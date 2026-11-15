@@ -2,22 +2,24 @@ import {afterAll,beforeAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
 import {readFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
+import {resolve} from 'node:path'
+import {esbuildRawSource} from './helpers/esbuild-raw-source.mjs'
 let browser,script,css
 beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import React from 'react';import {createRoot} from 'react-dom/client';import {NotesApp} from './src/preload/notes/editor';import '@blocknote/mantine/style.css';import './src/preload/notes/style.css';
  window.noteRequests=[];window.noteComponentViews=[];document.addEventListener('sherlock:notes-component-view',e=>window.noteComponentViews.push(e.detail));window.noteTaskRows=[];document.addEventListener('sherlock:notes-task-state',e=>window.noteTaskRows.push(e.detail));window.pickedFiles=[{name:'picked.png',path:'/synthetic/picked.png'}];window.savedNote=null;
- const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});if(method==='load')return {saved:window.savedNote||{title:'斜杠插入验收',blocks:[{id:'before',type:'paragraph',content:'保留前文'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后文'}],yjs:'',revision:0}};if(method==='library-list')return [];if(method==='file-pick')return new Promise(resolve=>window.finishPick=()=>resolve({files:window.pickedFiles}));if(method==='file-admit')return {...input,id:input.nodeId,source:'computer',authorizationId:'grant'};if(method==='file-bind')return {previewSessionId:'synthetic'};if(method==='generate')return new Promise((resolve,reject)=>{window.finishGenerate=resolve;window.failGenerate=()=>reject(Error('合成生成失败'))});if(method==='save'){window.savedNote={...input.content,revision:input.revision+1};return {status:'saved',saved:window.savedNote}};return {}},draft:async()=>{}};
+ const bridge={request:async(method,input)=>{window.noteRequests.push({method,input});if(method==='load')return {saved:window.savedNote||{title:'斜杠插入验收',blocks:[{id:'before',type:'paragraph',content:'保留前文'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后文'}],yjs:'',revision:0}};if(method==='library-list')return [];if(method==='document-import')return new Promise(resolve=>window.finishDocumentImport=resolve);if(method==='file-pick')return new Promise(resolve=>window.finishPick=()=>resolve({files:window.pickedFiles}));if(method==='file-admit')return {...input,id:input.nodeId,source:'computer',authorizationId:'grant'};if(method==='file-bind')return {previewSessionId:'synthetic'};if(method==='generate')return new Promise((resolve,reject)=>{window.finishGenerate=resolve;window.failGenerate=()=>reject(Error('合成生成失败'))});if(method==='save'){window.savedNote={...input.content,revision:input.revision+1};return {status:'saved',saved:window.savedNote}};return {}},draft:async()=>{}};
  const root=createRoot(document.querySelector('#notes'));window.remount=()=>root.render(<NotesApp key={Date.now()} sessionId="slash-insert" bridge={bridge} dark={document.body.hasAttribute('data-ds-dark-theme')} navigate={()=>{}}/>);window.remount();
- `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}}]})
+ `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},alias:{react:resolve('node_modules/react'),'react-dom':resolve('node_modules/react-dom')},plugins:[esbuildRawSource(),{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}}]})
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
  const {chromium}=await import(/* @vite-ignore */pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await chromium.launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },60000)
 afterAll(async()=>browser?.close())
 async function fixture(dark=false){
- const context=await browser.newContext({viewport:{width:1100,height:850}}),page=await context.newPage(),errors=[];page.setDefaultTimeout(2500);page.on('pageerror',e=>errors.push(e.message))
- await page.route('http://127.0.0.1/slash-insert',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section id="notes" class="en-root" data-dark="${dark}" style="position:fixed;inset:0"><div class="en-editor-host"></div></section></body>`}));await page.goto('http://127.0.0.1/slash-insert');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'before',type:'paragraph',content:'保留前文'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后文'}]));return {context,page,errors}
+ const context=await browser.newContext({viewport:{width:1100,height:850}}),page=await context.newPage(),errors=[];page.setDefaultTimeout(2500);page.on('pageerror',e=>errors.push(e.stack??e.message))
+ await page.route('http://127.0.0.1/slash-insert',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section id="notes" class="en-root" data-dark="${dark}" style="position:fixed;inset:0"><div class="en-editor-host"></div></section></body>`}));await page.goto('http://127.0.0.1/slash-insert');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor().catch(async error=>{await context.close();throw Error(errors.join('\n')+'\n'+error.message)});await page.evaluate(()=>window.noteEditor.replaceBlocks(window.noteEditor.document,[{id:'before',type:'paragraph',content:'保留前文'},{id:'anchor',type:'paragraph'},{id:'after',type:'paragraph',content:'保留后文'}]));return {context,page,errors}
 }
 async function slash(page,title){
  await page.locator('[data-id="anchor"] .bn-inline-content').click();await page.keyboard.type('/')
@@ -44,6 +46,27 @@ for(const [title,kind] of [['图片','image'],['视频','video'],['音频','audi
 },15000)
 it('canceling the picker leaves the slash paragraph and surrounding text editable',async()=>{
  const {context,page}=await fixture();try{await slash(page,'文件');await expect.poll(()=>page.evaluate(()=>typeof window.finishPick)).toBe('function');await page.evaluate(()=>{window.pickedFiles=[];window.finishPick()});expect(await page.locator('.en-note-file').count()).toBe(0);expect(await page.evaluate(()=>window.noteEditor.getBlock('before').content[0].text)).toBe('保留前文');expect(await page.locator('.en-root [role=alert]').count()).toBe(0)}finally{await context.close()}
+},15000)
+it('imports Markdown as editable note blocks at the original position and preserves them on reopen',async()=>{
+ const {context,page,errors}=await fixture();try{
+  await slash(page,'导入文档')
+  await expect.poll(()=>page.evaluate(()=>typeof window.finishDocumentImport)).toBe('function')
+  await page.getByText('正在导入文档…',{exact:true}).waitFor()
+  await page.evaluate(()=>{window.noteEditor.setTextCursorPosition('after','end');window.finishDocumentImport({format:'markdown',text:'## 导入标题\n\n正文内容'})})
+  await page.getByRole('heading',{name:'导入标题',exact:true}).waitFor()
+  expect(await page.evaluate(()=>window.noteEditor.document.map(block=>[block.type,block.content?.[0]?.text]))).toEqual([
+   ['paragraph','保留前文'],['heading','导入标题'],['paragraph','正文内容'],['paragraph','保留后文']
+  ])
+  expect(await page.getByText('正文内容',{exact:true}).evaluate(node=>node.closest('[contenteditable=true]')!==null)).toBe(true)
+  await page.evaluate(()=>{
+   const editor=window.noteEditor,block=editor.document.find(block=>block.content?.[0]?.text==='正文内容')
+   editor.setTextCursorPosition(block.id,'end');editor.insertInlineContent('，已编辑')
+  })
+  await page.getByText('正文内容，已编辑',{exact:true}).waitFor()
+  await expect.poll(()=>page.evaluate(()=>window.savedNote?.blocks.some(block=>block.content?.[0]?.text==='正文内容，已编辑')),{timeout:5000}).toBe(true)
+  await page.evaluate(()=>window.remount());await page.getByText('正文内容，已编辑',{exact:true}).waitFor()
+  expect(await page.locator('.en-note-file').count()).toBe(0);expect(errors).toEqual([])
+ }finally{await context.close()}
 },15000)
 for(const dark of [false,true])it(`creates a full-width smart draft and replaces only that block after generation (${dark?'dark':'light'})`,async()=>{
  const {context,page,errors}=await fixture(dark);try{

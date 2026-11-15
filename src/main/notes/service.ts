@@ -28,6 +28,8 @@ import { findNoteComponent, noteLibraryItems, noteLibraryNode, noteLibrarySpec }
 import {prepareNoteReferences} from './reference-context'
 import type {ResearchContextSource} from '../state/research-context-bridge'
 import { pickNoteFiles } from './file-picker'
+import { readNoteDocument } from './document-import'
+import type { KnowledgeContent } from '../knowledge/content'
 import {createNoteComponentActions} from './component-actions'
 import type {ResearchCanvasExportDependencies} from '../state/research-canvas-export'
 
@@ -35,6 +37,7 @@ export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string; onDocumentAdapter?(adapter:NoteDocumentAdapter):void;
   runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; canWrite?(sessionId:string):boolean; canvasAvailable?(sessionId:string):boolean; inspectCanvas?(sessionId:string,signal:AbortSignal,args?:{ids?:string[]}):Promise<unknown>; resetZoom?():Promise<void>;windowAction?(action:string,args:any):Promise<unknown>; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any,control?:{signal?:AbortSignal;guardId?:string}):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
   exportFiles?:Pick<ResearchCanvasExportDependencies,'showSaveDialog'|'writeFile'>;
+  documentContent?: KnowledgeContent;
 }): () => void {
   const store = new NotesStore(options.root), active = new Map<string, AbortController>(), rpc = harnessRpc(options.runtimeUrl)
   const capabilityBridge=new NotesCapabilityBridge(value=>{const window=options.getWindow();if(!window||window.isDestroyed())throw Error('笔记窗口不可用。');(window.webContents as any).send('notes:capability-action',value)})
@@ -62,6 +65,22 @@ export function installNotesService(options: {
       case 'component-render': {if(!noteLibrarySpec(input.spec))throw Error('组件内容格式无效。');return {ok:true}}
       case 'reply-render': {if(typeof input.text!=='string'||!input.text.trim()||input.text.length>100000)throw Error('回复内容不可用。');return {ok:true}}
       case 'file-pick': return pickNoteFiles(input.kind,options.getWindow(),()=>options.owner()===owner&&options.canRead(session),input.locale)
+      case 'document-import': {
+        const window = options.getWindow(), content = options.documentContent
+        if (!content || options.canWrite?.(session) === false) throw Error('当前笔记不能导入文档。')
+        const key = 'note-document-import:' + session
+        if (active.has(key)) throw Error('请等待当前文档导入完成。')
+        const controller = new AbortController()
+        active.set(key, controller)
+        const current = () => !controller.signal.aborted && options.owner() === owner && options.getWindow() === window &&
+          !!window && !window.isDestroyed() && options.canRead(session) && options.canWrite?.(session) !== false
+        try {
+          const { files: [file] } = await pickNoteFiles('document', window, current, input.locale)
+          if (!file || !current()) return null
+          const document = await readNoteDocument(file, content, controller.signal, input.locale)
+          return current() ? document : null
+        } finally { active.delete(key) }
+      }
       case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
       case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
       case 'file-media': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.media(owner,session,input)
