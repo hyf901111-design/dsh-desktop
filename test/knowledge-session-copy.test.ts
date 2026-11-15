@@ -49,6 +49,7 @@ test.each(sources)('seeds the $mode mode before publishing the personal copy to 
       ] } as T
       if (method === 'session.create') {
         expect(params.workspaceId).toBe('current')
+        expect(stores.research.getItem('sherlock.knowledge.copy-title.v1:' + params.sessionId)).toBe(source.title + '（副本）')
         expect(stores.research.getItem('ework.session.view.v1:' + params.sessionId)).toBe(source.mode)
         if (source.mode === 'research') {
           const key = 'sherlock.research.canvas.artifacts.v1:' + params.sessionId

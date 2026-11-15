@@ -15,6 +15,7 @@ const WORKBENCH_TRIAL_KEY = 'ework.research.openterminal-trial.v1'
 const RESPONSIVE_ARRANGE_PREFIX = 'ework.research.responsive-arrange.v1:'
 const RESEARCH_CANVAS_STORAGE_PREFIXES = [
   HOME_GUIDE_SESSION_PREFIX,
+  'sherlock.knowledge.copy-title.v1:',
   'sherlock.research.canvas.files.v1:',
   'sherlock.research.canvas.artifacts.v1:',
   'sherlock.research.canvas.selection.v1:',

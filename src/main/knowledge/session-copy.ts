@@ -92,6 +92,7 @@ export function createKnowledgeSessionCopier(options: {
 
     try {
       // A session becomes visible only after its complete content is ready.
+      write('sherlock.knowledge.copy-title.v1:' + sessionId, title)
       write('ework.session.view.v1:' + sessionId, source.mode)
       switch (source.mode) {
         case 'research':
