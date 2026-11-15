@@ -11,94 +11,21 @@
         "schemaVersion": 1,
         "featureName": "现金流表格演示、知识库侧栏对齐与分类打开模式",
         "branch": "codex/feat/spreadsheet-cash-flow-guide-20261116",
-        "baseCommit": "37f2d640d94fbb56b2e6bfcb8120db5302cb469a",
-        "tipCommit": "c5db38923a8cf374ffd07113053d496e33273cd1",
+        "baseCommit": "c5db38923a8cf374ffd07113053d496e33273cd1",
+        "tipCommit": "cfdba23c04a95adbc0138412c127e2b432f6d252",
         "commits": [
           {
-            "commit": "a714aa2b494d096f04fff688b37a242ba32d68a7",
+            "commit": "cfdba23c04a95adbc0138412c127e2b432f6d252",
             "parents": [
-              "37f2d640d94fbb56b2e6bfcb8120db5302cb469a"
+              "c5db38923a8cf374ffd07113053d496e33273cd1"
             ],
-            "subject": "优化知识库名称、统计标签和侧栏对齐"
-          },
-          {
-            "commit": "055a9a157143d844c5df2a3ad45733eaf335d361",
-            "parents": [
-              "a714aa2b494d096f04fff688b37a242ba32d68a7"
-            ],
-            "subject": "对齐研究笔记和表格的输入框参考按钮"
-          },
-          {
-            "commit": "3b88cc1c17f659d6b453826b4f232bc72a724dc0",
-            "parents": [
-              "055a9a157143d844c5df2a3ad45733eaf335d361"
-            ],
-            "subject": "优化现金流组件窄栏布局并加入易方达配色"
-          },
-          {
-            "commit": "c5db38923a8cf374ffd07113053d496e33273cd1",
-            "parents": [
-              "3b88cc1c17f659d6b453826b4f232bc72a724dc0"
-            ],
-            "subject": "按导入框选和两轮对话重编现金流表格演示"
+            "subject": "修复表格导入演示因控件重绘中断"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/home-spreadsheet-runtime.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-composer.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-final-shell.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
             "path": "src/preload/home-guides.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/session-directory.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
           },
           {
             "status": "M",
@@ -106,39 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/view.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/ui-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/spreadsheet/cash-flow-guide-component.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-spreadsheet-runtime.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/spreadsheet-cash-flow-guide.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/spreadsheet-cash-flow-playback.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/spreadsheet-cash-flow-sandbox.test.ts"
           }
         ],
         "checks": [
@@ -150,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "c5db38923a8cf374ffd07113053d496e33273cd1",
-            "completedAt": "2026-11-15T23:34:44.690589+00:00",
+            "verifiedCommit": "cfdba23c04a95adbc0138412c127e2b432f6d252",
+            "completedAt": "2026-11-15T23:45:53.434515+00:00",
             "timeoutMs": 120000
           },
           {
@@ -159,43 +54,21 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/spreadsheet-cash-flow-playback.test.ts",
               "test/home-spreadsheet-runtime.test.js",
               "test/spreadsheet-cash-flow-guide.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "test/spreadsheet-cash-flow-sandbox.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/knowledge-composer.test.js",
-              "test/spreadsheet-workbook.test.ts",
-              "test/home-guide-operations-entry.test.ts"
+              "test/spreadsheet-cash-flow-sandbox.test.ts"
             ],
             "outcome": "passed",
-            "summary": "48 项聚焦检查，覆盖实际 Excel 导入、双轮对话、原生插入路径和易方达切换",
-            "verifiedCommit": "c5db38923a8cf374ffd07113053d496e33273cd1",
-            "completedAt": "2026-11-15T23:34:44.690589+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "lists real session modes|centers empty messages|publishes and manages|paginates files and native sessions|knowledge pager on one row|aligns folder counts"
-            ],
-            "outcome": "passed",
-            "summary": "6 项知识库聚焦浏览器检查，覆盖合计、计数标签、分类名称和原生打开",
-            "verifiedCommit": "c5db38923a8cf374ffd07113053d496e33273cd1",
-            "completedAt": "2026-11-15T23:34:44.690589+00:00",
+            "summary": "13 项现金流定向检查，包括导入按钮在指针移动期间重绘",
+            "verifiedCommit": "cfdba23c04a95adbc0138412c127e2b432f6d252",
+            "completedAt": "2026-11-15T23:45:53.434515+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 证实知识库合计与标签布局。组件沙箱验证 258px 标签、自适应配色和回款值联动。完整客户端回放与同位置参考按钮仍待本地构建核对。"
+          "summary": "上一候选实包验证知识库分类和 878 合计、标签、右侧画布动作隐藏、三种模式同位置参考按钮。空白表格已实包进入，导入前控件重绘已在聚焦检查修复，等待重新构建验收。"
         },
         "acceptanceCriteria": [
           "从探索打开第六个案例，在独立工作簿完成整理、趋势图、组件生成",
@@ -212,60 +85,7 @@
           "AI 对话为免计费固定样本回放",
           "需按本地构建手册核验完整客户端"
         ],
-        "generatedAt": "2026-11-15T23:34:44.690589+00:00"
-      },
-      "merged": {
-        "mergeCommit": "d6c3ffcecec73dd9ff84cb0c3f3e347c6b383b7a",
-        "verificationCommit": "d6c3ffcecec73dd9ff84cb0c3f3e347c6b383b7a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d6c3ffcecec73dd9ff84cb0c3f3e347c6b383b7a",
-            "completedAt": "2026-11-15T23:34:55.853Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-spreadsheet-runtime.test.js",
-              "test/spreadsheet-cash-flow-guide.test.ts",
-              "test/spreadsheet-workbook.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/home-guide-explore-entry-browser.test.ts",
-              "test/browser-sidebar-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-spreadsheet-runtime.test.js test/spreadsheet-cash-flow-guide.test.ts test/spreadsheet-workbook.test.ts test/home-guide-operations-entry.test.ts test/home-guide-explore-entry-browser.test.ts test/browser-sidebar-entry.test.ts",
-            "verifiedCommit": "d6c3ffcecec73dd9ff84cb0c3f3e347c6b383b7a",
-            "completedAt": "2026-11-15T23:34:55.853Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "test/home-operations-browser.test.js",
-              "-t",
-              "all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/explore-menu-browser.test.ts test/home-operations-browser.test.js -t all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks",
-            "verifiedCommit": "d6c3ffcecec73dd9ff84cb0c3f3e347c6b383b7a",
-            "completedAt": "2026-11-15T23:34:55.853Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T23:34:55.853Z"
+        "generatedAt": "2026-11-15T23:45:53.434515+00:00"
       }
     }
   ],
