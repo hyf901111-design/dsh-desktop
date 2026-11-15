@@ -11,28 +11,28 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "e7b56c6e1f094456b4e5ae82983a49fb174f2189",
-        "tipCommit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
+        "baseCommit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
+        "tipCommit": "580c0d5faf5e3a8a46284871397221ddd69550f3",
         "commits": [
           {
-            "commit": "758ef715a3f82be802977d72c737d559a2be7f3a",
+            "commit": "1d097444f31d32a942a99365e2f96f379b0954bb",
             "parents": [
-              "e7b56c6e1f094456b4e5ae82983a49fb174f2189"
+              "2c051da4268439b1769e0bdf6952f9e3a060083f"
             ],
-            "subject": "交互：将记忆文档的预览和编辑移到标题右侧"
+            "subject": "交互：为原生表格增加编辑预览切换并标识共享只读状态"
           },
           {
-            "commit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
+            "commit": "580c0d5faf5e3a8a46284871397221ddd69550f3",
             "parents": [
-              "758ef715a3f82be802977d72c737d559a2be7f3a"
+              "1d097444f31d32a942a99365e2f96f379b0954bb"
             ],
-            "subject": "功能：接收方以原生只读页面查看知识库共享会话"
+            "subject": "交互：保留斜杠一级菜单并按对话栏空间级联展开"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "scripts/lib/knowledge-shared-research.mjs"
+            "path": "scripts/lib/slash-command-flyout.mjs"
           },
           {
             "status": "M",
@@ -40,51 +40,7 @@
           },
           {
             "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/file-preview.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/session-share.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/panel.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/panel.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/session-directory.tsx"
-          },
-          {
-            "status": "A",
             "path": "src/preload/knowledge/shared-session.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/memory/document-editor.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/memory/style.ts"
           },
           {
             "status": "M",
@@ -92,23 +48,27 @@
           },
           {
             "status": "M",
+            "path": "src/preload/spreadsheet/engine.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/header-resize.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
+          },
+          {
+            "status": "M",
             "path": "src/preload/spreadsheet/view.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
+            "path": "test/command-popup-position-browser.test.js"
           },
           {
             "status": "M",
-            "path": "src/shared/knowledge-sessions.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-sharing-worker.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "test/fixtures/command-popup-position-browser.tsx"
           }
         ],
         "checks": [
@@ -120,28 +80,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
-            "completedAt": "2026-11-15T03:18:46.652Z",
+            "verifiedCommit": "580c0d5faf5e3a8a46284871397221ddd69550f3",
+            "completedAt": "2026-11-15T03:47:11.094Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
               "--maxWorkers=1",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-session-content.test.ts",
-              "test/knowledge-native-preview.test.ts"
+              "test/command-popup-position-browser.test.js",
+              "test/spreadsheet-workbook.test.ts",
+              "test/spreadsheet-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "43 项相关测试覆盖双账号共享与只读权限、内嵌记忆编辑以及常规文件预览。",
-            "verifiedCommit": "2c051da4268439b1769e0bdf6952f9e3a060083f",
-            "completedAt": "2026-11-15T03:18:46.652Z",
+            "summary": "26 项表格与原生命令弹层检查通过，覆盖主对话与右侧栏的级联方向、最小宽度、选择和返回。",
+            "verifiedCommit": "580c0d5faf5e3a8a46284871397221ddd69550f3",
+            "completedAt": "2026-11-15T03:47:11.094Z",
             "timeoutMs": 120000
           }
         ],
@@ -198,10 +154,11 @@
           "文件与模式分类的空状态提示在列表内容区居中；他人共享提供全部文件入口，每条记录显示所属共享目录。",
           "他人共享以全部文件切换汇总列表，下级目录缩进，保留筛选与搜索。",
           "文件和会话分享弹窗的下拉箭头与按钮间距统一。",
-          "斜杠菜单一级可悬停打开各自子菜单，知识库样式对照 Figma 保留搜索和键盘操作。",
           "经验记忆直接显示正文预览和编辑，不需先打开文件条目。",
           "研究、笔记和表格的共享接收者由知识库直接打开已有原生模式的只读页面，保留布局、笔记块、工作表和工作簿对象。旧会话共享可由发布者重新发布升级。",
-          "经验记忆的编辑和预览在记忆.md标题行右侧。"
+          "经验记忆的编辑和预览在记忆.md标题行右侧。",
+          "斜杠一级保持展开。悬停或点击具有子选项的命令时显示相邻的原生二级菜单。主对话默认向右，窄的右侧对话栏向左展开。知识库下的他人共享再沿同方向展开。",
+          "表格普通会话可切换编辑和预览。预览保留当前工作表、选区及撤销历史，共享表格顶部显示锁定的预览状态。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -210,51 +167,7 @@
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T03:18:46.652Z"
-      },
-      "merged": {
-        "mergeCommit": "f5012ab8bef942cd5316e0c0da3daaf953674b50",
-        "verificationCommit": "f5012ab8bef942cd5316e0c0da3daaf953674b50",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f5012ab8bef942cd5316e0c0da3daaf953674b50",
-            "completedAt": "2026-11-15T03:19:48.396Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "f5012ab8bef942cd5316e0c0da3daaf953674b50",
-            "completedAt": "2026-11-15T03:19:48.396Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T03:19:48.396Z"
+        "generatedAt": "2026-11-15T03:47:11.094Z"
       }
     }
   ],
