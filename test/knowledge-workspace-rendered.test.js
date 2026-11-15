@@ -17,10 +17,28 @@ beforeAll(async () => {
       import { mountFloatingSurfaces } from './src/preload/floating-surfaces'
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
-      import { installKnowledgeSidebar } from './scripts/lib/knowledge-client.mjs'
+      import { installKnowledgeSidebar, installKnowledgeSourceNavigation } from './scripts/lib/knowledge-client.mjs'
       import React from 'react'
       import { createRoot } from 'react-dom/client'
       const host = new WorkspaceSurfaceHost(document)
+      if (document.body.hasAttribute('data-test-session-directory')) {
+        const byId = {
+          board: { title: '消费行业研究看板', updatedAt: 1700000000000 },
+          note: { title: '季度会议笔记', updatedAt: 1690000000000 },
+          sheet: { title: '渠道库存表格', updatedAt: 1680000000000 },
+          chat: { title: '普通对话' },
+          removed: { title: '已删除表格', removed: true },
+          child: { title: '子任务', parentId: 'note' }
+        }
+        const opened = new Map()
+        installKnowledgeSourceNavigation({ document,
+          sessions: { list: { getSnapshot: () => ({ ids: Object.keys(byId), byId }) }, subagentAddress: () => undefined,
+            open: id => { window.openedSession = { id, view: opened.get(id) } } },
+          workspaces: { list: { getSnapshot: () => ({ items: [{ title: '行业跟踪', sessionIds: ['board', 'note', 'sheet'] }] }) } },
+          chatStore: { create: id => ({ actions: { setView: view => opened.set(id, view) } }) },
+          boards: () => ({ isBoardOnly: id => id === 'board' })
+        })
+      }
       if (document.body.hasAttribute('data-test-browser-topbar')) {
         const browser = new BrowserAppView(document, {
           subscribe: () => () => {},
@@ -162,6 +180,10 @@ beforeAll(async () => {
             entry?.reject(Error('cancelled'))
             return
           }
+          if (method === 'session-evidence') return args.ids.map(id => ({
+            id, preferredView: id === 'sheet' ? 'trajectory' : 'chat', notes: id === 'note',
+            spreadsheet: id === 'removed' || id === 'child', research: false
+          }))
           if (method === 'received') {
             if (window.waitForSharedCatalog) return window.waitForSharedCatalog
             if (document.querySelector('[data-knowledge-panel-file="decafbaddecafbaddecafbaddecafbad"]')) {
@@ -201,6 +223,40 @@ beforeAll(async () => {
 }, 20_000)
 
 afterAll(async () => { await browser?.close() })
+
+it('lists real session modes under all files and opens each one in its native view', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<body data-test-session-directory><div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div></body>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const group = library.getByRole('group', { name: '所有文件子分类' })
+    expect(await group.getByRole('button').allTextContents()).toEqual(['文件资料', '研究模式', '笔记模式', '表格模式'])
+    for (const [label, title, id, view] of [
+      ['研究模式', '消费行业研究看板', 'board', 'research'],
+      ['笔记模式', '季度会议笔记', 'note', 'notes'],
+      ['表格模式', '渠道库存表格', 'sheet', 'spreadsheet']
+    ]) {
+      await group.getByRole('button', { name: label }).click()
+      const directory = library.getByRole('main', { name: label })
+      const row = directory.getByRole('button', { name: new RegExp(title) })
+      await row.waitFor()
+      expect(await directory.getByRole('button').count()).toBe(1)
+      const search = directory.getByRole('searchbox', { name: '搜索会话' })
+      await search.fill('找不到的项目')
+      await directory.getByText('没有符合搜索条件的会话。').waitFor()
+      await search.fill('行业跟踪')
+      await row.click()
+      expect(await page.evaluate(() => window.openedSession)).toEqual({ id, view })
+      await library.waitFor({ state: 'hidden' })
+      await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
+    }
+    await group.getByRole('button', { name: '文件资料' }).click()
+    await library.getByRole('button', { name: '添加文件', exact: true }).waitFor()
+  } finally { await page.close() }
+})
 
 it('aligns the knowledge app icon and title with the browser when switching workspaces', async () => {
   const page = await browser.newPage()

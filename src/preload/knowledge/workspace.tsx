@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import {
@@ -12,11 +12,13 @@ import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-to
 import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
 import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
+import { knowledgeSessionLabels, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 import { KnowledgeMemory } from './memory'
 import { FileSearch } from './file-search'
 import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
 import { countFileFacets, emptyFileFacets, FilterMenu } from './filter-menu'
 import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
+import { KnowledgeSessionDirectory, openKnowledgeSession, useKnowledgeSessions } from './session-directory'
 import css from './workspace.css?raw'
 
 interface Bridge {
@@ -26,6 +28,7 @@ interface Bridge {
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
   request(method: 'download', args: { id: string }): Promise<boolean>
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
+  request(method: 'session-evidence', args: { ids: string[] }): Promise<KnowledgeSessionEvidence[]>
   request(method: 'edit', args: KnowledgeEdit): Promise<KnowledgeSnapshot>
   request(method: 'recent-searches', args?: Record<string, never>): Promise<string[]>
   request(method: 'remember-search', args: { query: string }): Promise<string[]>
@@ -58,6 +61,7 @@ const fileName = (path: string) => path.split(/[\\/]/u).at(-1) || path
 const pageSize = 10
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
 const defaultFilter: KnowledgeFilter = {}
+const sessionSections = [ ['research', 'research'], ['notes', 'note'], ['spreadsheet', 'table'] ] as const
 const formatBytes = (size: number) => size >= 1024 * 1024
   ? `${(size / (1024 * 1024)).toLocaleString(undefined, { maximumFractionDigits: 1 })} MB`
   : `${Math.max(1, Math.round(size / 1024))} KB`
@@ -98,6 +102,16 @@ export function mountKnowledgeWorkspace(document: Document, host: WorkspaceSurfa
 
 function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: WorkspaceSurfaceHost; document: Document }) {
   const [tab, setTab] = useState<'files' | 'memory'>('files')
+  const [sessionMode, setSessionMode] = useState<KnowledgeSessionMode>()
+  const [surfaceVisible, setSurfaceVisible] = useState(() => host.current()?.surface === 'knowledge')
+  const evidenceFor = useCallback(async (ids: string[]) => {
+    const records: KnowledgeSessionEvidence[] = []
+    for (let start = 0; start < ids.length; start += 128) {
+      records.push(...await bridge.request('session-evidence', { ids: ids.slice(start, start + 128) }))
+    }
+    return records
+  }, [bridge])
+  const sessions = useKnowledgeSessions(document, surfaceVisible && tab === 'files' && !!sessionMode, evidenceFor)
   const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
   const header = useRef<HTMLElement>(null)
   const workspaceToggle = useRef<HTMLButtonElement>(null)
@@ -164,8 +178,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     const hover = new WorkspaceViewHover(bar, () => bar, setWorkspaceExpanded, bridge.workspacePointerInBar)
     workspaceHover.current = hover
     const syncSurface = () => {
-      if (host.current()?.surface !== 'knowledge') hover.setExpanded(false)
+      const visible = host.current()?.surface === 'knowledge'
+      setSurfaceVisible(visible)
+      if (!visible) hover.setExpanded(false)
     }
+    syncSurface()
     document.addEventListener('sherlock:workspace-surface-change', syncSurface)
     return () => {
       document.removeEventListener('sherlock:workspace-surface-change', syncSurface)
@@ -396,6 +413,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }, [document, draftFilter, menu])
 
   function applyFilter(next: KnowledgeFilter, fromAssistant = false) {
+    setSessionMode(undefined)
     const state = { revision: crypto.randomUUID(), filter: next }
     filterState.current = { ...state, assistantFilter: fromAssistant }
     setFilter(next)
@@ -659,7 +677,14 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     if (category === 'received' && selection === 'received') void refreshReceived(true)
     updateFilter({ category, folderId, sharedCategory: undefined })
     setMenu(undefined)
+    setDraftFilter(undefined)
     closePreview()
+  }
+
+  async function openSession(id: string, mode: KnowledgeSessionMode | 'chat') {
+    const ok = await openKnowledgeSession(document, id, mode)
+    if (ok && host.current()?.surface === 'knowledge') host.revealConversation()
+    return ok
   }
 
   function submitDialog(event: React.FormEvent) {
@@ -707,7 +732,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         </nav>
       </div>
       <div className="knowledge-header-tabs">
-        <button type="button" aria-current={tab === 'files' ? 'page' : undefined} onClick={() => setTab('files')}>文件资料</button>
+        <button type="button" aria-current={tab === 'files' ? 'page' : undefined} onClick={() => {
+          setTab('files')
+          setSessionMode(undefined)
+        }}>文件资料</button>
         <button type="button" aria-current={tab === 'memory' ? 'page' : undefined} onClick={() => {
           setMenu(undefined)
           setDraftFilter(undefined)
@@ -717,17 +745,30 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     </header>
     {tab === 'memory' ? bridge.memory && <KnowledgeMemory document={document} bridge={bridge.memory} /> : <div className="knowledge-body">
       <nav className="knowledge-navigation" aria-label="知识库分类">
-        {(Object.keys(knowledgeCategories) as KnowledgeCategory[]).map(category => <button key={category} type="button"
-          aria-current={!filter.folderId && selection === category ? 'page' : undefined} onClick={() => selectCategory(category)}>
-          {buttonIcon(categoryIcons[category], knowledgeCategories[category])}
-          <small>{listKnowledgeDocuments(snapshot, { category }).length}</small>
-        </button>)}
+        {(Object.keys(knowledgeCategories) as KnowledgeCategory[]).map(category => <React.Fragment key={category}>
+          <button type="button" aria-current={!sessionMode && !filter.folderId && selection === category && category !== 'all' ? 'page' : undefined}
+            onClick={() => selectCategory(category)}>
+            {buttonIcon(categoryIcons[category], knowledgeCategories[category])}
+            <small>{listKnowledgeDocuments(snapshot, { category }).length}</small>
+          </button>
+          {category === 'all' && <div className="knowledge-session-sections" role="group" aria-label="所有文件子分类">
+            <button type="button" aria-current={!sessionMode && !filter.folderId && selection === 'all' ? 'page' : undefined}
+              onClick={() => selectCategory('all')}>{buttonIcon('all', '文件资料')}</button>
+            {sessionSections.map(([mode, icon]) => <button key={mode} type="button" aria-current={sessionMode === mode ? 'page' : undefined}
+              onClick={() => {
+                setSessionMode(mode)
+                setMenu(undefined)
+                setDraftFilter(undefined)
+                closePreview()
+              }}>{buttonIcon(icon, knowledgeSessionLabels[mode])}</button>)}
+          </div>}
+        </React.Fragment>)}
         <div className="knowledge-folder-heading"><span>文件夹</span>
           <button className="knowledge-square" type="button" aria-label="新建文件夹" disabled={busy || !ready}
             onClick={() => openDialog({ type: 'create-folder' })}><KnowledgeIcon name="add" /></button>
         </div>
-        {snapshot.folders.map(folder => <div className="knowledge-folder" key={folder.id} data-selected={filter.folderId === folder.id}>
-          <button type="button" aria-current={filter.folderId === folder.id ? 'page' : undefined} onClick={() => selectCategory('all', folder.id)}>
+        {snapshot.folders.map(folder => <div className="knowledge-folder" key={folder.id} data-selected={!sessionMode && filter.folderId === folder.id}>
+          <button type="button" aria-current={!sessionMode && filter.folderId === folder.id ? 'page' : undefined} onClick={() => selectCategory('all', folder.id)}>
             <KnowledgeIcon name="folder" /><span data-odyssey-truncated-tooltip>{folder.name}</span>
             <small>{listKnowledgeDocuments(snapshot, { folderId: folder.id }).length}</small>
           </button>
@@ -738,6 +779,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           </button>
         </div>)}
       </nav>
+      {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} {...sessions} open={openSession} /> :
       <main className="knowledge-file-list" data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
         if (selection === 'received' || !event.dataTransfer.types.includes('Files')) return
         dragDepth.current++
@@ -908,7 +950,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           </div>
         </div>
         {dragging && <div className="knowledge-drop-zone">拖放文件到知识库</div>}
-      </main>
+      </main>}
       {preview && !preview.native && <aside className="knowledge-preview" aria-label="文件预览">
         <header><strong title={preview.document.name}>{preview.document.name}</strong>
           <button className="knowledge-square" type="button" aria-label="关闭预览" onClick={closePreview}><KnowledgeIcon name="close" /></button></header>
@@ -922,22 +964,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     {tab === 'files' && menu && (target || targetFolder) && <div ref={actionMenu} className="knowledge-popup knowledge-action-menu"
       role="group" tabIndex={-1} aria-label="更多操作">
       {target && <>
-        {target.sessionId && <button type="button" onClick={() => {
-          const requestId = crypto.randomUUID()
-          const reply = (event: Event) => {
-            const result = (event as CustomEvent).detail
-            if (result?.requestId !== requestId) return
-            document.removeEventListener('sherlock:knowledge-source-result', reply)
-            if (result.ok) host.revealConversation()
-            else setNotice({ text: '来源会话已不可用。', error: true })
-          }
-          document.addEventListener('sherlock:knowledge-source-result', reply)
-          const result = document.dispatchEvent(new CustomEvent('sherlock:knowledge-source-open', {
-            detail: { id: target.sessionId, requestId }, cancelable: true
-          }))
-          document.removeEventListener('sherlock:knowledge-source-result', reply)
-          if (result) setNotice({ text: '来源会话已不可用。', error: true })
+        {target.sessionId && <button type="button" onClick={async () => {
           setMenu(undefined)
+          if (!await openSession(target.sessionId!, 'chat')) setNotice({ text: '来源会话已不可用。', error: true })
         }}>跳转至会话</button>}
         <button type="button" onClick={() => void fileAction('open', target)}>打开文件</button>
         <button type="button" onClick={() => void fileAction('reveal', target)}>在文件夹中显示</button>
