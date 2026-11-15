@@ -11,46 +11,18 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "99d6d64ccf6d2625ef23cc47cc95d7db2ca91c48",
-        "tipCommit": "bc9b7c2be83e3710e7bed67bcff754b8fa618c10",
+        "baseCommit": "bc9b7c2be83e3710e7bed67bcff754b8fa618c10",
+        "tipCommit": "603dc815dcc282b9d3ce6fd6b422b31a9ef6cde8",
         "commits": [
           {
-            "commit": "bc9b7c2be83e3710e7bed67bcff754b8fa618c10",
+            "commit": "603dc815dcc282b9d3ce6fd6b422b31a9ef6cde8",
             "parents": [
-              "99d6d64ccf6d2625ef23cc47cc95d7db2ca91c48"
+              "bc9b7c2be83e3710e7bed67bcff754b8fa618c10"
             ],
-            "subject": "功能：在知识库按模式收纳并直达会话"
+            "subject": "交互：支持将知识库已有文件拖入文件夹"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/store.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/icons.tsx"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/knowledge/session-directory.tsx"
-          },
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.css"
@@ -58,10 +30,6 @@
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/knowledge-sessions.ts"
           },
           {
             "status": "M",
@@ -77,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "bc9b7c2be83e3710e7bed67bcff754b8fa618c10",
-            "completedAt": "2026-11-15T01:26:42.660387+00:00",
+            "verifiedCommit": "603dc815dcc282b9d3ce6fd6b422b31a9ef6cde8",
+            "completedAt": "2026-11-15T01:33:37.039291+00:00",
             "timeoutMs": 120000
           },
           {
@@ -87,13 +55,12 @@
               "test",
               "--",
               "--maxWorkers=1",
-              "test/knowledge-composer.test.js",
-              "test/figma-inline-references-patch.test.js"
+              "test/knowledge-library.test.ts"
             ],
             "outcome": "passed",
-            "summary": "十项会话接入及补丁验证通过。",
-            "verifiedCommit": "bc9b7c2be83e3710e7bed67bcff754b8fa618c10",
-            "completedAt": "2026-11-15T01:26:42.660387+00:00",
+            "summary": "十项知识库存储操作检查通过。",
+            "verifiedCommit": "603dc815dcc282b9d3ce6fd6b422b31a9ef6cde8",
+            "completedAt": "2026-11-15T01:33:37.039291+00:00",
             "timeoutMs": 120000
           },
           {
@@ -108,15 +75,15 @@
               "test/knowledge-workspace-rendered.test.js"
             ],
             "outcome": "passed",
-            "summary": "二十五项知识库渲染检查通过，包括四分类、模式直达和会话筛选。",
-            "verifiedCommit": "bc9b7c2be83e3710e7bed67bcff754b8fa618c10",
-            "completedAt": "2026-11-15T01:26:42.660387+00:00",
+            "summary": "二十六项渲染检查通过，覆盖新建文件夹、菜单移动、拖放移动和分类直达。",
+            "verifiedCommit": "603dc815dcc282b9d3ce6fd6b422b31a9ef6cde8",
+            "completedAt": "2026-11-15T01:33:37.039291+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "eb50b2340 签名客户端实测全新安装配置默认深色伊萨卡午夜和星云风暴，并确认知识库新顶栏、设置同款记忆开关、原测试资料及右侧对话。新增的会话列表直达通过 Chromium 渲染与原生会话接口集成夹具验证。"
+          "summary": "eb50b2340 签名客户端实测全新安装配置默认深色伊萨卡午夜和星云风暴，并确认知识库新顶栏、设置同款记忆开关、原测试资料及右侧对话。新增的会话列表直达通过 Chromium 渲染与原生会话接口集成夹具验证。 本次界面在 Chromium 中从新建文件夹开始，分别经菜单和真实拖动整理旧文件，已确认目标计数和文件总数。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -158,7 +125,8 @@
           "分类、文件夹计数与添加文件夹图标共用同一列，悬停更多按钮仍在原计数位置。",
           "知识库顶栏复用浏览器的四视图快捷入口。悬停展开，移过标题、文件资料、经验记忆和顶栏空白时保持，离开后收起。标题与空白区域支持拖动窗体。",
           "知识库文件资料及右侧知识库复用设置中的经验记忆开关。首次建立的用户资料使用深色与星云风暴，已有配置保留。",
-          "所有文件下可进入文件资料、研究模式、笔记模式和表格模式。会话目录可按会话名与工作区检索，识别原生看板、已有笔记和工作簿以及保存的会话视图。选择会话后在原会话直接切换对应原生模式。"
+          "所有文件下可进入文件资料、研究模式、笔记模式和表格模式。会话目录可按会话名与工作区检索，识别原生看板、已有笔记和工作簿以及保存的会话视图。选择会话后在原会话直接切换对应原生模式。",
+          "已有文件可通过更多菜单移入新建文件夹，也可直接拖入左侧文件夹。移动后两处文件计数及时更新，已有文件不会复制。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -166,51 +134,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-15T01:26:42.660387+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ff79b042bc6aa925d1ae303932a40cbf069e89ca",
-        "verificationCommit": "ff79b042bc6aa925d1ae303932a40cbf069e89ca",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ff79b042bc6aa925d1ae303932a40cbf069e89ca",
-            "completedAt": "2026-11-15T01:27:03.451Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "ff79b042bc6aa925d1ae303932a40cbf069e89ca",
-            "completedAt": "2026-11-15T01:27:03.451Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T01:27:03.451Z"
+        "generatedAt": "2026-11-15T01:33:37.039291+00:00"
       }
     }
   ],
