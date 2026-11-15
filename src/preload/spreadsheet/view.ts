@@ -313,7 +313,7 @@ class SpreadsheetView{
    percent:edit('number-format','百分比','percent',{value:'0.00%'}),decimals:edit('number-format','两位小数','decimals',{value:'#,##0.00'}),
    filter:{...menu('filter','筛选','filter','筛选'),pressed:!!this.current()?.getFilter()},sort:menu('sort','排序','sort'),
    duplicates:edit('duplicates','去重','duplicates'),functions:menu('functions','插入函数','sum'),
-   recalc:{action:'recalc',label:'重新计算',browserIcon:'refresh'},freeze:menu('freeze','冻结','freeze'),
+   recalc:{action:'recalc',label:'重新计算',browserIcon:'refresh',disabled:!this.editable},freeze:menu('freeze','冻结','freeze'),
    gridlines:edit('gridlines','网格线','grid'),zoom:menu('zoom','缩放','search',undefined,false),
    focus:{action:'focus',label:this.focusLayout?'退出专注表格':'专注表格',icon:this.focusLayout?'exit-focus':'focus'}
   } satisfies Record<string,Tool>
@@ -709,13 +709,13 @@ class SpreadsheetView{
     const value=this.menu?.anchor.closest<HTMLElement>('[data-chart-id]')?.dataset.chartId
     const card=value?this.chartCards.get(value)?.element:undefined
     return [
-     {label:'编辑图表',action:'edit-chart',value,icon:'edit'},
-     {label:'重命名图表',action:'rename-chart',value,icon:'rename'},
+     {label:'编辑图表',action:'edit-chart',value,icon:'edit',disabled:!this.editable},
+     {label:'重命名图表',action:'rename-chart',value,icon:'rename',disabled:!this.editable},
      {label:card?.hasAttribute('data-chart-show-data')?'显示图表':'显示数据',action:'toggle-chart-data',value,icon:'grid',disabled:!card?.querySelector('table')},
      {label:'定位选区',action:'chart-source',value,icon:'pin'},
      {label:'导出图表',action:'menu',value:'chart-export',icon:'download',disabled:!card?.querySelector('table')},
-     {label:'复制图表',action:'duplicate-chart',value,icon:'duplicates'},
-     {label:'删除图表',action:'confirm-remove-chart',value,icon:'trash',divider:true}
+     {label:'复制图表',action:'duplicate-chart',value,icon:'duplicates',disabled:!this.editable},
+     {label:'删除图表',action:'confirm-remove-chart',value,icon:'trash',divider:true,disabled:!this.editable}
     ]
    }
    case 'chart-export':return chartExportFormats.map(format=>({label:format.toUpperCase(),action:'chart-export-image',value:format,icon:'download'}))
@@ -1993,7 +1993,7 @@ class SpreadsheetView{
     const value2=action==='zoom-reset'?100:action==='zoom'?Number(value.replace('%','')):this.zoom+(action==='zoom-plus'?10:-10)
     this.zoom=Math.min(200,Math.max(50,value2));sheet?.zoom(this.zoom/100);this.refreshFields();return
    }
-   case 'recalc':api?.getFormula().executeCalculation();this.say('正在重新计算公式');return
+   case 'recalc':if(this.editable){api?.getFormula().executeCalculation();this.say('正在重新计算公式')}return
   }
   if(!model||!sheet||!range||!this.editable)return
   switch(action){

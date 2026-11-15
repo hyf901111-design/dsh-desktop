@@ -31,6 +31,7 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
     .knowledge-shared-session-mode{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;background:var(--knowledge-field);color:var(--knowledge-ink)}
     .knowledge-shared-session-mode svg{flex:none}
     .knowledge-shared-session-body>[data-research-canvas]{position:absolute;inset:0;height:auto}
+    .knowledge-shared-session-body [data-research-canvas] :is([data-workbench-ask],[data-workbench-more]){display:none}
     .knowledge-shared-session-body{flex:1;position:relative;min-height:0;min-width:0;overflow:hidden}
     .knowledge-shared-session-body>.en-root{position:absolute;inset:0;border-radius:0}
     .knowledge-shared-session-body>.ew-sheet{height:100%}
