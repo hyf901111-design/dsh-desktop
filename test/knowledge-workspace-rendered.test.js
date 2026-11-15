@@ -159,6 +159,14 @@ beforeAll(async () => {
         memory,
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
+          if (method === 'edit' && args.type === 'create-folder') {
+            window.data.folders.push({ id: 'new-folder', name: args.name })
+            return structuredClone(window.data)
+          }
+          if (method === 'edit' && args.type === 'move') {
+            window.data.documents.find(row => row.id === args.id).folderId = args.folderId
+            return structuredClone(window.data)
+          }
           if (method === 'recent-searches') return [...recentSearches]
           if (method === 'remember-search') {
             const index = recentSearches.indexOf(args.query)
@@ -255,6 +263,35 @@ it('lists real session modes under all files and opens each one in its native vi
     }
     await group.getByRole('button', { name: '文件资料' }).click()
     await library.getByRole('button', { name: '添加文件', exact: true }).waitFor()
+  } finally { await page.close() }
+})
+
+it('moves existing files into a new folder through the row menu and by dragging', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await library.getByRole('button', { name: '新建文件夹' }).click()
+    const create = library.getByRole('dialog', { name: '新建文件夹' })
+    await create.getByRole('textbox', { name: '名称' }).fill('已整理')
+    await create.getByRole('button', { name: '确认' }).click()
+    const folder = library.getByRole('button', { name: /^已整理 / })
+    await library.getByRole('button', { name: '消费行业周报.md的更多操作' }).click()
+    await library.getByRole('button', { name: '移动到文件夹…' }).click()
+    const move = library.getByRole('dialog', { name: '移动到文件夹' })
+    expect(await move.getByRole('button', { name: '移动', exact: true }).isDisabled()).toBe(true)
+    await move.getByRole('combobox', { name: '目标文件夹' }).selectOption({ label: '已整理' })
+    await move.getByRole('button', { name: '移动', exact: true }).click()
+    await expect.poll(() => folder.textContent()).toBe('已整理1')
+    await library.getByRole('button', { name: /研究写作规范.md 手动上传/ }).dragTo(folder)
+    await expect.poll(() => folder.textContent()).toBe('已整理2')
+    await folder.click()
+    await library.getByRole('row', { name: /消费行业周报\.md/ }).waitFor()
+    await library.getByRole('row', { name: /研究写作规范\.md/ }).waitFor()
+    expect(await page.evaluate(() => window.data.documents.length)).toBe(3)
   } finally { await page.close() }
 })
 
