@@ -1,5 +1,6 @@
 import {spreadsheetRangeCodec,collectSpreadsheetReferences,installSpreadsheetReferences,spreadsheetMessageParts} from './spreadsheet-inline-references.mjs'
 import {SPREADSHEET_QUICK_PROMPTS} from '../../packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js'
+import {eworkWorkspaceDraftText,eworkWorkspaceDraftRevision,eworkBindWorkspaceDraft,eworkRestoreWorkspaceDraft,eworkWorkspaceDraftImages} from './workspace-draft-state.mjs'
 
 const modeWelcome={
  spreadsheet:{
@@ -75,6 +76,46 @@ ctx.effect(()=>{
 },'Workspace mode composer shortcuts');
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${spreadsheetRangeCodec.toString()})()),'Spreadsheet range codec'));
 ctx.effect(()=>(${installSpreadsheetReferences.toString()})({win:window,doc:document,sessions,getInput:id=>inputHub.shell(id)}),'Spreadsheet range insertion');`,'registration')
+ const draftHub='var InputHub = class {'
+ change(draftHub,[eworkWorkspaceDraftText,eworkWorkspaceDraftRevision,eworkBindWorkspaceDraft,eworkRestoreWorkspaceDraft,eworkWorkspaceDraftImages].map(fn=>fn.toString()).join('\n')+'\n'+draftHub,'mode draft state')
+ const draftWrite='setDraft: (d, text) => {\n\t\t\t\t\t\td.draft = text;\n\t\t\t\t\t},'
+ change(draftWrite,`setDraft: (d,text,mode='chat')=>{
+  d.workspaceDrafts={...d.workspaceDrafts,[mode]:text};
+  if(mode==='chat')d.draft=text;
+ },`,'persist workspace draft text')
+ const savedDraft='const storedDraft = useStore((s) => s.draft);'
+ change(savedDraft,savedDraft+'\nconst workspaceDrafts=useStore(s=>s.workspaceDrafts);','saved workspace drafts')
+ const draftEffect=`(0, react.useEffect)(() => {
+				if (inputState.draft === "" && storedDraft !== "") inputActions.setDraft(storedDraft);
+				const unmirror = bindDraftMirror(actions.setDraft);
+				return () => {
+					unmirror();
+				};
+			}, [inputActions]);`
+ change(draftEffect,`react.useLayoutEffect(()=>bindDraftMirror(actions.setDraft,view,storedDraft,workspaceDrafts),[inputActions,sessionId,view]);`,'activate draft with current workspace mode')
+ const bindDraft='bindDraftMirror: (write) => inputHub.shell(sessionId).bindMirror(write)'
+ change(bindDraft,`bindDraftMirror:(write,view,legacyDraft,savedDrafts)=>{
+ const shell=inputHub.shell(sessionId);
+ if(sherlockShared(sessionId)){
+  if(!shell.snapshot.draft&&legacyDraft)shell.setDraft(legacyDraft);
+  return shell.bindMirror(write);
+ }
+ return eworkBindWorkspaceDraft(shell,view,legacyDraft,savedDrafts,write,()=>new InputMachine({now:()=>Date.now()}));
+ }`,'bind editor to mode drafts')
+ const releaseDrafts='const drafts = shell.snapshot.imageIds;'
+ change(releaseDrafts,'const drafts = eworkWorkspaceDraftImages(shell);','release every mode draft attachment')
+ const draftAdmission='const admissionSnapshot = admissionShell?.snapshot;'
+ change(draftAdmission,draftAdmission+`
+    const admissionCore=admissionShell?.core;
+    const ownsWorkspaceDraft=()=>!admissionShell||(!admissionShell.disposed&&admissionShell.core===admissionCore&&admissionShell.snapshot.draftRev===admissionSnapshot.draftRev);`,'pin submission to originating mode')
+ const submissionState='const shellSnapshot = annotationAdmission?.pptxAnnotation===true?annotationAdmission:shell?.snapshot;'
+ change(submissionState,'if(!ownsWorkspaceDraft())return;\n'+submissionState,'reject stale submission after preparing references')
+ const restoreDraft=`shell?.restoreImages(attempt.imageIds);
+						const restoreDraft = shell?.snapshot.draft === "" && shell.snapshot.draftRev === committedDraftRev;
+						if (restoreDraft) shell.restoreDraftState(attempt.draftState);`
+ change(restoreDraft,'const restoreDraft=eworkRestoreWorkspaceDraft(shell,admissionCore,committedDraftRev,attempt.draftState,attempt.imageIds);','restore failed send to original mode')
+ const committedRev='const committedDraftRev = shell?.snapshot.draftRev;'
+ change(committedRev,'const committedDraftRev = admissionCore ? eworkWorkspaceDraftRevision(admissionCore) : undefined;','remember original draft revision after send')
  const mode="const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);"
  change(mode,mode.replace("research || activeView==='notes'","research || activeView==='notes' || !subagentPanel&&activeView==='spreadsheet'").replace('||homeGuideSidebar||browserAppActive','||homeGuideSidebar||activeView===\'spreadsheet\'||browserAppActive'),'shared conversation')
  const page='"data-phase": phase,\n\t\t\t\t"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
@@ -172,7 +213,8 @@ ${welcomeAnchor}`,'right pane welcome component')
   react.createElement(react.Fragment,{key:i},projectUserText(part.text,openFile))))
  `,'sent range chip')
  const commit='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
- change(commit,`if(document.body.dataset.eworkSpreadsheetSession===session.sessionId){
+ change(commit,`if(!ownsWorkspaceDraft())return;
+                if(document.body.dataset.eworkSpreadsheetSession===session.sessionId){
                   try{
                     const sheetRefs=(${collectSpreadsheetReferences.toString()})(attempt.draftState);
                     if(!window.dshDesktop?.spreadsheetAdmission)throw Error('表格尚未就绪，草稿已保留。');
@@ -184,6 +226,7 @@ ${welcomeAnchor}`,'right pane welcome component')
                 } else if(attempt.draftState.occurrences.some(o=>o.source==='spreadsheet-range')){
                   shell?.notify("error","请回到表格发送选区引用，或先移除选区。");return;
                 }
+                if(!ownsWorkspaceDraft())return;
                 `+commit,'capture before composer commits')
  return source+'\n'+restore+JSON.stringify(entries).replaceAll('*/','*\\/')+' */'
 }
