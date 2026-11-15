@@ -11,33 +11,37 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
-        "tipCommit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
+        "baseCommit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
+        "tipCommit": "377afad5cc7420100e0f0839a84beaa63881701c",
         "commits": [
           {
-            "commit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
+            "commit": "377afad5cc7420100e0f0839a84beaa63881701c",
             "parents": [
-              "b32b1071ee8955a87ac2f477df3386dc8a356412"
+              "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594"
             ],
-            "subject": "修复：防止研究副本被画布自动命名抢占"
+            "subject": "修复：隐藏共享原件对话并自动整理研究预览"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "scripts/lib/knowledge-shared-research.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/knowledge/session-copy.ts"
+            "path": "src/preload/figma-panels.css"
           },
           {
             "status": "M",
-            "path": "src/main/state/research-canvas-storage.ts"
+            "path": "src/preload/knowledge/shared-session.tsx"
           },
           {
             "status": "M",
-            "path": "test/knowledge-session-copy.test.ts"
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-shared-research-layout.test.js"
           }
         ],
         "checks": [
@@ -49,30 +53,35 @@
             ],
             "outcome": "passed",
             "summary": "主进程与预加载类型检查通过。",
-            "verifiedCommit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
-            "completedAt": "2026-11-15T04:39:27.000Z",
+            "verifiedCommit": "377afad5cc7420100e0f0839a84beaa63881701c",
+            "completedAt": "2026-11-15T04:57:16.000Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
               "--maxWorkers=1",
+              "test/knowledge-shared-research-layout.test.js",
+              "test/knowledge-composer.test.js",
               "test/knowledge-session-copy.test.ts",
-              "test/knowledge-session-copy-host.test.js",
-              "test/research-canvas-storage.test.ts"
+              "test/knowledge-workspace-rendered.test.js",
+              "test/research-resident-conversation.test.ts"
             ],
             "outcome": "passed",
-            "summary": "24 项检查通过，确保副本名称在原生研究自动命名介入前已有持久化记录。",
-            "verifiedCommit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
-            "completedAt": "2026-11-15T04:39:27.000Z",
+            "summary": "52 项聚焦检查通过，含真实渲染器在宽窄视口自动整理、屏蔽旧对话和恢复草稿。",
+            "verifiedCommit": "377afad5cc7420100e0f0839a84beaa63881701c",
+            "completedAt": "2026-11-15T04:57:16.000Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "上一签名版确认看板画布与顶栏贴合、历史副本恢复，以及上传、移动和右侧原生预览。研究新副本的自动命名冲突修复后由此批签名版复验。"
+          "summary": "浏览器通过渲染测试核验共享预览宽窄布局、当前原件与原会话的右栏隔离。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -131,7 +140,8 @@
           "打开他人共享的研究、笔记和表格保留只读预览，不增加左侧会话。点击创建副本后，保存完整内容再在当前工作区登记可编辑副本。原始共享版本不受副本编辑影响。",
           "共享会话顶栏右侧显示创建副本与预览，右侧栏展开时预览占用腾出的空间。表格仍可选择和导航，禁用编辑器、快捷写入和数据命令。",
           "知识库中查看共享研究看板，画布紧接标题栏，缩放和右侧对话栏展开时只保留一层顶部空间。",
-          "知识库副本以原生持久化会话登记到项目，从其他会话切回或重启后仍可从左侧打开，已保存旧版副本在原项目恢复。"
+          "知识库副本以原生持久化会话登记到项目，从其他会话切回或重启后仍可从左侧打开，已保存旧版副本在原项目恢复。",
+          "预览共享原件时隐藏原工作区的对话和工具面板，返回后恢复原工具位置与草稿。共享研究看板在本地按可用宽度整理，创建副本后进入原生会话。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -140,51 +150,7 @@
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T04:39:27.000Z"
-      },
-      "merged": {
-        "mergeCommit": "52022d45982d42a7388c7af0ece2c285002bfac5",
-        "verificationCommit": "52022d45982d42a7388c7af0ece2c285002bfac5",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "52022d45982d42a7388c7af0ece2c285002bfac5",
-            "completedAt": "2026-11-15T04:39:42.836Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "52022d45982d42a7388c7af0ece2c285002bfac5",
-            "completedAt": "2026-11-15T04:39:42.836Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T04:39:42.836Z"
+        "generatedAt": "2026-11-15T04:57:16.000Z"
       }
     }
   ],
