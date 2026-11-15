@@ -8,7 +8,7 @@ import { createHomeThemeGallery, homeAppearanceIcon, type HomeThemeGallery } fro
 type Section = 'input' | 'operations'
 type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
-export type HomeOperationExample = HomeOperationCard | 'workbench'
+export type HomeOperationExample = HomeOperationCard | 'workbench' | 'spreadsheet'
 export type HomeOperationActionContext = { signal: AbortSignal; origin?: {x:number;y:number}; revealComposer(): Promise<void>; handoff?():void; demoEntry?:{closeTarget:HTMLElement;closeOwned():Promise<void>} }
 type Card = HomeOperationCard
 export type HomeOperationsDeck = {element:HTMLElement;usecase:HTMLElement;example:HTMLButtonElement;cards:HTMLButtonElement[];pages:HTMLButtonElement[];refresh():void;layout():void;setVisible(visible:boolean,autoplay?:boolean):void;dispose():void}
@@ -24,7 +24,7 @@ const smootherStep = (value: number) => {
   return t * t * t * (t * (t * 6 - 15) + 10)
 }
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
-const EXAMPLE_KINDS: HomeOperationExample[] = [...CARDS, 'workbench']
+export const HOME_OPERATION_EXAMPLES: readonly HomeOperationExample[] = [...CARDS, 'workbench', 'spreadsheet']
 export const HOME_OPERATIONS_COPY = {
   zh: {
     demoIntro: '即将进入实例演示，\n演示过程不消耗费用',
@@ -35,7 +35,8 @@ export const HOME_OPERATIONS_COPY = {
       ['笔记随航', '体验有AI护航的文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
       ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
       ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。'],
-      ['自由搭建', '生成专属研究工作台', '描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。']
+      ['自由搭建', '生成专属研究工作台', '描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。'],
+      ['表格分析', '利润涨了，现金去哪了？', '用 AI 分析季度财报，画出利润与现金流趋势，\n拆解差额并试算多回款的影响。']
     ]
   },
   en: {
@@ -47,7 +48,8 @@ export const HOME_OPERATIONS_COPY = {
       ['Notes Copilot', 'Explore AI-assisted documents', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
       ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
       ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.'],
-      ['Build freely', 'Generate your research workbench', 'Describe your research needs and watch AI assemble\nan interactive research workbench.']
+      ['Build freely', 'Generate your research workbench', 'Describe your research needs and watch AI assemble\nan interactive research workbench.'],
+      ['Spreadsheet analysis', 'Profits rose. Where did the cash go?', 'Analyze quarterly results with AI, trace the cash-flow gap,\nand test a collection scenario.']
     ]
   }
 } as const
@@ -494,7 +496,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       if(controller.signal.aborted)return
       const context = { signal: controller.signal, ...(example&&bounds?{origin:{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}}:{}), revealComposer: () => revealComposer(controller.signal),handoff:()=>{if(actionController!==controller||controller.signal.aborted)throw Error('本次卡片操作已取消。');actionHandedOff=true} }
       if (example) await options.onExample!(card, context)
-      else if (card !== 'workbench') await options.onAction!(card, context)
+      else if (card !== 'workbench' && card !== 'spreadsheet') await options.onAction!(card, context)
     }
     catch (error) {
       if (controller.signal.aborted || disposed || error instanceof Error && error.name==='AbortError') return
@@ -667,7 +669,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     quickPanel = grid; grid.id = options.embedded?'odyssey-deck-quick-panel':'odyssey-home-quick-panel'; grid.setAttribute('role', 'tabpanel'); grid.setAttribute('aria-labelledby', quickTab.id)
     usecase = doc.createElement('article'); usecase.className = 'odyssey-operations-usecase'
     exampleButton = doc.createElement('button'); exampleButton.type = 'button'; exampleButton.className = 'odyssey-operations-example-open'; exampleButton.dataset.odysseyOperationsOpenExample = ''; exampleButton.tabIndex = -1
-    exampleButton.addEventListener('click', () => { if(options.embedded)options.embedded.onExample(EXAMPLE_KINDS[caseIndex]!);else void runAction(EXAMPLE_KINDS[caseIndex]!, true) })
+    exampleButton.addEventListener('click', () => { if(options.embedded)options.embedded.onExample(HOME_OPERATION_EXAMPLES[caseIndex]!);else void runAction(HOME_OPERATION_EXAMPLES[caseIndex]!, true) })
     usecase.append(exampleButton)
     const createCaseLayer = (index: number) => {
       const layer = doc.createElement('div')

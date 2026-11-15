@@ -2,6 +2,7 @@ import { mountSharedKnowledgeSessions } from './knowledge/shared-session'
 import { mountKnowledgePanels } from './knowledge/panel'
 import { knowledgeOpenEvent, mountKnowledgeWorkspace } from './knowledge/workspace'
 import { mountSpreadsheet } from './spreadsheet/view'
+import { mountCashFlowGuide } from './spreadsheet/cash-flow-guide'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
 import {NativeBrowserMenuProjection} from './browser/native-menus'
@@ -407,8 +408,9 @@ function initializeUi(): void {
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill }, { beforeNavigate: () => notes.flushCurrent() })
-  const homeGuides = mountHomeGuides(document, { beforeOpen: session => notes.prepareGuideFromCurrent(session.sessionId), prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide,
-    mountWorkbench: mountHomeWorkbenchGuide })
+  const homeGuides = mountHomeGuides(document, { beforeOpen: async session => { if(session.kind==='spreadsheet'){const id=document.body.dataset.eworkSpreadsheetSession;if(id)await spreadsheetView?.flush(id)} await notes.prepareGuideFromCurrent(session.sessionId) }, prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: mountHomePresentationGuide,
+    mountWorkbench: mountHomeWorkbenchGuide,
+    mountSpreadsheet: async (doc, _host, options) => mountCashFlowGuide(doc, options, spreadsheetView!) })
   const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, { themeController: getHomeThemeController(document)!, onBeforeOpen:()=>{void homeGuides.reset(false)}, onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample:(kind, context)=>playHomeGuideFromExplore(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
   const scheduledView = new ScheduledTaskView(document, {

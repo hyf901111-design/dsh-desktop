@@ -2,7 +2,7 @@ import styles from './explore-menu.css?raw'
 import {createExploreOrb} from './explore-orb'
 import {readExploreQuota,renderExploreQuota,type ExploreQuota} from './explore-quota'
 import {RESEARCH_COMPONENT_DIN_FACES} from '../../packages/dsh-research-task-runtime/html-artifact.js'
-import {createHomeOperationsDeck,HOME_OPERATIONS_COPY,type HomeOperationCard,type HomeOperationExample,type HomeOperationActionContext} from './home-operations'
+import {createHomeOperationsDeck,HOME_OPERATIONS_COPY,HOME_OPERATION_EXAMPLES,type HomeOperationCard,type HomeOperationExample,type HomeOperationActionContext} from './home-operations'
 import {createHomeThemeGallery} from './home-theme-gallery'
 import type {HomeThemeController} from './home-theme-controls'
 import type {ExploreResult} from './explore-search'
@@ -17,7 +17,7 @@ import sunIcon from './explore-assets/sun.svg?inline'
 import moonIcon from './explore-assets/moon.svg?inline'
 
 type Options={themeController:HomeThemeController;onBeforeOpen?():void;onToggleAppearance():Promise<void>;onAction(card:HomeOperationCard,context:HomeOperationActionContext):Promise<void>;onExample(card:HomeOperationExample,context:HomeOperationActionContext):Promise<void>}
-const cards:HomeOperationCard[]=['board','note','ppt','report'],examples:HomeOperationExample[]=[...cards,'workbench']
+const cards:HomeOperationCard[]=['board','note','ppt','report'],examples=HOME_OPERATION_EXAMPLES
 const mounted=new WeakMap<Document,()=>void>()
 const homeAppearanceIcon=(dark:boolean)=>dark?sunIcon:moonIcon
 

@@ -1,5 +1,5 @@
 const CASE_DURATION_MS = 6000
-export const HOME_OPERATIONS_CASE_COUNT = 5
+export const HOME_OPERATIONS_CASE_COUNT = 6
 const PROGRESS_PROPERTY = '--odyssey-operations-case-progress'
 
 export interface HomeOperationsCarousel {

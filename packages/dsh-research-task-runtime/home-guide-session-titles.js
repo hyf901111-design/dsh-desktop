@@ -1,4 +1,4 @@
-const titles=Object.freeze({workbench:'白酒龙头研究工作台',board:'自选行情示例看板',note:'AI 护航研究笔记示例',ppt:'公司风格演示示例',report:'研究报告示例'})
+const titles=Object.freeze({spreadsheet:'利润涨了，现金去哪了？',workbench:'白酒龙头研究工作台',board:'自选行情示例看板',note:'AI 护航研究笔记示例',ppt:'公司风格演示示例',report:'研究报告示例'})
 const suffix='（演示案例）'
 
 export function legacyHomeGuideSessionTitle(kind,replay=false){

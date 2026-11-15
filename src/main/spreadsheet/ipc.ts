@@ -8,6 +8,7 @@ import {noteLibraryItems,noteLibraryNode,noteLibrarySpec} from '../notes/compone
 import {readNoteGenerationStream} from '../notes/stream'
 import {canSaveCustomComponent,type ComponentLibraryStore} from '../state/component-library'
 import {readWorkbookPath,writeWorkbookFile} from './files'
+import {cashFlowGuideAnalysisOperations,cashFlowGuideChartOperation,cashFlowGuideComponent,createCashFlowGuideWorkbook,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
 import {SpreadsheetService} from './service'
 import {SpreadsheetStore,type WorkbookKey} from './store'
 import type {ConversationComponentVisibleContext} from '../../../packages/dsh-research-task-runtime/conversation-component-contract'
@@ -19,7 +20,7 @@ function exportStem(value:unknown){
   :''
 }
 
-export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined}){
+export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined;canPlayCashFlowGuide?(key:WorkbookKey):boolean}){
  const {ipcMain,getWindow}=options
  const store=new SpreadsheetStore(options.dataPath)
  const visible=(sessionId:unknown,write=false)=>{
@@ -67,6 +68,30 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
     return text
    }
    case 'admit':service.admit(key,input.instruction,input.bookId,input.references,input.useWorkbook);return true
+   case 'cash-flow-guide-source':case 'cash-flow-guide-analysis':case 'cash-flow-guide-trend':case 'component-cash-flow-guide':{
+    if(!options.canPlayCashFlowGuide?.(key))throw Error('请从探索打开独立的现金流演示。')
+    const {revision,workbook}=store.load(key)
+    if(input.revision!==revision)throw Error('工作簿已变化，演示已停止。')
+    const locale=options.locale?.()??'zh'
+    if(action==='cash-flow-guide-source'){
+     if(workbook||store.recent(key).length)throw Error('此会话已有工作簿，演示未覆盖现有内容。')
+     return store.create(key,revision,createCashFlowGuideWorkbook('cash-flow-guide-'+randomUUID(),locale))
+    }
+    if(!workbook?.id.startsWith('cash-flow-guide-'))throw Error('示例工作簿已切换。')
+    const hasAnalysis=Object.hasOwn(workbook.sheets,CASH_FLOW_GUIDE_TREND.sheetId)
+    const hasTrend=workbook.charts?.some(item=>item.chartId==='cash-flow-guide-trend')
+    if(action==='cash-flow-guide-analysis'&&!hasAnalysis){
+     return store.apply(key,randomUUID(),{revision,operations:cashFlowGuideAnalysisOperations(workbook,locale)})
+    }
+    if(action==='cash-flow-guide-trend'&&hasAnalysis&&!hasTrend){
+     return store.apply(key,randomUUID(),{revision,operations:[cashFlowGuideChartOperation(locale)]})
+    }
+    if(action==='component-cash-flow-guide'&&hasTrend&&!workbook.components?.length){
+     const component=cashFlowGuideComponent(workbook,locale)
+     return store.save(key,revision,{...workbook,components:[component]})
+    }
+    throw Error('演示步骤或工作簿已变化。')
+   }
    case 'refresh-calculations':return store.refreshCalculations(key,input.revision,input.workbook as Workbook)
    case 'save':{
     const workbook=input.workbook as Workbook

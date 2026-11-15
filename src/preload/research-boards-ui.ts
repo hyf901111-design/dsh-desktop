@@ -4,7 +4,7 @@ import { mergeSharedCanvas } from './shared-board-canvas-merge'
 import { sharedCanvasContent, withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 export { useResearchBoardCanvasHeader } from './research-board-header-menu'
 import {waitForMemorySource} from './memory/source'
-import {installHomeGuideEntryNative} from './home-guide-entry-native'
+import {homeGuideMode,installHomeGuideEntryNative,type HomeGuideEntryKind} from './home-guide-entry-native'
 import {homeGuideSessionTitle,isHomeGuideSessionTitle} from '../../packages/dsh-research-task-runtime/home-guide-session-titles.js'
 import { researchBoardRunning } from './research-board-activity'
 import { orderBoardConversationGroups } from './research-board-conversation-order'
@@ -916,7 +916,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
   }
-  type GuideKind = 'board' | 'note' | 'ppt' | 'report' | 'workbench'
+  type GuideKind = HomeGuideEntryKind
   type GuideSession = { kind: GuideKind; sessionId: string; cwd: string; title: string; createdAt: number }
   const guidePrefix = 'sherlock.home-guide.sessions.v1:'
   let guideIdentityRevision = 0
@@ -942,7 +942,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (raw) {
       const value = JSON.parse(raw)
       if (value?.version !== 1 || value.scope !== owner || !Array.isArray(value.entries)) throw Error('示例记录暂时无法读取。')
-      entries = value.entries.filter((entry: GuideSession) => entry && ['board', 'note', 'ppt', 'report', 'workbench'].includes(entry.kind) && typeof entry.sessionId === 'string' && typeof entry.cwd === 'string' && typeof entry.title === 'string' && Number.isFinite(entry.createdAt))
+      entries = value.entries.filter((entry: GuideSession) => entry && ['board', 'note', 'ppt', 'report', 'workbench', 'spreadsheet'].includes(entry.kind) && typeof entry.sessionId === 'string' && typeof entry.cwd === 'string' && typeof entry.title === 'string' && Number.isFinite(entry.createdAt))
     }
     guideRecords.set(owner, entries)
     return entries
@@ -1090,7 +1090,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         const binding = deps.sessions.binding(sessionId)
         if (!binding?.session?.rename) throw Error('示例会话尚未就绪，请稍后重试。')
         const original=binding.session.projections?.faceOf?.('title')?.getSnapshot?.()??deps.sessions.list.getSnapshot().byId[sessionId]?.title??''
-        const placeholder=doc.documentElement.dataset.odysseyLocale==='en'?{board:'New Research',workbench:'New Research',note:'New Note',ppt:'New Session',report:'New Session'}[kind]:{board:'新研究',workbench:'新研究',note:'新笔记',ppt:'新会话',report:'新会话'}[kind]
+        const placeholder=doc.documentElement.dataset.odysseyLocale==='en'?{board:'New Research',workbench:'New Research',note:'New Note',ppt:'New Session',report:'New Session',spreadsheet:'New Spreadsheet'}[kind]:{board:'新研究',workbench:'新研究',note:'新笔记',ppt:'新会话',report:'新会话',spreadsheet:'新表格'}[kind]
         // Native summaries otherwise fall back to the reserved directory name
         // as soon as composing begins. Keep the normal empty-session label.
         if(!original.trim()){
@@ -1132,7 +1132,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const stale = value.ok === true && record && (record.owner !== guideOwner() || record.generation !== state.account.generation || record.revision !== guideIdentityRevision)
       win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-reply', { detail: { requestId, ...(stale ? { ok: false, message: '账号或页面已变化，请重新打开示例。' } : value) } }))
     }
-    if (!['board','note','ppt','report','workbench'].includes(kind) || !['prepare','open','activate-title'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command !== 'prepare' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
+    if (!['board','note','ppt','report','workbench','spreadsheet'].includes(kind) || !['prepare','open','activate-title'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command !== 'prepare' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
     const fingerprint = JSON.stringify([kind, command, request.replay === true, request.sessionId])
     const prior = guideRequests.get(requestId)
     if (prior) { if (prior.fingerprint !== fingerprint) reply({ ok: false, message: '示例请求标识已使用。' }); else void prior.promise.then(value => reply(value, prior)); return }
@@ -1170,6 +1170,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       }
       navigation++
       valid()
+      if (kind === 'spreadsheet') deps.chatStore?.create(entry.sessionId).actions.setView('spreadsheet')
       deps.sessions.open(entry.sessionId)
       if (kind === 'board' || kind === 'workbench') selectBoardSession(entry.sessionId)
       return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: false }
@@ -1190,7 +1191,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     open:(entry,kind,check)=>{
       check();const registered=getHomeGuideSession(entry.sessionId)
       if(!registered||registered.kind!==kind||registered.cwd!==entry.cwd||!deps.chatStore)throw Error('原生示例入口已变化。')
-      deps.chatStore.create(entry.sessionId).actions.setView(kind==='note'?'notes':kind==='board'||kind==='workbench'?'research':'chat');check()
+      deps.chatStore.create(entry.sessionId).actions.setView(homeGuideMode(kind));check()
       navigation++;deps.sessions.open(entry.sessionId)
       if(kind==='board'||kind==='workbench')selectBoardSession(entry.sessionId)
     }
