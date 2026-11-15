@@ -146,7 +146,7 @@ function studyText(value: unknown): string {
 }
 // Only user-visible native fields enter evidence. Prompts, refresh errors,
 // arbitrary object keys and web container URLs are never treated as page text.
-function containerText(value: unknown): { text: string; truncated: boolean } {
+export function researchContainerText(value: unknown): { text: string; truncated: boolean } {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { text: '', truncated: false }
   let truncated = false
   const boundedText = (value: unknown, limit = 120_000): string => {
@@ -349,7 +349,7 @@ export class ResearchContextBridge {
         }
         if (source.kind === 'generated-container') {
           source.status = text(node.generationStatus, 128) || 'unavailable'
-          const container = containerText(node.containerSpec)
+          const container = researchContainerText(node.containerSpec)
           source.text = container.text
           if (container.truncated) source.truncated = true
           if (source.text && (node.refreshError || source.status !== 'completed')) {

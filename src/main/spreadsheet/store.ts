@@ -25,11 +25,19 @@ export class SpreadsheetStore {
   constructor(private root: string) {}
   private directory(key: WorkbookKey) { return join(this.root, 'spreadsheet-v1', hash([key.owner,key.sessionId])) }
   hasContent(key: WorkbookKey): boolean {
+    return this.workbookWithContent(key) !== null
+  }
+  workbookWithContent(key: WorkbookKey): Workbook | null {
     const active = this.read(key)
-    return workbookHasContent(active.workbook) || (active.recent ?? []).some(id => {
-      if (id === active.workbook?.id) return false
-      try { return workbookHasContent(this.recentBook(key, id)) } catch { return false }
-    })
+    if (workbookHasContent(active.workbook)) return active.workbook
+    for (const id of active.recent ?? []) {
+      if (id === active.workbook?.id) continue
+      try {
+        const workbook = this.recentBook(key, id)
+        if (workbookHasContent(workbook)) return workbook
+      } catch { /* Skip an unavailable historical workbook. */ }
+    }
+    return null
   }
   private read(key: WorkbookKey): Stored {
     const file=join(this.directory(key),'active.json')

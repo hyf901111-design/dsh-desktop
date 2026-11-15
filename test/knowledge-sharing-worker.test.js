@@ -15,6 +15,10 @@ import { ClientCapabilityService } from '../src/main/state/client-capability-ser
 import { KnowledgeViewBridge } from '../src/main/knowledge/view-bridge'
 import { resolveKnowledgeReference } from '../src/main/knowledge/references'
 import { CollaborationClient, collaborationRequestSpec } from '../src/main/collaboration-client'
+import { createKnowledgeSessionSnapshot, knowledgeSessionShareId } from '../src/main/knowledge/session-share'
+import { blankWorkbook } from '../src/shared/spreadsheet/workbook'
+
+vi.mock('electron', () => ({ BrowserWindow: vi.fn(), dialog: {} }))
 
 let worker
 const tokens = ['a'.repeat(64), 'b'.repeat(64)]
@@ -48,6 +52,68 @@ afterAll(async () => { await worker?.dispose() })
 
 const request = (path = '', account, options = {}) => worker.dispatchFetch('https://knowledge.test/v1/collaboration/knowledge' + path, {
   ...options, headers: { ...options.headers, ...account !== undefined && { authorization: 'Bearer ' + tokens[account] } }
+})
+
+it('shares all three session snapshots with a recipient that can read but cannot alter or revoke them', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ework-session-shares-'))
+  const clients = tokens.map((_token, account) => new CollaborationClient({
+    authenticated: true, generation: 1, subscribeSessionChanged: () => () => {},
+    async collaborationRequest(endpoint, signal) {
+      const spec = collaborationRequestSpec(endpoint)
+      const response = await request(spec.path.slice('/v1/collaboration/knowledge'.length), account,
+        { method: spec.method, headers: spec.headers, body: spec.body, signal })
+      if (!response.ok) throw Object.assign(Error('共享请求失败'), { status: response.status })
+      return spec.raw ? response : response.json()
+    }
+  }))
+  const [publisher, recipient] = clients.map(client => new KnowledgeSharing({ client, authenticated: () => true }))
+  const owner = new KnowledgeStore(join(root, 'owner'), () => ({ owner: 'a0', generation: 1 }), () => {})
+  const reader = new KnowledgeStore(join(root, 'reader'), () => ({ owner: 'a1', generation: 1 }), () => {})
+  const preview = new KnowledgeFilePreview(join(root, 'preview'), () => ({ owner: 'a1', generation: 1 }), reader, recipient)
+  const content = new KnowledgeContent(() => ({}))
+  const workbook = blankWorkbook('shared-book')
+  workbook.sheets[workbook.sheetOrder[0]].cellData[0] = { 0: { v: '可读库存数据' } }
+  const items = [
+    ['研究会话', '研究组件内容', { mode: 'research', canvas: { files: [], artifacts: [
+      { title: '交付摘要', containerSpec: { type: 'markdown', content: '研究组件内容' } }
+    ] }, readFile: async () => undefined }],
+    ['笔记会话', '笔记正文', { mode: 'notes', note: { title: '笔记会话', yjs: '',
+      blocks: [{ id: 'p', type: 'paragraph', content: [{ type: 'text', text: '笔记正文' }] }] } }],
+    ['表格会话', '可读库存数据', { mode: 'spreadsheet', workbook }]
+  ]
+  const published = []
+  try {
+    for (const [title, _body, snapshot] of items) {
+      const id = knowledgeSessionShareId(snapshot.mode, 'shared-fixture')
+      const file = await createKnowledgeSessionSnapshot(snapshot, title)
+      const catalog = await owner.updateSessionShare(snapshot.mode, (_previous, current) =>
+        publisher.publishBytes(id, file.name, 'generated', file.data, '行业研究', current))
+      published.push(catalog.sessionShares[snapshot.mode].id)
+    }
+    await recipient.received(true)
+    for (const [index, [_title, body, snapshot]] of items.entries()) {
+      const id = published[index]
+      const { document, data } = await recipient.read(id)
+      expect(document.received).toEqual({ category: '行业研究', owner: 'user0' })
+      expect((await content.read(document, data)).text).toContain(body)
+      expect((await request('/' + id, undefined)).status).toBe(401)
+      await expect(recipient.rename(id, '越权修改.md')).rejects.toMatchObject({ status: 404 })
+      await expect(recipient.revoke(id)).rejects.toMatchObject({ status: 404 })
+      const asset = await preview.open(id, 'recipient')
+      expect(asset.kind).toBe(snapshot.mode === 'spreadsheet' ? 'media' : 'text')
+      expect(asset.revision).toBeUndefined()
+      expect(asset.editablePresentation).not.toBe(true)
+      await expect(reader.saveMarkdown(id, 'unavailable', '越权修改')).rejects.toThrow('不存在')
+      const catalog = await owner.updateSessionShare(snapshot.mode, async previous => { await publisher.revoke(previous.id) })
+      expect(catalog.sessionShares[snapshot.mode]).toBeUndefined()
+      await expect(recipient.read(id)).rejects.toThrow('已取消共享')
+    }
+  } finally {
+    await Promise.all(published.map(id => publisher.revoke(id)))
+    await preview.reset()
+    clients.forEach(client => client.stop())
+    await rm(root, { recursive: true, force: true })
+  }
 })
 
 it('returns the acknowledged renderer results and cancels a view request when the session unbinds', async () => {

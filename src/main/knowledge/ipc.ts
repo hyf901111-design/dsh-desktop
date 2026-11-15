@@ -10,7 +10,8 @@ import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
-import { knowledgeSessionLabels, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
+import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
+import { knowledgeSessionShareId } from './session-share'
 
 function id(value: unknown): string {
   if (typeof value !== 'string' || !/^[a-f0-9-]{36}$/u.test(value)) throw Error('知识库项目标识无效。')
@@ -35,7 +36,7 @@ async function copyKnowledgeFile(source: string, target: string, check: () => vo
 }
 
 export function installKnowledgeIpc({
-  store, window, identity, generatedWorkspace, sharing, content, filePreview, sessionEvidence
+  store, window, identity, generatedWorkspace, sharing, content, filePreview, sessionEvidence, sessionSnapshot
 }: {
   store: KnowledgeStore
   sharing: KnowledgeSharing
@@ -45,6 +46,7 @@ export function installKnowledgeIpc({
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
   sessionEvidence(owner: string, id: string, mode: KnowledgeSessionMode): KnowledgeSessionEvidence
+  sessionSnapshot(owner: string, id: string, mode: KnowledgeSessionMode, check: () => void): Promise<{ name: string; data: Buffer }>
 }) {
   const transfers = new Map<string, { controller: AbortController; sender: WebContents }>()
   const observedSenders = new WeakSet<WebContents>()
@@ -93,6 +95,25 @@ export function installKnowledgeIpc({
         const category = args.category
         await store.setSharing(documentId, (document, path, current) => sharing.publish(document, path, category, current))
         return store.snapshot()
+      }
+      case 'share-session':
+      case 'unshare-session': {
+        if (typeof args.id !== 'string' || !args.id || args.id.length > 512 || /[\x00-\x1f]/u.test(args.id) ||
+            typeof args.mode !== 'string' || !Object.hasOwn(knowledgeSessionLabels, args.mode)) throw Error('会话标识无效。')
+        const sessionId = args.id
+        const mode = args.mode as KnowledgeSessionMode
+        const category = args.category
+        return store.updateSessionShare(knowledgeSessionShareKey(mode, sessionId), async (previous, current) => {
+          check()
+          if (method === 'unshare-session') {
+            if (previous) await sharing.revoke(previous.id)
+            return undefined
+          }
+          if (owner.owner === 'local') throw Error('请登录后共享会话。')
+          if (typeof category !== 'string') throw Error('请选择共享分类。')
+          const snapshot = await sessionSnapshot(owner.owner, sessionId, mode, current)
+          return sharing.publishBytes(knowledgeSessionShareId(mode, sessionId), snapshot.name, 'generated', snapshot.data, category, current)
+        })
       }
       case 'unshare': {
         await store.setSharing(id(args.id), async document => {

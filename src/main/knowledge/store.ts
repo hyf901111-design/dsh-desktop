@@ -4,6 +4,7 @@ import { link, mkdir, open, readFile, realpath, rename, rm, stat } from 'node:fs
 import { basename, extname, isAbsolute, join } from 'node:path'
 import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportProgress, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
 import { atomicWrite } from '../integrations/store'
+import type { KnowledgeSessionShare } from '../../shared/knowledge-sessions'
 import { copyResearchFile } from '../state/research-owned-files'
 
 interface StoredDocument extends KnowledgeDocument {
@@ -19,6 +20,7 @@ interface LibraryState {
   folders: KnowledgeFolder[]
   excludedOrigins: string[]
   recentSearches?: string[]
+  sessionShares?: Record<string, KnowledgeSessionShare>
 }
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u
@@ -121,8 +123,22 @@ export class KnowledgeStore {
   snapshot(): Promise<KnowledgeSnapshot> {
     return this.run(async state => ({
       documents: state.documents.map(publicDocument),
-      folders: state.folders.map(folder => ({ ...folder }))
+      folders: state.folders.map(folder => ({ ...folder })),
+      ...(state.sessionShares ? { sessionShares: { ...state.sessionShares } } : {})
     }))
+  }
+
+  async updateSessionShare(key: string, change: (
+    previous: KnowledgeSessionShare | undefined, current: () => void
+  ) => Promise<KnowledgeSessionShare | undefined>) {
+    await this.run(async (state, directory, current) => {
+      const shares = { ...state.sessionShares }
+      const share = await change(shares[key], current)
+      if (share) shares[key] = share
+      else delete shares[key]
+      await this.persist(state, { ...state, sessionShares: shares }, directory, current)
+    })
+    return this.snapshot()
   }
 
   async recentSearches(): Promise<string[]> {

@@ -169,6 +169,14 @@ beforeAll(async () => {
             window.data.documents.find(row => row.id === args.id).folderId = args.folderId
             return structuredClone(window.data)
           }
+          if (method === 'share-session' || method === 'unshare-session') {
+            const key = args.mode + ':' + args.id
+            window.sessionShareAction = { method, ...args }
+            window.data.sessionShares ??= {}
+            if (method === 'share-session') window.data.sessionShares[key] = { id: 'a'.repeat(32), category: args.category }
+            else delete window.data.sessionShares[key]
+            return structuredClone(window.data)
+          }
           if (method === 'recent-searches') return [...recentSearches]
           if (method === 'remember-search') {
             const index = recentSearches.indexOf(args.query)
@@ -250,9 +258,10 @@ it('lists real session modes under all files and opens each one in its native vi
     ]) {
       await group.getByRole('button', { name: label }).click()
       const directory = library.getByRole('main', { name: label })
-      const row = directory.getByRole('button', { name: new RegExp(title) })
+      const opens = directory.locator('.knowledge-session-open')
+      const row = opens.filter({ hasText: title })
       await row.waitFor()
-      expect(await directory.getByRole('button').count()).toBe(view === 'research' ? 2 : 1)
+      expect(await opens.count()).toBe(view === 'research' ? 2 : 1)
       expect(await directory.getByRole('button', { name: /空白/ }).count()).toBe(0)
       const tile = row.locator('.knowledge-file-icon')
       expect(await tile.evaluate(el => el.getBoundingClientRect().width)).toBe(36)
@@ -260,7 +269,7 @@ it('lists real session modes under all files and opens each one in its native vi
       await row.hover()
       await expect.poll(() => tile.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(color)
       if (view === 'research') {
-        const boxes = await directory.getByRole('button').evaluateAll(items => items.map(el => el.getBoundingClientRect().toJSON()))
+        const boxes = await opens.evaluateAll(items => items.map(el => el.getBoundingClientRect().toJSON()))
         expect(boxes[1].top - boxes[0].bottom).toBe(4)
       }
       const search = directory.getByRole('searchbox', { name: '搜索会话' })
@@ -274,6 +283,44 @@ it('lists real session modes under all files and opens each one in its native vi
     }
     await group.getByRole('button', { name: '文件资料' }).click()
     await library.getByRole('button', { name: '添加文件', exact: true }).waitFor()
+  } finally { await page.close() }
+})
+
+it('publishes and manages read-only sharing from each mode with inset dialog controls', async () => {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<body data-test-session-directory><div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div></body>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    for (const [label, title, id, mode] of [
+      ['研究模式', '消费行业研究看板', 'board', 'research'],
+      ['笔记模式', '季度会议笔记', 'note', 'notes'],
+      ['表格模式', '渠道库存表格', 'sheet', 'spreadsheet']
+    ]) {
+      await library.getByRole('button', { name: label }).click()
+      await library.getByRole('button', { name: `共享会话「${title}」` }).click()
+      const dialog = library.getByRole('dialog', { name: '共享只读会话' })
+      expect(await dialog.getByText(/其他已登录用户可在「他人共享」查看/).isVisible()).toBe(true)
+      const category = dialog.getByRole('combobox', { name: '共享分类' })
+      const inset = await category.evaluate(element => {
+        const icon = element.nextElementSibling
+        return element.getBoundingClientRect().right - icon.getBoundingClientRect().right
+      })
+      expect(inset).toBe(12)
+      await category.selectOption({ label: '写作模板' })
+      await dialog.getByRole('button', { name: '发布', exact: true }).click()
+      const manage = library.getByRole('button', { name: `管理共享「${title}」` })
+      await manage.waitFor()
+      expect(await page.evaluate(() => window.sessionShareAction)).toMatchObject({ method: 'share-session', id, mode, category: '写作模板' })
+      await manage.click()
+      expect(await category.inputValue()).toBe('写作模板')
+      expect(await dialog.getByRole('button', { name: '重新发布' }).isVisible()).toBe(true)
+      await dialog.getByRole('button', { name: '取消共享' }).click()
+      await library.getByRole('button', { name: `共享会话「${title}」` }).waitFor()
+      expect(await page.evaluate(() => window.sessionShareAction)).toMatchObject({ method: 'unshare-session', id, mode })
+    }
   } finally { await page.close() }
 })
 
