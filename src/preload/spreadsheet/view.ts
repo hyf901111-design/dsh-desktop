@@ -9,6 +9,7 @@ import {browserIcons} from '../browser/icons'
 import {workbenchStylePalette} from '../../../packages/dsh-research-task-runtime/workbench-style.js'
 import {serializeWorkbenchContent,workbenchImageExportRequest} from '../../../packages/dsh-research-task-runtime/workbench-export.js'
 import type {ResearchCanvasExportRequest,ResearchCanvasExportResult} from '../../main/state/research-canvas-export'
+import {CASH_FLOW_GUIDE_ADJUSTMENTS,CASH_FLOW_GUIDE_ANALYSIS,CASH_FLOW_GUIDE_SOURCE,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
 import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
@@ -210,6 +211,44 @@ class SpreadsheetView{
  private selected(){return this.current()?.getActiveRange()??this.current()?.getRange('A1')}
  private nativeCell(){return this.current()?.getRange(this.active)}
  private request(method:string,fields:Record<string,unknown>={}){return this.bridge.request(method,{sessionId:this.sessionId,owner:this.owner,generation:this.generation,...fields})}
+ get cashFlowGuideReady(){return this.ready&&!this.disposed&&this.host.isConnected&&this.editable}
+ async applyCashFlowGuide(step:'source'|'analysis'|'trend',check:()=>void){
+  check()
+  if(!this.cashFlowGuideReady||this.busy||this.dirty||this.formulaDirty)throw Error('表格正在编辑，演示已停止。')
+  const target=step==='source'?CASH_FLOW_GUIDE_SOURCE:step==='analysis'?CASH_FLOW_GUIDE_ANALYSIS:CASH_FLOW_GUIDE_TREND
+  const row=await this.request('cash-flow-guide-'+step,{revision:this.record.revision}) as WorkbookRecord
+  check()
+  await this.install(row,target)
+  check()
+  if(!this.engine||this.current()?.getSheetId()!==target.sheetId)throw Error('示例工作表尚未就绪。')
+  if(step==='trend'){
+   const chart=row.workbook?.charts?.find(item=>item.chartId==='cash-flow-guide-trend')
+   if(!chart)throw Error('趋势图尚未保存。')
+   this.jump('A5:C5')
+   return this.chartCards.get(chart.chartId)?.element
+  }
+  if(step==='source')this.jump(target.range)
+  else this.jump('F14:H16')
+  return this.chrome.querySelector<HTMLElement>('[data-field=formula]')??undefined
+ }
+ openCashFlowGuideComponent(){
+  if(this.current()?.getSheetId()!==CASH_FLOW_GUIDE_ADJUSTMENTS.sheetId)throw Error('现金流调整项所在工作表已切换。')
+  this.jump(CASH_FLOW_GUIDE_ADJUSTMENTS.range)
+  this.openSmart()
+  const input=this.modal.querySelector<HTMLTextAreaElement>('[data-field=component-prompt]')
+  const submit=this.modal.querySelector<HTMLButtonElement>('[data-action=component-generate]')
+  if(!input||!submit)throw Error('智能组件表单尚未就绪。')
+  return {input,submit}
+ }
+ async insertCashFlowGuideComponent(wait:()=>Promise<void>){
+  await this.addComponent('component-cash-flow-guide','',wait)
+  if(!this.record.workbook?.components?.some(item=>item.componentId==='cash-flow-guide-bridge'))throw Error('现金流拆解台尚未保存。')
+  this.jump('A5:C5')
+  return this.componentCards.get('cash-flow-guide-bridge')?.element
+ }
+ closeCashFlowGuideComponent(){
+  if(this.modal.dataset.docked==='smart')this.closeDialog()
+ }
  private async load(){
   this.say('')
   for(let i=0;i<12&&!this.disposed;i++){
@@ -596,7 +635,7 @@ class SpreadsheetView{
   if(this.busy||(!this.editable&&action!=='export')||this.sharedReadOnly)return
   this.busy=true;this.say('')
   try{
-   await this.flush(true,action==='component-generate')
+   await this.flush(true,action==='component-generate'||action==='component-cash-flow-guide')
    if(this.disposed||stillOpen&&!stillOpen())return
    const row=await this.request(action,{revision:this.record.revision,...fields})
    if(this.disposed||!row)return
@@ -1759,7 +1798,7 @@ class SpreadsheetView{
  }
  private endComponentGesture=(event:PointerEvent)=>this.finishComponentGesture(event,true)
  private cancelComponentGesture=(event:PointerEvent)=>this.finishComponentGesture(event,false)
- private async addComponent(action:string,value:string){
+ private async addComponent(action:string,value:string,prepareDemo?:()=>Promise<void>){
   const target=this.componentTarget,dialog=this.modal.firstElementChild
   if(!target||!dialog||!this.editable||this.busy)return
   const library=action==='component-add'
@@ -1779,12 +1818,14 @@ class SpreadsheetView{
   const known=new Set(this.record.workbook?.components?.map(item=>item.componentId))
   if(library){this.modal.querySelectorAll<HTMLButtonElement>('[data-action=component-add]').forEach(button=>button.disabled=true);this.dialogFeedback('正在插入组件…')}
   try{
+   if(prepareDemo)await prepareDemo()
    const saved=await this.run(action,{...target,...library?{libraryId:value}:{requestId,prompt}},'组件已插入',()=>this.modal.firstElementChild===dialog)
    if(!saved||this.modal.firstElementChild!==dialog)return
    const inserted=this.record.workbook?.components?.find(item=>!known.has(item.componentId))
    this.closeDialog()
    if(inserted)this.selectDockedComponent(inserted.componentId)
   }catch(error){
+   if(prepareDemo)throw error
    if(this.modal.firstElementChild!==dialog)return
    const job=this.componentJob,message=errorMessage(error)
    if(job){job.stage=undefined;job.detail=undefined;Object.assign(job.node,{generationStatus:message==='已停止生成'?'cancelled':'failed',generationError:message,generationCompletedAt:Date.now()});this.publishGeneration()}
@@ -2259,6 +2300,7 @@ export function mountSpreadsheet(doc:Document,bridge:Bridge){
   if(doc.body.dataset.eworkSpreadsheetSession!==id||!view)throw Error('当前表格已切换。')
   return view.admit(prompt,references,useWorkbook)
  },
+  cashFlowGuideView:(id:string)=>doc.body.dataset.eworkSpreadsheetSession===id&&view?.cashFlowGuideReady?view:undefined,
   flush:(id:string)=>doc.body.dataset.eworkSpreadsheetSession===id&&view?view.flush():Promise.resolve(),
   dispose:()=>{disposed=true;delete doc.body.dataset.eworkSpreadsheetMode;observer.disconnect();off.forEach(fn=>fn());view?.dispose();style.remove()}}
 }

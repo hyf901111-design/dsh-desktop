@@ -663,3 +663,17 @@ html[data-odyssey-locale="en"] [data-odyssey-home-operations-layout="fluid"] .od
 .odyssey-operations-toggle[data-odyssey-home-attention]::before{animation:odyssey-home-toggle-attention 1333.333333ms ease-in-out 3;}
 @keyframes odyssey-home-toggle-attention{0%,100%{opacity:0;scale:.94}50%{opacity:1;scale:1}}
 @media(prefers-reduced-motion:reduce){.odyssey-operations-toggle[data-odyssey-home-attention]::before{animation:none;opacity:0;}}
+
+.odyssey-operations-case-layer[data-case="5"] {
+  background-image: linear-gradient(115deg, var(--odyssey-operations-gradient-mid, transparent), transparent 78%);
+}
+.odyssey-operations-case-layer[data-case="5"] .odyssey-operations-gradient-field::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 42%;
+  background-image:
+    linear-gradient(rgb(118 133 160 / .15) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(118 133 160 / .15) 1px, transparent 1px);
+  background-size: 20px 20px;
+  mask-image: linear-gradient(110deg, transparent 10%, #000);
+}

@@ -1,4 +1,4 @@
-import {Window} from 'happy-dom'
+import {Window,type HTMLElement,type HTMLInputElement} from 'happy-dom'
 import {describe,expect,it} from 'vitest'
 import {applyOperations,inspectWorkbook} from '../src/shared/spreadsheet/workbook'
 import {
@@ -44,9 +44,9 @@ describe('cash-flow spreadsheet tutorial',()=>{
       expect(select('[data-ratio]').textContent).toBe('64%')
       select('[data-adjustment="receivables"]').click()
       expect(select('[data-source-detail]').textContent).toContain('经销渠道')
-      const slider=select('input[type=range]') as unknown as HTMLInputElement
+      const slider=select('input[type=range]') as HTMLInputElement
       slider.value='3000'
-      slider.dispatchEvent(new document.Event('input') as unknown as Event)
+      slider.dispatchEvent(new document.Event('input'))
       expect(select('[data-flow]').textContent).toBe('1.90')
       expect(select('[data-actual-flow]').textContent).toContain('1.60')
       expect(select('[data-ratio]').textContent).toBe('76%')
