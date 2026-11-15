@@ -331,7 +331,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     if(state.phase==='completed'){hideCue();void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
     else if(state.holding){status.textContent=scenes[state.index]?.[2]||''}
     else if(state.index===0)status.textContent=definition.intro
-   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。');if(kind==='note'&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===run.id)void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}})
+   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();if(kind==='spreadsheet')void adapter.flush?.().catch(()=>{});fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。');if(kind==='note'&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===run.id)void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}})
    run.timeline.play();visibility()
   }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);fault(error instanceof Error?error.message:'示例尚未就绪，请重试。')}
  }

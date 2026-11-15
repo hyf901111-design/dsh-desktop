@@ -63,7 +63,17 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     try { homeGuideTargetPoint(document, element); return true } catch { return false }
   }
   const point = async (target: HTMLElement, action: 'move' | 'click') => {
-    check()
+    // The active sidebar can still be moving after its aria-expanded state changes.
+    // Wait for two consecutive positions before asking the pointer to travel.
+    let previous: ReturnType<typeof homeGuideTargetPoint> | undefined
+    await waitFor(() => {
+      check()
+      if (!visible(target)) { previous = undefined; return }
+      const position = homeGuideTargetPoint(document, target)
+      const settled = previous && Math.hypot(position.x - previous.x, position.y - previous.y) < 1
+      previous = position
+      return settled ? target : undefined
+    }, '演示控件尚未稳定显示，请重试。')
     await options.point?.({ target, action })
     check()
   }
@@ -154,6 +164,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       if (step === 'component') {
         await setRight(false)
         const { input, submit } = check().openCashFlowGuideComponent()
+        input.scrollIntoView({ block: 'nearest', inline: 'nearest' })
         const prompt = localeText(
           '用选区做一个现金流拆解台。拆开净利润到经营现金流的差额，点击柱子查看构成，并用滑杆试算多回款后能否达到 75% 的现金转化率。',
           'Build a cash flow bridge from the selection. Show adjustment details on click, and let me test whether collecting more receivables reaches a 75% cash conversion target.'
