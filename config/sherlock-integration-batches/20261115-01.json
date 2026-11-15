@@ -9,143 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "工作区欢迎页、表格引用和知识库图片图标",
+        "featureName": "集成预览客户端启动修复",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "dae475e061743c2866afe861534a143847ff65ea",
-        "tipCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
+        "baseCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
+        "tipCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
         "commits": [
           {
-            "commit": "2664758b87859540cd31859578fc48a209e13eb8",
+            "commit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
             "parents": [
-              "dae475e061743c2866afe861534a143847ff65ea"
+              "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34"
             ],
-            "subject": "调整知识库页码反馈、计数对齐和新建研究图标"
-          },
-          {
-            "commit": "c00524cbcec0f7c98748fec7347b57e47aba94bf",
-            "parents": [
-              "2664758b87859540cd31859578fc48a209e13eb8"
-            ],
-            "subject": "提升知识库图片文件图标辨识度"
-          },
-          {
-            "commit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
-            "parents": [
-              "c00524cbcec0f7c98748fec7347b57e47aba94bf"
-            ],
-            "subject": "统一工作区对话欢迎页和表格参考范围"
+            "subject": "修复表格引用依赖导致的客户端打包启动错误"
           }
         ],
         "files": [
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/canvas-task-routing.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-tools.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/notes-activity.mjs"
+            "path": "packages/dsh-research-task-runtime/index.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/patch-figma-final-shell.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/scheduled/task-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/client-capability-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/icons.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/pagination.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/icons.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/client-tools.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-final-shell-patch.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/spreadsheet-service.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/workspace-mode-welcome.test.js"
+            "path": "test/conversation-components-policy.test.js"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "生成已验证的最新原生界面补丁。",
-            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
-            "completedAt": "2026-11-15T14:11:06.471Z",
-            "timeoutMs": 120000
-          },
           {
             "argv": [
               "npm",
@@ -153,9 +44,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
-            "completedAt": "2026-11-15T14:11:06.471Z",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
+            "completedAt": "2026-11-15T14:24:37.176Z",
             "timeoutMs": 120000
           },
           {
@@ -171,46 +62,24 @@
               "test/conversation-components-policy.test.js"
             ],
             "outcome": "passed",
-            "summary": "208 项表格引用、宿主请求和模型上下文聚焦测试通过。",
-            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
-            "completedAt": "2026-11-15T14:11:06.471Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "--maxWorkers=1",
-              "test/workspace-mode-welcome.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/figma-final-shell-patch.test.ts",
-              "-t",
-              "renders the shared welcome|keeps file icons readable|shows the current canvas count"
-            ],
-            "outcome": "passed",
-            "summary": "4 项欢迎页、引用控制及深浅色图标显示测试通过。",
-            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
-            "completedAt": "2026-11-15T14:11:06.471Z",
+            "summary": "209 项相关测试通过，覆盖模型请求保留表格参考范围。",
+            "verifiedCommit": "ad3da3c0dfd3c85a9c2db301f1f008bcbbff03bd",
+            "completedAt": "2026-11-15T14:24:37.176Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "浏览器聚焦验证通过。集成客户端实机验收待构建。"
+          "outcome": "not-applicable",
+          "summary": "界面来源未变，等待签名测试包实机启动。"
         },
         "acceptanceCriteria": [
-          "笔记与研究欢迎页各有三个快捷用例，点击后填写当前草稿。",
-          "表格整表参考可关闭，框选后优先显示选区引用，研究空看板显示参考按钮。",
-          "知识库图片文件使用灰色卡片上的紫色风景图标。"
+          "实际产品窗口能启动进入现有本地资料与会话。",
+          "表格模型请求仍然获取本轮参考范围。"
         ],
         "risks": [
-          "本轮使用本地测试流程，真实客户端交给用户验收。"
+          "此前签名包在进入窗口前加载出错，需要实机确认启动修复。"
         ],
-        "generatedAt": "2026-11-15T14:11:06.471Z"
+        "generatedAt": "2026-11-15T14:24:37.176Z"
       }
     }
   ],
