@@ -1037,9 +1037,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     {tab === 'files' && menu && (target || targetFolder) && <div ref={actionMenu} className="knowledge-popup knowledge-action-menu"
       role="group" tabIndex={-1} aria-label="更多操作">
       {target && <>
-        <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>
-          {buttonIcon('folder', '移动到文件夹…')}
-        </button>
+        <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>移动到文件夹…</button>
         {target.sessionId && <button type="button" onClick={async () => {
           setMenu(undefined)
           if (!await openSession(target.sessionId!, 'chat')) setNotice({ text: '来源会话已不可用。', error: true })
@@ -1048,7 +1046,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <button type="button" onClick={() => void fileAction('reveal', target)}>在文件夹中显示</button>
         <hr />
         <button type="button" onClick={() => void edit({ type: 'save', id: target.id, value: !target.saved })}>
-          {target.saved ? '取消收藏' : '收藏至知识库'}
+          {target.saved ? '取消收藏' : '添加至收藏'}
         </button>
         <button type="button" onClick={() => void edit({ type: 'star', id: target.id, value: !target.starred })}>
           {target.starred ? '取消重点' : '设为重点'}
