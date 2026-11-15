@@ -8,6 +8,7 @@ import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
 import { researchHasContent } from './knowledge/session-content'
 import { createKnowledgeSessionSnapshot } from './knowledge/session-share'
+import type { SessionSummary } from '@deepseek-ai/dsh-host-apiproxy/api'
 import {routeBrowserUse} from './browser/route'
 import {registerBrowserApp} from './browser/service'
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
@@ -1519,12 +1520,13 @@ async function bootstrap(): Promise<void> {
       } catch { /* Unavailable or corrupt sessions stay out of the directory. */ }
       return { id, hasContent }
     },
-    sessionSnapshot: async (owner, id, mode, check) => {
-      const catalog = await taskRpc<{ items: { sessionId: string; title?: string; parentId?: string; removed?: boolean }[] }>('session.list', {})
+    sessionSnapshot: async (owner, id, mode, displayTitle, check) => {
+      const catalog = await taskRpc<{ items: SessionSummary[] }>('session.list', {})
       check()
-      const session = catalog.items.find(item => item.sessionId === id && !item.removed && !item.parentId)
+      const session = catalog.items.find(item => item.sessionId === id && !item.parentSessionId && item.origin !== 'subagent')
       if (!session || isScheduledSession(id)) throw Error('只能共享当前工作区的会话。')
-      const title = session.title ?? '未命名会话'
+      const projectedTitle = session.projections?.values.title
+      const title = typeof projectedTitle === 'string' && projectedTitle.trim() ? projectedTitle : displayTitle
       const shared = researchBoardsService?.isSharedSession(id)
       if (shared) {
         const binding = researchBoardsService?.getBinding(id)

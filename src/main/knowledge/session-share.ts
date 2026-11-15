@@ -25,7 +25,8 @@ export function knowledgeSessionShareId(mode: KnowledgeSessionMode, sessionId: s
 }
 
 export async function createKnowledgeSessionSnapshot(input: Snapshot, sessionTitle: string) {
-  const title = cleanTitle(sessionTitle) || '未命名会话'
+  const documentTitle = input.mode === 'notes' ? input.note.title : input.mode === 'spreadsheet' ? input.workbook?.name : undefined
+  const title = cleanTitle(sessionTitle) || cleanTitle(documentTitle) || '未命名会话'
   const name = `${title} · ${knowledgeSessionLabels[input.mode]}`
   if (input.mode === 'spreadsheet' && input.workbook && workbookHasContent(input.workbook)) {
     return { name: name + '.xlsx', data: await writeWorkbookFile(input.workbook, 'xlsx', input.workbook.sheetOrder[0]!) }
