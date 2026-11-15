@@ -421,7 +421,7 @@ it('opens workspace tabs only from the toggle and holds them anywhere in the bro
   const nav=page.getByRole('navigation',{name:'工作区视图'}),label=page.locator('.eb-app-label'),tab=page.getByRole('tab',{name:'新标签页'}),add=page.getByRole('button',{name:'新标签页',exact:true}),bar=page.locator('.eb-tabs'),toolbar=page.locator('.eb-toolbar')
   const hoverAndWait=async(locator,options)=>{await locator.hover(options);await page.waitForTimeout(230)}
   await hoverAndWait(label);expect(await nav.count()).toBe(0);await hoverAndWait(tab);expect(await nav.count()).toBe(0)
-  await toggle.hover();await nav.waitFor();expect(await nav.getByRole('button').allTextContents()).toEqual(['对话','研究','笔记','轨迹'])
+  await toggle.hover();await nav.waitFor();expect(await nav.getByRole('button').allTextContents()).toEqual(['对话','研究','笔记','表格'])
   expect(await toggle.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
   expect(await label.evaluate(el=>getComputedStyle(el).getPropertyValue('-webkit-app-region'))).toBe('drag')
   for(const control of [label,page.getByRole('button',{name:'切换到笔记',exact:true}),tab,add]){await hoverAndWait(control);expect(await nav.count()).toBe(1)}
