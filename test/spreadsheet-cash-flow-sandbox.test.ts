@@ -51,6 +51,24 @@ it('uses trusted keyboard input and clickable waterfall marks without journaling
  }finally{await page.close()}
 },15000)
 
+it('offers direct scenario comparison and a readable chart in a narrow sidebar',async()=>{
+ const {page,frame}=await preview(true)
+ try{
+  expect(await frame.locator('[data-scenario-delta]').count()).toBe(1)
+  expect(await frame.locator('[data-scenario-delta]').textContent()).toContain('2,750 万元')
+  const chart=await frame.locator('.bridge-graph').boundingBox()
+  expect(chart?.height).toBeGreaterThan(175)
+  await frame.getByRole('button',{name:'+3,000 万元',exact:true}).click()
+  await expect.poll(()=>frame.locator('[data-ratio]').textContent()).toBe('76%')
+  expect(await frame.locator('[data-scenario-delta]').textContent()).toContain('+0.30 亿元')
+  expect(await frame.locator('[data-scenario-delta]').textContent()).toContain('+12 个百分点')
+  expect(await frame.locator('[data-source-detail] > div').count()).toBe(2)
+  await frame.getByRole('button',{name:'实际值',exact:true}).click()
+  await expect.poll(()=>frame.locator('[data-ratio]').textContent()).toBe('64%')
+  expect(await frame.locator('[data-scenario-delta]').textContent()).toContain('2,750 万元')
+ }finally{await page.close()}
+},15000)
+
 it('keeps ordinary read-only spreadsheet previews from applying artifact handlers',async()=>{
  const {page,frame}=await preview(false)
  try{
