@@ -11,48 +11,21 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d",
-        "tipCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
+        "baseCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
+        "tipCommit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
         "commits": [
           {
-            "commit": "36a21db24e6bd90ecb45068830f28b2eb790a74d",
+            "commit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
             "parents": [
-              "aa4fc81e22ce3d34faab2d9dfd9a1d631d26b99d"
+              "b32b1071ee8955a87ac2f477df3386dc8a356412"
             ],
-            "subject": "修复：移除共享研究画布顶部重复留白"
-          },
-          {
-            "commit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
-            "parents": [
-              "36a21db24e6bd90ecb45068830f28b2eb790a74d"
-            ],
-            "subject": "修复：在项目会话中持久保留知识库副本"
+            "subject": "修复：防止研究副本被画布自动命名抢占"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/knowledge-sessions.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-session.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-grid-workbench.css"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
             "status": "M",
@@ -60,31 +33,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/session-directory.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/shared-session.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/knowledge-sessions.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/knowledge-session-copy-host.test.js"
+            "path": "src/main/state/research-canvas-storage.ts"
           },
           {
             "status": "M",
             "path": "test/knowledge-session-copy.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/knowledge-shared-research-layout.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-session.test.js"
           }
         ],
         "checks": [
@@ -96,46 +49,30 @@
             ],
             "outcome": "passed",
             "summary": "主进程与预加载类型检查通过。",
-            "verifiedCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
-            "completedAt": "2026-11-15T04:32:07.000Z",
+            "verifiedCommit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
+            "completedAt": "2026-11-15T04:39:27.000Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
               "--maxWorkers=1",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-content.test.ts",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-native-preview.test.ts",
-              "test/knowledge-session-content.test.ts",
-              "test/knowledge-session-copy-host.test.js",
               "test/knowledge-session-copy.test.ts",
-              "test/knowledge-shared-research-layout.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/command-popup-position-browser.test.js",
-              "test/command-popup-surface.test.js",
-              "test/slash-menu-expanded.test.js",
-              "test/spreadsheet-workbook.test.ts",
-              "test/spreadsheet-service.test.ts",
-              "test/memory-service.test.ts"
+              "test/knowledge-session-copy-host.test.js",
+              "test/research-canvas-storage.test.ts"
             ],
             "outcome": "passed",
-            "summary": "190 项知识库与相关入口回归通过，覆盖画布间距、持久化副本和共享、文件导入与原生预览、右侧对话与引用菜单。",
-            "verifiedCommit": "b32b1071ee8955a87ac2f477df3386dc8a356412",
-            "completedAt": "2026-11-15T04:32:07.000Z",
-            "timeoutMs": 150000
+            "summary": "24 项检查通过，确保副本名称在原生研究自动命名介入前已有持久化记录。",
+            "verifiedCommit": "b3fb5008636fe9d05ca2b3f6ffbc5fa7c1c97594",
+            "completedAt": "2026-11-15T04:39:27.000Z",
+            "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 渲染验证覆盖共享画布顶部间距、知识库主界面及双栏斜杠菜单。签名客户端切换和重启验证待本次合并后进行。"
+          "summary": "上一签名版确认看板画布与顶栏贴合、历史副本恢复，以及上传、移动和右侧原生预览。研究新副本的自动命名冲突修复后由此批签名版复验。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -203,51 +140,7 @@
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T04:32:07.000Z"
-      },
-      "merged": {
-        "mergeCommit": "48fb9039b86f9d61be829aa901c52780d9b8bfc2",
-        "verificationCommit": "48fb9039b86f9d61be829aa901c52780d9b8bfc2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "48fb9039b86f9d61be829aa901c52780d9b8bfc2",
-            "completedAt": "2026-11-15T04:32:48.433Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "48fb9039b86f9d61be829aa901c52780d9b8bfc2",
-            "completedAt": "2026-11-15T04:32:48.433Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T04:32:48.433Z"
+        "generatedAt": "2026-11-15T04:39:27.000Z"
       }
     }
   ],
