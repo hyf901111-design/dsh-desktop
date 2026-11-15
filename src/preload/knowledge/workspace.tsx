@@ -917,11 +917,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           {selection === 'received' && <div className="knowledge-shared-column">
             <span className="knowledge-shared-heading">分类</span>
             <nav className="knowledge-shared-folders" aria-label="共享分类">
-              {filter.sharedCategory && <button className="knowledge-shared-back" type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>
+              {filter.sharedCategory ? <button className="knowledge-shared-back" type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>
                 {buttonIcon('back', '返回上级目录')}
-              </button>}
-              <button type="button" aria-current={!filter.sharedCategory ? 'page' : undefined}
-                onClick={() => updateFilter({ sharedCategory: undefined })}>{buttonIcon('all', '全部文件')}</button>
+              </button> : <button type="button" aria-current="page"
+                onClick={() => updateFilter({ sharedCategory: undefined })}>{buttonIcon('all', '全部文件')}</button>}
               {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
                 title={category} onClick={() => updateFilter({ sharedCategory: category })}>
                 {buttonIcon('folder', category)}<KnowledgeIcon name="next" />
