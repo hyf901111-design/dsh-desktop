@@ -17,3 +17,20 @@
 - Import Word, TXT, Markdown, and PDF into Notes. Use Open With to send supported files directly to Notes or Spreadsheets for editing.
 - Chat, Research, Notes, and Spreadsheets keep separate unsent drafts and share sent messages. Use Shift and the arrow keys to extend and reference a spreadsheet selection.
 - Knowledge Base pagination stays on one row by hiding jump controls as the list narrows. New Workspace is the first item in the collapsed sidebar's More menu.
+
+## 发布验证
+
+- 构建提交 `d55fe7989dd1cd71259a70bf10b3796b4b25f8cc`。98 项发布相关检查、集成检查、类型检查与生产构建通过。已在正式签名客户端验证双侧栏窄布局、单行分页与前后翻页。
+- 标准 App 和 DMG 使用 Developer ID 签名。兼容桥保留 `io.dsh.desktop` 和旧签名，内嵌应用为 `com.evanarts.sherlock`。签名、两个 ZIP 的完整性和 DMG 校验通过。本次按要求跳过 Apple 公证。
+- Cloudflare 两条更新源均为 1.6.1，公开资源与稳定下载入口通过大小、缓存与单段 Range/206 核验。两份公开 blockmap 与本地逐字节一致。
+- 两条差分通道均从 1.6.0 重建 1.6.1 ZIP，SHA-512 与发布包一致。本次核验范围为差分传输与重建。
+
+| 通道 | 完整包（字节） | 传输（字节） | 复用（字节） | Range 请求 |
+| --- | ---: | ---: | ---: | ---: |
+| 标准 | 899,625,031 | 85,942,827 | 813,682,204 | 158 |
+| 旧签名兼容 | 976,912,369 | 129,830,486 | 847,081,883 | 271 |
+
+- Homebrew Cask 已同步到 1.6.1，Tap 提交 `6f3778916f26a9c72231c77de8da4d528a26e131`，DMG SHA-256 为 `57b872d1500d7852b56c2a1a6247b19ff52a16c923fe60849577d66d8f8a0873`。
+- 滚动清理移除 1.5.0 的 5 个旧版资源，两条 1.6.0 blockmap 保留且可访问。
+
+[下载 EWork Odyssey 1.6.1（macOS Apple Silicon）](https://updates.evanarts.com/releases/v1.6.1/sherlock-mac-arm64.dmg)
