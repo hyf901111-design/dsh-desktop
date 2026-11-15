@@ -6,7 +6,7 @@ import {createHomeOperationsDeck,HOME_OPERATIONS_COPY,type HomeOperationCard,typ
 import {createHomeThemeGallery} from './home-theme-gallery'
 import type {HomeThemeController} from './home-theme-controls'
 import type {ExploreResult} from './explore-search'
-import searchIcon from './explore-assets/search.svg?inline'
+import searchIcon from '../../build/brand/odyssey-b-search-20.svg?inline'
 import settingsIcon from './explore-assets/settings.svg?inline'
 import closeIcon from './explore-assets/close.svg?inline'
 import chevronIcon from './explore-assets/chevron.svg?inline'
