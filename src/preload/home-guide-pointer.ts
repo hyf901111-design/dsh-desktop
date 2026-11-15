@@ -8,10 +8,13 @@ export function homeGuideTargetPoint(document:Document,target:HTMLElement):Point
  const win=document.defaultView!
   if(!target?.isConnected||target.ownerDocument!==document||(target as HTMLButtonElement).disabled||target.getAttribute('aria-disabled')==='true'||target.closest('[hidden],[inert]')||['hidden','collapse'].includes(win.getComputedStyle(target).visibility))throw Error('操作目标不可用，请重新打开。')
   const box=target.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(win.innerWidth,box.right),bottom=Math.min(win.innerHeight,box.bottom)
+  const topLayer=target.closest(':popover-open,dialog:modal')
   for(let node:HTMLElement|null=target;node;node=node.parentElement){
    const style=win.getComputedStyle(node)
    if(node.hidden||node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')throw Error('操作目标不可用，请重新打开。')
    if(node!==target){const clip=node.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,clip.left);right=Math.min(right,clip.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom)}}
+   // Native popovers and modal dialogs paint outside the clipping of their DOM parents.
+   if(node===topLayer)break
   }
   if(right<=left||bottom<=top)throw Error('操作目标不可用，请先滚动到目标。')
   if(target.hasAttribute('data-bn-thread-id')){
