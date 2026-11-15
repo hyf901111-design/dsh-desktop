@@ -201,6 +201,50 @@
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
         "generatedAt": "2026-11-15T01:08:01.387291+00:00"
+      },
+      "merged": {
+        "mergeCommit": "30d93824636b0d999a0bcf4c79676ddd7bde1bf4",
+        "verificationCommit": "30d93824636b0d999a0bcf4c79676ddd7bde1bf4",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "30d93824636b0d999a0bcf4c79676ddd7bde1bf4",
+            "completedAt": "2026-11-15T01:08:23.458Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "npx",
+              "vitest",
+              "run",
+              "test/knowledge-composer.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "test/knowledge-sharing-worker.test.js",
+              "test/knowledge-library.test.ts",
+              "test/knowledge-content.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/browser-sidebar-entry-rendered.test.js",
+              "test/sidebar-new-note-browser.test.js",
+              "test/research-tab-icons.test.js",
+              "test/client-capability-header.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
+            "verifiedCommit": "30d93824636b0d999a0bcf4c79676ddd7bde1bf4",
+            "completedAt": "2026-11-15T01:08:23.458Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-15T01:08:23.458Z"
       }
     }
   ],
