@@ -44,7 +44,7 @@ it('renders the account quota, grows the hover arc, and clears it at sign-out',a
     await ui.uiExpect(page.getByRole('meter',{name:/5 小时/})).toHaveAttribute('aria-valuenow','29')
     await ui.uiExpect(page.getByRole('meter',{name:/周用量/})).toHaveAttribute('aria-valuenow','7')
     const panel=page.getByRole('tabpanel',{name:'管理用量'})
-    const plan=panel.getByText('Mini trial subscription',{exact:true})
+    const plan=panel.getByText('Mini Trial Subscription',{exact:true})
     await ui.uiExpect(plan).toBeVisible()
     await ui.uiExpect(panel.getByText('当前订阅等级',{exact:true})).toBeVisible()
     const firstMeter=await page.getByRole('meter',{name:/5 小时/}).boundingBox()

@@ -246,7 +246,7 @@ beforeAll(async () => {
           window.knowledgeActionResult = response
           window.rowsAtKnowledgeReply = Array.from(document.querySelectorAll('.knowledge-table tbody .knowledge-file-title')).map(element => element.textContent)
         },
-        path: () => ''
+        path: file => document.body.hasAttribute('data-test-native-drops') ? '/upload/' + file.name : ''
       })
       window.dispatchEvent(new Event('sherlock:knowledge-open'))
     ` },
@@ -277,7 +277,13 @@ it('lists real session modes under all files and opens each one in its native vi
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const group = library.getByRole('group', { name: '所有文件子分类' })
-    expect(await group.getByRole('button').allTextContents()).toEqual(['文件资料', '研究模式', '笔记模式', '表格模式'])
+    expect(await group.getByRole('button').locator('span').allTextContents()).toEqual(['文件资料', '研究模式', '笔记模式', '表格模式'])
+    await expect.poll(() => group.locator('small').allTextContents()).toEqual(['3', '2', '1', '1'])
+    const countColumn = await library.getByRole('button', { name: /^手动收藏 / }).locator('small').boundingBox()
+    for (const count of await group.locator('small').all()) {
+      const box = await count.boundingBox()
+      expect({ x: box.x, width: box.width }).toEqual({ x: countColumn.x, width: countColumn.width })
+    }
     for (const [label, title, id, view] of [
       ['研究模式', '消费行业研究看板', 'board', 'research'],
       ['笔记模式', '季度会议笔记', 'note', 'notes'],
@@ -306,6 +312,7 @@ it('lists real session modes under all files and opens each one in its native vi
       const search = directory.getByRole('searchbox', { name: '搜索会话' })
       await search.fill('找不到的项目')
       await directory.getByText('没有符合搜索条件的会话。').waitFor()
+      expect(await group.getByRole('button', { name: label }).locator('small').textContent()).toBe(view === 'research' ? '2' : '1')
       await search.fill('行业跟踪')
       await row.click()
       expect(await page.evaluate(() => window.openedSession)).toEqual({ id, view })
@@ -426,7 +433,7 @@ it('centers empty messages in session, file and shared list content areas', asyn
       expect(Math.abs(text.x + text.width / 2 - bounds.x - contentWidth / 2)).toBeLessThan(2)
     }
     for (const name of ['研究模式', '笔记模式', '表格模式']) {
-      await categories.getByRole('button', { name, exact: true }).click()
+      await categories.getByRole('button', { name: new RegExp(`^${name}( |$)`) }).click()
       const directory = library.getByRole('main', { name })
       await centered(directory.getByText('这里还没有会话。'), directory.locator('.knowledge-session-results'))
     }
@@ -998,7 +1005,7 @@ it.each(['no-preference', 'reduce'])('provides drag and preview feedback with %s
     })
     for (let attempt = 0; attempt < 2; attempt++) {
       await list.dispatchEvent('dragenter', { dataTransfer: transfer })
-      const overlay = library.getByText('拖放文件到知识库', { exact: true })
+      const overlay = library.getByRole('status').filter({ hasText: /^松开以上传文件$/ })
       await overlay.waitFor()
       expect(await overlay.evaluate(el => getComputedStyle(el).animationName)).toBe(animation)
       expect(await file.boundingBox()).toEqual(before)
@@ -1013,6 +1020,50 @@ it.each(['no-preference', 'reduce'])('provides drag and preview feedback with %s
     await preview.getByRole('button', { name: '关闭预览' }).click()
     await preview.waitFor({ state: 'detached' })
     expect(await file.boundingBox()).toEqual(before)
+  } finally { await page.close() }
+})
+
+it('drops one or several local files into the active knowledge folder with individual progress', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<body data-test-native-drops><div class="pI_x6G_centerCol" style="position:fixed;inset:10px 10px 10px 250px"></div>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const list = library.locator('.knowledge-file-list')
+    const heading = list.locator('thead')
+    const pager = list.getByRole('navigation', { name: '文件分页' })
+    const folder = library.getByRole('navigation', { name: '知识库分类' }).getByRole('button', { name: /^研究资料 / })
+    await folder.click()
+    for (const files of [['单文件.md'], ['批量资料一.txt', '批量资料二.pdf']]) {
+      const dataTransfer = await page.evaluateHandle(names => {
+        const data = new DataTransfer()
+        for (const name of names) data.items.add(new File(['正文'], name))
+        return data
+      }, files)
+      await list.dispatchEvent('dragenter', { dataTransfer })
+      const overlay = list.getByRole('status').filter({ hasText: /^松开以上传文件$/ })
+      await overlay.waitFor()
+      const [target, headerBox, pagerBox] = await Promise.all([overlay.boundingBox(), heading.boundingBox(), pager.boundingBox()])
+      expect(target.y - headerBox.y - headerBox.height).toBeCloseTo(8)
+      expect(target.y + target.height).toBeCloseTo(pagerBox.y)
+      expect(await overlay.evaluate(el => {
+        const image = el.querySelector('img'), style = getComputedStyle(el)
+        return { border: style.borderTopStyle, radius: style.borderRadius, image: [image.naturalWidth, image.naturalHeight] }
+      })).toEqual({ border: 'dashed', radius: '8px', image: [28, 28] })
+      await list.dispatchEvent('drop', { dataTransfer })
+      await overlay.waitFor({ state: 'detached' })
+      for (const name of files) {
+        const progress = list.getByRole('progressbar', { name: `${name}的上传进度`, exact: true })
+        await progress.waitFor()
+        await expect.poll(() => progress.getAttribute('value')).toBe('8192')
+      }
+      await page.evaluate(names => names.forEach(name => window.finishImport(name)), files)
+      for (const name of files) await list.getByRole('button', { name: new RegExp(name) }).first().waitFor()
+      expect(await page.evaluate(names => window.data.documents.filter(row => names.includes(row.name)).map(row => row.folderId), files))
+        .toEqual(files.map(() => 'f'))
+    }
   } finally { await page.close() }
 })
 
@@ -1414,6 +1465,10 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
     const previous = pager.getByRole('button', { name: '上一页' })
     const next = pager.getByRole('button', { name: '下一页' })
     const position = async () => (await pager.boundingBox()).y
+    const numberTiles = () => pager.getByRole('button', { name: /^第 \d+ 页$/ }).evaluateAll(nodes => nodes.map(node => {
+      const { width, height } = node.getBoundingClientRect()
+      return { width, height, background: getComputedStyle(node).backgroundColor }
+    }))
 
     for (const label of ['所有文件', '手动收藏', '重点文件', '我的共享', '研究资料', '他人共享', '行业研究',
       '研究模式', '笔记模式', '表格模式']) {
@@ -1425,6 +1480,14 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
       const rows = scroller.locator(session ? 'li' : 'tbody tr')
       await expect.poll(() => rows.count(), label).toBe(20)
       expect(await pager.getByRole('button', { name: '第 1 页', exact: true }).getAttribute('aria-current')).toBe('page')
+      if (label === '所有文件') {
+        const [current, other, last] = await numberTiles()
+        expect(current).toMatchObject({ width: 30, height: 30 })
+        expect(other).toMatchObject({ width: 30, height: 30 })
+        expect(other.background).not.toBe('rgba(0, 0, 0, 0)')
+        expect(last.background).toBe(other.background)
+        expect(current.background).not.toBe(other.background)
+      }
       expect(await previous.isDisabled()).toBe(true)
       const firstPage = await rows.first().innerText()
       const anchor = await position()
@@ -1542,7 +1605,7 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     await page.goto('https://knowledge.test/')
     await page.setContent(`
       <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 360px 10px 10px"></div>
-      <aside data-knowledge-panel-host style="position:fixed;top:10px;right:10px;width:340px;height:720px"></aside>`)
+      <aside data-knowledge-panel-host style="position:fixed;inset:10px 10px 10px auto;width:340px"></aside>`)
     await page.addScriptTag({ content: bundle })
     const pane = page.getByRole('region', { name: '知识库资料' })
     const files = pane.getByRole('button', { name: '文件资料', exact: true })
@@ -1570,7 +1633,9 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     const fullToggle = library.getByRole('switch', { name: /启用记忆/ })
     expect(await fullToggle.isChecked()).toBe(true)
     expect(await fullToggle.evaluate(switchShape)).toEqual(await toggle.evaluate(switchShape))
-    for (const context of [fullMemory, pane.getByRole('region', { name: '经验记忆' })]) {
+    const contexts = [fullMemory, pane.getByRole('region', { name: '经验记忆' })]
+    const normalHeights = []
+    for (const context of contexts) {
       await context.getByRole('heading', { name: '记忆验收正文' }).waitFor()
       expect(await context.getByRole('button', { name: '预览与编辑' }).count()).toBe(0)
       expect(await context.getByRole('dialog').count()).toBe(0)
@@ -1580,11 +1645,32 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
         return tabs && tabs.getBoundingClientRect().left > node.getBoundingClientRect().right &&
           Math.abs(tabs.getBoundingClientRect().right - node.parentElement.getBoundingClientRect().right) < 1
       })).toBe(true)
+      normalHeights.push((await context.getByRole('tabpanel').boundingBox()).height)
+    }
+    await page.setViewportSize({ width: 1700, height: 1300 })
+    for (const [index, context] of contexts.entries()) {
+      const preview = context.getByRole('tabpanel')
+      await expect.poll(async () => (await preview.boundingBox()).height).toBeGreaterThan(normalHeights[index] + 450)
+      expect(await preview.evaluate(node => {
+        const region = node.closest('.knowledge-memory')
+        return Math.abs(region.getBoundingClientRect().bottom - parseFloat(getComputedStyle(region).paddingBottom) - node.getBoundingClientRect().bottom)
+      })).toBeLessThan(2)
     }
     await fullMemory.getByRole('tab', { name: '编辑', exact: true }).click()
-    await fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' }).fill('## 保存后直接预览')
+    const editor = fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' })
+    expect((await editor.boundingBox()).height).toBeGreaterThan(800)
+    const markdown = '## 保存后直接预览\n\n' + Array.from({ length: 80 }, (_, index) => `记忆段落 ${index + 1}`).join('\n\n')
+    await editor.fill(markdown)
+    await page.setViewportSize({ width: 1100, height: 500 })
+    expect(await editor.inputValue()).toBe(markdown)
+    expect((await editor.boundingBox()).height).toBeGreaterThan(100)
     await fullMemory.getByRole('button', { name: '保存', exact: true }).click()
     await fullMemory.getByRole('heading', { name: '保存后直接预览' }).waitFor()
+    const preview = fullMemory.getByRole('tabpanel')
+    await preview.evaluate(node => { node.scrollTop = node.scrollHeight })
+    expect(await preview.evaluate(node => node.scrollTop)).toBeGreaterThan(0)
+    expect(await preview.getByText('记忆段落 80', { exact: true }).evaluate(node =>
+      node.getBoundingClientRect().bottom <= node.closest('[role=tabpanel]').getBoundingClientRect().bottom)).toBe(true)
     await fullMemory.getByRole('tab', { name: '编辑', exact: true }).click()
     await fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' }).fill('未保存草稿')
     await fullMemory.getByRole('button', { name: '取消', exact: true }).click()

@@ -24,6 +24,7 @@ import { KnowledgePreviewContent, type KnowledgePreview } from './preview'
 import { KnowledgeSessionDirectory, openKnowledgeSession, useKnowledgeSessions } from './session-directory'
 import { KnowledgePagination, useKnowledgePagination } from './pagination'
 import { listKnowledgeRows, usePublishedKnowledgeSessions, type KnowledgeListRow } from './published-sessions'
+import dropUploadIcon from './drop-upload.svg?inline'
 import css from './workspace.css?raw'
 
 interface Bridge {
@@ -113,14 +114,16 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [tab, setTab] = useState<'files' | 'memory'>('files')
   const [sessionMode, setSessionMode] = useState<KnowledgeSessionMode>()
   const [surfaceVisible, setSurfaceVisible] = useState(() => host.current()?.surface === 'knowledge')
-  const evidenceFor = useCallback(async (mode: KnowledgeSessionMode, ids: string[]) => {
+  const evidenceFor = useCallback(async (mode: KnowledgeSessionMode, ids: string[], signal: AbortSignal) => {
     const records: KnowledgeSessionEvidence[] = []
     for (let start = 0; start < ids.length; start += 32) {
+      signal.throwIfAborted()
       records.push(...await bridge.request('session-evidence', { mode, ids: ids.slice(start, start + 32) }))
     }
     return records
   }, [bridge])
-  const sessions = useKnowledgeSessions(document, surfaceVisible && tab === 'files' ? sessionMode : undefined, evidenceFor)
+  const sessionDirectories = useKnowledgeSessions(document, surfaceVisible && tab === 'files', evidenceFor)
+  const sessions = sessionMode ? sessionDirectories[sessionMode] : undefined
   const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
   const header = useRef<HTMLElement>(null)
   const workspaceToggle = useRef<HTMLButtonElement>(null)
@@ -130,6 +133,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [received, setReceived] = useState<KnowledgeDocument[]>([])
   const [receivedStatus, setReceivedStatus] = useState<{ loading: boolean; error?: string }>({ loading: false })
   const snapshot = { ...local, documents: [...local.documents, ...received] }
+  const fileCount = listKnowledgeDocuments(snapshot, { category: 'all' }).length
   const [filter, setFilter] = useState<KnowledgeFilter>(defaultFilter)
   const filterState = useRef({ revision: crypto.randomUUID(), filter: defaultFilter, assistantFilter: false })
   const previousFilter = useRef<typeof filterState.current>()
@@ -164,6 +168,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const appliedSharedCatalog = useRef(false)
   const dragDepth = useRef(0)
   const selection = filter.category ?? 'all'
+  const canDropFiles = ready && !busy && !choosingFiles && selection !== 'received'
+  useEffect(() => {
+    dragDepth.current = 0
+    setDragging(false)
+  }, [canDropFiles, filter.folderId, selection, sessionMode, surfaceVisible, tab])
   const visibleImports = selection === 'all' ? imports.filter(item => !filter.folderId || item.folderId === filter.folderId) : []
   const selectedFolder = snapshot.folders.find(folder => folder.id === filter.folderId)
   const title = selectedFolder?.name ?? knowledgeCategories[selection]
@@ -857,19 +866,19 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <button type="button" aria-current={!sessionMode && !filter.folderId && selection === category && category !== 'all' ? 'page' : undefined}
             onClick={() => selectCategory(category)}>
             {buttonIcon(categoryIcons[category], knowledgeCategories[category])}
-            <small>{listKnowledgeDocuments(snapshot, { category }).length +
+            <small>{category === 'all' ? fileCount : listKnowledgeDocuments(snapshot, { category }).length +
               (category === 'shared' ? Object.keys(local.sessionShares ?? {}).length : 0)}</small>
           </button>
           {category === 'all' && <div className="knowledge-session-sections" role="group" aria-label="所有文件子分类">
             <button type="button" aria-current={!sessionMode && !filter.folderId && selection === 'all' ? 'page' : undefined}
-              onClick={() => selectCategory('all')}>{buttonIcon('all', '文件资料')}</button>
+              onClick={() => selectCategory('all')}>{buttonIcon('all', '文件资料')}<small>{fileCount}</small></button>
             {sessionSections.map(([mode, icon]) => <button key={mode} type="button" aria-current={sessionMode === mode ? 'page' : undefined}
               onClick={() => {
                 setSessionMode(mode)
                 setMenu(undefined)
                 setDraftFilter(undefined)
                 closePreview()
-              }}>{buttonIcon(icon, knowledgeSessionLabels[mode])}</button>)}
+              }}>{buttonIcon(icon, knowledgeSessionLabels[mode])}<small>{sessionDirectories[mode]?.entries?.length ?? '—'}</small></button>)}
           </div>}
         </React.Fragment>)}
         <div className="knowledge-folder-heading"><span>文件夹</span>
@@ -889,23 +898,30 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           </button>
         </div>)}
       </nav>
-      {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} {...sessions} open={openSession}
+      {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} entries={sessions?.entries ?? []}
+        loading={sessions?.loading ?? true} error={sessions?.error ?? false} open={openSession}
         shares={local.sessionShares} share={(row, mode) => openDialog({ type: 'share-session', row, mode })} /> :
       <main className="knowledge-file-list" data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
-        if (selection === 'received' || !event.dataTransfer.types.includes('Files')) return
+        if (!canDropFiles || !event.dataTransfer.types.includes('Files')) return
+        event.preventDefault()
         dragDepth.current++
         setDragging(true)
-      }} onDragLeave={() => {
+      }} onDragLeave={event => {
+        if (!event.dataTransfer.types.includes('Files')) return
         dragDepth.current = Math.max(0, dragDepth.current - 1)
         if (!dragDepth.current) setDragging(false)
       }} onDragOver={event => {
-        if (selection !== 'received' && event.dataTransfer.types.includes('Files')) event.preventDefault()
-      }} onDrop={event => {
-        if (!event.dataTransfer.files.length) return
+        if (!event.dataTransfer.types.includes('Files')) return
         event.preventDefault()
+        event.stopPropagation()
+        event.dataTransfer.dropEffect = canDropFiles ? 'copy' : 'none'
+      }} onDrop={event => {
+        if (!event.dataTransfer.types.includes('Files') && !event.dataTransfer.files.length) return
+        event.preventDefault()
+        event.stopPropagation()
         dragDepth.current = 0
         setDragging(false)
-        if (busy || choosingFiles || !ready || selection === 'received') return
+        if (!canDropFiles) return
         const paths = Array.from(event.dataTransfer.files, file => bridge.path(file)).filter(Boolean)
         if (paths.length) void addFiles(paths)
         else setNotice({ text: '请拖入本地文件。', error: true })
@@ -1068,10 +1084,13 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   : '正在加载文件…'}
               </p>)}
             </div>
+            {canDropFiles && dragging && <div className="knowledge-drop-zone" role="status">
+              <span className="knowledge-drop-icon"><img src={dropUploadIcon} alt="" width={28} height={28} /></span>
+              <span>松开以上传文件</span>
+            </div>}
             <KnowledgePagination label="文件分页" page={page} pages={pages} setPage={setPage} />
           </div>
         </div>
-        {dragging && <div className="knowledge-drop-zone">拖放文件到知识库</div>}
       </main>}
       {preview && !preview.native && <aside className="knowledge-preview" aria-label="文件预览">
         <header><strong title={preview.document.name}>{preview.document.name}</strong>

@@ -63,7 +63,7 @@ export function renderExploreQuota(panel: HTMLElement, quota: ExploreQuota | und
   const plan = doc.createElement('div'), planLabel = doc.createElement('span'), planName = doc.createElement('strong')
   plan.className = 'odyssey-explore-quota-plan'
   planLabel.textContent = word('当前订阅等级', 'Current subscription')
-  planName.textContent = 'Mini trial subscription'
+  planName.textContent = 'Mini Trial Subscription'
   plan.append(planLabel, planName)
   card.append(plan)
   for (const [label, entry] of [[word('5 小时用量','5-hour usage'), quota.fiveHour], [word('周用量','Weekly usage'), quota.week]] as const) {

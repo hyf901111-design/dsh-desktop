@@ -4,19 +4,21 @@ import { basename, extname } from 'node:path'
 import { dialog } from 'electron'
 import type { BrowserWindow } from 'electron'
 import type { TrustedWindow } from '../ipc-trust'
+import { noteDocumentExtensions } from './document-import'
 
-const mediaFilters = {
+const fileFilters = {
   image: { name: '图片', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'avif'] },
   video: { name: '视频', extensions: ['mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi', 'qt'] },
-  audio: { name: '音频', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac', 'aiff', 'opus', 'caf'] }
+  audio: { name: '音频', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac', 'aiff', 'opus', 'caf'] },
+  document: { name: 'PDF、TXT、Word 和 Markdown 文档', extensions: noteDocumentExtensions }
 }
 
 export async function pickNoteFiles(kind: unknown, window: TrustedWindow | undefined, current: () => boolean, locale?:string): Promise<{ files: Array<{ name: string; path: string }> }> {
-  if (kind !== 'image' && kind !== 'video' && kind !== 'audio' && kind !== 'file') throw Error('文件选择类型无效。')
+  if (kind !== 'image' && kind !== 'video' && kind !== 'audio' && kind !== 'file' && kind !== 'document') throw Error('文件选择类型无效。')
   if (!window || window.isDestroyed() || !current()) return { files: [] }
-  const filter = kind === 'file' ? undefined : mediaFilters[kind]
+  const filter = kind === 'file' ? undefined : fileFilters[kind]
   const selection = await dialog.showOpenDialog(window as BrowserWindow, {
-    properties: ['openFile', 'multiSelections'],
+    properties: kind === 'document' ? ['openFile'] : ['openFile', 'multiSelections'],
     ...(filter ? { filters: [{...filter,name:noteUiText(filter.name,locale)}] } : {})
   })
   if (!current() || selection.canceled) return { files: [] }
