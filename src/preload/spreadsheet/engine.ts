@@ -96,7 +96,8 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
   if(sheet.columnHeader?.height==null||sheet.columnHeader.height===20)sheet.columnHeader={...sheet.columnHeader,height:SHEET_COLUMN_HEADER_HEIGHT}
  }
  const model=api.createWorkbook(renderWorkbook)
- if(!editable)model.setEditable(false)
+ let editingAllowed=editable
+ if(!editingAllowed)model.setEditable(false)
  const injector=univer.__getInjector()
  if(contextCommand){
   const icons={chart:'chart',library:'grid',smart:'sparkles',reference:'link'}
@@ -156,7 +157,7 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  const bindRender=(render:IRender)=>{
   if(watched.has(render.unitId))return
   const spreadsheet=render.unitId===model.getId()
-  if(spreadsheet&&editable)headerResize=bindHeaderResize(render,injector.get(SheetsSelectionsService),win)
+  if(spreadsheet&&editable)headerResize=bindHeaderResize(render,injector.get(SheetsSelectionsService),win,()=>editingAllowed)
   const on=[render.scene.beforeRender$.subscribe(canvas=>{
    if(!canvas)return
    renderingSheet=spreadsheet
@@ -295,15 +296,21 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
  const context=injector.get(IContextService)
  // Univer also gates typing into a selected cell on its auto-focus flag.
  // Enable that path after the user enters the grid, leaving the chat and toolbar independent.
- const updateEditorFocus=(event:Event)=>{
-  const inside=host.contains(event.target as Node)
-  const disableAutoFocus=!inside||!editable
+ const updateEditorFocus=(event?:Event)=>{
+  const inside=host.contains(event ? event.target as Node : doc.activeElement)
+  const disableAutoFocus=!inside||!editingAllowed
   if(context.getContextValue(DISABLE_AUTO_FOCUS_KEY)!==disableAutoFocus)context.setContextValue(DISABLE_AUTO_FOCUS_KEY,disableAutoFocus)
  }
  doc.addEventListener('focusin',updateEditorFocus,true)
  doc.addEventListener('pointerdown',updateEditorFocus,true)
  requestAnimationFrame(()=>{if(!disposed){applyTheme();selection()}})
  return {api,model,
+  setEditable(value:boolean){
+   editingAllowed=editable&&value
+   if(!editingAllowed)headerResize?.cancel()
+   model.setEditable(editingAllowed)
+   updateEditorFocus()
+  },
   historyCount:(action:'undo'|'redo')=>{
    const status=injector.get(IUndoRedoService).getUndoRedoStatus(model.getId())
    return action==='undo'?status.undos:status.redos

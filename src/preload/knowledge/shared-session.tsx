@@ -6,6 +6,7 @@ import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import type { KnowledgeDocument } from '../../shared/knowledge-library'
 import { knowledgeSessionLabels, sharedKnowledgeSessionFile, type SharedKnowledgeSession } from '../../shared/knowledge-sessions'
 import { KnowledgeIcon } from './icons'
+import { HeaderViewModeIcon } from '../header-view-mode-icon'
 
 export function mountSharedKnowledgeSessions(document: Document, host: WorkspaceSurfaceHost,
   read: (id: string) => Promise<{ session: SharedKnowledgeSession; updatedAt: number }>,
@@ -17,9 +18,12 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
   const style = document.createElement('style')
   style.textContent = `
     .knowledge-shared-session{display:flex;flex-direction:column}
-    .knowledge-shared-session>header{display:flex;align-items:center;gap:10px;padding:0 18px;min-height:46px;flex:none}
+    .knowledge-shared-session>header{display:flex;align-items:center;gap:10px;padding:0 46px 0 18px;min-height:46px;flex:none}
     .knowledge-shared-session>header strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
     .knowledge-shared-session>header small{margin-left:auto;white-space:nowrap;color:var(--knowledge-muted)}
+    .knowledge-shared-session-mode{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;background:var(--knowledge-field);color:var(--knowledge-ink)}
+    .knowledge-shared-session-mode svg{flex:none}
+    .knowledge-shared-session-body>[data-research-canvas]{position:absolute;inset:0;height:auto}
     .knowledge-shared-session-body{flex:1;position:relative;min-height:0;min-width:0;overflow:hidden}
     .knowledge-shared-session-body>.en-root{position:absolute;inset:0;border-radius:0}
     .knowledge-shared-session-body>.ew-sheet{height:100%}
@@ -68,7 +72,9 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
     headerRoot.render(<>
       <button type="button" className="knowledge-square" aria-label="返回知识库" onClick={close}><KnowledgeIcon name="back" /></button>
       <strong title={entry.title}>{entry.title}</strong>
-      <small>{knowledgeSessionLabels[entry.mode]} · 只读</small>
+      <small>{entry.mode === 'spreadsheet'
+        ? <span className="knowledge-shared-session-mode" title="共享工作簿仅供查看" aria-label="表格预览 · 只读"><HeaderViewModeIcon preview />预览</span>
+        : <>{knowledgeSessionLabels[entry.mode]} · 只读</>}</small>
     </>)
     const body = document.createElement('div')
     body.className = 'knowledge-shared-session-body'

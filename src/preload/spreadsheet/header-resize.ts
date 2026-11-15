@@ -6,7 +6,7 @@ import type { SheetsSelectionsService } from '@univerjs/sheets'
 const handlePrefix = '__SpreadsheetHeaderResizeControllerShape'
 type Axis = 'row' | 'column'
 
-export function bindHeaderResize(render: IRender, selections: SheetsSelectionsService, win: Window) {
+export function bindHeaderResize(render: IRender, selections: SheetsSelectionsService, win: Window, canResize: () => boolean = () => true) {
   const { scene } = render
   let drag: { restore(): boolean; apply(): void; move(): void } | undefined
   let frame = 0
@@ -30,7 +30,7 @@ export function bindHeaderResize(render: IRender, selections: SheetsSelectionsSe
           const helper = scene.getObject(handlePrefix + 'Helper__')
           const skeletons = render.with(SheetSkeletonManagerService)
           const skeleton = skeletons?.getCurrentSkeleton()
-          if (event.button !== 0 || !helper || !skeleton) return
+          if (!canResize() || event.button !== 0 || !helper || !skeleton) return
           finish()
           const worksheet = skeleton.worksheet
           const row = axis === 'row'
@@ -111,6 +111,7 @@ export function bindHeaderResize(render: IRender, selections: SheetsSelectionsSe
   win.addEventListener('pointercancel', finish, true)
   win.addEventListener('blur', finish)
   return {
+    cancel: finish,
     snapshot<T>(save: () => T): T {
       if (!drag) return save()
       const preview = drag
