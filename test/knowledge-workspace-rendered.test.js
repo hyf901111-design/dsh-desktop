@@ -1016,6 +1016,11 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     await memory.click({ timeout: 1600 })
     expect(await pane.getByRole('searchbox', { name: '搜索知识库文件' }).isVisible()).toBe(false)
     const toggle = pane.getByRole('switch', { name: /启用记忆/ })
+    const switchShape = el => {
+      const { width, height, appearance } = getComputedStyle(el)
+      return { width, height, appearance, thumb: getComputedStyle(el, '::after').width }
+    }
+    expect(await toggle.evaluate(switchShape)).toEqual({ width: '34px', height: '20px', appearance: 'none', thumb: '14px' })
     await toggle.check()
     expect(await pane.getByText('记忆.md').isVisible()).toBe(true)
     await files.click()
@@ -1027,7 +1032,9 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const fullMemory = library.getByRole('region', { name: '经验记忆' })
     await fullMemory.waitFor()
-    expect(await library.getByRole('switch', { name: /启用记忆/ }).isChecked()).toBe(true)
+    const fullToggle = library.getByRole('switch', { name: /启用记忆/ })
+    expect(await fullToggle.isChecked()).toBe(true)
+    expect(await fullToggle.evaluate(switchShape)).toEqual(await toggle.evaluate(switchShape))
     for (const context of [fullMemory, pane.getByRole('region', { name: '经验记忆' })]) {
       await context.getByText('记忆.md', { exact: true }).waitFor()
       const spacing = await context.locator('.knowledge-memory-row').last().evaluate(row => {

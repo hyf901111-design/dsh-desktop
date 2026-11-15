@@ -541,7 +541,6 @@
 }
 .knowledge-memory-row > span:not(.knowledge-file-icon) { display: grid; gap: 4px; margin-right: auto; }
 .knowledge-memory-row small, .knowledge-memory > p { color: var(--knowledge-muted); }
-.knowledge-memory-row [role=switch] { accent-color: var(--knowledge-accent); width: 18px; height: 18px; }
 
 @keyframes knowledge-popup-in {
   from { opacity: 0; translate: 0 -3px; }

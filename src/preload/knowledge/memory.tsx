@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import type { MemoryBridge, MemorySnapshot } from '../../shared/memory'
 import { openMemoryDocumentEditor } from '../memory/document-editor'
+import { mountMemorySwitchStyles } from '../memory/switch'
 import { KnowledgeFileIcon } from './icons'
 
 export function KnowledgeMemory({ document, bridge, compact = false }: { document: Document; bridge: MemoryBridge; compact?: boolean }) {
@@ -13,6 +14,7 @@ export function KnowledgeMemory({ document, bridge, compact = false }: { documen
   const editor = React.useRef<ReturnType<typeof openMemoryDocumentEditor>>()
 
   useEffect(() => {
+    mountMemorySwitchStyles(document)
     const scope = lifecycle.current
     scope.active = true
     let seq = 0
@@ -84,7 +86,7 @@ export function KnowledgeMemory({ document, bridge, compact = false }: { documen
     {snapshot && <>
       <label className="knowledge-memory-row">
         <span><strong>启用记忆</strong><small>在相关对话中使用已保存的偏好、约定和项目背景。</small></span>
-        <input type="checkbox" role="switch" checked={snapshot.settings.use} disabled={busy}
+        <input type="checkbox" role="switch" className="ew-memory-toggle" checked={snapshot.settings.use} disabled={busy}
           onChange={event => void toggle(event.currentTarget.checked)} />
       </label>
       <div className="knowledge-memory-row">
