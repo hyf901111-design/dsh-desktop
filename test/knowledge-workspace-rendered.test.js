@@ -1089,13 +1089,47 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     for (const style of styles) {
       expect(style.viewBox).toBe('0 0 24 24')
       expect(style.stroke).toBe('1.7')
-      expect(style.page).toBe(styles[0].page)
+      const pdf = styles.find(item => item.format === 'pdf')
+      if (style.format === 'ppt') expect(style.page).not.toBe(pdf.page)
+      else expect(style.page).toBe(pdf.page)
     }
+    const checkGeometry = async surface => {
+      const popup = surface.getByRole('group', { name: '筛选文件' })
+      const geometry = await popup.getByRole('checkbox').evaluateAll(inputs => inputs.map(input => {
+        const box = input.getBoundingClientRect()
+        const label = input.nextElementSibling.getBoundingClientRect()
+        return {
+          width: box.width, height: box.height, gap: label.left - box.right,
+          centered: Math.abs((box.top + box.height / 2) - (label.top + label.height / 2)) < .5,
+          appearance: getComputedStyle(input).appearance
+        }
+      }))
+      expect(geometry.length).toBe(14)
+      expect(geometry.every(box => box.width === 14 && box.height === 14 && box.gap === 8 &&
+        box.centered && box.appearance === 'none')).toBe(true)
+      const limited = popup.getByRole('checkbox', { name: '不限', exact: true })
+      expect(await limited.last().isChecked()).toBe(true)
+      const markdown = popup.getByRole('checkbox', { name: 'Markdown', exact: true })
+      await markdown.focus()
+      await markdown.press('Space')
+      expect(await markdown.isChecked()).toBe(true)
+      expect(await limited.last().isChecked()).toBe(false)
+      expect(await markdown.evaluate(input => getComputedStyle(input, '::after').content)).toBe('""')
+      return popup
+    }
+    const panelFilter = pane.getByRole('button', { name: '筛选', exact: true })
+    await panelFilter.click()
+    const panelPopup = await checkGeometry(pane)
+    await panelPopup.getByRole('button', { name: '重置' }).click()
+    await panelPopup.getByRole('button', { name: '完成' }).click()
     const filter = library.getByRole('button', { name: '筛选', exact: true })
     await filter.click()
-    expect(await library.locator('.knowledge-filter-menu').evaluate(el => getComputedStyle(el).animationName)).toBe('none')
-    await library.getByRole('checkbox', { name: 'Markdown', exact: true }).check()
-    await library.getByRole('button', { name: '完成' }).click()
+    const popup = await checkGeometry(library)
+    expect(await popup.evaluate(el => getComputedStyle(el).animationName)).toBe('none')
+    if (process.env.KNOWLEDGE_QA_SCREENSHOT) {
+      await popup.screenshot({ path: process.env.KNOWLEDGE_QA_SCREENSHOT.replace('.png', '-filter-' + theme + '.png') })
+    }
+    await popup.getByRole('button', { name: '完成' }).click()
     expect(await filter.evaluate(button => {
       const css = getComputedStyle(button)
       return { shadow: css.boxShadow, left: css.paddingLeft, right: css.paddingRight, motion: css.transitionDuration, count: button.lastElementChild.textContent }
