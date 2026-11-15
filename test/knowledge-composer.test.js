@@ -120,6 +120,7 @@ it('composes with the installed native client patch sequence and keeps its resto
     stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(value))))
   const base = stripKnowledgeConversation(withoutOuterPatches(installed))
   const knowledge = patchKnowledgeConversation(base)
+  expect(knowledge).toContain('const {actions} = slots.resolveStore(chatStore, sessionId);')
   const patched = patchSpreadsheetClient(
     patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(knowledge)))
   )
@@ -145,7 +146,7 @@ it('opens the original conversation only while it is still available', async () 
   const session = { title: '来源对话', removed: false }
   const sessions = { list: { getSnapshot: () => ({ byId: { one: session } }) }, subagentAddress: () => undefined, open: vi.fn() }
   const setView = vi.fn()
-  const dispose = installKnowledgeSourceNavigation({ document, sessions, chatStore: { create: () => ({ actions: { setView } }) } })
+  const dispose = installKnowledgeSourceNavigation({ document, sessions, selectView: setView })
   const notify = vi.fn()
   document.addEventListener('sherlock:knowledge-source-result', notify)
   const open = requestId => document.dispatchEvent(new window.CustomEvent('sherlock:knowledge-source-open', {
@@ -154,7 +155,7 @@ it('opens the original conversation only while it is still available', async () 
   try {
     expect(open('available')).toBe(false)
     expect(sessions.open).toHaveBeenCalledExactlyOnceWith('one')
-    expect(setView).toHaveBeenCalledExactlyOnceWith('chat')
+    expect(setView).toHaveBeenCalledExactlyOnceWith('one', 'chat')
     session.removed = true
     expect(open('removed')).toBe(false)
     expect(sessions.open).toHaveBeenCalledOnce()
@@ -169,7 +170,7 @@ it('opens a newly imported file session after refreshing a catalog with an empty
   const sessions = { list: { getSnapshot: () => ({ byId }) }, subagentAddress: () => undefined, open: vi.fn(),
     refresh: vi.fn(async () => { byId = { imported: { title: '导入文件', blank: true } } }) }
   const setView = vi.fn()
-  const dispose = installKnowledgeSourceNavigation({ document, sessions, chatStore: { create: () => ({ actions: { setView } }) } })
+  const dispose = installKnowledgeSourceNavigation({ document, sessions, selectView: setView })
   const open = new Promise(resolve => {
     document.addEventListener('sherlock:knowledge-source-result', event => resolve(event.detail), { once: true })
   })
@@ -180,7 +181,7 @@ it('opens a newly imported file session after refreshing a catalog with an empty
     expect(await open).toEqual({ requestId: 'import', ok: true })
     expect(sessions.refresh).toHaveBeenCalledOnce()
     expect(sessions.open).toHaveBeenCalledExactlyOnceWith('imported')
-    expect(setView).toHaveBeenCalledExactlyOnceWith('spreadsheet')
+    expect(setView).toHaveBeenCalledExactlyOnceWith('imported', 'spreadsheet')
   } finally { dispose(); await window.happyDOM.abort() }
 })
 

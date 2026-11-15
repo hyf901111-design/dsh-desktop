@@ -242,7 +242,7 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
  return()=>{off();offFile();doc.removeEventListener('sherlock:knowledge-preview-file',preview);doc.removeEventListener('sherlock:knowledge-activate-chat',activate)}
 }
 
-export function installKnowledgeSourceNavigation({ sessions, workspaces, chatStore, boards, document: doc = document }) {
+export function installKnowledgeSourceNavigation({ sessions, workspaces, selectView, boards, document: doc = document }) {
  const win = doc.defaultView
  const dispatch = (name, detail) => doc.dispatchEvent(new win.CustomEvent(name, { detail }))
  const usable = (snapshot, id) => {
@@ -279,11 +279,11 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, chatSto
    try {
     const adapter = view === 'research' ? boards?.() : undefined
     const shared = adapter?.getState?.().boards.find(board => board.localSessionId === id && board.pinned)
+    selectView(id, view)
     if (shared) {
      void adapter.openBoard(shared.boardId).then(opened => reply(opened === id), () => reply(false))
      return
     }
-    chatStore.create(id).actions.setView(view)
     sessions.open(id)
     reply(true)
    } catch { reply(false) }
@@ -371,7 +371,17 @@ export function patchKnowledgeConversation(input) {
  if(!input.includes(sourceNavigation)){
   const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
   input=replace(input,anchor,anchor+'\n '+sourceNavigation+
-   '\n ctx.effect(()=>('+installKnowledgeSourceNavigation.toString()+')({sessions,workspaces,chatStore,boards:()=>sherlockBoardsAdapter}),"Knowledge Base source conversation");')
+   '\n ctx.effect(()=>('+installKnowledgeSourceNavigation.toString()+`)({
+    sessions, workspaces, boards: () => sherlockBoardsAdapter,
+    selectView(sessionId, view) {
+     // Reuse the store held by the session slots, including when already open.
+     const {actions} = slots.resolveStore(chatStore, sessionId);
+     explicitHomeViewSessions.delete(sessionId);
+     explicitResearchViewSessions.add(sessionId);
+     if (view !== 'research') clearInitialResearchSession(sessionId);
+     actions.setView(view);
+    }
+   }), "Knowledge Base source conversation");`)
  }
  if(!input.includes(marker)){
   const registration='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
