@@ -3,7 +3,7 @@ import { openSharedKnowledgeSession } from './session-directory'
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
-  knowledgeCategories, knowledgeFormat, listKnowledgeDocuments, maxEditableKnowledgeBytes,
+  knowledgeCategories, knowledgeFormat, knowledgeSharedCatalogError, listKnowledgeDocuments, maxEditableKnowledgeBytes,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeFilter, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
 import type { MemoryBridge } from '../../shared/memory'
@@ -241,6 +241,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const location = useRef<HTMLDivElement>(null)
   const directoryTrigger = useRef<HTMLButtonElement>(null)
   const filterTrigger = useRef<HTMLButtonElement>(null)
+  const reloadReceived = useRef<() => void>(() => {})
   const browsingReceived = category === 'received'
   useEffect(() => {
     let revision = 0
@@ -259,8 +260,12 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
           }))
         }
       }).catch(error => {
-        if (current === revision) setState({ ready: true, error: printError(error) })
+        if (current === revision) setState({ ready: true, error: browsingReceived ? knowledgeSharedCatalogError(error) : printError(error) })
       })
+    }
+    reloadReceived.current = () => {
+      setState({ ready: false, error: '' })
+      load(true)
     }
     const reset = () => {
       setSnapshot({ documents: [], folders: [] })
@@ -378,13 +383,19 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
         showSavedOnly={category !== 'received'} reset={() => setDraftFacets(emptyFileFacets)}
         apply={() => { setFacets(draftFacets); setMenu(undefined); filterTrigger.current?.focus() }} />}
     </div>
-    {state.error && hasRows && <p className="knowledge-panel-state" role="alert">{state.error}</p>}
+    {state.error && hasRows && <div className="knowledge-panel-state knowledge-load-error">
+      <span role="alert">{state.error}</span>
+      {browsingReceived && <button type="button" onClick={() => reloadReceived.current()}>重试</button>}
+    </div>}
     {referenceError && <p className="knowledge-panel-state" role="alert">{referenceError}</p>}
     <div className="knowledge-panel-rows"
       key={JSON.stringify([category, folder, sharedCategory, allShared])}
       data-ready={state.ready && !state.error}>
       {!state.ready && <p className="knowledge-panel-state knowledge-panel-empty" role="status">正在加载文件…</p>}
-      {state.error && !hasRows && <p className="knowledge-panel-state knowledge-panel-empty" role="alert">{state.error}</p>}
+      {state.error && !hasRows && <div className="knowledge-panel-state knowledge-panel-empty knowledge-load-error">
+        <span role="alert">{state.error}</span>
+        {browsingReceived && <button type="button" onClick={() => reloadReceived.current()}>重试</button>}
+      </div>}
       {state.ready && !state.error && sharedDirectory && <button type="button" className="knowledge-panel-directory" onClick={() => setAllShared(true)}>
         <KnowledgeIcon name="all" /><span>全部文件</span><small>{rows.length}</small><KnowledgeIcon name="next" />
       </button>}

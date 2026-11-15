@@ -141,13 +141,16 @@ beforeAll(async () => {
           window.markdown = { text, revision: 'saved' }
           return { document: documents.find(row => row.id === id), revision: 'saved' }
         },
-        received: async () => [
-          ...(window.sharedPreview ? [structuredClone(window.sharedPreview.document)] : []),
-          { id: 'r1', name: '共享行业资料.pdf', source: 'upload', size: 1024, updatedAt: 1,
-            starred: false, saved: false, received: { owner: '共享人', category: '行业研究' } },
-          { id: 'r2', name: '共享数据表.xlsx', source: 'upload', size: 8192, updatedAt: 2,
-            starred: false, saved: false, received: { owner: '共享人', category: '数据分析' } }
-        ]
+        received: async () => {
+          if (window.sharedCatalogError) throw Error(window.sharedCatalogError)
+          return [
+            ...(window.sharedPreview ? [structuredClone(window.sharedPreview.document)] : []),
+            { id: 'r1', name: '共享行业资料.pdf', source: 'upload', size: 1024, updatedAt: 1,
+              starred: false, saved: false, received: { owner: '共享人', category: '行业研究' } },
+            { id: 'r2', name: '共享数据表.xlsx', source: 'upload', size: 8192, updatedAt: 2,
+              starred: false, saved: false, received: { owner: '共享人', category: '数据分析' } }
+          ]
+        }
       })
       const uploads = new Map()
       const recentSearches = []
@@ -207,6 +210,7 @@ beforeAll(async () => {
             id, hasContent: ({ research: ['board', 'board2'], notes: ['note'], spreadsheet: ['sheet', 'removed', 'child'] })[args.mode].includes(id)
           }))
           if (method === 'received') {
+            if (window.sharedCatalogError) throw Error(window.sharedCatalogError)
             if (window.waitForSharedCatalog) return window.waitForSharedCatalog
             if (document.querySelector('[data-knowledge-panel-file="decafbaddecafbaddecafbaddecafbad"]')) {
               return window.sharedPreview ? [structuredClone(window.sharedPreview.document)] : []
@@ -273,7 +277,7 @@ it('lists real session modes under all files and opens each one in its native vi
         width: el.getBoundingClientRect().width,
         format: el.dataset.format,
         fill: el.querySelector('svg').getAttribute('fill')
-      }))).toEqual({ width: 36, format: view, fill: 'currentColor' })
+      }))).toEqual({ width: 32, format: view, fill: 'currentColor' })
       const color = await tile.evaluate(el => getComputedStyle(el).backgroundColor)
       await row.hover()
       await expect.poll(() => tile.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(color)
@@ -730,6 +734,39 @@ it('keeps the native right pane open when creating a file tab already opens it',
   } finally { await page.close() }
 })
 
+it('shows a readable shared directory error and retries from either knowledge surface', async () => {
+  const page = await browser.newPage({ viewport: { width: 1380, height: 900 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 390px 10px 120px"></div>
+      <aside data-knowledge-panel-host style="position:fixed;inset:10px 0 10px auto;width:380px"></aside>`)
+    await page.evaluate(() => {
+      window.sharedCatalogError = "Error invoking remote method 'knowledge:request': ResearchBoardsError: NOT_FOUND"
+    })
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const panel = page.getByRole('region', { name: '知识库资料' })
+    await library.getByRole('button', { name: /他人共享 \d+/ }).click()
+    await panel.getByRole('button', { name: '所有文件', exact: true }).click()
+    await panel.getByRole('button', { name: '他人共享', exact: true }).click()
+    for (const surface of [library, panel]) {
+      const error = surface.getByRole('alert').filter({ hasText: '暂时无法加载他人共享。' })
+      await error.waitFor({ timeout: 2000 })
+      expect(await error.textContent()).toBe('暂时无法加载他人共享。')
+      expect(await surface.getByText(/ResearchBoardsError|NOT_FOUND/).count()).toBe(0)
+    }
+    await panel.getByRole('button', { name: '重试', exact: true }).click()
+    await panel.getByRole('alert').filter({ hasText: '暂时无法加载他人共享。' }).waitFor()
+    await page.evaluate(() => { window.sharedCatalogError = undefined })
+    await library.getByRole('button', { name: '重试', exact: true }).click()
+    await library.getByRole('button', { name: /渠道调研验收.md/ }).first().waitFor()
+    await panel.getByRole('button', { name: '行业研究' }).waitFor()
+    expect(await panel.getByRole('alert').count()).toBe(0)
+  } finally { await page.close() }
+})
+
 it('rechecks an open shared preview on focus, list refresh and a visible timer', async () => {
   const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
   try {
@@ -1085,7 +1122,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
       const svg = tile.querySelector('svg')
       const css = getComputedStyle(tile)
       return {
-        color: css.color, background: css.backgroundColor,
+        background: css.backgroundColor, highlight: css.backgroundImage, rim: css.boxShadow,
         viewBox: svg.getAttribute('viewBox'), fill: svg.getAttribute('fill'),
         glyph: svg.firstElementChild.getAttribute('d')
       }
@@ -1095,7 +1132,9 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     for (const style of styles) {
       expect(style.viewBox).toBe('0 0 24 24')
       expect(style.fill).toBe('currentColor')
-      expect(style.color).toBe('rgb(255, 255, 255)')
+      expect(style.background).toMatch(/ \/ 0\./u)
+      expect(style.highlight).toContain('radial-gradient')
+      expect(style.rim).toContain('inset')
     }
     if (process.env.KNOWLEDGE_QA_SCREENSHOT) {
       await library.getByRole('table').screenshot({
@@ -1146,17 +1185,24 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     const file = library.getByRole('button', { name: /研究写作规范.md/ }).first()
     const appearance = async () => file.evaluate(el => {
       const tile = el.querySelector('.knowledge-file-icon')
-      const luminance = css => css.match(/[\d.]+/g).slice(0, 3).map(Number)
-        .map(value => css.startsWith('color(srgb ') ? value : value / 255)
-        .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+      const sample = document.createElement('canvas').getContext('2d')
+      const paint = css => { sample.fillStyle = css; sample.fillRect(0, 0, 1, 1) }
+      const luminance = () => [...sample.getImageData(0, 0, 1, 1).data].slice(0, 3)
+        .map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
         .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0)
-      const ink = luminance(getComputedStyle(tile).color)
-      const background = luminance(getComputedStyle(tile).backgroundColor)
+      const tileStyle = getComputedStyle(tile)
+      const row = getComputedStyle(el.closest('td')).backgroundColor
+      paint(getComputedStyle(el.closest('.knowledge-workspace')).backgroundColor)
+      paint(row)
+      paint(tileStyle.backgroundColor)
+      const background = luminance()
+      paint(tileStyle.color)
+      const ink = luminance()
       return {
-        foreground: getComputedStyle(tile).color,
+        foreground: tileStyle.color,
         contrast: (Math.max(ink, background) + .05) / (Math.min(ink, background) + .05),
-        row: getComputedStyle(el.closest('td')).backgroundColor,
-        tile: getComputedStyle(tile).backgroundColor,
+        row,
+        tile: tileStyle.backgroundColor,
         geometry: [tile.offsetWidth, tile.offsetHeight],
         fill: tile.querySelector('svg').getAttribute('fill')
       }

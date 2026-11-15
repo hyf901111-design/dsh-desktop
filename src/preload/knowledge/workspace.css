@@ -322,21 +322,36 @@
   color: light-dark(var(--knowledge-icon-color), color-mix(in srgb, var(--knowledge-icon-color), #fff 50%));
 }
 .knowledge-file-icon[data-tile=true] {
-  width: 36px;
-  height: 36px;
-  border-radius: 7px;
-  color: #fff;
-  background: var(--knowledge-icon-color);
+  --knowledge-icon-wash: light-dark(
+    color-mix(in srgb, var(--knowledge-icon-color) 13%, transparent),
+    color-mix(in srgb, var(--knowledge-icon-color) 32%, transparent)
+  );
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: light-dark(
+    color-mix(in srgb, var(--knowledge-icon-color), #18202d 25%),
+    color-mix(in srgb, var(--knowledge-icon-color), #fff 65%)
+  );
+  background-color: color-mix(in srgb, var(--knowledge-icon-wash), var(--knowledge-icon-color) var(--knowledge-icon-state, 0%));
+  background-image:
+    radial-gradient(ellipse at 20% 4%, light-dark(rgb(255 255 255 / .94), rgb(239 246 255 / .19)), transparent 78%),
+    linear-gradient(153deg, light-dark(rgb(255 255 255 / .35), rgb(255 255 255 / .07)), transparent 55%,
+      light-dark(rgb(46 52 68 / .045), rgb(5 8 14 / .16)));
+  box-shadow:
+    inset 0 0 0 1px light-dark(color-mix(in srgb, var(--knowledge-icon-color) 19%, transparent), rgb(227 237 255 / .15)),
+    inset 0 1px 0 light-dark(rgb(255 255 255 / .94), rgb(248 251 255 / .16)),
+    0 1px 2px light-dark(rgb(37 45 63 / .07), rgb(0 0 0 / .22));
   transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out;
 }
-.knowledge-file-icon[data-tile=true] .knowledge-icon { width: 21px; height: 21px; }
+.knowledge-file-icon[data-tile=true] .knowledge-icon { width: 18px; height: 18px; }
 .knowledge-table tbody tr:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true],
 .knowledge-panel-row:is(:hover, :focus-within) .knowledge-file-icon[data-tile=true],
 .knowledge-session-rows button:is(:hover, :focus-visible) .knowledge-file-icon[data-tile=true] {
-  background: color-mix(in srgb, var(--knowledge-icon-color), #fff 6%);
+  --knowledge-icon-state: 7%;
 }
 .knowledge-table tbody tr[data-selected=true] .knowledge-file-icon[data-tile=true] {
-  background: color-mix(in srgb, var(--knowledge-icon-color), #fff 10%);
+  --knowledge-icon-state: 12%;
 }
 .knowledge-file-icon[data-format=pdf] { --knowledge-icon-color: #ac2d48; }
 .knowledge-file-icon[data-format=ppt] { --knowledge-icon-color: #92520e; }

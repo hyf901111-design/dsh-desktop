@@ -24,6 +24,20 @@ export function knowledgeRequestError(error: unknown): string {
   return message.replace(/^Error invoking remote method (['"])knowledge:request\1:\s*(?:Error:\s*)?/u, '')
 }
 
+export function knowledgeSharedCatalogError(error: unknown): string {
+  switch (knowledgeRequestError(error).replace(/^ResearchBoardsError:\s*/u, '').trim()) {
+    case 'LOGIN_REQUIRED':
+    case '请先登录账户。':
+    case '请登录后查看他人共享。':
+      return '请登录后查看他人共享。'
+    case 'SESSION_CHANGED':
+    case '账号已变化，请重新打开知识库。':
+      return '账号已变化，请重试。'
+    default:
+      return '暂时无法加载他人共享。'
+  }
+}
+
 export type KnowledgeCategory = keyof typeof knowledgeCategories
 export type KnowledgeFormat = keyof typeof knowledgeFormats
 export type KnowledgeSource = keyof typeof knowledgeSources
