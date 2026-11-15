@@ -232,7 +232,7 @@ export class ScheduledTaskView {
               {label:english?'New research':'新建研究',icon:'research' as const,run:()=>group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research',{bubbles:true}))}
             ] : []),
             ...(this.sidebarActions?[{
-              label:english?'New note':wide?'新笔记':'新建笔记',icon:this.dark()?'noteDark' as const:'note' as const,
+              label:english?'New Note':wide?'新笔记':'新建笔记',icon:this.dark()?'noteDark' as const:'note' as const,
               disabled:this.newDocumentBusy,run:()=>void this.createDocument('note')
             }]:[]),
             ...(this.sidebarActions?.newSpreadsheet?[{
