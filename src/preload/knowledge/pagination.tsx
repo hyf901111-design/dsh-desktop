@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react'
+import { KnowledgeIcon } from './icons'
 
 const pageSize = 20
 
@@ -37,15 +38,27 @@ export function KnowledgePagination({ label, page, pages, setPage }: {
     ? Array.from({ length: pages }, (_, index) => index + 1)
     : [1, ...(start > 2 ? ['before'] : []), ...Array.from({ length: end - start + 1 }, (_, index) => start + index),
       ...(end < pages - 1 ? ['after'] : []), pages]
+  const firstThree = Math.max(1, Math.min(page - 1, pages - 2))
+  const firstFive = Math.max(1, Math.min(page - 2, pages - 4))
 
   return <nav className="knowledge-pagination" aria-label={label}>
     <div className="knowledge-pagination-controls">
-      <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>上一页</button>
-      {pages === 1 ? <span>1 / 1</span> : shortcuts.map(item => typeof item === 'number'
+      <button type="button" className="knowledge-pagination-step" aria-label="上一页" title="上一页"
+        disabled={page === 1} onClick={() => setPage(page - 1)}>
+        <span>上一页</span><KnowledgeIcon name="back" />
+      </button>
+      <span className="knowledge-pagination-status" data-single={pages === 1}
+        aria-label={`第 ${page} 页，共 ${pages} 页`}>{page} / {pages}</span>
+      {pages > 1 && shortcuts.map(item => typeof item === 'number'
         ? <button key={item} type="button" className="knowledge-pagination-number" aria-label={`第 ${item} 页`}
+          data-width-tier={item >= firstThree && item < firstThree + 3 ? 'narrow'
+            : item >= firstFive && item < firstFive + 5 ? 'medium' : 'wide'}
           aria-current={item === page ? 'page' : undefined} onClick={() => setPage(item)}>{item}</button>
-        : <span key={item} aria-hidden="true">…</span>)}
-      <button type="button" disabled={page === pages} onClick={() => setPage(page + 1)}>下一页</button>
+        : <span key={item} data-width-tier="wide" aria-hidden="true">…</span>)}
+      <button type="button" className="knowledge-pagination-step" aria-label="下一页" title="下一页"
+        disabled={page === pages} onClick={() => setPage(page + 1)}>
+        <span>下一页</span><KnowledgeIcon name="back" />
+      </button>
     </div>
     {pages > 1 && <form className="knowledge-pagination-jump" noValidate onSubmit={event => {
       event.preventDefault()

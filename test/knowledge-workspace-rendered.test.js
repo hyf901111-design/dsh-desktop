@@ -1481,7 +1481,7 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     await pager.waitFor()
     await expectAligned()
     await pager.getByRole('button', { name: '下一页' }).click()
-    expect(await pager.getByRole('button', { name: '第 2 页', exact: true }).getAttribute('aria-current')).toBe('page')
+    expect(await pager.getByText('2 / 2', { exact: true }).isVisible()).toBe(true)
     await expectAligned()
   } finally { await page.close() }
 })
@@ -1624,6 +1624,67 @@ it('shakes the page field on repeated invalid submissions and suppresses native 
     expect(await input.inputValue()).toBe('')
     expect(await input.getAttribute('aria-invalid')).toBeNull()
     expect(await page.getByRole('button', { name: '第 3 页', exact: true }).getAttribute('aria-current')).toBe('page')
+  } finally { await page.close() }
+})
+
+it('keeps the knowledge pager on one row as its own column shrinks', async () => {
+  const page = await browser.newPage({ viewport: { width: 1150, height: 650 }, reducedMotion: 'reduce' })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({
+      contentType: 'text/html', body: `<!doctype html>
+        <body data-test-pagination><div class="pI_x6G_centerCol" style="position:fixed;inset:10px"></div></body>`
+    }))
+    await page.goto('https://knowledge.test/')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await page.evaluate(() => {
+      const row = window.data.documents[0]
+      window.data.documents.push(...Array.from({ length: 160 }, (_, index) => ({
+        ...row, id: 'responsive-page-' + index, name: '自适应分页-' + index + '.md'
+      })))
+      document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+    })
+    for (const category of ['所有文件', '笔记模式']) {
+      const totalPages = category === '所有文件' ? 11 : 3
+      await library.getByRole('navigation', { name: '知识库分类' })
+        .getByRole('button', { name: new RegExp('^' + category + ' ') }).click()
+      const pager = library.getByRole('navigation', { name: /分页/ })
+      const shortcuts = pager.getByRole('button', { name: /^第 \d+ 页$/ })
+      const jump = pager.getByRole('spinbutton', { name: '跳至页码' })
+      const resizeColumn = width => pager.evaluate((element, width) => { element.style.width = width + 'px' }, width)
+      const pagerFits = () => pager.evaluate(element => {
+        const bounds = element.getBoundingClientRect()
+        return [...element.querySelectorAll('button, input, .knowledge-pagination-status')]
+          .filter(control => control.getClientRects().length)
+          .every(control => {
+            const rect = control.getBoundingClientRect()
+            return rect.bottom <= bounds.bottom && rect.right <= bounds.right
+          })
+      })
+      await expect.poll(() => shortcuts.count()).toBe(Math.min(7, totalPages))
+      await resizeColumn(490)
+      expect(await jump.isVisible()).toBe(true)
+      expect(await pagerFits()).toBe(true)
+      await resizeColumn(290)
+      expect(await jump.isVisible()).toBe(false)
+      expect(await shortcuts.count()).toBe(Math.min(5, totalPages))
+      expect(await pagerFits()).toBe(true)
+      await resizeColumn(230)
+      expect(await shortcuts.count()).toBe(3)
+      expect(await pagerFits()).toBe(true)
+      for (const width of [182, 116]) {
+        await resizeColumn(width)
+        expect(await shortcuts.count()).toBe(0)
+        expect(await pager.getByText(`1 / ${totalPages}`, { exact: true }).isVisible()).toBe(true)
+        await pager.getByRole('button', { name: '下一页', exact: true }).click()
+        expect(await pager.getByText(`2 / ${totalPages}`, { exact: true }).isVisible()).toBe(true)
+        expect(await pagerFits()).toBe(true)
+        await pager.getByRole('button', { name: '上一页', exact: true }).click()
+      }
+      await resizeColumn(490)
+      expect(await jump.isVisible()).toBe(true)
+      expect(await shortcuts.count()).toBe(Math.min(7, totalPages))
+    }
   } finally { await page.close() }
 })
 
