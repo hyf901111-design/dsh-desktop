@@ -115,9 +115,14 @@ beforeAll(async () => {
       }
       window.sharedPreviewReads = 0
       let useMemory = false
+      let memoryDocument = { content: '## 记忆验收正文', hash: 'first' }
       const memory = { request: async command => {
         if (command.type === 'settings') useMemory = command.use
-        return { owner: 'test-account', settings: { use: useMemory } }
+        if (command.type === 'document-save') {
+          if (command.expectedHash !== memoryDocument.hash) throw Error('修改已冲突')
+          memoryDocument = { content: command.content, hash: 'saved' }
+        }
+        return { owner: 'test-account', settings: { use: useMemory }, document: { ...memoryDocument } }
       } }
       mountKnowledgePanels(document, {
         memory,
@@ -1296,10 +1301,13 @@ it('reuses a manual search without moving the field or losing the format filter'
 
 it('switches the right knowledge pane to the shared memory settings and keeps the file search on return', async () => {
   const page = await browser.newPage({ viewport: { width: 1100, height: 800 } })
+  page.setDefaultTimeout(2200)
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
-    await page.setContent('<aside data-knowledge-panel-host style="width:340px;height:720px"></aside>')
+    await page.setContent(`
+      <div class="pI_x6G_centerCol" style="position:fixed;inset:10px 360px 10px 10px"></div>
+      <aside data-knowledge-panel-host style="position:fixed;top:10px;right:10px;width:340px;height:720px"></aside>`)
     await page.addScriptTag({ content: bundle })
     const pane = page.getByRole('region', { name: '知识库资料' })
     const files = pane.getByRole('button', { name: '文件资料', exact: true })
@@ -1328,14 +1336,18 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
     expect(await fullToggle.isChecked()).toBe(true)
     expect(await fullToggle.evaluate(switchShape)).toEqual(await toggle.evaluate(switchShape))
     for (const context of [fullMemory, pane.getByRole('region', { name: '经验记忆' })]) {
-      await context.getByText('记忆.md', { exact: true }).waitFor()
-      const spacing = await context.locator('.knowledge-memory-row').last().evaluate(row => {
-        const [icon, title] = row.children
-        return title.getBoundingClientRect().left - icon.getBoundingClientRect().right
-      })
-      expect(spacing).toBeGreaterThanOrEqual(8)
-      expect(spacing).toBeLessThanOrEqual(12)
+      await context.getByRole('heading', { name: '记忆验收正文' }).waitFor()
+      expect(await context.getByRole('button', { name: '预览与编辑' }).count()).toBe(0)
+      expect(await context.getByRole('dialog').count()).toBe(0)
     }
+    await fullMemory.getByRole('tab', { name: '编辑', exact: true }).click()
+    await fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' }).fill('## 保存后直接预览')
+    await fullMemory.getByRole('button', { name: '保存', exact: true }).click()
+    await fullMemory.getByRole('heading', { name: '保存后直接预览' }).waitFor()
+    await fullMemory.getByRole('tab', { name: '编辑', exact: true }).click()
+    await fullMemory.getByRole('textbox', { name: '记忆 Markdown 内容' }).fill('未保存草稿')
+    await fullMemory.getByRole('button', { name: '取消', exact: true }).click()
+    await fullMemory.getByRole('heading', { name: '保存后直接预览' }).waitFor()
     await files.click()
     await pane.getByRole('button', { name: '打开完整知识库' }).click()
     await library.getByRole('textbox', { name: '搜索文件' }).waitFor()

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import type { MemoryBridge, MemorySnapshot } from '../../shared/memory'
 import { openMemoryDocumentEditor } from '../memory/document-editor'
 import { mountMemorySwitchStyles } from '../memory/switch'
-import { KnowledgeFileIcon } from './icons'
 
 export function KnowledgeMemory({ document, bridge, compact = false }: { document: Document; bridge: MemoryBridge; compact?: boolean }) {
   const [snapshot, setSnapshot] = useState<MemorySnapshot>()
@@ -10,8 +9,10 @@ export function KnowledgeMemory({ document, bridge, compact = false }: { documen
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [reload, setReload] = useState(0)
+  const [identity, setIdentity] = useState(0)
   const lifecycle = React.useRef({ generation: 0, active: true })
-  const editor = React.useRef<ReturnType<typeof openMemoryDocumentEditor>>()
+  const host = React.useRef<HTMLDivElement>(null)
+  const owner = snapshot?.owner
 
   useEffect(() => {
     mountMemorySwitchStyles(document)
@@ -29,7 +30,7 @@ export function KnowledgeMemory({ document, bridge, compact = false }: { documen
     }
     const reset = () => {
       scope.generation++
-      editor.current?.close()
+      setIdentity(value => value + 1)
       setBusy(false)
       setNotice('')
       setSnapshot(undefined)
@@ -42,22 +43,22 @@ export function KnowledgeMemory({ document, bridge, compact = false }: { documen
       scope.active = false
       scope.generation++
       seq++
-      editor.current?.close()
       off?.()
       document.removeEventListener('sherlock:knowledge-identity-changed', reset)
     }
   }, [document, bridge, reload])
 
-  function edit() {
-    if (!snapshot || editor.current) return
+  useEffect(() => {
+    if (!owner || !host.current) return
     const generation = lifecycle.current.generation
-    editor.current = openMemoryDocumentEditor({
-      document, bridge, owner: snapshot.owner, t: value => value,
+    const editor = openMemoryDocumentEditor({
+      document, host: host.current, bridge, owner, t: value => value,
       current: () => lifecycle.current.active && lifecycle.current.generation === generation,
-      saved: value => { setSnapshot(value); setNotice('已保存到记忆.md。') },
-      closed: () => { editor.current = undefined }
+      saved: setSnapshot,
+      closed: () => {}
     })
-  }
+    return () => editor.close()
+  }, [document, bridge, owner, identity, reload])
 
   async function toggle(use: boolean) {
     const generation = lifecycle.current.generation
@@ -89,12 +90,7 @@ export function KnowledgeMemory({ document, bridge, compact = false }: { documen
         <input type="checkbox" role="switch" className="ew-memory-toggle" checked={snapshot.settings.use} disabled={busy}
           onChange={event => void toggle(event.currentTarget.checked)} />
       </label>
-      <div className="knowledge-memory-row">
-        <KnowledgeFileIcon format="markdown" />
-        <span><strong>记忆.md</strong><small>预览、补充或修改已保存的记忆。</small></span>
-        <button type="button" className="knowledge-primary" onClick={edit}>预览与编辑</button>
-      </div>
-      {snapshot.document?.error && <p role="alert">{snapshot.document.error}</p>}
+      <div ref={host} />
     </>}
   </section>
 }
