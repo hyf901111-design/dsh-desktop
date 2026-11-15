@@ -125,6 +125,22 @@ test('rejects targets clipped out by a scroll ancestor rather than pointing at h
  const f=fixture(),parent=document.createElement('div');parent.style.overflow='hidden';parent.getBoundingClientRect=()=>({left:20,top:20,right:100,bottom:100,width:80,height:80,x:20,y:20,toJSON:()=>({})});document.body.append(parent);parent.append(f.target)
  const result=f.pointer.perform({target:f.target}).catch(error=>error.message);await vi.runAllTimersAsync();expect(await result).toContain('不可用')
 })
+test('animates actual cell coordinates in a canvas inside a clipped spreadsheet shell',async()=>{
+ const f=fixture(),shell=document.createElement('div')
+ shell.style.overflow='hidden'
+ shell.getBoundingClientRect=()=>new DOMRect(0,0,40,40)
+ document.body.append(shell)
+ shell.append(f.target)
+ expect(()=>homeGuideTargetPoint(document,f.target)).toThrow('不可用')
+ const frames:Array<{x:number;y:number;phase:string}>=[]
+ const action=f.pointer.perform({fromTarget:f.target,target:f.target,action:'drag',
+  canvasPoints:{from:()=>({x:120,y:148}),to:()=>({x:436,y:296})},onFrame:frame=>frames.push(frame)})
+ await vi.runAllTimersAsync()
+ await action
+ expect(frames.find(frame=>frame.phase==='pressed')).toMatchObject({x:120,y:148})
+ expect(frames.filter(frame=>frame.phase==='dragging').length).toBeGreaterThan(1)
+ expect(frames.find(frame=>frame.phase==='released')).toMatchObject({x:436,y:296})
+})
 test('raises its non-interactive cursor after any newly opened manual popover, including component menus',async()=>{
  const prototype=HTMLElement.prototype,show=Object.getOwnPropertyDescriptor(prototype,'showPopover'),hide=Object.getOwnPropertyDescriptor(prototype,'hidePopover'),matches=prototype.matches,open=new Set<Element>(),order:Element[]=[]
  Object.defineProperty(prototype,'showPopover',{configurable:true,value:function(){open.add(this);order.push(this)}});Object.defineProperty(prototype,'hidePopover',{configurable:true,value:function(){open.delete(this)}})

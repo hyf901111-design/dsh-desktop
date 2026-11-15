@@ -1,7 +1,11 @@
 import {createHomeGuideHover} from './home-guide-hover'
 export type HomeGuidePointerFrame={x:number;y:number;phase:'moving'|'pressed'|'dragging'|'released'|'idle'}
-export type HomeGuidePointerAction={target:HTMLElement;action?:'move'|'click'|'drag';fromTarget?:HTMLElement;onFrame?(frame:HomeGuidePointerFrame):void}
 type Point={x:number;y:number}
+export type HomeGuidePointerAction={
+ target:HTMLElement;action?:'move'|'click'|'drag';fromTarget?:HTMLElement
+ canvasPoints?:{from():Point;to():Point}
+ onFrame?(frame:HomeGuidePointerFrame):void
+}
 type Options={runId:string;signal:AbortSignal;initialPosition?:Point;wait(ms:number):Promise<void>;waitUntilPlaying():Promise<void>}
 
 export function homeGuideTargetPoint(document:Document,target:HTMLElement):Point{
@@ -66,12 +70,12 @@ export function createHomeGuidePointer(document:Document,options:Options){
  const point=(target:HTMLElement):Point=>homeGuideTargetPoint(document,target)
  const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{validateDrag?.();hover.update(next.x,next.y);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;raiseLayer();element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})}
  const reduced=()=>win.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true
- const travel=async(target:HTMLElement,duration:number,phase:HomeGuidePointerFrame['phase']='moving')=>{
+ const travel=async(readPoint:()=>Point,duration:number,phase:HomeGuidePointerFrame['phase']='moving')=>{
   duration*=1.3
-  const destination=point(target),start=position??{x:Math.max(8,destination.x-64),y:Math.max(8,destination.y-40)},steps=reduced()?1:Math.max(1,Math.ceil(duration/16))
+  const destination=readPoint(),start=position??{x:Math.max(8,destination.x-64),y:Math.max(8,destination.y-40)},steps=reduced()?1:Math.max(1,Math.ceil(duration/16))
   paint(start,phase)
   for(let index=1;index<=steps;index++){
-   await wait(reduced()?0:duration/steps);ensure();const end=point(target),t=index/steps,eased=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2
+   await wait(reduced()?0:duration/steps);ensure();const end=readPoint(),t=index/steps,eased=t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2
    const dx=end.x-start.x,dy=end.y-start.y,distance=Math.hypot(dx,dy),bend=phase==='moving'&&!reduced()?Math.min(20,distance*.12):0
    // A shallow approach arc shares the existing eased clock. Precision drags
    // keep their exact selected/drop path and onFrame coordinates unchanged.
@@ -86,22 +90,30 @@ export function createHomeGuidePointer(document:Document,options:Options){
   async perform(action:HomeGuidePointerAction){
    ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true;onFrame=action.onFrame
    let completed=false
+   const readCanvasPoint=(read:()=>Point)=>{
+    if(!action.target.isConnected||action.target.ownerDocument!==document)throw aborted()
+    const {x,y}=read()
+    if(!Number.isFinite(x)||!Number.isFinite(y))throw Error('表格选区尚未显示。')
+    return {x:Math.max(0,Math.min(win.innerWidth-1,x)),y:Math.max(0,Math.min(win.innerHeight-1,y))}
+   }
+   const readTarget=()=>action.canvasPoints?readCanvasPoint(action.canvasPoints.to):point(action.target)
    try{
-    await gate();const target=point(action.target)
+    await gate();const target=readTarget()
     if(action.action==='drag'){
      if(!action.fromTarget)throw Error('连接操作缺少起点。')
      const source=action.fromTarget,canvas=source.closest('[data-research-canvas]'),guide=canvas?.closest<HTMLElement>('[data-home-guide]')
+     const readSource=()=>action.canvasPoints?readCanvasPoint(action.canvasPoints.from):point(source)
      if(source.dataset.financialPort==='output'&&action.target.dataset.financialPort==='input'&&guide?.dataset.homeGuide===options.runId){const target=action.target;validateDrag=()=>{point(source);point(target);if(document.documentElement.dataset.homeGuidePointerRun&&document.documentElement.dataset.homeGuidePointerRun!==options.runId||source.closest('[data-research-canvas]')!==canvas||target.closest('[data-research-canvas]')!==canvas||guide.dataset.homeGuide!==options.runId)throw aborted()}}
-     await travel(action.fromTarget,320)
-     if(action.fromTarget.dataset.homeGuideDragFile===options.runId)draggedFile={node:action.fromTarget,origin:point(action.fromTarget),transform:action.fromTarget.style.transform}
-     paint(point(action.fromTarget),'pressed');await wait(reduced()?0:104)
-     await travel(action.target,780,'dragging');paint(point(action.target),'released');await wait(reduced()?0:208)
+     await travel(readSource,320)
+     if(source.dataset.homeGuideDragFile===options.runId)draggedFile={node:source,origin:readSource(),transform:source.style.transform}
+     paint(readSource(),'pressed');await wait(reduced()?0:104)
+     await travel(readTarget,780,'dragging');paint(readTarget(),'released');await wait(reduced()?0:208)
     }else{
      const distance=position?Math.hypot(target.x-position.x,target.y-position.y):120
-     await travel(action.target,Math.max(280,Math.min(620,230+distance*.4)))
-     if(action.action!=='move'){paint(point(action.target),'pressed');await wait(reduced()?0:104);paint(point(action.target),'released');await wait(reduced()?0:208)}
+     await travel(readTarget,Math.max(280,Math.min(620,230+distance*.4)))
+     if(action.action!=='move'){paint(readTarget(),'pressed');await wait(reduced()?0:104);paint(readTarget(),'released');await wait(reduced()?0:208)}
     }
-    ensure();paint(point(action.target),'idle');completed=true
+    ensure();paint(readTarget(),'idle');completed=true
    }finally{onFrame=undefined;validateDrag=undefined;if(!completed)hover.clear();if(draggedFile&&!completed)draggedFile.node.style.transform=draggedFile.transform;draggedFile=undefined;busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
   },
   dispose(){stop();options.signal.removeEventListener('abort',stop);element.remove()}

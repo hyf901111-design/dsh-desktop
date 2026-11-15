@@ -244,12 +244,6 @@ class SpreadsheetView{
   if(!engine||!sheet||sheet.getSheetId()!==source.sheetId)throw Error('选区所在工作表已切换。')
   const {r0,c0,r1,c1}=parseRange(source.range)
   this.jump(address(r0,c0))
-  const markers=[this.doc.createElement('span'),this.doc.createElement('span')]
-  for(const marker of markers){
-   marker.setAttribute('aria-hidden','true')
-   marker.style.cssText='position:absolute;width:2px;height:2px;pointer-events:none'
-   this.grid.append(marker)
-  }
   let last=''
   const select=(row:number,col:number)=>{
    const range=address(r0,c0)+':'+address(row,col)
@@ -258,35 +252,34 @@ class SpreadsheetView{
    sheet.getRange(range).activate()
    this.readSelection()
   }
-  try{
-   await new Promise<void>(resolve=>this.win.requestAnimationFrame(()=>resolve()))
-   check()
+  await new Promise<void>(resolve=>this.win.requestAnimationFrame(()=>resolve()))
+  check()
+  // Univer cells are canvas pixels. Read the live grid geometry instead of
+  // attaching DOM targets inside the spreadsheet's clipped scrolling shell.
+  const cellPoint=(row:number,col:number)=>{
    const view=engine.objectViewport()
-   if(!view)throw Error('表格网格尚未就绪。')
+   const cell=engine.objectRange({startRow:row,endRow:row,startColumn:col,endColumn:col})
+   if(!view||!cell||this.engine!==engine)throw Error('表格网格尚未就绪。')
    const {zoom,scrollX,scrollY,headerX,headerY,left,top}=view
-   const position=(row:number,col:number)=>{
-    const cell=engine.objectRange({startRow:row,endRow:row,startColumn:col,endColumn:col})!
-    return {
-     x:Math.max(left+2,Math.min(this.grid.clientWidth-14,((cell.x+cell.right)/2+headerX-scrollX)*zoom)),
-     y:Math.max(top+2,Math.min(this.grid.clientHeight-14,((cell.y+cell.bottom)/2+headerY-scrollY)*zoom))
-    }
-   }
-   const from=position(r0,c0),to=position(r1,c1)
-   ;[from,to].forEach(({x,y},i)=>Object.assign(markers[i]!.style,{left:x-1+'px',top:y-1+'px'}))
-   const start=markers[0]!.getBoundingClientRect()
-   const span=(value:number,origin:number,distance:number)=>distance>0?Math.min(1,Math.max(0,(value-origin)/distance)):0
-   await point?.({action:'drag',fromTarget:markers[0],target:markers[1]!,onFrame:frame=>{
-    check()
-    if(frame.phase==='pressed'||frame.phase==='dragging'){
-     const row=r0+Math.round((r1-r0)*span(frame.y,start.top+1,to.y-from.y))
-     const col=c0+Math.round((c1-c0)*span(frame.x,start.left+1,to.x-from.x))
-     select(row,col)
-    }
-   }})
+   const box=this.grid.getBoundingClientRect()
+   const x=Math.max(left+2,Math.min(this.grid.clientWidth-14,((cell.x+cell.right)/2+headerX-scrollX)*zoom))
+   const y=Math.max(top+2,Math.min(this.grid.clientHeight-14,((cell.y+cell.bottom)/2+headerY-scrollY)*zoom))
+   return {x:box.left+x*box.width/Math.max(1,this.grid.clientWidth),y:box.top+y*box.height/Math.max(1,this.grid.clientHeight)}
+  }
+  const from=()=>cellPoint(r0,c0),to=()=>cellPoint(r1,c1)
+  const span=(value:number,origin:number,end:number)=>end>origin?Math.min(1,Math.max(0,(value-origin)/(end-origin))):0
+  await point?.({action:'drag',fromTarget:this.grid,target:this.grid,canvasPoints:{from,to},onFrame:frame=>{
    check()
-   select(r1,c1)
-   if(target==='trend')this.referenceSelection()
-  }finally{for(const marker of markers)marker.remove()}
+   if(frame.phase==='pressed'||frame.phase==='dragging'){
+    const start=from(),end=to()
+    const row=r0+Math.round((r1-r0)*span(frame.y,start.y,end.y))
+    const col=c0+Math.round((c1-c0)*span(frame.x,start.x,end.x))
+    select(row,col)
+   }
+  }})
+  check()
+  select(r1,c1)
+  if(target==='trend')this.referenceSelection()
  }
  referenceCashFlowGuideRange(){
   if(this.selectionSignature()!==CASH_FLOW_GUIDE_TREND.sheetId+'!'+CASH_FLOW_GUIDE_TREND.range)throw Error('引用的表格选区已变化。')
