@@ -106,6 +106,30 @@ function useSlashCommandFlyout(cardRef, popup, flyout, ready, confirmation) {
   }, [cardRef, popup, flyout, ready, confirmation])
 }
 
+const nativeSurfaceCall = 'useExpandedCommandMenu(cardRef,state,state.command === "skills");\nuseEWorkCommandPopupSurface(cardRef,state);'
+const flyoutCall = `const flyout=state.open?popup.binding?.segment?.flyout:undefined;
+ useSlashCommandFlyout(cardRef,popup,flyout,state.open,state.confirming);
+ `
+
+// Keep the first installed cascade compatible with the native popup's exact
+// restore anchors. The cascade claims its popover before the normal hooks run.
+export function migrateSlashFlyoutOptions(source) {
+  if (!source.includes('function useEWorkCommandPopupSurface(ref,state,enabled=true){')) return source
+  source = replace(source, 'function useEWorkCommandPopupSurface(ref,state,enabled=true){', 'function useEWorkCommandPopupSurface(ref,state){')
+  source = replace(source, 'if(!enabled||!element||!state.open||state.confirming!==null||state.command==="skills")return',
+    'if(!element||!state.open||state.confirming!==null||state.command==="skills")return')
+  source = replace(source, '},[ref,state.open,state.confirming,state.command==="skills",enabled])', '},[ref,state.open,state.confirming,state.command==="skills"])')
+  const from = source.indexOf(tag), to = source.indexOf('function PopupSelectView(', from)
+  if (from < 0 || to < 0) throw Error('Installed slash flyout source could not be migrated')
+  const nativeSurface = '/* ework:command-popup-surface:v2 */'
+  source = replace(source.slice(0, from) + source.slice(to), nativeSurface,
+    tag+'\n'+commandFlyoutPlacement.toString()+'\n'+useSlashCommandFlyout.toString()+'\n'+nativeSurface)
+  return replace(source, `const flyout=state.open?popup.binding?.segment?.flyout:undefined;
+ useExpandedCommandMenu(cardRef,state,state.command === "skills"&&!flyout);
+ useEWorkCommandPopupSurface(cardRef,state,!flyout);
+ useSlashCommandFlyout(cardRef,popup,flyout,state.open,state.confirming);`, flyoutCall + nativeSurfaceCall)
+}
+
 export function patchSlashFlyoutOptions(source) {
   if (source.includes(tag)) return source
   const wrappedSegment = 'via: "menu",\n\t\t\t\t\t\tspan: pick.span'
@@ -116,15 +140,9 @@ export function patchSlashFlyoutOptions(source) {
     if(segment?.flyout&&(current.confirming||current.submitting))return;`)
   source = replace(source, 'if(binding.command!=="knowledge")this.deps.consume(binding.segment);',
     'if(binding.command!=="knowledge")this.deps.consume(binding.segment);\n binding.segment?.flyout?.closePrimary();')
-  source = replace(source, 'function useEWorkCommandPopupSurface(ref,state){', 'function useEWorkCommandPopupSurface(ref,state,enabled=true){')
-  source = replace(source, 'if(!element||!state.open||state.confirming!==null||state.command==="skills")return',
-    'if(!enabled||!element||!state.open||state.confirming!==null||state.command==="skills")return')
-  source = replace(source, '},[ref,state.open,state.confirming,state.command==="skills"])', '},[ref,state.open,state.confirming,state.command==="skills",enabled])')
-  source = replace(source, 'function PopupSelectView({ popup, t }) {', tag+'\n'+commandFlyoutPlacement.toString()+'\n'+useSlashCommandFlyout.toString()+'\nfunction PopupSelectView({ popup, t }) {')
-  source = replace(source, 'useExpandedCommandMenu(cardRef,state,state.command === "skills");\nuseEWorkCommandPopupSurface(cardRef,state);', `const flyout=state.open?popup.binding?.segment?.flyout:undefined;
- useExpandedCommandMenu(cardRef,state,state.command === "skills"&&!flyout);
- useEWorkCommandPopupSurface(cardRef,state,!flyout);
- useSlashCommandFlyout(cardRef,popup,flyout,state.open,state.confirming);`)
+  const surfaceStart = '/* ework:command-popup-surface:v2 */'
+  source = replace(source, surfaceStart, tag+'\n'+commandFlyoutPlacement.toString()+'\n'+useSlashCommandFlyout.toString()+'\n'+surfaceStart)
+  source = replace(source, nativeSurfaceCall, flyoutCall + nativeSurfaceCall)
   source = replace(source, 'cardRef.current.contains(ev.target)) return;', '(cardRef.current.contains(ev.target)||flyout?.primary?.contains(ev.target))) return;')
   source = replace(source, 'state.confirming,\n\t\t\t\tpopup\n', 'state.confirming,\n\t\t\t\tpopup,flyout\n')
   source = replace(source,'if (state.open && state.confirming === null) searchRef.current?.focus();',

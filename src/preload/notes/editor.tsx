@@ -5,12 +5,12 @@ import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/not
 import {capabilityReceiptText} from '../../../packages/dsh-research-task-runtime/client-capability-receipts.js'
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState, createContext, useContext } from 'react'
 import { createPortal } from 'react-dom'
-import { BlockNoteSchema, defaultBlockSpecs, createUserStore } from '@blocknote/core'
+import { BlockNoteEditor, BlockNoteSchema, defaultBlockSpecs, createUserStore } from '@blocknote/core'
 import { en, zh } from '@blocknote/core/locales'
 import {useNoteUiLocale,notePlaceholderCss} from './locale'
 import { SideMenuExtension, filterSuggestionItems } from '@blocknote/core/extensions'
 import { CommentsExtension, DefaultThreadStoreAuth } from '@blocknote/core/comments'
-import { withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
+import { blocksToYXmlFragment, withCollaboration, YjsThreadStore } from '@blocknote/core/yjs'
 import { BlockNoteView } from '@blocknote/mantine'
 import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useComponentsContext, useExtensionState, useEditorState, getDefaultReactSlashMenuItems, SuggestionMenuController, FloatingComposerController } from '@blocknote/react'
 import * as Y from 'yjs'
@@ -80,13 +80,20 @@ type ComposerAdmission = {draft:string;draftRev:number;imageIds:string[];submiss
 const Context = createContext<{ bridge: NotesBridge; sessionId: string; dark: boolean; navigate(view: string): void; editor?: any; importing?:Set<string> } | null>(null)
 const encode = (doc: Y.Doc) => { const bytes = Y.encodeStateAsUpdate(doc); let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s) }
 const plain = (content: NoteContent) => content.title + '\n\n' + content.blocks.map(b => noteText(b.content) || (b.type === 'research' ? t('研究组件') : '')).join('\n\n')
-function createNoteDocument(content:NoteContent&{updatedAt?:number}){
+function createNoteDocument(content:NoteContent&{updatedAt?:number}, seedBlocks = true){
   const doc=new Y.Doc();if(content.yjs)Y.applyUpdate(doc,Uint8Array.from(atob(content.yjs),c=>c.charCodeAt(0)))
+  // Portable notes carry blocks and formatting without the author's Yjs history.
+  const needsBlocks = seedBlocks && !content.yjs && content.blocks.length > 0
+  if(needsBlocks){
+    const source = BlockNoteEditor.create({ schema, initialContent: content.blocks })
+    try { blocksToYXmlFragment(source, source.document, doc.getXmlFragment('note')) }
+    finally { source._tiptapEditor.destroy() }
+  }
   const metadata=doc.getMap('note-metadata'),legacyDate=noteHasSavedContent(content)?noteEditTimestamp(content.updatedAt):undefined
   const seeded=!noteEditTimestamp(metadata.get('editedAt'))&&!!legacyDate
   // Seed a known legacy date before the save baseline, without dirtying an opened note.
   if(seeded)metadata.set('editedAt',legacyDate!)
-  return{doc,seeded}
+  return{doc,seeded:seeded||needsBlocks}
 }
 class NoteThreadStoreAuth extends DefaultThreadStoreAuth {
   override canAddReaction(): boolean { return false }
@@ -250,7 +257,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   titleRef.current = title
   const foreground=useRef(props.active!==false);foreground.current=props.active!==false
   const editorActive=()=>foreground.current&&noteEditorVisible(scroll.current)
-  const doc = useMemo(() => createNoteDocument(props.initial).doc, [])
+  const doc = useMemo(() => createNoteDocument(props.initial,!props.sharedReadOnly).doc, [])
   const [editedAt,setEditedAt]=useState(()=>noteEditTimestamp(doc.getMap('note-metadata').get('editedAt'))),editFingerprint=useRef('')
   const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: id===CHALLENGE_USER?t('AI评论员'):t('我'), avatarUrl: '' }))), [])
   useEffect(()=>{users.setUser({id:CHALLENGE_USER,username:t('AI评论员'),avatarUrl:''})},[users,document.documentElement.dataset.odysseyLocale])
@@ -1039,7 +1046,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
         {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
         {composerPreview.current?.requestId===preview.requestId?[...(composerPreview.current.updates??[]).map(node=>({node})),...composerPreview.current.components].map((result,index)=><ResearchBlock key={index} block={{id:'preview-'+index,props:{payload:JSON.stringify(result.node)}}}/>):null}
       </SuggestionPanel></div> : null}</>
-  return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}>
+  return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}
+    onBeforeInputCapture={props.sharedReadOnly ? event => event.preventDefault() : undefined}
+    onPasteCapture={props.sharedReadOnly ? event => { event.preventDefault(); event.stopPropagation() } : undefined}
+    onDropCapture={props.sharedReadOnly ? event => { event.preventDefault(); event.stopPropagation() } : undefined}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
     {!props.guide&&!props.sharedReadOnly&&props.active!==false?<NoteViewMode sessionId={props.sessionId} preview={viewPreview} disabled={!!props.recovery||writing||externalBusy||challenge.running||!!challenge.busyId||!!importing.current.size} onToggle={()=>{
       if(composing.current||request.current||settlingProposal.current||externalCapabilities.current?.pending()||noteResearchBlocks(editor.document).some(block=>inlineComponents.isGenerating(block.id)))return
@@ -1049,7 +1059,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     <main className="en-main"><div className="en-document-scroll" data-note-file-drop-owner="" data-file-drag={fileDrag||undefined} ref={scroll} onCompositionStartCapture={startBodyComposition} onCompositionEndCapture={()=>{composing.current=false}} onKeyDownCapture={event=>{const target=event.target as HTMLElement;if(composing.current||props.recovery||request.current||settlingProposal.current||!editorActive()||!target.isContentEditable||target.closest('input,textarea,button,select,[contenteditable="false"]')||!target.closest('.bn-editor'))return;const blockId=noteInlineAiTrigger(editor,event.nativeEvent);if(!blockId)return;event.preventDefault();event.stopPropagation();clearSelection(true);setPreview(undefined);setInlineDraft({anchor:captureNoteInlineAnchor(editor,client.current,blockId),prompt:inlinePrompt.current})}} onDragOverCapture={event=>{if(ownsFiles(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';setFileDrag(true)}}} onDragLeave={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setFileDrag(false)}} onScroll={track} onPasteCapture={paste} onPointerDownCapture={e=>{if(!request.current&&!preview&&!(e.target as HTMLElement).closest('.en-inline-assistant,.en-research')&&(e.target as HTMLElement).closest('.bn-editor,.en-title'))clearSelection()}}>
       <div className="en-document" data-note-document-id={client.current}>
         {props.recovery ? <div className="en-recovery"><strong>{t("发现未保存的本地草稿")}</strong><span>{t("上次编辑内容已保留，可对比后恢复。")}</span><div><button onClick={() => setCompare(true)}>{t("对比草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(true)}>{props.recovering ? t("正在保存…") : t("恢复草稿")}</button><button disabled={props.recovering} onClick={() => props.onRecovery(false)}>{t("保留已保存版本")}</button></div></div> : null}
-        <input className="en-title" aria-label={t("笔记标题")} placeholder={t("无标题文档")} value={title} readOnly={readOnly} maxLength={1000} onChange={e => { titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
+        <input className="en-title" aria-label={t("笔记标题")} placeholder={t("无标题文档")} value={title} readOnly={readOnly} maxLength={1000} onChange={e => { if(readOnly)return;titleRef.current = e.target.value; setTitle(e.target.value); changed() }} />
         {editedDate?<time className="en-edit-date" dateTime={editedDate.calendar}>{editedDate.label}</time>:null}
         <BlockNoteView key={document.documentElement.dataset.odysseyLocale} editor={editor} editable={!readOnly} theme={props.dark ? 'dark' : 'light'} formattingToolbar={false} sideMenu={false} slashMenu={false} comments={false} tableHandles={false}>
           <NativeTableControls active={!readOnly} sessionId={props.sessionId}/>{!viewPreview?<><FloatingComposerController/><ManualNoteThreads/></>:null}

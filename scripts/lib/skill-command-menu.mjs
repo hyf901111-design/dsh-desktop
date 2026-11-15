@@ -1,6 +1,7 @@
 export const SKILL_COMMAND_MENU_CSS = '.mufS8W_card[data-ework-command=skills]{width:min(360px,100%)}.mufS8W_card[data-ework-command=skills] .mufS8W_row{flex-direction:column;align-items:stretch;gap:2px;padding:7px 9px}.mufS8W_card[data-ework-command=skills] .mufS8W_label{flex:none;line-height:20px}.mufS8W_card[data-ework-command=skills] .mufS8W_detail{display:block;min-width:0;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mufS8W_card[data-ework-command=skills] .mufS8W_viewport::-webkit-scrollbar{width:4px}'
 const SETTLEMENT_CSS='/* ework:skill-command-settlement:css */.mufS8W_card [data-ework-skill-applying]{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.mufS8W_card[data-ework-command=skills][aria-busy=true]{cursor:progress}.mufS8W_card[data-ework-command=skills][aria-busy=true] [aria-selected=true]{opacity:.55;pointer-events:none}'
 import {readFileSync} from 'node:fs'
+import {migrateSlashFlyoutOptions} from './slash-command-flyout.mjs'
 import {patchCommandPopupSurface} from './command-popup-surface.mjs'
 import {patchExpandedCommandMenu} from './expanded-command-menu.mjs'
 import {patchCommandMenuSelection} from './command-menu-selection.mjs'
@@ -10,6 +11,7 @@ const replace=(source,anchor,next)=>{
  return source.replace(anchor,next)
 }
 export function patchSkillCommandPopup(source){
+ source=migrateSlashFlyoutOptions(source)
  const marker='/* ework:skill-command-popup:v1 */'
  if(source.includes(marker))return patchSlashPopupDesign(patchKnowledgePopup(patchCommandPopupSurface(patchSkillCommandArtwork(patchSkillCommandSettlement(patchExpandedCommandMenu(source,'skills'))))))
  const open='this.popupFor(actx).open(name, ui, session, segment);'

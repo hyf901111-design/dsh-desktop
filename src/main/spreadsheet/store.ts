@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync, unlinkSync, lstatSync, rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { applyOperations, MAX_BOOK_BYTES, validateWorkbook, type Workbook } from '../../shared/spreadsheet/workbook'
@@ -75,6 +75,7 @@ export class SpreadsheetStore {
     if(workbook)try{unlinkSync(join(this.directory(key),hash(workbook.id)+'.json'))}catch{}
     return this.public(next)
   }
+  remove(key:WorkbookKey){rmSync(this.directory(key),{recursive:true,force:true})}
   create(key:WorkbookKey,revision:number,workbook:Workbook){const old=this.read(key);this.expect(old,revision);validateWorkbook(workbook);return this.commit(key,old,workbook)}
   save(key:WorkbookKey,revision:number,workbook:Workbook){
     const old=this.read(key);this.expect(old,revision);validateWorkbook(workbook)

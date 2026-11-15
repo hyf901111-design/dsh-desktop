@@ -4,13 +4,15 @@ import { NotesApp } from '../notes/editor'
 import { mountSharedSpreadsheet } from '../spreadsheet/view'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import type { KnowledgeDocument } from '../../shared/knowledge-library'
-import { knowledgeSessionLabels, sharedKnowledgeSessionFile, type SharedKnowledgeSession } from '../../shared/knowledge-sessions'
+import { knowledgeSessionLabels, sharedKnowledgeSessionFile, type SharedKnowledgeSession, type KnowledgeSessionCopy } from '../../shared/knowledge-sessions'
+import { openKnowledgeSession } from './session-directory'
 import { KnowledgeIcon } from './icons'
 import { HeaderViewModeIcon } from '../header-view-mode-icon'
 
 export function mountSharedKnowledgeSessions(document: Document, host: WorkspaceSurfaceHost,
   read: (id: string) => Promise<{ session: SharedKnowledgeSession; updatedAt: number }>,
-  canRead: (id: string, updatedAt: number) => Promise<boolean>) {
+  canRead: (id: string, updatedAt: number) => Promise<boolean>,
+  copy: (id: string, updatedAt: number, fromSession?: string) => Promise<KnowledgeSessionCopy>) {
   const surface = document.createElement('section')
   surface.className = 'knowledge-workspace knowledge-shared-session'
   surface.setAttribute('aria-label', '共享会话')
@@ -20,10 +22,16 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
     .knowledge-shared-session{display:flex;flex-direction:column}
     .knowledge-shared-session>header{display:flex;align-items:center;gap:10px;padding:0 46px 0 18px;min-height:46px;flex:none}
     .knowledge-shared-session>header strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
-    .knowledge-shared-session>header small{margin-left:auto;white-space:nowrap;color:var(--knowledge-muted)}
+    body:has([data-dsh-panel-host][data-odyssey-panel-right="open"]) .knowledge-shared-session>header{padding-right:10px}
+    .knowledge-shared-session-actions{display:flex;align-items:center;flex:none;gap:8px;margin-left:auto;white-space:nowrap}
+    .knowledge-shared-session-actions button{background:var(--knowledge-field)}
+    .knowledge-shared-session-actions button:hover:not(:disabled){background:var(--knowledge-control-hover)}
+    .knowledge-session-copy-notice{position:absolute;right:10px;top:46px;z-index:4;margin:0;padding:8px 12px;
+      max-width:calc(100% - 20px);background:var(--knowledge-menu);border:1px solid var(--knowledge-line);border-radius:8px}
     .knowledge-shared-session-mode{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:6px;background:var(--knowledge-field);color:var(--knowledge-ink)}
     .knowledge-shared-session-mode svg{flex:none}
     .knowledge-shared-session-body>[data-research-canvas]{position:absolute;inset:0;height:auto}
+    .knowledge-shared-session-body [data-research-canvas] :is([data-workbench-ask],[data-workbench-more]){display:none}
     .knowledge-shared-session-body{flex:1;position:relative;min-height:0;min-width:0;overflow:hidden}
     .knowledge-shared-session-body>.en-root{position:absolute;inset:0;border-radius:0}
     .knowledge-shared-session-body>.ew-sheet{height:100%}
@@ -69,13 +77,49 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
     const token = request
     const header = document.createElement('header')
     const headerRoot = createRoot(header)
-    headerRoot.render(<>
+    let copying = false
+    let copied: KnowledgeSessionCopy | undefined
+    let notice = ''
+    const failureText = (error: unknown) =>
+      (error instanceof Error ? error.message : String(error)).replace(/^Error invoking remote method '[^']+': (?:Error: )?/u, '')
+    const renderHeader = () => headerRoot.render(<>
       <button type="button" className="knowledge-square" aria-label="返回知识库" onClick={close}><KnowledgeIcon name="back" /></button>
       <strong title={entry.title}>{entry.title}</strong>
-      <small>{entry.mode === 'spreadsheet'
-        ? <span className="knowledge-shared-session-mode" title="共享工作簿仅供查看" aria-label="表格预览 · 只读"><HeaderViewModeIcon preview />预览</span>
-        : <>{knowledgeSessionLabels[entry.mode]} · 只读</>}</small>
+      <div className="knowledge-shared-session-actions">
+        <button type="button" disabled={!current || copying} onClick={() => void createCopy()}>
+          {copying ? '正在创建…' : copied ? '打开副本' : '创建副本'}
+        </button>
+        <span className="knowledge-shared-session-mode" title="共享会话仅供查看"
+          aria-label={knowledgeSessionLabels[entry.mode] + '预览 · 只读'}><HeaderViewModeIcon preview />预览</span>
+      </div>
+      {notice && <p className="knowledge-session-copy-notice" role="status">{notice}</p>}
     </>)
+    async function createCopy() {
+      const source = current
+      if (!source || copying || token !== request) return
+      copying = true
+      notice = ''
+      renderHeader()
+      try {
+        const from = document.querySelector<HTMLElement>('.pI_x6G_centerCol [data-srb-session-header][data-ework-notes-session]')?.dataset.eworkNotesSession
+        copied ??= await copy(source.id, source.updatedAt, from)
+        // Session registration arrives on the resident client's catalog stream.
+        for (let attempt = 0; attempt < 12 && token === request; attempt++) {
+          if (await openKnowledgeSession(document, copied.id, copied.mode)) {
+            if (token === request && host.current()?.surface === 'shared-session') host.revealConversation()
+            return
+          }
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+        notice = copied.named ? '副本已创建，可从左侧工作区打开。' : '副本已创建，可从左侧工作区打开并修改名称。'
+      } catch (error) {
+        notice = failureText(error)
+      } finally {
+        copying = false
+        if (token === request && current) renderHeader()
+      }
+    }
+    renderHeader()
     const body = document.createElement('div')
     body.className = 'knowledge-shared-session-body'
     surface.replaceChildren(header, body)
@@ -118,9 +162,10 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
       }
       cleanView = () => { dispose?.(); headerRoot.unmount() }
       current = { id: row.id, updatedAt: result.updatedAt }
+      renderHeader()
     } catch (error) {
       if (token !== request) return
-      status(body, String((error as Error).message ?? error).replace(/^Error invoking remote method '[^']+': (?:Error: )?/u, ''), true)
+      status(body, failureText(error), true)
     }
   }
 

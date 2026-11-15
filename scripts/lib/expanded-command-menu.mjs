@@ -4,7 +4,7 @@ const CSS='/* ework-expanded-command-menu:start */.mufS8W_card[data-ework-comman
 export function useExpandedCommandMenu(ref,state,enabled=true){
  (0,react.useLayoutEffect)(()=>{
   const element=ref.current
-  if(!element||!state.open||!enabled)return
+  if(!element||!state.open||!enabled||element.hasAttribute('popover'))return
   const win=element.ownerDocument.defaultView
   let frame=0
   const originalWidth=element.getBoundingClientRect().width,originalMaxHeight=element.style.getPropertyValue('max-height'),originalMaxHeightPriority=element.style.getPropertyPriority('max-height')

@@ -18,6 +18,8 @@ export type KnowledgeSessionEvidence = {
   hasContent: boolean
 }
 
+export type KnowledgeSessionCopy = { id: string; mode: KnowledgeSessionMode; named: boolean }
+
 export type KnowledgeSessionShare = { id: string; category: string }
 export const knowledgeSessionShareKey = (mode: KnowledgeSessionMode, sessionId: string) => `${mode}:${sessionId}`
 

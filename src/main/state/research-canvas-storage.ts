@@ -160,6 +160,12 @@ export class ResearchCanvasStorage {
     }
   }
 
+  removeItem(key: string) {
+    if (!validResearchCanvasStorageKey(key)) return
+    rmSync(researchCanvasStoragePath(this.userDataPath, key), { force: true })
+    this.values.delete(key)
+  }
+
   private read(key: string): string | null {
     const filePath = researchCanvasStoragePath(this.userDataPath, key)
     try {

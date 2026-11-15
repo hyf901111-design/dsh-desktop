@@ -10,7 +10,7 @@ import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
-import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
+import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode, type SharedKnowledgeSession, type KnowledgeSessionCopy } from '../../shared/knowledge-sessions'
 import { knowledgeSessionShareId, readKnowledgeSessionSnapshot } from './session-share'
 
 function id(value: unknown): string {
@@ -36,7 +36,7 @@ async function copyKnowledgeFile(source: string, target: string, check: () => vo
 }
 
 export function installKnowledgeIpc({
-  store, window, identity, generatedWorkspace, sharing, content, filePreview, sessionEvidence, sessionSnapshot
+  store, window, identity, generatedWorkspace, sharing, content, filePreview, sessionEvidence, sessionSnapshot, copySession
 }: {
   store: KnowledgeStore
   sharing: KnowledgeSharing
@@ -46,8 +46,10 @@ export function installKnowledgeIpc({
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
   sessionEvidence(owner: string, id: string, mode: KnowledgeSessionMode): KnowledgeSessionEvidence
+  copySession(owner: string, source: SharedKnowledgeSession, fromSession: string | undefined, check: () => void): Promise<KnowledgeSessionCopy>
   sessionSnapshot(owner: string, id: string, mode: KnowledgeSessionMode, displayTitle: string, check: () => void): Promise<{ name: string; data: Buffer }>
 }) {
+  const activeCopies = new Set<string>()
   const transfers = new Map<string, { controller: AbortController; sender: WebContents }>()
   const observedSenders = new WeakSet<WebContents>()
   registerTrustedMainWindowHandler(ipcMain, 'knowledge:request', window, async (event, method: unknown, input?: unknown) => {
@@ -215,6 +217,22 @@ export function installKnowledgeIpc({
         const allowed = !!row && row.updatedAt === args.updatedAt && await sharing.canReadVersion(row, signal)
         check()
         return allowed
+      }
+      case 'copy-shared-session': {
+        const shareId = previewId(args.id)
+        const stamp = args.updatedAt
+        if (shareId.length !== 32 || typeof stamp !== 'number' || !Number.isSafeInteger(stamp)) throw Error('共享会话标识无效。')
+        const key = owner.owner + ':' + shareId
+        if (activeCopies.has(key)) throw Error('正在创建此会话的副本。')
+        activeCopies.add(key)
+        try {
+          const file = await sharing.read(shareId, AbortSignal.timeout(15000))
+          check()
+          if (file.document.updatedAt !== stamp) throw Error('共享会话已更新，请重新打开后创建副本。')
+          const source = readKnowledgeSessionSnapshot(file.document, file.data)
+          const fromSession = typeof args.fromSession === 'string' && args.fromSession.length <= 512 ? args.fromSession : undefined
+          return await copySession(owner.owner, source, fromSession, check)
+        } finally { activeCopies.delete(key) }
       }
       case 'shared-session': {
         const shareId = previewId(args.id)

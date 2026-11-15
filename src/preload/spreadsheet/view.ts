@@ -281,7 +281,7 @@ class SpreadsheetView{
   this.chrome.innerHTML='<div class="ew-sheet-ribbon" role="toolbar" aria-label="表格工具栏">'+button('menu','菜单',{glyph:'menu',value:'commands',className:'dropdown',withLabel:true})+toolbarDivider+'<div class="ew-sheet-ribbon-tools">'+this.toolbar()+'</div><div class="ew-sheet-ribbon-end">'+button('menu','',{glyph:'more',label:'更多工具',value:'overflow'})+button('search','',{glyph:'search',label:'查找'})+(this.sharedReadOnly?'':this.focusButton())+'</div></div><div class="ew-sheet-formula"><div class="ew-sheet-name"><input data-field="address" aria-label="单元格地址" autocomplete="off" spellcheck="false" value="'+text(this.active)+'">'+button('menu','',{glyph:'down',value:'ranges',label:'前往单元格'})+'</div><span class="ew-sheet-fx" aria-hidden="true">fx</span><input data-field="formula" aria-label="公式栏" autocomplete="off" spellcheck="false" '+(!this.editable?'readonly ':'')+'value="'+text(this.formula)+'"></div>'
   this.foot.innerHTML='<div class="ew-sheet-tabs"><div class="ew-sheet-tab-controls">'+button('menu','',{glyph:'grid',label:'工作表列表',value:'sheets'})+'</div><div class="ew-sheet-tab-list" role="tablist" aria-label="工作表">'+book.sheetOrder.map(id=>{
    const sheet=book.sheets[id]!,active=(current?.getSheetId()??this.selection?.sheetId??book.sheetOrder[0])===id
-   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" data-ui-preserve title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
+   return '<div class="ew-sheet-tab" data-current="'+active+'"><button type="button" role="tab" aria-selected="'+active+'" data-action="sheet" data-value="'+text(id)+'" data-ui-preserve title="'+text(sheet.name)+'">'+text(sheet.name)+'</button>'+(active&&!this.sharedReadOnly?button('menu','',{glyph:'down',label:'工作表选项',value:'sheet'}):'')+'</div>'
   }).join('')+'</div>'+button('add-sheet','',{glyph:'plus',label:'新增工作表',disabled:!this.editable||book.sheetOrder.length>=MAX_SHEETS})+'<span class="ew-sheet-sheet-count">'+book.sheetOrder.length+' 个工作表</span>'+(book.components?.length?button('menu','组件 '+book.components.length,{glyph:'grid',value:'components',label:'查看工作簿组件'}):'')+(book.charts?.length?button('menu','图表 '+book.charts.length,{glyph:'chart',value:'charts',label:'查看工作簿图表'}):'')+'</div><div class="ew-sheet-status"><span class="ew-sheet-status-text" role="status"></span><div><span class="ew-sheet-selection-count">计数：'+this.count+'</span>'+button('zoom-minus','',{glyph:'minus',label:'缩小表格'})+button('zoom-reset',this.zoom+'%',{label:'重置表格缩放'})+button('zoom-plus','',{glyph:'plus',label:'放大表格'})+'</div></div>'
   const tabList=this.foot.querySelector<HTMLElement>('.ew-sheet-tab-list')!
   tabList.scrollLeft=tabScroll
@@ -313,7 +313,7 @@ class SpreadsheetView{
    percent:edit('number-format','百分比','percent',{value:'0.00%'}),decimals:edit('number-format','两位小数','decimals',{value:'#,##0.00'}),
    filter:{...menu('filter','筛选','filter','筛选'),pressed:!!this.current()?.getFilter()},sort:menu('sort','排序','sort'),
    duplicates:edit('duplicates','去重','duplicates'),functions:menu('functions','插入函数','sum'),
-   recalc:{action:'recalc',label:'重新计算',browserIcon:'refresh'},freeze:menu('freeze','冻结','freeze'),
+   recalc:{action:'recalc',label:'重新计算',browserIcon:'refresh',disabled:!this.editable},freeze:menu('freeze','冻结','freeze'),
    gridlines:edit('gridlines','网格线','grid'),zoom:menu('zoom','缩放','search',undefined,false),
    focus:{action:'focus',label:this.focusLayout?'退出专注表格':'专注表格',icon:this.focusLayout?'exit-focus':'focus'}
   } satisfies Record<string,Tool>
@@ -461,7 +461,7 @@ class SpreadsheetView{
   try{
    const {createSheetEngine}=await import('./engine')
    if(this.disposed||token!==this.modeToken)return
-   this.engine=createSheetEngine(this.grid,record.workbook,this.canEdit,derived=>this.changed(derived),()=>this.readSelection(),this.contextAction,this.positionSheetObjects)
+   this.engine=createSheetEngine(this.grid,record.workbook,this.canEdit,derived=>this.changed(derived),()=>this.readSelection(),this.sharedReadOnly?undefined:this.contextAction,this.positionSheetObjects,this.sharedReadOnly)
    if(this.preview)this.engine.setEditable(false)
    const book=this.engine.model
    if(!position&&previous&&book.getSheetBySheetId(previous.sheetId)){
@@ -709,13 +709,13 @@ class SpreadsheetView{
     const value=this.menu?.anchor.closest<HTMLElement>('[data-chart-id]')?.dataset.chartId
     const card=value?this.chartCards.get(value)?.element:undefined
     return [
-     {label:'编辑图表',action:'edit-chart',value,icon:'edit'},
-     {label:'重命名图表',action:'rename-chart',value,icon:'rename'},
+     {label:'编辑图表',action:'edit-chart',value,icon:'edit',disabled:!this.editable},
+     {label:'重命名图表',action:'rename-chart',value,icon:'rename',disabled:!this.editable},
      {label:card?.hasAttribute('data-chart-show-data')?'显示图表':'显示数据',action:'toggle-chart-data',value,icon:'grid',disabled:!card?.querySelector('table')},
      {label:'定位选区',action:'chart-source',value,icon:'pin'},
      {label:'导出图表',action:'menu',value:'chart-export',icon:'download',disabled:!card?.querySelector('table')},
-     {label:'复制图表',action:'duplicate-chart',value,icon:'duplicates'},
-     {label:'删除图表',action:'confirm-remove-chart',value,icon:'trash',divider:true}
+     {label:'复制图表',action:'duplicate-chart',value,icon:'duplicates',disabled:!this.editable},
+     {label:'删除图表',action:'confirm-remove-chart',value,icon:'trash',divider:true,disabled:!this.editable}
     ]
    }
    case 'chart-export':return chartExportFormats.map(format=>({label:format.toUpperCase(),action:'chart-export-image',value:format,icon:'download'}))
@@ -749,7 +749,7 @@ class SpreadsheetView{
    case 'sort':return [{label:'按选区首列升序',action:'sort',value:'asc'},{label:'按选区首列降序',action:'sort',value:'desc'}]
    case 'functions':return items(['SUM','AVERAGE','MIN','MAX','COUNT','IF','IFERROR','NPV','IRR','XIRR'],'function')
    case 'zoom':return items(['50%','75%','100%','125%','150%','200%'],'zoom')
-   case 'ranges':return [{label:'引用当前选区到对话',action:'reference-selection'},{label:'前往 A1',action:'jump',value:'A1'},{label:'输入单元格地址…',action:'address-dialog'},...sheet?[{label:'前往当前选区 '+this.selection?.range,action:'jump',value:this.selection?.range}]:[]]
+   case 'ranges':return [...(this.sharedReadOnly?[]:[{label:'引用当前选区到对话',action:'reference-selection'}]),{label:'前往 A1',action:'jump',value:'A1'},{label:'输入单元格地址…',action:'address-dialog'},...sheet?[{label:'前往当前选区 '+this.selection?.range,action:'jump',value:this.selection?.range}]:[]]
   }
   return []
  }
@@ -1993,7 +1993,7 @@ class SpreadsheetView{
     const value2=action==='zoom-reset'?100:action==='zoom'?Number(value.replace('%','')):this.zoom+(action==='zoom-plus'?10:-10)
     this.zoom=Math.min(200,Math.max(50,value2));sheet?.zoom(this.zoom/100);this.refreshFields();return
    }
-   case 'recalc':api?.getFormula().executeCalculation();this.say('正在重新计算公式');return
+   case 'recalc':if(this.editable){api?.getFormula().executeCalculation();this.say('正在重新计算公式')}return
   }
   if(!model||!sheet||!range||!this.editable)return
   switch(action){
