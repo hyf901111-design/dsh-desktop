@@ -11,29 +11,148 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91",
-        "tipCommit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
+        "baseCommit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
+        "tipCommit": "cb191ac0b4391043ea06a407fabf7a6c7af6dc23",
         "commits": [
           {
-            "commit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
+            "commit": "6e18ec787386405b61913ed7793910eb6fa85b43",
             "parents": [
-              "21ba0366add1474d77cf0ceaeadcb1a49fbd4b91"
+              "afdd8cb0e3029394ad91798c283ea7a36221958e"
             ],
-            "subject": "修复：仅传递技能菜单的输入范围到客户端预加载"
+            "subject": "修复：经验记忆文档随窗口高度自适应"
+          },
+          {
+            "commit": "12a27b8a36b631544b615578f26d871654340f92",
+            "parents": [
+              "6e18ec787386405b61913ed7793910eb6fa85b43"
+            ],
+            "subject": "优化：统一知识库分页页码的方形背景"
+          },
+          {
+            "commit": "c0b5d924cb1647ce9e49f34da0ed56d826f538e9",
+            "parents": [
+              "12a27b8a36b631544b615578f26d871654340f92"
+            ],
+            "subject": "优化：探索页采用面性工具图标和套餐标题大小写"
+          },
+          {
+            "commit": "f6f927e626361a67db21ddfb7e9e974588a3458d",
+            "parents": [
+              "c0b5d924cb1647ce9e49f34da0ed56d826f538e9"
+            ],
+            "subject": "新增：笔记可导入 PDF、文本、Word 和 Markdown 正文"
+          },
+          {
+            "commit": "4a0a5107bb90b0339b041ae7eb393ae7c41d4422",
+            "parents": [
+              "f6f927e626361a67db21ddfb7e9e974588a3458d"
+            ],
+            "subject": "优化：按设计稿完善知识库单文件和批量拖放上传"
+          },
+          {
+            "commit": "cb191ac0b4391043ea06a407fabf7a6c7af6dc23",
+            "parents": [
+              "4a0a5107bb90b0339b041ae7eb393ae7c41d4422"
+            ],
+            "subject": "新增：对齐显示知识库文件和会话子分类数量"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/integrations/skill-command.ts"
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
           },
           {
             "status": "M",
-            "path": "test/integration-skill-composer.test.ts"
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/notes/document-import.ts"
           },
           {
             "status": "M",
-            "path": "test/skill-command-menu.test.ts"
+            "path": "src/main/notes/file-picker.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-assets/moon.svg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/explore-assets/search.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-assets/settings.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-assets/sun.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-quota.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/drop-upload.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/memory.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/panel.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/session-directory.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/memory/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-quota-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/note-document-import.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-slash-insert.test.js"
           }
         ],
         "checks": [
@@ -44,30 +163,40 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "主进程及预加载类型检查通过。",
-            "verifiedCommit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
-            "completedAt": "2026-11-15T11:30:53Z",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "cb191ac0b4391043ea06a407fabf7a6c7af6dc23",
+            "completedAt": "2026-11-15T12:15:22Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
               "--maxWorkers=1",
-              "test/skill-command-menu.test.ts",
-              "test/integration-skill-composer.test.ts"
+              "test/knowledge-workspace-rendered.test.js",
+              "test/knowledge-library.test.ts",
+              "test/note-document-import.test.ts",
+              "test/knowledge-content.test.ts",
+              "test/notes-slash-insert.test.js",
+              "test/explore-menu-browser.test.ts",
+              "test/explore-quota-browser.test.ts",
+              "-t",
+              "drops one or several|provides drag and preview|paginates files|switches the right knowledge pane|preserves the memory tab|moves existing files|keeps uploaded bytes|reports bytes while importing|reads the four Notes|extracts actual source text|reads selectable PDF|extracts PowerPoint|imports Markdown|places smart and link|opens file picker|canceling the picker|filled sidebar-style|renders the account quota|lists real session modes|publishes and manages|centers empty messages"
             ],
             "outcome": "passed",
-            "summary": "85 项技能菜单跨进程与原生输入框聚焦测试通过。",
-            "verifiedCommit": "afdd8cb0e3029394ad91798c283ea7a36221958e",
-            "completedAt": "2026-11-15T11:30:53Z",
+            "summary": "知识库、笔记导入和探索页的聚焦渲染与文档读取验证。",
+            "verifiedCommit": "cb191ac0b4391043ea06a407fabf7a6c7af6dc23",
+            "completedAt": "2026-11-15T12:15:22Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "唯一桌面客户端已完成他人共享验收、五个演示入口以及行情看板和研究工作台的完整播放。新版继续核验 PPT、研报和笔记后半程。"
+          "summary": "通过可调整尺寸的客户端渲染测试，覆盖记忆预览及编辑、分页、子分类计数、单文件与批量拖放、笔记正文导入及重开、探索工具和用量套餐。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -136,7 +265,12 @@
           "知识库主区文件与会话每页二十条，分页固定在列表区左下，提供快捷页码、跳转输入、滚动条间距。",
           "我的共享混排已发布的文件、研究、笔记、表格，兼容已有发布，支持打开原会话、管理共享。",
           "折叠侧栏中五个探索演示都使用主页开启独立的原生示例会话，普通主页点击仍新建对话。",
-          "PPT 与研报的技能菜单只传递可序列化的输入范围，打开菜单的 DOM 和回调保留在原渲染环境。"
+          "PPT 与研报的技能菜单只传递可序列化的输入范围，打开菜单的 DOM 和回调保留在原渲染环境。",
+          "知识库主区与右侧记忆文档使用各自父容器的可用高度，预览和编辑区内部滚动。",
+          "分页数字采用固定方形底块，所有文件下的四类计数与侧栏计数共列。",
+          "知识库按 Figma 文件列表拖放态显示半透明虚线，单文件和批量上传各自报告进度。",
+          "笔记斜杠导入 PDF、TXT、DOCX 和 Markdown 的可读正文，保留周围内容，编辑后可重开。",
+          "探索页三个功能采用实心图标，用量管理套餐显示 Mini Trial Subscription。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -144,51 +278,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T11:30:53Z"
-      },
-      "merged": {
-        "mergeCommit": "e78cd25fb6d3c3f773f624ef95b8303d6b4e81c4",
-        "verificationCommit": "e78cd25fb6d3c3f773f624ef95b8303d6b4e81c4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e78cd25fb6d3c3f773f624ef95b8303d6b4e81c4",
-            "completedAt": "2026-11-15T11:31:10.451Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "e78cd25fb6d3c3f773f624ef95b8303d6b4e81c4",
-            "completedAt": "2026-11-15T11:31:10.451Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T11:31:10.451Z"
+        "generatedAt": "2026-11-15T12:15:22Z"
       }
     }
   ],
