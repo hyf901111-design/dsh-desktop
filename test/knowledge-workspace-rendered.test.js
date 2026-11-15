@@ -1481,7 +1481,7 @@ it('keeps shared categories and metadata readable as both desktop sidebars narro
     await pager.waitFor()
     await expectAligned()
     await pager.getByRole('button', { name: '下一页' }).click()
-    expect(await pager.getByRole('button', { name: '第 2 页', exact: true }).getAttribute('aria-current')).toBe('page')
+    expect(await pager.getByText('2 / 2', { exact: true }).isVisible()).toBe(true)
     await expectAligned()
   } finally { await page.close() }
 })
