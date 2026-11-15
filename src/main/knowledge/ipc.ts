@@ -115,7 +115,9 @@ export function installKnowledgeIpc({
           if (owner.owner === 'local') throw Error('请登录后共享会话。')
           if (typeof category !== 'string') throw Error('请选择共享分类。')
           const snapshot = await sessionSnapshot(owner.owner, sessionId, mode, displayTitle, current)
-          return sharing.publishBytes(knowledgeSessionShareId(mode, sessionId), snapshot.name, 'generated', snapshot.data, category, current)
+          const share = await sharing.publishBytes(knowledgeSessionShareId(mode, sessionId), snapshot.name, 'generated', snapshot.data, category, current)
+          const title = sharedKnowledgeSessionFile(snapshot.name, 'generated')?.title ?? displayTitle
+          return { ...share, title, publishedAt: Date.now(), size: snapshot.data.length }
         })
       }
       case 'unshare': {

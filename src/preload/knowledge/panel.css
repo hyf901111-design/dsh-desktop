@@ -68,7 +68,7 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
 .knowledge-panel-menu button { display: flex; align-items: center; gap: 7px; text-align: left; min-height: 30px; }
 .knowledge-panel-menu button[aria-current] { background: var(--kb-panel-field); }
 .knowledge-panel-menu > span { border-top: 1px solid var(--kb-panel-line); margin-top: 4px; padding: 4px 7px 0; color: var(--kb-panel-muted); font-size: 11px; }
-.knowledge-panel-rows { display: flex; flex: 1; flex-direction: column; overflow: auto; min-height: 0; }
+.knowledge-panel-rows { display: flex; flex: 1; flex-direction: column; overflow: auto; min-height: 0; padding-inline-end: 8px; scrollbar-gutter: stable; }
 .knowledge-panel-rows > :is(button, .knowledge-panel-row) { flex: none; }
 .knowledge-panel-row { display: flex; align-items: center; gap: 7px; min-height: 52px; padding: 4px 7px; border-radius: 6px; transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out; }
 .knowledge-panel-row:hover, .knowledge-panel-row:focus-within { background: var(--kb-panel-field); }

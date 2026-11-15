@@ -193,7 +193,7 @@
 }
 .knowledge-toolbar > button { background: var(--knowledge-field); }
 .knowledge-workspace .knowledge-toolbar > button:not(.knowledge-primary):hover:not(:disabled),
-.knowledge-workspace .knowledge-pagination > button:hover:not(:disabled),
+.knowledge-workspace .knowledge-pagination button:hover:not(:disabled),
 :is(.knowledge-workspace, .knowledge-panel) .knowledge-filter-menu footer button:not(.knowledge-primary):hover {
   background: var(--knowledge-control-hover);
 }
@@ -291,6 +291,7 @@
 }
 .knowledge-table-content { display: flex; flex: 1; min-width: 0; min-height: 0; flex-direction: column; }
 .knowledge-table-wrap { display: flex; flex-direction: column; min-width: 0; min-height: 0; flex: 1; overflow: auto; }
+:is(.knowledge-table-wrap, .knowledge-session-results) { padding-inline-end: 12px; scrollbar-gutter: stable; }
 .knowledge-table { flex: none; width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .knowledge-table thead { position: sticky; top: 0; z-index: 1; background: var(--knowledge-bg); }
 .knowledge-table th { height: var(--knowledge-table-header-height); border-bottom: 1px solid var(--knowledge-line); font-weight: 400; }
@@ -415,15 +416,36 @@
   flex-shrink: 0;
   min-height: 42px;
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: flex-start;
   align-items: center;
   padding-top: 8px;
   color: var(--knowledge-muted);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
-.knowledge-pagination button { background: var(--knowledge-field); padding: 5px 9px; }
-.knowledge-pagination span { min-width: 4ch; text-align: center; font-variant-numeric: tabular-nums; }
+.knowledge-pagination :is(.knowledge-pagination-controls, form, label) {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.knowledge-workspace .knowledge-pagination button { background: var(--knowledge-field); padding: 4px 8px; }
+.knowledge-workspace .knowledge-pagination .knowledge-pagination-number { min-width: 26px; background: transparent; }
+.knowledge-workspace .knowledge-pagination .knowledge-pagination-number[aria-current] {
+  background: var(--knowledge-active);
+  color: var(--knowledge-ink);
+}
+.knowledge-pagination input {
+  width: 44px;
+  border: 1px solid var(--knowledge-line);
+  border-radius: 6px;
+  background: var(--knowledge-field);
+  padding: 3px 5px;
+  text-align: center;
+  appearance: textfield;
+}
+.knowledge-pagination input::-webkit-inner-spin-button { appearance: none; }
 .knowledge-drop-zone {
   position: absolute;
   inset: 6px;

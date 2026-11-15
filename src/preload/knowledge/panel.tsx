@@ -1,9 +1,10 @@
 import { sharedKnowledgeSessionFile, knowledgeSessionLabels as sharedModeLabels } from '../../shared/knowledge-sessions'
-import { openSharedKnowledgeSession } from './session-directory'
+import { openKnowledgeSession, openSharedKnowledgeSession } from './session-directory'
+import { listKnowledgeRows, usePublishedKnowledgeSessions } from './published-sessions'
 import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
-  knowledgeCategories, knowledgeFormat, knowledgeSharedCatalogError, listKnowledgeDocuments, maxEditableKnowledgeBytes,
+  knowledgeCategories, knowledgeFormat, knowledgeSharedCatalogError, maxEditableKnowledgeBytes,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeFilter, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
 import type { MemoryBridge } from '../../shared/memory'
@@ -15,6 +16,7 @@ import css from './panel.css?raw'
 
 type PanelBridge = {
   memory?: MemoryBridge
+  revealConversation(): void
   snapshot(): Promise<KnowledgeSnapshot>
   received(refresh?: boolean): Promise<KnowledgeDocument[]>
   preview(id: string): Promise<KnowledgePreview>
@@ -318,7 +320,8 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       document.removeEventListener('keydown', escape)
     }
   }, [document, menu])
-  const rows = listKnowledgeDocuments(snapshot, { ...facets, category, folderId: folder, sharedCategory, query })
+  const publishedSessions = usePublishedKnowledgeSessions(document, snapshot, category === 'shared')
+  const rows = listKnowledgeRows(snapshot, { ...facets, category, folderId: folder, sharedCategory, query }, publishedSessions)
   const sharedDirectory = browsingReceived && !allShared && !sharedCategory && !query.trim()
   const sharedCounts = new Map<string, number>()
   if (sharedDirectory) for (const row of rows) {
@@ -405,20 +408,29 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
         </button>) : rows.map(row => {
         const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
         const title = session ? session.title : row.name
+        const published = row.publishedSession
         return <div className="knowledge-panel-row" key={row.id}>
-          <KnowledgeItemIcon format={session ? session.mode : knowledgeFormat(row.name)} tile />
+          <KnowledgeItemIcon format={published?.mode ?? (session ? session.mode : knowledgeFormat(row.name))} tile />
           <button type="button" className="knowledge-panel-name" onClick={() => {
+            if (published) {
+              void openKnowledgeSession(document, published.entry.id, published.mode).then(ok => {
+                if (!ok) setReferenceError('来源会话已不可用。')
+                else bridge.revealConversation()
+              })
+              return
+            }
             if (!openSharedKnowledgeSession(document, row)) document.dispatchEvent(new CustomEvent('sherlock:knowledge-preview-file', {
               detail: { id: row.id, name: row.name }
             }))
           }}>
             <span title={title}>{title}</span>
             <small>{row.received ? [session && sharedModeLabels[session.mode], row.received.category, row.received.owner].filter(Boolean).join(' · ')
-              : snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.source === 'generated' ? '会话生成' : '手动上传')}</small>
+              : published ? [sharedModeLabels[published.mode], row.share?.category].join(' · ')
+                : snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.source === 'generated' ? '会话生成' : '手动上传')}</small>
           </button>
-          <div className="knowledge-panel-action" data-session={session ? true : undefined}>
-            <small>{size(row.size)}</small>
-            {!session && <button type="button" aria-label={`引用文件 ${row.name}`} onClick={() => reference(row)}>@文件</button>}
+          <div className="knowledge-panel-action" data-session={session || published ? true : undefined}>
+            <small>{published && !row.size ? '—' : size(row.size)}</small>
+            {!session && !published && <button type="button" aria-label={`引用文件 ${row.name}`} onClick={() => reference(row)}>@文件</button>}
           </div>
         </div>
       }))}
