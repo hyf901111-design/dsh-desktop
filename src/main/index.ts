@@ -1539,18 +1539,10 @@ async function bootstrap(): Promise<void> {
       if (mode === 'spreadsheet') return createKnowledgeSessionSnapshot({ mode, workbook: knowledgeWorkbooks.workbookWithContent({ owner, sessionId: id }) }, title)
       const canvas = shared ? researchBoardsService!.readSharedCanvas(id)
         : readStoredResearchCanvas({ getItem: key => researchCanvasStorage.peekItem(key) }, id)
-      return createKnowledgeSessionSnapshot({ mode, canvas, readFile: async (node, name) => {
-        if (!node.id || !node.authorizationId || !knowledgeContent.supports(name)) return
-        try {
-          check()
-          const file = await researchFilePreviewRegistry!.resolveExportSource({ sessionId: id, nodeId: node.id, authorizationId: node.authorizationId })
-          if (!file) return
-          const info = await stat(file.path)
-          const result = await knowledgeContent.read({ name, size: info.size }, file.path)
-          check()
-          return result?.text && (result.truncated ? result.text + '\n\n此附件仅显示部分正文。' : result.text)
-        } catch { check(); return undefined }
-      } }, title)
+      return createKnowledgeSessionSnapshot({ mode, canvas, readLayout: (prefix, suffix) =>
+        (shared && prefix === 'ework.research.grid.v1:' ? researchCanvasStorage.peekItem('ework.research.shared-grid.v1:' + id + suffix) : null) ??
+        researchCanvasStorage.peekItem(prefix + id + suffix)
+      }, title)
     },
     generatedWorkspace: sessionId => researchBoardsService?.isSharedSession(sessionId) || isScheduledSession(sessionId)
       ? Promise.resolve(null) : knowledgeWorkspaceFiles.resolveRoot(sessionId)

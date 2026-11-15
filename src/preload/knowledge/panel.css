@@ -93,7 +93,7 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
   white-space: nowrap;
 }
 .knowledge-panel .knowledge-panel-action button:hover { background: var(--knowledge-control-hover); }
-.knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action small { opacity: 0; }
+.knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action:not([data-session]) small { opacity: 0; }
 .knowledge-panel-row:is(:hover,:focus-within) .knowledge-panel-action button { opacity: 1; pointer-events: auto; }
 .knowledge-panel-directory { display: flex; gap: 8px; align-items: center; width: 100%; min-height: 36px; }
 .knowledge-panel-directory small { margin-left: auto; }

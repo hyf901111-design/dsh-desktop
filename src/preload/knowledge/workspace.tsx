@@ -1,3 +1,5 @@
+import { sharedKnowledgeSessionFile, knowledgeSessionLabels as sharedModeLabels } from '../../shared/knowledge-sessions'
+import { openSharedKnowledgeSession } from './session-directory'
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
@@ -728,6 +730,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   async function openPreview(row: KnowledgeDocument) {
+    if (openSharedKnowledgeSession(document, row)) return
     const request = ++previewRequest.current
     const openInPane = new CustomEvent('sherlock:knowledge-preview-file', {
       detail: { id: row.id, name: row.name }, cancelable: true
@@ -994,6 +997,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     </tr>
                   ))}
                   {rows.slice((shownPage - 1) * pageSize, shownPage * pageSize).map(row => {
+                    const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
+                    const title = session ? session.title : row.name
                     const completed = completedImports[row.id] !== undefined
                     const bytes = formatBytes(row.size)
                     const updatedAt = new Date(row.updatedAt)
@@ -1001,7 +1006,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
                       data-knowledge-file-context-menu={row.received ? undefined : true}
                       onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
-                      <td><button className="knowledge-file-name" type="button" title={row.name}
+                      <td><button className="knowledge-file-name" type="button" title={title}
                         onClick={event => {
                           if (event.detail && movedClick.current === row.id) { movedClick.current = undefined; return }
                           void openPreview(row)
@@ -1011,15 +1016,17 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                           fileBeingMoved.current = { id: row.id, folderId: row.folderId, pointer: event.pointerId,
                             x: event.clientX, y: event.clientY, active: false, source: event.currentTarget }
                         }}>
-                        <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />
+                        {session ? <span className="knowledge-file-icon" data-tile="true" data-format={session.mode === 'spreadsheet' ? 'excel' : session.mode === 'research' ? 'ppt' : 'word'}>
+                          <KnowledgeIcon name={session.mode === 'spreadsheet' ? 'table' : session.mode === 'notes' ? 'note' : 'research'} />
+                        </span> : <KnowledgeFileIcon format={knowledgeFormat(row.name)} tile />}
                         <span className="knowledge-file-content">
-                          <span className="knowledge-file-title"><span>{row.name}</span>
+                          <span className="knowledge-file-title"><span>{title}</span>
                             {row.saved && <span className="knowledge-bookmarked" aria-label="手动收藏"><KnowledgeIcon name="bookmark" /></span>}
                             {row.starred && <span className="knowledge-tag" data-kind="star">重点</span>}
                             {row.share && <span className="knowledge-tag" data-kind="share">共享</span>}
                           </span>
                           {row.received ? <small className="knowledge-shared-metadata">
-                            <span title={row.received.category}>{row.received.category}</span>
+                            <span title={row.received.category}>{session ? sharedModeLabels[session.mode] + ' · ' : ''}{row.received.category}</span>
                             <span className="knowledge-shared-inline-size"> · {bytes}</span>
                             <time dateTime={updatedAt.toISOString()}> · {date}</time>
                             <span className="knowledge-shared-inline-owner" title={row.received.owner}> · {row.received.owner}</span>

@@ -1,3 +1,4 @@
+import { mountSharedKnowledgeSessions } from './knowledge/shared-session'
 import { mountKnowledgePanels } from './knowledge/panel'
 import { knowledgeOpenEvent, mountKnowledgeWorkspace } from './knowledge/workspace'
 import { mountSpreadsheet } from './spreadsheet/view'
@@ -276,6 +277,10 @@ function initializeUi(): void {
     request: command => ipcRenderer.invoke('memory:request', command),
     subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) }
   }
+  const disposeSharedKnowledgeSessions = mountSharedKnowledgeSessions(document, workspaceSurfaceHost,
+    id => ipcRenderer.invoke('knowledge:request', 'shared-session', { id }),
+    (id, updatedAt) => ipcRenderer.invoke('knowledge:request', 'shared-session-status', { id, updatedAt }))
+  window.addEventListener('unload', disposeSharedKnowledgeSessions, { once: true })
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
     memory: knowledgeMemory,
     workspacePointerInBar,

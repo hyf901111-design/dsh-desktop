@@ -15,7 +15,7 @@ import { ClientCapabilityService } from '../src/main/state/client-capability-ser
 import { KnowledgeViewBridge } from '../src/main/knowledge/view-bridge'
 import { resolveKnowledgeReference } from '../src/main/knowledge/references'
 import { CollaborationClient, collaborationRequestSpec } from '../src/main/collaboration-client'
-import { createKnowledgeSessionSnapshot, knowledgeSessionShareId } from '../src/main/knowledge/session-share'
+import { createKnowledgeSessionSnapshot, knowledgeSessionShareId, readKnowledgeSessionSnapshot } from '../src/main/knowledge/session-share'
 import { blankWorkbook } from '../src/shared/spreadsheet/workbook'
 
 vi.mock('electron', () => ({ BrowserWindow: vi.fn(), dialog: {} }))
@@ -70,13 +70,13 @@ it('shares all three session snapshots with a recipient that can read but cannot
   const owner = new KnowledgeStore(join(root, 'owner'), () => ({ owner: 'a0', generation: 1 }), () => {})
   const reader = new KnowledgeStore(join(root, 'reader'), () => ({ owner: 'a1', generation: 1 }), () => {})
   const preview = new KnowledgeFilePreview(join(root, 'preview'), () => ({ owner: 'a1', generation: 1 }), reader, recipient)
-  const content = new KnowledgeContent(() => ({}))
   const workbook = blankWorkbook('shared-book')
   workbook.sheets[workbook.sheetOrder[0]].cellData[0] = { 0: { v: '可读库存数据' } }
   const items = [
     ['研究会话', '研究组件内容', { mode: 'research', canvas: { files: [], artifacts: [
-      { title: '交付摘要', containerSpec: { type: 'markdown', content: '研究组件内容' } }
-    ] }, readFile: async () => undefined }],
+      { id: 'summary', kind: 'generated-container', x: 123, y: 321, width: 550, title: '交付摘要',
+        authorizationId: 'private-authorization', containerSpec: { type: 'markdown', content: '研究组件内容' } }
+    ] } }],
     ['笔记会话', '笔记正文', { mode: 'notes', note: { title: '笔记会话', yjs: '',
       blocks: [{ id: 'p', type: 'paragraph', content: [{ type: 'text', text: '笔记正文' }] }] } }],
     ['表格会话', '可读库存数据', { mode: 'spreadsheet', workbook }]
@@ -95,15 +95,20 @@ it('shares all three session snapshots with a recipient that can read but cannot
       const id = published[index]
       const { document, data } = await recipient.read(id)
       expect(document.received).toEqual({ category: '行业研究', owner: 'user0' })
-      expect(document.name).toMatch(new RegExp('^' + title + ' · '))
-      expect((await content.read(document, data)).text).toContain(body)
+      expect(document.name).toBe(title + '.ework-session-' + snapshot.mode)
+      const session = readKnowledgeSessionSnapshot(document, data)
+      expect(session).toMatchObject({ mode: snapshot.mode, title, version: 1 })
+      expect(JSON.stringify(session)).toContain(body)
+      if (session.mode === 'research') {
+        expect(session.canvas.artifacts[0]).toMatchObject({ id: 'summary', x: 123, y: 321, width: 550 })
+        expect(session.canvas.artifacts[0]).not.toHaveProperty('authorizationId')
+      }
+      if (session.mode === 'notes') expect(session.note.blocks[0].id).toBe('p')
+      if (session.mode === 'spreadsheet') expect(session.workbook).toEqual(workbook)
       expect((await request('/' + id, undefined)).status).toBe(401)
       await expect(recipient.rename(id, '越权修改.md')).rejects.toMatchObject({ status: 404 })
       await expect(recipient.revoke(id)).rejects.toMatchObject({ status: 404 })
-      const asset = await preview.open(id, 'recipient')
-      expect(asset.kind).toBe(snapshot.mode === 'spreadsheet' ? 'media' : 'text')
-      expect(asset.revision).toBeUndefined()
-      expect(asset.editablePresentation).not.toBe(true)
+      await expect(preview.open(id, 'recipient')).rejects.toThrow('只读会话')
       await expect(reader.saveMarkdown(id, 'unavailable', '越权修改')).rejects.toThrow('不存在')
       const catalog = await owner.updateSessionShare(snapshot.mode, async previous => { await publisher.revoke(previous.id) })
       expect(catalog.sessionShares[snapshot.mode]).toBeUndefined()

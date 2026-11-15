@@ -1,3 +1,4 @@
+import { sharedKnowledgeSessionFile } from '../../shared/knowledge-sessions'
 import { createHash } from 'node:crypto'
 import { readFile, writeFile, mkdir, realpath, rm } from 'node:fs/promises'
 import { dirname, extname, join } from 'node:path'
@@ -135,6 +136,7 @@ export class KnowledgeFilePreview {
     const file = received ? await this.sharing.read(id, AbortSignal.timeout(15000)) : await this.store.file(id)
     check()
     const document = file.document
+    if (received && sharedKnowledgeSessionFile(document.name, document.source)) throw Error('请在知识库中打开对应的只读会话。')
     const editablePresentation = !received && !document.share && /\.pptx$/i.test(document.name)
     if (previous?.authorizationId && 'path' in file && await realpath(file.path) === previous.path) {
       const descriptor = await this.registry.restore({ sessionId: scope, nodeId: id, authorizationId: previous.authorizationId })
