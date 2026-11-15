@@ -59,7 +59,7 @@ it('shows one collapsed Home action with a native tooltip and follows the visibl
   await page.evaluate(()=>{document.querySelector('.wSkVaW_root').dataset.odysseyPage='home'})
   await expect.poll(()=>home.getAttribute('aria-pressed')).toBe('true')
   await rail.locator('.st-more').click()
-  expect(await page.getByRole('menuitem').allTextContents()).toEqual(['插件','定时任务'])
+  expect(await page.getByRole('menuitem').allTextContents()).toEqual(['新建对话','新建研究','新建笔记','新建表格','插件','定时任务'])
   await page.keyboard.press('Escape')
   await page.evaluate(()=>window.newNoteFixture.setCollapsed(false))
   await expect.poll(()=>home.count()).toBe(0)

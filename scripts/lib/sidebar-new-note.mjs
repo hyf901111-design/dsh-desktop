@@ -116,7 +116,15 @@ export function patchSidebarNewNoteShell(input){
   const foot='(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.footArea,'
   return apply(source,'shell',[
     [group,'wide && newSessionControls'],
-    [root,'\t\t\tconst newSessionControls = '+group+';\n'+root],
+    [root,'\t\t\tconst newSessionControls = '+group+';\n'+`
+    react.useEffect(()=>{
+      if(wide)return;
+      const rail=column.current;
+      const openResearch=()=>startResearchSession();
+      rail?.addEventListener('sherlock:sidebar-new-research',openResearch);
+      return()=>rail?.removeEventListener('sherlock:sidebar-new-research',openResearch);
+    },[wide,startResearchSession]);
+`+root],
     [foot,'!wide && '+home+',\n'+foot],
     ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "新建研究",\n"sidebar.home.label":"主页",'],
     ['"session.newResearch.label": "New research",','"session.newResearch.label": "New research",\n"sidebar.home.label":"Home",'],
