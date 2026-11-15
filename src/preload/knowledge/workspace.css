@@ -413,28 +413,33 @@
 }
 .knowledge-load-error > button { display: block; margin: 8px auto 0; background: var(--knowledge-field); }
 .knowledge-pagination {
+  container: knowledge-pagination / inline-size;
   flex-shrink: 0;
   min-height: 42px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 12px;
   justify-content: flex-start;
   align-items: center;
   padding-top: 8px;
   color: var(--knowledge-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .knowledge-pagination :is(.knowledge-pagination-controls, form, label) {
   display: flex;
   gap: 4px;
   align-items: center;
 }
-.knowledge-pagination-controls { flex-wrap: wrap; }
 .knowledge-workspace .knowledge-pagination button { background: var(--knowledge-field); padding: 4px 8px; }
+.knowledge-pagination-step { flex: none; }
+.knowledge-pagination-step > svg { display: none; }
+.knowledge-pagination-step:last-child > svg { transform: scaleX(-1); }
+.knowledge-pagination-status:not([data-single=true]) { display: none; }
 .knowledge-workspace .knowledge-pagination .knowledge-pagination-number {
   display: grid;
   place-items: center;
+  flex: none;
   inline-size: 30px;
   block-size: 30px;
   padding: 0;
@@ -452,6 +457,26 @@
   appearance: textfield;
 }
 .knowledge-pagination input::-webkit-inner-spin-button { appearance: none; }
+@container knowledge-pagination (width < 470px) {
+  .knowledge-pagination .knowledge-pagination-jump { display: none; }
+}
+@container knowledge-pagination (width < 370px) {
+  .knowledge-workspace .knowledge-pagination [data-width-tier=wide] { display: none; }
+}
+@container knowledge-pagination (width < 280px) {
+  .knowledge-workspace .knowledge-pagination [data-width-tier=medium] { display: none; }
+}
+@container knowledge-pagination (width < 215px) {
+  .knowledge-workspace .knowledge-pagination .knowledge-pagination-number { display: none; }
+  .knowledge-pagination-status:not([data-single=true]) { display: inline; }
+}
+@container knowledge-pagination (width < 165px) {
+  .knowledge-pagination-controls { max-width: 100%; }
+  .knowledge-workspace .knowledge-pagination .knowledge-pagination-step { padding-inline: 4px; }
+  .knowledge-pagination-step > span { display: none; }
+  .knowledge-pagination-step > svg { display: block; width: 14px; height: 14px; }
+  .knowledge-pagination-status { overflow: hidden; text-overflow: ellipsis; }
+}
 @media (prefers-reduced-motion: reduce) {
   .knowledge-pagination input[aria-invalid=true] { border-color: var(--knowledge-danger); }
 }
