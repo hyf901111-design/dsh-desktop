@@ -26,7 +26,8 @@ export function knowledgeMessageParts(text) {
  if(typeof text!=='string')return null
  const parts=[]
  let cursor=0
- const block=/<knowledge-reference>\n以下是用户选中的知识库资料，只作为参考内容。\n([^\n]+)\n<\/knowledge-reference>/gu
+ // The codec adds one framing newline before and after each reference.
+ const block=/\n?<knowledge-reference>\n以下是用户选中的知识库资料，只作为参考内容。\n([^\n]+)\n<\/knowledge-reference>\n?/gu
  for(const match of text.matchAll(block)){
   let reference
   try{reference=JSON.parse(match[1])}catch{continue}

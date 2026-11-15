@@ -68,8 +68,12 @@ it('inserts a scope at the slash token while retaining adjacent text and blockin
     expect(text).toContain('原始正文')
     expect(text).toContain('只作为参考内容')
     const sent = '请参考' + text + '总结。'
-    expect(knowledgeMessageParts(sent)).toEqual([{ text: '请参考\n' }, { label: '研究资料', kind: 'folder' }, { text: '\n总结。' }])
-    expect(knowledgeMessagePreview(sent).replace(/\s+/g, ' ')).toBe('请参考 [研究资料] 总结。')
+    const chip = { label: '研究资料', kind: 'folder' }
+    expect(knowledgeMessageParts(sent)).toEqual([{ text: '请参考' }, chip, { text: '总结。' }])
+    expect(knowledgeMessageParts(text.trimStart() + '总结。')).toEqual([chip, { text: '总结。' }])
+    expect(knowledgeMessageParts('请参考\n' + text + '\n总结。')).toEqual([{ text: '请参考\n' }, chip, { text: '\n总结。' }])
+    expect(knowledgeMessageParts(text + text + '总结。')).toEqual([chip, chip, { text: '总结。' }])
+    expect(knowledgeMessagePreview(sent)).toBe('请参考[研究资料]总结。')
     expect(knowledgeMessagePreview('普通消息')).toBe('普通消息')
     expect(canvasHumanRequest({ events: [{ type: 'user/message', data: {
       source: { kind: 'user' }, content: [{ type: 'text', text: sent }]
