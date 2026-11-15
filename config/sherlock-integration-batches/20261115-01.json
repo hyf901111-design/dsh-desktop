@@ -11,29 +11,33 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "82bd5a279e93d03654c5d8a901ee8c5f10e8f523",
-        "tipCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
+        "baseCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
+        "tipCommit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
         "commits": [
           {
-            "commit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
+            "commit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
             "parents": [
-              "82bd5a279e93d03654c5d8a901ee8c5f10e8f523"
+              "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549"
             ],
-            "subject": "知识库：将文件与会话图标改为灰底办公文档样式"
+            "subject": "知识库：统一文件和会话每页二十条并固定分页"
           }
         ],
         "files": [
           {
-            "status": "M",
-            "path": "src/preload/knowledge/icons.tsx"
+            "status": "A",
+            "path": "src/preload/knowledge/pagination.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/panel.css"
+            "path": "src/preload/knowledge/session-directory.tsx"
           },
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
           },
           {
             "status": "M",
@@ -49,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程与预加载类型检查通过。",
-            "verifiedCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
-            "completedAt": "2026-11-15T10:20:36Z",
+            "verifiedCommit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
+            "completedAt": "2026-11-15T10:25:27Z",
             "timeoutMs": 120000
           },
           {
@@ -64,18 +68,18 @@
               "--maxWorkers=1",
               "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "keeps file icons readable|lists real session modes|shows a readable shared directory error|shared categories and metadata"
+              "keeps file icons readable|lists real session modes|shows a readable shared directory error|shared categories and metadata|paginates files and native sessions|centers empty messages"
             ],
             "outcome": "passed",
-            "summary": "五项知识库渲染检查，覆盖办公图标、会话列表与共享目录。",
-            "verifiedCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
-            "completedAt": "2026-11-15T10:20:36Z",
+            "summary": "七项知识库渲染检查，覆盖二十条分页、固定位置、空态、图标及共享目录。",
+            "verifiedCommit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
+            "completedAt": "2026-11-15T10:25:27Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "深浅主题核对文件类型图标以及悬停、选中反馈，生产线路用原客户端核对跨账号 Markdown 列表和预览。"
+          "summary": "深浅主题核对文件类型图标以及悬停、选中反馈，生产线路用原客户端核对跨账号 Markdown 列表和预览。 固定翻页器覆盖 7 个文件分类和 3 种原生会话目录，验证每页 20 条及最后一页。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -140,7 +144,8 @@
           "PDF 与 PPT 通过轮廓和色彩区分。主视图与右侧筛选复选框统一尺寸、对齐与键盘交互。",
           "共享目录加载失败时提供中文说明与重试，并与成功返回空目录的状态区分。",
           "侧栏收起只保留主页创建入口，点击沿用新建对话，提供悬停提示；随主视图切换与浏览器、知识库互斥高亮。",
-          "文件与会话图标采用灰色卡片、彩色封面和白色文档页。PDF 和 PPT 以红色与橙色、PDF 符号与幻灯片图形区分。"
+          "文件与会话图标采用灰色卡片、彩色封面和白色文档页。PDF 和 PPT 以红色与橙色、PDF 符号与幻灯片图形区分。",
+          "知识库主区文件与各类会话每页二十条，类别或搜索变化时回到第一页，翻页器固定在结果列右下。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -148,51 +153,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T10:20:36Z"
-      },
-      "merged": {
-        "mergeCommit": "5941785845d3730557e5170342be04576de9b1d2",
-        "verificationCommit": "5941785845d3730557e5170342be04576de9b1d2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5941785845d3730557e5170342be04576de9b1d2",
-            "completedAt": "2026-11-15T10:21:06.966Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "5941785845d3730557e5170342be04576de9b1d2",
-            "completedAt": "2026-11-15T10:21:06.966Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T10:21:06.966Z"
+        "generatedAt": "2026-11-15T10:25:27Z"
       }
     }
   ],
