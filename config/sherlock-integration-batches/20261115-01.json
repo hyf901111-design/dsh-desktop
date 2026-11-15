@@ -12,7 +12,7 @@
         "featureName": "知识库自适应单行分页",
         "branch": "codex/feat/knowledge-library-20261114",
         "baseCommit": "5c60d088526fe46fe925ca4bbed21424a521dfc1",
-        "tipCommit": "3122f6fc38c0171853443a1f9168dc6856aa363c",
+        "tipCommit": "8f6327030cfdb670a67fae3cf296dd4938f63429",
         "commits": [
           {
             "commit": "3122f6fc38c0171853443a1f9168dc6856aa363c",
@@ -20,6 +20,13 @@
               "5c60d088526fe46fe925ca4bbed21424a521dfc1"
             ],
             "subject": "知识库分页器按列表宽度保持单行"
+          },
+          {
+            "commit": "8f6327030cfdb670a67fae3cf296dd4938f63429",
+            "parents": [
+              "3122f6fc38c0171853443a1f9168dc6856aa363c"
+            ],
+            "subject": "覆盖他人共享窄栏的分页状态"
           }
         ],
         "files": [
@@ -45,8 +52,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "3122f6fc38c0171853443a1f9168dc6856aa363c",
-            "completedAt": "2026-11-15T15:52:20.440Z",
+            "verifiedCommit": "8f6327030cfdb670a67fae3cf296dd4938f63429",
+            "completedAt": "2026-11-15T15:55:22.164Z",
             "timeoutMs": 120000
           },
           {
@@ -60,12 +67,12 @@
               "--maxWorkers=1",
               "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "paginat|pager|page field"
+              "paginat|pager|page field|keeps shared categories"
             ],
             "outcome": "passed",
-            "summary": "三个分页聚焦场景通过。",
-            "verifiedCommit": "3122f6fc38c0171853443a1f9168dc6856aa363c",
-            "completedAt": "2026-11-15T15:52:20.440Z",
+            "summary": "四个分页聚焦场景通过，含他人共享实际窄栏。",
+            "verifiedCommit": "8f6327030cfdb670a67fae3cf296dd4938f63429",
+            "completedAt": "2026-11-15T15:55:22.164Z",
             "timeoutMs": 120000
           }
         ],
@@ -78,7 +85,7 @@
           "重新放宽恢复原有快捷页码和数字跳页。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-15T15:52:20.440Z"
+        "generatedAt": "2026-11-15T15:55:22.164Z"
       }
     }
   ],
