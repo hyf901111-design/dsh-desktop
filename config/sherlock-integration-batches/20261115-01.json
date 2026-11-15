@@ -11,21 +11,44 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "e1e0ac4e9a0f239e8c69145c94069f7af66e54aa",
-        "tipCommit": "84686cab880aa6f8f6eeabe40816f226cf085266",
+        "baseCommit": "84686cab880aa6f8f6eeabe40816f226cf085266",
+        "tipCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
         "commits": [
           {
-            "commit": "84686cab880aa6f8f6eeabe40816f226cf085266",
+            "commit": "167454a2755afa5db114ee7837d5d3455bbe9f2e",
             "parents": [
-              "e1e0ac4e9a0f239e8c69145c94069f7af66e54aa"
+              "84686cab880aa6f8f6eeabe40816f226cf085266"
             ],
-            "subject": "测试：使用打包后侧栏验证页签溢出"
+            "subject": "交互：按名称宽度显示知识库引用标签"
+          },
+          {
+            "commit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
+            "parents": [
+              "167454a2755afa5db114ee7837d5d3455bbe9f2e"
+            ],
+            "subject": "交互：统一斜杠权限菜单与设置用语"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "test/figma-panel-tab-overflow.test.ts"
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-permission-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-inline-references-input.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-inline-references-patch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/permission-localization.test.ts"
           }
         ],
         "checks": [
@@ -37,29 +60,34 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "84686cab880aa6f8f6eeabe40816f226cf085266",
-            "completedAt": "2026-11-14T23:59:43.347Z",
+            "verifiedCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
+            "completedAt": "2026-11-15T00:19:49.699913+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "env",
-              "SHERLOCK_SIDEBAR_CLIENT_SOURCE=/private/tmp/ework-kb-context-menu.9P3SD0/build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js",
               "npm",
               "test",
               "--",
-              "test/figma-panel-tab-overflow.test.ts"
+              "test/figma-inline-references-input.test.js",
+              "test/permission-localization.test.ts",
+              "test/knowledge-composer.test.js",
+              "test/figma-inline-references-projection.test.js",
+              "test/figma-inline-references-patch.test.js",
+              "test/spreadsheet-inline-references.test.js",
+              "test/conversation-permission-default.test.js",
+              "test/skill-command-menu.test.ts"
             ],
             "outcome": "passed",
-            "summary": "对已经打包的侧栏直接作渲染验证，九个页签状态与焦点切换通过。",
-            "verifiedCommit": "84686cab880aa6f8f6eeabe40816f226cf085266",
-            "completedAt": "2026-11-14T23:59:43.347Z",
+            "summary": "八个聚焦测试文件的三十四项检查通过。",
+            "verifiedCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
+            "completedAt": "2026-11-15T00:19:49.699913+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "8895dabff 签名包的独立实例已验证七文件批量导入、右键更多菜单、原生 Markdown 预览、页签溢出以及右侧栏收起与恢复。其后长目录筛选标签、共享分割线和短分类名的修整通过 Chromium 渲染验证。 最新构建目录中 11 个范围内的测试文件和 111 项检查串行通过。"
+          "summary": "cf1a3cdf9 签名客户端已实测工作区切换后的草稿恢复和知识库工具重连，从斜杠选择共享分类和自有文件夹、行内输入并发送，确认实际读取引用范围内的 Markdown 正文。新提交中的标签宽度和权限翻译通过渲染代码聚焦验证。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -93,7 +121,10 @@
           "知识库保留原生右侧栏入口，移除重复按钮；共享下钻显示返回箭头和返回上级目录并保留搜索与筛选。",
           "文件夹计数和分类共列，悬停在同一位置显示更多。长文件夹名与顶栏标题自动省略，悬停显示全名，不挤占筛选、搜索与添加文件。",
           "右侧对话筛选到长名称文件夹时，筛选摘要省略过长的目录标签。标签可悬停查看全名，撤销后恢复筛选前的目录和工具栏。",
-          "他人共享两列的表头下沿连续，类目分割线从表头下沿开始，翻页前后与左分类分割线底部等高，选中项与分割线留有横向间距。窄窗口在文件夹计数与分类计数保持对齐时完整显示短分类名。"
+          "他人共享两列的表头下沿连续，类目分割线从表头下沿开始，翻页前后与左分类分割线底部等高，选中项与分割线留有横向间距。窄窗口在文件夹计数与分类计数保持对齐时完整显示短分类名。",
+          "从浏览器、笔记、表格和研究返回知识库时，原会话草稿及引用保留，右侧对话恢复对知识库筛选状态的读取。",
+          "斜杠选择知识库文件夹后，标签与文字同一行编辑，发送后引用范围中的文件正文可供实际读取。",
+          "输入框的知识库分类引用标签随名称宽度调整。斜杠权限选项复用设置中的本地化名称，保持原有选择和返回行为。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -101,51 +132,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-14T23:59:43.347Z"
-      },
-      "merged": {
-        "mergeCommit": "837438a8c6dd6321142f39e94c4f75a1de0b7b7b",
-        "verificationCommit": "837438a8c6dd6321142f39e94c4f75a1de0b7b7b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "837438a8c6dd6321142f39e94c4f75a1de0b7b7b",
-            "completedAt": "2026-11-15T00:00:01.665Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "837438a8c6dd6321142f39e94c4f75a1de0b7b7b",
-            "completedAt": "2026-11-15T00:00:01.665Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T00:00:01.665Z"
+        "generatedAt": "2026-11-15T00:19:49.699913+00:00"
       }
     }
   ],
