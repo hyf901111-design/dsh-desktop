@@ -11,44 +11,45 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "84686cab880aa6f8f6eeabe40816f226cf085266",
-        "tipCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
+        "baseCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
+        "tipCommit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
         "commits": [
           {
-            "commit": "167454a2755afa5db114ee7837d5d3455bbe9f2e",
+            "commit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
             "parents": [
-              "84686cab880aa6f8f6eeabe40816f226cf085266"
+              "f96fd8f08518c4beba24259e84b8501b91d98b8e"
             ],
-            "subject": "交互：按名称宽度显示知识库引用标签"
-          },
-          {
-            "commit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
-            "parents": [
-              "167454a2755afa5db114ee7837d5d3455bbe9f2e"
-            ],
-            "subject": "交互：统一斜杠权限菜单与设置用语"
+            "subject": "交互：对齐知识库与浏览器顶栏并补充应用图标"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-inline-references-client.mjs"
+            "path": "src/preload/browser/style.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/figma-permission-menu.mjs"
+            "path": "src/preload/browser/view.ts"
           },
           {
             "status": "M",
-            "path": "test/figma-inline-references-input.test.js"
+            "path": "src/preload/knowledge/workspace.css"
           },
           {
             "status": "M",
-            "path": "test/figma-inline-references-patch.test.js"
+            "path": "src/preload/knowledge/workspace.tsx"
           },
           {
             "status": "M",
-            "path": "test/permission-localization.test.ts"
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -60,34 +61,34 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
-            "completedAt": "2026-11-15T00:19:49.699913+00:00",
+            "verifiedCommit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
+            "completedAt": "2026-11-15T00:43:41.802908+00:00",
             "timeoutMs": 120000
           },
           {
             "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
-              "test/figma-inline-references-input.test.js",
-              "test/permission-localization.test.ts",
-              "test/knowledge-composer.test.js",
-              "test/figma-inline-references-projection.test.js",
-              "test/figma-inline-references-patch.test.js",
-              "test/spreadsheet-inline-references.test.js",
-              "test/conversation-permission-default.test.js",
-              "test/skill-command-menu.test.ts"
+              "--maxWorkers=1",
+              "test/knowledge-workspace-rendered.test.js",
+              "test/browser-app-rendered.test.js",
+              "-t",
+              "aligns the knowledge|preserves filters through return|keeps shared categories|keeps expanded workspace controls|opens workspace tabs only|places the shared workspace back button"
             ],
             "outcome": "passed",
-            "summary": "八个聚焦测试文件的三十四项检查通过。",
-            "verifiedCommit": "f96fd8f08518c4beba24259e84b8501b91d98b8e",
-            "completedAt": "2026-11-15T00:19:49.699913+00:00",
+            "summary": "三个宽度来回切换验证顶栏坐标相等。两份测试文件中六项聚焦检查通过。",
+            "verifiedCommit": "e03647400f9749a5b9f6e3961112155f5ad7c4ce",
+            "completedAt": "2026-11-15T00:43:41.802908+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "cf1a3cdf9 签名客户端已实测工作区切换后的草稿恢复和知识库工具重连，从斜杠选择共享分类和自有文件夹、行内输入并发送，确认实际读取引用范围内的 Markdown 正文。新提交中的标签宽度和权限翻译通过渲染代码聚焦验证。"
+          "summary": "2f413e496 签名客户端已验斜杠权限中文标签和知识库行内引用。新调整使用真实浏览器与知识库前端，在宽屏、紧凑及窄屏切换中测得返回、应用图标与名称的位置一致。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -124,7 +125,8 @@
           "他人共享两列的表头下沿连续，类目分割线从表头下沿开始，翻页前后与左分类分割线底部等高，选中项与分割线留有横向间距。窄窗口在文件夹计数与分类计数保持对齐时完整显示短分类名。",
           "从浏览器、笔记、表格和研究返回知识库时，原会话草稿及引用保留，右侧对话恢复对知识库筛选状态的读取。",
           "斜杠选择知识库文件夹后，标签与文字同一行编辑，发送后引用范围中的文件正文可供实际读取。",
-          "输入框的知识库分类引用标签随名称宽度调整。斜杠权限选项复用设置中的本地化名称，保持原有选择和返回行为。"
+          "输入框的知识库分类引用标签随名称宽度调整。斜杠权限选项复用设置中的本地化名称，保持原有选择和返回行为。",
+          "知识库使用既有应用图标。和浏览器共享顶栏，切换时返回按钮、应用图标和名称的坐标一致。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -132,51 +134,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享改名由客户端和协作 Worker 联合提供，线上升级需同时部署 Worker。"
         ],
-        "generatedAt": "2026-11-15T00:19:49.699913+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ab7b9d6643af558586be6d17be2caf2a1ff1d78e",
-        "verificationCommit": "ab7b9d6643af558586be6d17be2caf2a1ff1d78e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ab7b9d6643af558586be6d17be2caf2a1ff1d78e",
-            "completedAt": "2026-11-15T00:20:11.345Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "ab7b9d6643af558586be6d17be2caf2a1ff1d78e",
-            "completedAt": "2026-11-15T00:20:11.345Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T00:20:11.345Z"
+        "generatedAt": "2026-11-15T00:43:41.802908+00:00"
       }
     }
   ],
