@@ -65,10 +65,16 @@ export class KnowledgeSharing {
     if (document.size > maxBytes) throw Error('共享文件最大为 25 MB。')
     const data = await readFile(path)
     if (data.byteLength !== document.size) throw Error('文件大小已变化，请重新添加文件。')
+    return this.publishBytes(document.id, document.name, document.source, data, category, current)
+  }
+
+  async publishBytes(id: string, name: string, source: KnowledgeDocument['source'], data: Buffer, category: string, current: () => void) {
+    if (!this.options.authenticated()) throw Error('请登录后共享。')
+    if (!knowledgeSharedCategories.some(value => value === category)) throw Error('请选择共享分类。')
+    if (data.byteLength > maxBytes) throw Error('共享内容最大为 25 MB。')
     current()
     const result = await this.options.client.request<{ id: string; category: string }>({
-      kind: 'knowledge.publish', id: document.id, name: document.name, category,
-      source: document.source, size: data.byteLength, data: new Uint8Array(data)
+      kind: 'knowledge.publish', id, name, category, source, size: data.byteLength, data: new Uint8Array(data)
     })
     if (!/^[a-f0-9]{32}$/u.test(result.id) || result.category !== category) throw Error('共享服务未返回有效的文件标识。')
     return result

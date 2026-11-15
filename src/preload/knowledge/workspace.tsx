@@ -12,7 +12,8 @@ import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-to
 import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
 import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
-import { knowledgeSessionLabels, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
+import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
+  type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 import { KnowledgeMemory } from './memory'
 import { FileSearch } from './file-search'
 import { categoryIcons, KnowledgeFileIcon, KnowledgeIcon } from './icons'
@@ -26,6 +27,7 @@ interface Bridge {
   workspacePointerInBar?: WorkspacePointerInBar
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
+  request(method: 'share-session' | 'unshare-session', args: { id: string; mode: KnowledgeSessionMode; category?: string }): Promise<KnowledgeSnapshot>
   request(method: 'download', args: { id: string }): Promise<boolean>
   request(method: 'snapshot', args?: Record<string, unknown>): Promise<KnowledgeSnapshot>
   request(method: 'session-evidence', args: { ids: string[]; mode: KnowledgeSessionMode }): Promise<KnowledgeSessionEvidence[]>
@@ -48,6 +50,7 @@ type DialogState =
   | { type: 'create-folder' }
   | { type: 'rename-folder' | 'remove-folder'; id: string; name: string }
   | { type: 'rename' | 'move' | 'remove' | 'share'; row: KnowledgeDocument }
+  | { type: 'share-session'; row: KnowledgeSessionEntry; mode: KnowledgeSessionMode }
 
 type FileImport = KnowledgeImportProgress & {
   id: string
@@ -142,6 +145,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const searchSequence = useRef(0)
   const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean; pointer: boolean }>()
   const [dialog, setDialog] = useState<DialogState>()
+  const sessionShare = dialog?.type === 'share-session'
+    ? local.sessionShares?.[knowledgeSessionShareKey(dialog.mode, dialog.row.id)] : undefined
   const [value, setValue] = useState('')
   const [preview, setPreview] = useState<KnowledgePreview & { native?: boolean; loading?: boolean }>()
   const [dragging, setDragging] = useState(false)
@@ -542,7 +547,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     setMenu(undefined)
     setValue(next.type === 'rename' ? next.row.name.replace(/\.[^.]+$/u, '') :
       next.type === 'rename-folder' ? next.name : next.type === 'move' ? next.row.folderId ?? '' :
-      next.type === 'share' ? next.row.share?.category ?? knowledgeSharedCategories[0] : '')
+      next.type === 'share' ? next.row.share?.category ?? knowledgeSharedCategories[0] :
+        next.type === 'share-session' ? local.sessionShares?.[knowledgeSessionShareKey(next.mode, next.row.id)]?.category ?? knowledgeSharedCategories[0] : '')
     setNotice(undefined)
     setDialog(next)
   }
@@ -629,6 +635,23 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setSnapshot(result)
       setDialog(undefined)
       setNotice({ text: category ? '已共享，其他用户可在知识库中查找此文件。' : '已取消共享。' })
+    } catch (error) {
+      if (epoch === currentEpoch.current) setNotice({ text: message(error), error: true })
+    } finally {
+      if (epoch === currentEpoch.current) setBusy(false)
+    }
+  }
+
+  async function shareSession(row: KnowledgeSessionEntry, mode: KnowledgeSessionMode, category?: string) {
+    const epoch = currentEpoch.current
+    setBusy(true)
+    setNotice(undefined)
+    try {
+      const result = await bridge.request(category ? 'share-session' : 'unshare-session', { id: row.id, mode, category })
+      if (epoch !== currentEpoch.current) return
+      setSnapshot(result)
+      setDialog(undefined)
+      setNotice({ text: category ? '已发布只读快照。' : '已取消共享。' })
     } catch (error) {
       if (epoch === currentEpoch.current) setNotice({ text: message(error), error: true })
     } finally {
@@ -775,6 +798,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         break
       }
       case 'share': void share(dialog.row, value); break
+      case 'share-session': void shareSession(dialog.row, dialog.mode, value); break
       case 'move': void edit({ type: dialog.type, id: dialog.row.id, folderId: value || undefined }); break
       case 'remove': void edit({ type: dialog.type, id: dialog.row.id }); break
     }
@@ -855,7 +879,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           </button>
         </div>)}
       </nav>
-      {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} {...sessions} open={openSession} /> :
+      {sessionMode ? <KnowledgeSessionDirectory key={sessionMode} mode={sessionMode} {...sessions} open={openSession}
+        shares={local.sessionShares} share={(row, mode) => openDialog({ type: 'share-session', row, mode })} /> :
       <main className="knowledge-file-list" data-knowledge-undo-revision={undoAvailable ? filterState.current.revision : undefined} onDragEnter={event => {
         if (selection === 'received' || !event.dataTransfer.types.includes('Files')) return
         dragDepth.current++
@@ -917,11 +942,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           {selection === 'received' && <div className="knowledge-shared-column">
             <span className="knowledge-shared-heading">分类</span>
             <nav className="knowledge-shared-folders" aria-label="共享分类">
-              {filter.sharedCategory ? <button className="knowledge-shared-back" type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>
-                {buttonIcon('back', '返回上级目录')}
-              </button> : <button type="button" aria-current="page"
-                onClick={() => updateFilter({ sharedCategory: undefined })}>{buttonIcon('all', '全部文件')}</button>}
-              {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
+              <button type="button" aria-current={!filter.sharedCategory ? 'page' : undefined}
+                onClick={() => updateFilter({ sharedCategory: undefined })}>{buttonIcon('all', '全部文件')}</button>
+              {receivedCategories.map(category => <button className="knowledge-shared-folder" key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
                 title={category} onClick={() => updateFilter({ sharedCategory: category })}>
                 {buttonIcon('folder', category)}<KnowledgeIcon name="next" />
               </button>)}
@@ -1082,26 +1105,38 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           if (!busy && event.key === 'Escape') { setDialog(undefined); setNotice(undefined) }
         }}>
         <h2 id="knowledge-dialog-title">{dialogTitle(dialog.type)}</h2>
-        {dialog.type === 'share' ? <>
-          <p>共享后，其他已登录用户及其 Agent 可查找和引用此文件。</p>
-          <select autoFocus aria-label="共享分类" value={value} onChange={event => setValue(event.target.value)}>
-            {knowledgeSharedCategories.map(category => <option key={category}>{category}</option>)}
-          </select>
+        {dialog.type === 'share' || dialog.type === 'share-session' ? <>
+          {dialog.type === 'share-session' ? <>
+            <p className="knowledge-move-file" title={dialog.row.title}>{dialog.row.title}</p>
+            <p>发布已保存内容的只读快照。其他已登录用户可在「他人共享」查看。修改会话后可重新发布。</p>
+          </> : <p>共享后，其他已登录用户及其 Agent 可查找和引用此文件。</p>}
+          <div className="knowledge-dialog-select">
+            <select autoFocus aria-label="共享分类" value={value} onChange={event => setValue(event.target.value)}>
+              {knowledgeSharedCategories.map(category => <option key={category}>{category}</option>)}
+            </select>
+            <KnowledgeIcon name="chevron" />
+          </div>
         </> : dialog.type === 'move' ? <>
           <p className="knowledge-move-file" title={dialog.row.name}>{dialog.row.name}</p>
-          <select autoFocus aria-label="目标文件夹" value={value} onChange={event => setValue(event.target.value)}>
-            <option value="">未分组</option>
-            {snapshot.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
-          </select>
+          <div className="knowledge-dialog-select">
+            <select autoFocus aria-label="目标文件夹" value={value} onChange={event => setValue(event.target.value)}>
+              <option value="">未分组</option>
+              {snapshot.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+            </select>
+            <KnowledgeIcon name="chevron" />
+          </div>
         </> : dialog.type === 'remove' ? <p>从知识库删除「{dialog.row.name}」？</p>
           : dialog.type === 'remove-folder' ? <p>删除「{dialog.name}」后，里面的文件会移到未分组。</p>
             : <input autoFocus aria-label="名称" maxLength={255} value={value} onChange={event => setValue(event.target.value)}
               onFocus={event => event.currentTarget.select()} required />}
         {notice?.error && <p role="alert" className="knowledge-danger">{notice.text}</p>}
         <footer>
+          {dialog.type === 'share-session' && sessionShare && <button type="button" className="knowledge-danger knowledge-stop-sharing" disabled={busy}
+            onClick={() => void shareSession(dialog.row, dialog.mode)}>取消共享</button>}
           <button type="button" disabled={busy} onClick={() => { setDialog(undefined); setNotice(undefined) }}>取消</button>
           <button type="submit" className="knowledge-primary" disabled={busy || dialog.type === 'move' && value === (dialog.row.folderId ?? '')}>
-            {dialog.type === 'move' ? '移动' : dialog.type.startsWith('remove') ? '删除' : '确认'}
+            {dialog.type === 'share-session' ? sessionShare ? '重新发布' : '发布' :
+              dialog.type === 'move' ? '移动' : dialog.type.startsWith('remove') ? '删除' : '确认'}
           </button>
         </footer>
       </form>
@@ -1116,6 +1151,6 @@ function message(error: unknown): string {
 function dialogTitle(type: DialogState['type']) {
   return {
     'create-folder': '新建文件夹', 'rename-folder': '重命名文件夹', 'remove-folder': '删除文件夹',
-    rename: '重命名文件', share: '共享至知识库', move: '移动到文件夹', remove: '从知识库删除'
+    rename: '重命名文件', share: '共享至知识库', 'share-session': '共享只读会话', move: '移动到文件夹', remove: '从知识库删除'
   }[type]
 }

@@ -1,3 +1,5 @@
+import type { KnowledgeSessionShare } from './knowledge-sessions'
+
 export const knowledgeCategories = {
   all: '所有文件',
   saved: '手动收藏',
@@ -49,6 +51,7 @@ export interface KnowledgeDocument {
 export interface KnowledgeSnapshot {
   documents: KnowledgeDocument[]
   folders: KnowledgeFolder[]
+  sessionShares?: Record<string, KnowledgeSessionShare>
 }
 
 export interface KnowledgeFilter {

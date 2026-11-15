@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { knowledgeSessionLabels, type KnowledgeSessionEntry, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
+import { knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
+  type KnowledgeSessionMode, type KnowledgeSessionShare } from '../../shared/knowledge-sessions'
 import { KnowledgeIcon } from './icons'
 
 export function useKnowledgeSessions(document: Document, mode: KnowledgeSessionMode | undefined,
@@ -86,12 +87,14 @@ export function openKnowledgeSession(document: Document, id: string, view: Knowl
   })
 }
 
-export function KnowledgeSessionDirectory({ mode, entries, loading, error, open }: {
+export function KnowledgeSessionDirectory({ mode, entries, loading, error, open, shares, share }: {
   mode: KnowledgeSessionMode
   entries: KnowledgeSessionEntry[]
   loading: boolean
   error: boolean
   open: (id: string, mode: KnowledgeSessionMode) => Promise<boolean>
+  shares?: Record<string, KnowledgeSessionShare>
+  share: (row: KnowledgeSessionEntry, mode: KnowledgeSessionMode) => void
 }) {
   const [query, setQuery] = useState('')
   const [opening, setOpening] = useState<string>()
@@ -114,20 +117,29 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open 
     {loading && !rows.length && <p className="knowledge-empty" role="status">正在读取会话…</p>}
     {!loading && !error && !rows.length && <p className="knowledge-empty">{needle ? '没有符合搜索条件的会话。' : '这里还没有会话。'}</p>}
     {rows.length > 0 && <ul className="knowledge-session-rows" aria-label="会话列表">
-      {rows.map(row => <li key={row.id}><button type="button" title={row.title} disabled={!!opening}
-        aria-busy={opening === row.id}
-        onClick={async () => {
-          setOpening(row.id)
-          setFailed(false)
-          const ok = await open(row.id, mode)
-          setOpening(undefined)
-          setFailed(!ok)
-        }}>
-        <span className="knowledge-file-icon" data-tile="true" data-format={color}><KnowledgeIcon name={icon} /></span>
-        <span className="knowledge-session-title"><span>{row.title}</span>{row.workspace && <small>{row.workspace}</small>}</span>
-        {row.updatedAt > 0 && <time dateTime={new Date(row.updatedAt).toISOString()}>{new Date(row.updatedAt).toLocaleDateString()}</time>}
-        <KnowledgeIcon name="next" />
-      </button></li>)}
+      {rows.map(row => {
+        const published = shares?.[knowledgeSessionShareKey(mode, row.id)]
+        const action = published ? '管理共享' : '共享会话'
+        return <li key={row.id}>
+          <button className="knowledge-session-open" type="button" title={row.title} disabled={!!opening}
+            aria-busy={opening === row.id}
+            onClick={async () => {
+              setOpening(row.id)
+              setFailed(false)
+              const ok = await open(row.id, mode)
+              setOpening(undefined)
+              setFailed(!ok)
+            }}>
+            <span className="knowledge-file-icon" data-tile="true" data-format={color}><KnowledgeIcon name={icon} /></span>
+            <span className="knowledge-session-title"><span>{row.title}</span>{row.workspace && <small>{row.workspace}</small>}</span>
+            {published && <span className="knowledge-tag" data-kind="share">已共享</span>}
+            {row.updatedAt > 0 && <time dateTime={new Date(row.updatedAt).toISOString()}>{new Date(row.updatedAt).toLocaleDateString()}</time>}
+            <KnowledgeIcon name="next" />
+          </button>
+          <button className="knowledge-square knowledge-session-share" type="button" title={action}
+            aria-label={`${action}「${row.title}」`} onClick={() => share(row, mode)}><KnowledgeIcon name="shared" /></button>
+        </li>
+      })}
     </ul>}
   </main>
 }

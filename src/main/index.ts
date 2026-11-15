@@ -7,6 +7,7 @@ import { KnowledgeFilePreview } from './knowledge/file-preview'
 import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
 import { researchHasContent } from './knowledge/session-content'
+import { createKnowledgeSessionSnapshot } from './knowledge/session-share'
 import {routeBrowserUse} from './browser/route'
 import {registerBrowserApp} from './browser/service'
 import {ClientCapabilityService,installClientCapabilityBinding} from './state/client-capability-service'
@@ -1517,6 +1518,37 @@ async function bootstrap(): Promise<void> {
         }
       } catch { /* Unavailable or corrupt sessions stay out of the directory. */ }
       return { id, hasContent }
+    },
+    sessionSnapshot: async (owner, id, mode, check) => {
+      const catalog = await taskRpc<{ items: { sessionId: string; title?: string; parentId?: string; removed?: boolean }[] }>('session.list', {})
+      check()
+      const session = catalog.items.find(item => item.sessionId === id && !item.removed && !item.parentId)
+      if (!session || isScheduledSession(id)) throw Error('只能共享当前工作区的会话。')
+      const title = session.title ?? '未命名会话'
+      const shared = researchBoardsService?.isSharedSession(id)
+      if (shared) {
+        const binding = researchBoardsService?.getBinding(id)
+        if (mode !== 'research' || !binding ||
+            researchBoardsService?.taskAuthority(owner, binding.boardId).snapshot.board.role !== 'owner') {
+          throw Error('只有研究看板所有者可以发布快照。')
+        }
+      }
+      if (mode === 'notes') return createKnowledgeSessionSnapshot({ mode, note: calendarNotes.load(owner, id).saved }, title)
+      if (mode === 'spreadsheet') return createKnowledgeSessionSnapshot({ mode, workbook: knowledgeWorkbooks.workbookWithContent({ owner, sessionId: id }) }, title)
+      const canvas = shared ? researchBoardsService!.readSharedCanvas(id)
+        : readStoredResearchCanvas({ getItem: key => researchCanvasStorage.peekItem(key) }, id)
+      return createKnowledgeSessionSnapshot({ mode, canvas, readFile: async (node, name) => {
+        if (!node.id || !node.authorizationId || !knowledgeContent.supports(name)) return
+        try {
+          check()
+          const file = await researchFilePreviewRegistry!.resolveExportSource({ sessionId: id, nodeId: node.id, authorizationId: node.authorizationId })
+          if (!file) return
+          const info = await stat(file.path)
+          const result = await knowledgeContent.read({ name, size: info.size }, file.path)
+          check()
+          return result?.text && (result.truncated ? result.text + '\n\n此附件仅显示部分正文。' : result.text)
+        } catch { check(); return undefined }
+      } }, title)
     },
     generatedWorkspace: sessionId => researchBoardsService?.isSharedSession(sessionId) || isScheduledSession(sessionId)
       ? Promise.resolve(null) : knowledgeWorkspaceFiles.resolveRoot(sessionId)

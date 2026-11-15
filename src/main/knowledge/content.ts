@@ -141,7 +141,7 @@ export class KnowledgeContent {
     return plain.has(extension) || extension === 'pdf' || office.some(value => value === extension)
   }
 
-  async read(row: KnowledgeDocument, source: string | Buffer, signal?: AbortSignal): Promise<KnowledgeText | undefined> {
+  async read(row: Pick<KnowledgeDocument, 'name' | 'size'>, source: string | Buffer, signal?: AbortSignal): Promise<KnowledgeText | undefined> {
     signal?.throwIfAborted()
     if (!this.supports(row.name)) return
     const extension = textType(row.name)
