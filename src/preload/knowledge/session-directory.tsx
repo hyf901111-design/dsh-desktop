@@ -71,7 +71,7 @@ export function useKnowledgeSessions(document: Document, enabled: boolean,
   return directories
 }
 
-export function openKnowledgeSession(document: Document, id: string, view: KnowledgeSessionMode | 'chat', retained = false): Promise<boolean> {
+export function openKnowledgeSession(document: Document, id: string, view: KnowledgeSessionMode | 'chat', retained: boolean | 'imported' = false): Promise<boolean> {
   const win = document.defaultView!
   return new Promise(resolve => {
     const requestId = crypto.randomUUID()

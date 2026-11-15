@@ -289,9 +289,9 @@ function initializeUi(): void {
       }
       const session = result.session
       if (!session) throw Error('文件导入失败。')
-      let opened = await openKnowledgeSession(document, session.id, session.mode, true)
-      if (!opened) opened = await openKnowledgeSession(document, session.id, session.mode, true)
-      if (!opened) throw Error('文件已导入，请从工作区打开对应会话。')
+      if (!await openKnowledgeSession(document, session.id, session.mode, 'imported')) {
+        throw Error('文件已导入，请从工作区打开对应会话。')
+      }
       if (workspaceSurfaceHost.current()) workspaceSurfaceHost.revealConversation()
     } catch (error) { throw Error(knowledgeRequestError(error)) }
   }

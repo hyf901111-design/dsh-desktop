@@ -158,6 +158,28 @@ it('opens the original conversation only while it is still available', async () 
   } finally { dispose(); await window.happyDOM.abort() }
 })
 
+it('opens a newly imported file session after refreshing a catalog with an empty conversation', async () => {
+  const window = new Window()
+  const { document } = window
+  let byId = {}
+  const sessions = { list: { getSnapshot: () => ({ byId }) }, subagentAddress: () => undefined, open: vi.fn(),
+    refresh: vi.fn(async () => { byId = { imported: { title: '导入文件', blank: true } } }) }
+  const setView = vi.fn()
+  const dispose = installKnowledgeSourceNavigation({ document, sessions, chatStore: { create: () => ({ actions: { setView } }) } })
+  const open = new Promise(resolve => {
+    document.addEventListener('sherlock:knowledge-source-result', event => resolve(event.detail), { once: true })
+  })
+  try {
+    document.dispatchEvent(new window.CustomEvent('sherlock:knowledge-source-open', {
+      detail: { id: 'imported', requestId: 'import', view: 'spreadsheet', retained: 'imported' }, cancelable: true
+    }))
+    expect(await open).toEqual({ requestId: 'import', ok: true })
+    expect(sessions.refresh).toHaveBeenCalledOnce()
+    expect(sessions.open).toHaveBeenCalledExactlyOnceWith('imported')
+    expect(setView).toHaveBeenCalledExactlyOnceWith('spreadsheet')
+  } finally { dispose(); await window.happyDOM.abort() }
+})
+
 it('prompts for a fresh file after revocation and refreshes the shared directory', async () => {
   const window = new Window()
   const message = '引用的文件已不存在或已取消共享，请重新选择。'
