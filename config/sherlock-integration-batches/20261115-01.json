@@ -9,23 +9,77 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "知识库应用与右侧对话",
+        "featureName": "工作区欢迎页、表格引用和知识库图片图标",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "2e5a82c381d0af553feb19f69293e9329307764c",
-        "tipCommit": "dae475e061743c2866afe861534a143847ff65ea",
+        "baseCommit": "dae475e061743c2866afe861534a143847ff65ea",
+        "tipCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
         "commits": [
           {
-            "commit": "dae475e061743c2866afe861534a143847ff65ea",
+            "commit": "2664758b87859540cd31859578fc48a209e13eb8",
             "parents": [
-              "2e5a82c381d0af553feb19f69293e9329307764c"
+              "dae475e061743c2866afe861534a143847ff65ea"
             ],
-            "subject": "修复文件导入后直接跳转编辑会话"
+            "subject": "调整知识库页码反馈、计数对齐和新建研究图标"
+          },
+          {
+            "commit": "c00524cbcec0f7c98748fec7347b57e47aba94bf",
+            "parents": [
+              "2664758b87859540cd31859578fc48a209e13eb8"
+            ],
+            "subject": "提升知识库图片文件图标辨识度"
+          },
+          {
+            "commit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
+            "parents": [
+              "c00524cbcec0f7c98748fec7347b57e47aba94bf"
+            ],
+            "subject": "统一工作区对话欢迎页和表格参考范围"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/canvas-task-routing.d.ts"
+          },
+          {
             "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
+            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-figma-final-shell.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/spreadsheet-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/scheduled/task-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
           },
           {
             "status": "M",
@@ -33,14 +87,65 @@
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/session-directory.tsx"
+            "path": "src/preload/knowledge/icons.tsx"
           },
           {
             "status": "M",
-            "path": "test/knowledge-composer.test.js"
+            "path": "src/preload/knowledge/pagination.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-tools.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-final-shell-patch.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/spreadsheet-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workspace-mode-welcome.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "生成已验证的最新原生界面补丁。",
+            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
+            "completedAt": "2026-11-15T14:11:06.471Z",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "npm",
@@ -48,9 +153,27 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "类型检查通过。",
-            "verifiedCommit": "dae475e061743c2866afe861534a143847ff65ea",
-            "completedAt": "2026-11-15T13:15:24Z",
+            "summary": "TypeScript 检查通过。",
+            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
+            "completedAt": "2026-11-15T14:11:06.471Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "--maxWorkers=1",
+              "test/spreadsheet-service.test.ts",
+              "test/spreadsheet-inline-references.test.js",
+              "test/client-tools.test.js",
+              "test/client-capability-transport.test.ts",
+              "test/conversation-components-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "208 项表格引用、宿主请求和模型上下文聚焦测试通过。",
+            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
+            "completedAt": "2026-11-15T14:11:06.471Z",
             "timeoutMs": 120000
           },
           {
@@ -62,162 +185,32 @@
               "test",
               "--",
               "--maxWorkers=1",
+              "test/workspace-mode-welcome.test.js",
               "test/knowledge-workspace-rendered.test.js",
-              "test/dsh-file-drop-compat.test.ts",
-              "test/notes-native-drop.test.js",
-              "test/notes-header-runtime.test.js",
-              "test/notes-slash-insert.test.js",
-              "test/note-document-import.test.ts",
-              "test/command-popup-position-browser.test.js",
-              "test/skill-command-patch.test.js",
-              "test/deliverable-cards.test.js",
-              "test/knowledge-session-copy.test.ts",
-              "test/knowledge-session-copy-host.test.js",
-              "test/spreadsheet-files.test.ts",
-              "test/research-resident-conversation.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/sidebar-new-session-actions.test.ts",
-              "test/sidebar-new-note-install.test.js",
-              "test/knowledge-composer.test.js",
+              "test/figma-final-shell-patch.test.ts",
               "-t",
-              "paginates files|drops one or several|lets all file-drag|clears an outside overlay|native export menu|complete notes header|imports Markdown|opens a submenu|opens both submenu|navigates slash categories|exact production Node|native popup scope|compatible editor|patches installed|seeds the|file import|round trips Excel|preserves quoted CSV|converts a file|extracts|hides the research workspace|expanded More|collapsed More|single collapsed Home|installs Shell twice|newly imported file session|opens the original conversation"
+              "renders the shared welcome|keeps file icons readable|shows the current canvas count"
             ],
             "outcome": "passed",
-            "summary": "聚焦验证覆盖知识库文件拖放、页码、斜杠菜单、笔记导入导出、文件模式打开和工作区会话持久化。",
-            "verifiedCommit": "dae475e061743c2866afe861534a143847ff65ea",
-            "completedAt": "2026-11-15T13:15:24Z",
+            "summary": "4 项欢迎页、引用控制及深浅色图标显示测试通过。",
+            "verifiedCommit": "1a1545fb71543f1ecc3f4886d56b4eeaaf676e34",
+            "completedAt": "2026-11-15T14:11:06.471Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "聚焦渲染测试验证了分页、级联菜单、笔记操作菜单，以及合成文件跨过对话区拖到知识库列表后上传的行为。打开方式和会话保存逻辑有独立聚焦覆盖。"
+          "summary": "浏览器聚焦验证通过。集成客户端实机验收待构建。"
         },
         "acceptanceCriteria": [
-          "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
-          "右侧常驻对话能访问当前知识库工作区，执行筛选、排序和受版本保护的 Markdown 修改。",
-          "登录用户可检索、阅读、引用有权访问的共享文件；取消共享时拒绝旧引用并保留草稿。",
-          "客户端折叠侧栏中知识库位于浏览器下方，分类和文件图标符合客户端风格，控件支持减少动态效果。",
-          "首页快捷入口位于浏览器旁边。普通对话可用正文关键词查找共享文件和匹配片段。",
-          "左右栏同时可见时，共享列表保留足够空间显示文件名与共享人。",
-          "手动选择和拖放的文件在知识库列表显示实际复制进度，支持重试和取消，成功后按通常列表条件显示。",
-          "最近搜索只记录手动输入，按账号保存，选用或清除时保留其他筛选条件。",
-          "上传完成后正式文件行短暂显示完成状态，可立即预览或打开更多操作。",
-          "右侧知识库切换文件资料与经验记忆，沿用同一启用开关和记忆 Markdown 编辑器。",
-          "右侧文件行在文件大小和 @文件 之间立即切换，文件名位置稳定。拖放、预览和上传完成使用短淡入并尊重减少动态效果。",
-          "PowerPoint 正文的引用页码遵循演示文稿播放顺序。",
-          "共享目录从手动刷新或预览定期复核取得结果后，文件列表、页签目录和预览同步更新。",
-          "知识库弹出菜单、筛选反馈、共享目录和行尾引用应用短动效；减少动态效果时静态呈现，保留键盘和侧栏原生行为。",
-          "斜杠知识库以分类与文件夹分组显示，沿用知识库图标和共享二级返回；搜索后可直接展开共享目录。",
-          "共享列表在双侧栏下保留短分类名称与文件信息，受宽度约束时将隐藏列的大小、日期与共享人放到文件名下方。",
-          "已打开的右侧知识库预览在改名后与文件列表同步显示新标题，保留当前页签及编辑草稿。",
-          "共享文件改名更新两端目录、检索和已有文件引用，保持共享标识和正文，撤销后禁止改名恢复。",
-          "知识库列表随分类、确认筛选、排序和对话撤销短暂淡入，切换右侧目录和插入输入框引用时有反馈，支持减少动态效果。",
-          "同会话重新生成同一路径文件时，自动收录和手动收藏更新已有条目的正文与引用并保留整理状态；已共享正文与库内人工 Markdown 编辑受保护。",
-          "右侧对话在文件列表渲染后才确认筛选、排序和撤销，使用同一列表快照；查看经验记忆时只读命令保留页签，离开工作区或取消操作使等待加载的旧请求失效。",
-          "共享检索工具读取正文后可在回复中引用文件和共享人，引用点击打开右侧的原生预览并实时核验当前账号权限。",
-          "右侧预览无法打开已撤销文件时保留可读的处理提示，隐藏 Electron 传输前缀。",
-          "对话保存 Markdown 后，已打开的原生预览在同一页签显示新版；发生版本冲突时保留草稿，提供预览和载入新版。",
-          "主视图筛选弹层对齐筛选按钮右边缘，受窄窗口约束时保持在文件区内。对话展示真实文件列表回执，只有当前可撤销的筛选提供撤销控制。",
-          "可管理的文件行右键打开更多按钮的同一菜单，菜单靠近光标并避开窗口边缘。右侧先读取共享目录时，知识库主页面共享计数同步更新。",
-          "笔记、表格、知识库、浏览器和研究复用固定在普通页签之外的对话页签，页签拥挤及来回切换时保持可见。",
-          "侧栏更新提示、探索和消息中心处于同一行，准备好更新后显示蓝底向上箭头，继续由用户确认重启。",
-          "知识库保留原生右侧栏入口，移除重复按钮；共享下钻显示返回箭头和返回上级目录并保留搜索与筛选。",
-          "文件夹计数和分类共列，悬停在同一位置显示更多。长文件夹名与顶栏标题自动省略，悬停显示全名，不挤占筛选、搜索与添加文件。",
-          "右侧对话筛选到长名称文件夹时，筛选摘要省略过长的目录标签。标签可悬停查看全名，撤销后恢复筛选前的目录和工具栏。",
-          "他人共享两列的表头下沿连续，类目分割线从表头下沿开始，翻页前后与左分类分割线底部等高，选中项与分割线留有横向间距。窄窗口在文件夹计数与分类计数保持对齐时完整显示短分类名。",
-          "从浏览器、笔记、表格和研究返回知识库时，原会话草稿及引用保留，右侧对话恢复对知识库筛选状态的读取。",
-          "斜杠选择知识库文件夹后，标签与文字同一行编辑，发送后引用范围中的文件正文可供实际读取。",
-          "输入框的知识库分类引用标签随名称宽度调整。斜杠权限选项复用设置中的本地化名称，保持原有选择和返回行为。",
-          "知识库使用既有应用图标。和浏览器共享顶栏，切换时返回按钮、应用图标和名称的坐标一致。",
-          "分类、文件夹计数与添加文件夹图标共用同一列，悬停更多按钮仍在原计数位置。",
-          "知识库顶栏复用浏览器的四视图快捷入口。悬停展开，移过标题、文件资料、经验记忆和顶栏空白时保持，离开后收起。标题与空白区域支持拖动窗体。",
-          "知识库文件资料及右侧知识库复用设置中的经验记忆开关。首次建立的用户资料使用深色与星云风暴，已有配置保留。",
-          "所有文件下可进入文件资料、研究模式、笔记模式和表格模式。会话目录可按会话名与工作区检索，识别原生看板、已有笔记和工作簿以及保存的会话视图。选择会话后在原会话直接切换对应原生模式。",
-          "已有文件可通过更多菜单移入新建文件夹，也可直接拖入左侧文件夹。移动后两处文件计数及时更新，已有文件不会复制。",
-          "文件列表更多菜单中，移动到文件夹使用纯文字，收藏入口显示添加至收藏。",
-          "研究、笔记与表格列表的每行使用文件列表同尺寸的图标底板和按类型配色的线形图标，悬停高亮之间保留四像素间距。",
-          "只有已保存实际内容的研究看板、笔记或工作簿才显示在模式目录；默认空段落、仅默认导航的画板与空白工作簿排除。",
-          "知识库内容变更后显示两秒气泡，文件列表表头不因反馈移动。",
-          "文件与模式分类的空状态提示在列表内容区居中；他人共享提供全部文件入口，每条记录显示所属共享目录。",
-          "他人共享以全部文件切换汇总列表，下级目录缩进，保留筛选与搜索。",
-          "文件和会话分享弹窗的下拉箭头与按钮间距统一。",
-          "经验记忆直接显示正文预览和编辑，不需先打开文件条目。",
-          "研究、笔记和表格的共享接收者由知识库直接打开已有原生模式的只读页面，保留布局、笔记块、工作表和工作簿对象。旧会话共享可由发布者重新发布升级。",
-          "经验记忆的编辑和预览在记忆.md标题行右侧。",
-          "斜杠一级保持展开。悬停或点击具有子选项的命令时显示相邻的原生二级菜单。主对话默认向右，窄的右侧对话栏向左展开。知识库下的他人共享再沿同方向展开。",
-          "表格普通会话可切换编辑和预览。预览保留当前工作表、选区及撤销历史，共享表格顶部显示锁定的预览状态。",
-          "打开他人共享的研究、笔记和表格保留只读预览，不增加左侧会话。点击创建副本后，保存完整内容再在当前工作区登记可编辑副本。原始共享版本不受副本编辑影响。",
-          "共享会话顶栏右侧显示创建副本与预览，右侧栏展开时预览占用腾出的空间。表格仍可选择和导航，禁用编辑器、快捷写入和数据命令。",
-          "知识库中查看共享研究看板，画布紧接标题栏，缩放和右侧对话栏展开时只保留一层顶部空间。",
-          "知识库副本以原生持久化会话登记到项目，从其他会话切回或重启后仍可从左侧打开，已保存旧版副本在原项目恢复。",
-          "预览共享原件时隐藏原工作区的对话和工具面板，返回后恢复原工具位置与草稿。共享研究看板在本地按可用宽度整理，创建副本后进入原生会话。",
-          "升级后在后台扫描已有项目会话的交付记录，按原会话来源补录可用成果，去重并保留已删除状态。",
-          "PDF 与 PPT 通过轮廓和色彩区分。主视图与右侧筛选复选框统一尺寸、对齐与键盘交互。",
-          "共享目录加载失败时提供中文说明与重试，并与成功返回空目录的状态区分。",
-          "侧栏收起只保留主页创建入口，点击沿用新建对话，提供悬停提示；随主视图切换与浏览器、知识库互斥高亮。",
-          "文件与会话图标采用灰色卡片、彩色封面和白色文档页。PDF 和 PPT 以红色与橙色、PDF 符号与幻灯片图形区分。",
-          "知识库主区文件与会话每页二十条，分页固定在列表区左下，提供快捷页码、跳转输入、滚动条间距。",
-          "我的共享混排已发布的文件、研究、笔记、表格，兼容已有发布，支持打开原会话、管理共享。",
-          "折叠侧栏中五个探索演示都使用主页开启独立的原生示例会话，普通主页点击仍新建对话。",
-          "PPT 与研报的技能菜单只传递可序列化的输入范围，打开菜单的 DOM 和回调保留在原渲染环境。",
-          "分页器仅当前页带背景。知识库斜杠级联使用原生子菜单样式和同一套键盘导航。",
-          "知识库中间列表优先接收单文件及批量拖放，并关闭对话输入框的拖放提示。",
-          "笔记顶栏更多菜单支持导入和分格式导出。文件打开方式在兼容格式上提供笔记和表格快捷入口。",
-          "研究模式右侧对话隐藏项目选择器，沿用当前会话工作区。",
-          "收起侧栏后，更多菜单可直接新建对话、研究、笔记与表格。"
+          "笔记与研究欢迎页各有三个快捷用例，点击后填写当前草稿。",
+          "表格整表参考可关闭，框选后优先显示选区引用，研究空看板显示参考按钮。",
+          "知识库图片文件使用灰色卡片上的紫色风景图标。"
         ],
         "risks": [
-          "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
-          "生产服务部署及正式客户端发布需要单独验证。",
-          "正文查询逐批读取可解析文件，结果按匹配批次返回。",
-          "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
+          "本轮使用本地测试流程，真实客户端交给用户验收。"
         ],
-        "generatedAt": "2026-11-15T13:15:24Z"
-      },
-      "merged": {
-        "mergeCommit": "9db7133403d3fe83e0bdd1d3057f29fde565748d",
-        "verificationCommit": "9db7133403d3fe83e0bdd1d3057f29fde565748d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "9db7133403d3fe83e0bdd1d3057f29fde565748d",
-            "completedAt": "2026-11-15T13:15:42.643Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "9db7133403d3fe83e0bdd1d3057f29fde565748d",
-            "completedAt": "2026-11-15T13:15:42.643Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T13:15:42.643Z"
+        "generatedAt": "2026-11-15T14:11:06.471Z"
       }
     }
   ],
