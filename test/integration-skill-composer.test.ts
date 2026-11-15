@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { runInNewContext, Script } from 'node:vm'
 import { Window } from 'happy-dom'
-import { afterEach, expect, it,vi } from 'vitest'
+import { afterAll, afterEach, expect, it,vi } from 'vitest'
 import {SKILL_REFERENCE_SOURCE,decodeSkillReference} from '../src/shared/skill-reference'
 import { installSkillComposer,serializeSharedSkillDraft } from '../src/preload/integrations/skill-composer'
 import { createSkillUseBridge } from '../src/preload/integrations/skill-use'
@@ -13,9 +13,11 @@ import type { IntegrationBridge } from '../src/shared/integration-ui'
 import { patchIntegrationSkillComposer } from '../scripts/lib/patch-integration-skill-composer.mjs'
 
 const require = createRequire(import.meta.url)
+const moduleWindow = new Window()
+afterAll(async () => { await moduleWindow.happyDOM.close() })
 const source = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
 let descriptor: any
-runInNewContext(source.slice(0, source.indexOf('\n//# sourceMappingURL=client.js.map')), { window: { __ModuleLoader__: { load: (value: any) => { descriptor = value } } }, navigator: { platform: 'MacIntel' }, AbortController, TextEncoder, TextDecoder, setTimeout, clearTimeout })
+runInNewContext(source.slice(0, source.indexOf('\n//# sourceMappingURL=client.js.map')), { window: Object.assign(moduleWindow, { __ModuleLoader__: { load: (value: any) => { descriptor = value } } }), document: moduleWindow.document, navigator: { platform: 'MacIntel' }, AbortController, TextEncoder, TextDecoder, setTimeout, clearTimeout })
 function fakeModule(): any { let fake: any; fake = new Proxy(function () {}, { get: () => fake, apply: () => fake, construct: () => ({}) }); return fake }
 function store(initial: any) { let value = initial; return { getSnapshot: () => value, set: (next: any) => { value = next }, subscribe: () => () => {} } }
 const client = descriptor.factory((id: string) => id.startsWith('react') ? require(id) : id === '@deepseek-ai/dsh-client-runtime/client' ? { createSnapshotStore: store } : fakeModule())
