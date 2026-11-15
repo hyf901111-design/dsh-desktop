@@ -19,6 +19,7 @@ interface LibraryState {
   documents: StoredDocument[]
   folders: KnowledgeFolder[]
   excludedOrigins: string[]
+  historicalScanRevisions?: Record<string, string>
   recentSearches?: string[]
   sessionShares?: Record<string, KnowledgeSessionShare>
 }
@@ -283,7 +284,19 @@ export class KnowledgeStore {
     return document
   }
 
-  collectGenerated(path: string, provenance: { sessionId: string; sessionTitle?: string; saved?: boolean }) {
+  historicalScanRevisions() {
+    return this.run(async state => ({ ...state.historicalScanRevisions }))
+  }
+
+  saveHistoricalScanRevisions(revisions: Record<string, string>, check: () => void) {
+    return this.run(async (state, directory, current) => {
+      await this.persist(state, {
+        ...state, historicalScanRevisions: { ...state.historicalScanRevisions, ...revisions }
+      }, directory, () => { current(); check() }, false)
+    })
+  }
+
+  collectGenerated(path: string, provenance: { sessionId: string; sessionTitle?: string; saved?: boolean; updatedAt?: number }) {
     return this.importOne(path, provenance)
   }
 
@@ -292,6 +305,7 @@ export class KnowledgeStore {
     sessionId?: string
     sessionTitle?: string
     saved?: boolean
+    updatedAt?: number
     transfer?: { signal?: AbortSignal; progress?: (value: KnowledgeImportProgress) => void }
   }) {
     return this.run(async (state, directory, identityCurrent) => {
@@ -346,7 +360,7 @@ export class KnowledgeStore {
           id, name, source: origin ? 'generated' : 'upload', origin, folderId: options.folderId,
           sessionId: options.sessionId, starred: false,
           ...existing, saved, sessionTitle, sourceVersion, storageName: basename(copied), size: info.size,
-          updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1)
+          updatedAt: Math.max(options.updatedAt ?? Date.now(), (existing?.updatedAt ?? 0) + 1)
         }
         await this.persist(state, {
           ...state, documents: existing ? state.documents.map(item => item === existing ? row : item) : [...state.documents, row],

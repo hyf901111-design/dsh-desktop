@@ -6,6 +6,7 @@ import { knowledgeCapabilityHandlers, sharedKnowledgeCapabilityHandlers } from '
 import { KnowledgeFilePreview } from './knowledge/file-preview'
 import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
+import { scanKnowledgeHistory } from './knowledge/history-backfill'
 import { researchHasContent } from './knowledge/session-content'
 import { createKnowledgeSessionCopier, knowledgeCopyRetention, retainExistingKnowledgeCopies } from './knowledge/session-copy'
 import type { KnowledgeSessionMode } from '../shared/knowledge-sessions'
@@ -1356,8 +1357,59 @@ async function bootstrap(): Promise<void> {
   let conversationComponentsReady=false
   const integrationOwner = () => accountService!.authenticated ? accountService!.accountId : 'local'
   const knowledgeIdentity = () => ({ owner: integrationOwner() || 'local', generation: accountService!.generation })
-  const knowledge = new KnowledgeStore(join(app.getPath('userData'), 'knowledge-library'), knowledgeIdentity, () => {
+  let historyScanChangeTimer: ReturnType<typeof setTimeout> | undefined
+  let historyScanInProgress = false
+  const sendKnowledgeChange = () => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('knowledge:changed')
+  }
+  const knowledge = new KnowledgeStore(join(app.getPath('userData'), 'knowledge-library'), knowledgeIdentity, () => {
+    if (!historyScanInProgress) { sendKnowledgeChange(); return }
+    historyScanChangeTimer ??= setTimeout(() => {
+      historyScanChangeTimer = undefined
+      sendKnowledgeChange()
+    }, 150)
+  })
+  let historyScan: Promise<unknown> | undefined
+  let rescanAll = false
+  let knowledgeHistoryTimer: ReturnType<typeof setTimeout> | undefined
+  const scanPendingSessions = new Set<string>()
+  const queueKnowledgeHistory = (sessionId?: string) => {
+    if (sessionId) scanPendingSessions.add(sessionId)
+    else rescanAll = true
+    if (historyScan || knowledgeHistoryTimer) return
+    // Let the host flush the completed turn before reading the durable log.
+    knowledgeHistoryTimer = setTimeout(() => {
+      knowledgeHistoryTimer = undefined
+      const snapshot = runtime?.snapshot()
+      if (snapshot?.phase !== 'ready' || (accountService?.authenticated && !accountService.accountId)) return
+      const { owner, generation } = knowledgeIdentity()
+      const only = rescanAll ? undefined : new Set(scanPendingSessions)
+      rescanAll = false
+      scanPendingSessions.clear()
+      const check = () => {
+        const current = knowledgeIdentity()
+        if (current.owner !== owner || current.generation !== generation || runtime?.snapshot().url !== snapshot.url) {
+          throw Error('Knowledge history scan context changed')
+        }
+      }
+      historyScanInProgress = true
+      historyScan = scanKnowledgeHistory({ sessionRoot: join(dshHome, 'sessions'), store: knowledge, only, check,
+        allowSession: id => !researchBoardsService?.isSharedSession(id) && !isScheduledSession(id)
+      }).then(result => {
+        if (!only || result.failed) console.info('[knowledge] historical file collection', result)
+      }).catch(error => {
+        try { check() } catch { return }
+        console.warn('[knowledge] historical file collection failed', error)
+      }).finally(() => {
+        historyScanInProgress = false
+        historyScan = undefined
+        if (rescanAll || scanPendingSessions.size) queueKnowledgeHistory(scanPendingSessions.values().next().value)
+      })
+    }, sessionId ? 1200 : 0)
+  }
+  app.once('before-quit', () => {
+    clearTimeout(knowledgeHistoryTimer)
+    clearTimeout(historyScanChangeTimer)
   })
   let knowledgeShared: KnowledgeSharing
   const knowledgeContent = new KnowledgeContent(() => researchPdfModules({
@@ -1381,6 +1433,7 @@ async function bootstrap(): Promise<void> {
     clientCapability:(value,signal)=>clientCapabilities.request(value,signal),
     sessionCompleted: ({ sessionId, seq, title, preview }) => {
       if (isScheduledSession(sessionId) || seq <= (notifiedSessionTurns.get(sessionId) ?? -1)) return
+      queueKnowledgeHistory(sessionId)
       notifiedSessionTurns.delete(sessionId)
       notifiedSessionTurns.set(sessionId, seq)
       if (notifiedSessionTurns.size > 1000) notifiedSessionTurns.delete(notifiedSessionTurns.keys().next().value!)
@@ -1698,7 +1751,10 @@ async function bootstrap(): Promise<void> {
     void integrationService?.scanLegacySkills()
     if (accountService?.authenticated && !accountService.accountId) void accountService.invoke('me', undefined).catch(() => {})
     const snapshot = runtime?.snapshot()
-    if (snapshot?.phase === 'ready' && snapshot.url) void recoverKnowledgeCopies(snapshot.url)
+    if (snapshot?.phase === 'ready' && snapshot.url) {
+      void recoverKnowledgeCopies(snapshot.url)
+      queueKnowledgeHistory()
+    }
   })
   if (accountService.authenticated && !accountService.accountId) void accountService.invoke('me', undefined).catch(() => {})
   const dependencyIndex = integrationService ? new DependencyIndex(integrationService.store) : undefined
@@ -1732,6 +1788,7 @@ async function bootstrap(): Promise<void> {
       if (snapshot.phase === 'ready' && snapshot.url) {
         void openHarness(snapshot.url).catch(showUnexpectedError)
         void recoverKnowledgeCopies(snapshot.url)
+        queueKnowledgeHistory()
       } else if (snapshot.phase === 'failed') {
         void showRuntimeFailure(snapshot)
       }
