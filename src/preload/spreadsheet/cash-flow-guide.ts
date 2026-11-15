@@ -77,6 +77,17 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     await options.point?.({ target, action })
     check()
   }
+  const pointWhenVisible = async (target: HTMLElement, action: 'move' | 'click') => {
+    check()
+    // Docked controls can be painted outside the clipping rectangles used by
+    // the visual cursor. The real form and its focus remain authoritative.
+    if (!visible(target)) return
+    try { await options.point?.({ target, action }) }
+    catch (error) {
+      if (!(error instanceof Error) || !error.message.startsWith('操作目标不可用')) throw error
+    }
+    check()
+  }
   const setRight = async (open: boolean) => {
     const button = await waitFor(() => rightToggle() ?? undefined, '表格对话开关尚未就绪。')
     if (button.getAttribute('aria-expanded') === String(open)) return
@@ -89,9 +100,9 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       .filter(input => input.dataset.odysseyFileReferenceSession === options.sessionId && !input.disabled && !input.readOnly && visible(input))
     return inputs.length === 1 ? inputs[0] : undefined
   }
-  const write = async (input: HTMLTextAreaElement, value: string) => {
+  const write = async (input: HTMLTextAreaElement, value: string, docked = false) => {
     if (input.value) throw Error('输入框已有草稿，已保留你的编辑。')
-    await point(input, 'click')
+    await (docked ? pointWhenVisible : point)(input, 'click')
     if (!input.isConnected || input.value) throw abort()
     input.focus({ preventScroll: true })
     let previous = ''
@@ -158,7 +169,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         if (step === 'analysis') await options.wait(2100, requestAbort.signal)
         const target = await check().applyCashFlowGuide(step, check)
         await rpc('advance', step)
-        if (target && visible(target)) await point(target, 'move')
+        if (target) await pointWhenVisible(target, 'move')
         return
       }
       if (step === 'component') {
@@ -169,14 +180,14 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
           '用选区做一个现金流拆解台。拆开净利润到经营现金流的差额，点击柱子查看构成，并用滑杆试算多回款后能否达到 75% 的现金转化率。',
           'Build a cash flow bridge from the selection. Show adjustment details on click, and let me test whether collecting more receivables reaches a 75% cash conversion target.'
         )
-        await write(input, prompt)
-        await point(submit, 'click')
+        await write(input, prompt, true)
+        await pointWhenVisible(submit, 'click')
         if (input.value !== prompt || submit.disabled) throw abort()
         const card = await check().insertCashFlowGuideComponent(async () => {
           await options.wait(2300, requestAbort.signal)
           check()
         })
-        if (card && visible(card)) await point(card, 'move')
+        if (card) await pointWhenVisible(card, 'move')
         await rpc('advance', 'complete')
         await rpc('flush')
         completed = true
