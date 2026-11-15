@@ -11,25 +11,56 @@
         "schemaVersion": 1,
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
-        "baseCommit": "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549",
-        "tipCommit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
+        "baseCommit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
+        "tipCommit": "1275da28dfae46345b748b3941ca84be002be4e7",
         "commits": [
           {
-            "commit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
+            "commit": "f9f1a6c5ba729befd5cbe681367be9cee56815d4",
             "parents": [
-              "e308f4c3b6d65a7b9bb16805c29cd7f816ec1549"
+              "fc428319b65be188ce1989bdbedf7aaee6b39315"
             ],
-            "subject": "知识库：统一文件和会话每页二十条并固定分页"
+            "subject": "修复：折叠侧栏通过主页播放五个演示用例"
+          },
+          {
+            "commit": "1275da28dfae46345b748b3941ca84be002be4e7",
+            "parents": [
+              "f9f1a6c5ba729befd5cbe681367be9cee56815d4"
+            ],
+            "subject": "知识库：集中显示我的共享并增加页码跳转和列表留白"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
+            "path": "src/main/knowledge/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-entry-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-explore-entry.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/knowledge/pagination.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/session-directory.tsx"
+            "path": "src/preload/knowledge/panel.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/panel.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/knowledge/published-sessions.ts"
           },
           {
             "status": "M",
@@ -38,6 +69,22 @@
           {
             "status": "M",
             "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-library.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-sessions.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-native.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-explore-entry-browser.test.js"
           },
           {
             "status": "M",
@@ -53,8 +100,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程与预加载类型检查通过。",
-            "verifiedCommit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
-            "completedAt": "2026-11-15T10:25:27Z",
+            "verifiedCommit": "1275da28dfae46345b748b3941ca84be002be4e7",
+            "completedAt": "2026-11-15T10:51:48Z",
             "timeoutMs": 120000
           },
           {
@@ -67,19 +114,22 @@
               "--",
               "--maxWorkers=1",
               "test/knowledge-workspace-rendered.test.js",
+              "test/home-guide-explore-entry-browser.test.js",
+              "test/home-guide-entry-native.test.ts",
+              "test/knowledge-sharing-worker.test.js",
               "-t",
-              "keeps file icons readable|lists real session modes|shows a readable shared directory error|shared categories and metadata|paginates files and native sessions|centers empty messages"
+              "My Shares|paginates files|shared categories and metadata|centers empty messages|lists real session modes|session share|only visible Home entry|real collapsed Home action|visible back control|shares all three session snapshots"
             ],
             "outcome": "passed",
-            "summary": "七项知识库渲染检查，覆盖二十条分页、固定位置、空态、图标及共享目录。",
-            "verifiedCommit": "fc428319b65be188ce1989bdbedf7aaee6b39315",
-            "completedAt": "2026-11-15T10:25:27Z",
+            "summary": "19 项与共享目录、分页、演示入口及原生会话共享相关的聚焦检查。",
+            "verifiedCommit": "1275da28dfae46345b748b3941ca84be002be4e7",
+            "completedAt": "2026-11-15T10:51:48Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "深浅主题核对文件类型图标以及悬停、选中反馈，生产线路用原客户端核对跨账号 Markdown 列表和预览。 固定翻页器覆盖 7 个文件分类和 3 种原生会话目录，验证每页 20 条及最后一页。"
+          "summary": "唯一真实客户端完成线上其他账号三种只读预览和三个副本切换再打开。聚焦渲染覆盖我的共享、左置分页跳转、滚动间距及五个演示经主页进入。"
         },
         "acceptanceCriteria": [
           "知识库支持文件列表、格式及来源筛选、手动收藏、文件分组和分栏浏览他人共享。",
@@ -145,7 +195,9 @@
           "共享目录加载失败时提供中文说明与重试，并与成功返回空目录的状态区分。",
           "侧栏收起只保留主页创建入口，点击沿用新建对话，提供悬停提示；随主视图切换与浏览器、知识库互斥高亮。",
           "文件与会话图标采用灰色卡片、彩色封面和白色文档页。PDF 和 PPT 以红色与橙色、PDF 符号与幻灯片图形区分。",
-          "知识库主区文件与各类会话每页二十条，类别或搜索变化时回到第一页，翻页器固定在结果列右下。"
+          "知识库主区文件与会话每页二十条，分页固定在列表区左下，提供快捷页码、跳转输入、滚动条间距。",
+          "我的共享混排已发布的文件、研究、笔记、表格，兼容已有发布，支持打开原会话、管理共享。",
+          "折叠侧栏中五个探索演示都使用主页开启独立的原生示例会话，普通主页点击仍新建对话。"
         ],
         "risks": [
           "双账号使用本地服务和合成资料，模型响应用于验证工具协议和引用传递。",
@@ -153,51 +205,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T10:25:27Z"
-      },
-      "merged": {
-        "mergeCommit": "3f2ee2b16d8340924178bba36ca18ab9f59bf270",
-        "verificationCommit": "3f2ee2b16d8340924178bba36ca18ab9f59bf270",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3f2ee2b16d8340924178bba36ca18ab9f59bf270",
-            "completedAt": "2026-11-15T10:25:44.198Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npx",
-              "vitest",
-              "run",
-              "test/knowledge-composer.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/knowledge-sharing-worker.test.js",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/browser-sidebar-entry-rendered.test.js",
-              "test/sidebar-new-note-browser.test.js",
-              "test/research-tab-icons.test.js",
-              "test/client-capability-header.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npx vitest run test/knowledge-composer.test.js test/knowledge-workspace-rendered.test.js test/knowledge-sharing-worker.test.js test/knowledge-library.test.ts test/knowledge-content.test.ts test/browser-sidebar-entry.test.ts test/browser-sidebar-entry-rendered.test.js test/sidebar-new-note-browser.test.js test/research-tab-icons.test.js test/client-capability-header.test.ts",
-            "verifiedCommit": "3f2ee2b16d8340924178bba36ca18ab9f59bf270",
-            "completedAt": "2026-11-15T10:25:44.198Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T10:25:44.198Z"
+        "generatedAt": "2026-11-15T10:51:48Z"
       }
     }
   ],
