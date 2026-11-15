@@ -240,7 +240,7 @@ body[data-ds-dark-theme] .ew-sheet-pending-reference{color:#ececee;background:#3
 
 [data-odyssey-page=spreadsheet] [data-srb-session-header]{container-type:inline-size}
 [data-odyssey-page=spreadsheet] [data-srb-tabs]{min-width:0}
-[data-ework-spreadsheet-actions]{display:flex;align-items:center;flex:none;-webkit-app-region:no-drag}
+[data-ework-spreadsheet-actions]{display:flex;align-items:center;gap:4px;flex:none;-webkit-app-region:no-drag}
 [data-ework-spreadsheet-actions][hidden]{display:none}
 [data-ework-spreadsheet-actions] button{display:inline-grid;place-items:center;width:30px;height:30px;padding:0;color:var(--dsw-alias-label-primary);border:0;border-radius:7px;cursor:pointer}
 [data-ework-spreadsheet-actions] button:disabled{opacity:.45;cursor:default}

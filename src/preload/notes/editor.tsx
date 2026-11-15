@@ -254,7 +254,23 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const [editedAt,setEditedAt]=useState(()=>noteEditTimestamp(doc.getMap('note-metadata').get('editedAt'))),editFingerprint=useRef('')
   const users = useMemo(() => createUserStore(async ids => ids.map(id => ({ id, username: id===CHALLENGE_USER?t('AI评论员'):t('我'), avatarUrl: '' }))), [])
   useEffect(()=>{users.setUser({id:CHALLENGE_USER,username:t('AI评论员'),avatarUrl:''})},[users,document.documentElement.dataset.odysseyLocale])
-  const editor: any = useCreateBlockNote(withCollaboration({ schema, dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)}, dropCursor:{width:1,color:'var(--en-drag-ink)'}, initialContent: props.initial.blocks.length ? props.initial.blocks as any : undefined, collaboration: { fragment: doc.getXmlFragment('note'), user: { name: t('我'), color: '#94b2ff' } }, extensions: [NoteAiSelection(), NoteReplacementHighlights(),NoteInlineProposalHighlights(), CommentsExtension({ threadStore: new YjsThreadStore('local', doc.getMap('threads'), new NoteThreadStoreAuth('local', 'editor')), resolveUsers: users, confirmBeforeDiscard: false })] } as any))
+  const basicEditorOptions = {
+    schema,
+    dictionary: {...(document.documentElement.dataset.odysseyLocale==='en'?en:zh)},
+    dropCursor:{width:1,color:'var(--en-drag-ink)'},
+    initialContent: props.initial.blocks.length ? props.initial.blocks : undefined,
+    extensions: [
+      NoteAiSelection(), NoteReplacementHighlights(), NoteInlineProposalHighlights(),
+      CommentsExtension({
+        threadStore: new YjsThreadStore('local', doc.getMap('threads'), new NoteThreadStoreAuth('local', 'editor')),
+        resolveUsers: users, confirmBeforeDiscard: false
+      })
+    ]
+  }
+  const editor: any = useCreateBlockNote(props.sharedReadOnly ? basicEditorOptions : withCollaboration({
+    ...basicEditorOptions,
+    collaboration: { fragment: doc.getXmlFragment('note'), user: { name: t('我'), color: '#94b2ff' } }
+  } as any))
   editor.dictionary = document.documentElement.dataset.odysseyLocale==='en'?en:zh
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
   const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false||!!props.sharedReadOnly)

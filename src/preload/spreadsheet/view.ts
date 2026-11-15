@@ -39,7 +39,10 @@ class SpreadsheetView{
  private owner?:string
  private generation?:string
  private recent:Recent[]=[]
- private editable=false
+ private canEdit=false
+ private preview=false
+ private switchingMode=false
+ private get editable(){return this.canEdit&&!this.preview}
  private ready=false
  private disposed=false
  private busy=false
@@ -216,7 +219,7 @@ class SpreadsheetView{
    try{
     const state=await this.request('load')
     if(this.disposed)return
-    this.owner=state.owner;this.generation=state.generation;this.editable=state.editable;this.recent=state.recent;this.ready=true
+    this.owner=state.owner;this.generation=state.generation;this.canEdit=state.editable;this.recent=state.recent;this.ready=true
     if(this.host.isConnected&&!this.sharedReadOnly)this.doc.body.dataset.eworkSpreadsheetSession=this.sessionId
     await this.install(state.record)
     return
@@ -250,7 +253,15 @@ class SpreadsheetView{
   if(!header)return
   header.hidden=!this.record.workbook
   if(!this.record.workbook){header.replaceChildren();return}
-  if(header.childElementCount===0)header.innerHTML=button('menu','',{glyph:'more',label:'更多表格操作',value:'book'})
+  const mode=this.preview?'preview':'edit'
+  if(header.dataset.sheetViewMode!==mode||header.childElementCount===0){
+   header.dataset.sheetViewMode=mode
+   const label=this.preview?'切换到编辑模式':'切换到预览模式'
+   const copy=this.doc.documentElement.dataset.odysseyLocale==='en'?(this.preview?'Switch to editing':'Switch to preview'):label
+   header.innerHTML=button('view-mode','',{glyph:this.preview?'view':'edit',label:copy,pressed:this.preview})+
+    button('menu','',{glyph:'more',label:'更多表格操作',value:'book'})
+  }
+  header.querySelector<HTMLButtonElement>('[data-action=view-mode]')!.disabled=!this.canEdit||this.busy||this.switchingMode
  }
  private sessionTitle(){return this.headerActions?.dataset.eworkSpreadsheetTitle?.trim()||undefined}
  private paint(){
@@ -450,7 +461,8 @@ class SpreadsheetView{
   try{
    const {createSheetEngine}=await import('./engine')
    if(this.disposed||token!==this.modeToken)return
-   this.engine=createSheetEngine(this.grid,record.workbook,this.editable,derived=>this.changed(derived),()=>this.readSelection(),this.contextAction,this.positionSheetObjects)
+   this.engine=createSheetEngine(this.grid,record.workbook,this.canEdit,derived=>this.changed(derived),()=>this.readSelection(),this.contextAction,this.positionSheetObjects)
+   if(this.preview)this.engine.setEditable(false)
    const book=this.engine.model
    if(!position&&previous&&book.getSheetBySheetId(previous.sheetId)){
     const sheet=book.setActiveSheet(previous.sheetId)
@@ -593,7 +605,7 @@ class SpreadsheetView{
   try{const recent=await this.request('recent') as Recent[];if(!this.disposed)this.recent=recent}catch{}
  }
  private async run(action:string,fields:Record<string,unknown>={},message?:string,stillOpen?:()=>boolean){
-  if(this.busy)return
+  if(this.busy||(!this.editable&&action!=='export')||this.sharedReadOnly)return
   this.busy=true;this.say('')
   try{
    await this.flush(true,action==='component-generate')
@@ -660,7 +672,7 @@ class SpreadsheetView{
    ]
    case 'book':return [
     {label:'导入 Excel / CSV…',action:'import',browserIcon:'external',disabled:!this.editable||this.busy},
-    {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:this.busy},
+    {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:this.busy||this.sharedReadOnly},
     ...(this.incoming?[{label:'载入最新版本',action:'load-incoming',browserIcon:'refresh' as const,divider:true}]:[]),
     ...(this.record.canRedoAI?[{label:'重新应用 AI 修改',action:'redo-ai',browserIcon:'forward' as const,divider:true,disabled:!this.editable}]:[]),
     ...(this.record.lastAction?[{label:'撤销最近的 AI 修改',action:'undo-ai',browserIcon:'back' as const,divider:!this.record.canRedoAI,disabled:!this.editable}]:[])
@@ -1336,6 +1348,7 @@ class SpreadsheetView{
   if(result.status==='saved')this.say('已导出 '+request.suggestedName)
  }
  private contextAction=(command:SheetContextCommand)=>{
+  if(this.sharedReadOnly||command!=='reference'&&!this.editable)return
   this.readSelection()
   const action=command==='reference'?'reference-selection':command
   void this.handle(action,'',this.grid).catch(error=>this.say(errorMessage(error),true))
@@ -1833,6 +1846,25 @@ class SpreadsheetView{
   const chartId=action==='chart-export-image'?this.menu?.anchor.closest<HTMLElement>('[data-chart-id]')?.dataset.chartId:undefined
   this.closeMenu()
   switch(action){
+   case 'view-mode':{
+    if(!this.canEdit||this.busy||this.switchingMode||!this.engine)return
+    this.switchingMode=true
+    this.paintHeader()
+    try{
+     if(this.editable)await this.flush(true)
+     if(this.disposed||!this.engine)return
+     this.preview=!this.preview
+     this.closeDialog()
+     this.engine.setEditable(this.editable)
+     this.say(this.preview?'预览模式':'')
+     this.paint();this.renderChart();this.renderComponent()
+    }finally{
+     this.switchingMode=false
+     this.paintHeader()
+     this.headerActions?.querySelector<HTMLButtonElement>('[data-action=view-mode]')?.focus({preventScroll:true})
+    }
+    return
+   }
    case 'reload':await this.load();return
    case 'new':if(!this.record.workbook)await this.run('create',{name:this.sessionTitle()},'空白工作簿已创建');return
    case 'import':await this.run('import',{},'工作簿已导入');return

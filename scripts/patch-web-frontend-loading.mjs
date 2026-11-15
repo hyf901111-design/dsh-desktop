@@ -72,6 +72,7 @@ import { patchSubagentPanelRuntime, patchSubagentPanelRenderer, patchSubagentPan
 import { patchFigmaCanvasContextMenu } from './lib/figma-canvas-context-menu.mjs'
 import { patchFigmaReadingConversation, patchFigmaReadingTables, patchFigmaReadingWeb } from './lib/figma-reading-client.mjs'
 import { patchFigmaModelMenu, patchHostModelCatalog, patchModelCatalogSchema } from './lib/figma-model-menu.mjs'
+import { patchSlashFlyoutOptions, patchSlashFlyoutPrimary } from './lib/slash-command-flyout.mjs'
 import { patchSkillCommandPopup, patchSkillCommandLabels } from './lib/skill-command-menu.mjs'
 import {patchPlainSlashInput,stripPlainSlashInput} from './lib/plain-slash-input.mjs'
 import {patchComposerVoice,stripComposerVoice} from './lib/composer-voice.mjs'
@@ -235,8 +236,8 @@ for (const [name, patch] of [
   ['dsh-client-ui-user-questions', patchQuestionCountdown],
   ['dsh-client-ui-model-selection', patchFigmaModelMenu],
   ['dsh-client-connection', patchModelCatalogSchema],
-  ['dsh-client-ui-commands', patchSkillCommandPopup],
-  ['dsh-client-ui-input-trigger', patchSkillCommandLabels],
+  ['dsh-client-ui-commands', source => patchSlashFlyoutOptions(patchSkillCommandPopup(source))],
+  ['dsh-client-ui-input-trigger', source => patchSlashFlyoutPrimary(patchSkillCommandLabels(source))],
   ['dsh-client-ui-permission-presets', source => patchFigmaPermissionMenu(source, true)],
   ['dsh-client-ui-workspace', source => patchWorkspaceDragFeedback(patchFigmaWorkspaceMenus(patchFigmaNavigationTitles(source)))],
   ['dsh-client-ui-sidebar', patchNewChatSidebar],
