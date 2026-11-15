@@ -6,14 +6,23 @@ const policy=await import('../packages/dsh-research-task-runtime/conversation-co
 const session=text=>({id:'s',header:{},events:[{type:'turn/start',data:{turn:'1'}},{type:'user/message',seq:2,data:{id:'human',source:{kind:'user'},content:[{type:'text',text}]}}]})
 const catalog=(s,mode,{callId='catalog-1',error=false,resultCallId=callId}={})=>s.events.push({type:'tool/call',data:{name:'client_capabilities',callId,arguments:'{}'}},{type:'tool/result',data:{message:{source:{kind:'tool',callId:resultCallId},content:[{type:'tool-result',isError:error,content:[{type:'text',text:JSON.stringify({mode,capabilities:[]})}]}]}}})
 const schemas=[{name:'research_workbench_create',parameters:{type:'object',properties:{panels:{type:'array'}},required:['panels']}},{name:'client_capabilities'},{name:'client_action'},{name:'public_data_query',parameters:{properties:{operation:{enum:['catalog','query']}}}},{name:'financial_query',parameters:{properties:{intent:{enum:['resolve','catalog','research']}}}},{name:'run_code'},{name:'read_file'},{name:'Bash'}]
-function harness(s){
+function harness(s,options){
  expect(policy,'conversation policy 尚未实现').not.toBeNull()
  const prompts=[],hooks=new Map(),guards=[],startSubagent=vi.fn(),agent={session:s,steer:vi.fn()}
  const ctx={tools:{schemas:()=>schemas,guard:fn=>{guards.push(fn);return()=>{}}},systemPrompt:{context:v=>{prompts.push(v);return()=>{}}},llm:{resolveModelInfo:vi.fn(async()=>({reasoning:{efforts:[{id:'low'},{id:'high'}]},defaultMaxTokens:16000}))},on:(name,fn)=>{hooks.set(name,[...(hooks.get(name)||[]),fn]);return()=>{}},startSubagent}
- const disposeWorkbench=registerWorkbenchExecutionPolicy(ctx),disposeConversation=policy.registerConversationComponentsPolicy(ctx)
+ const disposeWorkbench=registerWorkbenchExecutionPolicy(ctx),disposeConversation=policy.registerConversationComponentsPolicy(ctx,options)
  const invoke=async(name,value)=>{const run=(hooks.get(name)||[]).reduceRight((next,fn)=>()=>fn({agent},next),async()=>value);return run()}
  return{agent,ctx,guards,startSubagent,stop:()=>hooks.get('agent/turn-stopping').forEach(fn=>fn({agent,turn:1})),prompt:()=>prompts.map(v=>v.text({agent})).filter(Boolean).join('\n'),config:()=>invoke('agent/request',{provider:'zai',model:'test',reasoningEffort:'high',maxTokens:16000}),wire:()=>invoke('agent/request-context',{system:'base',tools:schemas}),dispose:()=>{disposeConversation();disposeWorkbench()}}
 }
+it('uses the injected desktop scope in the initial model request for a spreadsheet question',async()=>{
+ const s=session('这批数据有哪些异常？')
+ const readSpreadsheetReference=vi.fn(async()=> '本轮默认参考当前工作簿。')
+ const h=harness(s,{readSpreadsheetReference})
+ try{
+  expect((await h.wire()).system).toContain('【当前表格参考范围】本轮默认参考当前工作簿。')
+  expect(readSpreadsheetReference).toHaveBeenCalledWith(h.agent,undefined)
+ }finally{h.dispose()}
+})
 describe('direct conversation component routing',()=>{
  it.each(['给一个6人团队做新品上线协作工作台，用模拟数据。只要三张卡，跨卡用同一批12项任务。','请做跨部门交付看板','为客服团队做工单分析工作台'])('preserves the selected budget and creation path for a natural unquantified build request: %s',async text=>{
   const s=session(text),h=harness(s)
