@@ -52,7 +52,6 @@ class SpreadsheetView{
  private calculationDirty=false
  private selection?:Selection
  private pointerSelection?:{pointerId:number;signature:string;engine:SheetEngine}
- private shiftSelection?:{signature:string;engine:SheetEngine}
  private summary=''
  private zoom=100
  private task:Promise<void>=Promise.resolve()
@@ -184,9 +183,7 @@ class SpreadsheetView{
   this.grid.addEventListener('pointerdown',this.selectionStart,true)
   this.win.addEventListener('pointerup',this.selectionEnd,true)
   this.win.addEventListener('pointercancel',this.selectionCancel,true)
-  this.win.addEventListener('blur',this.selectionReset)
-  this.doc.addEventListener('keydown',this.selectionKeyDown,true)
-  this.doc.addEventListener('keyup',this.selectionKeyUp,true)
+  this.win.addEventListener('blur',this.selectionCancel)
   this.root.addEventListener('ew-sheet-engine-error',event=>this.say((event as CustomEvent).detail,true))
   this.doc.addEventListener('pointerdown',this.outside,true)
   this.ribbonObserver=new ResizeObserver(this.resize)
@@ -461,7 +458,7 @@ class SpreadsheetView{
   try{
    const {createSheetEngine}=await import('./engine')
    if(this.disposed||token!==this.modeToken)return
-   this.engine=createSheetEngine(this.grid,record.workbook,this.canEdit,derived=>this.changed(derived),()=>this.readSelection(),this.sharedReadOnly?undefined:this.contextAction,this.positionSheetObjects,this.sharedReadOnly)
+   this.engine=createSheetEngine(this.grid,record.workbook,this.canEdit,derived=>this.changed(derived),navigation=>this.readSelection(navigation),this.sharedReadOnly?undefined:this.contextAction,this.positionSheetObjects,this.sharedReadOnly)
    if(this.preview)this.engine.setEditable(false)
    const book=this.engine.model
    if(!position&&previous&&book.getSheetBySheetId(previous.sheetId)){
@@ -482,7 +479,7 @@ class SpreadsheetView{
    if(added&&same&&this.chartCards.has(added.chartId))this.selectChart(added.chartId)
   }catch(error){this.say('表格引擎无法启动：'+errorMessage(error),true)}
  }
- private readSelection(){
+ private readSelection(navigation?:'expand'|'move'){
   if(!this.engine||this.disposed)return
   const sheet=this.current(),range=this.selected()
   if(!sheet||!range)return
@@ -506,6 +503,8 @@ class SpreadsheetView{
   this.updatePickedRange()
   if(this.componentPicking)this.updateComponentRange()
   this.refreshFields()
+  if(navigation==='expand')this.referenceSelection()
+  if(navigation==='move')this.clearSelectionPreview()
  }
  private selectionSignature(){return this.selection?this.selection.sheetId+'!'+this.selection.range:''}
  private clearSelectionPreview(){
@@ -540,17 +539,6 @@ class SpreadsheetView{
   this.finishSelection(gesture)
  }
  private selectionCancel=()=>{this.pointerSelection=undefined}
- private selectionReset=()=>{this.selectionCancel();this.shiftSelection=undefined}
- private selectionKeyDown=(event:KeyboardEvent)=>{
-  if(!event.shiftKey||!event.key.startsWith('Arrow')||!this.engine||this.engine.model.isCellEditing())return
-  const control=event.target as HTMLElement
-  if(control?.closest('input,textarea,[contenteditable=true],button')||!(this.grid.contains(control)||this.grid.contains(this.doc.activeElement)))return
-  this.shiftSelection??={signature:this.selectionSignature(),engine:this.engine}
- }
- private selectionKeyUp=(event:KeyboardEvent)=>{
-  if(event.key!=='Shift'||!this.shiftSelection)return
-  const gesture=this.shiftSelection;this.shiftSelection=undefined;this.finishSelection(gesture)
- }
  private changed(derived=false){
   if(this.disposed||!this.engine||!this.editable)return
   if(derived)this.calculationDirty=true;else this.dirty=true
@@ -2238,8 +2226,7 @@ class SpreadsheetView{
   this.win.removeEventListener('pointerup',this.endChartGesture,true);this.win.removeEventListener('pointercancel',this.cancelChartGesture,true)
   this.win.removeEventListener('pointerup',this.endComponentGesture,true);this.win.removeEventListener('pointercancel',this.cancelComponentGesture,true)
   this.win.removeEventListener('pointermove',this.moveComponentGesture,true);this.win.removeEventListener('blur',this.focusComponentFrame)
-  this.win.removeEventListener('blur',this.selectionReset)
-  this.doc.removeEventListener('keydown',this.selectionKeyDown,true);this.doc.removeEventListener('keyup',this.selectionKeyUp,true)
+  this.win.removeEventListener('blur',this.selectionCancel)
   this.headerActions?.removeEventListener('click',this.click)
   this.headerActions?.removeEventListener('keydown',this.key)
   this.headerActions?.replaceChildren()

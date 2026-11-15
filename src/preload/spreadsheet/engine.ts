@@ -11,7 +11,7 @@ import sortEn from '@univerjs/preset-sheets-sort/locales/en-US'
 import {ThemeService,CommandType,Inject,Injector,Plugin,InterceptorEffectEnum,HorizontalAlign,VerticalAlign,EDITOR_ACTIVATED,IContextService,IUniverInstanceService,IUndoRedoService,type IRange,type IWorkbookData,type Worksheet} from '@univerjs/core'
 import {AFTER_CELL_EDIT,BEFORE_CELL_EDIT,ResetBackgroundColorCommand,SetHorizontalTextAlignCommand,SheetInterceptorService,INTERCEPTOR_POINT,InsertSheetMutation,SheetsSelectionsService} from '@univerjs/sheets'
 import {IRenderManagerService,ICanvasColorService,CanvasColorService,SHEET_VIEWPORT_KEY,type IRender} from '@univerjs/engine-render'
-import {SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService,ScrollToRangeOperation} from '@univerjs/sheets-ui'
+import {ExpandSelectionCommand,MoveSelectionCommand,SHEET_VIEW_KEY,SheetPasteShortKeyCommand,ISheetClipboardService,SheetSkeletonManagerService,ScrollToRangeOperation} from '@univerjs/sheets-ui'
 import {OpenFilterPanelOperation,CloseFilterPanelOperation} from '@univerjs/sheets-filter-ui'
 import {DISABLE_AUTO_FOCUS_KEY,ContextMenuGroup,ContextMenuPosition,IconManager} from '@univerjs/ui'
 import coreCss from '@univerjs/preset-sheets-core/lib/index.css?raw'
@@ -32,7 +32,7 @@ export const sheetContextCopy={
 } as const
 export type SheetContextCommand=keyof typeof sheetContextCopy
 
-export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:()=>void,contextCommand?:(command:SheetContextCommand)=>void,viewportChanged?:()=>void,sharedReadOnly=false){
+export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:boolean,change:(derived?:boolean)=>void,selection:(navigation?:'expand'|'move')=>void,contextCommand?:(command:SheetContextCommand)=>void,viewportChanged?:()=>void,sharedReadOnly=false){
  const doc=host.ownerDocument,win=doc.defaultView!
  const style=doc.createElement('style');style.textContent=editorStyles;doc.head.append(style)
  const originalDark=doc.documentElement.classList.contains('univer-dark')
@@ -296,9 +296,13 @@ export function createSheetEngine(host:HTMLElement,workbook:Workbook,editable:bo
    }
    if(event.options?.fromFormula===true||event.options?.applyFormulaCalculationResult===true){if(event.id==='sheet.mutation.set-range-values')change(true)}
    else if(event.id.startsWith('sheet.')&&(event.type===CommandType.MUTATION||/zoom|hide-grid|freeze/.test(event.id)))change()
-   if(/selection|activate-sheet|range-values|numfmt/.test(event.id))selection()
+   const navigation=event.id===ExpandSelectionCommand.id?'expand':event.id===MoveSelectionCommand.id?'move':undefined
+   // Univer can keep keyboard focus in its hidden editor even when no cell is
+   // being edited. The completed sheet command gives us the actual selection.
+   if(navigation&&!model.isCellEditing()&&(event.params as {extra?:string}|undefined)?.extra!=='formula-editor')selection(navigation)
+   else if(/selection|activate-sheet|range-values|numfmt/.test(event.id))selection()
   }),
-  api.addEvent(api.Event.SelectionChanged,selection),
+  api.addEvent(api.Event.SelectionChanged,()=>selection()),
  ]
  const context=injector.get(IContextService)
  // Univer also gates typing into a selected cell on its auto-focus flag.
