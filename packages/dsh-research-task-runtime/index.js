@@ -14,7 +14,7 @@ import { registerHomeBoardSmartRuntime } from './home-board-smart-runtime.js'
 import { registerHomeWorkbenchRuntime } from './home-workbench-runtime.js'
 import {registerSpreadsheetSessions} from './spreadsheet-sessions.js'
 import {registerKnowledgeSessions} from './knowledge-sessions.js'
-import {registerClientTools} from './client-tools.js'
+import {readSpreadsheetReference,registerClientTools} from './client-tools.js'
 import {registerResearchReportTool} from './research-report-tool.js'
 import {registerPresentationFiles} from './presentation-files.js'
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
@@ -3638,7 +3638,7 @@ export async function apply(ctx) {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence, listObservedSources:listWorkbenchObservedSources })
-    const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx)
+    const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readSpreadsheetReference})
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
