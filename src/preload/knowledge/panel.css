@@ -72,7 +72,8 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
 .knowledge-panel-rows > :is(button, .knowledge-panel-row) { flex: none; }
 .knowledge-panel-row { display: flex; align-items: center; gap: 7px; min-height: 52px; padding: 4px 7px; border-radius: 6px; transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out; }
 .knowledge-panel-row:hover, .knowledge-panel-row:focus-within { background: var(--kb-panel-field); }
-.knowledge-panel .knowledge-file-icon[data-tile=true] { width: 32px; height: 32px; border-radius: 6px; }
+.knowledge-panel .knowledge-file-icon[data-tile=true] { width: 28px; height: 28px; border-radius: 7px; }
+.knowledge-panel .knowledge-file-icon[data-tile=true] .knowledge-icon { width: 17px; height: 17px; }
 .knowledge-panel .knowledge-panel-name { display: grid; flex: 1; text-align: left; padding-inline: 3px; }
 .knowledge-panel button.knowledge-panel-name:is(:hover, :focus-visible) { background: transparent; }
 .knowledge-panel-name :is(span,small) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

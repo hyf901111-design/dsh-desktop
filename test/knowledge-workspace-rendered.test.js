@@ -277,7 +277,7 @@ it('lists real session modes under all files and opens each one in its native vi
         width: el.getBoundingClientRect().width,
         format: el.dataset.format,
         fill: el.querySelector('svg').getAttribute('fill')
-      }))).toEqual({ width: 36, format: view, fill: 'currentColor' })
+      }))).toEqual({ width: 32, format: view, fill: 'currentColor' })
       const color = await tile.evaluate(el => getComputedStyle(el).backgroundColor)
       await row.hover()
       await expect.poll(() => tile.evaluate(el => getComputedStyle(el).backgroundColor)).not.toBe(color)
@@ -1122,7 +1122,7 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
       const svg = tile.querySelector('svg')
       const css = getComputedStyle(tile)
       return {
-        color: css.color, background: css.backgroundColor,
+        background: css.backgroundColor, highlight: css.backgroundImage, rim: css.boxShadow,
         viewBox: svg.getAttribute('viewBox'), fill: svg.getAttribute('fill'),
         glyph: svg.firstElementChild.getAttribute('d')
       }
@@ -1132,7 +1132,9 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     for (const style of styles) {
       expect(style.viewBox).toBe('0 0 24 24')
       expect(style.fill).toBe('currentColor')
-      expect(style.color).toBe('rgb(255, 255, 255)')
+      expect(style.background).toMatch(/ \/ 0\./u)
+      expect(style.highlight).toContain('radial-gradient')
+      expect(style.rim).toContain('inset')
     }
     if (process.env.KNOWLEDGE_QA_SCREENSHOT) {
       await library.getByRole('table').screenshot({
@@ -1183,17 +1185,24 @@ it.each(['light', 'dark'])('keeps file icons readable and controls stable in %s 
     const file = library.getByRole('button', { name: /研究写作规范.md/ }).first()
     const appearance = async () => file.evaluate(el => {
       const tile = el.querySelector('.knowledge-file-icon')
-      const luminance = css => css.match(/[\d.]+/g).slice(0, 3).map(Number)
-        .map(value => css.startsWith('color(srgb ') ? value : value / 255)
-        .map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+      const sample = document.createElement('canvas').getContext('2d')
+      const paint = css => { sample.fillStyle = css; sample.fillRect(0, 0, 1, 1) }
+      const luminance = () => [...sample.getImageData(0, 0, 1, 1).data].slice(0, 3)
+        .map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
         .reduce((sum, channel, index) => sum + channel * [.2126, .7152, .0722][index], 0)
-      const ink = luminance(getComputedStyle(tile).color)
-      const background = luminance(getComputedStyle(tile).backgroundColor)
+      const tileStyle = getComputedStyle(tile)
+      const row = getComputedStyle(el.closest('td')).backgroundColor
+      paint(getComputedStyle(el.closest('.knowledge-workspace')).backgroundColor)
+      paint(row)
+      paint(tileStyle.backgroundColor)
+      const background = luminance()
+      paint(tileStyle.color)
+      const ink = luminance()
       return {
-        foreground: getComputedStyle(tile).color,
+        foreground: tileStyle.color,
         contrast: (Math.max(ink, background) + .05) / (Math.min(ink, background) + .05),
-        row: getComputedStyle(el.closest('td')).backgroundColor,
-        tile: getComputedStyle(tile).backgroundColor,
+        row,
+        tile: tileStyle.backgroundColor,
         geometry: [tile.offsetWidth, tile.offsetHeight],
         fill: tile.querySelector('svg').getAttribute('fill')
       }
