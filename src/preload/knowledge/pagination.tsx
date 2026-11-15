@@ -29,6 +29,8 @@ export function KnowledgePagination({ label, page, pages, setPage }: {
   pages: number
   setPage: (page: number) => void
 }) {
+  const [invalid, setInvalid] = useState(false)
+  const shake = useRef<Animation | null>(null)
   const start = Math.max(2, Math.min(page - 2, pages - 5))
   const end = Math.min(pages - 1, start + 4)
   const shortcuts = pages <= 7
@@ -45,16 +47,28 @@ export function KnowledgePagination({ label, page, pages, setPage }: {
         : <span key={item} aria-hidden="true">…</span>)}
       <button type="button" disabled={page === pages} onClick={() => setPage(page + 1)}>下一页</button>
     </div>
-    {pages > 1 && <form className="knowledge-pagination-jump" onSubmit={event => {
+    {pages > 1 && <form className="knowledge-pagination-jump" noValidate onSubmit={event => {
       event.preventDefault()
       const form = event.currentTarget
-      const target = Number(new FormData(form).get('page'))
-      if (!Number.isInteger(target) || target < 1 || target > pages) return
-      setPage(target)
+      const input = form.elements.namedItem('page') as HTMLInputElement
+      shake.current?.cancel()
+      if (!input.validity.valid) {
+        setInvalid(true)
+        input.focus({ preventScroll: true })
+        if (!input.ownerDocument.defaultView?.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          shake.current = input.animate(
+            [0, -5, 5, -3, 3, 0].map(offset => ({ transform: `translateX(${offset}px)` })),
+            { duration: 260, easing: 'ease-out' }
+          )
+        }
+        return
+      }
+      setInvalid(false)
+      setPage(input.valueAsNumber)
       form.reset()
     }}>
       <label><span>跳至</span><input type="number" inputMode="numeric" name="page" min={1} max={pages} required
-        aria-label="跳至页码" /></label>
+        aria-label="跳至页码" aria-invalid={invalid || undefined} onChange={() => setInvalid(false)} /></label>
       <button type="submit">跳转</button>
     </form>}
   </nav>
