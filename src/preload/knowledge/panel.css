@@ -35,7 +35,7 @@ body[data-ds-dark-theme] .knowledge-panel {
 .knowledge-panel .knowledge-panel-sections [aria-pressed=true] {
   background: var(--knowledge-field); color: var(--knowledge-ink);
 }
-.knowledge-panel-files:not([hidden]) { display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+.knowledge-panel-files:not([hidden]) { display: flex; flex: 1; flex-direction: column; gap: 9px; min-height: 0; }
 .knowledge-panel .knowledge-memory { padding: 0 2px; width: 100%; box-sizing: border-box; }
 .knowledge-panel .knowledge-memory-row { gap: 8px; }
 .knowledge-panel .knowledge-memory-row > button { flex: none; background: var(--knowledge-field); }
@@ -70,7 +70,8 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
 .knowledge-panel-menu button { display: flex; align-items: center; gap: 7px; text-align: left; min-height: 30px; }
 .knowledge-panel-menu button[aria-current] { background: var(--kb-panel-field); }
 .knowledge-panel-menu > span { border-top: 1px solid var(--kb-panel-line); margin-top: 4px; padding: 4px 7px 0; color: var(--kb-panel-muted); font-size: 11px; }
-.knowledge-panel-rows { overflow: auto; min-height: 0; }
+.knowledge-panel-rows { display: flex; flex: 1; flex-direction: column; overflow: auto; min-height: 0; }
+.knowledge-panel-rows > :is(button, .knowledge-panel-row) { flex: none; }
 .knowledge-panel-row { display: flex; align-items: center; gap: 7px; min-height: 52px; padding: 4px 7px; border-radius: 6px; transition: background-color var(--odyssey-motion-hover-duration, 120ms) ease-out; }
 .knowledge-panel-row:hover, .knowledge-panel-row:focus-within { background: var(--kb-panel-field); }
 .knowledge-panel .knowledge-file-icon[data-tile=true] { width: 32px; height: 32px; border-radius: 6px; }
@@ -97,6 +98,15 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
 .knowledge-panel-directory { display: flex; gap: 8px; align-items: center; width: 100%; min-height: 36px; }
 .knowledge-panel-directory small { margin-left: auto; }
 .knowledge-panel-state { color: var(--kb-panel-muted); margin: 10px 2px; font-size: 12px; }
+.knowledge-panel-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: safe center;
+  margin: 0;
+  padding: 12px 2px;
+  text-align: center;
+}
 .knowledge-preview-content pre { margin: 0; padding: 8px 1px; white-space: pre-wrap; overflow-wrap: anywhere; overflow: auto; font: inherit; }
 .knowledge-panel :focus-visible { outline: 2px solid var(--kb-panel-muted); outline-offset: -2px; }
 

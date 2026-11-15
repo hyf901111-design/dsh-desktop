@@ -110,9 +110,9 @@ export function KnowledgeSessionDirectory({ mode, entries, loading, error, open 
       </label>
     </div>
     {failed && <p role="alert">此会话暂时无法打开。</p>}
-    {error && <p role="alert">暂时无法读取会话。</p>}
-    {loading && !rows.length && <p role="status">正在读取会话…</p>}
-    {!loading && !error && !rows.length && <p className="knowledge-session-empty">{needle ? '没有符合搜索条件的会话。' : '这里还没有会话。'}</p>}
+    {error && <p className={rows.length ? undefined : 'knowledge-empty'} role="alert">暂时无法读取会话。</p>}
+    {loading && !rows.length && <p className="knowledge-empty" role="status">正在读取会话…</p>}
+    {!loading && !error && !rows.length && <p className="knowledge-empty">{needle ? '没有符合搜索条件的会话。' : '这里还没有会话。'}</p>}
     {rows.length > 0 && <ul className="knowledge-session-rows" aria-label="会话列表">
       {rows.map(row => <li key={row.id}><button type="button" title={row.title} disabled={!!opening}
         aria-busy={opening === row.id}

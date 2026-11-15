@@ -920,6 +920,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               {filter.sharedCategory && <button className="knowledge-shared-back" type="button" onClick={() => updateFilter({ sharedCategory: undefined })}>
                 {buttonIcon('back', '返回上级目录')}
               </button>}
+              <button type="button" aria-current={!filter.sharedCategory ? 'page' : undefined}
+                onClick={() => updateFilter({ sharedCategory: undefined })}>{buttonIcon('all', '全部文件')}</button>
               {receivedCategories.map(category => <button key={category} type="button" aria-current={filter.sharedCategory === category ? 'page' : undefined}
                 title={category} onClick={() => updateFilter({ sharedCategory: category })}>
                 {buttonIcon('folder', category)}<KnowledgeIcon name="next" />
@@ -995,7 +997,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                             {row.share && <span className="knowledge-tag" data-kind="share">共享</span>}
                           </span>
                           {row.received ? <small className="knowledge-shared-metadata">
-                            <span>{bytes}</span>
+                            <span title={row.received.category}>{row.received.category}</span>
+                            <span className="knowledge-shared-inline-size"> · {bytes}</span>
                             <time dateTime={updatedAt.toISOString()}> · {date}</time>
                             <span className="knowledge-shared-inline-owner" title={row.received.owner}> · {row.received.owner}</span>
                           </small> : <small>{[knowledgeSources[row.source], row.sessionTitle,
