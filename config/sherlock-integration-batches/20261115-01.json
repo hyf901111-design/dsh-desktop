@@ -12,7 +12,7 @@
         "featureName": "知识库应用与右侧对话",
         "branch": "codex/feat/knowledge-library-20261114",
         "baseCommit": "cb191ac0b4391043ea06a407fabf7a6c7af6dc23",
-        "tipCommit": "bb14f4b6aeaff99b17f0ef398489a2e58e0a170e",
+        "tipCommit": "f51d30ff2575551268c9c33867b547561f14596c",
         "commits": [
           {
             "commit": "cad1714f16b3905cec11bf4692bee655531a84ae",
@@ -34,6 +34,13 @@
               "6ddcf2ade81574c6e263aadb14904807995495d9"
             ],
             "subject": "隐藏研究右侧对话中的项目选择器"
+          },
+          {
+            "commit": "f51d30ff2575551268c9c33867b547561f14596c",
+            "parents": [
+              "bb14f4b6aeaff99b17f0ef398489a2e58e0a170e"
+            ],
+            "subject": "补充研究对话补丁的类型声明"
           }
         ],
         "files": [
@@ -44,6 +51,10 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/board-directory-picker.d.mts"
           },
           {
             "status": "M",
@@ -175,8 +186,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "bb14f4b6aeaff99b17f0ef398489a2e58e0a170e",
-            "completedAt": "2026-11-15T12:53:53Z",
+            "verifiedCommit": "f51d30ff2575551268c9c33867b547561f14596c",
+            "completedAt": "2026-11-15T12:55:40Z",
             "timeoutMs": 120000
           },
           {
@@ -206,8 +217,8 @@
             ],
             "outcome": "passed",
             "summary": "聚焦验证覆盖知识库文件拖放、页码、斜杠菜单、笔记导入导出、文件模式打开和工作区会话持久化。",
-            "verifiedCommit": "bb14f4b6aeaff99b17f0ef398489a2e58e0a170e",
-            "completedAt": "2026-11-15T12:53:53Z",
+            "verifiedCommit": "f51d30ff2575551268c9c33867b547561f14596c",
+            "completedAt": "2026-11-15T12:55:40Z",
             "timeoutMs": 120000
           }
         ],
@@ -294,7 +305,7 @@
           "正文查询逐批读取可解析文件，结果按匹配批次返回。",
           "共享保存时的版本，更新由发布者重新发布。源设备本地文件授权及笔记修订记录不会随结构传输。"
         ],
-        "generatedAt": "2026-11-15T12:53:53Z"
+        "generatedAt": "2026-11-15T12:55:40Z"
       }
     }
   ],
