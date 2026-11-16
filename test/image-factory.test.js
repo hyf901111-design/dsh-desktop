@@ -1,7 +1,7 @@
 import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
-import { drawLayers, moveLayer } from '../src/preload/image-factory/layers'
+import { drawLayers, moveLayer, textTopInsideCanvas } from '../src/preload/image-factory/layers'
 import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, regionEditFrame, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
 
 
@@ -79,6 +79,14 @@ describe('image factory', () => {
     expect(stripImageFactoryContext(prompt)).toBe(text)
     expect(readImageFactoryContext(imageFactoryPrompt(text, { ...context, width: 8000 }))).toBeUndefined()
     expect(readImageFactoryContext(imageFactoryPrompt(text, { ...context, editBounds: { ...context.editBounds, right: .1 } }))).toBeUndefined()
+  })
+
+  it('fits the full rendered text box at the bottom of the image', () => {
+    const height = 1350
+    expect(textTopInsideCanvas(.94, 252, height)).toBeCloseTo((height - 252) / height)
+    expect(textTopInsideCanvas(.94, 336, height)).toBeCloseTo((height - 336) / height)
+    expect(textTopInsideCanvas(.2, 336, height)).toBe(.2)
+    expect(textTopInsideCanvas(.94, 1450, height)).toBe(0)
   })
 
   it('composites browser-laid text in the same order as the layer list', async () => {

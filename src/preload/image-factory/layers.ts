@@ -18,6 +18,10 @@ export function textLayerStyle(layer: TextLayer, size: Size) {
   } as const
 }
 
+export function textTopInsideCanvas(y: number, textHeight: number, canvasHeight: number) {
+  return Math.min(Math.max(0, y), Math.max(0, 1 - textHeight / canvasHeight))
+}
+
 export function moveLayer(layers: CanvasLayer[], id: string, targetId: string, above: boolean) {
   const layer = layers.find(item => item.id === id)
   if (!layer || id === targetId) return layers
