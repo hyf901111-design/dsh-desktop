@@ -60,33 +60,48 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 
 
 .if-gallery {
-  --if-gallery-gap:clamp(6px,1cqw,13px);
-  position:absolute;inset:0;display:flex;gap:var(--if-gallery-gap);overflow:hidden;
-  padding-inline:var(--if-gallery-gap);background:var(--if-main);container-type:size;
+  --if-gallery-inset:clamp(14px,1.9cqw,24px);
+  --if-gallery-gap:clamp(12px,1.5cqw,20px);
+  --if-gallery-card-width:clamp(178px,22.5cqw,288px);
+  position:absolute;inset:0;display:flex;min-height:0;background:var(--if-main);container-type:size;
+  padding-inline-start:var(--if-gallery-inset);
 }
-.if-gallery-lane {min-width:0;flex:1}
-.if-gallery-track {animation:if-gallery-up 110s linear infinite;will-change:transform}
-.if-gallery-lane:nth-child(odd) .if-gallery-track {animation-name:if-gallery-down}
-.if-gallery-lane:nth-child(2n) .if-gallery-track {animation-delay:-19s}
-.if-gallery-lane:nth-child(3n) .if-gallery-track {animation-delay:-31s}
-.if-gallery-lane:hover .if-gallery-track {animation-play-state:paused}
-.if-gallery-cycle {display:grid;gap:var(--if-gallery-gap);padding-block-end:var(--if-gallery-gap)}
-.image-factory .if-gallery-card {
-  display:block;width:100%;min-height:calc(100cqh / var(--if-gallery-count));
-  aspect-ratio:1;padding:0;overflow:hidden;border-radius:8px;background:var(--if-field);
+.if-gallery-viewport {flex:1;min-width:0;overflow:auto;scrollbar-width:none;overscroll-behavior-inline:contain}
+.if-gallery-track {
+  display:flex;align-items:center;width:max-content;min-height:100%;
+  padding-block:clamp(16px,4cqh,34px);
 }
-.image-factory .if-gallery-card:disabled {opacity:1}
-.if-gallery-card > img {display:block;width:100%;height:100%;object-fit:cover;user-select:none}
-.if-gallery-card:focus-visible {outline-offset:-3px}
-.if-gallery:has(.if-gallery-card:focus-visible) {overflow:auto}
-.if-gallery:has(.if-gallery-card:focus-visible) .if-gallery-track {animation:none;will-change:auto}
-.if-gallery:has(.if-gallery-card:focus-visible) .if-gallery-cycle[data-repeat=true] {display:none}
-@keyframes if-gallery-up {from {transform:translateY(0)} to {transform:translateY(-50%)}}
-@keyframes if-gallery-down {from {transform:translateY(-50%)} to {transform:translateY(0)}}
+.if-gallery-cycle {display:flex;align-items:flex-start;gap:var(--if-gallery-gap);padding-inline-end:var(--if-gallery-gap)}
+.if-gallery-card {width:var(--if-gallery-card-width);position:relative}
+.if-gallery-card img {
+  display:block;width:100%;height:clamp(112px,46cqh,calc(var(--if-gallery-card-width) * 1.44));
+  border-radius:7px;object-fit:cover;user-select:none;background:var(--if-field);
+}
+.if-gallery-card img[data-ratio="16:9"] {height:clamp(96px,35cqh,calc(var(--if-gallery-card-width) * 1.10))}
+.if-gallery-card img[data-ratio="1:1"] {height:clamp(100px,38cqh,var(--if-gallery-card-width))}
+.if-gallery-card h3 {margin:10px 0 4px;font-size:16px;line-height:1.3;font-weight:550}
+.if-gallery-caption {font-size:10px;color:var(--if-muted)}
+.if-gallery-card p {
+  margin:3px 0 7px;font-size:12px;line-height:1.48;color:var(--if-muted);
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;
+}
+.if-gallery-card dl {
+  display:grid;grid-template-columns:max-content minmax(0,1fr);gap:2px 9px;
+  margin:0 0 5px;font-size:11px;color:var(--if-muted);
+}
+.if-gallery-card dd {margin:0;overflow-wrap:anywhere}
+.image-factory .if-gallery-use {
+  display:inline-flex;align-items:center;gap:4px;border-radius:2px;padding:1px 0;
+  font-size:12px;color:var(--if-accent);
+}
+.if-gallery-use::after {content:'';position:absolute;inset:0;border-radius:7px}
+.if-gallery-use .if-symbol {--if-icon-size:12px;transform:rotate(45deg)}
+.image-factory .if-gallery-use:not(:disabled):hover {background:transparent;text-decoration:underline}
+.image-factory .if-gallery-use:focus-visible {outline:none}
+.if-gallery-use:focus-visible::after {outline:2px solid var(--if-mark);outline-offset:3px}
 @media(prefers-reduced-motion:reduce) {
   .if-top .eb-workspace-tabs {transition:none}
-  .if-gallery {overflow:auto}
-  .if-gallery-track {animation:none;will-change:auto}
+  .if-gallery-viewport {scrollbar-width:thin}
   .if-gallery-cycle[data-repeat=true] {display:none}
 }
 
