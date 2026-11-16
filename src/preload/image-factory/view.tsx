@@ -47,6 +47,11 @@ function titleFromPrompt(prompt: string, t: T) {
   return prompt.match(/[「“"《]([^」”"》\n]{1,36})[」”"》]/)?.[1] ||
     prompt.split(/[\n。！？；]/u)[0]?.trim().slice(0, 30) || t('生成图片', 'Generated image')
 }
+function startsNewImage(prompt: string) {
+  const text = prompt.trim()
+  return /^(?:请(?:帮我)?|帮我)?\s*(?:(?:另|从头|从零)(?:生成|制作|设计|创建|做|画)\s*一[张幅]|(?:生成|制作|设计|创建|做|画)\s*一[张幅]\s*(?:全新的?|新的))/u.test(text) ||
+    /^(?:please\s+)?(?:generate|create|make|draw|design)\s+a\s+(?:brand[- ]new|new)\s+(?:(?:square|landscape|portrait|\d+:\d+)\s+)?(?:image|poster|illustration|cover|graphic)\b/iu.test(text)
+}
 function blobData(doc: Document, blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new doc.defaultView!.FileReader()
@@ -387,7 +392,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         const ready = await workspace.ready(requestedScope)
         if (!mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' || workspace.getSnapshot().scope !== requestedScope)
           throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
-        const base = galleryScope === requestedScope ? undefined : ready
+        const newImage = !region && (galleryScope === requestedScope || startsNewImage(prompt))
+        const base = newImage ? undefined : ready
         const image = base?.layers.find(layer => layer.kind === 'image')
         const draft = base && selectionDrafts.current.get(base.id)
         const selection = region && draft?.requestId === id && draft.phase === 'sending' ? draft.area : undefined
