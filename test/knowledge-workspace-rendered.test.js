@@ -299,14 +299,29 @@ it('lists real session modes under all files and opens each one in its native vi
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const group = library.getByRole('group', { name: '所有文件子分类' })
-    expect(await group.getByRole('button').locator('span').allTextContents()).toEqual(['文件资料', '我的研究', '我的笔记', '我的表格'])
+    expect(await group.getByRole('button').locator(':scope > span').allTextContents()).toEqual(['文件资料', '我的研究', '我的笔记', '我的表格'])
     await expect.poll(() => group.locator('small').allTextContents()).toEqual(['3', '2', '1', '1'])
     const total = library.getByRole('button', { name: /^所有文件 / }).locator('small')
     await expect.poll(() => total.textContent()).toBe('7')
     const badge = element => getComputedStyle(element).backgroundColor
-    const fill = await total.evaluate(badge)
+    const fill = await total.locator('span').evaluate(badge)
     expect(fill).not.toBe('rgba(0, 0, 0, 0)')
     expect(await library.getByRole('button', { name: '新建文件夹' }).evaluate(badge)).toBe(fill)
+    const sizes = await total.locator('span').evaluate(element => {
+      const previous = element.textContent
+      const measure = value => {
+        element.textContent = value
+        const text = document.createRange()
+        text.selectNodeContents(element)
+        const bounds = element.getBoundingClientRect(), glyphs = text.getBoundingClientRect()
+        return { width: bounds.width, left: glyphs.left - bounds.left, right: bounds.right - glyphs.right }
+      }
+      try { return ['1', '20', '885'].map(measure) }
+      finally { element.textContent = previous }
+    })
+    expect(sizes.map(({ left, right }) => [left, right])).toEqual([[4, 4], [4, 4], [4, 4]])
+    expect(sizes[0].width).toBeLessThan(sizes[1].width)
+    expect(sizes[1].width).toBeLessThan(sizes[2].width)
     const countColumn = await library.getByRole('button', { name: /^手动收藏 / }).locator('small').boundingBox()
     for (const count of await group.locator('small').all()) {
       const box = await count.boundingBox()

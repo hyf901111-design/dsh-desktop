@@ -873,19 +873,19 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <button type="button" aria-current={!sessionMode && !filter.folderId && selection === category && category !== 'all' ? 'page' : undefined}
             onClick={() => selectCategory(category)}>
             {buttonIcon(categoryIcons[category], knowledgeCategories[category])}
-            <small>{category === 'all' ? totalFileCount : listKnowledgeDocuments(snapshot, { category }).length +
-              (category === 'shared' ? Object.keys(local.sessionShares ?? {}).length : 0)}</small>
+            <small><span>{category === 'all' ? totalFileCount : listKnowledgeDocuments(snapshot, { category }).length +
+              (category === 'shared' ? Object.keys(local.sessionShares ?? {}).length : 0)}</span></small>
           </button>
           {category === 'all' && <div className="knowledge-session-sections" role="group" aria-label="所有文件子分类">
             <button type="button" aria-current={!sessionMode && !filter.folderId && selection === 'all' ? 'page' : undefined}
-              onClick={() => selectCategory('all')}>{buttonIcon('all', '文件资料')}<small>{fileCount}</small></button>
+              onClick={() => selectCategory('all')}>{buttonIcon('all', '文件资料')}<small><span>{fileCount}</span></small></button>
             {sessionSections.map(([mode, icon]) => <button key={mode} type="button" aria-current={sessionMode === mode ? 'page' : undefined}
               onClick={() => {
                 setSessionMode(mode)
                 setMenu(undefined)
                 setDraftFilter(undefined)
                 closePreview()
-              }}>{buttonIcon(icon, knowledgeSessionDirectoryLabels[mode])}<small>{sessionDirectories[mode]?.entries?.length ?? '—'}</small></button>)}
+              }}>{buttonIcon(icon, knowledgeSessionDirectoryLabels[mode])}<small><span>{sessionDirectories[mode]?.entries?.length ?? '—'}</span></small></button>)}
           </div>}
         </React.Fragment>)}
         <div className="knowledge-folder-heading"><span>文件夹</span>
@@ -896,7 +896,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           data-selected={!sessionMode && filter.folderId === folder.id} data-move-target={moveTarget === folder.id}>
           <button type="button" aria-current={!sessionMode && filter.folderId === folder.id ? 'page' : undefined} onClick={() => selectCategory('all', folder.id)}>
             <KnowledgeIcon name="folder" /><span data-odyssey-truncated-tooltip>{folder.name}</span>
-            <small>{listKnowledgeDocuments(snapshot, { folderId: folder.id }).length}</small>
+            <small><span>{listKnowledgeDocuments(snapshot, { folderId: folder.id }).length}</span></small>
           </button>
           <button type="button" className="knowledge-square knowledge-folder-menu" data-knowledge-popup-trigger
             aria-label={`${folder.name}的更多操作`} aria-expanded={menu?.folder === true && menu.id === folder.id}

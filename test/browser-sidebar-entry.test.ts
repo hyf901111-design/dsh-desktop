@@ -4,6 +4,8 @@ import filledResearchIcon from '../build/brand/odyssey-b-research-18.svg?inline'
 import filledChatIcon from '../build/brand/odyssey-b-new-chat-18.svg?inline'
 import workspaceAddIcon from '../build/brand/odyssey-b-workspace-add-18.svg?inline'
 import {ScheduledTaskView} from '../src/preload/scheduled/view'
+import {createHomeGuideEntryClient,installHomeGuideEntryNative} from '../src/preload/home-guide-entry-native'
+import {createSidebarNewNoteAction} from '../src/preload/sidebar-new-note'
 const fixture=(wide:boolean)=>{
  const w=new Window();vi.stubGlobal('MutationObserver',w.MutationObserver);vi.stubGlobal('CustomEvent',w.CustomEvent)
  w.document.body.innerHTML=`<aside data-dsh-sidebar-root data-dsh-sidebar-wide="${wide}"><div data-srb-navigation-scroll><button data-sidebar-add-workspace>添加工作区</button></div><div class="hHd-Xa_newSessionGroup"><button class="hHd-Xa_newSession" data-sidebar-home>主页</button></div></aside><main class="pI_x6G_centerCol"></main>`
@@ -56,4 +58,53 @@ it('routes the five collapsed creation entries with the filled sidebar icons', a
    expect(more.getAttribute('aria-expanded')).toBe('false')
   }
  } finally {await w.happyDOM.abort();vi.unstubAllGlobals()}
+})
+
+it('closes More as soon as the spreadsheet demo clicks New Spreadsheet',async()=>{
+ const {w,actions}=fixture(true),document=w.document as unknown as Document
+ const more=document.querySelector<HTMLButtonElement>('.st-more')!
+ const entry={sessionId:'demo-spreadsheet',cwd:'/demo',title:'利润涨了，现金去哪了？'}
+ const input={snapshot:{phase:'plain',draft:'原会话草稿',draftRev:1}}
+ let selected='source'
+ const open=vi.fn(()=>{selected=entry.sessionId})
+ const ordinaryRequest=vi.fn()
+ w.addEventListener('sherlock:sidebar-new-note-request',ordinaryRequest)
+ const dispose=installHomeGuideEntryNative({
+  document,context:()=>({owner:'owner',generation:1,identityRevision:0,sessionId:selected,input}),
+  subscribe:()=>()=>{},prepare:async()=>entry,open
+ })
+ let release!:()=>void
+ const held=new Promise<void>(resolve=>{release=resolve})
+ const spreadsheet=createSidebarNewNoteAction(document,()=>held,'spreadsheet')
+ actions.newSpreadsheet.mockImplementation(spreadsheet.create)
+ const controller=new AbortController()
+ let pending:Promise<unknown>|undefined
+ try{
+  const client=await createHomeGuideEntryClient(document,{runId:'spreadsheet-more-test',kind:'spreadsheet',signal:controller.signal,sourceSessionId:selected})
+  more.click()
+  expect(more.getAttribute('aria-expanded')).toBe('true')
+  const menu=document.querySelector('[data-sidebar-more]')!
+  const target=[...menu.querySelectorAll('button')].find(button=>button.textContent==='新建表格')!
+  target.getBoundingClientRect=()=>new w.DOMRect(10,10,100,35) as unknown as DOMRect
+  await client.prepare(target,'new-spreadsheet')
+  pending=client.commit(target)
+  expect(document.querySelector('[data-sidebar-more]')).toBeNull()
+  expect(more.getAttribute('aria-expanded')).toBe('false')
+  expect(selected).toBe('source')
+  release()
+  await expect(pending).resolves.toMatchObject(entry)
+  expect(actions.newSpreadsheet).toHaveBeenCalledOnce()
+  await actions.newSpreadsheet.mock.results[0]!.value
+  expect(open).toHaveBeenCalledExactlyOnceWith(entry,'spreadsheet',expect.any(Function))
+  expect(ordinaryRequest).not.toHaveBeenCalled()
+  expect(document.querySelector('[data-sidebar-more]')).toBeNull()
+ }finally{
+  controller.abort()
+  release()
+  await pending?.catch(()=>{})
+  spreadsheet.dispose()
+  dispose()
+  await w.happyDOM.abort()
+  vi.unstubAllGlobals()
+ }
 })

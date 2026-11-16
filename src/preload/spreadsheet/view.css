@@ -235,10 +235,9 @@ body[data-ework-spreadsheet-mode] [id^="univer-doc-selection-container-__INTERNA
 .ew-sheet{container-type:inline-size}
 
 [data-reference-source="spreadsheet-range"] .uV2eYG_chipLabelText{font-variant-numeric:tabular-nums}
-/* The backdrop is clipped to the textarea mirror. Give painted tags room
-   below the text baseline and reserve one extra line for a wrapped preview. */
+/* Allow a wrapped provisional tag when it follows an existing draft. */
 body[data-ework-spreadsheet-mode] [data-research-composer-host] .uV2eYG_grow:has([data-reference-source=spreadsheet-range]) :is(.uV2eYG_mirror,.uV2eYG_input,.uV2eYG_backdrop){padding-bottom:4px}
-body[data-ework-spreadsheet-mode] [data-research-composer-host] .uV2eYG_grow:has(.ew-sheet-pending-reference) .uV2eYG_mirror{padding-bottom:29px}
+body[data-ework-spreadsheet-mode] [data-research-composer-host] .uV2eYG_grow:has(.ew-sheet-pending-reference[data-after-draft]) .uV2eYG_mirror{padding-bottom:29px}
 body[data-ework-spreadsheet-mode] [data-research-composer-host] .uV2eYG_grow:has(.ew-sheet-pending-reference)>textarea::placeholder{color:transparent!important}
 [data-ework-spreadsheet-mode] .ew-sheet-pending-reference{display:inline-block;box-sizing:border-box;height:24px;max-width:100%;vertical-align:-6px;margin-inline-start:2px;border-radius:6px;color:#29292d;background:#f6f6f7;box-shadow:inset 0 0 0 1px #d8d8db;font:400 13px/20px "Noto Sans SC",sans-serif;white-space:nowrap;overflow:hidden;opacity:.5;pointer-events:none}
 [data-ework-spreadsheet-mode] .ew-sheet-pending-reference>span{display:block;padding:2px 6px;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}

@@ -4,7 +4,9 @@ type Point={x:number;y:number}
 export type HomeGuidePointerAction={
  target:HTMLElement;action?:'move'|'click'|'drag';fromTarget?:HTMLElement
  canvasPoints?:{from():Point;to():Point}
- hover?:'target'
+ targetPoint?():Point
+ hover?:'target'|'none'
+ onClick?():void
  onFrame?(frame:HomeGuidePointerFrame):void
 }
 type Options={runId:string;signal:AbortSignal;initialPosition?:Point;wait(ms:number):Promise<void>;waitUntilPlaying():Promise<void>}
@@ -60,7 +62,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  if(topLayer)document.addEventListener('beforetoggle',beforeToggle,true)
  let draggedFile:{node:HTMLElement;origin:Point;transform:string}|undefined
  let onFrame:HomeGuidePointerAction['onFrame'],validateDrag:(()=>void)|undefined
- let hoverTargetOnly=false
+ let hoverMode:HomeGuidePointerAction['hover']
  const aborted=()=>Object.assign(Error('操作已取消。'),{name:'AbortError'})
  let rejectInterrupt!:(error:Error)=>void
  const interrupted=new Promise<never>((_resolve,reject)=>{rejectInterrupt=reject});void interrupted.catch(()=>{})
@@ -70,7 +72,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  const gate=async()=>{ensure();await Promise.race([options.waitUntilPlaying(),interrupted]);ensure()}
  const wait=async(ms:number)=>{await gate();await Promise.race([options.wait(ms),interrupted]);await gate()}
  const point=(target:HTMLElement):Point=>homeGuideTargetPoint(document,target)
- const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{validateDrag?.();if(!hoverTargetOnly||phase!=='moving'&&phase!=='dragging')hover.update(next.x,next.y);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;raiseLayer();element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})}
+ const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{validateDrag?.();if(!hoverMode||hoverMode==='target'&&phase!=='moving'&&phase!=='dragging')hover.update(next.x,next.y);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;raiseLayer();element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})}
  const reduced=()=>win.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true
  const travel=async(readPoint:()=>Point,duration:number,phase:HomeGuidePointerFrame['phase']='moving')=>{
   duration*=1.3
@@ -90,7 +92,8 @@ export function createHomeGuidePointer(document:Document,options:Options){
   snapshot:()=>({...position,state}),
   hide(){hideLayer();element.hidden=true;hover.clear()},
   async perform(action:HomeGuidePointerAction){
-   ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true;onFrame=action.onFrame;hoverTargetOnly=action.hover==='target'
+   ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true;onFrame=action.onFrame;hoverMode=action.hover
+   if(hoverMode==='none')hover.clear()
    let completed=false
    const readCanvasPoint=(read:()=>Point)=>{
     if(!action.target.isConnected||action.target.ownerDocument!==document)throw aborted()
@@ -98,7 +101,8 @@ export function createHomeGuidePointer(document:Document,options:Options){
     if(!Number.isFinite(x)||!Number.isFinite(y))throw Error('表格选区尚未显示。')
     return {x:Math.max(0,Math.min(win.innerWidth-1,x)),y:Math.max(0,Math.min(win.innerHeight-1,y))}
    }
-   const readTarget=()=>action.canvasPoints?readCanvasPoint(action.canvasPoints.to):point(action.target)
+   const readTarget=()=>action.targetPoint?readCanvasPoint(action.targetPoint):action.canvasPoints?readCanvasPoint(action.canvasPoints.to):point(action.target)
+   let clickPosition:Point|undefined
    try{
     await gate();const target=readTarget()
     if(action.action==='drag'){
@@ -113,10 +117,16 @@ export function createHomeGuidePointer(document:Document,options:Options){
     }else{
      const distance=position?Math.hypot(target.x-position.x,target.y-position.y):120
      await travel(readTarget,Math.max(280,Math.min(620,230+distance*.4)))
-     if(action.action!=='move'){paint(readTarget(),'pressed');await wait(reduced()?0:104);paint(readTarget(),'released');await wait(reduced()?0:208)}
+     if(action.action!=='move'){
+      paint(readTarget(),'pressed');await wait(reduced()?0:104)
+      const releasedAt=readTarget()
+      paint(releasedAt,'released')
+      if(action.onClick){action.onClick();clickPosition=releasedAt}
+      await wait(reduced()?0:208)
+     }
     }
-    ensure();paint(readTarget(),'idle');completed=true
-   }finally{onFrame=undefined;validateDrag=undefined;hoverTargetOnly=false;if(!completed)hover.clear();if(draggedFile&&!completed)draggedFile.node.style.transform=draggedFile.transform;draggedFile=undefined;busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
+    ensure();paint(clickPosition??readTarget(),'idle');completed=true
+   }finally{onFrame=undefined;validateDrag=undefined;hoverMode=undefined;if(!completed)hover.clear();if(draggedFile&&!completed)draggedFile.node.style.transform=draggedFile.transform;draggedFile=undefined;busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
   },
   dispose(){stop();options.signal.removeEventListener('abort',stop);element.remove()}
  }

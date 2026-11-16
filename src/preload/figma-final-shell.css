@@ -167,7 +167,7 @@ body:has(.VOzbGW_overlay:not([hidden]) .VOzbGW_panel:not([hidden]), [data-sherlo
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_chevron { width:12px; height:12px; }
 .sRp_composer .FJxK0a_root { display:none; }
 /* Keep all workspace references on the same row inside the native composer. */
-.sRp_composer [data-composer-card]:has(> :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor])) {
+.sRp_composer [data-composer-card]:has(> :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor])):not(:has(.ew-sheet-pending-reference)) {
   padding-block-start:12px !important;
 }
 .sRp_composer [data-composer-card] > :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor]) {

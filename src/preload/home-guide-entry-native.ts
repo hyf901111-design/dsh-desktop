@@ -100,7 +100,7 @@ export async function createHomeGuideEntryClient(document:Document,options:{runI
 
 /** Page-world owner. One lease can reserve and open exactly one dedicated session. */
 export function installHomeGuideEntryNative(deps:NativeDependencies){
- const document=deps.document,win=document.defaultView!,runs=new Map<string,any>(),closedRuns=new Set<string>(),closedNotes=new Set<string>(),composing=new Set<Element>();let stopped=false,selectionRevision=0,selected=deps.context().sessionId,opening:any,activeNote:any
+ const document=deps.document,win=document.defaultView!,runs=new Map<string,any>(),closedRuns=new Set<string>(),closedSidebarTokens=new Set<string>(),composing=new Set<Element>();let stopped=false,selectionRevision=0,selected=deps.context().sessionId,opening:any,activeSidebarDocument:any
  const sourceComposing=()=>{
   // Chromium may retire or blur an IME owner without delivering compositionend.
   // A retained, hidden composer must not block a later Explore entry forever.
@@ -108,7 +108,7 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
   return [...composing].some(el=>!el.closest('[data-odyssey-subagent-panel]')&&!!el.closest('.pI_x6G_centerCol,[data-ework-notes-composer-host]'))
  }
  const retain=(set:Set<string>,value:string)=>{set.add(value);if(set.size>256)set.delete(set.values().next().value!)}
- const retire=(run:any)=>{runs.delete(run.runId);retain(closedRuns,run.runId);if(run.noteToken)retain(closedNotes,run.noteToken)}
+ const retire=(run:any)=>{runs.delete(run.runId);retain(closedRuns,run.runId);if(run.sidebarToken)retain(closedSidebarTokens,run.sidebarToken)}
  const reply=(run:any,requestId:string,value:Record<string,unknown>)=>win.dispatchEvent(new win.CustomEvent(REPLY,{detail:{requestId,runId:run.runId,...value}}))
  const trace=(run:any,phase:'arm'|'prepare'|'commit'|'cancel',reason:HomeGuideEntryDenial)=>emitHomeGuideEntryDiagnostic({runId:run.runId,sessionId:run.context?.sessionId,kind:run.kind,phase,reason})
  const revoke=(run:any,reason:HomeGuideEntryDenial=run.denial??'cancelled',failed=false)=>{if(run.cancelled||run.phase==='done')return;trace(run,'cancel',reason);run.cancelled=true;run.controller.abort();win.clearTimeout(run.timer);retire(run);for(const requestId of run.pending)reply(run,requestId,failed?{ok:false,message:'演示准备未完成，请重新打开探索后重试。'}:{ok:false,cancelled:true});run.pending.clear();win.dispatchEvent(new win.CustomEvent(CANCELLED,{detail:{runId:run.runId}}))}
@@ -150,28 +150,31 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
   if(!run||run.target!==target||run.token!==marker.token||!id(marker.requestId))return
   try{
    consume(run,marker.requestId)
-   if(run.action==='new-note'){
+   if(run.action==='new-note'||run.action==='new-spreadsheet'){
     // Let the actual More menu close via its own handler; its native prepare
     // request below is the only normal callback replaced by this lease.
-    activeNote=run;win.queueMicrotask(()=>{if(activeNote===run){activeNote=undefined;if(!run.noteToken)revoke(run)}});return
+    activeSidebarDocument=run
+    win.queueMicrotask(()=>{if(activeSidebarDocument===run){activeSidebarDocument=undefined;if(!run.sidebarToken)revoke(run)}})
+    return
    }
    event.preventDefault();event.stopImmediatePropagation();void open(run).catch(()=>revoke(run))
   }catch{event.preventDefault();event.stopImmediatePropagation();revoke(run)}
  }
- const note=(event:Event)=>{
+ const sidebarDocument=(event:Event)=>{
   const d=(event as CustomEvent).detail
-  if(d?.kind==='spreadsheet')return
-  let run=activeNote
-  if(d?.phase!=='prepare')run=[...runs.values()].find(value=>value.noteToken===d?.token)
-  if(!run&&closedNotes.has(d?.token)){event.stopImmediatePropagation();win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,ok:false,cancelled:true}}));return}
-  if(!run||!id(d?.requestId))return
+  if(!id(d?.requestId)||d.kind!==undefined&&d.kind!=='spreadsheet'||!['prepare','create','cancel'].includes(d.phase))return
+  const preparing=d.phase==='prepare'
+  if(!preparing&&!id(d.token))return
+  const run=preparing?activeSidebarDocument:[...runs.values()].find(value=>value.sidebarToken===d.token)
+  if(!preparing&&!run&&closedSidebarTokens.has(d.token)){event.stopImmediatePropagation();win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,ok:false,cancelled:true}}));return}
+  if(!run||(run.action==='new-spreadsheet')!==(d.kind==='spreadsheet'))return
   if(d.phase==='prepare'&&(!run.target?.hasAttribute(CLICK)||run.phase!=='committing'))return
   event.stopImmediatePropagation()
   const nativeReply=(value:Record<string,unknown>)=>win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,...value}}))
   if(d.phase==='cancel'){revoke(run);nativeReply({ok:true});return}
   try{current(run)
-   if(d.phase==='prepare'){run.noteToken=win.crypto.randomUUID();activeNote=undefined;nativeReply({ok:true,token:run.noteToken});return}
-   if(d.phase!=='create'||run.noteCreating)throw cancelled();run.noteCreating=true
+   if(preparing){run.sidebarToken=win.crypto.randomUUID();activeSidebarDocument=undefined;nativeReply({ok:true,token:run.sidebarToken});return}
+   if(run.sidebarCreating)throw cancelled();run.sidebarCreating=true
    void open(run).then(()=>nativeReply({ok:true,sessionId:run.entry.sessionId}),()=>{revoke(run);nativeReply({ok:false,cancelled:true})})
   }catch{revoke(run);nativeReply({ok:false,cancelled:true})}
  }
@@ -206,8 +209,8 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
    void(async()=>{current(run);const entry=await deps.prepare(run.kind,run.runId,()=>current(run),run.controller.signal);current(run);pin(run);if(!entry||!id(entry.sessionId)||typeof entry.cwd!=='string'||typeof entry.title!=='string')throw cancelled();run.entry=entry;run.phase='prepared';trace(run,'prepare','prepared');reply(run,d.requestId,{ok:true,...entry});run.pending.delete(d.requestId)})().catch(error=>{if(run.cancelled)return;try{current(run)}catch{revoke(run);return}revoke(run,run.denial??'operation-failed',error?.name!=='AbortError')})
   }catch{revoke(run)}
  }
- win.addEventListener(REQUEST,receive);win.addEventListener('sherlock:sidebar-new-note-request',note,true);document.addEventListener('click',click,true)
+ win.addEventListener(REQUEST,receive);win.addEventListener('sherlock:sidebar-new-note-request',sidebarDocument,true);document.addEventListener('click',click,true)
  for(const type of ['pointerdown','keydown','beforeinput','input','compositionstart','compositionend'])document.addEventListener(type,input,true)
  document.addEventListener('focusout',blur,true)
- return()=>{if(stopped)return;for(const run of runs.values())revoke(run,'disposed');stopped=true;unsubscribe();win.removeEventListener(REQUEST,receive);win.removeEventListener('sherlock:sidebar-new-note-request',note,true);document.removeEventListener('click',click,true);for(const type of ['pointerdown','keydown','beforeinput','input','compositionstart','compositionend'])document.removeEventListener(type,input,true);document.removeEventListener('focusout',blur,true);composing.clear()}
+ return()=>{if(stopped)return;for(const run of runs.values())revoke(run,'disposed');stopped=true;unsubscribe();win.removeEventListener(REQUEST,receive);win.removeEventListener('sherlock:sidebar-new-note-request',sidebarDocument,true);document.removeEventListener('click',click,true);for(const type of ['pointerdown','keydown','beforeinput','input','compositionstart','compositionend'])document.removeEventListener(type,input,true);document.removeEventListener('focusout',blur,true);composing.clear()}
 }
