@@ -172,6 +172,10 @@ ctx.effect(()=>{
    'const { text, images, rest } = contentParts(imageFactoryDisplayContent(content));'))
  replace('const content = Array.isArray(node.data.content) ? contentParts(node.data.content) : {',
    'const content = Array.isArray(node.data.content) ? contentParts(imageFactoryDisplayContent(node.data.content)) : {')
+ const queueText='const text = Array.isArray(row.content) ? contentParts(row.content).text : row.text ?? row.preview;'
+ replace(queueText,'const factoryRow = imageFactoryQueueRow(row);\n\t\t\t\tif (factoryRow !== row) return factoryRow;\n\t\t\t\t'+queueText)
+ replace('content: canvasQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)',
+   'content: imageFactoryQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)')
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');
 ctx.effect(()=>{const bridge=(${installBrowserQuestionNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],getConversation:()=>ctx.get('conversation')});return bridge.dispose},'Browser region shared composer');

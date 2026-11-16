@@ -203,13 +203,33 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   }
 }
 
-function imageFactoryDisplayContent(content) {
+function imageFactoryDisplayContent(content, context = imageFactoryContentContext(content)) {
   if (!Array.isArray(content)) return content
-  const context = content.map(part => part.type === 'text' ? readImageFactoryContext(part.text) : undefined).find(Boolean)
   if (!context) return content
   const internal = context.internalReference ? content.findLastIndex(part => part.type === 'image') : -1
   return content.filter((_, index) => index !== internal).map(part =>
     part.type === 'text' ? { ...part, text: stripImageFactoryContext(part.text) } : part)
+}
+
+function imageFactoryContentContext(content) {
+  return Array.isArray(content) ? content.map(part => part.type === 'text' ? readImageFactoryContext(part.text) : undefined).find(Boolean) : undefined
+}
+
+function imageFactoryQueueRow(row) {
+  const context = imageFactoryContentContext(row.content)
+  if (!context) return row
+  const { text: _original, ...imageFactoryQueueContext } = context
+  const visible = imageFactoryDisplayContent(row.content, context)
+  const preview = Array.from(visible.map(part => part.type === 'text' ? part.text : '[' + part.type + ']')
+    .join(' ').replace(/\s+/g, ' ').trim())
+  const text = row.text === null ? null : visible.filter(part => part.type === 'text').map(part => part.text).join('')
+  return { ...row, text, preview: preview.slice(0, 200).join('') + (preview.length > 200 ? '…' : ''), imageFactoryQueueContext }
+}
+
+function imageFactoryQueueEditContent(row, text, serialize) {
+  if (row?.imageFactoryQueueContext && row.text !== null)
+    return [{ type: 'text', text: imageFactoryPrompt(text, row.imageFactoryQueueContext) }]
+  return canvasQueueEditContent(row, text, serialize)
 }
 
 function EWorkImageFactoryWelcome() {
@@ -241,5 +261,8 @@ ${readImageFactoryContext.toString()}
 ${stripImageFactoryContext.toString()}
 ${imageFactoryPrompt.toString()}
 ${imageFactoryDisplayContent.toString()}
+${imageFactoryContentContext.toString()}
+${imageFactoryQueueRow.toString()}
+${imageFactoryQueueEditContent.toString()}
 ${EWorkImageFactoryWelcome.toString()}
 `
