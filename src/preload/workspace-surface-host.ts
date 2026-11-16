@@ -131,16 +131,16 @@ export class WorkspaceSurfaceHost {
         for (const [name, element] of this.surfaces) {
             if (name !== current.surface) continue;
             element.dataset.settingsOpen = String(this.settingsOpen());
-            if (name !== 'knowledge' && name !== 'shared-session' && element.style.left !== left)
+            if (name !== 'knowledge' && name !== 'shared-session' && name !== 'image-factory' && element.style.left !== left)
                 element.style.left = left;
             if (element.dataset.dark !== String(dark))
                 element.dataset.dark = String(dark);
-            if (name === 'knowledge' || name === 'shared-session') {
+            if (name === 'knowledge' || name === 'shared-session' || name === 'image-factory') {
                 const center = this.document.querySelector<HTMLElement>('.pI_x6G_centerCol');
                 if (center) {
                     const box = center.getBoundingClientRect();
                     const view = this.document.defaultView;
-                    const reserved = name === 'shared-session' ? 0 : Math.max(0, parseFloat(view?.getComputedStyle(html).getPropertyValue('--dsh-sidebar-height') || '') || 0);
+                    const reserved = name !== 'knowledge' ? 0 : Math.max(0, parseFloat(view?.getComputedStyle(html).getPropertyValue('--dsh-sidebar-height') || '') || 0);
                     const height = Math.max(0, Math.min(box.bottom, view?.innerHeight ?? box.bottom) - box.top - reserved);
                     const bounds = { left: box.left, top: box.top, width: box.width, height };
                     for (const [property, pixels] of Object.entries(bounds)) {

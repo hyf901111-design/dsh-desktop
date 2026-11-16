@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { iconSource } from './icons'
@@ -66,12 +66,10 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const [preview, setPreview] = useState<number>()
   const [ratio, setRatio] = useState<Ratio>('4:5')
   const [messages, setMessages] = useState<Message[]>([])
-  const [prompt, setPrompt] = useState('')
   const [marking, setMarking] = useState(false)
   const [mark, setMark] = useState<Mark>()
   const [draft, setDraft] = useState<Region>()
   const [panel, setPanel] = useState<Panel>()
-  const [expanded, setExpanded] = useState(true)
   const [busy, setBusy] = useState(false)
   const [drop, setDrop] = useState(false)
   const [toast, setToast] = useState('')
@@ -80,9 +78,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const [filters, setFilters] = useState({ brightness: 0, contrast: 0 })
   const [dimensions, setDimensions] = useState({ width: '', height: '' })
   const [caption, setCaption] = useState({ text: '', fontSize: 48, placement: 'upper', color: '#ffffff' })
-  const [reference, setReference] = useState<(Raster & { name: string })>()
-  const file = useRef<HTMLInputElement>(null), refFile = useRef<HTMLInputElement>(null)
-  const scroll = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null)
+  const file = useRef<HTMLInputElement>(null), stage = useRef<HTMLDivElement>(null)
   const urls = useRef(new Set<string>()), active = useRef<{ id: string; cancelled: boolean }>()
   const mounted = useRef(true), drag = useRef<{ pointerId: number; start: Point }>()
   const count = useRef(0)
@@ -114,7 +110,6 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     observer.observe(target)
     return () => observer.disconnect()
   }, [Boolean(shown)])
-  useEffect(() => { if (scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight }, [messages.length, Boolean(region)])
   useEffect(() => {
     if (!toast) return
     const handle = setTimeout(() => setToast(''), 4200)
@@ -126,10 +121,6 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   }
   function clearMark() {
     setMark(undefined); setDraft(undefined); setMarking(false); drag.current = undefined
-  }
-  function clearReference() {
-    if (reference) { URL.revokeObjectURL(reference.url); urls.current.delete(reference.url) }
-    setReference(undefined)
   }
   function stop() {
     if (!active.current) return
@@ -171,60 +162,64 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     if (!mounted.current || job.cancelled) { URL.revokeObjectURL(raster.url); return }
     return add(raster, payload)
   }
-  function importFile(selectedFile: File | undefined, attached = false) {
+  function importFile(selectedFile: File | undefined) {
     if (!selectedFile) return
     void operation(async job => {
       acceptableFile(selectedFile, t)
-      if (attached) {
-        const raster = await loadRaster(doc, selectedFile)
-        if (!mounted.current || job.cancelled) { URL.revokeObjectURL(raster.url); return }
-        clearReference(); clearMark(); setPanel(undefined); urls.current.add(raster.url)
-        setReference({ ...raster, name: selectedFile.name }); input.current?.focus()
-      } else {
-        const title = selectedFile.name.replace(/\.[^.]+$/, '').trim() || t('导入图片', 'Imported image')
-        const version = await addBlob(selectedFile, job, { title, name: t('导入图片', 'Imported image'), basedOn: current?.id })
-        if (version) notify(t('图片已导入画布。', 'Image imported to the canvas.'))
-      }
+      const title = selectedFile.name.replace(/\.[^.]+$/, '').trim() || t('导入图片', 'Imported image')
+      const version = await addBlob(selectedFile, job, { title, name: t('导入图片', 'Imported image'), basedOn: current?.id })
+      if (version) notify(t('图片已导入画布。', 'Image imported to the canvas.'))
     })
   }
-  const send = (event?: FormEvent) => {
-    event?.preventDefault()
-    const request = prompt.trim(), base = current, area = region, upload = area ? undefined : reference
-    if (!request || active.current || preview !== undefined || panel === 'crop') return
-    const target = area ?? base ?? ratios[ratio]
-    const referenceImage = base ?? upload
-    setExpanded(true); setPanel(undefined)
+  async function send(request: string, upload?: File) {
+    const base = current, area = region
+    setPanel(undefined)
     setMessages(list => [...list, { id: crypto.randomUUID(), role: 'user', body: request, region: !!area, reference: upload?.name }])
-    void operation(async job => {
-      const source = area && base ? await referenceFor(doc, base, area)
-        : upload ? await referenceFor(doc, upload) : referenceImage ? await referenceFor(doc, referenceImage) : undefined
-      if (job.cancelled) return
-      const direction = area
-        ? t('参考图是原图中截取的选区。保持参考图的取景和相对位置，按下面描述修改选区：', 'The reference is the crop from a larger image. Preserve its framing and positions. Edit this crop as follows: ')
-        : source ? t('使用参考图，根据以下描述修改或生成画面：', 'Use the reference image to make the requested image: ')
-          : t('请生成一张图片。画面要适合指定比例并避免把关键文字和主体贴近边缘。要求：', 'Generate an image. Compose for the requested aspect ratio, keeping key details away from edges. Request: ')
-      const description = direction + request + '\n' + t('目标画面尺寸：', 'Target canvas: ') + target.width + ' × ' + target.height + ' px'
-      const data = await bridge.generate({ id: job.id, prompt: description, size: providerSize(target), reference: source })
-      if (job.cancelled || !mounted.current) return
-      const output = await loadRaster(doc, new Blob([Uint8Array.from(data)], { type: 'image/png' }))
-      let blob
+    let success = false
+    let errorMessage: string | undefined
+    await operation(async job => {
+      let uploaded: Raster | undefined
       try {
-        const size = base ?? ratios[ratio]
-        const { canvas, context } = canvasFor(doc, size)
-        if (area && base) applyRegion(context, base, output, area)
-        else if (base) context.drawImage(output.image, 0, 0, size.width, size.height)
-        else drawCover(context, output, { ...size, x: 0, y: 0 })
-        blob = await encode(canvas)
-      } finally { URL.revokeObjectURL(output.url) }
-      const title = base?.title ?? titleFromPrompt(request, t)
-      const name = area ? t('局部修改', 'Region edit') : base ? t('对话修改', 'Chat edit') : t('初次生成', 'Generated image')
-      const version = await addBlob(blob, job, { title, name, basedOn: base?.id })
-      if (!version) return
-      clearReference(); setPrompt('')
-      setMessages(list => [...list, { id: crypto.randomUUID(), role: 'assistant',
-        body: area ? t('已修改选区 1，结果已保存到画布。', 'Edited selection 1 and updated the canvas.')
-          : t('图片已放到当前画布。', 'The image is on the current canvas.'), version: version.id }])
+        if (!area && upload) {
+          acceptableFile(upload, t)
+          uploaded = await loadRaster(doc, upload)
+        }
+        const target = area ?? base ?? ratios[ratio]
+        const referenceImage = uploaded ?? base
+        const source = area && base ? await referenceFor(doc, base, area)
+          : referenceImage ? await referenceFor(doc, referenceImage) : undefined
+        if (job.cancelled) return
+        const direction = area
+          ? t('参考图是原图中截取的选区。保持参考图的取景和相对位置，按下面描述修改选区：', 'The reference is the crop from a larger image. Preserve its framing and positions. Edit this crop as follows: ')
+          : source ? t('使用参考图，根据以下描述修改或生成画面：', 'Use the reference image to make the requested image: ')
+            : t('请生成一张图片。画面要适合指定比例并避免把关键文字和主体贴近边缘。要求：', 'Generate an image. Compose for the requested aspect ratio, keeping key details away from edges. Request: ')
+        const description = direction + request + '\n' + t('目标画面尺寸：', 'Target canvas: ') + target.width + ' × ' + target.height + ' px'
+        const data = await bridge.generate({ id: job.id, prompt: description, size: providerSize(target), reference: source })
+        if (job.cancelled || !mounted.current) return
+        const output = await loadRaster(doc, new Blob([Uint8Array.from(data)], { type: 'image/png' }))
+        let blob
+        try {
+          const size = base ?? ratios[ratio]
+          const { canvas, context } = canvasFor(doc, size)
+          if (area && base) applyRegion(context, base, output, area)
+          else if (base) context.drawImage(output.image, 0, 0, size.width, size.height)
+          else drawCover(context, output, { ...size, x: 0, y: 0 })
+          blob = await encode(canvas)
+        } finally { URL.revokeObjectURL(output.url) }
+        const title = base?.title ?? titleFromPrompt(request, t)
+        const name = area ? t('局部修改', 'Region edit') : base ? t('对话修改', 'Chat edit') : t('初次生成', 'Generated image')
+        const version = await addBlob(blob, job, { title, name, basedOn: base?.id })
+        if (!version) return
+        setMessages(list => [...list, { id: crypto.randomUUID(), role: 'assistant',
+          body: area ? t('已修改选区 1，结果已保存到画布。', 'Edited selection 1 and updated the canvas.')
+            : t('图片已放到当前画布。', 'The image is on the current canvas.'), version: version.id }])
+        success = true
+      } catch (error) {
+        errorMessage = noticeText(error, t('图片处理失败，请重试。', 'Image processing failed. Please retry.'))
+        throw error
+      } finally { if (uploaded) URL.revokeObjectURL(uploaded.url) }
     })
+    return { success, error: errorMessage }
   }
   function localEdit(event?: FormEvent) {
     event?.preventDefault()
@@ -287,7 +282,8 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   function chooseMark() {
     if (busy || !current) return
     setPanel(undefined); setPreview(undefined); setDraft(undefined); setMark(undefined); drag.current = undefined
-    setExpanded(true); setMarking(on => !on)
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
+    setMarking(on => !on)
   }
   function onPointer(event: PointerEvent<HTMLDivElement>, step: 'start' | 'move' | 'end' | 'cancel') {
     if (!drawing || !current || busy) return
@@ -306,7 +302,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     if (step === 'cancel' || box.width < 2 || box.height < 2) { setDraft(undefined); return }
     if (panel === 'crop') { setDraft(box); return }
     setDraft(undefined); setMark({ version: current.id, rect: box })
-    input.current?.focus()
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-focus-chat'))
   }
   function switchPreview(id: number | undefined) {
     if (busy) return
@@ -314,9 +310,55 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     setPreview(id === selected ? undefined : id)
   }
 
+  const canSend = !busy && preview === undefined && panel !== 'crop'
+  const chatState = {
+    busy, canSend, region: !!region, ratio, preview, current: current && { title: current.title, id: current.id },
+    messages: messages.map(row => {
+      const v = history.all.find(item => item.id === row.version)
+      return { ...row, result: v && { id: v.id, url: v.url, label: v.title, width: v.width, height: v.height } }
+    }),
+  }
+  const publishChat = () => doc.dispatchEvent(new CustomEvent('sherlock:image-factory-state', { detail: chatState }))
+  useLayoutEffect(() => {
+    const submit = (event: Event) => {
+      const d = (event as CustomEvent).detail
+      if (doc.body.dataset.workspaceSurface !== 'image-factory' || !canSend || active.current ||
+          typeof d?.id !== 'string' || typeof d.prompt !== 'string' || !d.prompt.trim() || d.prompt.length > 3600) return
+      let attachment: File | undefined
+      if (d.file && !region) {
+        const { name, type, data } = d.file
+        if (typeof data !== 'string' || data.length > 28000000 || typeof name !== 'string' ||
+            !['image/png', 'image/jpeg', 'image/webp'].includes(type)) return
+        try {
+          attachment = new File([Uint8Array.from(atob(data), c => c.charCodeAt(0))], name.slice(0, 160), { type })
+        } catch { return }
+      }
+      event.preventDefault()
+      void send(d.prompt.trim(), attachment).then(result => {
+        doc.dispatchEvent(new CustomEvent('sherlock:image-factory-result', { detail: { id: d.id, ...result } }))
+      })
+    }
+    const action = (event: Event) => {
+      if (doc.body.dataset.workspaceSurface !== 'image-factory') return
+      const data = (event as CustomEvent).detail
+      if (data?.kind === 'cancel') stop()
+      if (data?.kind === 'clear-selection' && !busy) clearMark()
+      if (data?.kind === 'import' && !busy) file.current?.click()
+      if (data?.kind === 'preview' && Number.isSafeInteger(data.version)) switchPreview(data.version)
+    }
+    doc.addEventListener('sherlock:image-factory-submit', submit)
+    doc.addEventListener('sherlock:image-factory-action', action)
+    doc.addEventListener('sherlock:image-factory-request-state', publishChat)
+    publishChat()
+    return () => {
+      doc.removeEventListener('sherlock:image-factory-submit', submit)
+      doc.removeEventListener('sherlock:image-factory-action', action)
+      doc.removeEventListener('sherlock:image-factory-request-state', publishChat)
+    }
+  }, [busy, canSend, mark, ratio, preview, current, messages, history.all, bridge, t])
+
   const rectangle = draft ?? region
   const noEdits = !current || busy
-  const initCaption = t('告诉我想做什么图，或先导入一张图片。生成结果会显示在中间画布。', 'Describe what to make, or import an image. Results appear in the center canvas.')
   const exportLabel = t('导出', 'Export')
   const tools = [
     ['crop', t('裁剪', 'Crop')], ['resize', t('尺寸', 'Resize')], ['adjust', t('调整', 'Adjust')], ['type', t('文字', 'Text')],
@@ -335,7 +377,6 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
         <span className="if-top-title" title={current?.title}>{current?.title ?? t('未命名画布', 'Untitled canvas')}</span>
         <Button icon="upload" label={importLabel} disabled={busy} onClick={() => file.current?.click()}>{t('导入', 'Import')}</Button>
         <Button icon="download" primary label={exportLabel} disabled={noEdits} onClick={() => selectPanel('export')}>{exportLabel}<Symbol name="chevron" size={12}/></Button>
-        {!expanded && <Button icon="right-panel" label={t('展开右侧对话', 'Expand chat')} onClick={() => setExpanded(true)}/>}
       </header>
       <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => {
         importFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''
@@ -431,61 +472,6 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       </form>}
       {toast && <div className="if-toast" role="status"><Symbol name="check" size={15}/> {toast}</div>}
     </section>
-    <aside className="if-chat" hidden={!expanded} aria-label={t('图像工厂对话', 'Image Factory chat')}>
-      <header className="if-chat-top"><span className="if-chat-tab"><Symbol name="spark" size={15}/><strong>{t('对话', 'Chat')}</strong></span>
-        <Button icon="right-panel" label={t('收起右侧对话', 'Collapse chat')} onClick={() => setExpanded(false)}/>
-      </header>
-      <div className="if-context"><Symbol name="image" size={15}/><span>
-        {current ? current.title + ' · V' + current.id : t('未命名画布', 'Untitled canvas')}
-        {preview !== undefined && t('（预览 V', ' (previewing V') + preview + t('）', ')')}
-      </span></div>
-      <div className="if-messages" ref={scroll} role="log" aria-live="polite">
-        {(!messages.length || !current) && <div className="if-assistant"><Symbol name="spark"/><div><strong>{t('图像助手', 'Image assistant')}</strong><p>{initCaption}</p>
-          {!current && <div className="if-suggestions">
-            <Button disabled={busy} onClick={() => {
-              setPrompt(t('做一张「周末咖啡市集」海报。暖棕色调，右下放一杯咖啡，标题用奶油白。活动为 11 月 21–22 日，地点是南岸仓库。', 'Make a Weekend Coffee Market poster. Use warm browns, place a coffee cup in the lower right, and use an ivory title. Nov 21–22 at Southbank Warehouse.'))
-              input.current?.focus()
-            }}>{t('制作活动海报', 'Make a poster')}</Button>
-            <Button disabled={busy} onClick={() => file.current?.click()}>{t('优化已有图片', 'Improve an image')}</Button>
-          </div>}
-        </div></div>}
-        {messages.map(msg => {
-          const version = history.all.find(v => v.id === msg.version)
-          if (msg.role === 'user') return <div className="if-user" key={msg.id}>{(msg.region || msg.reference) &&
-            <div className="if-reference">{msg.region && <span className="if-number">1</span>}<span>{msg.region ? t('选区 1', 'Selection 1') : msg.reference}</span></div>}<div>{msg.body}</div></div>
-          if (msg.role === 'notice') return <div className="if-notice" data-error={msg.error} key={msg.id}>{msg.body}</div>
-          return <div className="if-assistant" key={msg.id}><Symbol name="spark"/><div><strong>{t('图像助手', 'Image assistant')}</strong><p>{msg.body}</p>{version &&
-            <button type="button" className="if-receipt" onClick={() => switchPreview(version.id)} disabled={busy}><img src={version.url} alt=""/><span>
-              <b>{version.name === t('初次生成', 'Generated image') ? version.title : version.name}</b><small>V{version.id} · {version.width} × {version.height} px</small>
-            </span></button>}
-          </div></div>
-        })}
-        {region && !busy && <div className="if-notice"><span className="if-number">1</span>{' '}{t('已引用画布上的选区 1', 'Selection 1 attached from canvas')} · V{current?.id}</div>}
-        {busy && <div className="if-notice" role="status">{t('正在处理图片…', 'Processing image…')}</div>}
-      </div>
-      <form className="if-composer" data-region={!!region} onSubmit={send}>
-        {(region || reference) && <div className="if-reference">
-          {region && <span className="if-number">1</span>}<span>{region ? t('选区 1', 'Selection 1') : reference?.name}</span>
-          <Button icon="close" label={t('移除引用', 'Remove reference')} onClick={region ? clearMark : clearReference} disabled={busy}/>
-        </div>}
-        {!current && !reference && <div className="if-reference"><Symbol name={ratios[ratio].icon} size={14}/>{ratio}</div>}
-        <textarea ref={input} value={prompt} maxLength={3600} rows={3} aria-label={t('图片描述', 'Image prompt')}
-          placeholder={current ? t('描述想做的修改，或先在画布上框选…', 'Describe an edit, or select a region on the canvas…')
-            : t('描述你想生成的画面…', 'Describe the image you want to make…')}
-          onChange={e => setPrompt(e.target.value)} disabled={busy} onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) { e.preventDefault(); send() }
-          }}/>
-        <div className="if-composer-bottom">
-          <input ref={refFile} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => {
-            importFile(e.currentTarget.files?.[0], true); e.currentTarget.value = ''
-          }}/>
-          <Button icon="paperclip" label={t('附加参考图', 'Attach reference image')} disabled={busy} onClick={() => refFile.current?.click()}/>
-          <span>{region ? t('作用于选区 1', 'Applies to selection 1') : current ? t('图像编辑', 'Image editing') : t('生成到当前画布', 'Generate to canvas')}</span>
-          {busy ? <Button icon="close" className="if-send" label={t('取消', 'Cancel')} onClick={stop}/>
-            : <Button type="submit" icon="arrow-up" primary className="if-send" label={t('发送', 'Send')} disabled={!prompt.trim() || preview !== undefined || panel === 'crop'}/>}
-        </div>
-      </form>
-    </aside>
   </div>
 }
 
@@ -505,11 +491,15 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
     if (now !== english) { english = now; render() }
   })
   language.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
-  const open = () => host.open('image-factory')
+  const open = () => {
+    host.open('image-factory')
+    if (host.current()?.surface === 'image-factory')
+      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
+  }
   render()
   return {
     open,
-    reset() { identity++; host.close('image-factory'); render() },
+    reset() { identity++; host.close('image-factory'); doc.dispatchEvent(new Event('sherlock:image-factory-reset')); render() },
     dispose() { language.disconnect(); react.unmount(); root.remove(); style.remove() },
   }
 }

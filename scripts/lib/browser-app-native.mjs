@@ -1,3 +1,4 @@
+import {installImageFactoryInput,imageFactoryNativeSource} from './image-factory-native.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
 import {createPendingConversation,EWorkPendingInputBar,browserPromptReference} from './pending-conversation.mjs'
 /** Browser is an application; conversation context is optional and never created by entry. */
@@ -150,9 +151,17 @@ export function patchBrowserAppNative(input){
  const canvasAction=source.includes(splitCanvasAction)?splitCanvasAction:'"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),';
  replace(canvasAction,'"data-browser-canvas-action": "",\n'+canvasAction);
  const root='function HomeGuideNativeOriginalConversationRoot('
- replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n`+root)
+ replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${imageFactoryNativeSource}\n`+root)
  const controller='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
- replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n`)
+ replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n
+ctx.effect(()=>{
+ const mode=({create: ${installImageFactoryInput.toString()}}).create({makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),conversation:conversationController});
+ eworkImageFactory=mode;
+ return()=>{if(eworkImageFactory===mode)eworkImageFactory=undefined;mode.dispose()};
+},'Image Factory native conversation input');
+`)
+ replace('footer, eworkNotes=false }) {', 'footer, eworkNotes=false, eworkImageFactory=false }) {')
+ replace('const primaryStops = (eworkNotes ? running :', 'const primaryStops = ((eworkNotes||eworkImageFactory) ? running :')
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');
 ctx.effect(()=>{const bridge=(${installBrowserQuestionNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],getConversation:()=>ctx.get('conversation')});return bridge.dispose},'Browser region shared composer');
@@ -186,7 +195,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace(failed,`window[Symbol.for('sherlock:browser-question')]?.settled(shell,attempt.draftState,attempt.imageIds,false,'发送失败，草稿已保留。');
 						`+failed)
  const mode="const sidebarMode=(research || activeView==='notes')&&(!homeGuideResident||homeGuideSidebar);"
- replace(mode,`const browserAppActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);const off=eworkPendingConversation?.subscribe(callback);return()=>{document.removeEventListener('sherlock:workspace-surface-change',callback);off?.()}},()=>!subagentPanel&&(['browser','knowledge'].includes(document.body.dataset.workspaceSurface)||!!sessionId&&eworkPendingConversation?.getSnapshot().rightSession===sessionId),()=>false);
+ replace(mode,`const browserAppActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);const off=eworkPendingConversation?.subscribe(callback);return()=>{document.removeEventListener('sherlock:workspace-surface-change',callback);off?.()}},()=>!subagentPanel&&(['browser','knowledge','image-factory'].includes(document.body.dataset.workspaceSurface)||!!sessionId&&eworkPendingConversation?.getSnapshot().rightSession===sessionId),()=>false);
 const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);`)
  replace('if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar) return;', 'if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar&&!browserAppActive) return;')
  replace('[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]', '[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, homeGuideSidebar, browserAppActive, researchSidebar, sessionId]')
@@ -196,7 +205,8 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive || pendi
  // rather than constructing another conversation layout for the Browser.
  {const signature=source.match(/function HomeGuideNativeOriginalConversationRoot\([^\n]+\) \{/)?.[0];if(!signature)throw Error('Native conversation root signature drift');replace(signature,signature+`
  const pendingPaneOpen=react.useSyncExternalStore(callback=>{window.addEventListener('sherlock:global-right-panel-state',callback);return()=>window.removeEventListener('sherlock:global-right-panel-state',callback)},()=>document.body.dataset.odysseyGlobalRightOpen==='true',()=>false);
- const pendingRight=sessionId===undefined&&!subagentPanel&&(['browser','knowledge'].includes(document.body.dataset.workspaceSurface)||pendingPaneOpen);`)}
+ const imageFactoryActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);return()=>document.removeEventListener('sherlock:workspace-surface-change',callback)},()=>!subagentPanel&&document.body.dataset.workspaceSurface==='image-factory',()=>false);
+ const pendingRight=sessionId===undefined&&!subagentPanel&&(['browser','knowledge','image-factory'].includes(document.body.dataset.workspaceSurface)||pendingPaneOpen);`)}
 
  replace('const inputState = useInput((s) => s);\n/* ework:notes-composer-slots:v1 */',`const nativeInputState = useInput((s) => s);
  const pendingDraft=react.useSyncExternalStore(eworkPendingConversation?.shell.state.subscribe||(()=>()=>{}),eworkPendingConversation?.shell.state.getSnapshot||(()=>undefined));
@@ -209,7 +219,7 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive || pendi
  replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && !browserAppActive && (activeView == null || activeView === "chat")')
  replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || browserAppActive && conversationVacant || research && sessionId !== void 0 && conversationVacant;')
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)
- replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation:pendingRight,')
+ replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation:pendingRight,eworkImageFactory:imageFactoryActive,')
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingRight && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(sessionId===undefined&&eworkPendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
  replace('selectWorkspace: async (workspaceId) => {','selectWorkspace: async (workspaceId) => {\n if(sessionId===undefined&&(["browser","knowledge"].includes(document.body.dataset.workspaceSurface)||document.body.dataset.odysseyGlobalRightOpen==="true")){eworkPendingConversation?.selectWorkspace(workspaceId);return;}')
@@ -232,6 +242,7 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive || pendi
  }
  `+browserSendAnchor)
  replace('const researchActive = this.researchActiveSessions.has(session.sessionId);',"const researchActive = this.researchActiveSessions.has(session.sessionId) && document.body.dataset.workspaceSurface!=='browser';")
+ replace('const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(', 'const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(imageFactoryActive ? react.createElement(EWorkImageFactoryConversation,{t}) : ')
  replace("activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation", "pendingRight ? researchConversationView : activeView === 'notes' && document.body.dataset.workspaceSurface!=='browser' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation")
  const project='function projectUserText(text, openFile) {'
  replace(project,project+`\nconst browserParts=(${browserUserTextSegments.toString()})(text);if(browserParts)return react_jsx_runtime.jsx(react.Fragment,{children:browserParts.map((part,index)=>part.url?react_jsx_runtime.jsx('a',{href:part.url,title:part.url,className:MessageItem_module_css_default.refChip,'data-ref-chip':'browser-source',children:part.title||new URL(part.url).hostname},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});`)
