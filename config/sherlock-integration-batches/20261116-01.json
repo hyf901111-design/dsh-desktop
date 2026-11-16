@@ -11,29 +11,25 @@
         "schemaVersion": 1,
         "featureName": "现金流表格演示、知识库侧栏对齐与分类打开模式",
         "branch": "codex/feat/spreadsheet-cash-flow-guide-20261116",
-        "baseCommit": "cfdba23c04a95adbc0138412c127e2b432f6d252",
-        "tipCommit": "f175f390bbc5ab9ab8e9b205aef614153cbdab19",
+        "baseCommit": "f175f390bbc5ab9ab8e9b205aef614153cbdab19",
+        "tipCommit": "137f03e083ac1fdc0323158dd079ab6ec6f54b5a",
         "commits": [
           {
-            "commit": "f175f390bbc5ab9ab8e9b205aef614153cbdab19",
+            "commit": "137f03e083ac1fdc0323158dd079ab6ec6f54b5a",
             "parents": [
-              "cfdba23c04a95adbc0138412c127e2b432f6d252"
+              "f175f390bbc5ab9ab8e9b205aef614153cbdab19"
             ],
-            "subject": "按画布坐标演示真实表格区域框选"
+            "subject": "在选区引用旁输入时兼容原生占位符变化"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/home-guide-pointer.ts"
+            "path": "src/preload/spreadsheet/cash-flow-guide.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-pointer.test.ts"
+            "path": "test/spreadsheet-cash-flow-playback.test.ts"
           }
         ],
         "checks": [
@@ -45,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "f175f390bbc5ab9ab8e9b205aef614153cbdab19",
-            "completedAt": "2026-11-15T23:56:42.435143+00:00",
+            "verifiedCommit": "137f03e083ac1fdc0323158dd079ab6ec6f54b5a",
+            "completedAt": "2026-11-16T00:08:10.482703+00:00",
             "timeoutMs": 120000
           },
           {
@@ -61,15 +57,15 @@
               "test/spreadsheet-cash-flow-sandbox.test.ts"
             ],
             "outcome": "passed",
-            "summary": "36 项聚焦检查，覆盖被容器裁剪的原生画布和原有指针场景",
-            "verifiedCommit": "f175f390bbc5ab9ab8e9b205aef614153cbdab19",
-            "completedAt": "2026-11-15T23:56:42.435143+00:00",
+            "summary": "37 项聚焦检查，覆盖画布坐标和选区引用占位符在输入期间重新测量",
+            "verifiedCommit": "137f03e083ac1fdc0323158dd079ab6ec6f54b5a",
+            "completedAt": "2026-11-16T00:08:10.482703+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "上一候选实包完成 XLSX 导入、原生对话和同比公式写入。用画布真实坐标修正第三步框选，定位回归检查通过，待重新构建实机全流程确认。"
+          "summary": "上一候选实包完成 XLSX 导入、首轮对话、公式写入、连续框选和输入框选区引用。实际客户端的引用占位符随测量变化已添加回归，待重新构建复验第二轮及组件。"
         },
         "acceptanceCriteria": [
           "从探索打开第六个案例，在独立工作簿完成整理、趋势图、组件生成",
@@ -86,60 +82,7 @@
           "AI 对话为免计费固定样本回放",
           "需按本地构建手册核验完整客户端"
         ],
-        "generatedAt": "2026-11-15T23:56:42.435143+00:00"
-      },
-      "merged": {
-        "mergeCommit": "844864061ab8eca83545f2f1b81f847b7817ad57",
-        "verificationCommit": "844864061ab8eca83545f2f1b81f847b7817ad57",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "844864061ab8eca83545f2f1b81f847b7817ad57",
-            "completedAt": "2026-11-15T23:56:55.611Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-spreadsheet-runtime.test.js",
-              "test/spreadsheet-cash-flow-guide.test.ts",
-              "test/spreadsheet-workbook.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/home-guide-explore-entry-browser.test.ts",
-              "test/browser-sidebar-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-spreadsheet-runtime.test.js test/spreadsheet-cash-flow-guide.test.ts test/spreadsheet-workbook.test.ts test/home-guide-operations-entry.test.ts test/home-guide-explore-entry-browser.test.ts test/browser-sidebar-entry.test.ts",
-            "verifiedCommit": "844864061ab8eca83545f2f1b81f847b7817ad57",
-            "completedAt": "2026-11-15T23:56:55.611Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "test/home-operations-browser.test.js",
-              "-t",
-              "all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/explore-menu-browser.test.ts test/home-operations-browser.test.js -t all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks",
-            "verifiedCommit": "844864061ab8eca83545f2f1b81f847b7817ad57",
-            "completedAt": "2026-11-15T23:56:55.611Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-15T23:56:55.611Z"
+        "generatedAt": "2026-11-16T00:08:10.482703+00:00"
       }
     }
   ],
