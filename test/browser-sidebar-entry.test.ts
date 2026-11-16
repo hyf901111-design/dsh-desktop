@@ -81,6 +81,9 @@ it('closes More as soon as the spreadsheet demo clicks New Spreadsheet',async()=
  let pending:Promise<unknown>|undefined
  try{
   const client=await createHomeGuideEntryClient(document,{runId:'spreadsheet-more-test',kind:'spreadsheet',signal:controller.signal,sourceSessionId:selected})
+  const home=document.querySelector<HTMLButtonElement>('[data-sidebar-home]')!
+  home.getBoundingClientRect=()=>new w.DOMRect(10,10,100,35) as unknown as DOMRect
+  await expect(client.prepare(home,'sidebar-home')).rejects.toMatchObject({name:'AbortError'})
   more.click()
   expect(more.getAttribute('aria-expanded')).toBe('true')
   const menu=document.querySelector('[data-sidebar-more]')!
