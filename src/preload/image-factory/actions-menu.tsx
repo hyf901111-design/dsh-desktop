@@ -26,7 +26,8 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
     if (bounds) {
       const width = doc.defaultView?.innerWidth ?? bounds.right
       const left = Math.max(edgeInset, Math.min(bounds.right - menuWidth, width - menuWidth - edgeInset))
-      setPosition({ left, top: bounds.bottom + 5, opensLeft: left >= menuWidth + edgeInset })
+      const opensLeft = width - left - menuWidth < menuWidth + edgeInset && left >= menuWidth + edgeInset
+      setPosition({ left, top: bounds.bottom + 5, opensLeft })
     }
   }
   function focusFirst(group?: HTMLDivElement | null) {
@@ -90,7 +91,7 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
       <button type="button" ref={exportItem} role="menuitem" aria-haspopup="menu" aria-expanded={branch} disabled={!canExport}
         onPointerEnter={event => { if (canExport && event.pointerType !== 'touch') showFormats(false) }}
         onKeyDown={event => {
-          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); showFormats(true) }
+          if (event.key === (position.opensLeft ? 'ArrowLeft' : 'ArrowRight')) { event.preventDefault(); showFormats(true) }
         }}
         onClick={() => showFormats(true)}>{t('导出', 'Export')}
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"
