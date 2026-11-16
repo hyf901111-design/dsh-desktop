@@ -70,10 +70,14 @@ it('collects a factory result from the native turn, updates it with the full can
       allowSession: () => true, check: () => {} })
     await scan()
     const [collected] = (await store.snapshot()).documents
-    expect(collected).toMatchObject({ name: '活动海报.png', sessionId, source: 'generated', sessionTitle: '图片会话' })
+    expect(collected).toMatchObject({
+      name: '活动海报.png', sessionId, source: 'generated', sessionTitle: '图片会话', generatedBy: 'image-factory'
+    })
     await store.edit({ type: 'rename', id: collected!.id, name: '已整理.png' })
     await store.collectFactoryImage(png, { id, name: '新名称', sessionId, processed: true })
-    expect((await store.snapshot()).documents).toEqual([expect.objectContaining({ id: collected!.id, name: '已整理.png' })])
+    expect((await store.snapshot()).documents).toEqual([
+      expect.objectContaining({ id: collected!.id, name: '已整理.png', generatedBy: 'image-factory' })
+    ])
     await store.edit({ type: 'remove', id: collected!.id })
     await writeFile(log, lines.map(row => JSON.stringify(row)).join('\n') + '\n\n')
     await scan()
