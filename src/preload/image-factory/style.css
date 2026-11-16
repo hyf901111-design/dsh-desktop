@@ -111,9 +111,21 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 
 .if-stage-scroll[data-layers-open=true]{inset-inline-start:222px}
 .if-text-layer {max-width:none;cursor:move;touch-action:none}
-.if-text-layer[data-selected=true]{outline:1px solid #5191ff;outline-offset:1px}
+.image-factory textarea.if-text-layer[data-selected=true]{outline:1px solid #5191ff;outline-offset:1px}
 .image-factory textarea.if-text-layer {max-width:none;border:0;border-radius:0;padding:0;margin:0;resize:none;overflow:hidden;background:transparent;cursor:text;user-select:text}
 .image-factory textarea.if-text-layer::placeholder{opacity:.7;color:inherit}
+.if-text-bounds {position:absolute;z-index:3;outline:1px solid #5191ff;pointer-events:none}
+.image-factory button.if-text-handle {position:absolute;display:grid;place-items:center;width:18px;height:18px;padding:0;
+  background:transparent;transform:translate(-50%,-50%);pointer-events:auto;touch-action:none}
+.if-text-handle::before {content:'';width:8px;height:8px;background:#fff;border:1px solid #5191ff;border-radius:2px}
+.if-text-handle:hover::before,.if-text-handle:focus-visible::before {background:#5191ff}
+.if-text-handle[data-text-resize-handle$="w"] {left:4px}
+.if-text-handle[data-text-resize-handle$="e"] {left:calc(100% - 4px)}
+.if-text-handle:is([data-text-resize-handle="w"],[data-text-resize-handle="e"]) {top:50%;cursor:ew-resize}
+.if-text-handle[data-text-resize-handle^="n"] {top:4px}
+.if-text-handle[data-text-resize-handle^="s"] {top:calc(100% - 4px)}
+.if-text-handle:is([data-text-resize-handle="nw"],[data-text-resize-handle="se"]) {cursor:nwse-resize}
+.if-text-handle:is([data-text-resize-handle="ne"],[data-text-resize-handle="sw"]) {cursor:nesw-resize}
 .if-raster[data-selecting=true] .if-text-layer{pointer-events:none}
 .if-mark-hint {position:absolute;z-index:4;top:14px;left:50%;transform:translateX(-50%);font-size:12px;max-width:calc(100% - 20px);padding:8px 12px;border:1px solid #ffffff18;border-radius:8px;color:#fff;background:#1d2639e8;pointer-events:none}
 .if-comment,.if-layers,.if-text-format {position:absolute;z-index:4;padding:10px 12px;border:1px solid var(--if-line);border-radius:11px;background:var(--if-panel);box-shadow:0 7px 26px #0004}

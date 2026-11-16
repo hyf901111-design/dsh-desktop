@@ -49,7 +49,7 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
   }
 })
 
-it.each([false, true])('saves a text drag at the release point (lost capture: %s)', async lostCapture => {
+it.each([false, true])('moves and resizes the selected text box (lost capture: %s)', async lostCapture => {
   const text: TextLayer = { id: randomUUID(), kind: 'text', text: '可拖动文字', x: .1, y: .2, width: .6,
     fontSize: 36, family: 'system-ui', weight: 400, color: '#ffffff', align: 'center' }
   const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '测试画布', width: 800, height: 1000, layers: [text] }
@@ -72,6 +72,7 @@ it.each([false, true])('saves a text drag at the release point (lost capture: %s
     await act(async () => factory.open())
     const label = document.querySelector<HTMLElement>('[data-canvas-text-id]')!
     const frame = label.closest<HTMLElement>('.if-raster')!
+    expect(frame.querySelector('[data-text-resize-handle]')).toBeNull()
     Object.defineProperty(label, 'setPointerCapture', { value: vi.fn() })
     vi.spyOn(label, 'getBoundingClientRect').mockReturnValue(new DOMRect(80, 200, 480, 44))
     const pointer = (type: string, target: Element, buttons: number, clientX: number, clientY: number) =>
@@ -84,8 +85,29 @@ it.each([false, true])('saves a text drag at the release point (lost capture: %s
     const saved = write.mock.calls.at(-1)?.[0].canvas.layers[0] as TextLayer
     expect(saved?.x).toBeCloseTo(.3)
     expect(saved?.y).toBeCloseTo(.6)
+    expect(frame.querySelectorAll('[data-text-resize-handle]')).toHaveLength(6)
+    const east = frame.querySelector<HTMLButtonElement>('[data-text-resize-handle="e"]')!
+    Object.defineProperty(east, 'setPointerCapture', { value: vi.fn() })
+    await act(async () => {
+      pointer('pointerdown', east, 1, 720, 622)
+      pointer('pointerup', frame, 0, 640, 622)
+    })
+    const narrowed = write.mock.calls.at(-1)?.[0].canvas.layers[0] as TextLayer
+    expect(narrowed.width).toBeCloseTo(.5)
+    expect(narrowed.fontSize).toBe(36)
+    const corner = frame.querySelector<HTMLButtonElement>('[data-text-resize-handle="se"]')!
+    Object.defineProperty(corner, 'setPointerCapture', { value: vi.fn() })
+    await act(async () => {
+      pointer('pointerdown', corner, 1, 640, 644)
+      pointer('pointerup', frame, 0, 540, 633)
+    })
+    const scaled = write.mock.calls.at(-1)?.[0].canvas.layers[0] as TextLayer
+    expect(scaled.width).toBeCloseTo(.375)
+    expect(scaled.fontSize).toBeCloseTo(27)
+    expect(document.querySelector<HTMLInputElement>('input[aria-label="字号"]')?.value).toBe('27')
     await act(async () => label.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
     expect(document.querySelector<HTMLTextAreaElement>('textarea[data-canvas-text-id]')?.value).toBe(text.text)
+    expect(frame.querySelectorAll('[data-text-resize-handle]')).toHaveLength(0)
   } finally {
     await act(async () => factory.dispose())
     host.dispose()
