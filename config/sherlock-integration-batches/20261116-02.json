@@ -11,25 +11,41 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "3e2b958471698905b23604f4274e859b5269f5a5",
-        "tipCommit": "2208079e8c3cffc640662b9fae8c280ebe004b20",
+        "baseCommit": "2208079e8c3cffc640662b9fae8c280ebe004b20",
+        "tipCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
         "commits": [
           {
-            "commit": "2208079e8c3cffc640662b9fae8c280ebe004b20",
+            "commit": "753ca1ede59115467b09e7beefe7d2361613552b",
             "parents": [
-              "3e2b958471698905b23604f4274e859b5269f5a5"
+              "2208079e8c3cffc640662b9fae8c280ebe004b20"
             ],
-            "subject": "修复：图像工厂图层拖放按释放位置完成排序"
+            "subject": "修复：图像工厂交付后结束原生对话并保留来源名称"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/image-factory/view.tsx"
           },
           {
-            "status": "A",
-            "path": "test/image-factory-layer-gesture.test.ts"
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
           }
         ],
         "checks": [
@@ -41,8 +57,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "2208079e8c3cffc640662b9fae8c280ebe004b20",
-            "completedAt": "2026-11-16T19:13:27.597Z",
+            "verifiedCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
+            "completedAt": "2026-11-16T19:31:30.993Z",
             "timeoutMs": 120000
           },
           {
@@ -50,31 +66,32 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-layer-gesture.test.ts",
+              "test/image-generation-tool.test.js",
+              "test/image-factory-native.test.js",
+              "test/knowledge-history-backfill.test.ts",
               "test/image-factory.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-canvases.test.ts"
+              "test/image-generation-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "16 项画布和图层交互聚焦检查通过。",
-            "verifiedCommit": "2208079e8c3cffc640662b9fae8c280ebe004b20",
-            "completedAt": "2026-11-16T19:13:27.597Z",
+            "summary": "生图工具、通用会话、知识库、画布和结果显示共 45 项聚焦检查通过。",
+            "verifiedCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
+            "completedAt": "2026-11-16T19:31:30.993Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "隔离 Electron 原生窗口复现并验证：拖动上下排序，拖出面板取消，双击仍可编辑。"
+          "outcome": "not-applicable",
+          "summary": "原签名版实际框选改图已生成、展示并入库，已捕获重复调用；修复待签名版复测。"
         },
         "acceptanceCriteria": [
-          "图层拖放更新列表和画布叠放顺序。",
-          "放开鼠标时捕获先丢失仍以目标行完成排序。",
-          "保持点击、双击、拖出面板取消和键盘排序。"
+          "直接生图或框选改图一次交付后使用通用对话收尾。",
+          "同一来源的改图成品自动入库并按来源会话检索。",
+          "用户明确要求后续工作时原生工具可继续。"
         ],
         "risks": [
-          "集成后的签名客户端需复测画布持久化和导出。"
+          "实际生图复测使用现有图像模型连接。"
         ],
-        "generatedAt": "2026-11-16T19:13:27.597Z"
+        "generatedAt": "2026-11-16T19:31:30.993Z"
       }
     },
     {
