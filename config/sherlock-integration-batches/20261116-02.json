@@ -11,33 +11,29 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
-        "tipCommit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
+        "baseCommit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
+        "tipCommit": "44a9d377618f9e6ef869d4f84d5d9a2ddbf801b7",
         "commits": [
           {
-            "commit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
+            "commit": "44a9d377618f9e6ef869d4f84d5d9a2ddbf801b7",
             "parents": [
-              "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54"
+              "bc0725bf7e7c821d1236c880ed16e4e9abf8157e"
             ],
-            "subject": "修复：图像工厂按会话指定比例生成和导出"
+            "subject": "优化：图像工厂首页采用居中横向灵感画廊"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+            "path": "src/preload/image-factory/gallery-examples.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
+            "path": "src/preload/image-factory/gallery.tsx"
           },
           {
             "status": "M",
-            "path": "test/image-factory.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-generation-tool.test.js"
+            "path": "src/preload/image-factory/style.css"
           }
         ],
         "checks": [
@@ -49,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
-            "completedAt": "2026-11-16T16:45:38.047Z",
+            "verifiedCommit": "44a9d377618f9e6ef869d4f84d5d9a2ddbf801b7",
+            "completedAt": "2026-11-16T17:05:50.439Z",
             "timeoutMs": 120000
           },
           {
@@ -60,34 +56,26 @@
               "run",
               "test/image-factory.test.js",
               "test/image-factory-native.test.js",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-generation-tool.test.js",
-              "test/image-generation-client.test.js",
-              "test/hosted-ark-runtime.test.js",
-              "test/knowledge-history-backfill.test.ts",
-              "test/pending-conversation.test.js"
+              "test/image-factory-canvas-workspace.test.ts"
             ],
             "outcome": "passed",
-            "summary": "57 项图像工厂、托管生图与知识库聚焦检查通过。",
-            "verifiedCommit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
-            "completedAt": "2026-11-16T16:45:38.047Z",
+            "summary": "16 项图像工厂、共用输入框和持久化画布聚焦检查通过。",
+            "verifiedCommit": "44a9d377618f9e6ef869d4f84d5d9a2ddbf801b7",
+            "completedAt": "2026-11-16T17:05:50.439Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 验证 4:5 生成和导出为 1080×1350，偏窄的模拟回图保持完整构图并延展不透明外缘，正确保留圆形比例；7:5 精准输出 1596×1140，透明素材保留透明边缘。"
+          "summary": "Chromium 加载实际组件和 12 张图片，测得居中上下各留白 157px；横向滚动、鼠标和键盘暂停、重复组等宽无错位，越过循环边界后继续向左移动。"
         },
         "acceptanceCriteria": [
-          "画布指明的比例进入托管图片模型的提示。",
-          "最终导出保持用户指定比例及完整构图。",
-          "回图有透明边缘时保留原透明语义。"
+          "首页工作区的横向灵感画廊整体上下居中。",
+          "每个示例显示标题、提示词、使用场景和图像参数。",
+          "选择示例将完整提示词和画面比例带入右侧通用输入框，供用户编辑和发送。"
         ],
-        "risks": [
-          "托管模型在现有网关分辨率下根据提示选择尺寸，客户端适配最终画布。"
-        ],
-        "generatedAt": "2026-11-16T16:45:38.047Z"
+        "risks": [],
+        "generatedAt": "2026-11-16T17:05:50.439Z"
       }
     },
     {
