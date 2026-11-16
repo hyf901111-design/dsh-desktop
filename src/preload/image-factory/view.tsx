@@ -237,6 +237,49 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     return () => { observer.disconnect(); scroller.removeEventListener('scroll', locate) }
   }, [area, current?.id, current?.width, current?.height, displayScale, pan, scope])
 
+  const focusComment = !!area && !!commentPos && !commentPending && !selectionDraft?.error
+  useLayoutEffect(() => {
+    if (focusComment) commentBubble.current?.querySelector('textarea')?.focus({ preventScroll: true })
+  }, [area, focusComment])
+
+  useLayoutEffect(() => {
+    const abort = () => {
+      if (!rectangleDrag.current) return
+      rectangleDrag.current = undefined
+      setRubberband(undefined)
+    }
+    if (!marking || !current || busy) { abort(); return }
+    const update = (event: globalThis.PointerEvent, released: boolean) => {
+      const drag = rectangleDrag.current, frame = imageFrame.current
+      if (drag?.pointer !== event.pointerId || !frame) return
+      const point = canvasPoint(event.clientX, event.clientY, frame.getBoundingClientRect(), current)
+      const selection = between(drag.start, point)
+      if (!released) { if (event.buttons & 1) setRubberband(selection); return }
+      if (event.buttons & 1) return
+      abort()
+      if (selection.width < 2 || selection.height < 2) return
+      setMarking(false)
+      setSelectionDraft(current.id, { area: selection, text: '' })
+    }
+    const move = (event: globalThis.PointerEvent) => update(event, false)
+    const end = (event: globalThis.PointerEvent) => update(event, true)
+    const cancel = (event: globalThis.PointerEvent) => { if (rectangleDrag.current?.pointer === event.pointerId) abort() }
+    const surfaceChanged = () => { if (doc.body.dataset.workspaceSurface !== 'image-factory') abort() }
+    // Pointer capture can be lost before Chromium dispatches pointerup to a neighboring element.
+    doc.addEventListener('pointermove', move, true)
+    doc.addEventListener('pointerup', end, true)
+    doc.addEventListener('pointercancel', cancel, true)
+    doc.addEventListener('sherlock:workspace-surface-change', surfaceChanged)
+    doc.defaultView?.addEventListener('blur', abort)
+    return () => {
+      doc.removeEventListener('pointermove', move, true)
+      doc.removeEventListener('pointerup', end, true)
+      doc.removeEventListener('pointercancel', cancel, true)
+      doc.removeEventListener('sherlock:workspace-surface-change', surfaceChanged)
+      doc.defaultView?.removeEventListener('blur', abort)
+    }
+  }, [doc, marking, current, busy])
+
   function setSelectionDraft(id: string, draft?: SelectionDraft) {
     if (draft) selectionDrafts.current.set(id, draft)
     else if (!selectionDrafts.current.delete(id)) return
@@ -350,24 +393,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     }
     patchLayer(drag.layer.id, patch, released)
   }
-  function onRectanglePointer(event: PointerEvent<HTMLDivElement>, phase: 'start' | 'move' | 'end' | 'cancel') {
-    if (!marking || !current || busy) return
-    const point = canvasPoint(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect(), current)
-    if (phase === 'start') {
-      if (event.button !== 0 || rectangleDrag.current) return
-      rectangleDrag.current = { pointer: event.pointerId, start: point }
-      event.currentTarget.setPointerCapture(event.pointerId)
-      setRubberband(undefined)
-      return
-    }
-    if (rectangleDrag.current?.pointer !== event.pointerId) return
-    const selection = between(rectangleDrag.current.start, point)
-    if (phase === 'move') { setRubberband(selection); return }
-    rectangleDrag.current = undefined; setRubberband(undefined)
-    if (phase === 'end' && selection.width >= 2 && selection.height >= 2) {
-      setMarking(false)
-      setSelectionDraft(current.id, { area: selection, text: '' })
-    }
+  function startRectangle(event: PointerEvent<HTMLDivElement>) {
+    if (!marking || !current || busy || !event.isPrimary || event.button !== 0 || rectangleDrag.current) return
+    const start = canvasPoint(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect(), current)
+    rectangleDrag.current = { pointer: event.pointerId, start }
+    event.currentTarget.setPointerCapture(event.pointerId)
   }
   async function importFile(image?: File) {
     if (!image || busy) return
@@ -624,11 +654,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             style={{ width: Math.max(1, current.width * displayScale), height: Math.max(1, current.height * displayScale),
               transform: 'translate(' + pan.x + 'px, ' + pan.y + 'px)' }}
             onPointerDownCapture={event => { if (event.isPrimary) textPointer(event, 'cancel') }}
-            onPointerDown={event => onRectanglePointer(event, 'start')}
-            onPointerMove={event => { onRectanglePointer(event, 'move'); textPointer(event, 'move') }}
-            onPointerUp={event => { onRectanglePointer(event, 'end'); textPointer(event, 'end') }}
-            onPointerCancel={event => { onRectanglePointer(event, 'cancel'); textPointer(event, 'cancel') }}
-            onLostPointerCapture={event => onRectanglePointer(event, 'cancel')}>
+            onPointerDown={startRectangle}
+            onPointerMove={event => textPointer(event, 'move')}
+            onPointerUp={event => textPointer(event, 'end')}
+            onPointerCancel={event => textPointer(event, 'cancel')}>
             <div className="if-raster-artwork">
               {current.layers.map(layer => {
                 if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
@@ -676,7 +705,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           {selectionDraft.phase === 'processing' ? <div role="status">{t('正在修改选区…', 'Editing selected area…')}</div>
             : <form role="dialog" aria-label={t('修改选区', 'Edit selected area')} onSubmit={event => { event.preventDefault(); sendComment() }}>
               <div className="if-float-header"><strong>{t('修改选区', 'Edit selected area')}</strong><Button icon="close" label={t('取消框选', 'Cancel selection')} disabled={commentPending} onClick={clearSelection}/></div>
-              <textarea autoFocus={!selectionDraft.error} aria-label={t('修改意见', 'Edit instructions')} placeholder={t('描述要怎么修改这个区域…', 'Describe how to edit this area…')}
+              <textarea aria-label={t('修改意见', 'Edit instructions')} placeholder={t('描述要怎么修改这个区域…', 'Describe how to edit this area…')}
                 ref={element => { if (element && commentPos && !selectionDraft.text && !commentPending && doc.activeElement === doc.body) element.focus({ preventScroll: true }) }}
                 value={selectionDraft.text} maxLength={3600} disabled={commentPending}
                 onChange={event => setSelectionDraft(current.id, { ...selectionDraft, text: event.target.value })}
