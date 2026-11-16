@@ -78,11 +78,41 @@ it('keeps short horizontal labels at 258px and switches to the standard EFund fi
   const metrics:{height:number;line:number}[]=await labels.evaluateAll((nodes:HTMLElement[])=>nodes.map(node=>({height:node.clientHeight,line:parseFloat(getComputedStyle(node).lineHeight)})))
   expect(metrics.every(({height,line})=>height<=line+1)).toBe(true)
   await frame.getByRole('button',{name:'+3,000 万元',exact:true}).click()
-  await frame.getByRole('button',{name:'易方达模式',exact:true}).click()
+  expect(await frame.getByRole('button',{name:'易方达模式',exact:true}).count()).toBe(0)
+  await page.locator('#outer').evaluate((outer:HTMLIFrameElement)=>
+   outer.contentWindow?.postMessage({type:'sherlock-workbench-style',mode:'enterprise',controlTheme:'light'},'*'))
+  await expect.poll(()=>frame.locator('html').getAttribute('data-workbench-style')).toBe('enterprise')
   expect(await frame.locator('.bridge-step .bridge-bar').evaluateAll((nodes:HTMLElement[])=>nodes.map(node=>getComputedStyle(node).backgroundColor)))
    .toEqual(['rgb(0, 80, 150)','rgb(30, 185, 225)','rgb(150, 150, 150)','rgb(150, 150, 150)','rgb(30, 185, 225)','rgb(0, 80, 150)'])
   expect(await frame.locator('[data-ratio]').textContent()).toBe('76%')
   expect(await frame.locator('[data-source-detail]').textContent()).toContain('情景多回款')
+ }finally{await page.close()}
+},15000)
+
+it('paints a flat range track and retains real keyboard and pointer input',async()=>{
+ const {page,frame}=await preview(true)
+ try{
+  const slider=frame.locator('#cash-flow-collections')
+  const styles=await slider.evaluate((node:HTMLInputElement)=>{
+   const input=getComputedStyle(node),track=getComputedStyle(node,'::-webkit-slider-runnable-track')
+   return {appearance:input.appearance,border:input.borderTopWidth,shadow:input.boxShadow,percent:node.style.getPropertyValue('--collection-fill'),track:track.borderTopWidth}
+  })
+  expect(styles).toEqual({appearance:'none',border:'0px',shadow:'none',percent:'0%',track:'0px'})
+  await slider.press('End')
+  expect(await slider.evaluate((node:HTMLInputElement)=>node.style.getPropertyValue('--collection-fill'))).toBe('100%')
+  expect(await frame.locator('[data-flow]').textContent()).toBe('2.40')
+  await slider.press('Home')
+  const bounds=await slider.boundingBox()
+  expect(bounds).not.toBeNull()
+  const y=bounds!.y+bounds!.height/2
+  await page.mouse.move(bounds!.x+7,y)
+  await page.mouse.down()
+  await page.mouse.move(bounds!.x+bounds!.width*.6,y,{steps:12})
+  await page.mouse.up()
+  const amount=Number(await slider.inputValue())
+  expect(amount).toBeGreaterThan(4000)
+  expect(amount).toBeLessThan(6000)
+  expect(Number(await frame.locator('[data-flow]').textContent())).toBeCloseTo(1.60+amount/10000,2)
  }finally{await page.close()}
 },15000)
 

@@ -1,5 +1,3 @@
-import {workbenchStylePalette} from '../../../packages/dsh-research-task-runtime/workbench-style.js'
-
 export type CashFlowGuideLocale = 'zh'|'en'
 type BridgeStep = {
   id:'profit'|'depreciation'|'receivables'|'inventory'|'other'|'cash'
@@ -14,7 +12,7 @@ const copy = {
     unit:'亿元', chart:'从净利润到经营现金流', assumption:'若当季多收回货款',
     actual:'实际', estimate:'测算', max:'8,000 万元', labels:['净利润','折旧摊销','应收增加','存货增加','其他调整','现金流'],
     shortLabels:['净利','折旧','应收','存货','其他','现金'],
-    colors:'柱图配色', defaultStyle:'默认', enterpriseStyle:'易方达模式', scenarioReceipt:'情景多回款',
+    scenarioReceipt:'情景多回款',
     targetMet:'达到 75% 目标', targetGap:'距 75% 目标差', points:'个百分点',
     actualPreset:'实际值', trialPreset:'+3,000 万元', presets:'回款情景',
     moreToTarget:'距达标需多回款 ', flowChange:'经营现金流 ', ratioChange:'现金转化率 ', amountUnit:'万元',
@@ -24,13 +22,12 @@ const copy = {
     unit:'CNY 100m', chart:'From net profit to operating cash flow', assumption:'If more receivables were collected',
     actual:'Actual', estimate:'Scenario', max:'CNY 80m', labels:['Net profit','D&A','Receivables','Inventory','Other','Cash flow'],
     shortLabels:['Profit','D&A','A/R','Stock','Other','Cash'],
-    colors:'Chart colors', defaultStyle:'Default', enterpriseStyle:'EFund mode', scenarioReceipt:'Extra collections',
+    scenarioReceipt:'Extra collections',
     targetMet:'75% target reached', targetGap:'Gap to 75% target:', points:'pp',
     actualPreset:'Actual', trialPreset:'+CNY 30m', presets:'Collection scenarios',
     moreToTarget:'Extra collections needed: ', flowChange:'Cash flow ', ratioChange:'Conversion ', amountUnit:'CNY 10k',
   }
 }
-const enterprise = workbenchStylePalette('enterprise')
 const css = `
   [data-cash-flow-bridge] {
     --ink: var(--sherlock-text);
@@ -48,7 +45,7 @@ const css = `
     font: 12px/1.4 var(--sherlock-font-sans);
     font-variant-numeric: tabular-nums;
   }
-  :root[data-sherlock-theme="dark"] [data-cash-flow-bridge]:not([data-bridge-style=enterprise]) {
+  :root[data-sherlock-theme="dark"]:not([data-workbench-style="enterprise"]) [data-cash-flow-bridge] {
     --inflow: #78c8af;
     --outflow: #ed9c73;
   }
@@ -60,22 +57,11 @@ const css = `
     gap: 2px 8px;
   }
   .bridge-heading strong { font-size: 13px; }
-  .bridge-toolbar { display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:6px; margin:10px 0 6px; }
-  .bridge-palette { display:flex; flex-wrap:wrap; gap:2px; border-radius:7px; padding:2px; background:var(--sherlock-surface-muted); }
-  [data-cash-flow-bridge] .bridge-palette button {
-    min-height:24px; white-space:nowrap; font-size:11px; padding:2px 7px;
-    --sherlock-control-secondary: transparent;
-    --sherlock-control-primary: color-mix(in srgb,var(--total) 18%,var(--sherlock-surface));
-    --sherlock-control-on-primary: var(--ink);
+  :root[data-workbench-style="enterprise"] [data-cash-flow-bridge] {
+    --inflow: var(--sherlock-chart-2);
+    --outflow: var(--sherlock-chart-3);
+    --goal: var(--total);
   }
-  [data-cash-flow-bridge][data-bridge-style=enterprise] {
-    --total: ${enterprise['chart-1']};
-    --inflow: ${enterprise['chart-2']};
-    --outflow: ${enterprise['chart-3']};
-    --goal: ${enterprise['chart-1']};
-  }
-  :root[data-sherlock-theme="dark"] [data-cash-flow-bridge][data-bridge-style=enterprise] { --goal: var(--inflow); }
-  [data-bridge-style=enterprise] .bridge-bar { box-shadow: inset 0 0 0 1px #ffffff24; }
   [data-cash-flow-bridge] .bridge-secondary { color: var(--quiet); font-size: 11px; }
   [data-cash-flow-bridge] .bridge-metrics {
     display: grid;
@@ -203,7 +189,44 @@ const css = `
     --sherlock-control-on-primary: var(--ink);
   }
   .bridge-scenario label { color: var(--ink); font-weight: 600; }
-  [data-cash-flow-bridge] .bridge-scenario input { display:block; width:100%; height:23px; margin:0; padding:0; accent-color:var(--total); }
+  [data-cash-flow-bridge] .bridge-scenario input[type="range"] {
+    --sherlock-control-bg: transparent;
+    --collection-track: var(--rule);
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 23px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+  }
+  [data-cash-flow-bridge] input[type="range"]::-webkit-slider-runnable-track {
+    height: 5px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(to right, var(--total) var(--collection-fill), var(--collection-track) var(--collection-fill));
+  }
+  [data-cash-flow-bridge] input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -4.5px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--total);
+  }
+  @layer ework-workbench {
+    [data-cash-flow-bridge] .bridge-scenario input[type="range"] {
+      border: 0 !important;
+      padding: 0 !important;
+    }
+    [data-cash-flow-bridge] input[type="range"]:focus-visible { outline: none !important; }
+  }
+  [data-cash-flow-bridge] input[type="range"]:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--total);
+    outline-offset: 2px;
+  }
   [data-cash-flow-bridge] .bridge-scenario-delta { margin-top: 8px; min-height: 2.8em; }
   @media (prefers-reduced-motion:reduce) {
     .bridge-bar,.bridge-connector,.bridge-amount { transition:none; }
@@ -220,13 +243,6 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
     <strong>${company} · ${period}</strong>
     <span class="bridge-secondary">${labels.sample}</span>
   </header>
-  <div class="bridge-toolbar">
-    <span class="bridge-secondary">${labels.colors}</span>
-    <div class="bridge-palette" role="group" aria-label="${labels.colors}">
-      <button type="button" data-palette="default" aria-pressed="true">${labels.defaultStyle}</button>
-      <button type="button" data-palette="enterprise" aria-pressed="false">${labels.enterpriseStyle}</button>
-    </div>
-  </div>
   <div class="bridge-metrics" aria-live="polite">
     <div><span data-metric-label>${labels.earnings}</span><b data-profit></b><span class="bridge-secondary">${labels.unit}</span></div>
     <div><span data-metric-label><span>${labels.cash}</span><span data-mode></span></span><b data-flow></b><span class="bridge-secondary" data-actual-flow></span></div>
@@ -266,7 +282,6 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
   const slider = root.querySelector('input');
   const graph = root.querySelector('ol');
   const presets = [...root.querySelectorAll('[data-scenario]')];
-  const palettes = [...root.querySelectorAll('[data-palette]')];
   const actualProfit = steps[0].amount;
   const actualCash = steps[steps.length - 1].amount;
   const formatNumber = new Intl.NumberFormat(locale === 'en' ? 'en-US' : 'zh-CN', {maximumFractionDigits:1});
@@ -337,6 +352,7 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
 
   function render() {
     const recovered = Number(slider.value);
+    slider.style.setProperty('--collection-fill', recovered / Number(slider.max) * 100 + '%');
     const projected = actualCash + recovered;
     const ratio = projected / actualProfit * 100;
     let balance = 0;
@@ -376,10 +392,6 @@ export function buildCashFlowGuideHtml(input:{locale:CashFlowGuideLocale;company
     showAdjustment();
   }
   render();
-  for (const palette of palettes) palette.addEventListener('click', () => {
-    root.dataset.bridgeStyle = palette.dataset.palette;
-    for (const option of palettes) option.setAttribute('aria-pressed', String(option === palette));
-  });
   slider.addEventListener('input',render);
   for (const preset of presets) preset.addEventListener('click', () => {
     slider.value = preset.dataset.scenario;

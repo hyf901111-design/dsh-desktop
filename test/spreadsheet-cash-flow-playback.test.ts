@@ -3,11 +3,13 @@ import {expect,it,vi} from 'vitest'
 import {mountCashFlowGuide} from '../src/preload/spreadsheet/cash-flow-guide'
 import type {HomeGuidePointerAction} from '../src/preload/home-guide-pointer'
 
-it('starts empty, opens the import control, and uses the Insert menu before generating the docked component',async()=>{
+it('maintains the right chat and switches the generated component through the native More menu',async()=>{
  const controller=new AbortController()
  const toggle=document.createElement('button')
  toggle.dataset.odysseyPanelEntry='right'
- toggle.setAttribute('aria-expanded','false')
+ toggle.setAttribute('aria-expanded','true')
+ const toggleRight=vi.fn(()=>toggle.setAttribute('aria-expanded',String(toggle.getAttribute('aria-expanded')!=='true')))
+ toggle.onclick=toggleRight
  const form=document.createElement('section')
  const control=(copy:string,action?:()=>void)=>{
   const button=document.createElement('button')
@@ -17,7 +19,7 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
   form.append(button)
   return button
  }
- let armed=false,picking=false,imported=false,menu=false,shown=false
+ let armed=false,picking=false,imported=false,menu=false,shown=false,generated=false,moreOpen=false,themesOpen=false,themed=false
  let upload=control('导入 Excel / CSV',()=>{if(armed)picking=true})
  const originalUpload=upload
  const file=control('三家公司季度财报.xlsx',()=>{if(picking)imported=true})
@@ -25,6 +27,9 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
  const smart=control('智能组件',()=>{if(menu)shown=true})
  const input=document.createElement('textarea')
  const submit=control('生成组件')
+ const more=control('组件更多操作',()=>{if(generated)moreOpen=true})
+ const theme=control('模式切换',()=>{if(moreOpen)themesOpen=true})
+ const enterprise=control('易方达模式',()=>{if(themesOpen)themed=true})
  form.append(input)
  document.body.append(toggle,form)
  const view={
@@ -35,7 +40,10 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
   cashFlowGuideInsertButton:()=>insert,
   cashFlowGuideSmartButton:()=>menu?smart:undefined,
   cashFlowGuideComponentForm:()=>shown?{input,submit}:undefined,
-  insertCashFlowGuideComponent:vi.fn(async(wait:()=>Promise<void>)=>{await wait();return undefined}),
+  dragCashFlowGuideRange:vi.fn(async()=>{}),
+  insertCashFlowGuideComponent:vi.fn(async(wait:()=>Promise<void>)=>{await wait();generated=true;return undefined}),
+  cashFlowGuideThemeControl:(action:string)=>action==='more'&&generated?more:action==='theme'&&moreOpen?theme:action==='theme-enterprise'&&themesOpen?enterprise:undefined,
+  get cashFlowGuideEnterpriseThemeSaved(){return themed},
   closeCashFlowGuideControls:vi.fn()
  }
  const point=vi.fn(async(action:HomeGuidePointerAction)=>{
@@ -53,10 +61,14 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
   expect(imported).toBe(false)
   await adapter.runStep('import-file')
   expect(imported).toBe(true)
+  await adapter.runStep('select-component')
   await adapter.runStep('component')
+  await adapter.runStep('component-theme')
+  expect(toggleRight).not.toHaveBeenCalled()
+  expect(themed).toBe(true)
   expect(input.value).toContain('现金流拆解台')
   expect(view.insertCashFlowGuideComponent).toHaveBeenCalledOnce()
-  expect(point.mock.calls.map(([action])=>action.target.textContent)).toEqual([originalUpload,upload,file,insert,smart,submit].map(target=>target.textContent))
+  expect(point.mock.calls.map(([action])=>action.target.textContent)).toEqual([originalUpload,upload,file,insert,smart,submit,more,theme,enterprise].map(target=>target.textContent))
  }finally{
   adapter.dispose()
   toggle.remove()
@@ -69,6 +81,7 @@ it('types after a real range chip while its native display marker changes',async
  const toggle=document.createElement('button')
  toggle.dataset.odysseyPanelEntry='right'
  toggle.setAttribute('aria-expanded','false')
+ toggle.onclick=()=>toggle.setAttribute('aria-expanded','true')
  const panel=document.createElement('section')
  panel.className='t8lSSG_panel'
  panel.innerHTML='<div class="uV2eYG_root"><div class="uV2eYG_grow"><textarea data-odyssey-file-reference-session="test-session"></textarea><button class="uV2eYG_primary">发送</button></div></div>'
