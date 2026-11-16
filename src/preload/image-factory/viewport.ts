@@ -64,6 +64,11 @@ export function useImageViewport(doc: Document, scroll: RefObject<HTMLDivElement
 
   useLayoutEffect(() => {
     if (!visible) return
+    const keyboardControl = (target: EventTarget | null) =>
+      target instanceof Element ? target.closest('button:focus-visible, a[href]:focus-visible') : null
+    // Space can change :focus-visible before keydown reaches the document.
+    let keyboardFocused = keyboardControl(doc.activeElement)
+    const focusin = (event: FocusEvent) => { keyboardFocused = keyboardControl(event.target) }
     const release = () => {
       space.current = false
       setSpaceHeld(false)
@@ -75,7 +80,7 @@ export function useImageViewport(doc: Document, scroll: RefObject<HTMLDivElement
       const target = event.target
       if (target instanceof Element && target !== doc.body && target !== doc.documentElement) {
         const scroller = scroll.current
-        if (target.closest(textEntry) || target.closest('button:focus-visible, a[href]:focus-visible')) return
+        if (target.closest(textEntry) || keyboardFocused?.contains(target)) return
         if (!scroller?.contains(target) &&
             !(scroller?.matches(':hover') && scroller.closest('.image-factory')?.contains(target))) return
       }
@@ -89,11 +94,13 @@ export function useImageViewport(doc: Document, scroll: RefObject<HTMLDivElement
     const surfaceChanged = () => {
       if (doc.body.dataset.workspaceSurface !== 'image-factory') release()
     }
+    doc.addEventListener('focusin', focusin)
     doc.addEventListener('keydown', keydown)
     doc.addEventListener('keyup', keyup)
     doc.addEventListener('sherlock:workspace-surface-change', surfaceChanged)
     doc.defaultView?.addEventListener('blur', release)
     return () => {
+      doc.removeEventListener('focusin', focusin)
       doc.removeEventListener('keydown', keydown)
       doc.removeEventListener('keyup', keyup)
       doc.removeEventListener('sherlock:workspace-surface-change', surfaceChanged)
