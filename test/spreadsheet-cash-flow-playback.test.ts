@@ -11,6 +11,8 @@ it('maintains the right chat and switches the generated component through the na
  const toggleRight=vi.fn(()=>toggle.setAttribute('aria-expanded',String(toggle.getAttribute('aria-expanded')!=='true')))
  toggle.onclick=toggleRight
  const form=document.createElement('section')
+ form.style.cssText='display:contents;overflow:hidden'
+ form.getBoundingClientRect=()=>new DOMRect()
  const control=(copy:string,action?:()=>void)=>{
   const button=document.createElement('button')
   button.textContent=copy
@@ -51,6 +53,8 @@ it('maintains the right chat and switches the generated component through the na
   if(action.target===originalUpload){
    originalUpload.remove()
    upload=control('导入 Excel / CSV',()=>{if(armed)picking=true})
+   upload.getBoundingClientRect=()=>new DOMRect(50,20,100,30)
+   expect(action.targetPoint?.()).toEqual({x:100,y:35})
   }
   action.onClick?.()
  })
@@ -76,7 +80,7 @@ it('maintains the right chat and switches the generated component through the na
   expect(view.insertCashFlowGuideComponent).toHaveBeenCalledOnce()
   expect(wait).toHaveBeenCalledWith(2200,expect.any(AbortSignal))
   expect(wait).toHaveBeenCalledWith(1500,expect.any(AbortSignal))
-  expect(point.mock.calls.map(([action])=>action.target)).toEqual([originalUpload,upload,file,insert,smart,input,submit,more,theme,enterprise])
+  expect(point.mock.calls.map(([action])=>action.target)).toEqual([originalUpload,file,insert,smart,input,submit,more,theme,enterprise])
   expect(point.mock.lastCall?.[0]).toMatchObject({target:enterprise,action:'click',hover:'none',onClick:expect.any(Function)})
  }finally{
   adapter.dispose()
