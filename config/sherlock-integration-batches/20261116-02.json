@@ -9,43 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像工厂 MVP",
+        "featureName": "图像工厂：框选改图保留透明度",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "7c9fdf5c1fbeff6abc6c15afa371efe960bb22e1",
-        "tipCommit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
+        "baseCommit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
+        "tipCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
         "commits": [
           {
-            "commit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
+            "commit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
             "parents": [
-              "7c9fdf5c1fbeff6abc6c15afa371efe960bb22e1"
+              "8a6faf039cc9483c40c83dd9e50d2890c1e2c151"
             ],
-            "subject": "修复：展开侧栏的更多菜单加入图像工厂"
+            "subject": "修复：框选改图保留用户指定的透明度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/scheduled/icons.ts"
+            "path": "src/preload/image-factory/raster.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
+            "path": "src/preload/image-factory/view.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-note-browser.test.js"
+            "path": "test/image-factory.test.js"
           }
         ],
         "checks": [
@@ -56,9 +44,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript 聚焦验证通过。",
-            "verifiedCommit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
-            "completedAt": "2026-11-16T23:38:01.080Z",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
+            "completedAt": "2026-11-16T23:57:17.336Z",
             "timeoutMs": 120000
           },
           {
@@ -66,79 +54,27 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-factory-gallery.test.ts",
               "test/image-factory.test.js",
-              "test/browser-app-native.test.js",
-              "test/conversation-submission.test.js",
-              "test/conversation-response-progress.test.js",
-              "test/image-factory-fonts-rendered.test.js",
-              "test/browser-sidebar-entry.test.ts",
-              "test/scheduled-task-view.test.ts"
+              "test/image-factory-native.test.js",
+              "test/image-factory-layer-gesture.test.ts"
             ],
             "outcome": "passed",
-            "summary": "图像工厂和原生对话的聚焦回归，以及六款海报字体实际渲染和导出。",
-            "verifiedCommit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
-            "completedAt": "2026-11-16T23:38:01.080Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "Image Factory"
-            ],
-            "outcome": "passed",
-            "summary": "图像工作区保存提示、左右面板、文字锚点和悬浮图层的实际 Chromium 布局。",
-            "verifiedCommit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
-            "completedAt": "2026-11-16T23:38:01.080Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-note-browser.test.js",
-              "-t",
-              "real expanded menu"
-            ],
-            "outcome": "passed",
-            "summary": "真实左侧展开菜单保留现有入口并展示图像工厂。",
-            "verifiedCommit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
-            "completedAt": "2026-11-16T23:38:01.080Z",
+            "summary": "40 项图像工厂聚焦测试通过，覆盖选区透明像素、半透明像素、边缘过渡和共用对话提交。",
+            "verifiedCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
+            "completedAt": "2026-11-16T23:57:17.336Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "旧版已复现跨出图片后框选消失。新实现验证跨边界松手、聚焦评论以及提交原生事件；签名版待复测。"
+          "summary": "旧签名版复现透明区域变白；签名预览构建后复测。"
         },
         "acceptanceCriteria": [
-          "文字选中边框有四角与左右手柄。",
-          "侧边调整宽度和换行，四角等比缩放文字框与字号。",
-          "缩放可保存，双击继续编辑。",
-          "导出有足够空间时向右展开，靠窗边向左展开，箭头同步。",
-          "保存提示在图像工作区居中。",
-          "Command 滚轮以指针位置缩放，按住空格拖动平移，适合恢复视图，文字输入保持正常。",
-          "六个文字手柄中心与框线重合。",
-          "图层在工作区左侧悬浮且不占用画布宽度。",
-          "越出图片松手后仍可输入并提交框选修改。",
-          "按图层、添加文本和框选修改排列工具栏。",
-          "更多和导出菜单各自模糊，点外部关闭。",
-          "新建图片任务显示画廊，切回已保存画布和原生对话，按账号保存任务页签。",
-          "六款海报字体在编辑和导出中实际呈现，包含思源黑体、易方达华文黑体、Montserrat。",
-          "展开侧栏的更多菜单在知识库与插件之间提供图像工厂入口。"
+          "明确要求保留原透明度时，框选回写和知识库收录使用原像素透明度。",
+          "普通框选编辑仍可改变透明区域。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T23:38:01.080Z"
+        "generatedAt": "2026-11-16T23:57:17.336Z"
       }
     },
     {
