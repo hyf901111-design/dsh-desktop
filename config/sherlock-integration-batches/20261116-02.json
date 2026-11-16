@@ -11,25 +11,21 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "79103585851304325a94e65777b64027c8235554",
-        "tipCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
+        "baseCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
+        "tipCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
         "commits": [
           {
-            "commit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
+            "commit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
             "parents": [
-              "79103585851304325a94e65777b64027c8235554"
+              "07187a9d5275a606f32cb6b0f9afcc2615328b15"
             ],
-            "subject": "修复：工作区页签按钮单击时稳定展开"
+            "subject": "修复：原生光标检测保留工作区页签悬停"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "src/preload/workspace-view-shortcuts.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-rendered.test.js"
           },
           {
             "status": "M",
@@ -45,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
-            "completedAt": "2026-11-16T20:27:10.621Z",
+            "verifiedCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
+            "completedAt": "2026-11-16T20:47:28.539Z",
             "timeoutMs": 120000
           },
           {
@@ -61,24 +57,25 @@
             ],
             "outcome": "passed",
             "summary": "浏览器和知识库共 7 项顶栏聚焦渲染检查通过。",
-            "verifiedCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
-            "completedAt": "2026-11-16T20:27:10.621Z",
+            "verifiedCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
+            "completedAt": "2026-11-16T20:47:28.539Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原签名版实机复现首击问题；修复已通过真实 Chromium 聚焦测试，待集成签名包复测。"
+          "summary": "旧签名版发现原生光标误判；此次修复通过真实 Chromium 聚焦测试，待新包实机复测。"
         },
         "acceptanceCriteria": [
           "首次直接点击页签按钮会展开四个模式，再点击收起。",
           "保留悬停后展开、离开后收起和键盘操作。",
-          "图像工厂、知识库、浏览器沿用共同行为。"
+          "图像工厂、知识库、浏览器沿用共同行为。",
+          "已经通过页面事件确认光标在顶栏内时，原生光标检测的否定结果不会收起页签。"
         ],
         "risks": [
           "本机渲染验证使用统一运行时的 Playwright 和 Chromium。"
         ],
-        "generatedAt": "2026-11-16T20:27:10.621Z"
+        "generatedAt": "2026-11-16T20:47:28.539Z"
       }
     },
     {
