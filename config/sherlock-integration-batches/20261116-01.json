@@ -11,68 +11,50 @@
         "schemaVersion": 1,
         "featureName": "现金流表格演示、知识库侧栏对齐与分类打开模式",
         "branch": "codex/feat/spreadsheet-cash-flow-guide-20261116",
-        "baseCommit": "0a68e5cedef8b02538d232357e602bb46c11a28a",
-        "tipCommit": "2c0e89ccecc13440239ffb47d908d7d1fbf08c22",
+        "baseCommit": "2c0e89ccecc13440239ffb47d908d7d1fbf08c22",
+        "tipCommit": "bf6f9d5c10809d206348f014fb31f215c3da60c8",
         "commits": [
           {
-            "commit": "2c0e89ccecc13440239ffb47d908d7d1fbf08c22",
+            "commit": "bf6f9d5c10809d206348f014fb31f215c3da60c8",
             "parents": [
-              "0a68e5cedef8b02538d232357e602bb46c11a28a"
+              "2c0e89ccecc13440239ffb47d908d7d1fbf08c22"
             ],
-            "subject": "统一表格演示从侧栏更多菜单新建表格"
+            "subject": "右对齐知识库分类统计标签"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/home-guide-entry-native.ts"
+            "path": "src/preload/knowledge/workspace.css"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-explore-entry.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-explore-entry-browser.test.js"
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "TypeScript 类型检查",
-            "verifiedCommit": "2c0e89ccecc13440239ffb47d908d7d1fbf08c22",
-            "completedAt": "2026-11-16T01:37:12.656193+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-explore-entry-browser.test.js",
-              "test/home-guide-entry-native.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts"
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "lists real session modes|aligns folder counts"
             ],
             "outcome": "passed",
-            "summary": "核验知识库折叠侧栏、展开侧栏、主页与会话启动表格演示时统一走原生更多菜单，菜单在点击后关闭",
-            "verifiedCommit": "2c0e89ccecc13440239ffb47d908d7d1fbf08c22",
-            "completedAt": "2026-11-16T01:37:12.656193+00:00",
+            "summary": "不同位数标签右边缘对齐，保持宽度自适应与四像素内边距",
+            "verifiedCommit": "bf6f9d5c10809d206348f014fb31f215c3da60c8",
+            "completedAt": "2026-11-16T01:41:58.179738+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "浏览器已复现并修复知识库折叠侧栏误走主页入口；待在最新签名包复播同一路径。"
+          "summary": "知识库标签通过浏览器几何尺寸和布局验证；侧栏原生入口及知识库标签待在同一本地包核验。"
         },
         "acceptanceCriteria": [
           "从探索打开第六个案例，在独立工作簿完成整理、趋势图、组件生成",
@@ -88,66 +70,14 @@
           "演示通过左侧更多的新建表格按钮后，菜单跟随点击收起。",
           "演示的菜单点击和输入光标对齐实际控件，导入文件与插入智能组件各自停留可读时间。",
           "知识库分类统计标签等距内边距，随数字长度自适应。",
-          "从知识库或其它工作区启动表格演示，经左侧更多菜单的新建表格打开独立表格会话。"
+          "从知识库或其它工作区启动表格演示，经左侧更多菜单的新建表格打开独立表格会话。",
+          "知识库分类统计标签右侧边缘沿同一列对齐。"
         ],
         "risks": [
           "AI 对话为免计费固定样本回放",
           "需按本地构建手册核验完整客户端"
         ],
-        "generatedAt": "2026-11-16T01:37:12.656193+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1aa5b53e0c9bbfa6d37573f448bbefcbb5e2956f",
-        "verificationCommit": "1aa5b53e0c9bbfa6d37573f448bbefcbb5e2956f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1aa5b53e0c9bbfa6d37573f448bbefcbb5e2956f",
-            "completedAt": "2026-11-16T01:37:29.756Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-spreadsheet-runtime.test.js",
-              "test/spreadsheet-cash-flow-guide.test.ts",
-              "test/spreadsheet-workbook.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/home-guide-explore-entry-browser.test.ts",
-              "test/browser-sidebar-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-spreadsheet-runtime.test.js test/spreadsheet-cash-flow-guide.test.ts test/spreadsheet-workbook.test.ts test/home-guide-operations-entry.test.ts test/home-guide-explore-entry-browser.test.ts test/browser-sidebar-entry.test.ts",
-            "verifiedCommit": "1aa5b53e0c9bbfa6d37573f448bbefcbb5e2956f",
-            "completedAt": "2026-11-16T01:37:29.756Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "test/home-operations-browser.test.js",
-              "-t",
-              "all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/explore-menu-browser.test.ts test/home-operations-browser.test.js -t all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks",
-            "verifiedCommit": "1aa5b53e0c9bbfa6d37573f448bbefcbb5e2956f",
-            "completedAt": "2026-11-16T01:37:29.756Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T01:37:29.756Z"
+        "generatedAt": "2026-11-16T01:41:58.179738+00:00"
       }
     }
   ],
