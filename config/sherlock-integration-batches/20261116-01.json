@@ -11,21 +11,63 @@
         "schemaVersion": 1,
         "featureName": "现金流表格演示、知识库侧栏对齐与分类打开模式",
         "branch": "codex/feat/spreadsheet-cash-flow-guide-20261116",
-        "baseCommit": "dff45dce67a7ec536dc8f84335ce52db28745118",
-        "tipCommit": "c88f35c5f48598a2458cfac0369701643d1835e9",
+        "baseCommit": "c88f35c5f48598a2458cfac0369701643d1835e9",
+        "tipCommit": "906a390c09ebdde3a3299c1e41371c491c4172e0",
         "commits": [
           {
-            "commit": "c88f35c5f48598a2458cfac0369701643d1835e9",
+            "commit": "5ab6c32577bcfb8e9ab6089e89dbc231b5f73612",
             "parents": [
-              "dff45dce67a7ec536dc8f84335ce52db28745118"
+              "c88f35c5f48598a2458cfac0369701643d1835e9"
             ],
-            "subject": "稳定表格演示的组件主题菜单切换"
+            "subject": "点击新建表格时同步收起侧栏更多菜单"
+          },
+          {
+            "commit": "52a16b58f5a776f5de37527e7a5f2b3f1261f50b",
+            "parents": [
+              "5ab6c32577bcfb8e9ab6089e89dbc231b5f73612"
+            ],
+            "subject": "对齐表格演示点击和输入并延长关键操作展示"
+          },
+          {
+            "commit": "906a390c09ebdde3a3299c1e41371c491c4172e0",
+            "parents": [
+              "52a16b58f5a776f5de37527e7a5f2b3f1261f50b"
+            ],
+            "subject": "使知识库统计标签按数字长度适应宽度"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/spreadsheet-inline-references.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-final-shell.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-entry-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-explore-entry.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/home-guide-pointer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
           },
           {
             "status": "M",
@@ -33,7 +75,23 @@
           },
           {
             "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/home-guide-pointer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           },
           {
             "status": "M",
@@ -49,8 +107,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "c88f35c5f48598a2458cfac0369701643d1835e9",
-            "completedAt": "2026-11-16T00:36:01.960701+00:00",
+            "verifiedCommit": "906a390c09ebdde3a3299c1e41371c491c4172e0",
+            "completedAt": "2026-11-16T01:04:52.744768+00:00",
             "timeoutMs": 120000
           },
           {
@@ -58,22 +116,44 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/browser-sidebar-entry.test.ts",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-entry-diagnostics.test.ts",
               "test/home-guide-pointer.test.ts",
               "test/spreadsheet-cash-flow-playback.test.ts",
-              "test/home-spreadsheet-runtime.test.js",
+              "test/spreadsheet-inline-references.test.js",
               "test/spreadsheet-cash-flow-guide.test.ts",
-              "test/spreadsheet-cash-flow-sandbox.test.ts"
+              "test/spreadsheet-cash-flow-sandbox.test.ts",
+              "test/home-guide-explore-entry-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "39 项聚焦检查，覆盖对话栏、主题子菜单指针、标准品牌色、滑轨样式和回款试算",
-            "verifiedCommit": "c88f35c5f48598a2458cfac0369701643d1835e9",
-            "completedAt": "2026-11-16T00:36:01.960701+00:00",
+            "summary": "153 项聚焦检查，覆盖原生菜单关合、指针动作、引用输入和生成回放",
+            "verifiedCommit": "906a390c09ebdde3a3299c1e41371c491c4172e0",
+            "completedAt": "2026-11-16T01:04:52.744768+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "lists real session modes|aligns folder counts"
+            ],
+            "outcome": "passed",
+            "summary": "2 项浏览器聚焦检查，覆盖分类计数背景尺寸、内边距及文件夹操作对齐",
+            "verifiedCommit": "906a390c09ebdde3a3299c1e41371c491c4172e0",
+            "completedAt": "2026-11-16T01:04:52.744768+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "聚焦浏览器验证真实双层组件沙箱响应原生主题消息、滑轨无描边、实鼠标拖动与键盘联动。已在上一签名包确认原生菜单路径，最新版演示全程和自动点开菜单待本地签名包复验。"
+          "summary": "已通过原生侧栏菜单和指针回放聚焦验证、知识库渲染浏览器验证；新版签名包待核对完整回放。"
         },
         "acceptanceCriteria": [
           "从探索打开第六个案例，在独立工作簿完成整理、趋势图、组件生成",
@@ -85,66 +165,16 @@
           "空白工作簿导入示例 XLSX，双轮原生对话中包含实际表格引用，再通过插入菜单生成智能组件。",
           "组件窄栏下以横排短标签展示并能切换易方达配色。",
           "三种模式参考按钮共用位置，知识库统计合计四类内容，右侧对话隐藏添加到画布。",
-          "表格演示全程保持右侧对话可见，组件生成后通过右上角更多的模式切换选易方达模式，回款滑轨为无描边扁平样式。"
+          "表格演示全程保持右侧对话可见，组件生成后通过右上角更多的模式切换选易方达模式，回款滑轨为无描边扁平样式。",
+          "演示通过左侧更多的新建表格按钮后，菜单跟随点击收起。",
+          "演示的菜单点击和输入光标对齐实际控件，导入文件与插入智能组件各自停留可读时间。",
+          "知识库分类统计标签等距内边距，随数字长度自适应。"
         ],
         "risks": [
           "AI 对话为免计费固定样本回放",
           "需按本地构建手册核验完整客户端"
         ],
-        "generatedAt": "2026-11-16T00:36:01.960701+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ac708a2410b500cadf848debb71cd83c0559f214",
-        "verificationCommit": "ac708a2410b500cadf848debb71cd83c0559f214",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ac708a2410b500cadf848debb71cd83c0559f214",
-            "completedAt": "2026-11-16T00:36:18.059Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-spreadsheet-runtime.test.js",
-              "test/spreadsheet-cash-flow-guide.test.ts",
-              "test/spreadsheet-workbook.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/home-guide-explore-entry-browser.test.ts",
-              "test/browser-sidebar-entry.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-spreadsheet-runtime.test.js test/spreadsheet-cash-flow-guide.test.ts test/spreadsheet-workbook.test.ts test/home-guide-operations-entry.test.ts test/home-guide-explore-entry-browser.test.ts test/browser-sidebar-entry.test.ts",
-            "verifiedCommit": "ac708a2410b500cadf848debb71cd83c0559f214",
-            "completedAt": "2026-11-16T00:36:18.059Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "test/home-operations-browser.test.js",
-              "-t",
-              "all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/explore-menu-browser.test.ts test/home-operations-browser.test.js -t all six example selections|latest rapid carousel|advances all six|pages through six|loops the six|six keyboard tracks",
-            "verifiedCommit": "ac708a2410b500cadf848debb71cd83c0559f214",
-            "completedAt": "2026-11-16T00:36:18.059Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T00:36:18.059Z"
+        "generatedAt": "2026-11-16T01:04:52.744768+00:00"
       }
     }
   ],
