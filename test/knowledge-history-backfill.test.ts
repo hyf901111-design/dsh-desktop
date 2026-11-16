@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zstdCompressSync } from 'node:zlib'
@@ -42,10 +42,11 @@ it('recovers closed historical deliveries from all frames without collecting inp
   }
 })
 
-it('collects a factory result from the native turn, updates it with the full canvas and respects deletion', async () => {
+it('collects each factory result, preserving the full canvas, source and library edits', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ework-knowledge-factory-'))
   try {
     const sessionId = 'session-main', id = 'e6a48a78-afdf-4e08-8c8b-b7e987012fab'
+    const editId = 'c5164048-5194-4962-81c8-e10a49579462'
     const directory = join(root, 'sessions', 'project', sessionId)
     const objects = join(root, 'objects')
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=', 'base64')
@@ -78,11 +79,30 @@ it('collects a factory result from the native turn, updates it with the full can
     expect((await store.snapshot()).documents).toEqual([
       expect.objectContaining({ id: collected!.id, name: '已整理.png', generatedBy: 'image-factory' })
     ])
+    const edited = await store.collectFactoryImage(png, { id: editId, name: '局部调整', sessionId, processed: true })
+    await store.edit({ type: 'rename', id: edited!.id, name: '修订海报.png' })
+    await store.edit({ type: 'save', id: edited!.id, value: true })
+    const editedFile = await store.file(edited!.id)
+    lines.push({ type: 'tool/code-dispatch', data: { name: 'image_generate', content: [
+      { type: 'text', text: JSON.stringify({ ...receipt, factory: { id: editId, title: '局部调整' } }) },
+      { type: 'image', attachment: image }
+    ] } })
+    await writeLog()
+    const previousLog = await stat(log)
+    await store.saveHistoricalScanRevisions({
+      [sessionId]: JSON.stringify(['session.jsonl', previousLog.size, previousLog.mtimeMs])
+    }, () => {})
+    await scan()
+    expect(await store.file(edited!.id)).toEqual({
+      path: editedFile.path,
+      document: expect.objectContaining({ name: '修订海报.png', saved: true, sessionId, sessionTitle: '图片会话' })
+    })
+    expect((await store.snapshot()).documents).toHaveLength(2)
     await store.edit({ type: 'remove', id: collected!.id })
     await writeFile(log, lines.map(row => JSON.stringify(row)).join('\n') + '\n\n')
     await scan()
     expect(await store.collectFactoryImage(png, { id, name: '新名称', sessionId, processed: true })).toBeUndefined()
-    expect((await store.snapshot()).documents).toEqual([])
+    expect((await store.snapshot()).documents.map(row => row.id)).toEqual([edited!.id])
   } finally {
     await rm(root, { force: true, recursive: true })
   }

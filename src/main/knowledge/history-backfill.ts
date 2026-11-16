@@ -25,6 +25,8 @@ type LogRow = {
 }
 
 const eventTypes = new Set(['session/title', 'assistant/message', 'tool/call', 'tool/result', 'tool/code-dispatch', 'turn/end'])
+// Revisit archived canvases that were saved before the source session title was merged.
+const scanVersion = 2
 const limit = 64 * 1024 * 1024
 const excludedDirectory = /^(?:\..+|node_modules|scratch|tmp|temp|__pycache__)$/i
 
@@ -177,7 +179,7 @@ export async function scanKnowledgeHistory({ sessionRoot, attachmentsRoot, store
       const path = join(directory, artifact.name)
       try {
         const info = await stat(path)
-        const revision = JSON.stringify([artifact.name, info.size, info.mtimeMs])
+        const revision = JSON.stringify([scanVersion, artifact.name, info.size, info.mtimeMs])
         if (previous[session.name] === revision) continue
         if (info.size > limit) { result.failed++; continue }
         const lines = logLines(await readFile(path), artifact.name.endsWith('.zstd'))

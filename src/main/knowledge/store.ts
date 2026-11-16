@@ -316,8 +316,14 @@ export class KnowledgeStore {
       const origin = digest(JSON.stringify(['image-factory', input.sessionId, input.id]))
       if (state.excludedOrigins.includes(origin)) return
       const existing = state.documents.find(row => row.origin === origin)
-      if (existing && (!input.processed || existing.sourceVersion !== 'factory-provider' || existing.share))
-        return publicDocument(existing)
+      const sessionTitle = input.sessionTitle ?? existing?.sessionTitle
+      if (existing && (!input.processed || existing.sourceVersion !== 'factory-provider' || existing.share)) {
+        if (existing.sessionTitle === sessionTitle) return publicDocument(existing)
+        const row = { ...existing, sessionTitle }
+        await this.persist(state, { ...state, documents: state.documents.map(item => item === existing ? row : item) },
+          directory, current)
+        return publicDocument(row)
+      }
 
       const id = existing?.id ?? randomUUID()
       const name = (input.name.replace(/[\\/\p{Cc}]/gu, ' ').trim().slice(0, 120) || '生成图片') + '.png'
@@ -325,9 +331,9 @@ export class KnowledgeStore {
       const target = join(directory, 'files', id)
       const path = join(target, storageName)
       const row: StoredDocument = {
-        id, name, origin, source: 'generated', sessionId: input.sessionId, sessionTitle: input.sessionTitle,
+        id, name, origin, source: 'generated', sessionId: input.sessionId,
         saved: false, starred: false, updatedAt: input.updatedAt ?? Date.now(),
-        ...existing, storageName, size: bytes.length, sourceVersion: input.processed ? 'factory-canvas' : 'factory-provider'
+        ...existing, sessionTitle, storageName, size: bytes.length, sourceVersion: input.processed ? 'factory-canvas' : 'factory-provider'
       }
       try {
         await mkdir(target, { recursive: true, mode: 0o700 })
