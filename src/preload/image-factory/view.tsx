@@ -8,7 +8,8 @@ import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu } from './actions-menu'
 import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
-import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, providerSize, ratios, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
+import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, providerDimensions, providerSize, ratios,
+  regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
 import { drawLayers, imageFonts, moveLayer, textLayerStyle, type CanvasLayer, type ImageScene, type TextLayer } from './layers'
 import styles from './style.css?raw'
 
@@ -21,7 +22,8 @@ type Bridge = {
   save(value: { action: 'download'; data: Uint8Array; name: string; format: 'png' | 'jpg' }): Promise<{ cancelled?: boolean }>
 }
 type T = (zh: string, en: string) => string
-type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; area?: Region; size: Size; title: string; delivering: boolean; release(): void }
+type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region };
+  size: Size; title: string; delivering: boolean; release(): void }
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 
 function Icon({ name, size }: { name: string; size?: number }) {
@@ -52,11 +54,11 @@ function blobData(doc: Document, blob: Blob): Promise<string> {
     reader.readAsDataURL(blob)
   })
 }
-async function referenceData(doc: Document, raster: Raster, area?: Region) {
-  const bounds = area ?? { x: 0, y: 0, width: raster.width, height: raster.height }
-  const scale = Math.min(1, 1536 / Math.max(bounds.width, bounds.height))
-  const { canvas, context } = canvasFor(doc, {
-    width: Math.max(1, Math.round(bounds.width * scale)), height: Math.max(1, Math.round(bounds.height * scale)),
+async function referenceData(doc: Document, raster: Raster, region?: { frame: Region; size: Size }) {
+  const bounds = region?.frame ?? { x: 0, y: 0, width: raster.width, height: raster.height }
+  const scale = Math.min(1, 1536 / Math.max(raster.width, raster.height))
+  const { canvas, context } = canvasFor(doc, region?.size ?? {
+    width: Math.max(1, Math.round(raster.width * scale)), height: Math.max(1, Math.round(raster.height * scale)),
   })
   context.drawImage(raster.image, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, canvas.width, canvas.height)
   let blob = await encode(canvas)
@@ -346,14 +348,19 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         if (region && (!selection || !image)) throw Error(t('选区已变化，请重新框选。', 'The selection changed. Select the area again.'))
         const size = (selection ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
         const title = (selection ? base?.title : undefined) || titleFromPrompt(prompt, t)
-        job = { id, sessionId, scope: requestedScope, scene: base, area: selection, size, title, delivering: false, release: hold }
+        const target = selection ?? size
+        const output = providerSize(target)
+        const outputSize = providerDimensions[output]
+        const edit = selection && image ? { area: selection, frame: regionEditFrame(selection, outputSize, image.raster) } : undefined
+        job = { id, sessionId, scope: requestedScope, scene: base, edit, size, title, delivering: false, release: hold }
         active.current.set(id, job)
-        const reference = image && (selection || !uploaded) ? await referenceData(doc, image.raster, selection) : undefined
+        const reference = image && (edit || !uploaded)
+          ? await referenceData(doc, image.raster, edit && { frame: edit.frame, size: outputSize })
+          : undefined
         if (!active.current.has(id) || !mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' ||
             workspace.getSnapshot().scope !== requestedScope) throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
-        const target = selection ?? size
-        reply({ operation: selection ? 'region' : reference || uploaded ? 'edit' : 'generate', size: providerSize(target),
-          width: target.width, height: target.height, title, reference })
+        reply({ operation: edit ? 'region' : reference || uploaded ? 'edit' : 'generate', size: output,
+          width: target.width, height: target.height, title, reference, editBounds: edit && regionEditBounds(edit.area, edit.frame) })
       } catch (error) {
         if (job) release(job); else hold()
         reply({ error: errorLabel(error, t('无法读取画布。', 'Could not read the canvas.')) })
@@ -385,7 +392,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         output = await loadRaster(doc, await response.blob())
         const { canvas, context } = canvasFor(doc, job.size)
         const previous = job.scene?.layers.find(layer => layer.kind === 'image')
-        if (job.area && previous) applyRegion(context, previous.raster, output, job.area)
+        if (job.edit && previous) applyRegion(context, previous.raster, output, job.edit.area, job.edit.frame)
         else drawFit(context, output, job.size)
         const png = await encode(canvas)
         const layer = await createImageLayer(doc, png, job.id, previous?.id ?? crypto.randomUUID(), 'image/png')

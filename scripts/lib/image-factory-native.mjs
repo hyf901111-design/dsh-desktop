@@ -65,10 +65,10 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       const response = await request(id, sessionId, scope, text, content.some(part => part.type === 'image'), region)
       if (!isActive() || currentId() !== sessionId || canvasScope() !== scope) throw Error('当前会话或画布已切换，草稿已保留。')
       if (region && response.operation !== 'region') throw Error('选区已变化，请重新框选。')
-      const { operation, size, width, height, title, reference } = response
+      const { operation, size, width, height, title, reference, editBounds } = response
       const next = [...content]
       const index = next.findLastIndex(part => part.type === 'text')
-      next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height, title, internalReference: !!reference }) }
+      next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height, title, internalReference: !!reference, editBounds }) }
       if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: '当前画布' })
       jobs.set(id, { id, sessionId, draft: scope === null, timer: win.setTimeout(() => finish(id), 615000) })
       return { content: next, id }
