@@ -48,3 +48,38 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
     vi.unstubAllGlobals()
   }
 })
+
+it.each([
+  ['生成一张全新的 1:1 插画，标题为「柚子气泡水」。', '柚子气泡水', 1024, 1024],
+  ['Please create a brand-new poster titled “Summer Market”.', 'Summer Market', 1080, 1350],
+  ['给当前画布的标题换个配色。', '旧海报', 800, 1000],
+] as const)('prepares a canvas request for %s', async (prompt, title, width, height) => {
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '旧海报', width: 800, height: 1000, layers: [] }
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1, canvas }), write: async () => {}, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  try {
+    await act(async () => factory.open())
+    const sessionId = 'image-session'
+    const id = randomUUID()
+    await act(async () => {
+      document.dispatchEvent(new CustomEvent('sherlock:image-factory-session', { detail: { sessionId } }))
+    })
+    const prepared = new Promise(resolve => {
+      document.addEventListener('sherlock:image-factory-prepared', event => resolve((event as CustomEvent).detail), { once: true })
+    })
+    await act(async () => {
+      document.dispatchEvent(new CustomEvent('sherlock:image-factory-prepare', {
+        detail: { id, sessionId, scope: sessionId, prompt }
+      }))
+    })
+    expect(await prepared).toMatchObject({ id, title, width, height })
+  } finally {
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.unstubAllGlobals()
+  }
+})
