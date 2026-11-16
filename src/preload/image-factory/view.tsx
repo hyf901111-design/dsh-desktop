@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
+import { CanvasActionsMenu } from './actions-menu'
 import { iconSource } from './icons'
 import { applyRegion, between, canvasFor, canvasPoint, cropRaster, drawFit, encode, loadRaster, providerSize, ratios, validSize,
   type Point, type Raster, type Ratio, type Region } from './raster'
@@ -17,10 +18,10 @@ type Version = Raster & { id: number; name: string; title: string; basedOn?: num
 type History = { all: Version[]; path: number[]; cursor: number }
 const emptyHistory: History = { all: [], path: [], cursor: -1 }
 type Mark = { version: number; rect: Region }
-type Panel = 'adjust' | 'crop' | 'resize' | 'type' | 'export'
+type Panel = 'adjust' | 'crop' | 'resize' | 'type'
 type Message = {
-  id: string; role: 'user' | 'assistant' | 'notice'; body: string; region?: boolean
-  reference?: string; version?: number; error?: boolean
+  id: string; role: 'user' | 'assistant' | 'notice'; body: string
+  version?: number; error?: boolean
 }
 type T = (zh: string, en: string) => string
 
@@ -77,6 +78,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const [filters, setFilters] = useState({ brightness: 0, contrast: 0 })
   const [dimensions, setDimensions] = useState({ width: '', height: '' })
+  const [keepRatio, setKeepRatio] = useState(true)
   const [caption, setCaption] = useState({ text: '', fontSize: 48, placement: 'upper', color: '#ffffff' })
   const file = useRef<HTMLInputElement>(null), stage = useRef<HTMLDivElement>(null)
   const urls = useRef(new Set<string>()), active = useRef<{ id: string; cancelled: boolean }>()
@@ -148,7 +150,11 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     setBusy(true)
     try { await work(job) }
     catch (error) {
-      if (!job.cancelled) notify(noticeText(error, t('图片处理失败，请重试。', 'Image processing failed. Please retry.')), true)
+      if (!job.cancelled) {
+        const message = noticeText(error, t('图片处理失败，请重试。', 'Image processing failed. Please retry.'))
+        setToast(message)
+        notify(message, true)
+      }
     } finally {
       if (active.current === job) active.current = undefined
       if (mounted.current) {
@@ -168,13 +174,13 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       acceptableFile(selectedFile, t)
       const title = selectedFile.name.replace(/\.[^.]+$/, '').trim() || t('导入图片', 'Imported image')
       const version = await addBlob(selectedFile, job, { title, name: t('导入图片', 'Imported image'), basedOn: current?.id })
-      if (version) notify(t('图片已导入画布。', 'Image imported to the canvas.'))
+      if (version) setToast(t('图片已导入画布。', 'Image imported to the canvas.'))
     })
   }
   async function send(request: string, upload?: File) {
     const base = current, area = region
     setPanel(undefined)
-    setMessages(list => [...list, { id: crypto.randomUUID(), role: 'user', body: request, region: !!area, reference: upload?.name }])
+    setMessages(list => [...list, { id: crypto.randomUUID(), role: 'user', body: request }])
     let success = false
     let errorMessage: string | undefined
     await operation(async job => {
@@ -211,7 +217,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
         const version = await addBlob(blob, job, { title, name, basedOn: base?.id })
         if (!version) return
         setMessages(list => [...list, { id: crypto.randomUUID(), role: 'assistant',
-          body: area ? t('已修改选区 1，结果已保存到画布。', 'Edited selection 1 and updated the canvas.')
+          body: area ? t('已修改框选区域，结果已更新到画布。', 'The selected area has been edited on the canvas.')
             : t('图片已放到当前画布。', 'The image is on the current canvas.'), version: version.id }])
         success = true
       } catch (error) {
@@ -223,7 +229,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   }
   function localEdit(event?: FormEvent) {
     event?.preventDefault()
-    if (!current || !panel || panel === 'export') return
+    if (!current || !panel || preview !== undefined) return
     const base = current, action = panel
     void operation(async job => {
       let target = { width: base.width, height: base.height }
@@ -257,9 +263,8 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     })
   }
   function exportImage(format: 'png' | 'jpg') {
-    if (!current) return
-    setPanel(undefined); setPreview(undefined)
-    const base = current
+    if (!shown) return
+    const base = shown
     void operation(async job => {
       const { canvas, context } = canvasFor(doc, base)
       if (format === 'jpg') { context.fillStyle = '#ffffff'; context.fillRect(0, 0, base.width, base.height) }
@@ -271,19 +276,34 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       if (!result.cancelled && mounted.current && !job.cancelled) setToast(name + '.' + format + t(' 已保存', ' saved'))
     })
   }
+  function changeDimension(key: 'width' | 'height', value: string) {
+    const other = key === 'width' ? 'height' : 'width'
+    setDimensions(previous => {
+      const next = { ...previous, [key]: value }
+      if (current && keepRatio && Number(value) > 0)
+        next[other] = String(Math.max(1, Math.round(Number(value) * current[other] / current[key])))
+      return next
+    })
+  }
+  function focusChat() {
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-focus-chat'))
+  }
   function selectPanel(next: Panel) {
-    if (busy || !current) return
-    setPreview(undefined); clearMark()
-    if (next === 'resize') setDimensions({ width: String(current.width), height: String(current.height) })
+    if (busy || !current || preview !== undefined) return
+    clearMark()
+    if (next === 'resize') {
+      setKeepRatio(true)
+      setDimensions({ width: String(current.width), height: String(current.height) })
+    }
     if (next === 'adjust') setFilters({ brightness: 0, contrast: 0 })
     if (next === 'type') setCaption({ text: '', fontSize: Math.min(48, Math.max(8, current.width / 4 | 0)), placement: 'upper', color: '#ffffff' })
     setPanel(p => p === next ? undefined : next)
   }
   function chooseMark() {
-    if (busy || !current) return
-    setPanel(undefined); setPreview(undefined); setDraft(undefined); setMark(undefined); drag.current = undefined
-    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
-    setMarking(on => !on)
+    if (busy || !current || preview !== undefined) return
+    setPanel(undefined); clearMark()
+    if (!marking) setMarking(true)
   }
   function onPointer(event: PointerEvent<HTMLDivElement>, step: 'start' | 'move' | 'end' | 'cancel') {
     if (!drawing || !current || busy) return
@@ -302,7 +322,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     if (step === 'cancel' || box.width < 2 || box.height < 2) { setDraft(undefined); return }
     if (panel === 'crop') { setDraft(box); return }
     setDraft(undefined); setMark({ version: current.id, rect: box })
-    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-focus-chat'))
+    focusChat()
   }
   function switchPreview(id: number | undefined) {
     if (busy) return
@@ -310,9 +330,15 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     setPreview(id === selected ? undefined : id)
   }
 
-  const canSend = !busy && preview === undefined && panel !== 'crop'
+  function usePreview() {
+    if (busy || preview === undefined) return
+    setHistory(h => ({ ...h, path: [...h.path.slice(0, h.cursor + 1), preview], cursor: h.cursor + 1 }))
+    setPreview(undefined)
+    setZoom(1)
+  }
+  const canSend = !busy && preview === undefined && !panel && (!marking || !!region)
   const chatState = {
-    busy, canSend, region: !!region, ratio, preview, current: current && { title: current.title, id: current.id },
+    busy, canSend, region: !!region, preview, editing: !!panel, marking, current: !!current,
     messages: messages.map(row => {
       const v = history.all.find(item => item.id === row.version)
       return { ...row, result: v && { id: v.id, url: v.url, label: v.title, width: v.width, height: v.height } }
@@ -342,7 +368,6 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       if (doc.body.dataset.workspaceSurface !== 'image-factory') return
       const data = (event as CustomEvent).detail
       if (data?.kind === 'cancel') stop()
-      if (data?.kind === 'clear-selection' && !busy) clearMark()
       if (data?.kind === 'import' && !busy) file.current?.click()
       if (data?.kind === 'preview' && Number.isSafeInteger(data.version)) switchPreview(data.version)
     }
@@ -355,16 +380,14 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       doc.removeEventListener('sherlock:image-factory-action', action)
       doc.removeEventListener('sherlock:image-factory-request-state', publishChat)
     }
-  }, [busy, canSend, mark, ratio, preview, current, messages, history.all, bridge, t])
+  }, [busy, canSend, mark, marking, panel, ratio, preview, current, messages, history.all, bridge, t])
 
   const rectangle = draft ?? region
-  const noEdits = !current || busy
-  const exportLabel = t('导出', 'Export')
+  const noEdits = busy || preview !== undefined
   const tools = [
-    ['crop', t('裁剪', 'Crop')], ['resize', t('尺寸', 'Resize')], ['adjust', t('调整', 'Adjust')], ['type', t('文字', 'Text')],
+    ['crop', t('裁剪', 'Crop')], ['resize', t('调整尺寸', 'Resize')], ['adjust', t('调整明暗', 'Adjust tone')], ['type', t('添加文字', 'Add text')],
   ] as const
   const panelTitle = tools.find(item => item[0] === panel)?.[1]
-  const status = region ? t('已添加到对话', 'Added to chat') : ''
   const importLabel = t('导入图片', 'Import image')
   return <div className="if-workplace" style={{ display: 'contents' }} onKeyDown={event => {
     if (event.key !== 'Escape' || (!panel && !marking && !region && preview === undefined)) return
@@ -375,19 +398,33 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
         <Button icon="left" label={t('返回对话', 'Back to chat')} onClick={close}/>
         <Symbol name="factory" size={20}/><strong>{t('图像工厂', 'Image Factory')}</strong>
         <span className="if-top-title" title={current?.title}>{current?.title ?? t('未命名画布', 'Untitled canvas')}</span>
-        <Button icon="upload" label={importLabel} disabled={busy} onClick={() => file.current?.click()}>{t('导入', 'Import')}</Button>
-        <Button icon="download" primary label={exportLabel} disabled={noEdits} onClick={() => selectPanel('export')}>{exportLabel}<Symbol name="chevron" size={12}/></Button>
+        <CanvasActionsMenu doc={doc} t={t} canImport={!busy} canExport={!!shown && !busy && !panel}
+          importing={() => file.current?.click()} exporting={exportImage}/>
       </header>
       <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => {
         importFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''
       }}/>
-      <nav className="if-toolbar" aria-label={t('画布编辑工具', 'Canvas tools')}>
+      {current && <nav className="if-toolbar" aria-label={t('画布编辑工具', 'Canvas tools')}>
         <Button icon="undo" label={t('撤销', 'Undo')} disabled={busy || history.cursor <= 0} onClick={() => travel(-1)}/>
         <Button icon="redo" label={t('重做', 'Redo')} disabled={busy || history.cursor >= history.path.length - 1} onClick={() => travel(1)}/>
         <i className="if-separator"/>
         {tools.map(([key, label]) => <Button key={key} icon={key} active={panel === key} disabled={noEdits} onClick={() => selectPanel(key)}>{label}</Button>)}
-        <Button icon="mark" active={marking} disabled={noEdits} onClick={chooseMark}>{t('框选修改', 'Select region')}</Button>
-      </nav>
+        <i className="if-separator"/>
+        <Button icon="mark" active={marking} disabled={noEdits} onClick={chooseMark}>{t('框选修改', 'Edit a selected area')}</Button>
+      </nav>}
+      {preview !== undefined && <div className="if-workflow" role="status">
+        <span>{t('正在预览版本 ', 'Previewing version ')}V{shown?.id}</span>
+        <div className="if-workflow-actions">
+          <Button disabled={busy} onClick={() => switchPreview(undefined)}>{t('返回当前版本', 'Return to current version')}</Button>
+          <Button primary disabled={busy} onClick={usePreview}>{t('设为当前版本', 'Set as current version')}</Button>
+        </div>
+      </div>}
+      {marking && <div className="if-workflow" role="status">
+        <span>{region
+          ? t('在右侧描述要改什么，AI 只会修改框内。', 'Describe the change in chat. AI will only edit inside the selection.')
+          : t('在图片上拖出要修改的范围。', 'Drag over the area you want to edit.')}</span>
+        <Button disabled={busy} onClick={clearMark}>{region ? t('清除选区', 'Clear selection') : t('退出框选', 'Exit selection')}</Button>
+      </div>}
       <div className="if-stage" data-drop={drop} onDragOver={event => {
         if (!event.dataTransfer.types.includes('Files')) return
         event.preventDefault(); event.dataTransfer.dropEffect = busy ? 'none' : 'copy'; setDrop(!busy)
@@ -395,11 +432,14 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       onDrop={event => { if (!event.dataTransfer.files.length) return; event.preventDefault(); setDrop(false); importFile(event.dataTransfer.files[0]) }}>
         {!shown ? <div className="if-empty">
           <div className="if-empty-logo"><Symbol name="factory" size={37}/></div>
-          <h2>{t('开始创作', 'Start creating')}</h2>
-          <p>{t('在右侧描述要生成的画面，也可以从已有图片开始。', 'Describe an image in chat, or start with an existing image.')}</p>
-          <Button icon="upload" primary disabled={busy} onClick={() => file.current?.click()}>{importLabel}</Button>
-          <small>{t('可拖入 PNG、JPG 或 WebP', 'Drop a PNG, JPG, or WebP')}</small>
-          <div className="if-ratios"><span>{t('画布比例', 'Canvas ratio')}</span>
+          <h2>{t('制作图片或海报', 'Create an image or poster')}</h2>
+          <p>{t('从一段描述开始，也可以导入已有图片进行编辑。', 'Start with a description, or import an image to edit.')}</p>
+          <div className="if-start-actions">
+            <Button icon="spark" primary disabled={busy} onClick={focusChat}>{t('用 AI 生图', 'Generate with AI')}</Button>
+            <Button icon="upload" disabled={busy} onClick={() => file.current?.click()}>{importLabel}</Button>
+          </div>
+          <small>{t('也可拖入 PNG、JPG 或 WebP', 'You can also drop a PNG, JPG, or WebP')}</small>
+          <div className="if-ratios"><span>{t('生图比例', 'Generation ratio')}</span>
             {(Object.keys(ratios) as Ratio[]).map(key => <Button key={key} icon={ratios[key].icon} active={ratio === key} disabled={busy} onClick={() => setRatio(key)}>{key}</Button>)}
           </div>
         </div> : <>
@@ -408,15 +448,14 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
               onPointerDown={e => onPointer(e, 'start')} onPointerMove={e => onPointer(e, 'move')}
               onPointerUp={e => onPointer(e, 'end')} onPointerCancel={e => onPointer(e, 'cancel')} onLostPointerCapture={e => onPointer(e, 'cancel')}>
               <img draggable={false} src={shown.url} alt={shown.title} style={panel === 'adjust' ? { filter: 'brightness(' + (100 + filters.brightness) + '%) contrast(' + (100 + filters.contrast) + '%)' } : undefined}/>
-              {rectangle && <div className="if-region" data-dragging={!!drag.current} data-edge={rectangle.x + rectangle.width > shown.width * .72}
+              {rectangle && <div className="if-region" data-dragging={!!drag.current} data-crop={panel === 'crop'}
                 style={{ left: rectangle.x / shown.width * 100 + '%', top: rectangle.y / shown.height * 100 + '%',
                   width: rectangle.width / shown.width * 100 + '%', height: rectangle.height / shown.height * 100 + '%' }}>
-                <i/><i/><i/><i/>{region && <><span className="if-number">1</span><span className="if-region-status">{status}</span></>}
+                <i/><i/><i/><i/>
               </div>}
             </div>
           </div>
           <div className="if-canvas-status"><span>{shown.width} × {shown.height} px</span>
-            {drawing && <span className="if-instruction">{panel === 'crop' ? t('拖动选择保留区域', 'Drag to select the crop') : t('拖动框选图片区域 · Esc 退出', 'Drag to select · Esc to exit')}</span>}
             <div className="if-zoom">
               <Button icon="minus" label={t('缩小', 'Zoom out')} disabled={zoom <= .25} onClick={() => setZoom(z => Math.max(.25, z / 1.25))}/>
               <span>{Math.round(fit * zoom * 100)}%</span>
@@ -426,51 +465,52 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
           </div>
         </>}
       </div>
-      <footer className="if-history">
-        {!!history.all.length && <><div className="if-history-head"><Symbol name="history"/>{t('版本', 'Versions')} · {history.all.length}
-          {(prior || preview !== undefined) && <Button icon="compare" disabled={busy} onClick={() => switchPreview(preview === undefined ? prior?.id : undefined)}>
-            {preview === undefined ? t('对比 V', 'Compare V') + prior?.id : t('返回 V', 'Back to V') + current?.id}
+      {!!history.all.length && <footer className="if-history">
+        <div className="if-history-head"><Symbol name="history"/>{t('版本记录', 'Version history')}
+          {prior && preview === undefined && <Button icon="compare" disabled={busy} onClick={() => switchPreview(prior.id)}>
+            {t('对比 V', 'Compare V') + prior.id}
           </Button>}
         </div><div className="if-versions">
           {history.all.map(version => <button type="button" className="if-version" key={version.id} aria-current={shown?.id === version.id} disabled={busy} onClick={() => switchPreview(version.id)}>
-            <img src={version.url} alt=""/><span><b>{version.name}</b><small>V{version.id} · {current?.id === version.id ? t('当前画布', 'Current canvas') : t('可预览', 'Available to preview')}</small></span>
+            <img src={version.url} alt=""/><span><b>{version.name}</b><small>V{version.id} · {current?.id === version.id ? t('当前版本', 'Current version') : shown?.id === version.id ? t('预览中', 'Previewing') : t('查看版本', 'View version')}</small></span>
             {shown?.id === version.id && <Symbol name="check" size={15}/>}
           </button>)}
-        </div></>}
-      </footer>
-      {panel && current && <form className="if-pop" data-export={panel === 'export'} onSubmit={localEdit}>
-        <div className="if-pop-head"><strong>{panelTitle ?? t('导出当前版本', 'Export current version')}</strong>
+        </div>
+      </footer>}
+      {panel && current && <form className="if-pop" onSubmit={localEdit}>
+        <div className="if-pop-head"><strong>{panelTitle}</strong>
           <Button icon="close" label={t('关闭面板', 'Close panel')} onClick={() => { setPanel(undefined); clearMark() }}/>
         </div>
-        {panel === 'export' ? <><p>V{current.id} · {current.width} × {current.height} px</p>
-          {(['png', 'jpg'] as const).map(format => <button className="if-format" key={format} type="button" onClick={() => exportImage(format)}>
-            <Symbol name="download"/>{format.toUpperCase()}<small>{format === 'png' ? t('无损', 'Lossless') : t('体积更小', 'Smaller file')}</small>
-          </button>)}</> : <>
-          {panel === 'crop' && <p>{draft ? draft.width + ' × ' + draft.height + ' px' : t('拖选需要保留的区域。', 'Select an area to keep.')}</p>}
-          {panel === 'adjust' && (['brightness', 'contrast'] as const).map(key => <label key={key}>
-            <span className="if-slider-head">{key === 'brightness' ? t('亮度', 'Brightness') : t('对比度', 'Contrast')}<span>{filters[key] > 0 ? '+' : ''}{filters[key]}</span></span>
-            <input type="range" min="-80" max="80" value={filters[key]} onChange={e => setFilters(f => ({ ...f, [key]: Number(e.target.value) }))}/>
-          </label>)}
-          {panel === 'resize' && <div className="if-dimensions">{(['width', 'height'] as const).map((key, i) => <label key={key}>
+        {panel === 'crop' && <p>{draft
+          ? t('保留 ', 'Keep ') + draft.width + ' × ' + draft.height + ' px'
+          : t('在图片上拖出要保留的区域。', 'Drag over the area you want to keep.')}</p>}
+        {panel === 'adjust' && (['brightness', 'contrast'] as const).map(key => <label key={key}>
+          <span className="if-slider-head">{key === 'brightness' ? t('亮度', 'Brightness') : t('对比度', 'Contrast')}<span>{filters[key] > 0 ? '+' : ''}{filters[key]}</span></span>
+          <input type="range" min="-80" max="80" value={filters[key]} onChange={e => setFilters(f => ({ ...f, [key]: Number(e.target.value) }))}/>
+        </label>)}
+        {panel === 'resize' && <>
+          <div className="if-dimensions">{(['width', 'height'] as const).map((key, i) => <label key={key}>
             {i ? t('高度（px）', 'Height (px)') : t('宽度（px）', 'Width (px)')}
-            <input type="number" min="1" max="4096" value={dimensions[key]} onChange={e => setDimensions(d => ({ ...d, [key]: e.target.value }))}/>
-          </label>)}</div>}
-          {panel === 'type' && <><label>{t('文字内容', 'Text')}<input value={caption.text} maxLength={100} onChange={e => setCaption(c => ({ ...c, text: e.target.value }))}/></label>
-            <div className="if-dimensions"><label>{t('字号（px）', 'Font size (px)')}
-              <input type="number" min="8" max="900" value={caption.fontSize} onChange={e => setCaption(c => ({ ...c, fontSize: Number(e.target.value) }))}/>
-            </label><label>{t('颜色', 'Color')}<input type="color" value={caption.color} onChange={e => setCaption(c => ({ ...c, color: e.target.value }))}/></label></div>
-            <label>{t('位置', 'Placement')}<select value={caption.placement} onChange={e => setCaption(c => ({ ...c, placement: e.target.value }))}>
-              <option value="upper">{t('上方居中', 'Top center')}</option><option value="middle">{t('画面居中', 'Center')}</option><option value="lower">{t('下方居中', 'Bottom center')}</option>
-            </select></label></>}
-          <div className="if-form-actions">
-            <Button onClick={() => { setFilters({ brightness: 0, contrast: 0 }); setDimensions({ width: String(current.width), height: String(current.height) }); setDraft(undefined); setCaption(c => ({ ...c, text: '' })) }}>{t('重置', 'Reset')}</Button>
-            <Button primary type="submit" disabled={busy || (panel === 'crop' && !draft) ||
-              (panel === 'resize' && !validSize(Number(dimensions.width), Number(dimensions.height))) ||
-              (panel === 'type' && (!caption.text.trim() || caption.fontSize < 8 || caption.fontSize > 900))}>{t('应用', 'Apply')}</Button>
-          </div>
+            <input type="number" min="1" max="4096" value={dimensions[key]} onChange={e => changeDimension(key, e.target.value)}/>
+          </label>)}</div>
+          <label className="if-keep-ratio"><input type="checkbox" checked={keepRatio} onChange={e => setKeepRatio(e.target.checked)}/>
+            {t('保持原图比例', 'Keep aspect ratio')}</label>
         </>}
+        {panel === 'type' && <><label>{t('文字内容', 'Text')}<input value={caption.text} maxLength={100} onChange={e => setCaption(c => ({ ...c, text: e.target.value }))}/></label>
+          <div className="if-dimensions"><label>{t('字号（px）', 'Font size (px)')}
+            <input type="number" min="8" max="900" value={caption.fontSize} onChange={e => setCaption(c => ({ ...c, fontSize: Number(e.target.value) }))}/>
+          </label><label>{t('颜色', 'Color')}<input type="color" value={caption.color} onChange={e => setCaption(c => ({ ...c, color: e.target.value }))}/></label></div>
+          <label>{t('位置', 'Placement')}<select value={caption.placement} onChange={e => setCaption(c => ({ ...c, placement: e.target.value }))}>
+            <option value="upper">{t('上方居中', 'Top center')}</option><option value="middle">{t('画面居中', 'Center')}</option><option value="lower">{t('下方居中', 'Bottom center')}</option>
+          </select></label></>}
+        <div className="if-form-actions">
+          <Button onClick={() => { setPanel(undefined); clearMark() }}>{t('取消', 'Cancel')}</Button>
+          <Button primary type="submit" disabled={busy || (panel === 'crop' && !draft) ||
+            (panel === 'resize' && !validSize(Number(dimensions.width), Number(dimensions.height))) ||
+            (panel === 'type' && (!caption.text.trim() || caption.fontSize < 8 || caption.fontSize > 900))}>{t('应用修改', 'Apply changes')}</Button>
+        </div>
       </form>}
-      {toast && <div className="if-toast" role="status"><Symbol name="check" size={15}/> {toast}</div>}
+      {toast && <div className="if-toast" role="status">{toast}</div>}
     </section>
   </div>
 }

@@ -116,15 +116,9 @@ function EWorkImageFactoryInput(props) {
   if (!shell) return null
   const h = react.createElement
   const en = document.documentElement.dataset.odysseyLocale === 'en'
-  const label = state.region ? (en ? 'Selection 1' : '选区 1')
-    : state.current ? state.current.title + ' · V' + state.current.id : state.ratio ?? '4:5'
-  const context = h('div', { className: 'ework-image-factory-context', 'data-image-factory-context': '' },
-    h('span', { className: MessageItem_module_css_default.refChip, 'data-ui-preserve': '' }, label),
-    state.region && h('button', { type: 'button', disabled: state.busy, 'aria-label': en ? 'Remove selection' : '移除选区引用',
-      onClick: () => app.action('clear-selection') }, '×'))
   return h(InputBar, {
     ...props, sessionId: undefined, variant: 'composer', eworkNotes: false, eworkImageFactory: true, eworkSpreadsheet: false,
-    researchCanvasWorkspace: undefined, researchFileReferences: [], researchArtifactReferences: [], eworkNoteContext: context,
+    researchCanvasWorkspace: undefined, researchFileReferences: [], researchArtifactReferences: [], eworkNoteContext: undefined,
     disabled: state.canSend === false && !state.busy, blocked: undefined, onRequestWorkspace: undefined, workspacePickerOpen: false,
     keyboard: shell, inputActions: shell.actions,
     useInput: select => { props.useInput(value => value); return select(input) },
@@ -134,8 +128,12 @@ function EWorkImageFactoryInput(props) {
     addImages: app.addImages, draftImages: ids => app.conversation.draftImages(ids),
     removeImage: id => { app.conversation.releaseDraftImage(id); shell.removeImage(id) },
     stop: () => app.action('cancel'),
-    placeholder: state.current ? en ? 'Describe an edit to the canvas…' : '描述想怎么改这张图…'
-      : en ? 'Describe an image or poster…' : '描述要生成的图片或海报…',
+    placeholder: state.preview ? (en ? 'Return to editing to continue…' : '返回编辑后可以继续对话…')
+      : state.region ? (en ? 'Describe what to change in the selected area…' : '描述怎么修改框选区域…')
+        : state.marking ? (en ? 'Select the area to edit on the canvas…' : '在画布上选好要修改的区域…')
+          : state.editing ? (en ? 'Apply or cancel your canvas edit…' : '请先应用或取消画布修改…')
+            : state.current ? (en ? 'Describe an edit to the image…' : '描述想怎么改这张图…')
+              : (en ? 'Describe an image or poster…' : '描述要生成的图片或海报…'),
   })
 }
 
@@ -160,18 +158,16 @@ function EWorkImageFactoryConversation({ t }) {
       h('div', { className: 'ew-sheet-welcome-actions' }, welcome.slice(2).map((label, index) =>
         h('button', { key: label, type: 'button', onClick: () => quick(index) }, label)))))
   const rows = state.messages.map(row => {
-    const reference = row.region ? (en ? 'Selection 1' : '选区 1') : row.reference
     if (row.role === 'user') return h(UserStyleBubble, {
       key: row.id, content: [{ type: 'text', text: row.body }], t,
-      noteReferences: reference ? [{ blockId: row.id, type: 'attachment', title: reference }] : [],
     })
     const result = row.result
     return h('div', { key: row.id, className: 'Md3f7G_flowItem', role: row.error ? 'alert' : undefined },
       h(AssistantMarkdown, { blocks: [{ kind: 'text', text: row.body }], streaming: false, t }),
-      result && h('button', { type: 'button', className: MessageItem_module_css_default.refChip, disabled: state.busy,
-        onClick: () => app?.action('preview', { version: result.id }) }, result.label + ' · V' + result.id),
-      result && h('img', { className: 'odyssey-image-generation-result', src: result.url, width: result.width, height: result.height,
-        alt: result.label, style: { display: 'block', width: '100%', height: 'auto', marginTop: 6 } }))
+      result && h('button', { type: 'button', className: 'ework-image-factory-result', disabled: state.busy,
+        'aria-label': en ? 'View image on canvas' : '在画布查看图片',
+        onClick: () => app?.action('preview', { version: result.id }) },
+        h('img', { className: 'odyssey-image-generation-result', src: result.url, width: result.width, height: result.height, alt: result.label })))
   })
   return h('div', { className: 'Md3f7G_column', 'data-image-factory-conversation': '', role: 'log', 'aria-live': 'polite' }, rows,
     state.busy && h('div', { className: 'Md3f7G_flowItem', role: 'status' },

@@ -66,7 +66,8 @@ export function cropRaster(doc: Document, image: Raster, area: Region) {
 /** Preserve the full generated composition when the provider returns a different ratio. */
 export function drawFit(context: CanvasRenderingContext2D, source: Raster, target: Size) {
   const scale = Math.min(target.width / source.width, target.height / source.height)
-  const width = Math.round(source.width * scale), height = Math.round(source.height * scale)
+  const width = Math.max(1, Math.round(source.width * scale))
+  const height = Math.max(1, Math.round(source.height * scale))
   context.drawImage(source.image, Math.floor((target.width - width) / 2), Math.floor((target.height - height) / 2), width, height)
 }
 

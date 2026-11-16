@@ -219,6 +219,7 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive || pendi
  replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && !browserAppActive && (activeView == null || activeView === "chat")')
  replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || browserAppActive && conversationVacant || research && sessionId !== void 0 && conversationVacant;')
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)
+ replace('heroWorkspaceRow,\n\t\t\t\trenderSlot,', 'heroWorkspaceRow: imageFactoryActive ? undefined : heroWorkspaceRow,\n\t\t\t\trenderSlot,')
  replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation:pendingRight,eworkImageFactory:imageFactoryActive,')
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingRight && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(sessionId===undefined&&eworkPendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
