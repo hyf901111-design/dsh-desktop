@@ -14,6 +14,7 @@ function fixture() {
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) },
     prompt: vi.fn(async () => ({ ok: true })), readAttachment: vi.fn(),
   }
+  const shells = new Map([[session.sessionId, shell]])
   const sessionsState = { current: session.sessionId, byId: { [session.sessionId]: { blank: false } } }
   const listListeners = new Set()
   const updateBlank = blank => {
@@ -23,7 +24,7 @@ function fixture() {
   const events = (name, detail, cancelable = false) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable }))
   const binding = installImageFactoryContext({
     sessions: { list: { getSnapshot: () => sessionsState, subscribe: fn => { listListeners.add(fn); return () => listListeners.delete(fn) } }, binding: () => ({ session }) },
-    getInput: () => shell,
+    getInput: id => shells.get(id),
     getPending: () => ({ shell, submitExternal: async submit => { sessionsState.current = session.sessionId; await submit(session.sessionId) } }),
     send: (...args) => binding.prompt(...args), doc, win,
   })
@@ -34,7 +35,7 @@ function fixture() {
       editBounds: detail.region ? { left: .2, top: .2, right: .8, bottom: .8 } : undefined,
     }) })
   })
-  return { win, doc, shell, binding, session, events, respond, state, listeners, sessionsState, updateBlank }
+  return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank }
 }
 
 it('keeps an imported draft outside a blank native session until its first canvas prompt is admitted', async () => {
@@ -183,5 +184,26 @@ it('keeps the uploaded reference visible and appends the current canvas privatel
     await expect(f.binding.prompt(f.session, [request, image, image, image, image], 'queue')).rejects.toThrow('最多可再附加三张')
     expect(f.session.prompt).toHaveBeenCalledOnce()
     expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+it('replaces each conversation’s gallery example after switching conversations', async () => {
+  const f = fixture()
+  try {
+    const other = {
+      snapshot: { draft: '另一个会话的文字' },
+      setDraft(draft) { this.snapshot.draft = draft },
+    }
+    f.shells.set('other-session', other)
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const select = prompt => f.events('use-prompt', { prompt }, true)
+    select('山脊徒步\n画面比例为 16:9。')
+    f.sessionsState.current = 'other-session'
+    select('橄榄绿香氛\n画面比例为 4:5。')
+    f.sessionsState.current = f.session.sessionId
+    select('提灯的狐狸\n画面比例为 4:5。')
+    expect(f.shell.snapshot.draft).toBe('保留未发送的文字\n\n提灯的狐狸\n画面比例为 4:5。')
+    expect(other.snapshot.draft).toBe('另一个会话的文字\n\n橄榄绿香氛\n画面比例为 4:5。')
+    expect(f.session.prompt).not.toHaveBeenCalled()
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })

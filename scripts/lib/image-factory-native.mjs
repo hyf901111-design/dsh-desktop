@@ -5,7 +5,7 @@ import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext }
 export function installImageFactoryContext({ sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt }) {
   const jobs = new Map(), listeners = new Set()
   let state = { current: false, busy: false }
-  let galleryDraft
+  let galleryDrafts = new WeakMap()
   const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
   const currentId = () => sessions.list.getSnapshot().current
   const canvasScope = () => {
@@ -31,10 +31,12 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     if (!shell || shell.disposed || !isActive() || state.busy || typeof prompt !== 'string' || !prompt.trim()) return false
     const draft = shell.snapshot.draft
     if (!gallery && draft.trim()) { focus(); return true }
-    const original = galleryDraft?.shell === shell && draft === galleryDraft.combined ? galleryDraft.original : draft
+    const previous = galleryDrafts.get(shell)
+    const original = previous && draft === previous.combined ? previous.original : draft
     const combined = original.trim() ? original.trimEnd() + '\n\n' + prompt : prompt
     if (combined.length > 3600) { shell.notify('error', '添加示例后超出 3600 字，请先缩短当前描述。'); return false }
-    galleryDraft = gallery ? { shell, original, combined } : undefined
+    if (gallery) galleryDrafts.set(shell, { original, combined })
+    else galleryDrafts.delete(shell)
     shell.setDraft(combined)
     focus()
     return true
@@ -177,7 +179,7 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     signal('session', { sessionId })
   }
   const offSession = sessions.list.subscribe?.(() => syncSession())
-  const reset = () => { for (const id of jobs.keys()) finish(id, false); galleryDraft = undefined; publishedScope = undefined }
+  const reset = () => { for (const id of jobs.keys()) finish(id, false); galleryDrafts = new WeakMap(); publishedScope = undefined }
   const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   signal('request-state', {})
