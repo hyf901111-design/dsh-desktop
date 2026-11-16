@@ -11,21 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
-        "tipCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
+        "baseCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
+        "tipCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
         "commits": [
           {
-            "commit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
+            "commit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
             "parents": [
-              "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9"
+              "a57be4ec9f15f6686f8adee38afa38633b8ab606"
             ],
-            "subject": "新增：知识库生成图片可打开来源画布"
+            "subject": "修复：图像工厂导出保留画布文字排版"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/knowledge/store.ts"
+            "path": "src/preload/image-factory/layers.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/style.css"
           },
           {
             "status": "M",
@@ -33,19 +37,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/knowledge-library.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-history-backfill.test.ts"
+            "path": "test/image-factory.test.js"
           }
         ],
         "checks": [
@@ -57,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
-            "completedAt": "2026-11-16T15:18:12.291Z",
+            "verifiedCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
+            "completedAt": "2026-11-16T15:35:38.538Z",
             "timeoutMs": 120000
           },
           {
@@ -66,34 +58,34 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/knowledge-history-backfill.test.ts",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-content.test.ts",
-              "test/knowledge-session-content.test.ts",
+              "test/image-factory.test.js",
+              "test/image-factory-canvases.test.ts",
               "test/image-factory-canvas-workspace.test.ts",
               "test/image-factory-native.test.js",
-              "test/workspace-surface-host.test.ts"
+              "test/knowledge-history-backfill.test.ts",
+              "test/image-generation-tool.test.js",
+              "test/image-generation-client.test.js"
             ],
             "outcome": "passed",
-            "summary": "39 项知识库、画布与原生会话聚焦检查通过。",
-            "verifiedCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
-            "completedAt": "2026-11-16T15:18:12.291Z",
+            "summary": "41 项图像工厂和知识库聚焦检查通过。",
+            "verifiedCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
+            "completedAt": "2026-11-16T15:35:38.538Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 实际界面操作通过，归档文件打开正确的会话画布，字体字号和文字保留，普通会话入口可用，早期无画布提示后留在原列表。"
+          "summary": "Chromium 从实际图像工厂界面导出，用中文、空白、制表符、表情符号及不同对齐方式混排的画布进行验证，两种格式写盘前的 262144 像素和 100% 预览逐像素一致，缩放后保持换行与编辑。"
         },
         "acceptanceCriteria": [
-          "生成图片的更多操作提供打开来源画布。",
-          "采用原生导航激活来源会话和右侧对话。",
-          "来源缺少持久化画布时保留原知识库位置与文件。"
+          "导出及知识库归档共用与预览一致的浏览器文字排版。",
+          "PNG 和 JPG 保留画布字体、对齐、换行、位置以及堆叠顺序。",
+          "缩放画布后文字仍可编辑。"
         ],
         "risks": [
-          "打开的是来源会话当前保存的画布。"
+          "JPG 文件采用有损编码。"
         ],
-        "generatedAt": "2026-11-16T15:18:12.291Z"
+        "generatedAt": "2026-11-16T15:35:38.538Z"
       }
     },
     {
