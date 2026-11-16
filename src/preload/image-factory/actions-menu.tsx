@@ -3,13 +3,14 @@ import { createPortal } from 'react-dom'
 
 type Format = 'png' | 'jpg'
 
-export function CanvasActionsMenu({ doc, t, canImport, canExport, importing, exporting }: {
+export function CanvasActionsMenu({ doc, t, canImport, canExport, importing, exporting, galleryAction }: {
   doc: Document
   t(zh: string, en: string): string
   canImport: boolean
   canExport: boolean
   importing(): void
   exporting(format: Format): void
+  galleryAction?: { label: string; run(): void }
 }) {
   const trigger = useRef<HTMLButtonElement>(null), menu = useRef<HTMLDivElement>(null)
   const exportItem = useRef<HTMLButtonElement>(null), formats = useRef<HTMLDivElement>(null)
@@ -93,6 +94,8 @@ export function CanvasActionsMenu({ doc, t, canImport, canExport, importing, exp
           <path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
+      {galleryAction && <button type="button" role="menuitem" onPointerEnter={() => setBranch(false)}
+        onClick={() => { close(true); galleryAction.run() }}>{galleryAction.label}</button>}
       {branch && <div className="en-export-menu en-note-format-menu" role="menu" ref={formats}
         aria-label={t('图像导出格式', 'Image export formats')} style={{ right: '100%', top: 32 }}>
         {(['png', 'jpg'] as const).map(format => <button key={format} type="button" role="menuitem"
