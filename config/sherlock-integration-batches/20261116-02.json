@@ -95,6 +95,42 @@
           "计时补丁严格锚点用例在变更前后同样有两项失败，实际补丁全流程与 UI 单独验收。"
         ],
         "generatedAt": "2026-11-16T12:43:56.269Z"
+      },
+      "merged": {
+        "mergeCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
+        "verificationCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
+            "completedAt": "2026-11-16T12:44:00.888Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory.test.js",
+              "test/image-actions.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/image-generation-tool.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
+            "verifiedCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
+            "completedAt": "2026-11-16T12:44:00.888Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-16T12:44:00.888Z"
       }
     }
   ],
