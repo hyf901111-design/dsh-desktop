@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
 import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
-import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
+import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, type CanvasImageType, type CanvasScope, type CanvasStorage,
+  type ImageFactoryTaskTab } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu } from './actions-menu'
 import { ImageFactoryGallery } from './gallery'
@@ -27,6 +28,7 @@ type T = (zh: string, en: string) => string
 type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region };
   size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
+type TaskTabs = { tabs: ImageFactoryTaskTab[]; active?: CanvasScope; busy: boolean }
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 const textResizeLabels: Record<TextResizeHandle, [string, string]> = {
   nw: ['左上角缩放文字', 'Scale text from top left'], ne: ['右上角缩放文字', 'Scale text from top right'],
@@ -121,11 +123,13 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const [, redrawBusy] = useState(0)
   const uiOperations = useRef(new Set<CanvasScope>())
   const [toast, setToast] = useState('')
+  const [tasks, setTasks] = useState<TaskTabs>()
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const file = useRef<HTMLInputElement>(null), scroll = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null)
   const imageFrame = useRef<HTMLDivElement>(null), commentBubble = useRef<HTMLDivElement>(null)
   const layerPanel = useRef<HTMLElement>(null), layerToggle = useRef<HTMLButtonElement>(null)
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
+  const taskStrip = useRef<HTMLDivElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
   const textDrag = useRef<{ layer: TextLayer; pointer: number; start: Point; moved: boolean; height: number; handle?: TextResizeHandle }>()
@@ -157,6 +161,23 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     doc.addEventListener('sherlock:image-factory-show-canvas', showCanvas)
     return () => doc.removeEventListener('sherlock:image-factory-show-canvas', showCanvas)
   }, [doc])
+  useLayoutEffect(() => {
+    const receive = (event: Event) => setTasks((event as CustomEvent<TaskTabs>).detail)
+    const fail = (event: Event) => setToast((event as CustomEvent<{ message: string }>).detail.message)
+    doc.addEventListener('sherlock:image-factory-task-state', receive)
+    doc.addEventListener('sherlock:image-factory-task-error', fail)
+    doc.dispatchEvent(new Event('sherlock:image-factory-request-task-state'))
+    return () => {
+      doc.removeEventListener('sherlock:image-factory-task-state', receive)
+      doc.removeEventListener('sherlock:image-factory-task-error', fail)
+    }
+  }, [doc])
+  useLayoutEffect(() => {
+    taskStrip.current?.querySelector('[aria-selected=true]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [tasks?.active])
+  useEffect(() => {
+    if (scene) doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-title', { detail: { scope, title: scene.title } }))
+  }, [doc, scope, scene?.title])
   useLayoutEffect(() => {
     if (!layersOpen) return
     const outside = (event: Event) => {
@@ -546,6 +567,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         const nextScene = { id: job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers }
         if (!workspace.change(job.sessionId, () => nextScene)) throw Error(t('图片没能放到画布。', 'Could not place the image on the canvas.'))
         newRaster = undefined
+        emit('task-title', { scope: job.sessionId, title: nextScene.title })
         if (job.scene) setSelectionDraft(job.scene.id)
         if (workspace.getSnapshot().scope === job.sessionId) {
           resetSelectionGesture(); setGalleryScope(undefined); if (!job.scene) resetViewport()
@@ -601,6 +623,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt }, cancelable: true }))
   }
+  function taskAction(kind: 'new' | 'select' | 'close', tabScope?: CanvasScope) {
+    releaseText()
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-action', { detail: { kind, scope: tabScope } }))
+  }
   function openWorkspaceView(view: string) {
     const sessionId = findWorkspaceSession(doc)?.dataset.eworkNotesSession
     if (!sessionId) { if (view === 'chat') close(); return }
@@ -634,7 +660,35 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, workspaceEnglishLabels[view])}</button>)}
         </nav>
       </div>
-      <span className="if-top-title" title={current?.title}>{current?.title}</span>
+      {tasks?.tabs.length ? <>
+        <span className="eb-app-divider" aria-hidden="true"/>
+        <div className="if-task-strip eb-tab-scroll" ref={taskStrip} role="tablist" aria-label={t('图片任务', 'Image tasks')} aria-busy={tasks.busy}>
+          {tasks.tabs.map((tab, index) => {
+            const selected = tab.scope === tasks.active
+            const title = (tab.scope === scope ? scene?.title : undefined) ?? tab.title ?? t('新图片任务', 'New image task')
+            return <div key={tab.scope ?? ''} className="if-task-tab eb-tab" data-active={selected}>
+              <button type="button" className="if-task-select" role="tab" aria-selected={selected} title={title}
+                aria-controls="image-factory-task-workspace" tabIndex={selected ? 0 : -1} disabled={tasks.busy}
+                onClick={() => taskAction('select', tab.scope)} onKeyDown={event => {
+                  const count = tasks.tabs.length
+                  if (event.key === 'Delete') { event.preventDefault(); taskAction('close', tab.scope); return }
+                  const next = event.key === 'ArrowLeft' ? (index - 1 + count) % count : event.key === 'ArrowRight' ? (index + 1) % count
+                    : event.key === 'Home' ? 0 : event.key === 'End' ? count - 1 : undefined
+                  if (next === undefined) return
+                  event.preventDefault()
+                  taskAction('select', tasks.tabs[next]!.scope)
+                  taskStrip.current?.querySelectorAll<HTMLElement>('[role=tab]')[next]?.focus({ preventScroll: true })
+                }}>
+                <Icon name="image" size={14}/><span className="eb-tab-title">{title}</span>
+              </button>
+              <button type="button" className="eb-tab-close" tabIndex={-1} disabled={tasks.busy}
+                aria-label={t('关闭任务 ', 'Close image task ') + title} onClick={() => taskAction('close', tab.scope)}><Icon name="close" size={14}/></button>
+            </div>
+          })}
+        </div>
+        <Button icon="plus" label={t('新建图片任务', 'New image task')} disabled={tasks.busy} onClick={() => taskAction('new')}/>
+      </> : null}
+      <span className="if-top-title" title={tasks?.tabs.length ? undefined : current?.title}>{tasks?.tabs.length ? null : current?.title}</span>
       <CanvasActionsMenu doc={doc} t={t} canExport={!!current?.layers.length && !busy} exporting={exportImage}
         galleryAction={scene && !busy ? galleryOpen ? { label: t('返回画布', 'Return to canvas'), run: () => setGalleryOpen(false) }
           : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: () => { releaseText(); clearSelection(); setGalleryOpen(true) } } : undefined}/>
@@ -649,7 +703,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         releaseText(); setSelectedId(undefined); clearSelection(); if (!marking && !area) setMarking(true)
       }}>{t('框选修改', 'Edit selected area')}</Button>
     </nav>}
-    <div className="if-stage" data-layers-open={layersOpen} ref={stage}>
+    <div id="image-factory-task-workspace" className="if-stage" data-layers-open={layersOpen} ref={stage}>
       {status === 'loading' || status === 'idle' ? <div className="if-canvas-message" role="status">{t('正在打开画布…', 'Opening canvas…')}</div>
         : status === 'error' ? <div className="if-canvas-message" role="alert">
           <span>{t('画布暂时无法读取。', 'The canvas could not be opened.')}</span>

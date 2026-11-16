@@ -31,6 +31,14 @@
 .if-top-title {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;-webkit-app-region:drag}
 .if-top-title:not(:empty) {border-left:1px solid var(--if-line);padding-left:12px;margin-left:4px}
 .if-top > .if-button {flex:none}
+.if-top {--eb-line:var(--if-line);--eb-ink:var(--if-ink);--eb-muted:var(--if-muted);--eb-field:var(--if-hover)}
+.if-top .if-task-strip {flex:0 1 auto;max-width:none;min-width:0;overflow:auto;scrollbar-width:none;-webkit-app-region:no-drag}
+.if-top .if-task-tab {flex:0 0 clamp(92px,18cqw,200px);min-width:0;gap:0;padding:0 4px!important}
+.if-top .if-task-tab[data-active=true] {background:var(--if-hover);color:var(--if-ink)!important}
+.if-top .if-task-select {display:flex;flex:1;align-items:center;gap:7px;min-width:0;height:30px;padding:0 5px;font-size:13px}
+.if-top .if-task-select:focus-visible,.if-top .eb-tab-close:focus-visible {outline-offset:-2px}
+.if-top .eb-tab-close {flex:none;opacity:0}
+.if-top .if-task-tab:is(:hover,:focus-within,[data-active=true]) .eb-tab-close {opacity:1}
 @container (480px < width <= 700px) {
   .if-top .workspace-app-title {width:auto}
   .if-top .workspace-app-title>span {display:inline}

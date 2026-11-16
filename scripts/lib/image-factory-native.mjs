@@ -1,8 +1,12 @@
 import { imageGenerationCalls } from './image-generation-client.mjs'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../../packages/dsh-research-task-runtime/image-factory-context.js'
+import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
-export function installImageFactoryContext({ sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt }) {
+export function installImageFactoryContext({
+  sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
+  getTaskWorkspace, setTaskView, taskStorage,
+}) {
   const jobs = new Map(), listeners = new Set()
   let state = { current: false, busy: false }
   let galleryDrafts = new WeakMap()
@@ -11,10 +15,12 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   const canvasScope = () => {
     const { current, byId } = sessions.list.getSnapshot()
     // The native sidebar only shows the currently selected empty session.
-    return current && byId?.[current]?.blank !== true ? current : null
+    return current && (current.startsWith('image-task-') || byId?.[current]?.blank !== true) ? current : null
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
+  const tasks = createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace: getTaskWorkspace,
+    setView: setTaskView, storage: taskStorage })
   const stateChange = event => {
     state = { current: event.detail?.current === true, busy: event.detail?.busy === true }
     for (const listener of listeners) listener()
@@ -87,6 +93,7 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   const promoteDraft = job => {
     if (job.draft && !job.promotion) {
       job.promotion = adopt(job.sessionId).catch(() => {})
+      tasks.bindDraft(job.sessionId)
       syncSession()
     }
     return job.promotion
@@ -181,13 +188,22 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     // The list can stop reporting a blank conversation before its admitted user turn is visible.
     const awaitingAdmission = scope !== null && [...jobs.values()].some(job => job.sessionId === scope && job.draft && !job.promotion)
     const sessionId = awaitingAdmission ? null : scope
+    tasks.sync(sessionId)
     if (!force && sessionId === publishedScope) return
     publishedScope = sessionId
     signal('session', { sessionId })
   }
   const offSession = sessions.list.subscribe?.(() => syncSession())
-  const reset = () => { for (const id of jobs.keys()) finish(id, false); galleryDrafts = new WeakMap(); publishedScope = undefined }
-  const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
+  const reset = () => {
+    for (const id of jobs.keys()) finish(id, false)
+    galleryDrafts = new WeakMap()
+    publishedScope = undefined
+    tasks.reset()
+  }
+  const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt,
+    comment: submitComment, 'focus-chat': focus, reset,
+    'task-action': event => { void tasks.action(event.detail) }, 'task-title': event => tasks.setTitle(event.detail),
+    'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   signal('request-state', {})
   syncSession()
@@ -260,6 +276,7 @@ let eworkImageFactory;
 ${readImageFactoryContext.toString()}
 ${stripImageFactoryContext.toString()}
 ${imageFactoryPrompt.toString()}
+${createImageFactoryTasks.toString()}
 ${imageFactoryDisplayContent.toString()}
 ${imageFactoryContentContext.toString()}
 ${imageFactoryQueueRow.toString()}

@@ -1384,6 +1384,8 @@ async function bootstrap(): Promise<void> {
     factoryCanvases.write(value))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:canvas-adopt', () => mainWindow, (_event, sessionId: string, epoch: number) =>
     factoryCanvases.adopt(sessionId, epoch))
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:tabs-read', () => mainWindow, () => factoryCanvases.readTabs())
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:tabs-write', () => mainWindow, (_event, value: unknown) => factoryCanvases.writeTabs(value))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:archive', () => mainWindow, (_event, value: unknown) => {
     const input = value as { id?: string; sessionId?: string; sessionTitle?: unknown; epoch?: number; name?: string; data?: Uint8Array } | undefined
     if (typeof input?.id !== 'string' || typeof input.sessionId !== 'string' || typeof input.name !== 'string' ||

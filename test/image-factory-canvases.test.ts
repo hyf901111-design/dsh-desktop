@@ -76,3 +76,22 @@ it('rejects an old account epoch and retains the original canvas if a new raster
     await expect(persistence.read('../studio')).rejects.toThrow('会话无效')
   } finally { await rm(root, { force: true, recursive: true }) }
 })
+
+it('restores the same open task tabs for the account without sharing them across identities', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'odyssey-factory-tabs-'))
+  try {
+    let owner = { owner: 'account-a', generation: 1 }
+    const studio = new ImageFactoryCanvases(root, () => owner)
+    const tabs = [{ scope: 'image-task-first', title: '海报' }, { scope: 'image-task-next' }]
+    await studio.writeTabs({ epoch: 1, tabs })
+    const reopened = new ImageFactoryCanvases(root, () => owner)
+    expect(await reopened.readTabs()).toEqual({ epoch: 1, tabs })
+    owner = { owner: 'account-b', generation: 2 }
+    expect(await reopened.readTabs()).toEqual({ epoch: 2, tabs: [] })
+    await expect(reopened.writeTabs({ epoch: 1, tabs })).rejects.toThrow('账号已切换')
+    await expect(reopened.writeTabs({ epoch: 2, tabs: [{ scope: null }] })).rejects.toThrow('无效')
+    owner = { owner: 'account-a', generation: 3 }
+    await reopened.writeTabs({ epoch: 3, tabs: tabs.slice(1) })
+    expect(await reopened.readTabs()).toEqual({ epoch: 3, tabs: tabs.slice(1) })
+  } finally { await rm(root, { force: true, recursive: true }) }
+})
