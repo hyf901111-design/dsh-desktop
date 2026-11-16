@@ -115,7 +115,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
-  const textDrag = useRef<{ id: string; pointer: number; start: Point; moved: boolean; x: number; y: number; height: number }>()
+  const textDrag = useRef<{ id: string; pointer: number; start: Point; moved: boolean; x: number; y: number; width: number; height: number }>()
   const pendingTextLayout = useRef<{ id: string; scope: CanvasScope; commit: boolean }>()
   const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef(new Map<string, CanvasJob>())
@@ -298,28 +298,34 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (selectedId === id) setSelectedId(undefined)
     setScene(old => old && { ...old, layers: old.layers.filter(layer => layer.id !== id) })
   }
-  function textPointer(event: PointerEvent<HTMLElement>, layer: TextLayer, phase: 'start' | 'move' | 'end') {
-    if (marking || area || editing || busy || !current || phase === 'start' && event.button !== 0) return
+  function textPointer(event: PointerEvent<HTMLElement>, phase: 'start' | 'move' | 'end' | 'cancel', layer?: TextLayer) {
+    if (!current) return
     if (phase === 'start') {
+      if (!layer || !event.isPrimary || event.button !== 0 || marking || area || editing || busy) return
       setSelectedId(layer.id)
       event.currentTarget.setPointerCapture(event.pointerId)
       const height = Math.ceil(event.currentTarget.getBoundingClientRect().height / displayScale)
-      textDrag.current = { id: layer.id, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, x: layer.x, y: layer.y, height }
+      textDrag.current = { id: layer.id, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY },
+        moved: false, x: layer.x, y: layer.y, width: layer.width, height }
       return
     }
     const drag = textDrag.current
-    if (!drag || drag.id !== layer.id || drag.pointer !== event.pointerId) return
-    if (phase === 'end') {
+    if (!drag || drag.pointer !== event.pointerId) return
+    if (phase === 'cancel') {
+      textDrag.current = undefined
       if (drag.moved) workspace.commit(scope)
-      textDrag.current = undefined; return
+      return
     }
+    const released = phase === 'end'
+    if (released) textDrag.current = undefined
+    else if (!(event.buttons & 1)) return
     const dx = event.clientX - drag.start.x, dy = event.clientY - drag.start.y
     if (!drag.moved && Math.hypot(dx, dy) < 3) return
     drag.moved = true
-    patchLayer(layer.id, {
-      x: Math.min(1 - layer.width, Math.max(0, drag.x + dx / (current.width * displayScale))),
+    patchLayer(drag.id, {
+      x: Math.min(1 - drag.width, Math.max(0, drag.x + dx / (current.width * displayScale))),
       y: textTopInsideCanvas(drag.y + dy / (current.height * displayScale), drag.height, current.height),
-    }, false)
+    }, released)
   }
   function onRectanglePointer(event: PointerEvent<HTMLDivElement>, phase: 'start' | 'move' | 'end' | 'cancel') {
     if (!marking || !current || busy) return
@@ -587,8 +593,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           }
         }}>
           <div ref={imageFrame} className="if-raster" data-selecting={marking} style={{ width: Math.max(1, current.width * displayScale), height: Math.max(1, current.height * displayScale) }}
-            onPointerDown={event => onRectanglePointer(event, 'start')} onPointerMove={event => onRectanglePointer(event, 'move')}
-            onPointerUp={event => onRectanglePointer(event, 'end')} onPointerCancel={event => onRectanglePointer(event, 'cancel')}
+            onPointerDownCapture={event => { if (event.isPrimary) textPointer(event, 'cancel') }}
+            onPointerDown={event => onRectanglePointer(event, 'start')}
+            onPointerMove={event => { onRectanglePointer(event, 'move'); textPointer(event, 'move') }}
+            onPointerUp={event => { onRectanglePointer(event, 'end'); textPointer(event, 'end') }}
+            onPointerCancel={event => { onRectanglePointer(event, 'cancel'); textPointer(event, 'cancel') }}
             onLostPointerCapture={event => onRectanglePointer(event, 'cancel')}>
             {current.layers.map(layer => {
               if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
@@ -607,8 +616,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                   onClick={() => { if (!marking && !area) setSelectedId(layer.id) }}
                   onDoubleClick={() => { if (!marking && !area && !busy) { setSelectedId(layer.id); setEditing(layer.id) } }}
                   onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
-                  onPointerDown={event => textPointer(event, layer, 'start')} onPointerMove={event => textPointer(event, layer, 'move')}
-                  onPointerUp={event => textPointer(event, layer, 'end')} onLostPointerCapture={event => textPointer(event, layer, 'end')}>{layer.text}</div>
+                  onPointerDown={event => textPointer(event, 'start', layer)}>{layer.text}</div>
             })}
             {rectangle && <div className="if-region" data-dragging={!!rubberband} style={{
               left: rectangle.x / current.width * 100 + '%', top: rectangle.y / current.height * 100 + '%',
