@@ -63,11 +63,12 @@ export function cropRaster(doc: Document, image: Raster, area: Region) {
   return canvas
 }
 
-export function drawCover(context: CanvasRenderingContext2D, source: Raster, target: Region) {
-  const scale = Math.max(target.width / source.width, target.height / source.height)
-  const width = target.width / scale, height = target.height / scale
-  context.drawImage(source.image, (source.width - width) / 2, (source.height - height) / 2,
-    width, height, target.x, target.y, target.width, target.height)
+/** Preserve the full generated composition when the provider returns a different ratio. */
+export function drawFit(context: CanvasRenderingContext2D, source: Raster, target: Size) {
+  const scale = Math.min(target.width / source.width, target.height / source.height)
+  const width = Math.max(1, Math.round(source.width * scale))
+  const height = Math.max(1, Math.round(source.height * scale))
+  context.drawImage(source.image, Math.floor((target.width - width) / 2), Math.floor((target.height - height) / 2), width, height)
 }
 
 /** Draw the edited patch inside the original integer pixel bounds, replacing transparent pixels as well. */
