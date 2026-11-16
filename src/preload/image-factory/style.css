@@ -91,9 +91,9 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 }
 
 .if-stage-scroll[data-layers-open=true]{inset-inline-start:222px}
-.if-text-layer {position:absolute;min-height:1.2em;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.2!important;cursor:move;touch-action:none}
+.if-text-layer {max-width:none;cursor:move;touch-action:none}
 .if-text-layer[data-selected=true]{outline:1px solid #5191ff;outline-offset:1px}
-.image-factory textarea.if-text-layer {border:0;border-radius:0;padding:0;margin:0;resize:none;overflow:hidden;background:transparent;cursor:text;line-height:1.2!important}
+.image-factory textarea.if-text-layer {max-width:none;border:0;border-radius:0;padding:0;margin:0;resize:none;overflow:hidden;background:transparent;cursor:text}
 .image-factory textarea.if-text-layer::placeholder{opacity:.7;color:inherit}
 .if-raster[data-selecting=true] .if-text-layer{pointer-events:none}
 .if-mark-hint {position:absolute;z-index:4;top:14px;left:50%;transform:translateX(-50%);font-size:12px;max-width:calc(100% - 20px);padding:8px 12px;border:1px solid #ffffff18;border-radius:8px;color:#fff;background:#1d2639e8;pointer-events:none}

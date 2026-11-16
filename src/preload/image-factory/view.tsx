@@ -9,7 +9,7 @@ import { CanvasActionsMenu } from './actions-menu'
 import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
 import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, providerSize, ratios, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
-import { drawLayers, imageFonts, moveLayer, textFont, type CanvasLayer, type ImageScene, type TextLayer } from './layers'
+import { drawLayers, imageFonts, moveLayer, textLayerStyle, type CanvasLayer, type ImageScene, type TextLayer } from './layers'
 import styles from './style.css?raw'
 
 export const imageFactoryOpenEvent = 'sherlock:image-factory-open'
@@ -311,7 +311,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     try {
       const { canvas, context } = canvasFor(doc, current)
       if (format === 'jpg') { context.fillStyle = '#fff'; context.fillRect(0, 0, current.width, current.height) }
-      drawLayers(context, current)
+      await drawLayers(context, current)
       const data = new Uint8Array(await (await encode(canvas)).arrayBuffer())
       const result = await bridge.save({ action: 'download', data, format, name: current.title })
       if (!result.cancelled && mounted.current) setToast(t('图片已保存。', 'Image saved.'))
@@ -403,7 +403,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           let data = layer.data
           if (layers.some(item => item.kind === 'text' && item.text.trim())) {
             const flattened = canvasFor(doc, nextScene)
-            drawLayers(flattened.context, nextScene)
+            await drawLayers(flattened.context, nextScene)
             data = new Uint8Array(await (await encode(flattened.canvas)).arrayBuffer())
           }
           const epoch = workspace.epoch(job.sessionId)
@@ -522,8 +522,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             onLostPointerCapture={event => onRectanglePointer(event, 'cancel')}>
             {current.layers.map(layer => {
               if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
-              const style = { left: layer.x * 100 + '%', top: layer.y * 100 + '%', width: layer.width * 100 + '%',
-                font: textFont(layer, layer.fontSize * displayScale), color: layer.color, textAlign: layer.align } as CSSProperties
+              const style = { ...textLayerStyle(layer, current), transform: 'scale(' + displayScale + ')',
+                transformOrigin: 'top left', outlineWidth: 1 / displayScale }
               return editing === layer.id ? <textarea key={layer.id} ref={element => {
                 if (!element) return
                 element.style.height = '0px'; element.style.height = element.scrollHeight + 'px'

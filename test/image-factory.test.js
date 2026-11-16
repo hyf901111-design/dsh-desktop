@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { Window } from 'happy-dom'
+import { describe, expect, it, vi } from 'vitest'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
 import { drawLayers, moveLayer } from '../src/preload/image-factory/layers'
 import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
@@ -55,21 +56,30 @@ describe('image factory', () => {
     expect(readImageFactoryContext(imageFactoryPrompt(text, { ...context, width: 8000 }))).toBeUndefined()
   })
 
-  it('composites movable, formatted text layers in the same order as the layer list', () => {
-    const text = { id: 'heading', kind: 'text', text: '海报', x: .1, y: .2, width: .5,
+  it('composites browser-laid text in the same order as the layer list', async () => {
+    const text = { id: 'heading', kind: 'text', text: '海报（限定）\n栏目\t内容 👩‍🎨 <&', x: .1, y: .2, width: .5,
       fontSize: 30, family: 'Songti SC', weight: 700, align: 'right', color: '#ff0000' }
     const image = { id: 'photo', kind: 'image', raster: { image: 'base' } }
     const original = [image, text]
     const layers = moveLayer(original, 'heading', 'photo', false)
     expect(original.map(layer => layer.id)).toEqual(['photo', 'heading'])
     expect(layers.map(layer => layer.id)).toEqual(['heading', 'photo'])
-    const calls = [], paint = {
-      measureText: s => ({ width: s.length * 16 }),
-      drawImage: (...args) => calls.push(['image', ...args]),
-      fillText: (...args) => calls.push(['text', ...args, paint.font, paint.fillStyle, paint.textAlign]),
+    const win = new Window()
+    const decode = vi.spyOn(win.HTMLImageElement.prototype, 'decode').mockResolvedValue()
+    const drawImage = vi.fn()
+    try {
+      await drawLayers({ canvas: win.document.createElement('canvas'), drawImage }, { width: 400, height: 300, layers })
+      expect(decode).toHaveBeenCalledOnce()
+      const [[raster, x, y], base] = drawImage.mock.calls
+      const serialized = decodeURIComponent(raster.src.split(',')[1])
+      expect(serialized).toContain('海报（限定）\n栏目\t内容 👩‍🎨 &lt;&amp;')
+      expect(serialized).toContain('text-align: right')
+      expect(serialized).toContain('width: 200px')
+      expect([x, y]).toEqual([0, 0])
+      expect(base).toEqual(['base', 0, 0, 400, 300])
+    } finally {
+      decode.mockRestore()
+      await win.happyDOM.abort()
     }
-    drawLayers(paint, { width: 400, height: 300, layers })
-    expect(calls).toEqual([['text', '海报', 240, 78, '700 30px "Songti SC", "PingFang SC", sans-serif', '#ff0000', 'right'],
-      ['image', 'base', 0, 0, 400, 300]])
   })
 })
