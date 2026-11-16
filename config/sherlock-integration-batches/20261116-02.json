@@ -11,37 +11,33 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
-        "tipCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
+        "baseCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
+        "tipCommit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
         "commits": [
           {
-            "commit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
+            "commit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
             "parents": [
-              "25e407fb30d15ad974ab2415193dd5d926977b70"
+              "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54"
             ],
-            "subject": "优化：框选改图等待和失败时保留选区与意见"
+            "subject": "修复：图像工厂按会话指定比例生成和导出"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
+            "path": "src/preload/image-factory/raster.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/style.css"
+            "path": "test/image-factory.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "path": "test/image-generation-tool.test.js"
           }
         ],
         "checks": [
@@ -53,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
-            "completedAt": "2026-11-16T16:26:45.127Z",
+            "verifiedCommit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
+            "completedAt": "2026-11-16T16:45:38.047Z",
             "timeoutMs": 120000
           },
           {
@@ -62,37 +58,36 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-native.test.js",
               "test/image-factory.test.js",
+              "test/image-factory-native.test.js",
               "test/image-factory-canvases.test.ts",
               "test/image-factory-canvas-workspace.test.ts",
               "test/image-generation-tool.test.js",
               "test/image-generation-client.test.js",
+              "test/hosted-ark-runtime.test.js",
               "test/knowledge-history-backfill.test.ts",
-              "test/pending-conversation.test.js",
-              "test/browser-app-native.test.js"
+              "test/pending-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "55 项图像工厂、原生发送和知识库聚焦检查通过。",
-            "verifiedCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
-            "completedAt": "2026-11-16T16:26:45.127Z",
+            "summary": "57 项图像工厂、托管生图与知识库聚焦检查通过。",
+            "verifiedCommit": "bc0725bf7e7c821d1236c880ed16e4e9abf8157e",
+            "completedAt": "2026-11-16T16:45:38.047Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 挂载实际画布和原生对话适配，验证提交失败、等待、切换会话、失败后保留原意见和选区、显式重试及成功清理。"
+          "summary": "Chromium 验证 4:5 生成和导出为 1080×1350，偏窄的模拟回图保持完整构图并延展不透明外缘，正确保留圆形比例；7:5 精准输出 1596×1140，透明素材保留透明边缘。"
         },
         "acceptanceCriteria": [
-          "提交成功后，完整选区在处理过程中保留。",
-          "取消或失败后，修改意见和选区可以继续使用。",
-          "重试需要用户触发并保持原消息内容。",
-          "成功应用后清理选区与意见。"
+          "画布指明的比例进入托管图片模型的提示。",
+          "最终导出保持用户指定比例及完整构图。",
+          "回图有透明边缘时保留原透明语义。"
         ],
         "risks": [
-          "选区及未提交意见保留在当前客户端运行期间。"
+          "托管模型在现有网关分辨率下根据提示选择尺寸，客户端适配最终画布。"
         ],
-        "generatedAt": "2026-11-16T16:26:45.127Z"
+        "generatedAt": "2026-11-16T16:45:38.047Z"
       }
     },
     {
