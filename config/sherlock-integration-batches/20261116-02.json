@@ -11,21 +11,35 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
-        "tipCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
+        "baseCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
+        "tipCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
         "commits": [
           {
-            "commit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
+            "commit": "0d3035f45a2ece1d95530187d9aceeec9b672916",
             "parents": [
-              "8fc1aeb0760b574216a1ffcc31c47f95e0859875"
+              "37cf4bfdfc7e6ef78ec51648694497c6184c75d6"
             ],
-            "subject": "功能：文字图层提供可拖拽缩放边框"
+            "subject": "修复：导出子菜单优先向右并同步箭头方向"
+          },
+          {
+            "commit": "2fba6bd9f03247b38e788ff26fb1a7f0bc9257c9",
+            "parents": [
+              "0d3035f45a2ece1d95530187d9aceeec9b672916"
+            ],
+            "subject": "调整：图像工厂提示气泡在工作区居中显示"
+          },
+          {
+            "commit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
+            "parents": [
+              "2fba6bd9f03247b38e788ff26fb1a7f0bc9257c9"
+            ],
+            "subject": "功能：支持快捷键缩放和平移图像画布"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
+            "path": "src/preload/image-factory/actions-menu.tsx"
           },
           {
             "status": "M",
@@ -36,8 +50,20 @@
             "path": "src/preload/image-factory/view.tsx"
           },
           {
+            "status": "A",
+            "path": "src/preload/image-factory/viewport.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-actions-menu.test.ts"
+          },
+          {
             "status": "M",
             "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -49,8 +75,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
-            "completedAt": "2026-11-16T22:31:33.461Z",
+            "verifiedCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
+            "completedAt": "2026-11-16T22:42:40.509Z",
             "timeoutMs": 120000
           },
           {
@@ -58,29 +84,48 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/image-factory-actions-menu.test.ts",
               "test/image-factory-layer-gesture.test.ts",
               "test/image-factory.test.js",
               "test/image-factory-canvas-workspace.test.ts",
               "test/image-factory-canvases.test.ts"
             ],
             "outcome": "passed",
-            "summary": "22 项文字手柄、画布状态和图层持久化聚焦检查通过。",
-            "verifiedCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
-            "completedAt": "2026-11-16T22:31:33.461Z",
+            "summary": "25 项菜单、图层、画布快捷手势和持久化聚焦检查通过。",
+            "verifiedCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
+            "completedAt": "2026-11-16T22:42:40.509Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "centers Image Factory notices"
+            ],
+            "outcome": "passed",
+            "summary": "Chromium 渲染验证保存提示与图像工作区中心坐标一致。",
+            "verifiedCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
+            "completedAt": "2026-11-16T22:42:40.509Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "聚焦 DOM 验证未选中无手柄、选中后出现六个手柄、左右改宽、四角缩放字号、字号同步和双击编辑，待签名版实机复测。"
+          "summary": "聚焦检查通过，继续在本地签名版验证实际交互。"
         },
         "acceptanceCriteria": [
           "文字选中边框有四角与左右手柄。",
           "侧边调整宽度和换行，四角等比缩放文字框与字号。",
-          "缩放可保存，双击继续编辑。"
+          "缩放可保存，双击继续编辑。",
+          "导出有足够空间时向右展开，靠窗边向左展开，箭头同步。",
+          "保存提示在图像工作区居中。",
+          "Command 滚轮以指针位置缩放，按住空格拖动平移，适合恢复视图，文字输入保持正常。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T22:31:33.461Z"
+        "generatedAt": "2026-11-16T22:42:40.509Z"
       }
     },
     {
