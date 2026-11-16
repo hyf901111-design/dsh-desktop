@@ -185,6 +185,29 @@ it('opens a newly imported file session after refreshing a catalog with an empty
   } finally { dispose(); await window.happyDOM.abort() }
 })
 
+it('engages the already saved image copy before opening its chat session', async () => {
+  const window = new Window()
+  const { document } = window
+  const summary = { title: '归档图片（副本）', blank: true }
+  const sessions = {
+    list: { getSnapshot: () => ({ byId: { copy: summary } }) },
+    subagentAddress: () => undefined,
+    retainNoteSession: vi.fn(() => { summary.blank = false }),
+    open: vi.fn(() => { expect(summary.blank).toBe(false) })
+  }
+  const dispose = installKnowledgeSourceNavigation({ document, sessions, selectView: vi.fn() })
+  const notify = vi.fn()
+  document.addEventListener('sherlock:knowledge-source-result', notify)
+  try {
+    document.dispatchEvent(new window.CustomEvent('sherlock:knowledge-source-open', {
+      detail: { id: 'copy', requestId: 'image-copy', view: 'chat', retained: 'imported' }, cancelable: true
+    }))
+    expect(sessions.retainNoteSession).toHaveBeenCalledExactlyOnceWith('copy')
+    expect(sessions.open).toHaveBeenCalledExactlyOnceWith('copy')
+    expect(notify.mock.calls[0][0].detail).toEqual({ requestId: 'image-copy', ok: true })
+  } finally { dispose(); await window.happyDOM.abort() }
+})
+
 it('prompts for a fresh file after revocation and refreshes the shared directory', async () => {
   const window = new Window()
   const message = '引用的文件已不存在或已取消共享，请重新选择。'
