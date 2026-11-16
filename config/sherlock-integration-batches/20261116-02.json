@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "d79b0ce47c3ec04383b2e777525790a0c105ad68",
-        "tipCommit": "0a7fb5f8e671406700a692564069d6fe2b6b08d9",
+        "baseCommit": "0a7fb5f8e671406700a692564069d6fe2b6b08d9",
+        "tipCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
         "commits": [
           {
-            "commit": "0a7fb5f8e671406700a692564069d6fe2b6b08d9",
+            "commit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
             "parents": [
-              "d79b0ce47c3ec04383b2e777525790a0c105ad68"
+              "0a7fb5f8e671406700a692564069d6fe2b6b08d9"
             ],
-            "subject": "修复：按会话隔离图像工厂的画廊示例草稿"
+            "subject": "修复：图像工厂更多菜单对齐按钮并适配导出方向"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
+            "path": "src/preload/image-factory/actions-menu.tsx"
           },
           {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "status": "A",
+            "path": "test/image-factory-actions-menu.test.ts"
           }
         ],
         "checks": [
@@ -41,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "0a7fb5f8e671406700a692564069d6fe2b6b08d9",
-            "completedAt": "2026-11-16T18:01:03.338Z",
+            "verifiedCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
+            "completedAt": "2026-11-16T18:17:55.289Z",
             "timeoutMs": 120000
           },
           {
@@ -50,27 +50,28 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-native.test.js",
+              "test/image-factory-actions-menu.test.ts",
               "test/image-factory.test.js",
-              "test/browser-app-native.test.js"
+              "test/image-factory-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "21 项通用对话和图像工厂聚焦检查通过。",
-            "verifiedCommit": "0a7fb5f8e671406700a692564069d6fe2b6b08d9",
-            "completedAt": "2026-11-16T18:01:03.338Z",
+            "summary": "18 项图像工厂菜单、画布和会话聚焦检查通过。",
+            "verifiedCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
+            "completedAt": "2026-11-16T18:17:55.289Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 用实际画廊和消息桥切换两个会话。换例时只替换本会话上一示例，保留手写限制；另一会话草稿保持独立。"
+          "summary": "Chromium 使用实际菜单和共用样式验证侧屏展开、收起时主菜单右边缘和更多按钮一致，格式子菜单向左展开并可按右方向键返回。触发 JPG 格式导出。"
         },
         "acceptanceCriteria": [
-          "来回切换会话后换用示例只替换本会话上一示例。",
-          "保留本会话用户已有文字和其他会话草稿。"
+          "主菜单贴着更多按钮。",
+          "方向箭头和子菜单实际展开方向一致。",
+          "键盘可进入、返回并选择导出格式。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T18:01:03.338Z"
+        "generatedAt": "2026-11-16T18:17:55.289Z"
       }
     },
     {
