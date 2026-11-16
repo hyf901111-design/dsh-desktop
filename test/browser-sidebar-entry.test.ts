@@ -14,7 +14,22 @@ const fixture=(wide:boolean)=>{
 }
 it('places browser after New Note in expanded More and uses the same open action',async()=>{
  const {w}=fixture(true),open=vi.fn();w.addEventListener('sherlock:browser-request',open)
- try{(w.document.querySelector('.st-more')as any).click();const rows=[...w.document.querySelectorAll<TestButton>('[role=menuitem]')];expect(rows.map(x=>x.textContent)).toEqual(['新笔记','新建表格','浏览器','知识库','插件','定时任务']);rows[2]!.click();expect(open).toHaveBeenCalledOnce()}finally{await w.happyDOM.abort();vi.unstubAllGlobals()}
+ try{(w.document.querySelector('.st-more')as any).click();const rows=[...w.document.querySelectorAll<TestButton>('[role=menuitem]')];expect(rows.map(x=>x.textContent)).toEqual(['新笔记','新建表格','浏览器','知识库','图像工厂','插件','定时任务']);rows[2]!.click();expect(open).toHaveBeenCalledOnce()}finally{await w.happyDOM.abort();vi.unstubAllGlobals()}
+})
+it('opens Image Factory from expanded More and dismisses the menu', async () => {
+ const { w } = fixture(true)
+ const open = vi.fn()
+ w.addEventListener('sherlock:image-factory-open', open)
+ const more = w.document.querySelector<TestButton>('.st-more')!
+ try {
+  more.click()
+  const factory = [...w.document.querySelectorAll<TestButton>('[role=menuitem]')].find(item => item.textContent === '图像工厂')!
+  expect(factory.querySelector('[data-odyssey-icon=factory]')).toBeTruthy()
+  factory.click()
+  expect(open).toHaveBeenCalledOnce()
+  expect(more.getAttribute('aria-expanded')).toBe('false')
+  expect(w.document.querySelector('[data-sidebar-more]')).toBeNull()
+ } finally { await w.happyDOM.abort(); vi.unstubAllGlobals() }
 })
 it('provides a persistent collapsed browser button and keeps collapsed More focused on other actions',async()=>{
  const {w,view}=fixture(false),open=vi.fn(),openKnowledge=vi.fn();w.addEventListener('sherlock:browser-request',open);w.addEventListener('sherlock:knowledge-open',openKnowledge)

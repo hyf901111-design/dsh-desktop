@@ -385,8 +385,9 @@ it('shares one More menu and preserves the scheduled draft through the integrati
   const plugin=Array.from(doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]')).find(button=>button.textContent?.includes('插件'))
   expect(plugin).toBeDefined();
   const menuRows=Array.from(doc.querySelectorAll<HTMLButtonElement>('[role=menuitem]'));
-  expect(menuRows.map(row=>row.querySelectorAll('.st-icon').length)).toEqual([1,1,1]);
-  expect(menuRows.map(row=>row.firstElementChild?.className)).toEqual(['st-icon','st-icon','st-icon']);
+  expect(menuRows.map(row=>row.textContent)).toEqual(['浏览器','知识库','图像工厂','插件','定时任务']);
+  expect(menuRows.map(row=>row.querySelectorAll('.st-icon').length)).toEqual(menuRows.map(()=>1));
+  expect(menuRows.map(row=>row.firstElementChild?.className)).toEqual(menuRows.map(()=>'st-icon'));
   expect(w.getComputedStyle(menuRows[0] as any).gap).toBe(w.getComputedStyle(menuRows[1] as any).gap);
   plugin!.click();await Promise.resolve();await Promise.resolve()
   expect(doc.querySelector<HTMLElement>('.st-root')!.hidden).toBe(true)

@@ -1,5 +1,4 @@
 import { icons } from './icons'
-import factoryIcon from '../image-factory/assets/factory.svg?inline'
 export const scheduledStyles = `
 [data-scheduled-hidden=true]{visibility:hidden!important}
 [data-dsh-sidebar-root] .hHd-Xa_newSessionGroup{display:flex!important;gap:8px!important;align-items:center!important;padding:0 2px!important;margin:0 0 6px!important;min-height:36px!important;background:transparent!important;border:0!important}
@@ -21,7 +20,7 @@ body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGrou
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory])::before{background:currentColor!important;opacity:1;width:20px;height:20px}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-home]::before{mask-image:url('${icons.homeRail.replaceAll("'",'%27')}')}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]::before{mask-image:url('${icons.browserRail.replaceAll("'",'%27')}')}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-image-factory]::before{mask-image:url('${factoryIcon.replaceAll("'",'%27')}')}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-image-factory]::before{mask-image:url('${icons.factory.replaceAll("'",'%27')}')}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]{display:grid!important;place-items:center!important;padding:0!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]::before{content:none}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup [data-sidebar-knowledge-glyph]{display:block;width:24px;height:24px;background:currentColor;mask:url('${icons.knowledge.replaceAll("'",'%27')}') center/100% 100% no-repeat;pointer-events:none}
