@@ -12,8 +12,16 @@ export function readImageFactoryContext(text) {
         !Number.isInteger(value.height) || value.height < 1 || value.height > 4096 ||
         typeof value.title !== 'string' || value.title.length < 1 || value.title.length > 100 ||
         typeof value.internalReference !== 'boolean') return
+    let editBounds
+    if (value.editBounds !== undefined) {
+      if (value.operation !== 'region' || !value.internalReference || !value.editBounds) return
+      const { left, top, right, bottom } = value.editBounds
+      if (![left, top, right, bottom].every(edge => Number.isFinite(edge) && edge >= 0 && edge <= 1) ||
+          left >= right || top >= bottom) return
+      editBounds = { left, top, right, bottom }
+    }
     return { id: value.id, operation: value.operation, size: value.size, width: value.width, height: value.height,
-      title: value.title, internalReference: value.internalReference, text: text.slice(0, match.index) }
+      title: value.title, internalReference: value.internalReference, ...(editBounds && { editBounds }), text: text.slice(0, match.index) }
   } catch { return }
 }
 

@@ -5,6 +5,11 @@ export const ratios = {
   '4:5': { width: 1080, height: 1350 },
   '16:9': { width: 1600, height: 900 },
 } as const
+export const providerDimensions = {
+  '1024x1024': { width: 1024, height: 1024 },
+  '1024x1536': { width: 1024, height: 1536 },
+  '1536x1024': { width: 1536, height: 1024 },
+} as const
 
 export type Ratio = keyof typeof ratios
 export type Size = { width: number; height: number }
@@ -89,10 +94,22 @@ export function encode(canvas: HTMLCanvasElement, type = 'image/png', quality?: 
   return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(Error('未能编码图片。')), type, quality))
 }
 
-export function cropRaster(doc: Document, image: Raster, area: Region) {
-  const { canvas, context } = canvasFor(doc, area)
-  context.drawImage(image.image, area.x, area.y, area.width, area.height, 0, 0, area.width, area.height)
-  return canvas
+export function regionEditFrame(area: Region, output: Size, image: Size): Region {
+  const scale = Math.max(area.width / output.width, area.height / output.height) * 1.2
+  const width = output.width * scale, height = output.height * scale
+  const origin = (start: number, length: number, extent: number, imageExtent: number) => {
+    const edge = imageExtent - extent
+    return Math.max(Math.min(0, edge), Math.min(Math.max(0, edge), start + (length - extent) / 2))
+  }
+  return { x: origin(area.x, area.width, width, image.width), y: origin(area.y, area.height, height, image.height), width, height }
+}
+
+export function regionEditBounds(area: Region, frame: Region) {
+  const unit = (offset: number, extent: number) => Math.round(Math.max(0, Math.min(1, offset / extent)) * 10_000) / 10_000
+  return {
+    left: unit(area.x - frame.x, frame.width), top: unit(area.y - frame.y, frame.height),
+    right: unit(area.x + area.width - frame.x, frame.width), bottom: unit(area.y + area.height - frame.y, frame.height),
+  }
 }
 
 /** Preserve the full generated composition when the provider returns a different ratio. */
@@ -103,9 +120,12 @@ export function drawFit(context: CanvasRenderingContext2D, source: Raster, targe
   context.drawImage(source.image, Math.floor((target.width - width) / 2), Math.floor((target.height - height) / 2), width, height)
 }
 
-/** Draw the edited patch inside the original integer pixel bounds, replacing transparent pixels as well. */
-export function applyRegion(context: CanvasRenderingContext2D, original: Raster, result: Raster, area: Region) {
+/** Sample the selected patch from the provider frame at uniform scale. */
+export function applyRegion(context: CanvasRenderingContext2D, original: Raster, result: Raster, area: Region, frame: Region) {
+  const scale = Math.min(result.width / frame.width, result.height / frame.height)
+  const x = (result.width - frame.width * scale) / 2 + (area.x - frame.x) * scale
+  const y = (result.height - frame.height * scale) / 2 + (area.y - frame.y) * scale
   context.drawImage(original.image, 0, 0)
   context.clearRect(area.x, area.y, area.width, area.height)
-  context.drawImage(result.image, area.x, area.y, area.width, area.height)
+  context.drawImage(result.image, x, y, area.width * scale, area.height * scale, area.x, area.y, area.width, area.height)
 }

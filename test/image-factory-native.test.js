@@ -31,6 +31,7 @@ function fixture() {
     events('prepared', { id: detail.id, ...(error ? { error } : {
       operation: detail.region ? 'region' : 'generate', size: '1024x1536', width: 200, height: 280, title: '海报',
       reference: detail.region ? { data: 'AAAA', mediaType: 'image/png' } : undefined,
+      editBounds: detail.region ? { left: .2, top: .2, right: .8, bottom: .8 } : undefined,
     }) })
   })
   return { win, doc, shell, binding, session, events, respond, state, listeners, sessionsState, updateBlank }
@@ -91,7 +92,9 @@ it('submits an anchored comment with a reference through the native session with
     expect(await submitted).toEqual({ id: 'local-comment', error: undefined })
     expect(f.session.prompt).toHaveBeenCalledOnce()
     const [[content]] = f.session.prompt.mock.calls
-    expect(readImageFactoryContext(content[0].text)).toMatchObject({ operation: 'region', internalReference: true })
+    expect(readImageFactoryContext(content[0].text)).toMatchObject({
+      operation: 'region', internalReference: true, editBounds: { left: .2, top: .2, right: .8, bottom: .8 }
+    })
     expect(content[1]).toMatchObject({ type: 'image', data: 'AAAA', mediaType: 'image/png' })
     expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }

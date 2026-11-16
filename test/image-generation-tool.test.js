@@ -57,6 +57,20 @@ it('routes a factory comment to the native image tool using the bound crop and o
  expect(result.guidance).toContain('一句话')
  expect(f.prompts[0].text({agent:f.agent})).toContain('180 × 300')
 })
+it('sends the framed selection to the image provider with its bounds and full-frame composition',async()=>{
+ const f=fixture({uploaded:true})
+ f.agent.session.events[1].data.content[0].text=imageFactoryPrompt('只移动选区里的花', {
+  id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'海报',operation:'region',
+  size:'1536x1024',width:180,height:30,internalReference:true,
+  editBounds:{left:.1,top:.45,right:.9,bottom:.55}
+ })
+ await f.call({prompt:'给花换颜色'})
+ const body=f.request.mock.calls[0][1].body
+ expect(body.get('size')).toBe('1536x1024')
+ expect(body.get('prompt')).toContain('给花换颜色')
+ expect(body.get('prompt')).toContain('水平 10% 至 90%、垂直 45% 至 55%')
+ expect(f.prompts[0].text({agent:f.agent})).toContain('返回完整参考画面')
+})
 it('uses the current upload directly and concludes only a successfully delivered standalone request',async()=>{
  const f=fixture({uploaded:true})
  const result=await f.call({continue_after_delivery:true})

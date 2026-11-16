@@ -2,7 +2,7 @@ import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
 import { drawLayers, moveLayer } from '../src/preload/image-factory/layers'
-import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
+import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, regionEditFrame, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
 
 
 describe('image factory', () => {
@@ -34,26 +34,39 @@ describe('image factory', () => {
     expect(calls).toEqual([[image, 90, 0, 900, 1350]])
   })
 
-  it('clears and composites only the selected pixel bounds', () => {
+  it('keeps the selected pixels inside a proportional edit frame at the canvas edge', () => {
+    const area = { x: 0, y: 294, width: 266, height: 6 }
+    const frame = regionEditFrame(area, { width: 1536, height: 1024 }, { width: 400, height: 300 })
+    expect(frame.x).toBe(0)
+    expect(frame.y + frame.height).toBeCloseTo(300)
+    expect(frame.width).toBeGreaterThan(area.width)
+    expect(frame.width / frame.height).toBeCloseTo(1.5)
+  })
+
+  it('uses uniform scaling and replaces only the selected bounds with a differently shaped provider result', () => {
     const operations = []
     const scene = { image: { name: 'original' } }
-    const edit = { image: { name: 'replacement' } }
+    const edit = { image: { name: 'replacement' }, width: 300, height: 300 }
     const target = {
       drawImage: (...args) => operations.push(args),
       clearRect: (...args) => operations.push(['clear', ...args]),
     }
-    applyRegion(target, scene, edit, { x: 51, y: 98, width: 20, height: 17 })
-    expect(operations).toEqual([[scene.image, 0, 0], ['clear', 51, 98, 20, 17], [edit.image, 51, 98, 20, 17]])
+    applyRegion(target, scene, edit, { x: 60, y: 90, width: 80, height: 20 },
+      { x: 40, y: 60, width: 150, height: 100 })
+    expect(operations).toEqual([[scene.image, 0, 0], ['clear', 60, 90, 80, 20],
+      [edit.image, 40, 110, 160, 40, 60, 90, 80, 20]])
   })
 
   it('preserves the exact user comment while passing a bounded canvas context to the native tool', () => {
     const context = { id: '11898f5e-5fab-4913-b241-267ac863be0c', size: '1024x1536',
-      operation: 'region', title: '活动海报', width: 43, height: 88, internalReference: true }
+      operation: 'region', title: '活动海报', width: 43, height: 88, internalReference: true,
+      editBounds: { left: .2, top: .1, right: .9, bottom: .8 } }
     const text = '把标题旁的物件换成红色。\\n 保持原布局。'.replaceAll('\\n', '\n')
     const prompt = imageFactoryPrompt(text, context)
     expect(readImageFactoryContext(prompt)).toEqual({ ...context, text })
     expect(stripImageFactoryContext(prompt)).toBe(text)
     expect(readImageFactoryContext(imageFactoryPrompt(text, { ...context, width: 8000 }))).toBeUndefined()
+    expect(readImageFactoryContext(imageFactoryPrompt(text, { ...context, editBounds: { ...context.editBounds, right: .1 } }))).toBeUndefined()
   })
 
   it('composites browser-laid text in the same order as the layer list', async () => {
