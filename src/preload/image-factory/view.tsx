@@ -10,7 +10,8 @@ import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
 import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
-import { drawLayers, imageFonts, moveLayer, textLayerStyle, textTopInsideCanvas, type CanvasLayer, type ImageScene, type TextLayer } from './layers'
+import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
+  type CanvasLayer, type ImageScene, type TextLayer, type TextResizeHandle } from './layers'
 import styles from './style.css?raw'
 
 export const imageFactoryOpenEvent = 'sherlock:image-factory-open'
@@ -26,6 +27,11 @@ type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: Im
   size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
+const textResizeLabels: Record<TextResizeHandle, [string, string]> = {
+  nw: ['左上角缩放文字', 'Scale text from top left'], ne: ['右上角缩放文字', 'Scale text from top right'],
+  w: ['调整文字框左边', 'Resize left text edge'], e: ['调整文字框右边', 'Resize right text edge'],
+  sw: ['左下角缩放文字', 'Scale text from bottom left'], se: ['右下角缩放文字', 'Scale text from bottom right'],
+}
 
 function Icon({ name, size }: { name: string; size?: number }) {
   const src = iconSource(name)
@@ -73,13 +79,17 @@ async function referenceData(doc: Document, raster: Raster, region?: { frame: Re
 }
 
 function TextControls({ layer, change, t }: { layer: TextLayer; change(patch: Partial<TextLayer>): void; t: T }) {
+  const [fontDraft, setFontDraft] = useState<string>()
   return <div className="if-text-format" role="group" aria-label={t('文本样式', 'Text formatting')}>
     <label><span>{t('字体', 'Font')}</span><select aria-label={t('字体', 'Font')} value={layer.family} onChange={e => change({ family: e.target.value as TextLayer['family'] })}>
       {imageFonts.map(font => <option key={font.family} value={font.family}>{t(font.label, font.english)}</option>)}
     </select></label>
     <label><span>{t('字号', 'Size')}</span><input type="number" min="8" max="600" step="1" aria-label={t('字号', 'Font size')}
-      defaultValue={layer.fontSize} onChange={e => { const value = e.target.valueAsNumber; if (value >= 8 && value <= 600) change({ fontSize: value }) }}
-      onBlur={e => { e.target.value = String(layer.fontSize) }}/></label>
+      value={fontDraft ?? layer.fontSize} onChange={e => {
+        setFontDraft(e.currentTarget.value)
+        const value = e.currentTarget.valueAsNumber
+        if (value >= 8 && value <= 600) change({ fontSize: value })
+      }} onBlur={() => setFontDraft(undefined)}/></label>
     <label><span>{t('字重', 'Weight')}</span><select aria-label={t('字重', 'Weight')} value={layer.weight} onChange={e => change({ weight: Number(e.target.value) })}>
       <option value="400">{t('常规', 'Regular')}</option><option value="500">{t('中等', 'Medium')}</option>
       <option value="600">{t('半粗', 'Semibold')}</option><option value="700">{t('粗体', 'Bold')}</option>
@@ -103,6 +113,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const [commentPos, setCommentPos] = useState<Point>()
   const [layersOpen, setLayersOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string>()
+  const [textBox, setTextBox] = useState<{ id: string; height: number }>()
   const [editing, setEditing] = useState<string>()
   const [dropTarget, setDropTarget] = useState<{ id: string; above: boolean }>()
   const [, redrawBusy] = useState(0)
@@ -115,7 +126,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
-  const textDrag = useRef<{ id: string; pointer: number; start: Point; moved: boolean; x: number; y: number; width: number; height: number }>()
+  const textDrag = useRef<{ layer: TextLayer; pointer: number; start: Point; moved: boolean; height: number; handle?: TextResizeHandle }>()
   const pendingTextLayout = useRef<{ id: string; scope: CanvasScope; commit: boolean }>()
   const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef(new Map<string, CanvasJob>())
@@ -134,6 +145,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const selectedText = current?.layers.find((layer): layer is TextLayer => layer.kind === 'text' && layer.id === selectedId)
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
   const displayScale = fit * zoom
+  const resizableText = !marking && !area && !busy && !editing ? selectedText : undefined
+  const textBoxHeight = resizableText && textBox?.id === resizableText.id ? textBox.height : 0
 
   useLayoutEffect(() => {
     const showCanvas = () => setGalleryScope(undefined)
@@ -174,6 +187,13 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     observer.observe(scroll.current)
     return () => observer.disconnect()
   }, [Boolean(current)])
+  useLayoutEffect(() => {
+    if (!resizableText) return
+    const { id } = resizableText
+    const element = imageFrame.current?.querySelector<HTMLElement>('[data-canvas-text-id="' + id + '"]')
+    const height = element?.getBoundingClientRect().height || resizableText.fontSize * 1.2 * displayScale
+    setTextBox(previous => previous?.id === id && previous.height === height ? previous : { id, height })
+  }, [resizableText, displayScale])
   useLayoutEffect(() => {
     const pending = pendingTextLayout.current
     if (!pending) return
@@ -230,7 +250,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     resetSelectionGesture()
   }
   function patchLayer(id: string, patch: Partial<TextLayer>, persist = true) {
-    const resize = persist && [patch.text, patch.fontSize, patch.family, patch.weight].some(value => value !== undefined)
+    const resize = persist && [patch.text, patch.fontSize, patch.family, patch.weight, patch.width].some(value => value !== undefined)
     if (resize) pendingTextLayout.current = { id, scope, commit: true }
     const changed = setScene(old => old && { ...old, layers: old.layers.map(layer => layer.id === id && layer.kind === 'text' ? { ...layer, ...patch } : layer) }, persist && !resize)
     if (resize && !changed) pendingTextLayout.current = undefined
@@ -298,15 +318,15 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (selectedId === id) setSelectedId(undefined)
     setScene(old => old && { ...old, layers: old.layers.filter(layer => layer.id !== id) })
   }
-  function textPointer(event: PointerEvent<HTMLElement>, phase: 'start' | 'move' | 'end' | 'cancel', layer?: TextLayer) {
+  function textPointer(event: PointerEvent<HTMLElement>, phase: 'start' | 'move' | 'end' | 'cancel', layer?: TextLayer, handle?: TextResizeHandle) {
     if (!current) return
     if (phase === 'start') {
       if (!layer || !event.isPrimary || event.button !== 0 || marking || area || editing || busy) return
       setSelectedId(layer.id)
       event.currentTarget.setPointerCapture(event.pointerId)
-      const height = Math.ceil(event.currentTarget.getBoundingClientRect().height / displayScale)
-      textDrag.current = { id: layer.id, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY },
-        moved: false, x: layer.x, y: layer.y, width: layer.width, height }
+      const pixels = handle ? textBoxHeight : event.currentTarget.getBoundingClientRect().height
+      const height = Math.max(1, Math.ceil(pixels / displayScale))
+      textDrag.current = { layer, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, height, handle }
       return
     }
     const drag = textDrag.current
@@ -322,10 +342,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     const dx = event.clientX - drag.start.x, dy = event.clientY - drag.start.y
     if (!drag.moved && Math.hypot(dx, dy) < 3) return
     drag.moved = true
-    patchLayer(drag.id, {
-      x: Math.min(1 - drag.width, Math.max(0, drag.x + dx / (current.width * displayScale))),
-      y: textTopInsideCanvas(drag.y + dy / (current.height * displayScale), drag.height, current.height),
-    }, released)
+    const patch = drag.handle ? resizeTextLayer(drag.layer, current, drag.height, drag.handle, dx / displayScale, dy / displayScale) : {
+      x: Math.min(1 - drag.layer.width, Math.max(0, drag.layer.x + dx / (current.width * displayScale))),
+      y: textTopInsideCanvas(drag.layer.y + dy / (current.height * displayScale), drag.height, current.height),
+    }
+    patchLayer(drag.layer.id, patch, released)
   }
   function onRectanglePointer(event: PointerEvent<HTMLDivElement>, phase: 'start' | 'move' | 'end' | 'cancel') {
     if (!marking || !current || busy) return
@@ -618,6 +639,20 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                   onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
                   onPointerDown={event => textPointer(event, 'start', layer)}>{layer.text}</div>
             })}
+            {resizableText && textBoxHeight > 0 && <div className="if-text-bounds" role="group" aria-label={t('调整文字图层大小', 'Resize text layer')}
+              style={{ left: resizableText.x * 100 + '%', top: resizableText.y * 100 + '%', width: resizableText.width * 100 + '%', height: textBoxHeight }}>
+              {textResizeHandles.map(handle => <button key={handle} type="button" className="if-text-handle" data-text-resize-handle={handle}
+                aria-label={t(...textResizeLabels[handle])} onPointerDown={event => textPointer(event, 'start', resizableText, handle)}
+                onKeyDown={event => {
+                  const dx = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
+                  const dy = handle.length === 1 ? 0 : event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+                  if (!dx && !dy) return
+                  event.preventDefault()
+                  const step = event.shiftKey ? 24 : 4
+                  const patch = resizeTextLayer(resizableText, current, textBoxHeight / displayScale, handle, dx * step, dy * step)
+                  patchLayer(resizableText.id, patch)
+                }}/>)}
+            </div>}
             {rectangle && <div className="if-region" data-dragging={!!rubberband} style={{
               left: rectangle.x / current.width * 100 + '%', top: rectangle.y / current.height * 100 + '%',
               width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',

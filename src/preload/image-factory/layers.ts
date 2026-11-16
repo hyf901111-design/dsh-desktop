@@ -7,6 +7,8 @@ export { imageFonts, type TextLayer }
 export type ImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType; data: Uint8Array; raster: Raster }
 export type CanvasLayer = ImageLayer | TextLayer
 export type ImageScene = Size & { id: string; title: string; layers: CanvasLayer[] }
+export const textResizeHandles = ['nw', 'ne', 'w', 'e', 'sw', 'se'] as const
+export type TextResizeHandle = typeof textResizeHandles[number]
 
 export function textLayerStyle(layer: TextLayer, size: Size) {
   const family = layer.family === 'system-ui' ? layer.family : '"' + layer.family + '"'
@@ -20,6 +22,33 @@ export function textLayerStyle(layer: TextLayer, size: Size) {
 
 export function textTopInsideCanvas(y: number, textHeight: number, canvasHeight: number) {
   return Math.min(Math.max(0, y), Math.max(0, 1 - textHeight / canvasHeight))
+}
+
+export function resizeTextLayer(layer: TextLayer, canvas: Size, height: number, handle: TextResizeHandle, dx: number, dy: number) {
+  const width = layer.width * canvas.width
+  const left = Math.min(layer.x * canvas.width, canvas.width - 1), top = layer.y * canvas.height
+  const right = Math.min(canvas.width, left + width)
+  const west = handle.endsWith('w'), north = handle.startsWith('n')
+  const widthLimit = west ? right : canvas.width - left
+  const horizontalDelta = west ? -dx : dx
+  if (handle.length === 1) {
+    const minimumWidth = Math.min(widthLimit, Math.max(1, Math.min(width, 24)))
+    const nextWidth = Math.min(widthLimit, Math.max(minimumWidth, width + horizontalDelta))
+    return { x: (west ? right - nextWidth : left) / canvas.width, width: nextWidth / canvas.width }
+  }
+
+  const verticalDelta = north ? -dy : dy
+  const heightLimit = north ? top + height : canvas.height - top
+  const requested = 1 + (width * horizontalDelta + height * verticalDelta) / (width ** 2 + height ** 2)
+  const maximumScale = Math.min(600 / layer.fontSize, widthLimit / width, heightLimit / height)
+  const scale = Math.max(8 / layer.fontSize, Math.min(maximumScale, requested))
+  const nextWidth = Math.min(widthLimit, width * scale)
+  return {
+    x: (west ? right - nextWidth : left) / canvas.width,
+    y: north ? Math.max(0, top + height - height * scale) / canvas.height : layer.y,
+    width: nextWidth / canvas.width,
+    fontSize: Math.min(600, Math.max(8, Math.round(layer.fontSize * scale * 10) / 10)),
+  }
 }
 
 export function moveLayer(layers: CanvasLayer[], id: string, targetId: string, above: boolean) {
