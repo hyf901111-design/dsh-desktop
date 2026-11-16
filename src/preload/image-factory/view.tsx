@@ -21,7 +21,7 @@ type Bridge = {
   save(value: { action: 'download'; data: Uint8Array; name: string; format: 'png' | 'jpg' }): Promise<{ cancelled?: boolean }>
 }
 type T = (zh: string, en: string) => string
-type CanvasJob = { id: string; sessionId: string; scene?: ImageScene; area?: Region; size: Size; title: string; delivering: boolean; release(): void }
+type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; area?: Region; size: Size; title: string; delivering: boolean; release(): void }
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 
 function Icon({ name, size }: { name: string; size?: number }) {
@@ -115,7 +115,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const active = useRef(new Map<string, CanvasJob>())
   const commentCapture = useRef<{ id: string; sceneId: string; area: Region }>()
   const refreshBusy = () => redrawBusy(value => value + 1)
-  const isBusy = (key: CanvasScope) => uiOperations.current.has(key) || [...active.current.values()].some(job => job.sessionId === key)
+  const isBusy = (key: CanvasScope) => uiOperations.current.has(key) ||
+    [...active.current.values()].some(job => job.scope === key || job.sessionId === key)
   const busy = status !== 'ready' || isBusy(scope)
   const setScene = (change: (old?: ImageScene) => ImageScene | undefined, persist = true) => workspace.change(scope, change, persist)
   const mounted = useRef(true)
@@ -318,30 +319,32 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       job.release(); if (mounted.current) refreshBusy()
     }
     const prepare = async (event: Event) => {
-      const { id, sessionId, prompt, uploaded, region } = (event as CustomEvent).detail ?? {}
+      const { id, sessionId, scope: requestedScope, prompt, uploaded, region } = (event as CustomEvent).detail ?? {}
       if (doc.body.dataset.workspaceSurface !== 'image-factory' || typeof id !== 'string' ||
           typeof sessionId !== 'string' || !validCanvasScope(sessionId) || typeof prompt !== 'string') return
       const reply = (data: object) => emit('prepared', { id, ...data })
-      if (isBusy(sessionId)) return reply({ error: t('请等待当前图片任务处理完成。', 'Wait for the current image action to finish.') })
-      uiOperations.current.add(sessionId); refreshBusy()
-      const hold = workspace.retain(sessionId)
+      if ((requestedScope !== null && requestedScope !== sessionId) || requestedScope !== workspace.getSnapshot().scope)
+        return reply({ error: t('当前工作区已变化。', 'The active workspace changed.') })
+      if (isBusy(requestedScope)) return reply({ error: t('请等待当前图片任务处理完成。', 'Wait for the current image action to finish.') })
+      uiOperations.current.add(requestedScope); refreshBusy()
+      const hold = workspace.retain(requestedScope)
       let job: CanvasJob | undefined
       try {
-        const ready = await workspace.ready(sessionId)
-        if (!mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' || workspace.getSnapshot().scope !== sessionId)
+        const ready = await workspace.ready(requestedScope)
+        if (!mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' || workspace.getSnapshot().scope !== requestedScope)
           throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
-        const base = galleryScope === sessionId ? undefined : ready
+        const base = galleryScope === requestedScope ? undefined : ready
         const image = base?.layers.find(layer => layer.kind === 'image')
         const captured = commentCapture.current
         const selection = region && captured?.sceneId === base?.id ? captured?.area : undefined
         if (region && (!selection || !image)) throw Error(t('选区已变化，请重新框选。', 'The selection changed. Select the area again.'))
         const size = (selection ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
         const title = (selection ? base?.title : undefined) || titleFromPrompt(prompt, t)
-        job = { id, sessionId, scene: base, area: selection, size, title, delivering: false, release: hold }
+        job = { id, sessionId, scope: requestedScope, scene: base, area: selection, size, title, delivering: false, release: hold }
         active.current.set(id, job)
         const reference = image && (selection || !uploaded) ? await referenceData(doc, image.raster, selection) : undefined
         if (!active.current.has(id) || !mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' ||
-            workspace.getSnapshot().scope !== sessionId) throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
+            workspace.getSnapshot().scope !== requestedScope) throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
         const target = selection ?? size
         reply({ operation: selection ? 'region' : reference || uploaded ? 'edit' : 'generate', size: providerSize(target),
           width: target.width, height: target.height, title, reference })
@@ -349,7 +352,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         if (job) release(job); else hold()
         reply({ error: errorLabel(error, t('无法读取画布。', 'Could not read the canvas.')) })
       } finally {
-        uiOperations.current.delete(sessionId)
+        uiOperations.current.delete(requestedScope)
         if (mounted.current) refreshBusy()
       }
     }
@@ -366,9 +369,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         return
       }
       job.delivering = true
+      const holdTarget = workspace.retain(job.sessionId)
       let output: Raster | undefined
       let newRaster: Raster | undefined
       try {
+        await workspace.ready(job.sessionId)
         const response = await fetch(url)
         if (!response.ok) throw Error(t('图片结果无法读取。', 'Could not read the generated image.'))
         output = await loadRaster(doc, await response.blob())
@@ -406,6 +411,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         if (info.revoke) URL.revokeObjectURL(url)
         if (output) URL.revokeObjectURL(output.url)
         if (newRaster) URL.revokeObjectURL(newRaster.url)
+        holdTarget()
         release(job)
       }
     }
@@ -612,7 +618,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   }
   const adopt = (event: Event) => {
     const id = (event as CustomEvent).detail?.sessionId
-    if (!activeHere() || typeof id !== 'string' || !validCanvasScope(id)) return
+    if (typeof id !== 'string' || !validCanvasScope(id)) return
     const reply = (error?: unknown) => doc.dispatchEvent(new CustomEvent('sherlock:image-factory-adopted', {
       detail: { sessionId: id, error: error && errorLabel(error, '画布未能绑定到会话。') },
     }))

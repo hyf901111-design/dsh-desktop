@@ -8,6 +8,11 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   let galleryDraft
   const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
   const currentId = () => sessions.list.getSnapshot().current
+  const canvasScope = () => {
+    const { current, byId } = sessions.list.getSnapshot()
+    // The native sidebar only shows the currently selected empty session.
+    return current && byId?.[current]?.blank !== true ? current : null
+  }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
   const stateChange = event => {
@@ -34,7 +39,7 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     return true
   }
   const usePrompt = event => { if (!state.current && fill(event.detail?.prompt, true)) event.preventDefault() }
-  function request(id, sessionId, prompt, uploaded, region) {
+  function request(id, sessionId, scope, prompt, uploaded, region) {
     return new Promise((resolve, reject) => {
       const cleanup = () => { win.clearTimeout(timer); doc.removeEventListener('sherlock:image-factory-prepared', reply) }
       const reply = event => {
@@ -46,7 +51,7 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       }
       const timer = win.setTimeout(() => { cleanup(); finish(id); reject(Error('图像画布尚未就绪，请重试。')) }, 12000)
       doc.addEventListener('sherlock:image-factory-prepared', reply)
-      signal('prepare', { id, sessionId, prompt, uploaded, region })
+      signal('prepare', { id, sessionId, scope, prompt, uploaded, region })
     })
   }
   async function prepare(sessionId, content, region = false) {
@@ -55,18 +60,23 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     if (!text.trim()) return { content }
     if (!region && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
     const id = win.crypto.randomUUID()
+    const scope = canvasScope()
     try {
-      const response = await request(id, sessionId, text, content.some(part => part.type === 'image'), region)
-      if (!isActive() || currentId() !== sessionId) throw Error('当前会话或画布已切换，草稿已保留。')
+      const response = await request(id, sessionId, scope, text, content.some(part => part.type === 'image'), region)
+      if (!isActive() || currentId() !== sessionId || canvasScope() !== scope) throw Error('当前会话或画布已切换，草稿已保留。')
       if (region && response.operation !== 'region') throw Error('选区已变化，请重新框选。')
       const { operation, size, width, height, title, reference } = response
       const next = [...content]
       const index = next.findLastIndex(part => part.type === 'text')
       next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height, title, internalReference: !!reference }) }
       if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: '当前画布' })
-      jobs.set(id, { id, sessionId, timer: win.setTimeout(() => finish(id), 615000) })
+      jobs.set(id, { id, sessionId, draft: scope === null, timer: win.setTimeout(() => finish(id), 615000) })
       return { content: next, id }
     } catch (error) { finish(id); throw error }
+  }
+  const promoteDraft = job => {
+    if (job.draft) job.promotion ??= adopt(job.sessionId).catch(() => {})
+    return job.promotion
   }
   function watch(session, job) {
     const observe = () => {
@@ -77,7 +87,7 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
       if (delivered) {
         job.delivering = true
-        void session.readAttachment(delivered.image.attachmentId).then(result => {
+        void Promise.all([session.readAttachment(delivered.image.attachmentId), promoteDraft(job)]).then(([result]) => {
           if (jobs.get(job.id) !== job) return
           if (!result.ok) throw Error(result.error.message)
           const bytes = Uint8Array.from(result.value.data)
@@ -90,7 +100,10 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       win.clearTimeout(job.idle)
       job.admitted ||= nodes.some(row => row.kind === 'user' && row.data?.content?.some(part =>
         part.type === 'text' && readImageFactoryContext(part.text)?.id === job.id))
-      if (job.admitted && !running) job.idle = win.setTimeout(() => { if (!job.delivering) finish(job.id) }, 1500)
+      if (job.admitted) {
+        void promoteDraft(job)
+        if (!running) job.idle = win.setTimeout(() => { if (!job.delivering) finish(job.id) }, 1500)
+      }
     }
     job.unsubscribe = session.subscribe(observe)
     observe()
@@ -141,20 +154,20 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       signal('adopt', { sessionId })
     })
   }
-  let publishedSession
+  let publishedScope
   const publishSession = () => {
-    const sessionId = currentId() ?? null
-    publishedSession = sessionId
+    const sessionId = canvasScope()
+    publishedScope = sessionId
     signal('session', { sessionId })
   }
-  const offSession = sessions.list.subscribe?.(() => { if ((currentId() ?? null) !== publishedSession) publishSession() })
-  const reset = () => { for (const id of jobs.keys()) finish(id); galleryDraft = undefined; publishedSession = undefined }
+  const offSession = sessions.list.subscribe?.(() => { if (canvasScope() !== publishedScope) publishSession() })
+  const reset = () => { for (const id of jobs.keys()) finish(id); galleryDraft = undefined; publishedScope = undefined }
   const events = { state: stateChange, 'request-session': publishSession, 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   signal('request-state', {})
   publishSession()
   return {
-    prompt, adopt, fill, focus, action: kind => signal('action', { kind }),
+    prompt, fill, focus, action: kind => signal('action', { kind }),
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
       offSession?.()

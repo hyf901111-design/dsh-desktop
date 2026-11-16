@@ -14,10 +14,15 @@ function fixture() {
     subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) },
     prompt: vi.fn(async () => ({ ok: true })), readAttachment: vi.fn(),
   }
-  const sessionsState = { current: session.sessionId }
+  const sessionsState = { current: session.sessionId, byId: { [session.sessionId]: { blank: false } } }
+  const listListeners = new Set()
+  const updateBlank = blank => {
+    sessionsState.byId[session.sessionId].blank = blank
+    for (const fn of listListeners) fn()
+  }
   const events = (name, detail, cancelable = false) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable }))
   const binding = installImageFactoryContext({
-    sessions: { list: { getSnapshot: () => sessionsState }, binding: () => ({ session }) },
+    sessions: { list: { getSnapshot: () => sessionsState, subscribe: fn => { listListeners.add(fn); return () => listListeners.delete(fn) } }, binding: () => ({ session }) },
     getInput: () => shell,
     getPending: () => ({ shell, submitExternal: async submit => { sessionsState.current = session.sessionId; await submit(session.sessionId) } }),
     send: (...args) => binding.prompt(...args), doc, win,
@@ -28,8 +33,35 @@ function fixture() {
       reference: detail.region ? { data: 'AAAA', mediaType: 'image/png' } : undefined,
     }) })
   })
-  return { win, doc, shell, binding, session, events, respond, state, listeners, sessionsState }
+  return { win, doc, shell, binding, session, events, respond, state, listeners, sessionsState, updateBlank }
 }
+
+it('keeps an imported draft outside a blank native session until its first canvas prompt is admitted', async () => {
+  const f = fixture()
+  try {
+    f.respond()
+    const selected = vi.fn(event => event.detail.sessionId)
+    const adoptions = vi.fn(event => f.events('adopted', { sessionId: event.detail.sessionId }))
+    f.doc.addEventListener('sherlock:image-factory-session', selected)
+    f.doc.addEventListener('sherlock:image-factory-adopt', adoptions)
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.updateBlank(true)
+    expect(selected.mock.results.at(-1)?.value).toBeNull()
+    const content = [{ type: 'text', text: '修改导入的海报' }]
+    f.session.prompt.mockResolvedValueOnce({ ok: false })
+    await f.binding.prompt(f.session, content, 'queue')
+    expect(adoptions).not.toHaveBeenCalled()
+    await f.binding.prompt(f.session, content, 'queue')
+    expect(adoptions).not.toHaveBeenCalled()
+    f.state.chat.order.push('user')
+    f.state.chat.nodes.set('user', { kind: 'user', data: { content: f.session.prompt.mock.calls.at(-1)[0] } })
+    f.state.running = true
+    f.updateBlank(false)
+    for (const listener of f.listeners) listener()
+    expect(adoptions).toHaveBeenCalledOnce()
+    expect(selected.mock.results.at(-1)?.value).toBe(f.session.sessionId)
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
 
 it('adds workspace context to the real native prompt while leaving ordinary chat unchanged', async () => {
   const f = fixture()
