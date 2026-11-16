@@ -43,18 +43,25 @@ it('edits only images already present in this session',async()=>{
  await expect(f.call({reference_image_ids:['another-session-image']})).rejects.toThrow(/当前会话/)
  expect(f.request).toHaveBeenCalledTimes(1)
 })
-it('routes a factory comment to the native image tool using the bound crop and output size',async()=>{
+it('routes the factory crop and concludes a standalone edit through the native turn lifecycle',async()=>{
  const f=fixture({uploaded:true}),content=f.agent.session.events[1].data.content
  const workspace={id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'蓝色海报',operation:'region',
   size:'1024x1536',width:180,height:300,internalReference:true}
  content[0].text=imageFactoryPrompt('把这里换成蓝色',workspace)
  content.splice(1,0,{type:'image',attachment:{...f.ref,attachmentId:'older'}})
- const result=await f.call({size:'1536x1024',reference_image_ids:['older']})
+ const args={size:'1536x1024',reference_image_ids:['older']}
+ const result=await f.call({...args,continue_after_delivery:true})
  expect(f.reads).toEqual([f.ref])
  expect(f.request.mock.calls[0][1].body.get('size')).toBe('1024x1536')
  expect(result.factory).toEqual({id:workspace.id,title:workspace.title,operation:'region'})
  expect(f.concludeTurn).not.toHaveBeenCalled()
- expect(result.guidance).toContain('一句话')
+ expect(await f.call(args,undefined,{parent:Symbol('code-mode')})).toEqual(result)
+ expect(f.concludeTurn).not.toHaveBeenCalled()
+ f.concludeTurn.mockImplementationOnce(()=>expect(f.saved).toHaveLength(1))
+ expect(await f.call(args)).toEqual(result)
+ expect(f.request).toHaveBeenCalledOnce()
+ expect(f.concludeTurn).toHaveBeenCalledOnce()
+ expect(result.guidance).toContain('已交付图像工厂')
  expect(f.prompts[0].text({agent:f.agent})).toContain('180 × 300')
 })
 it('sends the current canvas first and appended mood references next for whole-image edits', async () => {

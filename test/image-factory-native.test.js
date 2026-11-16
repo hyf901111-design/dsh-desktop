@@ -132,6 +132,7 @@ it('projects a completed native tool receipt once even after the canvas is hidde
     await f.binding.prompt(f.session, [{ type: 'text', text: '活动海报' }], 'queue')
     const [[content]] = f.session.prompt.mock.calls
     const { id } = readImageFactoryContext(content[0].text)
+    f.sessionsState.byId[f.session.sessionId].title = '活动海报会话'
     const attachment = { attachmentId: 'generated-png', mediaType: 'image/png', width: 200, height: 280 }
     f.state.chat.order.push('tool')
     f.state.chat.nodes.set('tool', { kind: 'tool-call', data: { root: {
@@ -148,7 +149,7 @@ it('projects a completed native tool receipt once even after the canvas is hidde
     f.doc.body.dataset.workspaceSurface = 'knowledge'
     for (const listener of f.listeners) listener()
     for (const listener of f.listeners) listener()
-    expect(await delivered).toMatchObject({ id, sessionId: 'native-session', revoke: true })
+    expect(await delivered).toMatchObject({ id, sessionId: 'native-session', sessionTitle: '活动海报会话', revoke: true })
     expect(f.session.readAttachment).toHaveBeenCalledExactlyOnceWith('generated-png')
     expect(f.listeners.size).toBe(0)
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
