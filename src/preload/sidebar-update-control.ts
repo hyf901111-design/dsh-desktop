@@ -167,15 +167,34 @@ export class SidebarUpdateControl {
 }
 #${BUTTON_ID}[data-action=install]:hover { background:#2056b4; }
 #${BUTTON_ID} .ework-notice-icon, #${PANEL_ID} [data-update-install] .ework-notice-icon { color:inherit; }
-#${PANEL_ID} button[data-update-install] { display:inline-flex; align-items:center; gap:4px; }
+#${PANEL_ID} button[data-update-install] {
+  position:relative; display:grid; place-items:center; width:100%; height:36px;
+  padding-inline:32px; font-size:13px; font-weight:500; text-align:center;
+}
+#${PANEL_ID} button[data-update-install] .ework-notice-icon {
+  position:absolute; inset-inline-start:12px; top:50%; transform:translateY(-50%);
+}
 #${PANEL_ID}[data-collapsed=true] { z-index:1502; }
 body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=preparing]):not([data-phase=downloaded]):not([data-phase=installing]) { visibility:hidden; }
 body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=preparing],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice { visibility:hidden; }
 #${PANEL_ID} .ework-update-summary { display:contents; }
 #${PANEL_ID} [hidden] { display:none!important; }
 #${PANEL_ID} .ework-update-notes { min-width:0; }
-#${PANEL_ID} .ework-update-notes summary { width:max-content; margin-left:auto; cursor:pointer; color:var(--notice-text); }
-#${PANEL_ID} .ework-update-notes summary:focus-visible { outline:1.5px solid var(--notice-accent); outline-offset:2px; border-radius:4px; }
+#${PANEL_ID} .ework-update-notes:not([open]) { position:absolute; inset:0; pointer-events:none; }
+#${PANEL_ID}:has(.ework-update-notes:not([hidden]) > summary:not([hidden])) header { padding-inline-end:28px; }
+#${PANEL_ID} .ework-update-notes summary {
+  position:absolute; inset-block-start:10px; inset-inline-end:10px; z-index:1;
+  display:grid; place-items:center; width:24px; height:24px; border-radius:5px;
+  cursor:pointer; list-style:none; color:var(--notice-muted); pointer-events:auto;
+}
+#${PANEL_ID} .ework-update-notes summary::-webkit-details-marker { display:none; }
+#${PANEL_ID} .ework-update-notes summary::before {
+  content:''; width:6px; height:6px; border:solid currentColor; border-width:0 1.5px 1.5px 0;
+  transform:translateY(-2px) rotate(45deg);
+}
+#${PANEL_ID} .ework-update-notes[open] summary::before { transform:translateY(2px) rotate(225deg); }
+#${PANEL_ID} .ework-update-notes summary:hover { color:var(--notice-text); background:var(--notice-button); }
+#${PANEL_ID} .ework-update-notes summary:focus-visible { outline:1.5px solid var(--notice-accent); outline-offset:1px; }
 #${PANEL_ID} .ework-update-notes-body { max-height:min(248px,38vh); overflow:auto; overscroll-behavior:contain; overflow-wrap:anywhere; border-top:1px solid var(--notice-track); margin-top:6px; padding:8px 6px 0 0; font-size:12px; line-height:1.55; }
 #${PANEL_ID} .ework-update-notes-body h3 { margin:0 0 6px; font:600 12px/18px "Noto Sans SC",sans-serif; }
 #${PANEL_ID} .ework-update-notes-body ul { margin:0; padding-inline-start:16px; }
@@ -346,7 +365,9 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
       if (blocks.length) {
         const doc = this.document
         const summary = doc.createElement('summary')
-        summary.textContent = this.locale === 'zh' ? '详情' : 'Details'
+        const label = this.locale === 'zh' ? '更新详情' : 'Update details'
+        summary.setAttribute('aria-label', label)
+        summary.title = label
         const body = doc.createElement('section')
         body.className = 'ework-update-notes-body'
         body.tabIndex = 0
