@@ -4,7 +4,7 @@ import { act } from 'react'
 import { expect, it, vi } from 'vitest'
 import { mountImageFactory } from '../src/preload/image-factory/view'
 import { WorkspaceSurfaceHost } from '../src/preload/workspace-surface-host'
-import type { StoredCanvas, TextLayer } from '../src/shared/image-factory-canvas'
+import type { CanvasWrite, StoredCanvas, TextLayer } from '../src/shared/image-factory-canvas'
 
 it('saves the layer order when capture is lost before pointerup reaches a sibling row', async () => {
   const layer = (text: string): TextLayer => ({
@@ -41,6 +41,51 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
     })
     expect(handles().map(button => button.textContent)).toEqual(['底层', '顶层'])
     expect(write).toHaveBeenCalledWith(expect.objectContaining({ canvas: { ...canvas, layers: [top, bottom] } }))
+  } finally {
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  }
+})
+
+it.each([false, true])('saves a text drag at the release point (lost capture: %s)', async lostCapture => {
+  const text: TextLayer = { id: randomUUID(), kind: 'text', text: '可拖动文字', x: .1, y: .2, width: .6,
+    fontSize: 36, family: 'system-ui', weight: 400, color: '#ffffff', align: 'center' }
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '测试画布', width: 800, height: 1000, layers: [text] }
+  const write = vi.fn(async (_value: CanvasWrite) => {})
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private readonly resized: ResizeObserverCallback) {}
+    observe(target: Element) {
+      this.resized([{ target, contentRect: new DOMRect(0, 0, canvas.width, canvas.height) } as ResizeObserverEntry],
+        this as unknown as ResizeObserver)
+    }
+    disconnect() {}
+  })
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  try {
+    await act(async () => factory.open())
+    const label = document.querySelector<HTMLElement>('[data-canvas-text-id]')!
+    const frame = label.closest<HTMLElement>('.if-raster')!
+    Object.defineProperty(label, 'setPointerCapture', { value: vi.fn() })
+    vi.spyOn(label, 'getBoundingClientRect').mockReturnValue(new DOMRect(80, 200, 480, 44))
+    const pointer = (type: string, target: Element, buttons: number, clientX: number, clientY: number) =>
+      target.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, pointerId: 1, buttons, clientX, clientY }))
+    await act(async () => {
+      pointer('pointerdown', label, 1, 120, 220)
+      if (lostCapture) pointer('lostpointercapture', label, 1, 120, 220)
+      pointer('pointerup', lostCapture ? frame : label, 0, 280, 620)
+    })
+    const saved = write.mock.calls.at(-1)?.[0].canvas.layers[0] as TextLayer
+    expect(saved?.x).toBeCloseTo(.3)
+    expect(saved?.y).toBeCloseTo(.6)
+    await act(async () => label.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
+    expect(document.querySelector<HTMLTextAreaElement>('textarea[data-canvas-text-id]')?.value).toBe(text.text)
   } finally {
     await act(async () => factory.dispose())
     host.dispose()
