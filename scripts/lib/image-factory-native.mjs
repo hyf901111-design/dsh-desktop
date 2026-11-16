@@ -159,8 +159,8 @@ function EWorkImageFactoryConversation({ t }) {
   const state = useImageFactoryChat(), h = react.createElement, app = eworkImageFactory
   const language = react.useSyncExternalStore(subscribeEWorkModeLocale, eworkModeLocale, eworkModeLocale)
   const en = language === 'en'
-  const welcome = en ? ['Create an image or poster', 'Describe an image, import a reference, or mark a region on the canvas.', 'Make an event poster', 'Improve an existing image']
-    : ['开始做图', '描述要生成的画面、附加参考图，或框选画布上要修改的位置。', '制作活动海报', '优化已有图片']
+  const welcome = en ? ['Create an image or poster', 'Describe an image, import a reference, or mark a region on the canvas. You can include the aspect ratio in your description.', 'Make an event poster', state.current ? 'Improve an existing image' : 'Import an image']
+    : ['开始做图', '描述要生成的画面、附加参考图，或框选画布上要修改的位置。画面比例可以直接写在描述里。', '制作活动海报', state.current ? '优化已有图片' : '导入图片']
   function quick(index) {
     if (index === 1 && !state.current) return app?.action('import')
     if (app?.shell.snapshot.draft.trim()) return app.focus()

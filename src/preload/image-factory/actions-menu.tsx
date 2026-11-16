@@ -3,12 +3,10 @@ import { createPortal } from 'react-dom'
 
 type Format = 'png' | 'jpg'
 
-export function CanvasActionsMenu({ doc, t, canImport, canExport, importing, exporting, galleryAction }: {
+export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction }: {
   doc: Document
   t(zh: string, en: string): string
-  canImport: boolean
   canExport: boolean
-  importing(): void
   exporting(format: Format): void
   galleryAction?: { label: string; run(): void }
 }) {
@@ -72,7 +70,7 @@ export function CanvasActionsMenu({ doc, t, canImport, canExport, importing, exp
   }
   return <>
     <button type="button" ref={trigger} className="en-header-export if-more" aria-label={label} title={label}
-      aria-haspopup="menu" aria-expanded={!!position} disabled={!canImport && !canExport}
+      aria-haspopup="menu" aria-expanded={!!position} disabled={!galleryAction && !canExport}
       onClick={() => position ? close() : open()} onKeyDown={event => {
         if (event.key === 'ArrowDown' && !position) { event.preventDefault(); open() }
       }}>
@@ -82,8 +80,6 @@ export function CanvasActionsMenu({ doc, t, canImport, canExport, importing, exp
     </button>
     {position && createPortal(<div ref={menu} role="menu" aria-label={label} className="en-export-menu"
       style={position} onKeyDown={onMenuKey}>
-      <button type="button" role="menuitem" disabled={!canImport} onPointerEnter={() => setBranch(false)}
-        onClick={() => { close(true); importing() }}>{t('导入图片', 'Import image')}</button>
       <button type="button" ref={exportItem} role="menuitem" aria-haspopup="menu" aria-expanded={branch} disabled={!canExport}
         onPointerEnter={event => { if (canExport && event.pointerType !== 'touch') showFormats(false) }}
         onKeyDown={event => {
@@ -97,7 +93,7 @@ export function CanvasActionsMenu({ doc, t, canImport, canExport, importing, exp
       {galleryAction && <button type="button" role="menuitem" onPointerEnter={() => setBranch(false)}
         onClick={() => { close(true); galleryAction.run() }}>{galleryAction.label}</button>}
       {branch && <div className="en-export-menu en-note-format-menu" role="menu" ref={formats}
-        aria-label={t('图像导出格式', 'Image export formats')} style={{ right: '100%', top: 32 }}>
+        aria-label={t('图像导出格式', 'Image export formats')} style={{ right: '100%', top: 0 }}>
         {(['png', 'jpg'] as const).map(format => <button key={format} type="button" role="menuitem"
           onClick={() => { close(true); exporting(format) }}>{format.toUpperCase()}</button>)}
       </div>}

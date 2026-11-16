@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createServer } from 'node:http'
 import { once } from 'node:events'
 import { imageFactoryInput, registerImageFactory } from '../packages/dsh-research-task-runtime/image-factory.js'
-import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, validSize } from '../src/preload/image-factory/raster'
+import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64')
 const request = { requestId: '11898f5e-5fab-4913-b241-267ac863be0c', size: '1024x1536', prompt: 'Make a poster' }
@@ -17,6 +17,15 @@ describe('image factory', () => {
     expect(validSize(4096, 4096)).toBe(false)
     expect(providerSize(size)).toBe('1024x1536')
     expect(providerSize(ratios['16:9'])).toBe('1536x1024')
+  })
+
+  it('uses dimensions or common and custom ratios described in chat without reading a time as a ratio', () => {
+    expect(requestedImageSize('请做一张海报，画面比例为 9：16。')).toEqual({ width: 900, height: 1600 })
+    expect(requestedImageSize('生成 16:9 的封面')).toEqual({ width: 1600, height: 900 })
+    expect(requestedImageSize('画布比例为 7 比 5')).toEqual({ width: 1600, height: 1143 })
+    expect(requestedImageSize('Create a 1080 × 1920 px cover')).toEqual({ width: 1080, height: 1920 })
+    expect(requestedImageSize('活动上午 10:30 开始')).toBeUndefined()
+    expect(requestedImageSize('Make it in landscape format')).toEqual({ width: 1600, height: 900 })
   })
 
   it('preserves the whole generated poster at a different canvas ratio', () => {

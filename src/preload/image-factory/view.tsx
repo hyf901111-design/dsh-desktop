@@ -1,16 +1,19 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
+import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
+import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
 import { CanvasActionsMenu } from './actions-menu'
 import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
-import { applyRegion, between, canvasFor, canvasPoint, cropRaster, drawFit, encode, loadRaster, providerSize, ratios, validSize,
-  type Point, type Raster, type Ratio, type Region } from './raster'
+import { applyRegion, between, canvasFor, canvasPoint, cropRaster, drawFit, encode, loadRaster, providerSize, ratios, requestedImageSize, validSize,
+  type Point, type Raster, type Region } from './raster'
 import styles from './style.css?raw'
 
 export const imageFactoryOpenEvent = 'sherlock:image-factory-open'
 type Reference = { data: Uint8Array; mediaType: string }
 type Bridge = {
+  workspacePointerInBar?: WorkspacePointerInBar
   generate(value: { id: string; prompt: string; size: string; reference?: Reference }): Promise<Uint8Array>
   cancel(id: string): Promise<unknown>
   save(value: { action: 'download'; data: Uint8Array; name: string; format: 'png' | 'jpg' }): Promise<{ cancelled?: boolean }>
@@ -25,6 +28,7 @@ type Message = {
   version?: number; error?: boolean
 }
 type T = (zh: string, en: string) => string
+const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 
 function Symbol({ name, size }: { name: string; size?: number }) {
   const src = iconSource(name)
@@ -67,14 +71,13 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const [history, setHistory] = useState<History>(emptyHistory)
   const [preview, setPreview] = useState<number>()
   const [galleryOpen, setGalleryOpen] = useState(false)
-  const [ratio, setRatio] = useState<Ratio>('4:5')
+  const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [marking, setMarking] = useState(false)
   const [mark, setMark] = useState<Mark>()
   const [draft, setDraft] = useState<Region>()
   const [panel, setPanel] = useState<Panel>()
   const [busy, setBusy] = useState(false)
-  const [drop, setDrop] = useState(false)
   const [toast, setToast] = useState('')
   const [zoom, setZoom] = useState(1)
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
@@ -83,6 +86,9 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const [keepRatio, setKeepRatio] = useState(true)
   const [caption, setCaption] = useState({ text: '', fontSize: 48, placement: 'upper', color: '#ffffff' })
   const file = useRef<HTMLInputElement>(null), stage = useRef<HTMLDivElement>(null)
+  const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
+  const workspaceHover = useRef<WorkspaceViewHover>()
+  const hasWorkspaceSession = workspaceExpanded && !!findWorkspaceSession(doc)
   const urls = useRef(new Set<string>()), active = useRef<{ id: string; cancelled: boolean }>()
   const mounted = useRef(true), drag = useRef<{ pointerId: number; start: Point }>()
   const count = useRef(0)
@@ -94,6 +100,22 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const region = mark?.version === current?.id ? mark?.rect : undefined
   const drawing = panel === 'crop' || marking
   const fit = shown ? Math.max(.01, Math.min(Math.max(1, bounds.width) / shown.width, Math.max(1, bounds.height) / shown.height, 1)) : 1
+
+  useLayoutEffect(() => {
+    const bar = header.current
+    if (!bar) return
+    const hover = new WorkspaceViewHover(bar, () => bar, setWorkspaceExpanded, bridge.workspacePointerInBar)
+    workspaceHover.current = hover
+    const closeWhenHidden = () => {
+      if (doc.body.dataset.workspaceSurface !== 'image-factory') hover.setExpanded(false)
+    }
+    doc.addEventListener('sherlock:workspace-surface-change', closeWhenHidden)
+    return () => {
+      doc.removeEventListener('sherlock:workspace-surface-change', closeWhenHidden)
+      hover.dispose()
+      workspaceHover.current = undefined
+    }
+  }, [bridge, doc])
 
   useEffect(() => {
     const allocated = urls.current
@@ -193,7 +215,9 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
           acceptableFile(upload, t)
           uploaded = await loadRaster(doc, upload)
         }
-        const target = area ?? base ?? ratios[ratio]
+        const requested = area ? undefined : requestedImageSize(request)
+        const size = requested ?? base ?? ratios['4:5']
+        const target = area ?? size
         const referenceImage = uploaded ?? base
         const source = area && base ? await referenceFor(doc, base, area)
           : referenceImage ? await referenceFor(doc, referenceImage) : undefined
@@ -208,10 +232,9 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
         const output = await loadRaster(doc, new Blob([Uint8Array.from(data)], { type: 'image/png' }))
         let blob
         try {
-          const size = base ?? ratios[ratio]
           const { canvas, context } = canvasFor(doc, size)
           if (area && base) applyRegion(context, base, output, area)
-          else if (base) context.drawImage(output.image, 0, 0, size.width, size.height)
+          else if (base && !requested) context.drawImage(output.image, 0, 0, size.width, size.height)
           else drawFit(context, output, size)
           blob = await encode(canvas)
         } finally { URL.revokeObjectURL(output.url) }
@@ -292,11 +315,24 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-focus-chat'))
   }
-  function useGalleryPrompt(prompt: string, ratio: Ratio) {
-    const accepted = !doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt }, cancelable: true }))
-    if (accepted) setRatio(ratio)
+  function useGalleryPrompt(prompt: string) {
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt }, cancelable: true }))
     focusChat()
-    return accepted
+  }
+  function openWorkspaceView(view: string) {
+    const sessionId = findWorkspaceSession(doc)?.dataset.eworkNotesSession
+    if (!sessionId) {
+      if (view === 'chat') close()
+      return
+    }
+    const button = workspaceViewButton(doc, sessionId, view)
+    if (!button?.isConnected || button.disabled) {
+      setToast(t('此会话视图暂不可用，请先打开对应会话。', 'This view is unavailable. Open the corresponding session first.'))
+      return
+    }
+    close()
+    const currentButton = workspaceViewButton(doc, sessionId, view)
+    if (currentButton?.isConnected && !currentButton.disabled) currentButton.click()
   }
   function selectPanel(next: Panel) {
     if (busy || !current || preview !== undefined) return
@@ -392,7 +428,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       doc.removeEventListener('sherlock:image-factory-action', action)
       doc.removeEventListener('sherlock:image-factory-request-state', publishChat)
     }
-  }, [busy, canSend, mark, marking, panel, ratio, preview, current, messages, history.all, bridge, t])
+  }, [busy, canSend, mark, marking, panel, preview, current, messages, history.all, bridge, t])
 
   const rectangle = draft ?? region
   const noEdits = busy || preview !== undefined
@@ -400,19 +436,39 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     ['crop', t('裁剪', 'Crop')], ['resize', t('调整尺寸', 'Resize')], ['adjust', t('调整明暗', 'Adjust tone')], ['type', t('添加文字', 'Add text')],
   ] as const
   const panelTitle = tools.find(item => item[0] === panel)?.[1]
-  const importLabel = t('导入图片', 'Import image')
+  const tabsLabel = workspaceExpanded ? t('收起工作区页签', 'Collapse workspace tabs') : t('展开工作区页签', 'Expand workspace tabs')
   return <div className="if-workplace" style={{ display: 'contents' }} onKeyDown={event => {
     if (event.key !== 'Escape' || (!panel && !marking && !region && preview === undefined)) return
     event.stopPropagation(); setPanel(undefined); clearMark(); setPreview(undefined)
   }}>
     <section className="if-work" aria-label={t('图像工厂画布', 'Image Factory canvas')}>
-      <header className="if-top">
+      <header className="if-top workspace-app-topbar" ref={header} onKeyDown={event => {
+        if (event.key !== 'Escape' || !workspaceExpanded) return
+        event.preventDefault(); event.stopPropagation()
+        workspaceHover.current?.setExpanded(false)
+        workspaceToggle.current?.focus({ preventScroll: true })
+      }}>
         <Button icon="left" label={t('返回对话', 'Back to chat')} onClick={close}/>
-        <Symbol name="factory" size={20}/><strong>{t('图像工厂', 'Image Factory')}</strong>
-        <span className="if-top-title" title={current?.title}>{current?.title ?? t('灵感画廊', 'Inspiration gallery')}</span>
-        <CanvasActionsMenu doc={doc} t={t} canImport={!busy} canExport={!!shown && !busy && !panel}
-          importing={() => file.current?.click()} exporting={exportImage}
-          galleryAction={canvas ? galleryOpen
+        <div className="workspace-app-title">
+          <Symbol name="factory" size={18}/><span>{t('图像工厂', 'Image Factory')}</span>
+        </div>
+        <div className="eb-workspace-controls">
+          <button type="button" className="eb-workspace-toggle" ref={workspaceToggle}
+            aria-label={tabsLabel} title={tabsLabel} aria-expanded={workspaceExpanded} aria-controls="image-factory-workspace-tabs"
+            onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true"/></button>
+          <nav id="image-factory-workspace-tabs" className="eb-workspace-tabs"
+            aria-label={t('工作区视图', 'Workspace views')} aria-hidden={!workspaceExpanded}>
+            {workspaceViews.map(([view, label]) => {
+              const name = t(label, workspaceEnglishLabels[view])
+              return <button key={view} type="button" aria-label={t('切换到', 'Switch to ') + name}
+                tabIndex={workspaceExpanded ? 0 : -1} disabled={!hasWorkspaceSession && view !== 'chat'}
+                onClick={() => openWorkspaceView(view)}>{name}</button>
+            })}
+          </nav>
+        </div>
+        <span className="if-top-title" title={current?.title}>{current?.title}</span>
+        <CanvasActionsMenu doc={doc} t={t} canExport={!!shown && !busy && !panel} exporting={exportImage}
+          galleryAction={canvas && !busy ? galleryOpen
             ? { label: t('返回画布', 'Return to canvas'), run: () => setGalleryOpen(false) }
             : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: showGallery } : undefined}/>
       </header>
@@ -440,21 +496,8 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
           : t('在图片上拖出要修改的范围。', 'Drag over the area you want to edit.')}</span>
         <Button disabled={busy} onClick={clearMark}>{region ? t('清除选区', 'Clear selection') : t('退出框选', 'Exit selection')}</Button>
       </div>}
-      <div className="if-stage" data-drop={drop} onDragOver={event => {
-        if (!event.dataTransfer.types.includes('Files')) return
-        event.preventDefault(); event.dataTransfer.dropEffect = busy ? 'none' : 'copy'; setDrop(!busy)
-      }} onDragLeave={event => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setDrop(false) }}
-      onDrop={event => { if (!event.dataTransfer.files.length) return; event.preventDefault(); setDrop(false); importFile(event.dataTransfer.files[0]) }}>
-        {!shown ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}
-          actions={<>
-            {canvas && <Button disabled={busy} onClick={() => setGalleryOpen(false)}>{t('返回画布', 'Return to canvas')}</Button>}
-            <Button icon="upload" disabled={busy} onClick={() => file.current?.click()}>{importLabel}</Button>
-            <Button icon="spark" primary disabled={busy} onClick={focusChat}>{t('用 AI 生图', 'Generate with AI')}</Button>
-          </>}
-          ratios={<div className="if-ratios"><span>{t('生图比例', 'Aspect ratio')}</span>
-            {(Object.keys(ratios) as Ratio[]).map(key =>
-              <Button key={key} icon={ratios[key].icon} active={ratio === key} disabled={busy} onClick={() => setRatio(key)}>{key}</Button>)}
-          </div>}/> : <>
+      <div className="if-stage">
+        {!shown ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}/> : <>
           <div className="if-stage-scroll" ref={stage}>
             <div className="if-raster" data-selecting={drawing} style={{ width: Math.max(1, Math.floor(shown.width * fit * zoom)), height: Math.max(1, Math.floor(shown.height * fit * zoom)) }}
               onPointerDown={e => onPointer(e, 'start')} onPointerMove={e => onPointer(e, 'move')}
@@ -528,6 +571,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
 }
 
 export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bridge: Bridge) {
+  mountWorkspaceTopbarStyles(doc)
   const root = doc.createElement('div')
   root.className = 'image-factory'
   const style = doc.createElement('style')
