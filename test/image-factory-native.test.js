@@ -155,3 +155,25 @@ it('uses the shared composer draft when switching gallery examples', async () =>
     expect(f.session.prompt).not.toHaveBeenCalled()
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
+
+it('keeps the uploaded reference visible and appends the current canvas privately', async () => {
+  const f = fixture()
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const canvas = { data: 'QUFB', mediaType: 'image/png' }
+    const title = '花市海报'.repeat(30)
+    f.doc.addEventListener('sherlock:image-factory-prepare', ({ detail }) => {
+      expect(detail.uploaded).toBe(true)
+      f.events('prepared', { id: detail.id, operation: 'edit', size: '1024x1536', width: 1080, height: 1350, title, reference: canvas })
+    })
+    const image = { type: 'image', data: 'QkJC', mediaType: 'image/png', name: '色卡.png' }
+    const request = { type: 'text', text: '参考色卡，给当前海报换色' }
+    await f.binding.prompt(f.session, [request, image], 'queue')
+    const [[content]] = f.session.prompt.mock.calls
+    expect(readImageFactoryContext(content[0].text)).toMatchObject({ title: title.slice(0, 100), internalReference: true })
+    expect(content.slice(1)).toEqual([image, { type: 'image', ...canvas, name: '当前画布' }])
+    await expect(f.binding.prompt(f.session, [request, image, image, image, image], 'queue')).rejects.toThrow('最多可再附加三张')
+    expect(f.session.prompt).toHaveBeenCalledOnce()
+    expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})

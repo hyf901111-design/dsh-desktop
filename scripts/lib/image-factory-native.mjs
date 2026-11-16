@@ -65,13 +65,17 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     const id = regionId ?? win.crypto.randomUUID()
     const scope = canvasScope()
     try {
-      const response = await request(id, sessionId, scope, text, content.some(part => part.type === 'image'), !!regionId)
+      const imageCount = content.filter(part => part.type === 'image').length
+      const response = await request(id, sessionId, scope, text, imageCount > 0, !!regionId)
       if (!isActive() || currentId() !== sessionId || canvasScope() !== scope) throw Error('当前会话或画布已切换，草稿已保留。')
       if (regionId && response.operation !== 'region') throw Error('选区已变化，请重新框选。')
       const { operation, size, width, height, title, reference, editBounds } = response
+      if (reference && imageCount > 3) throw Error('编辑当前画布时，最多可再附加三张参考图。')
       const next = [...content]
       const index = next.findLastIndex(part => part.type === 'text')
-      next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height, title, internalReference: !!reference, editBounds }) }
+      const receiptTitle = title.replace(/[\p{Cc}]/gu, ' ').trim().slice(0, 100) || '画布'
+      next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height,
+        title: receiptTitle, internalReference: !!reference, editBounds }) }
       if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: '当前画布' })
       jobs.set(id, { id, sessionId, draft: scope === null, timer: win.setTimeout(() => finish(id), 615000) })
       return { content: next, id }
@@ -195,10 +199,16 @@ function EWorkImageFactoryWelcome() {
   const app = eworkImageFactory
   const state = react.useSyncExternalStore(app?.subscribe ?? (() => () => {}), app?.getSnapshot ?? (() => imageFactoryEmpty), () => imageFactoryEmpty)
   const en = react.useSyncExternalStore(subscribeEWorkModeLocale, eworkModeLocale, eworkModeLocale) === 'en'
-  const labels = en ? ['Create an image or poster', 'Describe the image you want, add a reference, or select an area to edit on the canvas.', 'Make an event poster', 'Import an image']
-    : ['开始做图', '描述想做的图片、附加参考图，或在画布上框选要修改的位置。画面比例可以直接写在描述里。', '制作活动海报', '导入图片']
-  const prompt = en ? 'Create a Weekend Coffee Market poster for November 21–22. Use a warm brown palette and cream typography.' :
-    '做一张「周末咖啡市集」海报，活动为 11 月 21–22 日。用暖棕色和奶油白标题，右下放一杯咖啡。'
+  const labels = state.current
+    ? (en ? ['Edit the current image', 'Describe a change, add a reference, or select a region on the canvas.', 'Improve this image', 'Replace the image']
+      : ['编辑当前图片', '描述想改的内容，可以附上参考图，也可以框选画布上的局部。', '优化这张图片', '换一张图片'])
+    : (en ? ['Create an image or poster', 'Describe the picture you want. You can include the aspect ratio or add a reference image.', 'Make an event poster', 'Import an image']
+      : ['开始做图', '描述想做的图片，可以直接写出画面比例，也可以附上参考图。', '制作活动海报', '导入图片'])
+  const prompt = state.current
+    ? (en ? 'Improve the light and contrast of the current image. Keep the composition, existing lettering, and canvas dimensions.'
+      : '优化当前图片的亮度与对比度，保留构图、原有文字和画布尺寸。')
+    : (en ? 'Create a Weekend Coffee Market poster for November 21–22. Use a warm brown palette and cream typography.'
+      : '做一张「周末咖啡市集」海报，活动为 11 月 21–22 日。用暖棕色和奶油白标题，右下放一杯咖啡。')
   const h = react.createElement
   return h('div', { className: 'ew-sheet-welcome', 'data-mode-welcome': 'image-factory' },
     h('div', { className: 'ew-sheet-welcome-content' }, h('h2', null, labels[0]), h('p', null, labels[1]),

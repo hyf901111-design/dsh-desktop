@@ -359,14 +359,14 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         const selection = region && draft?.requestId === id && draft.phase === 'sending' ? draft.area : undefined
         if (region && (!selection || !image)) throw Error(t('选区已变化，请重新框选。', 'The selection changed. Select the area again.'))
         const size = (selection ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
-        const title = (selection ? base?.title : undefined) || titleFromPrompt(prompt, t)
+        const title = base?.title ?? titleFromPrompt(prompt, t)
         const target = selection ?? size
         const output = providerSize(target)
         const outputSize = providerDimensions[output]
         const edit = selection && image ? { area: selection, frame: regionEditFrame(selection, outputSize, image.raster) } : undefined
         job = { id, sessionId, scope: requestedScope, scene: base, edit, size, title, delivering: false, release: hold }
         active.current.set(id, job)
-        const reference = image && (edit || !uploaded)
+        const reference = image
           ? await referenceData(doc, image.raster, edit && { frame: edit.frame, size: outputSize })
           : undefined
         if (!active.current.has(id) || !mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' ||
