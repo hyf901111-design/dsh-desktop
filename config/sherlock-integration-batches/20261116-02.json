@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
-        "tipCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
+        "baseCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
+        "tipCommit": "79103585851304325a94e65777b64027c8235554",
         "commits": [
           {
-            "commit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
+            "commit": "79103585851304325a94e65777b64027c8235554",
             "parents": [
-              "753ca1ede59115467b09e7beefe7d2361613552b"
+              "8c2b116c1abf70ef6b926243503625ffbc17b335"
             ],
-            "subject": "优化：图像工厂成品入库时自动区分同名文件"
+            "subject": "优化：图像工厂框选改图自然衔接选区边缘"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/knowledge/store.ts"
+            "path": "src/preload/image-factory/raster.ts"
           },
           {
             "status": "M",
-            "path": "test/knowledge-library.test.ts"
+            "path": "test/image-factory.test.js"
           }
         ],
         "checks": [
@@ -41,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
-            "completedAt": "2026-11-16T19:46:16.459Z",
+            "verifiedCommit": "79103585851304325a94e65777b64027c8235554",
+            "completedAt": "2026-11-16T20:02:28.341Z",
             "timeoutMs": 120000
           },
           {
@@ -50,29 +50,31 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/knowledge-library.test.ts",
-              "test/knowledge-history-backfill.test.ts",
-              "test/image-factory-native.test.js"
+              "test/image-factory.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-native.test.js",
+              "test/knowledge-history-backfill.test.ts"
             ],
             "outcome": "passed",
-            "summary": "知识库、历史补收和图像工厂对话共 21 项聚焦检查通过。",
-            "verifiedCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
-            "completedAt": "2026-11-16T19:46:16.459Z",
+            "summary": "图像合成、图层交互、原生会话和知识库共 21 项聚焦检查通过。",
+            "verifiedCommit": "79103585851304325a94e65777b64027c8235554",
+            "completedAt": "2026-11-16T20:02:28.341Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原签名版可见同名文件；自动后缀需在新签名版复测。"
+          "summary": "用已生成的灯塔原图和同一裁片复算像素，选区外与中心各自相同，边沿接缝减轻。签名版待实际复测。"
         },
         "acceptanceCriteria": [
-          "新归档成品遇到同名时分配可辨别的文件名。",
-          "会话历史补收、重试和补存画布沿用已分配或用户整理后的名称。"
+          "选区内侧的交界渐变衔接原图，选区外像素保持一致。",
+          "选区中心保留模型结果和透明度，靠画布边缘的方向不留原图细线。",
+          "本地客户端框选修改成品可正常保存并入库预览。"
         ],
         "risks": [
-          "自动命名只用于新归档，既有文件的名称由用户管理。"
+          "羽化半径随选区尺寸增加，最多 12 像素。"
         ],
-        "generatedAt": "2026-11-16T19:46:16.459Z"
+        "generatedAt": "2026-11-16T20:02:28.341Z"
       }
     },
     {
