@@ -57,6 +57,28 @@ it('routes a factory comment to the native image tool using the bound crop and o
  expect(result.guidance).toContain('一句话')
  expect(f.prompts[0].text({agent:f.agent})).toContain('180 × 300')
 })
+it('sends the current canvas first and appended mood references next for whole-image edits', async () => {
+ const f=fixture({uploaded:true})
+ const {content}=f.agent.session.events[1].data
+ const palette={...f.ref,attachmentId:'palette',name:'色卡.png'}
+ content[0].text=imageFactoryPrompt('参考色卡修改花朵颜色', {
+  id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'花市海报',operation:'edit',
+  size:'1024x1536',width:1080,height:1350,internalReference:true
+ })
+ content.splice(1,0,{type:'image',attachment:palette})
+ await f.call({prompt:'参考色卡修改花朵颜色',reference_image_ids:[palette.attachmentId]})
+ expect(f.reads).toEqual([f.ref,palette])
+ expect(f.request.mock.calls[0][1].body.get('prompt')).toContain('第一张参考图是要编辑的画布')
+})
+it('requires the promised canvas reference before dispatching an edit', async () => {
+ const f=fixture()
+ f.agent.session.events[1].data.content[0].text=imageFactoryPrompt('修改当前图', {
+  id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'花市海报',operation:'edit',
+  size:'1024x1536',width:1080,height:1350,internalReference:true
+ })
+ await expect(f.call()).rejects.toThrow('当前画布未能作为图片参考')
+ expect(f.request).not.toHaveBeenCalled()
+})
 it('sends the framed selection to the image provider with its bounds and full-frame composition',async()=>{
  const f=fixture({uploaded:true})
  f.agent.session.events[1].data.content[0].text=imageFactoryPrompt('只移动选区里的花', {
