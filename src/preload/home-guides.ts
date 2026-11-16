@@ -33,7 +33,8 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
   ['ask-trend','针对框选区域下达任务','保留「季度分析!A1:C5」引用，只用这块数据绘制两条同比趋势线。',1700],
   ['trend','核对利润与现金流的背离','澄川制造 2026 年第三季度利润同比 +25%，经营现金流同比 −20%。',4200],
   ['select-component','框选现金流调整明细','从分析表框选净利润、经营现金流和中间的调整项。',2300],
-  ['component','从插入菜单生成智能组件','拆解台已生成，点击柱子可查明细，也可试算多回款。',2300],
+  ['open-component','点击插入菜单中的智能组件','保留框选的数据区域，打开展示组件需求的侧栏。',1500],
+  ['component','填写需求并生成现金流拆解台','拆解台已生成，点击柱子可查明细，也可试算多回款。',2300],
   ['component-theme','从组件更多菜单切换主题','点击右上角「更多」打开模式切换，为拆解台应用易方达主题。',2600]
  ]},
  workbench:{title:'白酒龙头研究工作台',view:'研究',intro:'从右侧提交研究需求，规划三个页签并逐步生成可联动的研究组件。',steps:HOME_WORKBENCH_STEPS.map(step=>[step.id,step.title,step.result,step.hold] as const)},

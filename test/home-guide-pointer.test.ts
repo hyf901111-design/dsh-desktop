@@ -37,6 +37,20 @@ test('can move through a menu without hovering intermediate rows',async()=>{
   expect(pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
  }finally{hit.mockRestore()}
 })
+test('runs the native click on visible release even when the control disappears',async()=>{
+ const {pointer,target}=fixture(),events:string[]=[]
+ const action=pointer.perform({target,action:'click',hover:'none',
+  onFrame:frame=>{events.push(frame.phase)},
+  onClick:()=>{
+   expect(pointer.snapshot()).toMatchObject({x:360,y:240,state:'released'})
+   events.push('click')
+   target.remove()
+  }
+ })
+ await vi.runAllTimersAsync()
+ await action
+ expect(events.slice(-4)).toEqual(['pressed','released','click','idle'])
+})
 test('targets the visible text fragment of a wrapped AI mark rather than its empty union center',()=>{
  const f=fixture(),mark=document.createElement('span');mark.dataset.bnThreadId='one';document.body.append(mark)
  const rect=(left:number,top:number,right:number,bottom:number)=>({left,top,right,bottom,width:right-left,height:bottom-top,x:left,y:top,toJSON:()=>({})})

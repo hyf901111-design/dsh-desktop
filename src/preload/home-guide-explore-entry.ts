@@ -9,7 +9,13 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
  const visible=(node:HTMLElement)=>{try{homeGuideTargetPoint(document,node);return true}catch{return false}}
  const unique=<T extends HTMLElement>(nodes:Iterable<T>):T|undefined=>{const all=[...new Set(nodes)].filter(visible);if(all.length>1)throw Error('可见入口不唯一，请重新打开探索。');return all[0]}
  const wait=async<T>(read:()=>T|undefined)=>{const expires=Date.now()+6000;for(;;){check();const value=read();if(value)return value;if(Date.now()>=expires)throw Error('可见入口尚未就绪，请重新打开探索。');await new Promise(resolve=>win.setTimeout(resolve,25))}}
- const click=async(target:HTMLElement)=>{check();await options.pointer.perform({target,action:'click'});check();homeGuideTargetPoint(document,target);options.nativeClick(target);check()}
+ const click=async(target:HTMLElement)=>{
+  check()
+  await options.pointer.perform({target,action:'click',hover:'none',onClick:()=>{
+   check();homeGuideTargetPoint(document,target);options.nativeClick(target)
+  }})
+  check()
+ }
  const activate=async(target:HTMLElement,action:HomeGuideEntryAction)=>{check();await options.pointer.perform({target,action:'move'});check();await options.activate(target,action,async()=>{check();homeGuideTargetPoint(document,target);await options.pointer.perform({target,action:'click'});check();homeGuideTargetPoint(document,target)});check()}
  const entry=options.context.demoEntry;if(!entry)throw Error('探索演示入口已变化。')
  await options.pointer.perform({target:entry.closeTarget,action:'click'});check();homeGuideTargetPoint(document,entry.closeTarget);await entry.closeOwned();check()

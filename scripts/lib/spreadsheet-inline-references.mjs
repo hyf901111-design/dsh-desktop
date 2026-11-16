@@ -68,6 +68,7 @@ export function installSpreadsheetReferences({win,doc,sessions,getInput}){
   node.className='ew-sheet-pending-reference'
   node.dataset.provisional='true'
   node.dataset.referenceSource='spreadsheet-range'
+  node.toggleAttribute('data-after-draft', !!state.before.draft)
   const label=doc.createElement('span')
   label.textContent=d.sheetName+'!'+d.range
   node.append(label)

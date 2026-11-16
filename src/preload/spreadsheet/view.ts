@@ -214,11 +214,11 @@ class SpreadsheetView{
  private nativeCell(){return this.current()?.getRange(this.active)}
  private request(method:string,fields:Record<string,unknown>={}){return this.bridge.request(method,{sessionId:this.sessionId,owner:this.owner,generation:this.generation,...fields})}
  get cashFlowGuideReady(){return this.ready&&!this.disposed&&this.host.isConnected&&this.editable}
- private guideImportArmed=false
+ private guideImportHold?:()=>Promise<void>
  cashFlowGuideImportButton(){
   return this.record.workbook?undefined:this.empty.querySelector<HTMLButtonElement>('[data-action=import]')??undefined
  }
- armCashFlowGuideImport(){this.guideImportArmed=true}
+ armCashFlowGuideImport(hold:()=>Promise<void>){this.guideImportHold=hold}
  cashFlowGuideFileButton(){return this.modal.querySelector<HTMLButtonElement>('[data-action=cash-flow-guide-import]')??undefined}
  get cashFlowGuideImported(){return !!this.engine&&this.record.workbook?.id.startsWith(CASH_FLOW_GUIDE_BOOK_PREFIX)===true}
  async applyCashFlowGuide(step:'analysis'|'trend',check:()=>void){
@@ -287,7 +287,8 @@ class SpreadsheetView{
  }
  cashFlowGuideInsertButton(){
   const selector='button[data-value=insert][data-action=menu]:not(:disabled,[hidden])'
-  return this.chrome.querySelector<HTMLButtonElement>(selector)??(this.menu?this.root.querySelector<HTMLButtonElement>('.ew-sheet-menu '+selector):null)??undefined
+  const controls=[...this.chrome.querySelectorAll<HTMLButtonElement>(selector),...this.root.querySelectorAll<HTMLButtonElement>('.ew-sheet-menu '+selector)]
+  return controls.find(button=>button.getClientRects().length>0&&this.win.getComputedStyle(button).visibility==='visible')
  }
  cashFlowGuideMenuButton(){return this.chrome.querySelector<HTMLButtonElement>('button[data-value=commands]')??undefined}
  cashFlowGuideSmartButton(){return this.root.querySelector<HTMLButtonElement>('.ew-sheet-menu button[data-action=smart]:not(:disabled)')??undefined}
@@ -323,7 +324,7 @@ class SpreadsheetView{
   return this.componentCards.get(CASH_FLOW_GUIDE_COMPONENT_ID)?.element
  }
  closeCashFlowGuideControls(){
-  this.guideImportArmed=false
+  this.guideImportHold=undefined
   if(this.modal.dataset.docked==='smart'||this.cashFlowGuideFileButton())this.closeDialog()
  }
  private async load(){
@@ -1055,7 +1056,7 @@ class SpreadsheetView{
   if(this.componentSidebarWidth===undefined)return
   try{this.win.localStorage.setItem(componentWidthKey,String(this.componentSidebarWidth))}catch{/* The current width is still applied. */}
  }
- private closeDialog(){this.chartEditor=undefined;this.componentPicking=false;this.componentTarget=undefined;this.clearComponentJob();delete this.modal.dataset.chartEditor;delete this.modal.dataset.rangePicking;delete this.modal.dataset.docked;this.root.querySelector<HTMLElement>('.ew-sheet-chart-preview')!.hidden=true;this.modal.hidden=true;this.syncInspector();this.modal.replaceChildren();this.resize()}
+ private closeDialog(){this.guideImportHold=undefined;this.chartEditor=undefined;this.componentPicking=false;this.componentTarget=undefined;this.clearComponentJob();delete this.modal.dataset.chartEditor;delete this.modal.dataset.rangePicking;delete this.modal.dataset.docked;this.root.querySelector<HTMLElement>('.ew-sheet-chart-preview')!.hidden=true;this.modal.hidden=true;this.syncInspector();this.modal.replaceChildren();this.resize()}
  private dialogFeedback(copy:string,error=false){
   const feedback=this.modal.querySelector<HTMLElement>('.ew-sheet-dialog-feedback')
   if(feedback){feedback.dataset.error=String(error);feedback.textContent=copy}
@@ -1977,8 +1978,7 @@ class SpreadsheetView{
    case 'reload':await this.load();return
    case 'new':if(!this.record.workbook)await this.run('create',{name:this.sessionTitle()},'空白工作簿已创建');return
    case 'import':{
-    if(!this.guideImportArmed){await this.run('import',{},'工作簿已导入');return}
-    this.guideImportArmed=false
+    if(!this.guideImportHold){await this.run('import',{},'工作簿已导入');return}
     const en=this.doc.documentElement.dataset.odysseyLocale==='en'
     const file=HOME_SPREADSHEET_GUIDE_FILE[en?'en':'zh']
     const sample=en?'Bundled example · XLSX':'内置示例 · XLSX'
@@ -1987,11 +1987,17 @@ class SpreadsheetView{
      button('cash-flow-guide-import',file,{glyph:'grid',withLabel:true,className:'outlined'})+'<small>'+text(sample)+'</small></div>',null)
     return
    }
-   case 'cash-flow-guide-import':
-    if(!this.cashFlowGuideFileButton()||this.record.workbook)return
+   case 'cash-flow-guide-import':{
+    const file=this.cashFlowGuideFileButton(),hold=this.guideImportHold
+    if(!file||file!==trigger||file.disabled||!hold||this.record.workbook)return
+    file.disabled=true
+    this.dialogFeedback(this.doc.documentElement.dataset.odysseyLocale==='en'?'Opening workbook…':'正在导入工作簿…')
+    try{await hold()}catch(error){if(error instanceof Error&&error.name==='AbortError')return;throw error}
+    if(this.cashFlowGuideFileButton()!==file||this.record.workbook)return
     this.closeDialog()
     await this.run('import',{guideSample:true},'工作簿已导入')
     return
+   }
    case 'activate':await this.run('activate',{id:value});return
    case 'export-format':if(sheet){if(api){const calculated=api.getFormula().onCalculationResultApplied(1200).catch(()=>{});api.getFormula().executeCalculation();await calculated}await this.run('export',{format:value,sheetId:sheet.getSheetId(),sessionTitle:this.sessionTitle()})}return
    case 'redo-ai':if(this.record.canRedoAI)await this.run('redo',{},'已重新应用 AI 修改');return
