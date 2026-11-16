@@ -51,6 +51,7 @@ import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeAppShortcuts } from './home-app-shortcuts'
 import { mountImageGenerationFlow } from './image-generation-flow'
+import { imageFactoryOpenEvent, mountImageFactory } from './image-factory/view'
 import { mountHomeThemes, getHomeThemeController } from './home-themes'
 import {toggleHomeAppearance} from './home-theme-controls'
 import {mountPowerSettings} from './power-settings'
@@ -420,7 +421,19 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create,newSpreadsheet:sidebarNewSpreadsheet.create})
   scheduledView.mount()
+  const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
+    generate: value => ipcRenderer.invoke('image-factory:generate', value),
+    cancel: id => ipcRenderer.invoke('image-factory:cancel', id),
+    save: value => ipcRenderer.invoke('conversation:image-action', value),
+  })
+  const openImageFactory = () => { void flushBeforeCreate().then(imageFactory.open).catch(() => {}) }
+  window.addEventListener(imageFactoryOpenEvent, openImageFactory)
   const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, async (app, signal) => {
+    if (app === 'image-factory') {
+      await flushBeforeCreate()
+      if (!signal.aborted) imageFactory.open()
+      return
+    }
     if (app === 'spreadsheet') { await sidebarNewSpreadsheet.create(signal); return }
     if (app === 'research' || app === 'note') {
       await homeActions.run(app === 'research' ? 'board' : 'note', { signal, revealComposer: async () => {} })
@@ -433,8 +446,11 @@ function initializeUi(): void {
     else if (app === 'plugin') window.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
     else await scheduledView.open()
   })
-  window.addEventListener('unload', disposeHomeAppShortcuts, { once: true })
-  const resetIntegrationIdentity = () => { document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  window.addEventListener('unload', () => {
+    disposeHomeAppShortcuts(); imageFactory.dispose()
+    window.removeEventListener(imageFactoryOpenEvent, openImageFactory)
+  }, { once: true })
+  const resetIntegrationIdentity = () => { imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
   window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })

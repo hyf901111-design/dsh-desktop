@@ -1,4 +1,5 @@
 import { icons } from './icons'
+import factoryIcon from '../image-factory/assets/factory.svg?inline'
 export const scheduledStyles = `
 [data-scheduled-hidden=true]{visibility:hidden!important}
 [data-dsh-sidebar-root] .hHd-Xa_newSessionGroup{display:flex!important;gap:8px!important;align-items:center!important;padding:0 2px!important;margin:0 0 6px!important;min-height:36px!important;background:transparent!important;border:0!important}
@@ -16,15 +17,16 @@ export const scheduledStyles = `
 .st-new-note-error{padding:12px;font-size:13px;line-height:1.5}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup{flex-direction:column!important}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup .hHd-Xa_newSession{flex:none!important;width:32px!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge]){width:36px!important;height:36px!important;padding:8px!important;border-radius:6px!important;color:var(--odyssey-sidebar-glyph,inherit)!important}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])::before{background:currentColor!important;opacity:1;width:20px;height:20px}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory]){width:36px!important;height:36px!important;padding:8px!important;border-radius:6px!important;color:var(--odyssey-sidebar-glyph,inherit)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory])::before{background:currentColor!important;opacity:1;width:20px;height:20px}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-home]::before{mask-image:url('${icons.homeRail.replaceAll("'",'%27')}')}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-browser]::before{mask-image:url('${icons.browserRail.replaceAll("'",'%27')}')}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-image-factory]::before{mask-image:url('${factoryIcon.replaceAll("'",'%27')}')}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]{display:grid!important;place-items:center!important;padding:0!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-knowledge]::before{content:none}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup [data-sidebar-knowledge-glyph]{display:block;width:24px;height:24px;background:currentColor;mask:url('${icons.knowledge.replaceAll("'",'%27')}') center/100% 100% no-repeat;pointer-events:none}
-body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.08))!important;color:var(--dsw-alias-label-primary,#292b2e)!important}
-body[data-ds-dark-theme] [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge])[aria-pressed=true]{color:var(--dsw-alias-label-primary,#e8e8e8)!important}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory])[aria-pressed=true]{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.08))!important;color:var(--dsw-alias-label-primary,#292b2e)!important}
+body[data-ds-dark-theme] [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button:is([data-sidebar-home],[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory])[aria-pressed=true]{color:var(--dsw-alias-label-primary,#e8e8e8)!important}
 [data-dsh-sidebar-wide=false] [data-srb-navigation-scroll]{display:none!important}
 [data-dsh-sidebar-wide=false] :is(.hHd-Xa_regionArea,.qDHVXG_rail){flex:none!important;height:auto!important;min-height:0}
 [data-dsh-sidebar-wide=false] .hHd-Xa_footArea{margin-top:auto}

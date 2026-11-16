@@ -20,6 +20,7 @@ import {createConversationComponentService} from './conversation-components/serv
 import {installConversationComponentHandlers} from './conversation-components/ipc'
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import {registerImageActions} from './image-actions'
+import {installImageFactory} from './image-factory'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import { PptxAnnotationService, registerPptxAnnotationHandlers, type PptxAnnotationHistoryEvent } from './pptx/annotations'
 import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
@@ -1747,7 +1748,9 @@ async function bootstrap(): Promise<void> {
     runtimeSnapshot: () => ({ revision: 0, runtimeEpoch: 'unavailable', ownerAccountId: 'unavailable', connections: [], tools: [], skills: [], plugins: [] }),
     execute: async () => unavailableIntegration(), readSkill: async () => unavailableIntegration(),
   })
+  const imageFactory = installImageFactory(() => mainWindow, () => runtime?.snapshot().url)
   stopIntegrationIdentity = accountService.subscribeSessionChanged(() => {
+    imageFactory.reset()
     memoryService?.rotateIdentity()
     noteNativeMenu.close()
     integrationService?.rotateIdentity()
@@ -1781,6 +1784,7 @@ async function bootstrap(): Promise<void> {
     memoryEndpoint,
     integrationEndpoint,
     accountEndpoint,
+    imageFactoryToken: imageFactory.token,
     localSearchUrl: localSearchRuntime.endpoint.url,
     localSearchToken: localSearchRuntime.endpoint.token,
     researchContext: {...researchContext,boardsToken},
