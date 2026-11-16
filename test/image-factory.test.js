@@ -2,7 +2,7 @@ import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
 import { drawLayers, moveLayer, textTopInsideCanvas } from '../src/preload/image-factory/layers'
-import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, regionEditFrame, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
+import { applyRegion, between, canvasPoint, drawFit, preservesRegionTransparency, providerSize, ratios, regionEditFrame, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
 
 
 describe('image factory', () => {
@@ -99,6 +99,61 @@ describe('image factory', () => {
     expect(pixel(12, 36)).toBeUndefined()
     expect(writes.every(band => band.x >= area.x && band.y >= area.y &&
       band.x + band.width <= area.x + area.width && band.y + band.height <= area.y + area.height)).toBe(true)
+  })
+
+  it('keeps the source alpha inside the selection when requested, even with an opaque replacement', () => {
+    const area = { x: 16, y: 16, width: 48, height: 48 }
+    const frame = { x: 0, y: 0, width: 80, height: 80 }
+    const original = {
+      ...frame, image: { pixel: x => x < 28 ? [0, 0, 0, 0] : [255, 0, 0, x < 44 ? 128 : 255] },
+    }
+    const replacement = {
+      ...frame, image: { pixel: x => x === 48 ? [0, 0, 0, 0] : [0, 255, 0, 255] },
+    }
+    let changed = false
+    const composited = new Map()
+    const target = {
+      drawImage: image => { changed = image === replacement.image },
+      clearRect: vi.fn(),
+      getImageData: (x, y, width, height) => {
+        const data = new Uint8ClampedArray(width * height * 4)
+        for (let index = 0; index < width * height; index++) {
+          const column = x + index % width, row = y + Math.floor(index / width)
+          const inside = changed && column >= 16 && column < 64 && row >= 16 && row < 64
+          data.set(composited.get(row * frame.width + column) ??
+            (inside ? replacement : original).image.pixel(column), index * 4)
+        }
+        return { data, width, height }
+      },
+      putImageData: ({ data, width, height }, x, y) => {
+        for (let index = 0; index < width * height; index++) {
+          const column = x + index % width, row = y + Math.floor(index / width)
+          composited.set(row * frame.width + column, data.slice(index * 4, (index + 1) * 4))
+        }
+      },
+    }
+    applyRegion(target, original, replacement, area, frame, true)
+    const edited = (column, row) => Array.from(target.getImageData(area.x + column, area.y + row, 1, 1).data)
+    expect(edited(5, 10)).toEqual([0, 0, 0, 0])
+    expect(edited(14, 10)).toEqual([0, 255, 0, 128])
+    expect(edited(28, 10)).toEqual([0, 255, 0, 255])
+    expect(edited(32, 10)).toEqual([255, 0, 0, 255])
+    expect(edited(14, 0)).toEqual([255, 0, 0, 128])
+  })
+
+  it.each([
+    ['请将选区里的红色色块改为纯青绿色，保留现有形状和透明区域。', true],
+    ['透明背景保持不变。', true],
+    ['不要改变原有的透明度。', true],
+    ['Preserve the original shape and alpha channel.', true],
+    ['Keep the background transparent.', true],
+    ['Don’t change the alpha channel.', true],
+    ['请在透明区域加一个红色圆点。', false],
+    ['将背景改成透明。', false],
+    ['不保留原有透明背景。', false],
+    ['Do not preserve the transparent background.', false],
+  ])('uses the source alpha only for a request to preserve it (%s)', (prompt, preserve) => {
+    expect(preservesRegionTransparency(prompt)).toBe(preserve)
   })
 
   it('preserves the exact user comment while passing a bounded canvas context to the native tool', () => {

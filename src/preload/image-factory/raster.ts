@@ -112,6 +112,20 @@ export function regionEditBounds(area: Region, frame: Region) {
   }
 }
 
+export function preservesRegionTransparency(prompt: string) {
+  const transparency = /透明(?:度|背景|区域|部分|像素)|\b(?:transparency|transparent|alpha)\b/iu
+  return prompt.split(/[\n，,。.!?！？；;]/u).some(clause => {
+    const subject = transparency.exec(clause)
+    if (!subject) return false
+    const before = clause.slice(0, subject.index)
+    const after = clause.slice(subject.index + subject[0].length)
+    if (/(?:不要|无需|不用|不必|别|不)\s*(?:保留|保持|维持)|\b(?:do not|don['’]t|never)\s+(?:preserve|keep|retain|maintain)\b/iu.test(before))
+      return false
+    return /保留|保持|维持|不(?:要|得)?\s*(?:修改|改变|更改|改动|破坏)|\b(?:preserve|keep|retain|maintain|(?:do not|don['’]t)\s+(?:change|alter|modify))\b/iu.test(before) ||
+      /^\s*(?:保持不变|维持原样|保持原样|不变|(?:should\s+)?(?:stay|remain)\s+unchanged\b)/iu.test(after)
+  })
+}
+
 /** Preserve the full generated composition when the provider returns a different ratio. */
 export function drawFit(context: CanvasRenderingContext2D, source: Raster, target: Size) {
   const scale = Math.min(target.width / source.width, target.height / source.height)
@@ -145,7 +159,8 @@ export function drawFit(context: CanvasRenderingContext2D, source: Raster, targe
 }
 
 /** Sample the provider frame at uniform scale and blend inside the selection. */
-export function applyRegion(context: CanvasRenderingContext2D, original: Raster, result: Raster, area: Region, frame: Region) {
+export function applyRegion(context: CanvasRenderingContext2D, original: Raster, result: Raster, area: Region, frame: Region,
+  preserveTransparency = false) {
   const scale = Math.min(result.width / frame.width, result.height / frame.height)
   const x = (result.width - frame.width * scale) / 2 + (area.x - frame.x) * scale
   const y = (result.height - frame.height * scale) / 2 + (area.y - frame.y) * scale
@@ -154,10 +169,10 @@ export function applyRegion(context: CanvasRenderingContext2D, original: Raster,
   const top = area.y > 0 ? feather : 0
   const right = area.x + area.width < original.width ? feather : 0
   const bottom = area.y + area.height < original.height ? feather : 0
-  // Read just the border strips. The center can keep the exact provider pixels,
-  // including transparency, and edges against the canvas boundary need no blend.
+  // The usual edit can keep the exact provider pixels in the center. When
+  // preserving transparency, read the whole selection to retain its alpha mask.
   const middle = area.height - top - bottom
-  const bands = [
+  const bands = preserveTransparency ? [{ x: 0, y: 0, width: area.width, height: area.height }] : [
     { x: 0, y: 0, width: area.width, height: top },
     { x: 0, y: area.height - bottom, width: area.width, height: bottom },
     { x: 0, y: top, width: left, height: middle },
@@ -177,15 +192,17 @@ export function applyRegion(context: CanvasRenderingContext2D, original: Raster,
       for (let column = 0; column < band.width; column++) {
         const localX = band.x + column
         const distance = Math.min(vertical, left ? localX : feather, right ? area.width - 1 - localX : feather)
-        const t = distance / feather
+        const t = feather ? Math.min(1, distance / feather) : 1
         const mix = t * t * (3 - 2 * t)
         const offset = (row * band.width + column) * 4
-        const originalAlpha = originalData[offset + 3]! * (1 - mix)
+        const sourceAlpha = originalData[offset + 3]!
         const editedAlpha = editedData[offset + 3]! * mix
-        const alpha = originalAlpha + editedAlpha
+        const originalAlpha = preserveTransparency ? 255 - editedAlpha : sourceAlpha * (1 - mix)
+        const weight = originalAlpha + editedAlpha
+        const alpha = preserveTransparency ? sourceAlpha : weight
         // Blend premultiplied colors so transparent pixels do not create halos.
         for (let channel = offset; channel < offset + 3; channel++) {
-          editedData[channel] = alpha ? (originalData[channel]! * originalAlpha + editedData[channel]! * editedAlpha) / alpha : 0
+          editedData[channel] = alpha ? (originalData[channel]! * originalAlpha + editedData[channel]! * editedAlpha) / weight : 0
         }
         editedData[offset + 3] = alpha
       }
