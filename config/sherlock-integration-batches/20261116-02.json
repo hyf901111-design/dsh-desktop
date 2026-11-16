@@ -11,18 +11,22 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "31680fe1228188d457aa1406ce3dae7229d822b5",
-        "tipCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
+        "baseCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
+        "tipCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
         "commits": [
           {
-            "commit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
+            "commit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
             "parents": [
-              "31680fe1228188d457aa1406ce3dae7229d822b5"
+              "8fc1aeb0760b574216a1ffcc31c47f95e0859875"
             ],
-            "subject": "修复：文字图层拖放保存松手位置并避免选字"
+            "subject": "功能：文字图层提供可拖拽缩放边框"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/layers.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/image-factory/style.css"
@@ -45,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
-            "completedAt": "2026-11-16T22:10:46.330Z",
+            "verifiedCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
+            "completedAt": "2026-11-16T22:31:33.461Z",
             "timeoutMs": 120000
           },
           {
@@ -55,29 +59,28 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
               "test/image-factory.test.js",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-actions.test.ts"
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-canvases.test.ts"
             ],
             "outcome": "passed",
-            "summary": "26 项文字拖放、画布、PNG/JPG 导出聚焦检查通过。",
-            "verifiedCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
-            "completedAt": "2026-11-16T22:10:46.330Z",
+            "summary": "22 项文字手柄、画布状态和图层持久化聚焦检查通过。",
+            "verifiedCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
+            "completedAt": "2026-11-16T22:31:33.461Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "签名基线实际导出 PNG 和 JPG，文件像素证实包含可编辑文字；随后复现拖放伴随浏览器选字。聚焦检查证实仅收到落点时也能保存，待新签名版复测。"
+          "summary": "聚焦 DOM 验证未选中无手柄、选中后出现六个手柄、左右改宽、四角缩放字号、字号同步和双击编辑，待签名版实机复测。"
         },
         "acceptanceCriteria": [
-          "释放文字时保存落点，包括前面缺少移动事件或捕获丢失但仍在画布内释放。",
-          "画布拖动不选中文字，双击仍能进入文本编辑。",
-          "PNG 和 JPG 均合成文字并保持原始画布尺寸。"
+          "文字选中边框有四角与左右手柄。",
+          "侧边调整宽度和换行，四角等比缩放文字框与字号。",
+          "缩放可保存，双击继续编辑。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T22:10:46.330Z"
+        "generatedAt": "2026-11-16T22:31:33.461Z"
       }
     },
     {
