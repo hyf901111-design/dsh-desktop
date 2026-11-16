@@ -132,6 +132,73 @@
         ],
         "recordedAt": "2026-11-16T12:44:00.888Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "知识库笔记返回主页",
+        "branch": "codex/feat/knowledge-home-navigation-20261116",
+        "baseCommit": "6cb33af84ccff5485760a1086fcaf5eb0cfaff53",
+        "tipCommit": "bee21f17581e88cdf3134fc1bf01c1aa56b32fbf",
+        "commits": [
+          {
+            "commit": "bee21f17581e88cdf3134fc1bf01c1aa56b32fbf",
+            "parents": [
+              "6cb33af84ccff5485760a1086fcaf5eb0cfaff53"
+            ],
+            "subject": "修复：知识库打开笔记后主页进入新建对话"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workspace-surface-host.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "bee21f17581e88cdf3134fc1bf01c1aa56b32fbf",
+            "completedAt": "2026-11-16T13:11:18.543Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-surface-host.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/knowledge-session-content.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "22 项聚焦用例通过，新增知识库打开笔记后点击主页的回归。",
+            "verifiedCommit": "bee21f17581e88cdf3134fc1bf01c1aa56b32fbf",
+            "completedAt": "2026-11-16T13:11:18.544Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "旧版原生界面已按报告路径复现，修正版等待集成测试包验证。"
+        },
+        "acceptanceCriteria": [
+          "知识库中打开我的笔记，点击折叠左栏主页，进入新建对话。",
+          "普通退出笔记仍能回到其来源工作区。"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-16T13:11:18.544Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -153,6 +220,17 @@
         "test/browser-sidebar-entry.test.ts",
         "test/workspace-surface-host.test.ts",
         "test/image-generation-tool.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workspace-surface-host.test.ts",
+        "test/browser-sidebar-entry.test.ts",
+        "test/knowledge-session-content.test.ts"
       ],
       "timeoutMs": 120000
     }
