@@ -11,49 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
-        "tipCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
+        "baseCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
+        "tipCommit": "52e4198115fd964fac2c126551cc960777750a5e",
         "commits": [
           {
-            "commit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
+            "commit": "52e4198115fd964fac2c126551cc960777750a5e",
             "parents": [
-              "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e"
+              "e13a8c0a5b4445d38e9fde96b62adf118aa04f66"
             ],
-            "subject": "功能：支持从知识库将归档图片作为独立画布编辑"
+            "subject": "修复：打开图片副本前同步原生会话状态"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/index.ts"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/knowledge/ipc.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/session-copy.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/image-factory-canvases.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-session-copy.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "test/knowledge-composer.test.js"
           }
         ],
         "checks": [
@@ -65,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
-            "completedAt": "2026-11-16T21:20:03.334Z",
+            "verifiedCommit": "52e4198115fd964fac2c126551cc960777750a5e",
+            "completedAt": "2026-11-16T21:33:11.322Z",
             "timeoutMs": 120000
           },
           {
@@ -74,46 +50,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/knowledge-session-copy.test.ts",
-              "test/knowledge-session-copy-host.test.js",
-              "test/image-factory-canvases.test.ts",
-              "test/knowledge-history-backfill.test.ts"
+              "test/knowledge-composer.test.js",
+              "test/image-factory-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "15 项会话复制、画布和归档聚焦检查通过。",
-            "verifiedCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
-            "completedAt": "2026-11-16T21:20:03.334Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "opens the selected archived image"
-            ],
-            "outcome": "passed",
-            "summary": "1 项真实 Chromium 文件菜单聚焦检查通过。",
-            "verifiedCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
-            "completedAt": "2026-11-16T21:20:03.334Z",
+            "summary": "16 项知识库会话导航与原生图像工厂测试通过。",
+            "verifiedCommit": "52e4198115fd964fac2c126551cc960777750a5e",
+            "completedAt": "2026-11-16T21:33:11.322Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "已通过真实 Chromium 文件操作验证选中记录，待签名包验证会话导航和图像内容。"
+          "summary": "签名版实测确认图片和会话已持久化，客户端会话缓存仍显示空白。已补本地会话同步并通过聚焦检查，待新包确认。"
         },
         "acceptanceCriteria": [
           "选中的归档 PNG 可以创建自己的编辑会话和画布。",
           "来源画布和已经归档的成品保留。",
-          "会话注册确认失败时清理暂存内容。"
+          "会话注册确认失败时清理暂存内容。",
+          "刚创建且已经持久化的图片副本可直接显示画布，无需等待下一次会话刷新。"
         ],
         "risks": [
-          "Chromium 渲染验证通过本机共享运行时定位 Playwright 和 Chromium。"
+          "会话视图偏好文件有 8 项既有轨迹页签断言在基线也失败。"
         ],
-        "generatedAt": "2026-11-16T21:20:03.334Z"
+        "generatedAt": "2026-11-16T21:33:11.322Z"
       }
     },
     {
