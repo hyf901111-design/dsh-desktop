@@ -12,7 +12,7 @@
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
         "baseCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
-        "tipCommit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
+        "tipCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
         "commits": [
           {
             "commit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
@@ -20,6 +20,13 @@
               "dfe23903ef049163e728a5bb3534a20c71c8fefe"
             ],
             "subject": "修复：消息定位栏隐藏图像工厂内部参数"
+          },
+          {
+            "commit": "25e407fb30d15ad974ab2415193dd5d926977b70",
+            "parents": [
+              "b79db81dddffa3d9349fec3e37c0542f66c57331"
+            ],
+            "subject": "测试：使用新补丁验证原生消息定位栏"
           }
         ],
         "files": [
@@ -41,8 +48,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
-            "completedAt": "2026-11-16T16:06:27.067Z",
+            "verifiedCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
+            "completedAt": "2026-11-16T16:08:40.279Z",
             "timeoutMs": 120000
           },
           {
@@ -58,8 +65,8 @@
             ],
             "outcome": "passed",
             "summary": "33 项原生对话、图像工厂和知识库聚焦检查通过。",
-            "verifiedCommit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
-            "completedAt": "2026-11-16T16:06:27.067Z",
+            "verifiedCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
+            "completedAt": "2026-11-16T16:08:40.279Z",
             "timeoutMs": 120000
           }
         ],
@@ -73,7 +80,7 @@
           "同一投影保持气泡、复制和编辑一致。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T16:06:27.067Z"
+        "generatedAt": "2026-11-16T16:08:40.279Z"
       }
     },
     {
