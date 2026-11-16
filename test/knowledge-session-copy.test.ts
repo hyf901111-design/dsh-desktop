@@ -6,6 +6,7 @@ import { createKnowledgeSessionCopier, retainExistingKnowledgeCopies } from '../
 import { NotesStore } from '../src/main/notes/store'
 import { SpreadsheetStore } from '../src/main/spreadsheet/store'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
+import { ImageFactoryCanvases } from '../src/main/state/image-factory-canvases'
 import { blankWorkbook } from '../src/shared/spreadsheet/workbook'
 import type { SharedKnowledgeSession } from '../src/shared/knowledge-sessions'
 import type { Rpc } from '../src/main/scheduled/task-runner'
@@ -25,7 +26,8 @@ const sources: SharedKnowledgeSession[] = [
 ]
 
 async function fixture(run: (stores: {
-  notes: NotesStore; workbooks: SpreadsheetStore; research: ResearchCanvasStorage; fallbackWorkspacePath: string
+  notes: NotesStore; workbooks: SpreadsheetStore; research: ResearchCanvasStorage
+  canvases: ImageFactoryCanvases; fallbackWorkspacePath: string
 }) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'ework-session-copy-'))
   try {
@@ -33,6 +35,7 @@ async function fixture(run: (stores: {
       notes: new NotesStore(join(root, 'notes')),
       workbooks: new SpreadsheetStore(root),
       research: new ResearchCanvasStorage(root),
+      canvases: new ImageFactoryCanvases(join(root, 'studio'), () => ({ owner: 'recipient', generation: 5 })),
       fallbackWorkspacePath: join(root, 'default-workspace')
     })
   } finally { await rm(root, { recursive: true, force: true }) }
@@ -74,6 +77,51 @@ test.each(sources)('seeds the $mode mode before publishing the personal copy to 
     } })('recipient', source, 'viewer-session', () => {})
     expect(result.mode).toBe(source.mode)
     expect(calls).toEqual(['workspace.list', 'session.create', 'retain'])
+  })
+})
+
+test.each([false, true])('stages the selected archived PNG in an independent canvas (registration fails: %s)', async fail => {
+  await fixture(async stores => {
+    const image = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=', 'base64'))
+    const source = { mode: 'image-factory' as const, title: '归档原图', image, width: 1, height: 1, epoch: 5 }
+    const original = { version: 1 as const, id: '0ec3c0e2-043a-481b-aeca-ab81b053a100', title: '来源会话当前画布', width: 1, height: 1, layers: [] }
+    await stores.canvases.write({ scope: 'source-session', epoch: 5, canvas: original })
+    const registered: string[] = []
+    const rpc: Rpc = async <T>(method: string, input: unknown) => {
+      if (method === 'workspace.list') return { items: [
+        { workspaceId: 'other', sessionIds: [] }, { workspaceId: 'original', sessionIds: ['source-session'] }
+      ] } as T
+      if (method === 'session.list') return { items: [] } as T
+      const { sessionId, workspaceId } = input as { sessionId: string; workspaceId: string }
+      expect(method).toBe('session.create')
+      registered.push(sessionId)
+      expect(workspaceId).toBe('original')
+      expect(stores.research.getItem('ework.session.view.v1:' + sessionId)).toBe('chat')
+      expect(await stores.canvases.read(sessionId)).toMatchObject({
+        canvas: { title: '归档原图（副本）', width: 1, height: 1, layers: [{ kind: 'image', mediaType: 'image/png' }] },
+        image: { data: image, mediaType: 'image/png' }
+      })
+      if (fail) throw Error('会话注册失败')
+      return { sessionId } as T
+    }
+    const retain = async (id: string, title: string) => {
+      expect(fail).toBe(false)
+      expect(id).toBe(registered[0])
+      expect(title).toBe('归档原图（副本）')
+    }
+    const copy = createKnowledgeSessionCopier({ ...stores, rpc, retain })('recipient', source, 'source-session', () => {})
+    if (fail) {
+      await expect(copy).rejects.toThrow('会话注册失败')
+      expect(registered).toHaveLength(2)
+      expect(registered[0]).toBe(registered[1])
+      expect((await stores.canvases.read(registered[0]!)).canvas).toBeUndefined()
+    } else {
+      const result = await copy
+      expect(registered).toHaveLength(1)
+      expect(result).toEqual({ id: registered[0], mode: 'image-factory' })
+    }
+    expect((await stores.canvases.read('source-session')).canvas).toEqual(original)
+    expect((await stores.canvases.read(null)).canvas).toBeUndefined()
   })
 })
 

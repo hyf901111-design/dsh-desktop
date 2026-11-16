@@ -1,21 +1,22 @@
 import type { KnowledgeContent } from './content'
 import type { KnowledgeFilePreview } from './file-preview'
 import { knowledgeReferenceOptions, resolveKnowledgeReference } from './references'
-import { dialog, ipcMain, shell, type BrowserWindow, type WebContents } from 'electron'
+import { dialog, ipcMain, nativeImage, shell, type BrowserWindow, type WebContents } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { copyFile, realpath, rename, rm, stat } from 'node:fs/promises'
+import { copyFile, readFile, realpath, rename, rm, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path'
 import { atomicWrite } from '../integrations/store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { KnowledgeStore } from './store'
-import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode, type KnowledgeSessionCopy } from '../../shared/knowledge-sessions'
+import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
+import { maximumCanvasImageBytes, validCanvasSize } from '../../shared/image-factory-canvas'
 import { fileEditorMode } from '../../shared/file-editor.mjs'
 import { readNoteDocumentContent } from '../notes/document-import'
 import { validateNoteContent } from '../notes/store'
 import { readWorkbookFile, readWorkbookPath } from '../spreadsheet/files'
-import type { KnowledgeSessionSeed } from './session-copy'
+import type { createKnowledgeSessionCopier } from './session-copy'
 import { knowledgeSessionShareId, readKnowledgeSessionSnapshot } from './session-share'
 
 function id(value: unknown): string {
@@ -51,7 +52,7 @@ export function installKnowledgeIpc({
   identity: () => { owner: string; generation: number }
   generatedWorkspace(sessionId: string): Promise<string | null>
   sessionEvidence(owner: string, id: string, mode: KnowledgeSessionMode): KnowledgeSessionEvidence
-  copySession(owner: string, source: KnowledgeSessionSeed, fromSession: string | undefined, check: () => void, imported?: boolean): Promise<KnowledgeSessionCopy>
+  copySession: ReturnType<typeof createKnowledgeSessionCopier>
   sessionSnapshot(owner: string, id: string, mode: KnowledgeSessionMode, displayTitle: string, check: () => void): Promise<{ name: string; data: Buffer }>
 }) {
   const activeCopies = new Set<string>()
@@ -197,6 +198,30 @@ export function installKnowledgeIpc({
           sessionId, saved: args.saved,
           sessionTitle: typeof args.sessionTitle === 'string' ? args.sessionTitle.trim().slice(0, 160) || undefined : undefined
         })
+      }
+      case 'copy-image-factory-file': {
+        const documentId = id(args.id)
+        const key = owner.owner + ':image:' + documentId
+        if (activeCopies.has(key)) throw Error('正在创建这张图片的副本。')
+        activeCopies.add(key)
+        try {
+          const { document, path } = await store.file(documentId)
+          check()
+          if (document.generatedBy !== 'image-factory' || document.size > maximumCanvasImageBytes) {
+            throw Error('请选择图像工厂生成的图片。')
+          }
+          const image = await readFile(path)
+          check()
+          if (image.length < 24 || image.length > maximumCanvasImageBytes || image.toString('ascii', 12, 16) !== 'IHDR') {
+            throw Error('归档 PNG 图片无法读取。')
+          }
+          const width = image.readUInt32BE(16), height = image.readUInt32BE(20)
+          if (!validCanvasSize(width, height)) throw Error('图片尺寸超出图像工厂画布限制。')
+          if (nativeImage.createFromBuffer(image).isEmpty()) throw Error('归档 PNG 图片无法读取。')
+          const title = basename(document.name, extname(document.name)).trim() || '生成图片'
+          return await copySession(owner.owner, { mode: 'image-factory', title, image, width, height, epoch: owner.generation },
+            document.sessionId, check)
+        } finally { activeCopies.delete(key) }
       }
       case 'open-file-in-editor': {
         const fromSession = typeof args.sessionId === 'string' && args.sessionId.length <= 256 ? args.sessionId : undefined

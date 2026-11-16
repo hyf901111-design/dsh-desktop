@@ -93,6 +93,10 @@ beforeAll(async () => {
       }))
       const documents = testPagination ? pagedFiles : [
         ...moreFormats,
+        ...(document.body.hasAttribute('data-test-factory-archive') ? [
+          { id: 'old-png', name: '初稿.png', generatedBy: 'image-factory', source: 'generated', sessionId: 'source-canvas' },
+          { id: 'new-png', name: '定稿.png', generatedBy: 'image-factory', source: 'generated', sessionId: 'source-canvas' },
+        ] : []),
         { id: 'a', name: '消费行业周报.md', source: 'generated', saved: true },
         { id: 'b', name: '研究写作规范.md', source: 'upload', folderId: 'f', size: 4096 },
         { id: 'c', name: '演示文稿.pptx', source: 'upload', folderId: 'f', size: 16384, updatedAt: 1762080000000 }
@@ -200,6 +204,8 @@ beforeAll(async () => {
       }
       mountKnowledgeWorkspace(document, host, {
         memory,
+        async openImageFactoryCopy(id) { window.openImageRequest = { id, action: 'copy' } },
+        async openImageFactorySource(id) { window.openImageRequest = { id, action: 'source' } },
         workspacePointerInBar: document.body.hasAttribute('data-test-negative-native-pointer') ? async () => false : undefined,
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
@@ -650,6 +656,30 @@ it('aligns the knowledge app icon and title with the browser when switching work
       expect(knowledgeHeader.icon).toContain('data:image/svg+xml')
       expect(knowledgeHeader.icon).not.toBe(browserHeader.icon)
     }
+  } finally {
+    await page.close()
+  }
+})
+
+it('opens the selected archived image separately from its source canvas', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    page.setDefaultTimeout(1800)
+    await page.setContent('<body data-test-factory-archive><main class="pI_x6G_centerCol" style="position:fixed;inset:0"></main>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const copy = library.getByRole('button', { name: '在图像工厂中编辑副本' })
+    const more = name => library.getByRole('button', { name: name + '的更多操作', exact: true })
+    await more('初稿.png').click()
+    await copy.click()
+    expect(await page.evaluate(() => window.openImageRequest)).toEqual({ id: 'old-png', action: 'copy' })
+    await more('定稿.png').click()
+    await library.getByRole('button', { name: '打开来源画布' }).click()
+    expect(await page.evaluate(() => window.openImageRequest)).toEqual({ id: 'source-canvas', action: 'source' })
+    await more('研究写作规范.md').click()
+    expect(await copy.count()).toBe(0)
   } finally {
     await page.close()
   }

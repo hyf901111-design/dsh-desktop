@@ -5,12 +5,15 @@ import { knowledgeSessionLabels, type KnowledgeSessionMode, type SharedKnowledge
 import type { NotesStore } from '../notes/store'
 import type { SpreadsheetStore } from '../spreadsheet/store'
 import type { ResearchCanvasStorage } from '../state/research-canvas-storage'
+import type { ImageFactoryCanvases } from '../state/image-factory-canvases'
 import type { Rpc } from '../scheduled/task-runner'
 
 type Workspace = { workspaceId: string; sessionIds: string[] }
 type RetainCopy = (id: string, title: string, existing?: boolean, imported?: boolean) => Promise<void>
 export type KnowledgeSessionSeed = SharedKnowledgeSession | {
   mode: 'notes'; title: string; note: Pick<import('../../shared/workspace-notes').NoteContent, 'title' | 'blocks'>
+} | {
+  mode: 'image-factory'; title: string; image: Uint8Array; width: number; height: number; epoch: number
 }
 const copySuffix = '（副本）'
 
@@ -67,10 +70,12 @@ export function createKnowledgeSessionCopier(options: {
   notes: NotesStore
   workbooks: SpreadsheetStore
   research: ResearchCanvasStorage
+  canvases: ImageFactoryCanvases
   fallbackWorkspacePath: string
 }) {
-  const { rpc, retain, notes, workbooks, research } = options
-  return async (owner: string, source: KnowledgeSessionSeed, fromSession: string | undefined, check: () => void, imported = false) => {
+  const { rpc, retain, notes, workbooks, research, canvases } = options
+  return async <Seed extends KnowledgeSessionSeed>(owner: string, source: Seed, fromSession: string | undefined, check: () => void, imported = false):
+    Promise<{ id: string; mode: Seed['mode'] }> => {
     const { items } = await rpc<{ items: Workspace[] }>('workspace.list', {})
     check()
     let workspace = items.find(item => fromSession && item.sessionIds.includes(fromSession)) ?? items[0]
@@ -82,21 +87,21 @@ export function createKnowledgeSessionCopier(options: {
     }
     const sessionId = 'session-' + randomUUID()
     const title = Array.from(source.title).slice(0, 105).join('') + (imported ? '' : copySuffix)
-    const undo: Array<() => void> = []
+    const undo: Array<() => void | Promise<void>> = []
     const write = (key: string, value: string) => {
       if (!research.setItem(key, value)) throw Error('副本布局无法保存，请检查本地存储后重试。')
       undo.push(() => research.removeItem(key))
     }
-    const discard = () => {
+    const discard = async () => {
       for (const cleanup of undo.reverse()) {
-        try { cleanup() } catch { /* Preserve the registration error. */ }
+        try { await cleanup() } catch { /* Preserve the registration error. */ }
       }
     }
 
     try {
       // A session becomes visible only after its complete content is ready.
       write('sherlock.knowledge.copy-title.v1:' + sessionId, title)
-      write('ework.session.view.v1:' + sessionId, source.mode)
+      write('ework.session.view.v1:' + sessionId, source.mode === 'image-factory' ? 'chat' : source.mode)
       switch (source.mode) {
         case 'research':
           write('sherlock.research.canvas.files.v1:' + sessionId, JSON.stringify(source.canvas.files))
@@ -115,10 +120,21 @@ export function createKnowledgeSessionCopier(options: {
           workbooks.create(key, 0, { ...source.workbook, id: randomUUID() })
           break
         }
+        case 'image-factory': {
+          const id = randomUUID()
+          const { width, height, image, epoch } = source
+          undo.push(() => canvases.discardStaged(sessionId, epoch))
+          await canvases.write({ scope: sessionId, epoch, image, canvas: {
+            version: 1, id, title, width, height, layers: [
+              { kind: 'image', id: randomUUID(), assetId: id, mediaType: 'image/png' }
+            ]
+          } })
+          break
+        }
       }
       check()
     } catch (error) {
-      discard()
+      await discard()
       throw error
     }
 
@@ -134,7 +150,7 @@ export function createKnowledgeSessionCopier(options: {
       } catch {
         const catalog = await rpc<{ items: { sessionId: string }[] }>('session.list', {}).catch(() => undefined)
         if (catalog && !catalog.items.some(item => item.sessionId === sessionId)) {
-          discard()
+          await discard()
           throw error
         }
         if (!catalog) throw error

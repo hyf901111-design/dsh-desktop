@@ -315,6 +315,14 @@ function initializeUi(): void {
     workspacePointerInBar,
     openFileInEditor,
     openImageFactorySource: id => imageFactory.openSessionCanvas(id, () => openKnowledgeSession(document, id, 'chat')),
+    async openImageFactoryCopy(id) {
+      const origin = workspaceSurfaceHost.current()
+      try {
+        const copy = await ipcRenderer.invoke('knowledge:request', 'copy-image-factory-file', { id }) as { id: string }
+        if (workspaceSurfaceHost.current() !== origin) return
+        await imageFactory.openSessionCanvas(copy.id, () => openKnowledgeSession(document, copy.id, 'chat', 'imported'))
+      } catch (error) { throw Error(knowledgeRequestError(error)) }
+    },
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
     subscribeImportProgress: listener => {
