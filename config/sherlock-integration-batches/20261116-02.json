@@ -143,6 +143,42 @@
           "当前运行期间保留图像版本与对话，可导出到本地。"
         ],
         "generatedAt": "2026-11-16T11:54:37.082Z"
+      },
+      "merged": {
+        "mergeCommit": "744eeeff410846520999945a9b1dc2025bcd12f9",
+        "verificationCommit": "744eeeff410846520999945a9b1dc2025bcd12f9",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "744eeeff410846520999945a9b1dc2025bcd12f9",
+            "completedAt": "2026-11-16T11:54:41.502Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory.test.js",
+              "test/image-actions.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/image-generation-tool.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
+            "verifiedCommit": "744eeeff410846520999945a9b1dc2025bcd12f9",
+            "completedAt": "2026-11-16T11:54:41.502Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-16T11:54:41.502Z"
       }
     }
   ],
