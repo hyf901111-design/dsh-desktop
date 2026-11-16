@@ -10,7 +10,7 @@ import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
 import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
-import { drawLayers, imageFonts, moveLayer, textLayerStyle, type CanvasLayer, type ImageScene, type TextLayer } from './layers'
+import { drawLayers, imageFonts, moveLayer, textLayerStyle, textTopInsideCanvas, type CanvasLayer, type ImageScene, type TextLayer } from './layers'
 import styles from './style.css?raw'
 
 export const imageFactoryOpenEvent = 'sherlock:image-factory-open'
@@ -110,7 +110,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
-  const textDrag = useRef<{ id: string; pointer: number; start: Point; moved: boolean; x: number; y: number }>()
+  const textDrag = useRef<{ id: string; pointer: number; start: Point; moved: boolean; x: number; y: number; height: number }>()
+  const pendingTextLayout = useRef<{ id: string; scope: CanvasScope; commit: boolean }>()
   const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef(new Map<string, CanvasJob>())
   const selectionDrafts = useRef(new Map<string, SelectionDraft>())
@@ -168,6 +169,20 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     observer.observe(scroll.current)
     return () => observer.disconnect()
   }, [Boolean(current)])
+  useLayoutEffect(() => {
+    const pending = pendingTextLayout.current
+    if (!pending) return
+    pendingTextLayout.current = undefined
+    if (pending.scope !== scope) return
+    const text = current?.layers.find(layer => layer.id === pending.id)
+    const element = imageFrame.current?.querySelector<HTMLElement>('[data-canvas-text-id="' + pending.id + '"]')
+    if (current && text?.kind === 'text' && element) {
+      const height = Math.ceil(element.getBoundingClientRect().height / displayScale)
+      const y = textTopInsideCanvas(text.y, height, current.height)
+      if (y !== text.y) { patchLayer(text.id, { y }); return }
+    }
+    if (pending.commit) workspace.commit(scope)
+  }, [current, displayScale, editing, scope, workspace])
   useEffect(() => {
     if (!toast) return
     const timer = setTimeout(() => setToast(''), 5000)
@@ -210,10 +225,15 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     resetSelectionGesture()
   }
   function patchLayer(id: string, patch: Partial<TextLayer>, persist = true) {
-    setScene(old => old && { ...old, layers: old.layers.map(layer => layer.id === id && layer.kind === 'text' ? { ...layer, ...patch } : layer) }, persist)
+    const resize = persist && [patch.text, patch.fontSize, patch.family, patch.weight].some(value => value !== undefined)
+    if (resize) pendingTextLayout.current = { id, scope, commit: true }
+    const changed = setScene(old => old && { ...old, layers: old.layers.map(layer => layer.id === id && layer.kind === 'text' ? { ...layer, ...patch } : layer) }, persist && !resize)
+    if (resize && !changed) pendingTextLayout.current = undefined
   }
   function releaseText(id = editing) {
     if (!id) return
+    // The canvas text and textarea can differ by a fraction of a pixel after wrapping.
+    pendingTextLayout.current ??= { id, scope, commit: false }
     setEditing(undefined)
     setScene(old => {
       if (!old?.layers.some(layer => layer.id === id && layer.kind === 'text' && !layer.text.trim())) return old
@@ -273,7 +293,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (phase === 'start') {
       setSelectedId(layer.id)
       event.currentTarget.setPointerCapture(event.pointerId)
-      textDrag.current = { id: layer.id, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, x: layer.x, y: layer.y }
+      const height = Math.ceil(event.currentTarget.getBoundingClientRect().height / displayScale)
+      textDrag.current = { id: layer.id, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, x: layer.x, y: layer.y, height }
       return
     }
     const drag = textDrag.current
@@ -287,7 +308,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     drag.moved = true
     patchLayer(layer.id, {
       x: Math.min(1 - layer.width, Math.max(0, drag.x + dx / (current.width * displayScale))),
-      y: Math.min(Math.max(0, 1 - layer.fontSize * 1.2 / current.height), Math.max(0, drag.y + dy / (current.height * displayScale))),
+      y: textTopInsideCanvas(drag.y + dy / (current.height * displayScale), drag.height, current.height),
     }, false)
   }
   function onRectanglePointer(event: PointerEvent<HTMLDivElement>, phase: 'start' | 'move' | 'end' | 'cancel') {
@@ -564,12 +585,12 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
               return editing === layer.id ? <textarea key={layer.id} ref={element => {
                 if (!element) return
                 element.style.height = '0px'; element.style.height = element.scrollHeight + 'px'
-              }} className="if-text-layer" data-selected="true" aria-label={t('编辑画布文本', 'Edit canvas text')}
+              }} className="if-text-layer" data-canvas-text-id={layer.id} data-selected="true" aria-label={t('编辑画布文本', 'Edit canvas text')}
                 autoFocus rows={1} spellCheck={false} value={layer.text} maxLength={500}
                 style={style} placeholder={t('输入文本', 'Enter text')} onChange={e => patchLayer(layer.id, { text: e.target.value })}
                 onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); releaseText(layer.id) } }}
                 onBlur={event => { if (!event.relatedTarget?.closest('.if-text-format')) releaseText(layer.id) }}/>
-                : <div key={layer.id} className="if-text-layer" data-selected={selectedId === layer.id} style={style}
+                : <div key={layer.id} className="if-text-layer" data-canvas-text-id={layer.id} data-selected={selectedId === layer.id} style={style}
                   tabIndex={marking || busy ? -1 : 0} role="button" aria-label={layer.text}
                   onClick={() => { if (!marking && !area) setSelectedId(layer.id) }}
                   onDoubleClick={() => { if (!marking && !area && !busy) { setSelectedId(layer.id); setEditing(layer.id) } }}
