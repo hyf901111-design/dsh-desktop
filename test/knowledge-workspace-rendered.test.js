@@ -200,6 +200,7 @@ beforeAll(async () => {
       }
       mountKnowledgeWorkspace(document, host, {
         memory,
+        workspacePointerInBar: document.body.hasAttribute('data-test-negative-native-pointer') ? async () => false : undefined,
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
           if (method === 'edit' && args.type === 'create-folder') {
@@ -666,6 +667,7 @@ it('keeps the four workspace shortcuts open across the draggable knowledge heade
         </header></div>
       </div>`)
     await page.evaluate(() => {
+      document.body.dataset.testNegativeNativePointer = ''
       document.querySelector('[data-conversation-view-id="notes"]').addEventListener('click', () => {
         document.body.dataset.selectedView = 'notes'
       })
@@ -685,6 +687,7 @@ it('keeps the four workspace shortcuts open across the draggable knowledge heade
     await title.hover()
     expect(await shortcuts.count()).toBe(0)
     await toggle.click()
+    await page.waitForTimeout(210)
     expect(await toggle.getAttribute('aria-expanded')).toBe('true')
     await toggle.click()
     expect(await toggle.getAttribute('aria-expanded')).toBe('false')

@@ -24,6 +24,7 @@ export class WorkspaceViewHover {
   expanded = false
   private timer?: ReturnType<typeof setTimeout>
   private generation = 0
+  private pointerBar?: HTMLElement
 
   constructor(
     private root: HTMLElement,
@@ -72,21 +73,25 @@ export class WorkspaceViewHover {
       if (!this.expanded || this.root.querySelector('.eb-workspace-controls :focus-visible')) return
       const bar = this.bar()
       if (!bar) return
-      let inside = bar.matches(':hover')
-      // Native window drag regions may consume Chromium's pointer events.
-      if (this.pointerInBar) {
+      const insideBar = () => this.pointerBar === bar || bar.matches(':hover')
+      let inside = insideBar()
+      // Native window drag regions can consume Chromium's pointer events.
+      if (!inside && this.pointerInBar) {
         const { x, y, width, height } = bar.getBoundingClientRect()
         try { inside = await this.pointerInBar({ x, y, width, height }) } catch {}
       }
       if (generation !== this.generation || this.root.querySelector('.eb-workspace-controls :focus-visible')) return
-      if (!inside) this.setExpanded(false)
+      if (!inside && !insideBar()) this.setExpanded(false)
       else if (this.pointerInBar) this.schedule()
     }, hoverDelay)
   }
 
   private over = (event: PointerEvent) => {
     const target = event.target as Element
-    if (event.pointerType === 'touch' || !target.closest?.('.workspace-app-topbar')) return
+    const bar = this.bar()
+    if (event.pointerType === 'touch' || !bar?.contains(target)) return
+    // A renderer pointer event can be newer than the native screen position.
+    this.pointerBar = bar
     if (this.expanded) {
       if (!this.pointerInBar) this.cancel()
       return
@@ -103,9 +108,13 @@ export class WorkspaceViewHover {
   }
 
   private out = (event: PointerEvent | FocusEvent) => {
+    const target = event.target as Element
+    const next = event.relatedTarget as Element | null
+    const bar = this.pointerBar
+    if (event.type === 'pointerout' && bar?.contains(target) && !bar.contains(next)) this.pointerBar = undefined
     const boundary = event.type === 'focusout' ? '.eb-workspace-controls'
       : this.expanded ? '.workspace-app-topbar' : '.eb-workspace-toggle'
-    if (!(event.target as Element).closest?.(boundary) || (event.relatedTarget as Element | null)?.closest?.(boundary)) return
+    if (!target.closest?.(boundary) || next?.closest?.(boundary)) return
     if (!this.expanded) this.cancel()
     else if (!this.pointerInBar || event.type === 'focusout') this.schedule()
   }
