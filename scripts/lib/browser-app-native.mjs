@@ -170,6 +170,8 @@ ctx.effect(()=>{
  const bubble=source.slice(bubbleStart,bubbleEnd)
  replace(bubble,exact(bubble,'const { text, images, rest } = contentParts(content);',
    'const { text, images, rest } = contentParts(imageFactoryDisplayContent(content));'))
+ replace('const content = Array.isArray(node.data.content) ? contentParts(node.data.content) : {',
+   'const content = Array.isArray(node.data.content) ? contentParts(imageFactoryDisplayContent(node.data.content)) : {')
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');
 ctx.effect(()=>{const bridge=(${installBrowserQuestionNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],getConversation:()=>ctx.get('conversation')});return bridge.dispose},'Browser region shared composer');

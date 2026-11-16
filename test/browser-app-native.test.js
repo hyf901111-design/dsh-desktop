@@ -3,6 +3,7 @@ import {Window} from 'happy-dom'
 import {stripSpreadsheetClient} from '../scripts/lib/spreadsheet-client.mjs'
 import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-header-client.mjs'
 import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
+import {imageFactoryPrompt,readImageFactoryContext,stripImageFactoryContext} from '../packages/dsh-research-task-runtime/image-factory-context.js'
 const stripNewer = source => stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(source)))
 import {installBrowserNative,browserSourceCodec,patchBrowserAppNative,stripBrowserAppNative,browserUserTextSegments} from '../scripts/lib/browser-app-native.mjs'
 it('patches the canvas action before its translated ternary is split into per-label calls',()=>{
@@ -17,6 +18,20 @@ import {readFileSync} from 'node:fs'
 it('registers the browser view with the actual production module and restores every patch byte',()=>{
  const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),before=stripBrowserAppNative(stripNewer(raw)),patched=patchBrowserAppNative(before)
  expect(stripBrowserAppNative(patched)).toBe(before);expect(patchBrowserAppNative(patched)).toBe(patched);expect(()=>new Function(patched)).not.toThrow()
+})
+it('uses the original factory comment in the native query preview',()=>{
+ const patched=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const helper=patched.slice(patched.indexOf('function imageFactoryDisplayContent('),patched.indexOf('function EWorkImageFactoryWelcome('))
+ const query=patched.slice(patched.indexOf('const queries = (0, react.useMemo)'),patched.indexOf('const runningTurn = (0, react.useMemo)'))
+ const render=new Function('nodeStore','contentParts','readImageFactoryContext','stripImageFactoryContext',
+  'const react={useMemo:fn=>fn()}, order=[...nodeStore.keys()], researchTaskIdentity=null;'+
+  'const researchTaskInputSummary=()=>undefined, parseResearchPrompt=text=>({text});'+helper+query+'return queries;')
+ const comment='把这个区域改成浅蓝'
+ const text=imageFactoryPrompt(comment,{id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'海报',operation:'region',
+  size:'1536x1024',width:333,height:21,internalReference:true,editBounds:{left:.1,top:.2,right:.9,bottom:.3}})
+ const data={content:[{type:'text',text},{type:'image'}]}
+ const parts=content=>({text:content[0].text,images:content.slice(1)})
+ expect(render(new Map([['user',{kind:'user',data}]]),parts,readImageFactoryContext,stripImageFactoryContext)).toEqual([{key:'user',preview:comment}])
 })
 it('attaches the source to the current native shell without sending or replacing the draft',async()=>{
  const w=new Window();vi.stubGlobal('window',w);vi.stubGlobal('document',w.document);vi.stubGlobal('CustomEvent',w.CustomEvent)
