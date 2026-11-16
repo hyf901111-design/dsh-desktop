@@ -11,40 +11,29 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "52e4198115fd964fac2c126551cc960777750a5e",
-        "tipCommit": "31680fe1228188d457aa1406ce3dae7229d822b5",
+        "baseCommit": "31680fe1228188d457aa1406ce3dae7229d822b5",
+        "tipCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
         "commits": [
           {
-            "commit": "7f42df175832b25bcff217208fd277f63abc181d",
+            "commit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
             "parents": [
-              "52e4198115fd964fac2c126551cc960777750a5e"
+              "31680fe1228188d457aa1406ce3dae7229d822b5"
             ],
-            "subject": "修复：三栏布局保留图像工厂顶栏名称"
-          },
-          {
-            "commit": "31680fe1228188d457aa1406ce3dae7229d822b5",
-            "parents": [
-              "7f42df175832b25bcff217208fd277f63abc181d"
-            ],
-            "subject": "优化：离开图像工厂时暂停画廊动画"
+            "subject": "修复：文字图层拖放保存松手位置并避免选字"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery.tsx"
-          },
-          {
-            "status": "M",
             "path": "src/preload/image-factory/style.css"
           },
           {
-            "status": "A",
-            "path": "test/image-factory-gallery.test.ts"
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
           },
           {
             "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "test/image-factory-layer-gesture.test.ts"
           }
         ],
         "checks": [
@@ -56,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "31680fe1228188d457aa1406ce3dae7229d822b5",
-            "completedAt": "2026-11-16T21:50:50.713Z",
+            "verifiedCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
+            "completedAt": "2026-11-16T22:10:46.330Z",
             "timeoutMs": 120000
           },
           {
@@ -65,45 +54,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "Image Factory title|four workspace shortcuts"
-            ],
-            "outcome": "passed",
-            "summary": "2 项三栏标题布局和共用顶栏页签 Chromium 检查通过。",
-            "verifiedCommit": "31680fe1228188d457aa1406ce3dae7229d822b5",
-            "completedAt": "2026-11-16T21:50:50.713Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory-gallery.test.ts",
               "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-native.test.js"
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory.test.js",
+              "test/image-factory-actions-menu.test.ts",
+              "test/image-actions.test.ts"
             ],
             "outcome": "passed",
-            "summary": "13 项图像工厂画廊、画布和共享对话聚焦检查通过。",
-            "verifiedCommit": "31680fe1228188d457aa1406ce3dae7229d822b5",
-            "completedAt": "2026-11-16T21:50:50.713Z",
+            "summary": "26 项文字拖放、画布、PNG/JPG 导出聚焦检查通过。",
+            "verifiedCommit": "8fc1aeb0760b574216a1ffcc31c47f95e0859875",
+            "completedAt": "2026-11-16T22:10:46.330Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "签名基线通过知识库笔记返回主页、新会话画廊填入和成品画布恢复；三栏时应用标题过早隐藏已在 Chromium 重现并修复。"
+          "summary": "签名基线实际导出 PNG 和 JPG，文件像素证实包含可编辑文字；随后复现拖放伴随浏览器选字。聚焦检查证实仅收到落点时也能保存，待新签名版复测。"
         },
         "acceptanceCriteria": [
-          "常见三栏布局下仍显示图像工厂应用名，极窄空间可折叠为图标。",
-          "应用名和顶栏空白区保留系统拖动，页签和按钮可点击。",
-          "画廊切到其他应用时停止动画，回来继续。"
+          "释放文字时保存落点，包括前面缺少移动事件或捕获丢失但仍在画布内释放。",
+          "画布拖动不选中文字，双击仍能进入文本编辑。",
+          "PNG 和 JPG 均合成文字并保持原始画布尺寸。"
         ],
-        "risks": [
-          "自动化鼠标无法证明 macOS 系统窗口有实际位移。"
-        ],
-        "generatedAt": "2026-11-16T21:50:50.713Z"
+        "risks": [],
+        "generatedAt": "2026-11-16T22:10:46.330Z"
       }
     },
     {
