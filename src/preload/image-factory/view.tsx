@@ -14,7 +14,7 @@ import { drawLayers, imageFonts, moveLayer, textLayerStyle, textTopInsideCanvas,
 import styles from './style.css?raw'
 
 export const imageFactoryOpenEvent = 'sherlock:image-factory-open'
-type FactoryAsset = { id: string; sessionId: string; epoch: number; name: string; data: Uint8Array }
+type FactoryAsset = { id: string; sessionId: string; sessionTitle?: string; epoch: number; name: string; data: Uint8Array }
 type Bridge = {
   workspacePointerInBar?: WorkspacePointerInBar
   storage: CanvasStorage
@@ -479,7 +479,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           }
           const epoch = workspace.epoch(job.sessionId)
           if (!mounted.current || active.current.get(job.id) !== job || epoch === undefined) return
-          await bridge.archive({ id: job.id, sessionId: job.sessionId, epoch, name: job.title, data })
+          const sessionTitle = typeof info.sessionTitle === 'string' ? info.sessionTitle : undefined
+          await bridge.archive({ id: job.id, sessionId: job.sessionId, sessionTitle, epoch, name: job.title.slice(0, 100), data })
         }
         catch { if (mounted.current && workspace.getSnapshot().scope === job.sessionId) setToast(t('画布已更新。知识库将从会话记录补收生成结果。', 'Canvas updated. The library will collect the generated result from chat history.')) }
       } catch (error) {

@@ -105,7 +105,8 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
           if (!result.ok) throw Error(result.error.message)
           const bytes = Uint8Array.from(result.value.data)
           const url = URL.createObjectURL(new Blob([bytes], { type: result.value.attachment.mediaType }))
-          signal('deliver', { id: job.id, sessionId: job.sessionId, url, revoke: true })
+          const sessionTitle = sessions.list.getSnapshot().byId?.[job.sessionId]?.title
+          signal('deliver', { id: job.id, sessionId: job.sessionId, sessionTitle, url, revoke: true })
           finish(job.id)
         }).catch(() => finish(job.id))
         return

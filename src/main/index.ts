@@ -1385,13 +1385,14 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:canvas-adopt', () => mainWindow, (_event, sessionId: string, epoch: number) =>
     factoryCanvases.adopt(sessionId, epoch))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:archive', () => mainWindow, (_event, value: unknown) => {
-    const input = value as { id?: string; sessionId?: string; epoch?: number; name?: string; data?: Uint8Array } | undefined
+    const input = value as { id?: string; sessionId?: string; sessionTitle?: unknown; epoch?: number; name?: string; data?: Uint8Array } | undefined
     if (typeof input?.id !== 'string' || typeof input.sessionId !== 'string' || typeof input.name !== 'string' ||
         input.epoch !== knowledgeIdentity().generation || input.name.length > 100 || !(input.data instanceof Uint8Array) || input.data.byteLength > 36 * 1024 * 1024) {
       throw Error('生成图片的知识库参数无效。')
     }
+    const sessionTitle = typeof input.sessionTitle === 'string' ? input.sessionTitle.trim().slice(0, 256) || undefined : undefined
     return knowledge.collectFactoryImage(Buffer.from(input.data), {
-      id: input.id, sessionId: input.sessionId, name: input.name, processed: true
+      id: input.id, sessionId: input.sessionId, sessionTitle, name: input.name, processed: true
     })
   })
   let historyScan: Promise<unknown> | undefined
