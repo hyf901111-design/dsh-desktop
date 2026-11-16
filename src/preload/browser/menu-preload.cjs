@@ -64,7 +64,15 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(!same){content.replaceChildren(template.content);composing=undefined;queued=undefined}else{const next=document.createElement('main');next.id=content.id;next.append(template.content);patch(content,next)}
   style.textContent=typeof value.css==='string'?value.css:'';state=value
   if(!same){hoverId=undefined;hoverCardId=undefined}hover(focusElement(hoverId))
-  if(same)for(const [key,scroll]of scrolls){const element=focusElement(key);if(element){element.scrollTop=scroll.top;element.scrollLeft=scroll.left}}
+  if(same){
+   const byId=new Map([...content.querySelectorAll('[data-native-control]')].map(element=>[id(element),element]))
+   for(const [key,scroll]of scrolls){
+    const element=byId.get(key)
+    if(!element)continue
+    if(element.scrollTop!==scroll.top)element.scrollTop=scroll.top
+    if(element.scrollLeft!==scroll.left)element.scrollLeft=scroll.left
+   }
+  }
   const desired=value.focusId?focusElement(value.focusId):activeId?focusElement(activeId):content.querySelector('input:not(:disabled),textarea:not(:disabled),select:not(:disabled),button:not(:disabled),[tabindex="0"]')
   if(!value.passive&&!value.focusOwner&&desired&&!desired.disabled){if(document.activeElement!==desired){desired.focus({preventScroll:true});if(!editable(desired))desired.scrollIntoView({block:'nearest',inline:'nearest'})}const wanted=!preserveComposition&&value.selection&&(!value.focusId||id(desired)===value.focusId)?{selectionStart:value.selection.start,selectionEnd:value.selection.end,direction:value.selection.direction}:id(desired)===activeId?caret:undefined;if(wanted?.selectionStart!==undefined)try{desired.setSelectionRange(wanted.selectionStart,wanted.selectionEnd,wanted.direction)}catch{}}
   if(!same&&!value.passive&&!value.reducedMotion)content.animate?.([{opacity:0},{opacity:1}],{duration:90,easing:'ease-out'})

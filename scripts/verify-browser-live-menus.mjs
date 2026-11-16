@@ -43,6 +43,21 @@ function rendererFixture(){
   const global=document.createElement('button');global.id='global-more-fixture';global.textContent='Global More';global.style.cssText='position:fixed;left:12px;top:200px;width:36px;height:36px';document.body.append(global)
   let globalAction=0
   global.addEventListener('click',()=>scheduled.showMenu(global,[{label:'Plugins',run:()=>globalAction++},{label:'Scheduled tasks',run:()=>globalAction++}]))
+  async function openNotificationCenter(count){
+   const host=document.createElement('div')
+   host.dataset.researchBoardBellHost=''
+   document.querySelector('[data-dsh-sidebar-root]').append(host)
+   const notifications=Array.from({length:count},(_,index)=>({
+    notificationId:'notice-'+index,eventVersion:1,type:'invitationResult',boardId:'board-'+index,
+    boardTitle:'协作看板 '+index,createdAt:Date.now(),readAt:index===0?null:1,
+    invitation:{invitationId:'invite-'+index,status:'accepted'}
+   }))
+   const snapshot={version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:'qa',username:'验收'}},
+    favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:1,unreadCount:1,pendingCount:0,notifications}}
+   mountResearchBoardNotifications(document,{getSnapshot:async()=>snapshot,subscribe:()=>()=>{}})
+   await Promise.resolve()
+   host.querySelector('button').click()
+  }
   let copiedPath=''
   function mountWorkspaceHoverCard(){
    const anchor=document.createElement('div')
@@ -65,7 +80,7 @@ function rendererFixture(){
   contextBridge.exposeInMainWorld('qa',{
    open:()=>view.open('live-menu-synthetic-session'),close:()=>view.close(),
    click,global:()=>global.click(),dismiss:()=>{scheduled.closeMenu();view.dismiss()},
-   mountWorkspaceHoverCard,copiedWorkspacePath:()=>copiedPath,
+   openNotificationCenter,mountWorkspaceHoverCard,copiedWorkspacePath:()=>copiedPath,
    tooltip:bounds=>{document.querySelector('#live-menu-tooltip')?.remove();const tip=document.createElement('div');tip.id='live-menu-tooltip';tip.role='tooltip';tip.textContent='实时网页上的提示';tip.style.cssText='position:fixed;z-index:10000;padding:12px;background:#292929;color:white;border-radius:8px;left:'+bounds.x+'px;top:'+bounds.y+'px';document.body.append(tip)},removeTooltip:()=>document.querySelector('#live-menu-tooltip')?.remove(),
    diagnostics:()=>({rootHidden:view.root.hidden,panel:view.panel,presented:view.panelPresented,documentFocused:document.hasFocus(),activeField:document.activeElement?.getAttribute('data-field'),states,sourceMenus:[...document.querySelectorAll('.eb-popover,.st-menu')].map(el=>({role:el.getAttribute('role'),hidden:el.getAttribute('aria-hidden'),inert:el.inert,visibility:getComputedStyle(el).visibility})),viewport:document.querySelector('[data-browser-viewport]')?.getBoundingClientRect().toJSON(),globalAction,calls,actions,images:document.querySelectorAll('.eb-page-image').length}),
    dispose:()=>{projection.dispose();view.dispose();host.dispose()},
@@ -95,7 +110,7 @@ async function nativeFixture(config){
  const live=()=>page.executeJavaScript('({...window.live,cursor:document.querySelector("video").currentTime})')
  const advancing=async()=>{const before=await live();await until(async()=>{const after=await live();return after.timer>before.timer+2&&after.raf>before.raf+2&&after.video>before.video+1},'timer, animation and video continue under native menu');const after=await live();return{before,after}}
  const ax=async wc=>{if(!wc.debugger.isAttached())wc.debugger.attach('1.3');return(await wc.debugger.sendCommand('Accessibility.getFullAXTree')).nodes}
- const check=async(name,run)=>{if(config.workspaceTabsOnly&&!/expanded browser tabs survive/.test(name)||config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
+ const check=async(name,run)=>{if(config.notificationsOnly&&!/notification center/.test(name)||config.workspaceTabsOnly&&!/expanded browser tabs survive/.test(name)||config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
  const dismiss=async()=>{await ui('qa.dismiss()');await until(()=>!locateMenu(),'native menu dismissed')}
  const diagnostics=async()=>({phase,error:null,window:win&&!win.isDestroyed()?{visible:win.isVisible(),focused:win.isFocused(),focusedWindow:BrowserWindow.getFocusedWindow()?.id,focusedContents:webContents.getFocusedWebContents()?.id,bounds:win.getContentBounds(),zoom:win.webContents.getZoomFactor()}:undefined,views:win&&!win.isDestroyed()?win.contentView.children.filter(view=>view.webContents&&!view.webContents.isDestroyed()).map(view=>({title:view.webContents.getTitle(),url:view.webContents.getURL().slice(0,160),visible:view.getVisible(),bounds:view.getBounds(),zoom:view.webContents.getZoomFactor()})):[],renderer:await Promise.race([ui('qa.diagnostics()'),pause(500).then(()=>({timeout:true}))]).catch(error=>({error:String(error)})),checks,timings,captureCalls,fontRequests,consoleEvents,trace})
  try{
@@ -145,6 +160,44 @@ async function nativeFixture(config){
   await request('bookmark',{url:'https://live-menu.example.test/saved',title:'中文研究资料',folder:'研究资料'})
   for(let i=0;i<5;i++)await request('new')
   await request('select',{id});await until(()=>pageView.getVisible(),'original tab selected')
+
+  await check('notification center projects its complete panel and owns scrolling above the live page',async()=>{
+   await ui('document.body.setAttribute("data-ds-dark-theme","");qa.openNotificationCenter(1000)')
+   const bounds=await shown('notification center')
+   const panel=await menuDOM(`(()=>{
+    const root=document.querySelector('.srb-notifications[data-native-menu-root]')
+    const list=root?.querySelector('.srb-notification-list')
+    return {roots:document.querySelectorAll('[data-native-menu-root]').length,
+     title:root?.querySelector('h2')?.textContent,tabs:root?.querySelectorAll('[role=tab]').length,
+     cards:list?.querySelectorAll('[data-notification-id]').length,scrollable:list?.scrollHeight>list?.clientHeight,
+     background:root&&getComputedStyle(root).backgroundColor,height:root?.offsetHeight}
+   })()`)
+   assert.equal(panel.title,'消息中心','title and cards cross the native page boundary together')
+   assert.equal(panel.roots,1,'rows are not separately projected')
+   assert.equal(panel.tabs,2);assert.equal(panel.cards,1000);assert.equal(panel.scrollable,true)
+   assert.match(panel.background,/^rgb\(/,'the page cannot show through the native panel')
+   assert.ok(bounds.height<=panel.height+42,'hidden rows do not expand the native overlay')
+   const point=await menuDOM(`(()=>{const r=document.querySelector('.srb-notification-list').getBoundingClientRect();
+    return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`)
+   menu.webContents.sendInputEvent({type:'mouseWheel',...point,deltaY:-640,deltaX:0,canScroll:true})
+   await until(()=>ui('document.querySelector(".srb-notification-list").scrollTop>0'),'scroll reaches the source list')
+   key('ArrowRight')
+   await until(()=>menuDOM('document.querySelector("[data-notification-filter=unread]")?.getAttribute("aria-selected")==="true"'),'keyboard switches to unread')
+   assert.equal(await menuDOM('document.querySelectorAll("[data-notification-id]").length'),1)
+   await clickNative('[data-notification-filter=all]')
+   await until(()=>menuDOM('document.querySelectorAll("[data-notification-id]").length===1000'),'click restores all messages')
+   key('Escape')
+   await until(()=>!locateMenu(),'notification center closes on Escape')
+   assert.equal(await ui('!!document.querySelector(".srb-notifications")'),false)
+   assert.equal(pageView.getVisible(),true)
+   await ui('document.body.removeAttribute("data-ds-dark-theme");qa.click(".srb-bell")')
+   await shown('light notification center')
+   const light=await menuDOM('getComputedStyle(document.querySelector(".srb-notifications")).backgroundColor')
+   assert.match(light,/^rgb\(/);assert.notEqual(light,panel.background)
+   await clickNative('.srb-notifications-close')
+   await until(()=>!locateMenu(),'close button dismisses the light center')
+   return {bounds,darkBackground:panel.background,lightBackground:light,cards:panel.cards,scroll:true,keyboard:true}
+  })
 
   await check('state updates do not restore a stale source address over the focused native menu',async()=>{
    win.webContents.focus();await ui('document.querySelector("[data-field=address]").focus()');await ui('qa.click("[data-action=menu]")');await shown('More before background state update');const before=await ui('qa.diagnostics()');assert.equal(before.activeField,'address');assert.equal(before.documentFocused,false)
@@ -396,8 +449,8 @@ async function nativeFixture(config){
  }catch(error){const failure=await diagnostics();failure.error=String(error?.stack||error);await writeFile(join(config.evidence,'failure.json'),JSON.stringify(failure,null,2));console.error(JSON.stringify(failure,null,2));api?.dispose();server?.close();win?.destroy();app.exit(1)}
 }
 
-await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {createRoot} from 'react-dom/client';import {jsx} from 'react/jsx-runtime';import {HoverCard} from '@deepseek-ai/dsh-client-ui-primitives';import {BrowserAppView} from './src/preload/browser/view';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],loader:{'.css':'empty'},logLevel:'silent'})
-const config={workspaceTabsOnly:process.env.BROWSER_LIVE_MENU_WORKSPACE_TABS_ONLY==='1',downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
+await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {createRoot} from 'react-dom/client';import {jsx} from 'react/jsx-runtime';import {HoverCard} from '@deepseek-ai/dsh-client-ui-primitives';import {BrowserAppView} from './src/preload/browser/view';import {mountResearchBoardNotifications} from './src/preload/research-board-notifications-ui';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],loader:{'.css':'empty'},logLevel:'silent'})
+const config={notificationsOnly:process.env.BROWSER_LIVE_MENU_NOTIFICATIONS_ONLY==='1',workspaceTabsOnly:process.env.BROWSER_LIVE_MENU_WORKSPACE_TABS_ONLY==='1',downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
 await build({stdin:{resolveDir:root,contents:`import {registerBrowserApp} from './src/main/browser/service';const {join}=require('node:path');(${nativeFixture.toString()})(${JSON.stringify(config)});`},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron'],logLevel:'silent'})
 const code=await new Promise((done,reject)=>{
  const child=spawn(require('electron'),[entry],{env:{...process.env,ELECTRON_RUN_AS_NODE:''},stdio:'inherit'}),timer=setTimeout(()=>child.kill('SIGTERM'),60000)
