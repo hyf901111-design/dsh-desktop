@@ -11,40 +11,68 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "ac23ff4d0e27050987b170003c97e4dfc5c1f414",
-        "tipCommit": "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d",
+        "baseCommit": "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d",
+        "tipCommit": "4bb46730baa4798dff1198659c972fe1a9856e55",
         "commits": [
           {
-            "commit": "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d",
+            "commit": "4bb46730baa4798dff1198659c972fe1a9856e55",
             "parents": [
-              "ac23ff4d0e27050987b170003c97e4dfc5c1f414"
+              "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d"
             ],
-            "subject": "优化：支持从已有画布返回灵感画廊继续创作"
+            "subject": "修复：图像工厂示例卡片使用正确缩略图"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/actions-menu.tsx"
+            "path": "src/preload/image-factory/gallery-art/blood-orange.jpg"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
+            "path": "src/preload/image-factory/gallery-art/blue-hour.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/coastal-museum.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/creative-drop.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/flower-market.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/jiangnan.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/lantern-fox.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/liquid-silver.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/night-shift.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/olive-perfume.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/ridge-walk.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-art/summer-fruit.jpg"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d",
-            "completedAt": "2026-11-16T11:59:26.134Z",
-            "timeoutMs": 120000
-          },
           {
             "argv": [
               "node",
@@ -59,14 +87,14 @@
             ],
             "outcome": "passed",
             "summary": "47 项聚焦测试通过，覆盖全局右侧对话与画布协议、参考图、区域映射、入口和导出。",
-            "verifiedCommit": "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d",
-            "completedAt": "2026-11-16T11:59:26.134Z",
+            "verifiedCommit": "4bb46730baa4798dff1198659c972fe1a9856e55",
+            "completedAt": "2026-11-16T12:09:20.785Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "上一候选包已用真实原生对话生图和框选改图，验收两处入口、顶栏按钮、版本切换及 PNG 实际保存。画廊待集成包验收。"
+          "summary": "上一候选包实机验证了顶栏间距、全局面板、画廊滚动与提示词填充及发送。该提交只修正打包缩略图。"
         },
         "acceptanceCriteria": [
           "两处入口打开同一画布，右侧复用客户端全局面板和输入框。",
@@ -79,43 +107,7 @@
           "真实生图使用当前账号现有图片模型权限。",
           "当前运行期间保留图像版本与对话，可导出到本地。"
         ],
-        "generatedAt": "2026-11-16T11:59:26.134Z"
-      },
-      "merged": {
-        "mergeCommit": "d7cc35d91096b6c18181af8a8aecf29cc4e667c7",
-        "verificationCommit": "d7cc35d91096b6c18181af8a8aecf29cc4e667c7",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d7cc35d91096b6c18181af8a8aecf29cc4e667c7",
-            "completedAt": "2026-11-16T11:59:29.587Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory.test.js",
-              "test/image-actions.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
-            "verifiedCommit": "d7cc35d91096b6c18181af8a8aecf29cc4e667c7",
-            "completedAt": "2026-11-16T11:59:29.587Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T11:59:29.587Z"
+        "generatedAt": "2026-11-16T12:09:20.785Z"
       }
     }
   ],
