@@ -281,8 +281,11 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, selectV
   const reply = ok => dispatch('sherlock:knowledge-source-result', { requestId, ok })
   if (typeof requestId !== 'string' || !['chat', 'research', 'notes', 'spreadsheet'].includes(view)) return reply(false)
   const activate = () => {
-   if (!usable(sessions.list.getSnapshot(), id)) return reply(false)
+   const summary = usable(sessions.list.getSnapshot(), id)
+   if (!summary) return reply(false)
    try {
+    // The local catalog can still show a newly saved image copy as blank.
+    if (retained === 'imported' && view === 'chat' && summary.blank) sessions.retainNoteSession(id)
     const adapter = view === 'research' ? boards?.() : undefined
     const shared = adapter?.getState?.().boards.find(board => board.localSessionId === id && board.pinned)
     selectView(id, view)
