@@ -11,25 +11,49 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
-        "tipCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
+        "baseCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
+        "tipCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
         "commits": [
           {
-            "commit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
+            "commit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
             "parents": [
-              "b88e66dfc756fb6d4836f4ba2880f895617d90e1"
+              "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e"
             ],
-            "subject": "修复：图像工厂全新生图使用新画布内容和归档名称"
+            "subject": "功能：支持从知识库将归档图片作为独立画布编辑"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
+            "path": "src/main/knowledge/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/session-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/image-factory-canvases.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-session-copy.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -41,8 +65,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
-            "completedAt": "2026-11-16T21:03:03.212Z",
+            "verifiedCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
+            "completedAt": "2026-11-16T21:20:03.334Z",
             "timeoutMs": 120000
           },
           {
@@ -50,29 +74,46 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-generation-tool.test.js"
+              "test/knowledge-session-copy.test.ts",
+              "test/knowledge-session-copy-host.test.js",
+              "test/image-factory-canvases.test.ts",
+              "test/knowledge-history-backfill.test.ts"
             ],
             "outcome": "passed",
-            "summary": "4 个文件共 43 项生图、图层与对话聚焦检查通过。",
-            "verifiedCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
-            "completedAt": "2026-11-16T21:03:03.212Z",
+            "summary": "15 项会话复制、画布和归档聚焦检查通过。",
+            "verifiedCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
+            "completedAt": "2026-11-16T21:20:03.334Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "opens the selected archived image"
+            ],
+            "outcome": "passed",
+            "summary": "1 项真实 Chromium 文件菜单聚焦检查通过。",
+            "verifiedCommit": "e13a8c0a5b4445d38e9fde96b62adf118aa04f66",
+            "completedAt": "2026-11-16T21:20:03.334Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "在已保存的旧画布上通过运行时测试复现全新生图误用旧标题，修复已通过聚焦测试，待签名包验证。"
+          "summary": "已通过真实 Chromium 文件操作验证选中记录，待签名包验证会话导航和图像内容。"
         },
         "acceptanceCriteria": [
-          "明确生成新图时采用新描述的标题和比例，交付不继承旧图层。",
-          "当前画布修改和框选继续使用当前画布。",
-          "新成品继续自动出现在知识库所有文件中。"
+          "选中的归档 PNG 可以创建自己的编辑会话和画布。",
+          "来源画布和已经归档的成品保留。",
+          "会话注册确认失败时清理暂存内容。"
         ],
-        "risks": [],
-        "generatedAt": "2026-11-16T21:03:03.212Z"
+        "risks": [
+          "Chromium 渲染验证通过本机共享运行时定位 Playwright 和 Chromium。"
+        ],
+        "generatedAt": "2026-11-16T21:20:03.334Z"
       }
     },
     {
