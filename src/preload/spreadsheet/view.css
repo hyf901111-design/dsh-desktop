@@ -477,7 +477,9 @@ body[data-ework-spreadsheet-mode] :is(.univer-popup>section>div.univer-overscrol
  .ew-sheet .ew-sheet-component-card .ew-grid-header>.ew-financial-header-selector{order:1;flex:1 0 100%;width:100%;max-width:none;margin:0}
 }
 .ew-sheet-component-card:has([data-financial-widget]) .ew-grid-header{background:var(--fw-card);color:var(--fw-text)}
-.ew-sheet-component-card .ew-grid-header>[aria-expanded=true]{background:var(--ss-hover)}
+.ew-sheet .ew-sheet-component-card .ew-grid-header>[data-workbench-more]:is(:hover,:focus-visible,[aria-expanded=true]){
+ background:color-mix(in srgb,currentColor 12%,transparent);
+}
 .ew-sheet .ew-sheet-component-card[data-sheet-component-floating] .ew-grid-header{cursor:grab}
 .ew-sheet .ew-sheet-component-card[data-dragging] .ew-grid-header{cursor:grabbing}
 .ew-sheet-component-card .ew-grid-icon-sheet-float{mask:url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23000' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='3' width='12' height='10' rx='1.2'/%3E%3Cpath d='M10 3v10M7.5 6 5.5 8l2 2'/%3E%3C/svg%3E") center/16px no-repeat}
