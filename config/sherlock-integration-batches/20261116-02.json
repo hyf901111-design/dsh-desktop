@@ -11,59 +11,21 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "37cf4bfdfc7e6ef78ec51648694497c6184c75d6",
-        "tipCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
+        "baseCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
+        "tipCommit": "e9960e09322946bb35a198f0e008823b76a35f5e",
         "commits": [
           {
-            "commit": "0d3035f45a2ece1d95530187d9aceeec9b672916",
+            "commit": "e9960e09322946bb35a198f0e008823b76a35f5e",
             "parents": [
-              "37cf4bfdfc7e6ef78ec51648694497c6184c75d6"
+              "8aa40bdb871dc6f4f47829440700073dd44a2576"
             ],
-            "subject": "修复：导出子菜单优先向右并同步箭头方向"
-          },
-          {
-            "commit": "2fba6bd9f03247b38e788ff26fb1a7f0bc9257c9",
-            "parents": [
-              "0d3035f45a2ece1d95530187d9aceeec9b672916"
-            ],
-            "subject": "调整：图像工厂提示气泡在工作区居中显示"
-          },
-          {
-            "commit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
-            "parents": [
-              "2fba6bd9f03247b38e788ff26fb1a7f0bc9257c9"
-            ],
-            "subject": "功能：支持快捷键缩放和平移图像画布"
+            "subject": "修复：点击适合后仍可按空格平移画布"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/actions-menu.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "A",
             "path": "src/preload/image-factory/viewport.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-actions-menu.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -75,8 +37,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
-            "completedAt": "2026-11-16T22:42:40.509Z",
+            "verifiedCommit": "e9960e09322946bb35a198f0e008823b76a35f5e",
+            "completedAt": "2026-11-16T22:48:31.479Z",
             "timeoutMs": 120000
           },
           {
@@ -92,8 +54,8 @@
             ],
             "outcome": "passed",
             "summary": "25 项菜单、图层、画布快捷手势和持久化聚焦检查通过。",
-            "verifiedCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
-            "completedAt": "2026-11-16T22:42:40.509Z",
+            "verifiedCommit": "e9960e09322946bb35a198f0e008823b76a35f5e",
+            "completedAt": "2026-11-16T22:48:31.479Z",
             "timeoutMs": 120000
           },
           {
@@ -107,14 +69,14 @@
             ],
             "outcome": "passed",
             "summary": "Chromium 渲染验证保存提示与图像工作区中心坐标一致。",
-            "verifiedCommit": "8aa40bdb871dc6f4f47829440700073dd44a2576",
-            "completedAt": "2026-11-16T22:42:40.509Z",
+            "verifiedCommit": "e9960e09322946bb35a198f0e008823b76a35f5e",
+            "completedAt": "2026-11-16T22:48:31.479Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "聚焦检查通过，继续在本地签名版验证实际交互。"
+          "summary": "Chromium 实测 Command 缩放居中于鼠标、Space 拖动 115 × 67 像素、适合复位、点过适合后仍可手势平移、Tab 聚焦适合后 Space 激活、对话输入空格不受影响，画布零写入。待签名版最终实测。"
         },
         "acceptanceCriteria": [
           "文字选中边框有四角与左右手柄。",
@@ -125,7 +87,7 @@
           "Command 滚轮以指针位置缩放，按住空格拖动平移，适合恢复视图，文字输入保持正常。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T22:42:40.509Z"
+        "generatedAt": "2026-11-16T22:48:31.479Z"
       }
     },
     {
