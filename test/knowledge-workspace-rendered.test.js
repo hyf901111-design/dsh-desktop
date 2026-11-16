@@ -314,7 +314,7 @@ it('lists real session modes under all files and opens each one in its native vi
         const text = document.createRange()
         text.selectNodeContents(element)
         const bounds = element.getBoundingClientRect(), glyphs = text.getBoundingClientRect()
-        return { width: bounds.width, left: glyphs.left - bounds.left, right: bounds.right - glyphs.right }
+        return { width: bounds.width, edge: bounds.right, left: glyphs.left - bounds.left, right: bounds.right - glyphs.right }
       }
       try { return ['1', '20', '885'].map(measure) }
       finally { element.textContent = previous }
@@ -322,10 +322,13 @@ it('lists real session modes under all files and opens each one in its native vi
     expect(sizes.map(({ left, right }) => [left, right])).toEqual([[4, 4], [4, 4], [4, 4]])
     expect(sizes[0].width).toBeLessThan(sizes[1].width)
     expect(sizes[1].width).toBeLessThan(sizes[2].width)
+    expect(sizes.map(({ edge }) => edge)).toEqual(Array(3).fill(sizes[0].edge))
     const countColumn = await library.getByRole('button', { name: /^手动收藏 / }).locator('small').boundingBox()
     for (const count of await group.locator('small').all()) {
       const box = await count.boundingBox()
       expect({ x: box.x, width: box.width }).toEqual({ x: countColumn.x, width: countColumn.width })
+      const pill = await count.locator('span').boundingBox()
+      expect(pill.x + pill.width).toBe(sizes[0].edge)
     }
     for (const [label, title, id, view] of [
       ['我的研究', '消费行业研究看板', 'board', 'research'],

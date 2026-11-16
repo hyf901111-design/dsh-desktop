@@ -121,7 +121,7 @@
 }
 .knowledge-navigation button > small {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   min-width: var(--knowledge-nav-trailing);
   margin-inline-start: auto;
   flex: none;
