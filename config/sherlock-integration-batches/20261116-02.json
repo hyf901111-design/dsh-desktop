@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
-        "tipCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
+        "baseCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
+        "tipCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
         "commits": [
           {
-            "commit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
+            "commit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
             "parents": [
-              "07187a9d5275a606f32cb6b0f9afcc2615328b15"
+              "b88e66dfc756fb6d4836f4ba2880f895617d90e1"
             ],
-            "subject": "修复：原生光标检测保留工作区页签悬停"
+            "subject": "修复：图像工厂全新生图使用新画布内容和归档名称"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/workspace-view-shortcuts.ts"
+            "path": "src/preload/image-factory/view.tsx"
           },
           {
             "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "test/image-factory-layer-gesture.test.ts"
           }
         ],
         "checks": [
@@ -41,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
-            "completedAt": "2026-11-16T20:47:28.539Z",
+            "verifiedCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
+            "completedAt": "2026-11-16T21:03:03.212Z",
             "timeoutMs": 120000
           },
           {
@@ -50,32 +50,29 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "workspace (tabs|controls|shortcuts|focus)|four workspace shortcuts"
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory.test.js",
+              "test/image-factory-native.test.js",
+              "test/image-generation-tool.test.js"
             ],
             "outcome": "passed",
-            "summary": "浏览器和知识库共 7 项顶栏聚焦渲染检查通过。",
-            "verifiedCommit": "b88e66dfc756fb6d4836f4ba2880f895617d90e1",
-            "completedAt": "2026-11-16T20:47:28.539Z",
+            "summary": "4 个文件共 43 项生图、图层与对话聚焦检查通过。",
+            "verifiedCommit": "c288c01c55c430b1cf5c3fb2747de0d6e38fb20e",
+            "completedAt": "2026-11-16T21:03:03.212Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "旧签名版发现原生光标误判；此次修复通过真实 Chromium 聚焦测试，待新包实机复测。"
+          "summary": "在已保存的旧画布上通过运行时测试复现全新生图误用旧标题，修复已通过聚焦测试，待签名包验证。"
         },
         "acceptanceCriteria": [
-          "首次直接点击页签按钮会展开四个模式，再点击收起。",
-          "保留悬停后展开、离开后收起和键盘操作。",
-          "图像工厂、知识库、浏览器沿用共同行为。",
-          "已经通过页面事件确认光标在顶栏内时，原生光标检测的否定结果不会收起页签。"
+          "明确生成新图时采用新描述的标题和比例，交付不继承旧图层。",
+          "当前画布修改和框选继续使用当前画布。",
+          "新成品继续自动出现在知识库所有文件中。"
         ],
-        "risks": [
-          "本机渲染验证使用统一运行时的 Playwright 和 Chromium。"
-        ],
-        "generatedAt": "2026-11-16T20:47:28.539Z"
+        "risks": [],
+        "generatedAt": "2026-11-16T21:03:03.212Z"
       }
     },
     {
