@@ -297,10 +297,29 @@ class SpreadsheetView{
   if(!input||!submit)return
   return {input,submit}
  }
+ cashFlowGuideThemeControl(action:'more'|'theme'|'theme-enterprise'){
+  const card=this.componentCards.get(CASH_FLOW_GUIDE_COMPONENT_ID)?.element
+  const more=card?.querySelector<HTMLButtonElement>('button[data-workbench-more]')
+  if(action==='more')return more??undefined
+  if(more?.getAttribute('aria-expanded')!=='true')return
+  return this.doc.querySelector<HTMLButtonElement>('[data-component-menu-surface="spreadsheet"] [data-component-menu-action="'+action+'"]')??undefined
+ }
+ get cashFlowGuideEnterpriseThemeSaved(){
+  return this.record.workbook?.components?.find(item=>item.componentId===CASH_FLOW_GUIDE_COMPONENT_ID)?.theme==='enterprise'
+ }
  async insertCashFlowGuideComponent(wait:()=>Promise<void>){
   await this.addComponent('component-cash-flow-guide','',wait)
   if(!this.record.workbook?.components?.some(item=>item.componentId===CASH_FLOW_GUIDE_COMPONENT_ID))throw Error('现金流拆解台尚未保存。')
   this.jump(CASH_FLOW_GUIDE_TREND.range)
+  const chart=this.record.workbook?.charts?.find(item=>item.chartId==='cash-flow-guide-trend')
+  const view=this.engine?.objectViewport()
+  if(chart&&!chart.layout&&view){
+   const layout=this.defaultChartLayout(chart)
+   const available=Math.floor((this.grid.clientWidth-16)/view.zoom-view.headerX)
+   const width=Math.max(260,Math.min(layout.width,available))
+   this.chartDefaults.set(chart.chartId,{...layout,x:Math.max(0,Math.min(layout.x,available-width)),width})
+   this.positionChart(chart.chartId)
+  }
   return this.componentCards.get(CASH_FLOW_GUIDE_COMPONENT_ID)?.element
  }
  closeCashFlowGuideControls(){

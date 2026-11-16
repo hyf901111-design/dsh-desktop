@@ -108,11 +108,11 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     beforeClick?.()
     current.click()
   }
-  const setRight = async (open: boolean) => {
+  const ensureRightOpen = async () => {
     const button = await waitFor(() => rightToggle() ?? undefined, '表格对话开关尚未就绪。')
-    if (button.getAttribute('aria-expanded') === String(open)) return
+    if (button.getAttribute('aria-expanded') === 'true') return
     await clickControl(() => rightToggle() ?? undefined, '表格对话开关尚未就绪。')
-    await waitFor(() => rightToggle()?.getAttribute('aria-expanded') === String(open) || undefined, '表格对话未能切换。')
+    await waitFor(() => rightToggle()?.getAttribute('aria-expanded') === 'true' || undefined, '表格对话未能打开。')
   }
   const composer = () => {
     const inputs = [...document.querySelectorAll<HTMLTextAreaElement>('.t8lSSG_panel textarea[data-odyssey-file-reference-session]')]
@@ -174,7 +174,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
   const takeOver = (event: Event) => {
     const target = event.target
     if (!completed && event.isTrusted && target instanceof win.Element &&
-        target.closest('.ew-sheet,.t8lSSG_panel,[data-odyssey-panel-entry="right"]')) options.onTakeover?.()
+        target.closest('.ew-sheet,.t8lSSG_panel,[data-odyssey-panel-entry="right"],[data-component-menu-surface="spreadsheet"]')) options.onTakeover?.()
   }
   document.addEventListener('pointerdown', takeOver, true)
   document.addEventListener('beforeinput', takeOver, true)
@@ -196,7 +196,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       if (step === 'empty') {
         workbookView = await waitFor(visibleView, '示例表格尚未就绪。')
         await waitFor(() => check().cashFlowGuideImportButton(), '空白表格尚未就绪。')
-        await setRight(false)
+        await ensureRightOpen()
         return
       }
       if (step === 'import-file') {
@@ -207,7 +207,6 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         return
       }
       if (step === 'ask') {
-        await setRight(true)
         const input = await waitFor(composer, '右侧表格对话尚未就绪。')
         const prompt = HOME_SPREADSHEET_GUIDE_PROMPTS[locale]
         await write(input, prompt)
@@ -240,7 +239,6 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         return
       }
       if (step === 'select-component') {
-        await setRight(false)
         await check().dragCashFlowGuideRange('component', options.point, check)
         return
       }
@@ -265,6 +263,15 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
           check()
         })
         if (card) await pointWhenVisible(card, 'move')
+        return
+      }
+      if (step === 'component-theme') {
+        await clickControl(() => check().cashFlowGuideThemeControl('more'), '组件更多操作尚未就绪。')
+        await options.wait(420, requestAbort.signal)
+        await clickControl(() => check().cashFlowGuideThemeControl('theme'), '组件主题菜单尚未就绪。')
+        await options.wait(420, requestAbort.signal)
+        await clickControl(() => check().cashFlowGuideThemeControl('theme-enterprise'), '易方达主题尚未就绪。')
+        await waitFor(() => check().cashFlowGuideEnterpriseThemeSaved || undefined, '易方达主题尚未保存。')
         completed = true
       }
     },
