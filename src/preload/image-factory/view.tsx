@@ -23,9 +23,14 @@ type History = { all: Version[]; path: number[]; cursor: number }
 const emptyHistory: History = { all: [], path: [], cursor: -1 }
 type Mark = { version: number; rect: Region }
 type Panel = 'adjust' | 'crop' | 'resize' | 'type'
+type ImageExecution = {
+  state: 'running' | 'completed' | 'failed' | 'cancelled'
+  startedAt: number; finishedAt?: number; aspect: string
+  steps: string[]; status: string; receipt?: string
+}
 type Message = {
-  id: string; role: 'user' | 'assistant' | 'notice'; body: string
-  version?: number; error?: boolean
+  id: string; role: 'user' | 'notice'; body: string
+  version?: number; error?: boolean; execution?: ImageExecution
 }
 type T = (zh: string, en: string) => string
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
@@ -168,9 +173,9 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     clearMark(); setPanel(undefined); setPreview(undefined)
     setHistory(h => ({ ...h, cursor: Math.min(h.path.length - 1, Math.max(0, h.cursor + delta)) }))
   }
-  async function operation(work: (job: { id: string; cancelled: boolean }) => Promise<void>) {
+  async function operation(work: (job: { id: string; cancelled: boolean }) => Promise<void>, requestId?: string) {
     if (active.current) return
-    const job = { id: crypto.randomUUID(), cancelled: false }
+    const job = { id: requestId ?? crypto.randomUUID(), cancelled: false }
     active.current = job
     setBusy(true)
     try { await work(job) }
@@ -184,7 +189,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       if (active.current === job) active.current = undefined
       if (mounted.current) {
         setBusy(false)
-        if (job.cancelled) notify(t('已取消图片任务。', 'Image request canceled.'))
+        if (job.cancelled && !requestId) notify(t('已取消图片任务。', 'Image request canceled.'))
       }
     }
   }
@@ -202,22 +207,33 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       if (version) setToast(t('图片已导入画布。', 'Image imported to the canvas.'))
     })
   }
-  async function send(request: string, upload?: File) {
+  async function send(id: string, request: string, upload?: File) {
     const base = current, area = region
+    const requested = area ? undefined : requestedImageSize(request)
+    const size = requested ?? base ?? ratios['4:5']
+    const target = area ?? size
+    let execution: ImageExecution = {
+      state: 'running', startedAt: Date.now(), aspect: target.width + ' / ' + target.height,
+      steps: [t('准备图片请求', 'Prepare image request')],
+      status: t('正在准备图片请求', 'Preparing image request'),
+    }
+    const update = (next: ImageExecution, version?: number) => {
+      execution = next
+      if (mounted.current) setMessages(list => list.map(row => row.id === id ? { ...row, execution: next, version } : row))
+    }
+    const advance = (step: string, status: string) => update({ ...execution, steps: [...execution.steps, step], status })
     setPanel(undefined)
-    setMessages(list => [...list, { id: crypto.randomUUID(), role: 'user', body: request }])
-    let success = false
-    let errorMessage: string | undefined
+    const started = execution
+    setMessages(list => [...list, { id, role: 'user', body: request, execution: started }])
     await operation(async job => {
       let uploaded: Raster | undefined
+      let revision: Version | undefined
+      let errorMessage: string | undefined
       try {
         if (!area && upload) {
           acceptableFile(upload, t)
           uploaded = await loadRaster(doc, upload)
         }
-        const requested = area ? undefined : requestedImageSize(request)
-        const size = requested ?? base ?? ratios['4:5']
-        const target = area ?? size
         const referenceImage = uploaded ?? base
         const source = area && base ? await referenceFor(doc, base, area)
           : referenceImage ? await referenceFor(doc, referenceImage) : undefined
@@ -227,8 +243,11 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
           : source ? t('使用参考图，根据以下描述修改或生成画面：', 'Use the reference image to make the requested image: ')
             : t('请生成一张图片。画面要适合指定比例并避免把关键文字和主体贴近边缘。要求：', 'Generate an image. Compose for the requested aspect ratio, keeping key details away from edges. Request: ')
         const description = direction + request + '\n' + t('目标画面尺寸：', 'Target canvas: ') + target.width + ' × ' + target.height + ' px'
+        advance(area ? t('调用图像模型修改框选区域', 'Request selected-area edit') : t('调用图像模型', 'Request image model'),
+          area ? t('正在修改框选区域', 'Editing selected area') : t('正在生成图片', 'Generating image'))
         const data = await bridge.generate({ id: job.id, prompt: description, size: providerSize(target), reference: source })
         if (job.cancelled || !mounted.current) return
+        advance(t('处理图像并写入画布', 'Process image and update canvas'), t('正在更新画布', 'Updating canvas'))
         const output = await loadRaster(doc, new Blob([Uint8Array.from(data)], { type: 'image/png' }))
         let blob
         try {
@@ -240,18 +259,20 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
         } finally { URL.revokeObjectURL(output.url) }
         const title = base?.title ?? titleFromPrompt(request, t)
         const name = area ? t('局部修改', 'Region edit') : base ? t('对话修改', 'Chat edit') : t('初次生成', 'Generated image')
-        const version = await addBlob(blob, job, { title, name, basedOn: base?.id })
-        if (!version) return
-        setMessages(list => [...list, { id: crypto.randomUUID(), role: 'assistant',
-          body: area ? t('已修改框选区域，结果已更新到画布。', 'The selected area has been edited on the canvas.')
-            : t('图片已放到当前画布。', 'The image is on the current canvas.'), version: version.id }])
-        success = true
+        revision = await addBlob(blob, job, { title, name, basedOn: base?.id })
       } catch (error) {
         errorMessage = noticeText(error, t('图片处理失败，请重试。', 'Image processing failed. Please retry.'))
-        throw error
-      } finally { if (uploaded) URL.revokeObjectURL(uploaded.url) }
-    })
-    return { success, error: errorMessage }
+      } finally {
+        if (uploaded) URL.revokeObjectURL(uploaded.url)
+        const state = revision ? 'completed' : job.cancelled ? 'cancelled' : 'failed'
+        const receipt = revision ? area
+          ? t('已修改框选区域，结果已更新到画布。', 'The selected area has been edited on the canvas.')
+          : t('图片已放到当前画布。', 'The image is on the current canvas.')
+          : job.cancelled ? t('已取消图片任务。', 'Image request canceled.')
+            : errorMessage ?? t('图片处理失败，请重试。', 'Image processing failed. Please retry.')
+        update({ ...execution, state, finishedAt: Date.now(), receipt }, revision?.id)
+      }
+    }, id)
   }
   function localEdit(event?: FormEvent) {
     event?.preventDefault()
@@ -408,8 +429,8 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
         } catch { return }
       }
       event.preventDefault()
-      void send(d.prompt.trim(), attachment).then(result => {
-        doc.dispatchEvent(new CustomEvent('sherlock:image-factory-result', { detail: { id: d.id, ...result } }))
+      void send(d.id, d.prompt.trim(), attachment).finally(() => {
+        doc.dispatchEvent(new CustomEvent('sherlock:image-factory-result', { detail: { id: d.id } }))
       })
     }
     const action = (event: Event) => {
@@ -417,7 +438,6 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       const data = (event as CustomEvent).detail
       if (data?.kind === 'cancel') stop()
       if (data?.kind === 'import' && !busy) file.current?.click()
-      if (data?.kind === 'preview' && Number.isSafeInteger(data.version)) switchPreview(data.version)
     }
     doc.addEventListener('sherlock:image-factory-submit', submit)
     doc.addEventListener('sherlock:image-factory-action', action)

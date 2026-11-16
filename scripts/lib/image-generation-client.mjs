@@ -58,8 +58,7 @@ function GeneratedConversationImage({image,loadImage,t}){
  })})
 }
 
-function ImageGenerationOutputs({nodes,running,loadImage,t}){
- const calls=imageGenerationCalls(nodes,running)
+function ImageGenerationCards({calls,loadImage,t}){
  if(!calls.length)return null
  const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs,en=document.documentElement.dataset.odysseyLocale==='en'
  const labels=en?{running:'Creating your image',completed:'Image ready',cancelled:'Image generation cancelled',failed:'Image generation failed',interrupted:'Image generation interrupted'}:{running:'正在生成图片',completed:'图片已生成',cancelled:'已取消生成',failed:'图片生成失败',interrupted:'图片生成已中断'}
@@ -68,10 +67,14 @@ function ImageGenerationOutputs({nodes,running,loadImage,t}){
  },call.id))})
 }
 
+function ImageGenerationOutputs({nodes,running,loadImage,t}){
+ return react_jsx_runtime.jsx(ImageGenerationCards,{calls:imageGenerationCalls(nodes,running),loadImage,t})
+}
+
 export function patchImageGenerationClient(source){
  const marker='/* ODYSSEY_CONVERSATION_IMAGE_GENERATION_V4 */'
  const replace=(before,after)=>{if(source.split(before).length!==2)throw Error('Image generation client anchor drifted: '+before.slice(0,90));source=source.replace(before,()=>after)}
- const functions=`${marker}\n${imageGenerationCalls.toString()}\n${GeneratedConversationImage.toString()}\n${ImageGenerationOutputs.toString()}\n${mountImageContextMenu.toString()}\nif(typeof document!=='undefined'&&!document.getElementById('odyssey-image-generation-style')){const style=document.createElement('style');style.id='odyssey-image-generation-style';style.textContent=${JSON.stringify(IMAGE_GENERATION_CSS)};document.head.append(style)}\n`
+ const functions=`${marker}\n${imageGenerationCalls.toString()}\n${GeneratedConversationImage.toString()}\n${ImageGenerationCards.toString()}\n${ImageGenerationOutputs.toString()}\n${mountImageContextMenu.toString()}\nif(typeof document!=='undefined'&&!document.getElementById('odyssey-image-generation-style')){const style=document.createElement('style');style.id='odyssey-image-generation-style';style.textContent=${JSON.stringify(IMAGE_GENERATION_CSS)};document.head.append(style)}\n`
  const current=source.indexOf(marker)
  if(current>=0){
   const end=source.indexOf('function ToolImageOutputs(',current)
