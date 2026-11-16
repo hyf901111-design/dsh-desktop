@@ -11,40 +11,77 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "7a7f6b3ec6e6e44a7f7db28bf140ffaacb9a39c5",
-        "tipCommit": "e57e57cc65c220db1fc59222ed274dcf9400969f",
+        "baseCommit": "e57e57cc65c220db1fc59222ed274dcf9400969f",
+        "tipCommit": "ac23ff4d0e27050987b170003c97e4dfc5c1f414",
         "commits": [
           {
-            "commit": "a2bf540d48bfde336457e33b3907221e2771ccba",
+            "commit": "ac23ff4d0e27050987b170003c97e4dfc5c1f414",
             "parents": [
-              "7a7f6b3ec6e6e44a7f7db28bf140ffaacb9a39c5"
+              "e57e57cc65c220db1fc59222ed274dcf9400969f"
             ],
-            "subject": "修复：生图铺入画布时保留海报边缘内容"
-          },
-          {
-            "commit": "e57e57cc65c220db1fc59222ed274dcf9400969f",
-            "parents": [
-              "a2bf540d48bfde336457e33b3907221e2771ccba"
-            ],
-            "subject": "优化：简化图像工厂对话和画布编辑流程"
+            "subject": "优化：为图像工厂加入灵感画廊和提示词复用"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/image-factory-native.mjs"
           },
           {
             "status": "A",
-            "path": "src/preload/image-factory/actions-menu.tsx"
+            "path": "src/preload/image-factory/gallery-art/blood-orange.jpg"
           },
           {
-            "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/blue-hour.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/coastal-museum.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/creative-drop.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/flower-market.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/jiangnan.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/lantern-fox.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/liquid-silver.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/night-shift.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/olive-perfume.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/ridge-walk.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/summer-fruit.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-examples.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery.tsx"
           },
           {
             "status": "M",
@@ -56,7 +93,7 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory.test.js"
+            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
@@ -68,8 +105,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "e57e57cc65c220db1fc59222ed274dcf9400969f",
-            "completedAt": "2026-11-16T11:33:33.728Z",
+            "verifiedCommit": "ac23ff4d0e27050987b170003c97e4dfc5c1f414",
+            "completedAt": "2026-11-16T11:54:37.082Z",
             "timeoutMs": 120000
           },
           {
@@ -85,62 +122,27 @@
               "test/image-generation-tool.test.js"
             ],
             "outcome": "passed",
-            "summary": "46 项聚焦测试通过，覆盖全局右侧对话与画布协议、参考图、区域映射、入口和导出。",
-            "verifiedCommit": "e57e57cc65c220db1fc59222ed274dcf9400969f",
-            "completedAt": "2026-11-16T11:33:33.728Z",
+            "summary": "47 项聚焦测试通过，覆盖全局右侧对话与画布协议、参考图、区域映射、入口和导出。",
+            "verifiedCommit": "ac23ff4d0e27050987b170003c97e4dfc5c1f414",
+            "completedAt": "2026-11-16T11:54:37.082Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "上一候选包跑通原生右侧对话生图和区域修改。新编辑流程待集成包验收。"
+          "summary": "上一候选包已用真实原生对话生图和框选改图，验收两处入口、顶栏按钮、版本切换及 PNG 实际保存。画廊待集成包验收。"
         },
         "acceptanceCriteria": [
           "两处入口打开同一画布，右侧复用客户端全局面板和输入框。",
           "欢迎语和用例专用于图像工厂，发送活跃画布命令可生图和框选改图；常规画布编辑与导出保持可用。",
-          "对话与输入区去除画布、版本和项目标签；导入和导出归入共用更多菜单；画布明确显示生成、裁剪、框选、预览和采用版本的下一步。"
+          "对话与输入区去除画布、版本和项目标签；导入和导出归入共用更多菜单；画布明确显示生成、裁剪、框选、预览和采用版本的下一步。",
+          "灵感画廊提供十二张可点选的示例卡，带动中文提示词与比例、保留用户已有草稿，支持直接描述生图与本地导入。"
         ],
         "risks": [
           "真实生图使用当前账号现有图片模型权限。",
           "当前运行期间保留图像版本与对话，可导出到本地。"
         ],
-        "generatedAt": "2026-11-16T11:33:33.728Z"
-      },
-      "merged": {
-        "mergeCommit": "fba0a93d35a6b2c00cb0e92ebcdfeb1970b01909",
-        "verificationCommit": "fba0a93d35a6b2c00cb0e92ebcdfeb1970b01909",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fba0a93d35a6b2c00cb0e92ebcdfeb1970b01909",
-            "completedAt": "2026-11-16T11:33:37.410Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory.test.js",
-              "test/image-actions.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
-            "verifiedCommit": "fba0a93d35a6b2c00cb0e92ebcdfeb1970b01909",
-            "completedAt": "2026-11-16T11:33:37.410Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T11:33:37.410Z"
+        "generatedAt": "2026-11-16T11:54:37.082Z"
       }
     }
   ],
