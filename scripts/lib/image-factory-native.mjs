@@ -26,17 +26,8 @@ export function installImageFactoryInput({ makeShell, conversation, document: do
     publish(initial)
   }
   const finish = event => {
-    const result = event.detail
-    if (!pending || result?.id !== pending.id) return
-    const { revision, ids, prompt } = pending
+    if (!pending || event.detail?.id !== pending.id) return
     pending = undefined
-    shell.setResearchContextPreparing(false)
-    if (result.success) {
-      const unchanged = shell.snapshot.draftRev === revision && shell.snapshot.draft === prompt
-      shell.commitSend(ids, unchanged ? prompt : null)
-      clearImages(ids)
-    }
-    request()
   }
   function fileData(file) {
     return new Promise((resolve, reject) => {
@@ -64,6 +55,10 @@ export function installImageFactoryInput({ makeShell, conversation, document: do
       }
       const event = new win.CustomEvent('sherlock:image-factory-submit', { cancelable: true, detail: { id: job.id, prompt, file: attachment } })
       if (doc.dispatchEvent(event)) throw new Error('图像工厂尚未就绪，请稍后重试。')
+      const unchanged = shell.snapshot.draftRev === job.revision && shell.snapshot.draft === job.prompt
+      shell.commitSend(job.ids, unchanged ? job.prompt : null)
+      clearImages(job.ids)
+      shell.setResearchContextPreparing(false)
     } catch (error) {
       if (pending === job) {
         pending = undefined
@@ -176,20 +171,36 @@ function EWorkImageFactoryConversation({ t }) {
       h('div', { className: 'ew-sheet-welcome-actions' }, welcome.slice(2).map((label, index) =>
         h('button', { key: label, type: 'button', onClick: () => quick(index) }, label)))))
   const rows = state.messages.map(row => {
-    if (row.role === 'user') return h(UserStyleBubble, {
-      key: row.id, content: [{ type: 'text', text: row.body }], t,
-    })
-    const result = row.result
-    return h('div', { key: row.id, className: 'Md3f7G_flowItem', role: row.error ? 'alert' : undefined },
-      h(AssistantMarkdown, { blocks: [{ kind: 'text', text: row.body }], streaming: false, t }),
-      result && h('button', { type: 'button', className: 'ework-image-factory-result', disabled: state.busy,
-        'aria-label': en ? 'View image on canvas' : '在画布查看图片',
-        onClick: () => app?.action('preview', { version: result.id }) },
-        h('img', { className: 'odyssey-image-generation-result', src: result.url, width: result.width, height: result.height, alt: result.label })))
+    if (row.role !== 'user') return h('div', { key: row.id, className: 'Md3f7G_flowItem', role: row.error ? 'alert' : undefined },
+      h(AssistantMarkdown, { blocks: [{ kind: 'text', text: row.body }], streaming: false, t }))
+    const { execution, result } = row
+    const running = execution.state === 'running'
+    const status = execution.status
+    const timing = { visible: true, running, startTime: execution.startedAt }
+    const canvasTask = {
+      state: running ? 'running' : execution.state === 'completed' ? 'completed' : 'stopped',
+      createdAt: execution.startedAt, updatedAt: execution.finishedAt, reason: status,
+      history: execution.steps.map(reason => ({ reason })),
+    }
+    return h(react.Fragment, { key: row.id },
+      h(UserStyleBubble, { content: [{ type: 'text', text: row.body }], t }),
+      h(ExecutionStatusGroup, {
+        entry: { key: 'image-factory:' + row.id, running, canvasTask }, activityNodes: [],
+        startTime: execution.startedAt, endTime: execution.finishedAt ?? null, responseTiming: timing,
+        liveActivity: running ? { label: status, kind: 'tool' } : undefined, seatProps: {}, t,
+      }),
+      h('div', { className: 'Md3f7G_flowItem', role: execution.state === 'failed' ? 'alert' : undefined },
+        execution.receipt && h(AssistantMarkdown, { blocks: [{ kind: 'text', text: execution.receipt }], streaming: false, t }),
+        h(ImageGenerationCards, {
+          calls: [{ id: row.id, state: execution.state, ratio: execution.aspect, image: result && {
+            attachmentId: 'image-factory:' + row.id, name: result.label + '.png', mediaType: 'image/png',
+            width: result.width, height: result.height,
+          } }],
+          loadImage: result ? async () => result.url : undefined, t,
+        })))
   })
-  return h('div', { className: 'Md3f7G_column', 'data-image-factory-conversation': '', role: 'log', 'aria-live': 'polite' }, rows,
-    state.busy && h('div', { className: 'Md3f7G_flowItem', role: 'status' },
-      en ? 'Processing image…' : '正在处理图片…'))
+  return h('div', { className: 'Md3f7G_column', 'data-image-factory-conversation': '', role: 'log', 'aria-live': 'polite' }, rows)
+
 }
 
 export const imageFactoryNativeSource = `

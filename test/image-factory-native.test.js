@@ -20,7 +20,7 @@ function fixture() {
   return { win, doc, shell, binding, event }
 }
 
-it('uses a factory-only composer without submitting a resident conversation after switching away', async () => {
+it('commits the native draft on admission and waits for completion before accepting another command', async () => {
   const { win, doc, shell, binding, event } = fixture()
   try {
     let command
@@ -37,16 +37,20 @@ it('uses a factory-only composer without submitting a resident conversation afte
     await shell.submit()
     expect(command?.prompt).toBe('用文字生成海报')
     expect(shell.setResearchContextPreparing).toHaveBeenCalledWith(true)
-
-    event('result', { id: 'other-job', success: true })
-    expect(shell.commitSend).not.toHaveBeenCalled()
-    event('result', { id: command.id, success: false })
-    expect(shell.commitSend).not.toHaveBeenCalled()
     expect(shell.setResearchContextPreparing).toHaveBeenLastCalledWith(false)
-
-    await shell.submit()
-    event('result', { id: command.id, success: true })
     expect(shell.commitSend).toHaveBeenCalledExactlyOnceWith([], '用文字生成海报')
+    const firstCommand = command
+    event('result', { id: 'other-job' })
+    await shell.submit()
+    expect(command).toBe(firstCommand)
+
+    event('result', { id: firstCommand.id })
+    expect(shell.commitSend).toHaveBeenCalledTimes(1)
+    shell.snapshot.draft = '新的图片需求'
+    shell.snapshot.draftRev++
+    await shell.submit()
+    expect(command?.prompt).toBe('新的图片需求')
+    expect(shell.commitSend).toHaveBeenLastCalledWith([], '新的图片需求')
   } finally { binding.dispose(); await win.happyDOM.abort() }
 })
 
