@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from
 import { createPortal } from 'react-dom'
 
 type Format = 'png' | 'jpg'
+const menuWidth = 160, edgeInset = 8
 
 export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction }: {
   doc: Document
@@ -12,7 +13,7 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
 }) {
   const trigger = useRef<HTMLButtonElement>(null), menu = useRef<HTMLDivElement>(null)
   const exportItem = useRef<HTMLButtonElement>(null), formats = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState<{ left: number; top: number }>()
+  const [position, setPosition] = useState<{ left: number; top: number; opensLeft: boolean }>()
   const [branch, setBranch] = useState(false)
   const label = t('更多图像操作', 'More image actions')
   function close(restoreFocus = false) {
@@ -24,7 +25,8 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
     const bounds = trigger.current?.getBoundingClientRect()
     if (bounds) {
       const width = doc.defaultView?.innerWidth ?? bounds.right
-      setPosition({ left: Math.max(8, Math.min(bounds.right - 160, width - (canExport ? 328 : 168))), top: bounds.bottom + 5 })
+      const left = Math.max(edgeInset, Math.min(bounds.right - menuWidth, width - menuWidth - edgeInset))
+      setPosition({ left, top: bounds.bottom + 5, opensLeft: left >= menuWidth + edgeInset })
     }
   }
   function focusFirst(group?: HTMLDivElement | null) {
@@ -50,12 +52,14 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
     }
   }, [doc, position])
   function showFormats(focus: boolean) {
+    if (!canExport) return
     setBranch(true)
     if (focus) doc.defaultView?.requestAnimationFrame(() => focusFirst(formats.current))
   }
   function onMenuKey(event: KeyboardEvent) {
     const insideFormats = formats.current?.contains(event.target as Node)
-    if (event.key === 'Escape' || insideFormats && event.key === 'ArrowLeft') {
+    const backKey = position?.opensLeft ? 'ArrowRight' : 'ArrowLeft'
+    if (event.key === 'Escape' || insideFormats && event.key === backKey) {
       event.stopPropagation()
       event.preventDefault()
       if (insideFormats) { setBranch(false); exportItem.current?.focus() }
@@ -82,21 +86,22 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
       </svg>
     </button>
     {position && createPortal(<div ref={menu} role="menu" aria-label={label} className="en-export-menu"
-      style={position} onKeyDown={onMenuKey}>
+      style={{ left: position.left, top: position.top }} onKeyDown={onMenuKey}>
       <button type="button" ref={exportItem} role="menuitem" aria-haspopup="menu" aria-expanded={branch} disabled={!canExport}
         onPointerEnter={event => { if (canExport && event.pointerType !== 'touch') showFormats(false) }}
         onKeyDown={event => {
-          if (event.key === 'ArrowRight') { event.preventDefault(); showFormats(true) }
+          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); showFormats(true) }
         }}
         onClick={() => showFormats(true)}>{t('导出', 'Export')}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"
+          style={{ transform: position.opensLeft ? 'scaleX(-1)' : undefined }}>
           <path d="M4.5 2.5 8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
       {galleryAction && <button type="button" role="menuitem" onPointerEnter={() => setBranch(false)}
         onClick={() => { close(true); galleryAction.run() }}>{galleryAction.label}</button>}
       {branch && <div className="en-export-menu en-note-format-menu" role="menu" ref={formats}
-        aria-label={t('图像导出格式', 'Image export formats')} style={{ left: '100%', top: 0 }}>
+        aria-label={t('图像导出格式', 'Image export formats')} style={{ top: -1, ...(position.opensLeft ? { right: '100%' } : { left: '100%' }) }}>
         {(['png', 'jpg'] as const).map(format => <button key={format} type="button" role="menuitem"
           onClick={() => { close(true); exporting(format) }}>{format.toUpperCase()}</button>)}
       </div>}
