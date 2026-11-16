@@ -44,6 +44,8 @@
 .if-symbol {width:var(--if-icon-size,17px);height:var(--if-icon-size,17px);display:inline-block;flex:none;background:currentColor;mask:var(--if-icon) center/contain no-repeat;pointer-events:none}
 .if-stage {position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(circle,var(--if-dot) 1px,transparent 1px) 0 0/28px 28px,var(--if-canvas);display:grid;place-items:center}
 .if-stage-scroll {position:absolute;inset:0 0 38px;overflow:auto;display:grid;place-items:safe center;padding:22px}
+.if-stage-scroll[data-pan-ready=true],.if-stage-scroll[data-pan-ready=true] * {cursor:grab!important}
+.if-stage-scroll[data-panning=true],.if-stage-scroll[data-panning=true] * {cursor:grabbing!important}
 .if-raster {position:relative;flex:none;box-shadow:0 12px 32px #0004;overflow:hidden;user-select:none;background:repeating-conic-gradient(#8b8c8f29 0% 25%,transparent 0% 50%) 0 0/16px 16px}
 .if-raster img {position:absolute;inset:0;display:block;width:100%;height:100%;user-select:none;pointer-events:none}
 .if-raster[data-selecting=true] {touch-action:none;cursor:crosshair;overflow:hidden}
@@ -55,7 +57,9 @@
 .if-canvas-status {position:absolute;bottom:0;left:0;right:0;height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;color:var(--if-muted);font-size:12px;pointer-events:none}
 .if-canvas-status .if-zoom {display:flex;align-items:center;gap:3px;pointer-events:auto}
 .if-zoom .if-button {height:27px;min-width:24px;padding:0 5px}
-.if-toast {position:absolute;z-index:4;left:16px;bottom:12px;max-width:calc(100% - 32px);padding:7px 12px;background:var(--if-field);border:1px solid var(--if-line);border-radius:8px;box-shadow:0 5px 20px #0003;overflow-wrap:anywhere}
+.if-toast {position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;
+  max-width:calc(100% - 32px);padding:7px 12px;text-align:center;pointer-events:none;background:var(--if-field);
+  border:1px solid var(--if-line);border-radius:8px;box-shadow:0 5px 20px #0003;overflow-wrap:anywhere}
 @media(max-width:850px){.if-top,.if-toolbar{padding-inline:8px;gap:4px}.if-top-title{border:0;padding-left:0}.if-stage-scroll{padding:12px}}
 
 /* The closed native toggle occupies the right edge of the full-width canvas. */

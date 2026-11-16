@@ -5,11 +5,11 @@ import { expect, it, vi } from 'vitest'
 import { CanvasActionsMenu } from '../src/preload/image-factory/actions-menu'
 
 it.each([
-  { side: 'left', open: 'ArrowLeft', back: 'ArrowRight' },
-  { side: 'right', open: 'ArrowRight', back: 'ArrowLeft' },
-])('stays under the trigger and opens the format menu to the $side', async ({ side, open, back }) => {
+  { side: 'left', room: 48, open: 'ArrowLeft', back: 'ArrowRight' },
+  { side: 'right', room: 248, open: 'ArrowRight', back: 'ArrowLeft' },
+])('aligns under the trigger and opens to the $side with $room px to the window edge', async ({ side, room, open, back }) => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
-  const right = side === 'left' ? document.defaultView!.innerWidth - 48 : 280
+  const right = document.defaultView!.innerWidth - room
   const mount = document.body.appendChild(document.createElement('div'))
   const root = createRoot(mount)
   const exportImage = vi.fn()
@@ -28,6 +28,8 @@ it.each([
     expect(main.querySelector('svg')?.style.transform ?? '').toBe(side === 'left' ? 'scaleX(-1)' : '')
     expect(document.activeElement?.textContent).toBe('导出')
 
+    await key(back)
+    expect(document.querySelector('[aria-label="图像导出格式"]')).toBeNull()
     await key(open)
     const child = document.querySelector<HTMLElement>('[role="menu"][aria-label="图像导出格式"]')!
     expect(child.style[side === 'left' ? 'right' : 'left']).toBe('100%')

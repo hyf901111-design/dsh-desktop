@@ -150,3 +150,66 @@ it.each([
     vi.unstubAllGlobals()
   }
 })
+
+it('zooms around the Command-wheel position and pans with Space without editing layers', async () => {
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '测试画布', width: 800, height: 1000, layers: [] }
+  const write = vi.fn(async () => {})
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private readonly resized: ResizeObserverCallback) {}
+    observe(target: Element) {
+      this.resized([{ target, contentRect: new DOMRect(0, 0, canvas.width, canvas.height) } as ResizeObserverEntry],
+        this as unknown as ResizeObserver)
+    }
+    disconnect() {}
+  })
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const input = document.body.appendChild(document.createElement('textarea'))
+  try {
+    await act(async () => factory.open())
+    const frame = document.querySelector<HTMLElement>('.if-raster')!
+    const scroll = frame.closest<HTMLElement>('.if-stage-scroll')!
+    Object.defineProperty(scroll, 'setPointerCapture', { value: vi.fn() })
+    vi.spyOn(frame, 'getBoundingClientRect').mockImplementation(() => {
+      const [x = 0, y = 0] = [...frame.style.transform.matchAll(/(-?\d+(?:\.\d+)?)px/g)].map(match => Number(match[1]))
+      return new DOMRect(100 + x, 80 + y, Number.parseFloat(frame.style.width), Number.parseFloat(frame.style.height))
+    })
+    // Happy DOM's WheelEvent lacks the mouse fields inherited by browsers.
+    const zoom = Object.assign(new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true }),
+      { metaKey: true, clientX: 400, clientY: 420 })
+    await act(async () => frame.dispatchEvent(zoom))
+    expect(zoom.defaultPrevented).toBe(true)
+    const magnified = frame.getBoundingClientRect()
+    expect(magnified.width).toBeGreaterThan(800)
+    expect(magnified.left + magnified.width * .375).toBeCloseTo(400)
+    expect(magnified.top + magnified.height * .34).toBeCloseTo(420)
+    const space = (type: string) => new KeyboardEvent(type, { key: ' ', code: 'Space', bubbles: true, cancelable: true })
+    const pointer = (type: string, buttons: number, clientX: number, clientY: number) =>
+      frame.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, pointerId: 1, buttons, clientX, clientY }))
+    await act(async () => {
+      expect(document.body.dispatchEvent(space('keydown'))).toBe(false)
+      pointer('pointerdown', 1, 130, 225)
+      pointer('pointerup', 0, 180, 295)
+      document.body.dispatchEvent(space('keyup'))
+    })
+    expect(frame.getBoundingClientRect().left).toBeCloseTo(magnified.left + 50)
+    expect(frame.getBoundingClientRect().top).toBeCloseTo(magnified.top + 70)
+    input.focus()
+    expect(input.dispatchEvent(space('keydown'))).toBe(true)
+    await act(async () => Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === '适合')!.click())
+    expect(frame.getBoundingClientRect().left).toBe(100)
+    expect(frame.getBoundingClientRect().top).toBe(80)
+    expect(frame.getBoundingClientRect().width).toBe(800)
+    expect(write).not.toHaveBeenCalled()
+  } finally {
+    await act(async () => factory.dispose())
+    input.remove()
+    host.dispose()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  }
+})

@@ -8,6 +8,7 @@ import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu } from './actions-menu'
 import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
+import { useImageViewport } from './viewport'
 import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
 import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
@@ -119,7 +120,6 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const [, redrawBusy] = useState(0)
   const uiOperations = useRef(new Set<CanvasScope>())
   const [toast, setToast] = useState('')
-  const [zoom, setZoom] = useState(1)
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const file = useRef<HTMLInputElement>(null), scroll = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null)
   const imageFrame = useRef<HTMLDivElement>(null), commentBubble = useRef<HTMLDivElement>(null)
@@ -137,6 +137,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const setScene = (change: (old?: ImageScene) => ImageScene | undefined, persist = true) => workspace.change(scope, change, persist)
   const mounted = useRef(true)
   const current = galleryOpen ? undefined : scene
+  const { zoom, pan, reset: resetViewport, stepZoom, spaceHeld, panning, panPointer, canZoomIn, canZoomOut } =
+    useImageViewport(doc, scroll, imageFrame, Boolean(current) && status === 'ready')
   const selectionDraft = current && selectionDrafts.current.get(current.id)
   const area = selectionDraft?.area
   const commentPending = !!selectionDraft?.phase
@@ -177,10 +179,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       return
     }
     setGalleryScope(undefined)
-    setSelectedId(undefined); setEditing(undefined); setZoom(1); setLayersOpen(false)
+    setSelectedId(undefined); setEditing(undefined); resetViewport(); setLayersOpen(false)
     resetSelectionGesture()
     textDrag.current = undefined; layerDrag.current = undefined; setDropTarget(undefined)
-  }, [scope, scene?.id])
+  }, [scope, scene?.id, resetViewport])
   useLayoutEffect(() => {
     if (!scroll.current) return
     const observer = new ResizeObserver(([entry]) => { if (entry) setBounds({ width: entry.contentRect.width, height: entry.contentRect.height }) })
@@ -233,7 +235,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (commentBubble.current) observer.observe(commentBubble.current)
     scroller.addEventListener('scroll', locate, { passive: true })
     return () => { observer.disconnect(); scroller.removeEventListener('scroll', locate) }
-  }, [area, current?.id, current?.width, current?.height, displayScale, scope])
+  }, [area, current?.id, current?.width, current?.height, displayScale, pan, scope])
 
   function setSelectionDraft(id: string, draft?: SelectionDraft) {
     if (draft) selectionDrafts.current.set(id, draft)
@@ -380,7 +382,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         title: image.name.replace(/\.[^.]+$/, '').trim().slice(0, 255) || t('导入图片', 'Imported image'), layers: [layer] }))
       if (!stored) URL.revokeObjectURL(layer.raster.url)
       if (stored && workspace.getSnapshot().scope === scope) {
-        clearSelection(); setSelectedId(undefined); setEditing(undefined); setGalleryOpen(false); setZoom(1)
+        clearSelection(); setSelectedId(undefined); setEditing(undefined); setGalleryOpen(false); resetViewport()
       }
     } catch (error) { if (mounted.current) setToast(errorLabel(error, t('图片无法读取。', 'Image could not be read.'))) }
     finally { uiOperations.current.delete(scope); release(); if (mounted.current) refreshBusy() }
@@ -501,7 +503,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         newRaster = undefined
         if (job.scene) setSelectionDraft(job.scene.id)
         if (workspace.getSnapshot().scope === job.sessionId) {
-          resetSelectionGesture(); setGalleryScope(undefined); if (!job.scene) setZoom(1)
+          resetSelectionGesture(); setGalleryScope(undefined); if (!job.scene) resetViewport()
         }
         try {
           let data = layer.data
@@ -608,12 +610,19 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           <span>{t('画布暂时无法读取。', 'The canvas could not be opened.')}</span>
           <Button onClick={() => workspace.select(scope)}>{t('重新打开', 'Try again')}</Button>
         </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}/> : <>
-        <div className="if-stage-scroll" data-layers-open={layersOpen} ref={scroll} onPointerDown={event => {
+        <div className="if-stage-scroll" data-layers-open={layersOpen} data-pan-ready={spaceHeld} data-panning={panning} ref={scroll}
+          onPointerDownCapture={event => panPointer(event, 'start')}
+          onPointerMoveCapture={event => panPointer(event, 'move')}
+          onPointerUpCapture={event => panPointer(event, 'end')}
+          onPointerCancelCapture={event => panPointer(event, 'cancel')}
+          onLostPointerCapture={event => panPointer(event, 'cancel')} onPointerDown={event => {
           if (event.target === event.currentTarget || event.target === imageFrame.current && !marking) {
             releaseText(); setSelectedId(undefined); if (area && !commentPending) clearSelection()
           }
         }}>
-          <div ref={imageFrame} className="if-raster" data-selecting={marking} style={{ width: Math.max(1, current.width * displayScale), height: Math.max(1, current.height * displayScale) }}
+          <div ref={imageFrame} className="if-raster" data-selecting={marking}
+            style={{ width: Math.max(1, current.width * displayScale), height: Math.max(1, current.height * displayScale),
+              transform: 'translate(' + pan.x + 'px, ' + pan.y + 'px)' }}
             onPointerDownCapture={event => { if (event.isPrimary) textPointer(event, 'cancel') }}
             onPointerDown={event => onRectanglePointer(event, 'start')}
             onPointerMove={event => { onRectanglePointer(event, 'move'); textPointer(event, 'move') }}
@@ -717,10 +726,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           {saveStatus === 'saved' && <span role="status">{t('已保存', 'Saved')}</span>}
           {saveStatus === 'error' && <Button onClick={() => workspace.commit(scope)}>{t('保存失败，重试', 'Save failed. Retry')}</Button>}
         </div><div className="if-zoom">
-          <Button icon="minus" label={t('缩小', 'Zoom out')} disabled={zoom <= .25} onClick={() => setZoom(z => Math.max(.25, z / 1.25))}/>
+          <Button icon="minus" label={t('缩小', 'Zoom out')} disabled={!canZoomOut} onClick={() => stepZoom(1 / 1.25)}/>
           <span>{Math.round(displayScale * 100)}%</span>
-          <Button icon="plus" label={t('放大', 'Zoom in')} disabled={zoom >= 4} onClick={() => setZoom(z => Math.min(4, z * 1.25))}/>
-          <Button onClick={() => setZoom(1)}>{t('适合', 'Fit')}</Button>
+          <Button icon="plus" label={t('放大', 'Zoom in')} disabled={!canZoomIn} onClick={() => stepZoom(1.25)}/>
+          <Button onClick={resetViewport}>{t('适合', 'Fit')}</Button>
         </div></div>
       </>}
     </div>
