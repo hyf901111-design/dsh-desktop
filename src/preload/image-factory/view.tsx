@@ -628,11 +628,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       void importFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''
     }}/>
     {current && <nav className="if-toolbar" aria-label={t('画布编辑工具', 'Canvas tools')}>
+      <Button icon="layers" active={layersOpen} onClick={() => setLayersOpen(value => !value)}>{t('图层', 'Layers')}</Button>
+      <Button icon="type" active={!!editing} disabled={busy} onClick={appendText}>{t('添加文本', 'Add text')}</Button>
       <Button icon="mark" active={marking || !!area} disabled={busy || !raster} onClick={() => {
         releaseText(); setSelectedId(undefined); clearSelection(); if (!marking && !area) setMarking(true)
       }}>{t('框选修改', 'Edit selected area')}</Button>
-      <Button icon="type" active={!!editing} disabled={busy} onClick={appendText}>{t('添加文本', 'Add text')}</Button>
-      <Button icon="layers" active={layersOpen} onClick={() => setLayersOpen(value => !value)}>{t('图层', 'Layers')}</Button>
     </nav>}
     <div className="if-stage" data-layers-open={layersOpen} ref={stage}>
       {status === 'loading' || status === 'idle' ? <div className="if-canvas-message" role="status">{t('正在打开画布…', 'Opening canvas…')}</div>
