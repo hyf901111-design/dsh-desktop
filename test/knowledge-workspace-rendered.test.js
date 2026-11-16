@@ -719,6 +719,23 @@ it('keeps the Image Factory title visible and draggable at typical three-pane wi
   }
 })
 
+it('centers Image Factory notices in the workspace', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.setContent(`
+      <section class="if-work" style="position:absolute;left:210px;top:20px;width:590px;height:760px">
+        <div class="if-toast" role="status">图片已保存。</div>
+      </section>`)
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    const workspace = await page.locator('.if-work').boundingBox()
+    const toast = await page.getByRole('status').boundingBox()
+    expect(toast.x + toast.width / 2).toBeCloseTo(workspace.x + workspace.width / 2)
+    expect(toast.y + toast.height / 2).toBeCloseTo(workspace.y + workspace.height / 2)
+  } finally {
+    await page.close()
+  }
+})
+
 it('keeps the four workspace shortcuts open across the draggable knowledge header', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
   try {

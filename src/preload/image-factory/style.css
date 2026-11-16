@@ -55,7 +55,9 @@
 .if-canvas-status {position:absolute;bottom:0;left:0;right:0;height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;color:var(--if-muted);font-size:12px;pointer-events:none}
 .if-canvas-status .if-zoom {display:flex;align-items:center;gap:3px;pointer-events:auto}
 .if-zoom .if-button {height:27px;min-width:24px;padding:0 5px}
-.if-toast {position:absolute;z-index:4;left:16px;bottom:12px;max-width:calc(100% - 32px);padding:7px 12px;background:var(--if-field);border:1px solid var(--if-line);border-radius:8px;box-shadow:0 5px 20px #0003;overflow-wrap:anywhere}
+.if-toast {position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;
+  max-width:calc(100% - 32px);padding:7px 12px;text-align:center;pointer-events:none;background:var(--if-field);
+  border:1px solid var(--if-line);border-radius:8px;box-shadow:0 5px 20px #0003;overflow-wrap:anywhere}
 @media(max-width:850px){.if-top,.if-toolbar{padding-inline:8px;gap:4px}.if-top-title{border:0;padding-left:0}.if-stage-scroll{padding:12px}}
 
 /* The closed native toggle occupies the right edge of the full-width canvas. */
