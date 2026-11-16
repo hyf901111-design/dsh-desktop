@@ -50,8 +50,10 @@ function validatedName(value: unknown): string {
   return name
 }
 
-function publicDocument({ storageName: _storage, origin: _origin, sourceVersion: _sourceVersion, ...row }: StoredDocument): KnowledgeDocument {
-  return row
+function publicDocument({ storageName: _storage, origin: _origin, sourceVersion, ...row }: StoredDocument): KnowledgeDocument {
+  return sourceVersion === 'factory-canvas' || sourceVersion === 'factory-provider'
+    ? { ...row, generatedBy: 'image-factory' }
+    : row
 }
 
 function findFolder(state: LibraryState, id?: string) {

@@ -127,6 +127,12 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const displayScale = fit * zoom
 
   useLayoutEffect(() => {
+    const showCanvas = () => setGalleryScope(undefined)
+    doc.addEventListener('sherlock:image-factory-show-canvas', showCanvas)
+    return () => doc.removeEventListener('sherlock:image-factory-show-canvas', showCanvas)
+  }, [doc])
+
+  useLayoutEffect(() => {
     const bar = header.current
     if (!bar) return
     const hover = new WorkspaceViewHover(bar, () => bar, setWorkspaceExpanded, bridge.workspacePointerInBar)
@@ -644,6 +650,24 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   render()
   return {
     open,
+    async openSessionCanvas(id: string, activateSession: () => Promise<boolean>) {
+      if (!validCanvasScope(id)) throw Error('来源会话已不可用。')
+      const origin = host.current()
+      const owner = workspace
+      const stillCurrent = () => owner === workspace && host.current() === origin
+      const release = owner.retain(id)
+      try {
+        const scene = await owner.ready(id)
+        if (!stillCurrent()) return
+        if (!scene) throw Error('来源会话没有已保存的画布，图片仍可在知识库预览。')
+        if (!await activateSession()) throw Error('来源会话已不可用。')
+        if (!stillCurrent()) return
+        doc.dispatchEvent(new Event('sherlock:image-factory-request-session'))
+        if (session !== id) throw Error('来源会话已切换，请重试。')
+        doc.dispatchEvent(new Event('sherlock:image-factory-show-canvas'))
+        open()
+      } finally { release() }
+    },
     reset() {
       identity++; host.close('image-factory'); workspace.dispose()
       workspace = new CanvasWorkspace(doc, bridge.storage)

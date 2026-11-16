@@ -56,6 +56,7 @@ export interface KnowledgeDocument {
   folderId?: string
   sessionId?: string
   sessionTitle?: string
+  generatedBy?: 'image-factory'
   saved: boolean
   starred: boolean
   share?: { id: string; category: string }

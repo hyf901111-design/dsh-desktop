@@ -314,6 +314,7 @@ function initializeUi(): void {
     memory: knowledgeMemory,
     workspacePointerInBar,
     openFileInEditor,
+    openImageFactorySource: id => imageFactory.openSessionCanvas(id, () => openKnowledgeSession(document, id, 'chat')),
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
     subscribeImportProgress: listener => {

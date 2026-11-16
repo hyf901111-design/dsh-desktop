@@ -31,6 +31,7 @@ import css from './workspace.css?raw'
 interface Bridge {
   memory?: MemoryBridge
   openFileInEditor?(source: FileEditorSource, mode: FileEditorMode): Promise<void>
+  openImageFactorySource?(sessionId: string): Promise<void>
   workspacePointerInBar?: WorkspacePointerInBar
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
@@ -810,6 +811,18 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     if (!await openSession(session.entry.id, session.mode)) setNotice({ text: '来源会话已不可用。', error: true })
   }
 
+  async function openSourceCanvas(sessionId: string) {
+    const epoch = currentEpoch.current
+    setMenu(undefined)
+    setBusy(true)
+    try { await bridge.openImageFactorySource?.(sessionId) }
+    catch (error) {
+      if (epoch === currentEpoch.current) setNotice({ text: message(error), error: true })
+    } finally {
+      if (epoch === currentEpoch.current) setBusy(false)
+    }
+  }
+
   function submitDialog(event: React.FormEvent) {
     event.preventDefault()
     if (!dialog || busy) return
@@ -1115,6 +1128,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       role="group" tabIndex={-1} aria-label="更多操作">
       {target && <>
         <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>移动到文件夹…</button>
+        {target.generatedBy === 'image-factory' && target.sessionId && bridge.openImageFactorySource &&
+          <button type="button" onClick={() => void openSourceCanvas(target.sessionId!)}>打开来源画布</button>}
         {target.sessionId && <button type="button" onClick={async () => {
           setMenu(undefined)
           if (!await openSession(target.sessionId!, 'chat')) setNotice({ text: '来源会话已不可用。', error: true })
