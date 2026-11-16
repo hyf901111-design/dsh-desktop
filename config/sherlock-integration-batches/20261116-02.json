@@ -11,68 +11,24 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "68c2b06e92ec23386865a163d2b01d94df328ec3",
-        "tipCommit": "7c63c34dd91979a88ebd4f20adb98b6d3d6eff93",
+        "baseCommit": "7c63c34dd91979a88ebd4f20adb98b6d3d6eff93",
+        "tipCommit": "7a7f6b3ec6e6e44a7f7db28bf140ffaacb9a39c5",
         "commits": [
           {
-            "commit": "7c63c34dd91979a88ebd4f20adb98b6d3d6eff93",
+            "commit": "7a7f6b3ec6e6e44a7f7db28bf140ffaacb9a39c5",
             "parents": [
-              "68c2b06e92ec23386865a163d2b01d94df328ec3"
+              "7c63c34dd91979a88ebd4f20adb98b6d3d6eff93"
             ],
-            "subject": "优化：图像工厂复用全局右侧对话屏"
+            "subject": "修复：保留图像工厂顶栏全局对话按钮"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/knowledge-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/pending-conversation.mjs"
-          },
-          {
-            "status": "D",
-            "path": "src/preload/image-factory/assets/right-panel.svg"
-          },
-          {
-            "status": "M",
             "path": "src/preload/image-factory/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "7c63c34dd91979a88ebd4f20adb98b6d3d6eff93",
-            "completedAt": "2026-11-16T11:12:25.195Z",
-            "timeoutMs": 120000
-          },
           {
             "argv": [
               "node",
@@ -87,60 +43,25 @@
             ],
             "outcome": "passed",
             "summary": "45 项聚焦测试通过，覆盖全局右侧对话与画布协议、参考图、区域映射、入口和导出。",
-            "verifiedCommit": "7c63c34dd91979a88ebd4f20adb98b6d3d6eff93",
-            "completedAt": "2026-11-16T11:12:25.195Z",
+            "verifiedCommit": "7a7f6b3ec6e6e44a7f7db28bf140ffaacb9a39c5",
+            "completedAt": "2026-11-16T11:24:24.430Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "独立功能工作树已通过前端补丁与聚焦检查；全局右侧屏在新集成包验证。"
+          "summary": "在本地候选包定位并复核全局按钮层级与导出间距，待重新打包验收。"
         },
         "acceptanceCriteria": [
           "两处入口打开同一画布，右侧复用客户端全局面板和输入框。",
-          "欢迎语和用例专用于图像工厂，发送活跃画布命令可生图和框选改图；常规画布编辑与导出保持可用。"
+          "欢迎语和用例专用于图像工厂，发送活跃画布命令可生图和框选改图；常规画布编辑与导出保持可用。",
+          "收起右侧屏后，原生展开按钮与首页位置一致，且不覆盖导出。"
         ],
         "risks": [
           "真实生图使用当前账号现有图片模型权限。",
           "当前运行期间保留图像版本与对话，可导出到本地。"
         ],
-        "generatedAt": "2026-11-16T11:12:25.195Z"
-      },
-      "merged": {
-        "mergeCommit": "934246296b7c5bfa3fef4775942760fe1064303d",
-        "verificationCommit": "934246296b7c5bfa3fef4775942760fe1064303d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "934246296b7c5bfa3fef4775942760fe1064303d",
-            "completedAt": "2026-11-16T11:13:14.752Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory.test.js",
-              "test/image-actions.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
-            "verifiedCommit": "934246296b7c5bfa3fef4775942760fe1064303d",
-            "completedAt": "2026-11-16T11:13:14.752Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T11:13:14.752Z"
+        "generatedAt": "2026-11-16T11:24:24.430Z"
       }
     }
   ],
