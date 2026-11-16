@@ -20,10 +20,11 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     for (const listener of listeners) listener()
   }
   const focus = () => win.requestAnimationFrame(() => doc.querySelector('#odyssey-right-workspace-panel textarea:not([disabled])')?.focus({ preventScroll: true }))
-  const finish = id => {
+  const finish = (id, updateScope = true) => {
     const job = jobs.get(id)
     if (job) { win.clearTimeout(job.timer); win.clearTimeout(job.idle); job.unsubscribe?.(); jobs.delete(id) }
     signal('settled', { id })
+    if (job?.draft && updateScope) syncSession()
   }
   function fill(prompt, gallery = false) {
     const shell = nativeInput()
@@ -82,7 +83,10 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     } catch (error) { finish(id); throw error }
   }
   const promoteDraft = job => {
-    if (job.draft) job.promotion ??= adopt(job.sessionId).catch(() => {})
+    if (job.draft && !job.promotion) {
+      job.promotion = adopt(job.sessionId).catch(() => {})
+      syncSession()
+    }
     return job.promotion
   }
   function watch(session, job) {
@@ -163,17 +167,21 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     })
   }
   let publishedScope
-  const publishSession = () => {
-    const sessionId = canvasScope()
+  function syncSession(force = false) {
+    const scope = canvasScope()
+    // The list can stop reporting a blank conversation before its admitted user turn is visible.
+    const awaitingAdmission = scope !== null && [...jobs.values()].some(job => job.sessionId === scope && job.draft && !job.promotion)
+    const sessionId = awaitingAdmission ? null : scope
+    if (!force && sessionId === publishedScope) return
     publishedScope = sessionId
     signal('session', { sessionId })
   }
-  const offSession = sessions.list.subscribe?.(() => { if (canvasScope() !== publishedScope) publishSession() })
-  const reset = () => { for (const id of jobs.keys()) finish(id); galleryDraft = undefined; publishedScope = undefined }
-  const events = { state: stateChange, 'request-session': publishSession, 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
+  const offSession = sessions.list.subscribe?.(() => syncSession())
+  const reset = () => { for (const id of jobs.keys()) finish(id, false); galleryDraft = undefined; publishedScope = undefined }
+  const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   signal('request-state', {})
-  publishSession()
+  syncSession()
   return {
     prompt, fill, focus, action: kind => signal('action', { kind }),
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },

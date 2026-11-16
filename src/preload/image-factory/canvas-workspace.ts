@@ -28,14 +28,18 @@ export class CanvasWorkspace {
     const previous = this.scope
     if (previous !== scope && this.entries.get(previous)?.dirty) this.commit(previous)
     this.scope = scope
-    this.publish(scope)
+    // Continue showing the standalone canvas until the adopted session can display it.
+    const keepDraftVisible = scope !== null && this.adoptions.has(scope) && this.current.scope === null && this.current.scene
+    if (!keepDraftVisible) this.publish(scope)
     if (previous !== scope) this.evict(previous)
-    void this.ready(scope).catch(() => {})
+    void this.ready(scope).then(() => {
+      if (this.current.scope !== scope) this.publish(scope)
+    }).catch(() => {})
   }
 
   async ready(scope: CanvasScope): Promise<ImageScene | undefined> {
+    if (scope !== null) await this.adoptions.get(scope)?.catch(() => {})
     if (this.disposed) throw Error('图像工厂已关闭。')
-    if (scope !== null) await this.adoptions.get(scope)
     const entry = this.entry(scope)
     if (entry.status !== 'ready') {
       entry.reading ??= this.load(scope, entry)
