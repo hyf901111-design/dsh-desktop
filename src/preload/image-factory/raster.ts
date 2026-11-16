@@ -144,12 +144,52 @@ export function drawFit(context: CanvasRenderingContext2D, source: Raster, targe
   context.imageSmoothingEnabled = smoothing
 }
 
-/** Sample the selected patch from the provider frame at uniform scale. */
+/** Sample the provider frame at uniform scale and blend inside the selection. */
 export function applyRegion(context: CanvasRenderingContext2D, original: Raster, result: Raster, area: Region, frame: Region) {
   const scale = Math.min(result.width / frame.width, result.height / frame.height)
   const x = (result.width - frame.width * scale) / 2 + (area.x - frame.x) * scale
   const y = (result.height - frame.height * scale) / 2 + (area.y - frame.y) * scale
+  const feather = Math.min(12, Math.floor(Math.min(area.width, area.height) / 16))
+  const left = area.x > 0 ? feather : 0
+  const top = area.y > 0 ? feather : 0
+  const right = area.x + area.width < original.width ? feather : 0
+  const bottom = area.y + area.height < original.height ? feather : 0
+  // Read just the border strips. The center can keep the exact provider pixels,
+  // including transparency, and edges against the canvas boundary need no blend.
+  const middle = area.height - top - bottom
+  const bands = [
+    { x: 0, y: 0, width: area.width, height: top },
+    { x: 0, y: area.height - bottom, width: area.width, height: bottom },
+    { x: 0, y: top, width: left, height: middle },
+    { x: area.width - right, y: top, width: right, height: middle },
+  ].filter(band => band.width && band.height)
   context.drawImage(original.image, 0, 0)
+  const previous = bands.map(band => context.getImageData(area.x + band.x, area.y + band.y, band.width, band.height).data)
   context.clearRect(area.x, area.y, area.width, area.height)
   context.drawImage(result.image, x, y, area.width * scale, area.height * scale, area.x, area.y, area.width, area.height)
+  for (const [index, band] of bands.entries()) {
+    const bandX = area.x + band.x, bandY = area.y + band.y
+    const image = context.getImageData(bandX, bandY, band.width, band.height)
+    const originalData = previous[index]!, editedData = image.data
+    for (let row = 0; row < band.height; row++) {
+      const localY = band.y + row
+      const vertical = Math.min(top ? localY : feather, bottom ? area.height - 1 - localY : feather)
+      for (let column = 0; column < band.width; column++) {
+        const localX = band.x + column
+        const distance = Math.min(vertical, left ? localX : feather, right ? area.width - 1 - localX : feather)
+        const t = distance / feather
+        const mix = t * t * (3 - 2 * t)
+        const offset = (row * band.width + column) * 4
+        const originalAlpha = originalData[offset + 3]! * (1 - mix)
+        const editedAlpha = editedData[offset + 3]! * mix
+        const alpha = originalAlpha + editedAlpha
+        // Blend premultiplied colors so transparent pixels do not create halos.
+        for (let channel = offset; channel < offset + 3; channel++) {
+          editedData[channel] = alpha ? (originalData[channel]! * originalAlpha + editedData[channel]! * editedAlpha) / alpha : 0
+        }
+        editedData[offset + 3] = alpha
+      }
+    }
+    context.putImageData(image, bandX, bandY)
+  }
 }

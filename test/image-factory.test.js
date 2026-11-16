@@ -57,16 +57,48 @@ describe('image factory', () => {
 
   it('uses uniform scaling and replaces only the selected bounds with a differently shaped provider result', () => {
     const operations = []
-    const scene = { image: { name: 'original' } }
+    const scene = { image: { name: 'original' }, width: 300, height: 300 }
     const edit = { image: { name: 'replacement' }, width: 300, height: 300 }
     const target = {
       drawImage: (...args) => operations.push(args),
       clearRect: (...args) => operations.push(['clear', ...args]),
     }
-    applyRegion(target, scene, edit, { x: 60, y: 90, width: 80, height: 20 },
+    applyRegion(target, scene, edit, { x: 60, y: 90, width: 80, height: 12 },
       { x: 40, y: 60, width: 150, height: 100 })
-    expect(operations).toEqual([[scene.image, 0, 0], ['clear', 60, 90, 80, 20],
-      [edit.image, 40, 110, 160, 40, 60, 90, 80, 20]])
+    expect(operations).toEqual([[scene.image, 0, 0], ['clear', 60, 90, 80, 12],
+      [edit.image, 40, 110, 160, 24, 60, 90, 80, 12]])
+  })
+
+  it('blends translucent result pixels only along the interior selection edges', () => {
+    const area = { x: 0, y: 32, width: 64, height: 64 }
+    const original = { image: { color: [255, 0, 0, 255] }, width: 128, height: 128 }
+    const replacement = { image: { color: [0, 0, 255, 128] }, width: 128, height: 128 }
+    const writes = []
+    let color
+    const target = {
+      drawImage: image => { color = image.color },
+      clearRect: vi.fn(),
+      getImageData: (_x, _y, width, height) => {
+        const data = new Uint8ClampedArray(width * height * 4)
+        for (let offset = 0; offset < data.length; offset += 4) data.set(color, offset)
+        return { data, width, height }
+      },
+      putImageData: (pixels, x, y) => writes.push({ ...pixels, x, y })
+    }
+    applyRegion(target, original, replacement, area, { x: 0, y: 20, width: 88, height: 88 })
+    const pixel = (x, y) => {
+      const band = writes.find(band => x >= band.x && x < band.x + band.width && y >= band.y && y < band.y + band.height)
+      if (!band) return undefined
+      const offset = ((y - band.y) * band.width + x - band.x) * 4
+      return Array.from(band.data.slice(offset, offset + 4))
+    }
+    expect(pixel(12, 32)).toEqual([255, 0, 0, 255])
+    expect(pixel(12, 34)).toEqual([170, 0, 85, 192])
+    expect(pixel(63, 64)).toEqual([255, 0, 0, 255])
+    expect(pixel(0, 64)).toBeUndefined()
+    expect(pixel(12, 36)).toBeUndefined()
+    expect(writes.every(band => band.x >= area.x && band.y >= area.y &&
+      band.x + band.width <= area.x + area.width && band.y + band.height <= area.y + area.height)).toBe(true)
   })
 
   it('preserves the exact user comment while passing a bounded canvas context to the native tool', () => {
