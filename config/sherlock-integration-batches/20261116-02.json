@@ -11,25 +11,29 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
-        "tipCommit": "79103585851304325a94e65777b64027c8235554",
+        "baseCommit": "79103585851304325a94e65777b64027c8235554",
+        "tipCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
         "commits": [
           {
-            "commit": "79103585851304325a94e65777b64027c8235554",
+            "commit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
             "parents": [
-              "8c2b116c1abf70ef6b926243503625ffbc17b335"
+              "79103585851304325a94e65777b64027c8235554"
             ],
-            "subject": "优化：图像工厂框选改图自然衔接选区边缘"
+            "subject": "修复：工作区页签按钮单击时稳定展开"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
+            "path": "src/preload/workspace-view-shortcuts.ts"
           },
           {
             "status": "M",
-            "path": "test/image-factory.test.js"
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -41,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "79103585851304325a94e65777b64027c8235554",
-            "completedAt": "2026-11-16T20:02:28.341Z",
+            "verifiedCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
+            "completedAt": "2026-11-16T20:27:10.621Z",
             "timeoutMs": 120000
           },
           {
@@ -50,31 +54,31 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-native.test.js",
-              "test/knowledge-history-backfill.test.ts"
+              "test/browser-app-rendered.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "workspace (tabs|controls|shortcuts|focus)|four workspace shortcuts"
             ],
             "outcome": "passed",
-            "summary": "图像合成、图层交互、原生会话和知识库共 21 项聚焦检查通过。",
-            "verifiedCommit": "79103585851304325a94e65777b64027c8235554",
-            "completedAt": "2026-11-16T20:02:28.341Z",
+            "summary": "浏览器和知识库共 7 项顶栏聚焦渲染检查通过。",
+            "verifiedCommit": "07187a9d5275a606f32cb6b0f9afcc2615328b15",
+            "completedAt": "2026-11-16T20:27:10.621Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "用已生成的灯塔原图和同一裁片复算像素，选区外与中心各自相同，边沿接缝减轻。签名版待实际复测。"
+          "summary": "原签名版实机复现首击问题；修复已通过真实 Chromium 聚焦测试，待集成签名包复测。"
         },
         "acceptanceCriteria": [
-          "选区内侧的交界渐变衔接原图，选区外像素保持一致。",
-          "选区中心保留模型结果和透明度，靠画布边缘的方向不留原图细线。",
-          "本地客户端框选修改成品可正常保存并入库预览。"
+          "首次直接点击页签按钮会展开四个模式，再点击收起。",
+          "保留悬停后展开、离开后收起和键盘操作。",
+          "图像工厂、知识库、浏览器沿用共同行为。"
         ],
         "risks": [
-          "羽化半径随选区尺寸增加，最多 12 像素。"
+          "本机渲染验证使用统一运行时的 Playwright 和 Chromium。"
         ],
-        "generatedAt": "2026-11-16T20:02:28.341Z"
+        "generatedAt": "2026-11-16T20:27:10.621Z"
       }
     },
     {
