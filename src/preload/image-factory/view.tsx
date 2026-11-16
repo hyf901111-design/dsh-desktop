@@ -105,7 +105,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
   const textDrag = useRef<{ id: string; pointer: number; start: Point; moved: boolean; x: number; y: number }>()
-  const layerDrag = useRef<string>()
+  const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef<CanvasJob>()
   const mounted = useRef(true)
   const current = galleryOpen ? undefined : scene
@@ -186,6 +186,34 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   }
   function layerMove(id: string, target: string, above: boolean) {
     setScene(old => old && { ...old, layers: moveLayer(old.layers, id, target, above) })
+  }
+  function layerPointer(event: PointerEvent<HTMLDivElement>, id: string, phase: 'start' | 'move' | 'end' | 'cancel') {
+    if (phase === 'start') {
+      const target = event.target as Element
+      if (busy || event.button !== 0 || target.closest('.if-layer-row > .if-button')) return
+      layerDrag.current = { id, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, dragging: false }
+      target.setPointerCapture(event.pointerId)
+      return
+    }
+    const drag = layerDrag.current
+    if (!drag || drag.id !== id || drag.pointer !== event.pointerId) return
+    if (phase === 'cancel') { layerDrag.current = undefined; setDropTarget(undefined); return }
+    if (phase === 'move' && !drag.dragging) {
+      if (!event.buttons || Math.hypot(event.clientX - drag.start.x, event.clientY - drag.start.y) < 4) return
+      drag.dragging = true
+      doc.getSelection()?.removeAllRanges()
+    }
+    if (!drag.dragging) { if (phase === 'end') layerDrag.current = undefined; return }
+    const target = doc.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-layer-id]')
+    const bounds = target?.getBoundingClientRect()
+    const targetId = target?.dataset.layerId
+    const destination = bounds && targetId && targetId !== id ? { id: targetId, above: event.clientY < bounds.top + bounds.height / 2 } : undefined
+    if (phase === 'move') setDropTarget(destination)
+    else {
+      if (!busy && destination) layerMove(id, destination.id, destination.above)
+      layerDrag.current = undefined
+      setDropTarget(undefined)
+    }
   }
   function deleteLayer(id: string) {
     if (busy) return
@@ -416,7 +444,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       <Button icon="type" active={!!editing} disabled={busy} onClick={appendText}>{t('添加文本', 'Add text')}</Button>
       <Button icon="layers" active={layersOpen} onClick={() => setLayersOpen(value => !value)}>{t('图层', 'Layers')}</Button>
     </nav>}
-    <div className="if-stage" ref={stage}>
+    <div className="if-stage" data-layers-open={layersOpen} ref={stage}>
       {!current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}/> : <>
         <div className="if-stage-scroll" data-layers-open={layersOpen} ref={scroll} onPointerDown={event => {
           if (event.target === event.currentTarget || event.target === imageFrame.current && !marking) {
@@ -472,25 +500,13 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
           {!current.layers.length && <p>{t('画布上还没有图层。', 'The canvas has no layers.')}</p>}
           {[...current.layers].reverse().map(layer => {
             const name = layer.kind === 'image' ? t('图片', 'Image') : layer.text.trim() || t('文本', 'Text')
-            return <div key={layer.id} className="if-layer-row" draggable={!busy}
+            return <div key={layer.id} className="if-layer-row" data-layer-id={layer.id}
               data-current={selectedId === layer.id} data-drop={dropTarget?.id === layer.id ? dropTarget.above ? 'above' : 'below' : undefined}
-              onDragStart={event => { layerDrag.current = layer.id; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', layer.id) }}
-              onDragEnd={() => { layerDrag.current = undefined; setDropTarget(undefined) }}
-              onDragOver={event => {
-                if (!layerDrag.current || layerDrag.current === layer.id || busy) return
-                event.preventDefault(); event.dataTransfer.dropEffect = 'move'
-                const box = event.currentTarget.getBoundingClientRect()
-                setDropTarget({ id: layer.id, above: event.clientY < box.top + box.height / 2 })
-              }}
-              onDrop={event => {
-                event.preventDefault()
-                const source = layerDrag.current
-                if (source && !busy) {
-                  const box = event.currentTarget.getBoundingClientRect()
-                  layerMove(source, layer.id, event.clientY < box.top + box.height / 2)
-                }
-                setDropTarget(undefined); layerDrag.current = undefined
-              }}>
+              onPointerDown={event => layerPointer(event, layer.id, 'start')}
+              onPointerMove={event => layerPointer(event, layer.id, 'move')}
+              onPointerUp={event => layerPointer(event, layer.id, 'end')}
+              onPointerCancel={event => layerPointer(event, layer.id, 'cancel')}
+              onLostPointerCapture={event => layerPointer(event, layer.id, 'cancel')}>
               <button type="button" className="if-layer-name" aria-pressed={selectedId === layer.id} title={name}
                 onClick={() => { releaseText(); clearSelection(); setSelectedId(layer.id) }}
                 onDoubleClick={() => { if (layer.kind === 'text' && !busy) setEditing(layer.id) }}

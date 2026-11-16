@@ -53,6 +53,8 @@ it('routes a factory comment to the native image tool using the bound crop and o
  expect(f.reads).toEqual([f.ref])
  expect(f.request.mock.calls[0][1].body.get('size')).toBe('1024x1536')
  expect(result.factory).toEqual({id:workspace.id,title:workspace.title,operation:'region'})
+ expect(f.concludeTurn).not.toHaveBeenCalled()
+ expect(result.guidance).toContain('一句话')
  expect(f.prompts[0].text({agent:f.agent})).toContain('180 × 300')
 })
 it('uses the current upload directly and concludes only a successfully delivered standalone request',async()=>{
