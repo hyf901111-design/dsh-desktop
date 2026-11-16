@@ -11,25 +11,33 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
-        "tipCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
+        "baseCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
+        "tipCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
         "commits": [
           {
-            "commit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
+            "commit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
             "parents": [
-              "a57be4ec9f15f6686f8adee38afa38633b8ab606"
+              "858e55751f8945a5f4e1bf97861ff16d5157a2d6"
             ],
-            "subject": "修复：图像工厂导出保留画布文字排版"
+            "subject": "修复：图像工厂框选改图保持选区比例"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
+            "path": "packages/dsh-research-task-runtime/image-factory-context.js"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/style.css"
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/raster.ts"
           },
           {
             "status": "M",
@@ -37,7 +45,15 @@
           },
           {
             "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/image-factory.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
           }
         ],
         "checks": [
@@ -49,8 +65,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
-            "completedAt": "2026-11-16T15:35:38.538Z",
+            "verifiedCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
+            "completedAt": "2026-11-16T15:52:28.587Z",
             "timeoutMs": 120000
           },
           {
@@ -59,33 +75,34 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/image-factory.test.js",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
               "test/image-factory-native.test.js",
-              "test/knowledge-history-backfill.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-canvases.test.ts",
               "test/image-generation-tool.test.js",
-              "test/image-generation-client.test.js"
+              "test/image-generation-client.test.js",
+              "test/knowledge-history-backfill.test.ts",
+              "test/pending-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "41 项图像工厂和知识库聚焦检查通过。",
-            "verifiedCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
-            "completedAt": "2026-11-16T15:35:38.538Z",
+            "summary": "50 项图像工厂、原生生图工具和知识库聚焦检查通过。",
+            "verifiedCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
+            "completedAt": "2026-11-16T15:52:28.587Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 从实际图像工厂界面导出，用中文、空白、制表符、表情符号及不同对齐方式混排的画布进行验证，两种格式写盘前的 262144 像素和 100% 预览逐像素一致，缩放后保持换行与编辑。"
+          "summary": "Chromium 实际缩放画布、反向拖选、气泡填写和发送，600×60 框选收到 1536×1024 上下文参考图。用正方形模拟模型结果，框内 36000 像素更新，框外像素不变，圆形保持 42×42。"
         },
         "acceptanceCriteria": [
-          "导出及知识库归档共用与预览一致的浏览器文字排版。",
-          "PNG 和 JPG 保留画布字体、对齐、换行、位置以及堆叠顺序。",
-          "缩放画布后文字仍可编辑。"
+          "框选改图参考图包含选区周围的上下文。",
+          "框选改图的原生生图工具收到准确选区边界。",
+          "等比例将结果中的对应区域贴回，框外原始像素保持。"
         ],
         "risks": [
-          "JPG 文件采用有损编码。"
+          "当模型返回不同的整体比例时，居中对齐参考画面。"
         ],
-        "generatedAt": "2026-11-16T15:35:38.538Z"
+        "generatedAt": "2026-11-16T15:52:28.587Z"
       }
     },
     {
