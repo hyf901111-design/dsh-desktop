@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { iconSource } from './icons'
-import { applyRegion, between, canvasFor, canvasPoint, cropRaster, drawCover, encode, loadRaster, providerSize, ratios, validSize,
+import { applyRegion, between, canvasFor, canvasPoint, cropRaster, drawFit, encode, loadRaster, providerSize, ratios, validSize,
   type Point, type Raster, type Ratio, type Region } from './raster'
 import styles from './style.css?raw'
 
@@ -203,7 +203,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
           const { canvas, context } = canvasFor(doc, size)
           if (area && base) applyRegion(context, base, output, area)
           else if (base) context.drawImage(output.image, 0, 0, size.width, size.height)
-          else drawCover(context, output, { ...size, x: 0, y: 0 })
+          else drawFit(context, output, size)
           blob = await encode(canvas)
         } finally { URL.revokeObjectURL(output.url) }
         const title = base?.title ?? titleFromPrompt(request, t)
