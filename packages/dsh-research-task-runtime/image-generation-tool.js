@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto'
 import {createOpenAIImageProvider,ImageGenerationError,validateGeneratedImage} from './image-generation-provider.js'
 import {readImageFactoryContext} from './image-factory-context.js'
 
-const TOOL='image_generate',KIND='odyssey-image-generation',MAX_BYTES=20*1024*1024
+const TOOL='image_generate',KIND='odyssey-image-generation',MAX_BYTES=20*1024*1024,MAX_PROMPT=16_000
 const fail=message=>{throw new ImageGenerationError(message)}
 const object=v=>v&&typeof v==='object'&&!Array.isArray(v)
 const human=session=>session?.events?.findLast(e=>e.type==='user/message'&&e.data?.source?.kind==='user')?.data
@@ -26,7 +26,7 @@ export function conversationImageReferences(session){
  return images
 }
 function argumentsFor(args,models,defaultModel,attachedIds){
- if(!object(args)||Object.keys(args).some(k=>!['prompt','model','size','quality','background','reference_image_ids','continue_after_delivery'].includes(k))||typeof args.prompt!=='string'||!args.prompt.trim()||args.prompt.length>16000)fail('图片生成参数无效，请提供不超过 16000 字的描述。')
+ if(!object(args)||Object.keys(args).some(k=>!['prompt','model','size','quality','background','reference_image_ids','continue_after_delivery'].includes(k))||typeof args.prompt!=='string'||!args.prompt.trim()||args.prompt.length>MAX_PROMPT)fail('图片生成参数无效，请提供不超过 16000 字的描述。')
  if(args.continue_after_delivery!==undefined&&typeof args.continue_after_delivery!=='boolean')fail('继续执行参数无效。')
  const input={prompt:args.prompt.trim(),model:args.model??defaultModel,size:args.size??'auto',quality:args.quality??'auto',background:args.background??'auto',reference_image_ids:args.reference_image_ids??attachedIds}
  if(!models.has(input.model))fail('此图片模型尚未接入。')
@@ -39,6 +39,12 @@ function selectedRegionInstructions({left,top,right,bottom}){
  const percent=value=>Number((value*100).toFixed(2))+'%'
  return '保持参考图整幅画面的比例、取景和选区外内容。只修改水平 '+percent(left)+' 至 '+percent(right)+'、垂直 '+
   percent(top)+' 至 '+percent(bottom)+' 的矩形（从左上角起算）。返回完整参考画面。'
+}
+
+function canvasAspectRatio({width,height}){
+ let a=width,b=height
+ while(b)[a,b]=[b,a%b]
+ return width/a+':'+height/a
 }
 
 /** Add future built-in providers here; credentials and transport stay provider-owned. */
@@ -78,8 +84,17 @@ export function registerImageGenerationTool(ctx,options={}){
     ...routed, size:factory.size,
     ...(factory.internalReference&&{reference_image_ids:attachedIds.slice(-1)}),
    } : routed,models,hosted?.models[0]?.id??defaultModel,attachedIds)
-   if(factory?.editBounds)input.prompt+='\n\n'+selectedRegionInstructions(factory.editBounds)
    const provider=models.get(input.model).provider
+   const hostedCanvas=!!factory&&factory.operation!=='region'&&provider===hosted
+   // The hosted gateway appends its own aspect-ratio hint to preset sizes.
+   // Use its resolution preset alone and supply the actual canvas proportions.
+   if(hostedCanvas)input.size='auto'
+   const framing=factory?.editBounds ? selectedRegionInstructions(factory.editBounds)
+    : hostedCanvas ? '输出画面的宽高比为 '+canvasAspectRatio(factory)+'。画面铺满该比例，保留完整主体。' : ''
+   if(framing){
+    if(input.prompt.length+framing.length+2>MAX_PROMPT)fail('图片描述过长，请缩短后重试。')
+    input.prompt+='\n\n'+framing
+   }
    const generate=provider.capture?.()??provider.generate.bind(provider)
    const attachments=ctx.get?.('attachments');if(!attachments)fail('图片附件服务未就绪，请重启客户端后重试。')
    const available=conversationImageReferences(session),references=input.reference_image_ids.map(id=>{const ref=available.get(id);if(!ref||!['image/png','image/jpeg','image/webp'].includes(ref.mediaType))fail('参考图必须是当前会话已有的 PNG、JPEG 或 WebP 图片。');return ref})
@@ -118,7 +133,9 @@ export function registerImageGenerationTool(ctx,options={}){
      check(agent,session,authority,signal)
      return{kind:KIND,version:1,ok:true,requestKey:key,model:input.model,image,
       ...(factory&&{factory:{id:factory.id,title:factory.title,operation:factory.operation}}),
-      guidance:factory ? '图片已交付图像工厂。用一句话向用户报告本轮结果，不需重复显示或生成。' :
+      guidance:factory ? '图片已交付图像工厂。'+(factory.operation==='region' ? '' :
+       '画布目标尺寸为 '+factory.width+' × '+factory.height+' 像素。使用画布尺寸报告本轮结果。')+
+       '用一句话向用户报告本轮结果，不需重复显示或生成。' :
        '图片已直接显示在当前会话。继续完成用户明确要求的其他工作，无需重复展示或生成。'}
     }catch(error){
      if(signal.aborted)throw new ImageGenerationError(signal.reason?.name==='TimeoutError'?'图片生成等待超时；服务端可能仍在处理，未自动重试。':'图片生成已取消。')

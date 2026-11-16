@@ -127,6 +127,20 @@ it('supports a future built-in provider without changing the tool or image UI',a
  const f=fixture({providers:[{models:[{id:'builtin-art',name:'内置生图'}],generate}],defaultModel:'builtin-art'})
  const result=await f.call();expect(result.model).toBe('builtin-art');expect(generate).toHaveBeenCalledOnce();expect(f.request).not.toHaveBeenCalled()
 })
+it('preserves the requested factory aspect ratio when the hosted gateway maps fixed sizes to presets',async()=>{
+ const generate=vi.fn(async()=>({data:png,mediaType:'image/png'}))
+ const hosted={available:()=>true,models:[{id:'seedream-flash',name:'Seedream Flash'}],generate}
+ const f=fixture({hosted})
+ const workspace={id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'留白海报',operation:'generate',
+   size:'1024x1536',width:1080,height:1350,internalReference:false}
+ f.agent.session.events[1].data.content[0].text=imageFactoryPrompt('制作一张宽高比为 4:5 的海报',workspace)
+ const result=await f.call({prompt:'制作一张留白海报',size:'1024x1536'})
+ const [forwarded]=generate.mock.calls[0]
+ expect(forwarded.size).toBe('auto')
+ expect(forwarded.prompt).toContain('宽高比为 4:5')
+ expect(result.guidance).toContain('1080 × 1350')
+})
+
 it('uses Seedream for stale OpenAI model arguments when hosted image generation is available',async()=>{
  const generate=vi.fn(async()=>({data:png,mediaType:'image/png'}))
  let available=true
