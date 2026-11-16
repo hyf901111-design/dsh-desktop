@@ -32,7 +32,7 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
     }
 
     const updateMotion = () => {
-      if (reducedMotion.matches || node.matches(':hover, :focus-within')) {
+      if (!cycleWidth || reducedMotion.matches || node.matches(':hover, :focus-within')) {
         win.cancelAnimationFrame(frame)
         frame = 0
         previousTime = undefined
@@ -53,13 +53,13 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
 
     const observer = new ResizeObserver(([entry]) => {
       if (entry) cycleWidth = entry.target.getBoundingClientRect().width
+      updateMotion()
     })
     observer.observe(cycle)
     const motionEvents = ['pointerenter', 'pointerleave', 'focusin', 'focusout']
     for (const event of motionEvents) node.addEventListener(event, updateMotion)
     reducedMotion.addEventListener('change', updateMotion)
     node.addEventListener('wheel', wheel, { passive: false })
-    updateMotion()
     return () => {
       win.cancelAnimationFrame(frame)
       observer.disconnect()

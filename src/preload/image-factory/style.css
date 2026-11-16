@@ -26,9 +26,13 @@
 .if-top button,.if-top .eb-workspace-controls {-webkit-app-region:no-drag}
 .if-top .eb-workspace-toggle {color:var(--if-muted)}
 .if-top .eb-workspace-tabs {transition:flex-basis 200ms cubic-bezier(.2,.8,.2,1),opacity 200ms ease}
-.if-top-title {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.if-top-title {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;-webkit-app-region:drag}
 .if-top-title:not(:empty) {border-left:1px solid var(--if-line);padding-left:12px;margin-left:4px}
 .if-top > .if-button {flex:none}
+@container (480px < width <= 700px) {
+  .if-top .workspace-app-title {width:auto}
+  .if-top .workspace-app-title>span {display:inline}
+}
 .image-factory .if-more {background:var(--odyssey-header-icon-bg);border-radius:7px}
 .image-factory .if-more:not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]) {background:var(--odyssey-header-icon-hover)}
 .if-toolbar {height:48px;padding:0 14px;overflow:auto;scrollbar-width:none}

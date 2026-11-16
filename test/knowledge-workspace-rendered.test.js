@@ -685,6 +685,40 @@ it('opens the selected archived image separately from its source canvas', async 
   }
 })
 
+it('keeps the Image Factory title visible and draggable at typical three-pane widths', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <div class="image-factory" style="left:10px;width:620px">
+        <section class="if-work">
+          <header class="if-top workspace-app-topbar">
+            <button type="button">返回对话</button>
+            <div class="workspace-app-title"><i></i><span>图像工厂</span></div>
+            <div class="eb-workspace-controls"><button class="eb-workspace-toggle" type="button">页签</button></div>
+            <span class="if-top-title"></span>
+            <button type="button">更多</button>
+          </header>
+        </section>
+      </div>`)
+    await page.addScriptTag({ content: bundle })
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    const header = page.locator('.if-top')
+    const title = header.getByText('图像工厂')
+    const region = el => getComputedStyle(el).getPropertyValue('-webkit-app-region')
+    expect(await title.isVisible()).toBe(true)
+    expect(await title.evaluate(region)).toBe('drag')
+    expect(await header.evaluate(region)).toBe('drag')
+    expect(await header.locator('.if-top-title').evaluate(region)).toBe('drag')
+    expect(await header.getByRole('button', { name: '页签' }).evaluate(region)).toBe('no-drag')
+    await page.locator('.image-factory').evaluate(el => { el.style.width = '440px' })
+    expect(await title.isVisible()).toBe(false)
+  } finally {
+    await page.close()
+  }
+})
+
 it('keeps the four workspace shortcuts open across the draggable knowledge header', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
   try {
