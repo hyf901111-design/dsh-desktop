@@ -261,7 +261,10 @@ export function mountResearchBoardNotifications(
     actions.className = 'srb-notification-actions'
     actions.append(boardButton(doc, '详情', () => {
       closePanel()
-      doc.dispatchEvent(new win.Event('ework-open-about'))
+      if (latestUpdate?.releaseNotes && liveUpdatePhase === latestUpdate.phase &&
+          ['available', 'downloading', 'preparing', 'downloaded', 'error'].includes(latestUpdate.phase)) {
+        doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: 'show' }))
+      } else doc.dispatchEvent(new win.Event('ework-open-about'))
     }))
     if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'downloaded' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'downloaded' ? '重启更新' : latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'downloaded' ? 'install' : latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
     row.append(actions)

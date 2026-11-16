@@ -72,3 +72,16 @@ describe('desktop update state', () => {
   expect(unknown.transferredBytes).toBeUndefined()
   expect(unknown.bytesPerSecond).toBeUndefined()
  })
+
+it('keeps the release notes with their target throughout download and preparation', () => {
+  let status = reduceUpdateStatus(initialUpdateStatus('1.0.0'), {
+    type: 'available', version: '1.1.0', releaseNotes: '- 新功能'
+  })
+  status = reduceUpdateStatus(status, { type: 'progress', percent: 50 })
+  expect(status.releaseNotes).toBe('- 新功能')
+  status = reduceUpdateStatus(status, { type: 'prepare', version: '1.1.0' })
+  expect(status.releaseNotes).toBe('- 新功能')
+  status = reduceUpdateStatus(status, { type: 'downloaded', version: '1.1.0' })
+  expect(status.releaseNotes).toBe('- 新功能')
+  expect(reduceUpdateStatus(status, { type: 'available', version: '1.2.0' }).releaseNotes).toBeUndefined()
+})

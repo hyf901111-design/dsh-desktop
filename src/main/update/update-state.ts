@@ -2,7 +2,7 @@ import type { UpdateStatus } from '../../shared/contracts'
 
 export type UpdateStateEvent =
   | { type: 'check'; manual: boolean }
-  | { type: 'available'; version: string }
+  | { type: 'available'; version: string; releaseNotes?: string }
   | {
       type: 'progress'
       percent: number
@@ -15,8 +15,8 @@ export type UpdateStateEvent =
       resumedBytes?: number
       fallbackReason?: UpdateStatus['fallbackReason']
     }
-  | { type: 'downloaded'; version: string }
-  | { type: 'prepare'; version: string }
+  | { type: 'downloaded'; version: string; releaseNotes?: string }
+  | { type: 'prepare'; version: string; releaseNotes?: string }
   | { type: 'install'; stage?: UpdateStatus['installStage'] }
   | { type: 'not-available' }
   | { type: 'error'; message: string; errorStage?: UpdateStatus['errorStage'] }
@@ -36,11 +36,17 @@ export function reduceUpdateStatus(
     manual: current.manual
   }
 
+  const target = (version: string, notes?: string) => {
+    const releaseNotes = notes ?? (version === current.availableVersion ? current.releaseNotes : undefined)
+    return { availableVersion: version, ...(releaseNotes ? { releaseNotes } : {}) }
+  }
+  const currentTarget = { availableVersion: current.availableVersion, ...(current.releaseNotes ? { releaseNotes: current.releaseNotes } : {}) }
+
   switch (event.type) {
     case 'check':
       return { ...base, phase: 'checking', manual: event.manual }
     case 'available':
-      return { ...base, phase: 'available', availableVersion: event.version }
+      return { ...base, phase: 'available', ...target(event.version, event.releaseNotes ?? '') }
     case 'progress':
       return {
         ...current,
@@ -52,16 +58,16 @@ export function reduceUpdateStatus(
         ...(event.downloadKind ? { downloadKind: event.downloadKind, archiveBytes: validBytes(event.archiveBytes), reusedBytes: validBytes(event.reusedBytes), resumedBytes: validBytes(event.resumedBytes), fallbackReason: event.fallbackReason } : {})
       }
     case 'downloaded':
-      return { ...base, phase: 'downloaded', availableVersion: event.version }
+      return { ...base, phase: 'downloaded', ...target(event.version, event.releaseNotes) }
     case 'prepare':
-      return { ...base, phase: 'preparing', availableVersion: event.version, installStage: 'preparing' }
+      return { ...base, phase: 'preparing', ...target(event.version, event.releaseNotes), installStage: 'preparing' }
     case 'install':
-      return { ...base, availableVersion: current.availableVersion, phase: 'installing', installStage: event.stage }
+      return { ...base, ...currentTarget, phase: 'installing', installStage: event.stage }
     case 'not-available':
       return { ...base, phase: 'up-to-date' }
     case 'error':
       return {
-        ...base, availableVersion: current.availableVersion, phase: 'error', message: event.message,
+        ...base, ...currentTarget, phase: 'error', message: event.message,
         errorStage: event.errorStage ?? (
           current.phase === 'checking' ? 'check'
             : current.phase === 'available' || current.phase === 'downloading' ? 'download'

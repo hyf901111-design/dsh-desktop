@@ -17,7 +17,7 @@ export function patchFigmaUpdateWorkspace(source) {
 }
 
 export function patchFigmaAboutUpdates(source) {
-  if(source.includes(PREPARED_UPDATE_UI_MARKER))return patchPreparedAboutUpdates(source)
+  if (source.includes(PREPARED_UPDATE_UI_MARKER)) return patchAboutReleaseNotes(patchPreparedAboutUpdates(source))
   source = exact(source, 'const message = verifying ? t("about.verifying")', `const installCopy = { preparing: ["正在准备安装", "准备中…"], saving: ["正在保存研究状态", "保存中…"], restarting: ["正在重启应用", "重启中…"] };
             const installCopyEn = { preparing: ["Preparing installation", "Preparing…"], saving: ["Saving research state", "Saving…"], restarting: ["Restarting the app", "Restarting…"] };
             const stageCopy = (t("about.nav") === "关于" ? installCopy : installCopyEn)[update.installStage];
@@ -28,5 +28,26 @@ export function patchFigmaAboutUpdates(source) {
   // Figma 34 keeps the rotating update arrows; 37 uses the verification ring.
   source = exact(source, 'children: [downloading ? null : jsx("span", { className: "sherlock-about-action-icon"', 'children: [!active || downloading ? null : jsx("span", { className: "sherlock-about-action-icon"')
   source = exact(source, '"data-loading": active,', '"data-loading": verifying,')
-  return patchPreparedAboutUpdates(source)
+  return patchAboutReleaseNotes(patchPreparedAboutUpdates(source))
+}
+
+function patchAboutReleaseNotes(source) {
+  const ready = 'const ready = update.phase === "downloaded";'
+  source = exact(source, ready, `${ready}
+            const updateNotes = update.availableVersion && ["available", "downloading", "preparing", "downloaded"].includes(update.phase)
+              ? window.sherlockAbout?.getUpdateReleaseNotes?.(update.releaseNotes) ?? []
+              : [];`)
+  const history = 'jsxs("section", { className: "sherlock-about-changelog", children:'
+  return exact(source, history, `updateNotes.length ? jsxs("details", {
+              key: update.availableVersion, open: true, className: "sherlock-about-release", "data-about-update-notes": true,
+              children: [
+                jsx("summary", { children: chinese ? \`\${update.availableVersion} 更新内容\` : \`What's new in \${update.availableVersion}\` }),
+                jsxs("div", { className: "sherlock-about-release-content", children: updateNotes.map((block, index) =>
+                  block.kind === "list"
+                    ? jsx("ul", { className: "sherlock-about-release-items", children: block.items.map((item, i) => jsx("li", { children: item }, i)) }, index)
+                    : jsx("p", { children: block.text }, index)
+                ) })
+              ]
+            }) : null,
+            ${history}`)
 }

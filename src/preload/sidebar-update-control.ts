@@ -1,5 +1,5 @@
 import type { UpdateStatus } from '../shared/contracts'
-import { updateAction, updateErrorCopy, updateErrorStage, updateInstallCopy, updateMessage, updateTransferMessage, type UpdateLocale } from './update-view'
+import { updateAction, updateErrorCopy, updateErrorStage, updateInstallCopy, updateMessage, updateReleaseNoteBlocks, updateTransferMessage, type UpdateLocale } from './update-view'
 import { installSidebarNoticeStyles, noticeIcon, positionSidebarNotice } from './sidebar-notice'
 
 const BUTTON_ID = 'sherlock-sidebar-update-button'
@@ -41,6 +41,10 @@ export interface SidebarUpdateCallbacks {
 export class SidebarUpdateControl {
   private button?: HTMLButtonElement
   private panel?: HTMLElement
+  private summary?: HTMLElement
+  private notes?: HTMLDetailsElement
+  private actions?: HTMLElement
+  private notesKey = ''
   private status?: UpdateStatus
   private dismissed = ''
   private pending = false
@@ -127,6 +131,18 @@ export class SidebarUpdateControl {
     panel.className = 'ework-sidebar-notice'
     panel.hidden = true
     panel.setAttribute('aria-live', 'polite')
+    const summary = this.document.createElement('div')
+    summary.className = 'ework-update-summary'
+    const notes = this.document.createElement('details')
+    notes.className = 'ework-update-notes'
+    notes.addEventListener('toggle', () => positionSidebarNotice(this.document, panel))
+    const actions = this.document.createElement('div')
+    actions.className = 'ework-notice-actions'
+    panel.append(summary, notes, actions)
+    this.summary = summary
+    this.notes = notes
+    this.actions = actions
+    this.notesKey = ''
     this.document.body.append(panel)
     target.insertBefore(button, anchor)
     this.button = button
@@ -155,6 +171,15 @@ export class SidebarUpdateControl {
 #${PANEL_ID}[data-collapsed=true] { z-index:1502; }
 body:has(.srb-bubble.ework-sidebar-notice) #${PANEL_ID}:not([data-phase=downloading]):not([data-phase=preparing]):not([data-phase=downloaded]):not([data-phase=installing]) { visibility:hidden; }
 body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=preparing],[data-phase=downloaded],[data-phase=installing])) .srb-bubble.ework-sidebar-notice { visibility:hidden; }
+#${PANEL_ID} .ework-update-summary { display:contents; }
+#${PANEL_ID} [hidden] { display:none!important; }
+#${PANEL_ID} .ework-update-notes { min-width:0; }
+#${PANEL_ID} .ework-update-notes summary { width:max-content; margin-left:auto; cursor:pointer; color:var(--notice-text); }
+#${PANEL_ID} .ework-update-notes summary:focus-visible { outline:1.5px solid var(--notice-accent); outline-offset:2px; border-radius:4px; }
+#${PANEL_ID} .ework-update-notes-body { max-height:min(248px,38vh); overflow:auto; overscroll-behavior:contain; overflow-wrap:anywhere; border-top:1px solid var(--notice-track); margin-top:6px; padding:8px 6px 0 0; font-size:12px; line-height:1.55; }
+#${PANEL_ID} .ework-update-notes-body h3 { margin:0 0 6px; font:600 12px/18px "Noto Sans SC",sans-serif; }
+#${PANEL_ID} .ework-update-notes-body ul { margin:0; padding-inline-start:16px; }
+#${PANEL_ID} .ework-update-notes-body li+li, #${PANEL_ID} .ework-update-notes-body p+p { margin-top:6px; }
 #${PANEL_ID} { opacity:1; transition:opacity ${DISMISS_DURATION}ms ease; }
 #${PANEL_ID}[data-closing=true] { opacity:0; pointer-events:none; }
 @media (prefers-reduced-motion:reduce) { #${PANEL_ID} { transition:none; } }
@@ -174,7 +199,16 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
         if (action === 'download') void this.startDownload()
         else if (action === 'install') void this.startInstall()
         else if (action === 'retry') void this.retryUpdate()
-        else if (action === 'show') { this.dismissed = ''; this.detailsPreference = true; this.cancelDismissal(); if (this.status) this.render(this.status) }
+        else if (action === 'show' && this.status) {
+          this.dismissed = ''
+          this.detailsPreference = true
+          this.cancelDismissal()
+          this.render(this.status)
+          if (this.notes && !this.notes.hidden) {
+            this.notes.open = true
+            this.notes.querySelector<HTMLElement>('section')?.focus({ preventScroll: true })
+          }
+        }
       })
       this.document.addEventListener('pointerdown', event => {
         if (this.panel?.hidden || this.panel?.contains(event.target as Node) || this.button?.contains(event.target as Node)) return
@@ -192,7 +226,11 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
   }
 
   render(status: UpdateStatus): void {
-    if (this.downloadRequested && ['available', 'checking'].includes(status.phase)) status = { ...status, phase: 'downloading', percent: 0 }
+    const previous = this.status
+    if (this.downloadRequested && ['available', 'checking'].includes(status.phase)) {
+      const target = status.phase === 'checking' ? previous : status
+      status = { ...status, availableVersion: target?.availableVersion, releaseNotes: target?.releaseNotes, phase: 'downloading', percent: 0 }
+    }
     // A later, independent check may announce its result again.
     if ((!this.aboutChecks && status.phase === 'checking' && this.status?.phase !== 'checking') ||
       this.status && (status.availableVersion ?? status.currentVersion) !== (this.status.availableVersion ?? this.status.currentVersion)) {
@@ -201,13 +239,18 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
       this.cancelDismissal()
     }
     this.status = status
-    if (!this.mount() || !this.button || !this.panel) return
+    if (!this.mount() || !this.button || !this.panel || !this.summary || !this.actions) return
     const doc = this.document, panel = this.panel, button = this.button
     const action = updateAction(status), zh = this.locale === 'zh'
     const key = phaseKey(status)
     const restartLabel = zh ? '重启更新' : 'Restart and update'
     const active = ['downloading', 'preparing', 'installing'].includes(status.phase)
     const quiet = !status.manual && status.phase === 'available'
+    const hasNotes = this.renderReleaseNotes(status)
+    // A manual discovery stays visible when the production updater immediately starts the transfer.
+    if (hasNotes && status.manual && this.aboutChecks === 0 && !this.dismissed &&
+        (status.phase === 'available' || status.phase === 'downloading' && !previous?.manual) &&
+        this.detailsPreference === undefined) this.detailsPreference = true
     button.dataset.action = action.kind
     button.replaceChildren(status.phase === 'downloading'
       ? progressRing(doc, status.percent ?? 0, zh ? '下载进度' : 'Download progress')
@@ -220,8 +263,7 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
     panel.dataset.phase = status.phase
     panel.dataset.installStage = status.installStage ?? ''
     panel.dataset.collapsed = String(collapsed)
-    // Download state controls the ring; only an explicit interaction opens its
-    // details. Keep that choice across progress ticks and preparation phases.
+    // Background transfers stay quiet. Keep the viewer's choice across progress and preparation.
     const defaultOpen = !quiet && !['downloading', 'preparing'].includes(status.phase) && (status.phase !== 'downloaded' || status.manual === true)
     const open = (this.detailsPreference ?? defaultOpen) && action.kind !== 'hidden' && this.dismissed !== key && this.aboutChecks === 0
     if (open) this.cancelDismissal()
@@ -261,11 +303,12 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
     } else description.textContent = ready ? updateMessage(status,this.locale) : checking ? installCopy.description
       : completed ? (zh ? '更新完成，当前已是最新版本。' : 'Update complete. You are up to date.')
       : status.phase === 'error' ? errorCopy.description
-      : (zh ? '优化研究体验，修复已知问题。' : 'Research improvements and fixes.')
+      : (hasNotes ? '' : zh ? '暂无本次更新说明。' : 'Release notes are unavailable.')
     if (description.textContent) children.push(description)
-    if (status.phase === 'available' || status.phase === 'error' || completed || ready) {
-      const actions = doc.createElement('div')
-      actions.className = 'ework-notice-actions'
+    const actions = this.actions
+    actions.replaceChildren()
+    actions.hidden = !(status.phase === 'available' || status.phase === 'error' || completed || ready)
+    if (!actions.hidden) {
       if (completed) {
         actions.append(this.action(zh ? '知道了' : 'Got it', () => { this.dismissed = key; this.render(status) }))
       } else if (ready) {
@@ -284,13 +327,59 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
         retry.className = 'ework-notice-primary'
         actions.append(retry)
       }
-      children.push(actions)
     }
-    panel.replaceChildren(...children)
+    this.summary.replaceChildren(...children)
     if (checking) panel.setAttribute('role', 'status')
     else panel.removeAttribute('role')
     positionSidebarNotice(doc, panel)
     this.broadcast(status)
+  }
+
+  private renderReleaseNotes(status: UpdateStatus): boolean {
+    const notes = this.notes!
+    const key = JSON.stringify([status.availableVersion, this.locale, status.releaseNotes])
+    if (key !== this.notesKey) {
+      notes.replaceChildren()
+      notes.open = false
+      this.notesKey = key
+      const blocks = status.availableVersion ? updateReleaseNoteBlocks(status.releaseNotes, this.locale) : []
+      if (blocks.length) {
+        const doc = this.document
+        const summary = doc.createElement('summary')
+        summary.textContent = this.locale === 'zh' ? '详情' : 'Details'
+        const body = doc.createElement('section')
+        body.className = 'ework-update-notes-body'
+        body.tabIndex = 0
+        const heading = doc.createElement('h3')
+        heading.id = 'sherlock-update-release-notes-heading'
+        heading.textContent = this.locale === 'zh' ? `${status.availableVersion} 更新内容` : `What's new in ${status.availableVersion}`
+        body.setAttribute('aria-labelledby', heading.id)
+        body.append(heading)
+        for (const block of blocks) {
+          if (block.kind === 'paragraph') {
+            const paragraph = doc.createElement('p')
+            paragraph.textContent = block.text
+            body.append(paragraph)
+          } else {
+            const list = doc.createElement('ul')
+            for (const item of block.items) {
+              const entry = doc.createElement('li')
+              entry.textContent = item
+              list.append(entry)
+            }
+            body.append(list)
+          }
+        }
+        notes.append(summary, body)
+      }
+    }
+    const hasNotes = notes.childElementCount > 0
+    notes.hidden = !hasNotes || !['available', 'downloading', 'preparing', 'downloaded', 'error'].includes(status.phase)
+    this.panel!.dataset.updateNotes = String(!notes.hidden)
+    const summary = notes.querySelector('summary')
+    if (summary) summary.hidden = status.phase === 'available'
+    if (status.phase === 'available') notes.open = true
+    return !notes.hidden
   }
 
   private cancelDismissal(): void {
@@ -366,9 +455,9 @@ body:has(#${PANEL_ID}:not([hidden]):is([data-phase=downloading],[data-phase=prep
   private async invoke(callback: () => void | Promise<unknown>, failureStage?: () => UpdateStatus['errorStage']): Promise<void> {
     if (this.pending) return
     this.pending = true
-    this.panel?.querySelectorAll('button').forEach(button => { button.disabled = true })
+    this.actions?.querySelectorAll('button').forEach(button => { button.disabled = true })
     try { await callback() } catch (error) {
       if (this.status) this.render({ ...this.status, phase: 'error', errorStage: failureStage?.() ?? updateErrorStage(this.status), manual: true, message: error instanceof Error ? error.message : String(error) })
-    } finally { this.pending = false; this.panel?.querySelectorAll('button').forEach(button => { button.disabled = false }) }
+    } finally { this.pending = false; this.actions?.querySelectorAll('button').forEach(button => { button.disabled = false }) }
   }
 }

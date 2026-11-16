@@ -15,6 +15,7 @@ export function normalizeUpdateNotification(value: unknown): UpdateStatus | unde
     phase: input.phase as UpdateStatus['phase'],
     manual: input.manual === true
   }
+  if (typeof input.releaseNotes === 'string' && input.releaseNotes.trim()) status.releaseNotes = input.releaseNotes.slice(0, 16_000)
   if (typeof input.message === 'string') status.message = input.message.slice(0, 1200)
   if (input.phase === 'error' && ['check', 'download', 'install'].includes(String(input.errorStage))) status.errorStage = input.errorStage as UpdateStatus['errorStage']
   if (input.phase === 'installing' && ['preparing', 'saving', 'restarting'].includes(String(input.installStage))) status.installStage = input.installStage as UpdateStatus['installStage']

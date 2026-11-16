@@ -3,6 +3,7 @@ import { disposeNativeMacPreparation, prepareNativeMacInstall, resetNativeMacPre
 import { cancelUpdateRestartReceipt, consumeUpdateRestartReceipt, writeUpdateRestartReceipt } from './restart-receipt'
 import { armMacRenameRecovery, repairRenamedMacDock } from './mac-update-recovery'
 import electronUpdater from 'electron-updater'
+import type { UpdateInfo } from 'builder-util-runtime'
 import { validateLocalUpdateEnvironment, type LocalUpdateEnvironment } from './local-update-guard'
 import type { LocalDownloadUpdater } from './local-download-updater'
 import type { LocalCheckUpdater } from './local-check-updater'
@@ -38,7 +39,8 @@ let checkPromise: Promise<unknown> | undefined
 let lastCheckedAt = 0
 let downloadedVersion: string | undefined
 let preparedVersion: string | undefined
-let latestVersion: string | undefined
+type UpdateTarget = { version: string; releaseNotes?: string }
+let latestTarget: UpdateTarget | undefined
 let preparationPromise: Promise<UpdateStatus> | undefined
 let preparationController: AbortController | undefined
 let preparing = false
@@ -167,7 +169,7 @@ export async function checkForUpdates(manual = false): Promise<UpdateStatus> {
   if (status.phase !== 'downloaded') transition({ type: 'check', manual })
   else status = { ...status, manual }
   lastCheckedAt = Date.now()
-  checkPromise = queryLatestVersion().catch((error) => {
+  checkPromise = queryLatestUpdate().catch((error) => {
     transition({ type: 'error', errorStage: 'check', message: errorMessage(error) })
     if (manual) scheduleReset()
   }).finally(() => {
@@ -248,12 +250,20 @@ export async function downloadAvailableUpdate(): Promise<UpdateStatus> {
   try { return await preparationPromise } finally { preparationPromise = undefined }
 }
 
-async function queryLatestVersion(): Promise<string | undefined> {
+function updateTarget(info: UpdateInfo): UpdateTarget {
+  const notes = Array.isArray(info.releaseNotes)
+    ? info.releaseNotes.find(note => note?.version === info.version)?.note
+    : info.releaseNotes
+  const releaseNotes = typeof notes === 'string' ? notes.slice(0, 16_000).trim() : ''
+  return { version: info.version, ...(releaseNotes ? { releaseNotes } : {}) }
+}
+
+async function queryLatestUpdate(): Promise<UpdateTarget | undefined> {
   refreshing = true
-  latestVersion = undefined
+  latestTarget = undefined
   try {
     await autoUpdater.checkForUpdates()
-    return latestVersion
+    return latestTarget
   } finally { refreshing = false }
 }
 
@@ -287,10 +297,10 @@ async function prepareAvailableUpdate(): Promise<UpdateStatus> {
       if (downloadedVersion !== target) throw Error('更新文件版本不匹配，请重新下载。')
       transition({ type: 'prepare', version: target })
       errorStage = 'check'
-      const before = await queryLatestVersion()
+      const before = await queryLatestUpdate()
       assertCurrent()
       if (!before) { transition({ type: 'not-available' }); return getUpdateStatus() }
-      if (before !== target) { target = before; transition({ type: 'available', version: target }); continue }
+      if (before.version !== target) { target = before.version; transition({ type: 'available', ...before }); continue }
       errorStage = 'install'
       if (preparedVersion !== target) {
         if (process.platform === 'darwin') await prepareNativeMacInstall(nativeUpdater, 120_000, controller.signal)
@@ -298,11 +308,11 @@ async function prepareAvailableUpdate(): Promise<UpdateStatus> {
         preparedVersion = target
       }
       errorStage = 'check'
-      const after = await queryLatestVersion()
+      const after = await queryLatestUpdate()
       assertCurrent()
       if (!after) { preparedVersion = undefined; transition({ type: 'not-available' }); return getUpdateStatus() }
-      if (after !== target) { target = after; transition({ type: 'available', version: target }); continue }
-      transition({ type: 'downloaded', version: target })
+      if (after.version !== target) { target = after.version; transition({ type: 'available', ...after }); continue }
+      transition({ type: 'downloaded', ...after })
       return getUpdateStatus()
     }
     throw Error('更新版本连续变化，请稍后重试。')
@@ -347,8 +357,8 @@ function configureUpdater(localCheckOnly = false): void {
     if (!preparing && !installing && status.phase !== 'downloaded') transition({ type: 'check', manual: status.manual })
   })
   autoUpdater.on('update-available', (info) => {
-    latestVersion = info.version
-    if (!preparing && !installing) transition({ type: preparedVersion === info.version ? 'downloaded' : 'available', version: info.version })
+    latestTarget = updateTarget(info)
+    if (!preparing && !installing) transition({ type: preparedVersion === info.version ? 'downloaded' : 'available', ...latestTarget })
   })
   autoUpdater.on('download-progress', (progress) => {
     if (stopped) return
@@ -357,14 +367,14 @@ function configureUpdater(localCheckOnly = false): void {
       downloadKind: transfer.downloadKind, archiveBytes: transfer.archiveBytes, reusedBytes: transfer.reusedBytes, resumedBytes: transfer.resumedBytes, fallbackReason: transfer.fallbackReason })
   })
   autoUpdater.on('update-not-available', () => {
-    latestVersion = undefined
+    latestTarget = undefined
     if (preparing || installing) return
     transition({ type: 'not-available' })
     scheduleReset()
   })
   autoUpdater.on('update-downloaded', (info) => {
     downloadedVersion = info.version
-    transition({ type: updateAccess === 'production' ? 'prepare' : 'downloaded', version: info.version })
+    transition({ type: updateAccess === 'production' ? 'prepare' : 'downloaded', ...updateTarget(info) })
   })
   autoUpdater.on('error', (error) => {
     if (stopped) return

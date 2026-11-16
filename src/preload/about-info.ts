@@ -1,3 +1,4 @@
+import { updateReleaseNoteBlocks } from './update-view'
 export type SherlockAboutLocale = 'zh' | 'en'
 
 export type SherlockReleaseNote = {
@@ -1324,6 +1325,7 @@ export function createSherlockAboutBridge(
 ): {
   getInfo(): Promise<SherlockAboutInfo>
   checkForUpdates(): Promise<UpdateStatus>
+  getUpdateReleaseNotes(notes: unknown): ReturnType<typeof updateReleaseNoteBlocks>
   getUpdateStatus(): Promise<UpdateStatus>
   downloadUpdate(): Promise<UpdateStatus>
   installUpdate(): Promise<void>
@@ -1334,6 +1336,7 @@ export function createSherlockAboutBridge(
       const status = await readUpdateStatus()
       return buildSherlockAboutInfo(status.currentVersion, typeof locale === 'function' ? locale() : locale)
     },
+    getUpdateReleaseNotes: (notes: unknown) => updateReleaseNoteBlocks(notes, typeof locale === 'function' ? locale() : locale),
     getUpdateStatus: readUpdateStatus,
     ...actions,
     checkForUpdates(): Promise<UpdateStatus> {

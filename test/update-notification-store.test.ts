@@ -86,3 +86,20 @@ it('retains the live check failure stage when a cached version supplies only the
  expect(readUpdateNotification(w.localStorage)?.errorStage).toBeUndefined()
  dispose()
 })
+
+it('routes live download details to the release notes popup', async () => {
+ const {w,mount}=fixture()
+ const dispose=mount()
+ const show=vi.fn(), about=vi.fn()
+ w.document.addEventListener('ework-update-action',show)
+ w.document.addEventListener('ework-open-about',about)
+ w.document.documentElement.dataset.eworkUpdateStatus=JSON.stringify({
+  phase:'downloading',currentVersion:'0.9.5',availableVersion:'0.9.6',manual:false,releaseNotes:'- 新增趋势图'
+ })
+ w.document.dispatchEvent(new w.CustomEvent('ework-update-status'))
+ ;(w.document.querySelector('.srb-bell') as any).click()
+ ;(w.document.querySelector('[data-update-notification] button') as any).click()
+ expect(show.mock.calls[0]?.[0].detail).toBe('show')
+ expect(about).not.toHaveBeenCalled()
+ dispose()
+})

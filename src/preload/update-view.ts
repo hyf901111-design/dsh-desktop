@@ -116,3 +116,28 @@ export function updateInstallCopy(status: UpdateStatus, locale: UpdateLocale): {
       : { title: zh ? '更新已准备就绪' : 'Update ready', description: updateMessage({ ...status, phase: 'downloaded' }, locale) }
   }
 }
+
+type UpdateNoteBlock = { kind: 'paragraph'; text: string } | { kind: 'list'; items: string[] }
+
+/** The feed publishes Markdown bullets under optional Chinese and English headings. */
+export function updateReleaseNoteBlocks(notes: unknown, locale: UpdateLocale): UpdateNoteBlock[] {
+  if (typeof notes !== 'string') return []
+  const sections = notes.slice(0, 16_000).split(/^[ \t]*#{1,6}[ \t]+(中文|English)[ \t]*\r?$/gim)
+  const heading = locale === 'zh' ? '中文' : 'english'
+  const preferred = sections.findIndex((name, index) => index % 2 === 1 && name.toLowerCase() === heading)
+  const content = sections[preferred + 1]?.trim() || sections[2]?.trim() || sections[0]?.trim() || ''
+  const blocks: UpdateNoteBlock[] = []
+  for (const line of content.split(/\r?\n/)) {
+    const text = line.trim()
+    if (!text) continue
+    const bullet = /^[-*•]\s+(.+)$/.exec(text)
+    if (!bullet) {
+      blocks.push({ kind: 'paragraph', text: text.replace(/^#{1,6}\s+/, '') })
+      continue
+    }
+    const previous = blocks.at(-1)
+    if (previous?.kind === 'list') previous.items.push(bullet[1]!)
+    else blocks.push({ kind: 'list', items: [bullet[1]!] })
+  }
+  return blocks
+}

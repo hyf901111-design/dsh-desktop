@@ -33,6 +33,8 @@ export interface UpdateStatus {
   installStage?: 'preparing' | 'saving' | 'restarting'
   currentVersion: string
   availableVersion?: string
+  /** Plain release notes from the update feed for availableVersion. */
+  releaseNotes?: string
   percent?: number
   transferredBytes?: number
   totalBytes?: number

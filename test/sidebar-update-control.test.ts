@@ -414,3 +414,35 @@ it('aligns the update control in the account row and switches to the ready resta
   expect(panel(document).querySelector('[data-update-install] [data-notice-icon=restart]')).not.toBeNull()
   expect(callbacks.install).not.toHaveBeenCalled()
 })
+
+it('keeps localized notes open when a manual discovery becomes a download', () => {
+  const { document, control } = fixture()
+  const target = { ...available, releaseNotes: '## 中文\n\n- 新增趋势图\n- <img src=x>\n\n## English\n\n- New trend chart' }
+  control.render(target)
+  const notes = panel(document).querySelector<HTMLDetailsElement>('details')!
+  expect(notes.open).toBe(true)
+  expect(notes.querySelector('li')?.textContent).toBe('新增趋势图')
+  expect(notes.querySelector('img')).toBeNull()
+  expect(notes.textContent).not.toContain('New trend chart')
+
+  control.render({ ...target, phase: 'downloading', percent: 40 })
+  expect(panel(document).hidden).toBe(false)
+  expect(notes.querySelector('summary')?.hidden).toBe(false)
+  expect(notes.open).toBe(true)
+  const body = notes.querySelector<HTMLElement>('section')!
+  body.focus()
+  control.render({ ...target, phase: 'downloading', percent: 65 })
+  expect(document.activeElement).toBe(body)
+  expect(panel(document).querySelector('section')).toBe(body)
+  expect(panel(document).querySelector('[role=progressbar]')?.getAttribute('aria-valuenow')).toBe('65')
+
+  notes.open = false
+  control.render({ ...target, phase: 'downloading', percent: 72 })
+  expect(notes.open).toBe(false)
+  document.dispatchEvent(new document.defaultView!.CustomEvent('ework-update-action', { detail: 'show' }))
+  expect(notes.open).toBe(true)
+
+  control.render({ ...available, availableVersion: '0.9.7' })
+  expect(notes.hidden).toBe(true)
+  expect(notes.textContent).not.toContain('新增趋势图')
+})

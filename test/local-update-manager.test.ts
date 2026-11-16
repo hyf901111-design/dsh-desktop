@@ -55,7 +55,7 @@ describe('isolated local update checks',()=>{
     response.delay=50;await initialize();const wc={mainFrame:{processId:1,routingId:1}};manager.registerUpdateHandlers(()=>({isDestroyed:()=>false,webContents:wc}))
     const event={sender:wc,senderFrame:wc.mainFrame};const checking=fake.handlers.get('updates:check')!(event)
     await new Promise(r=>setTimeout(r,20));expect(manager.getUpdateStatus().phase).toBe('checking')
-    await checking;expect(manager.getUpdateStatus()).toMatchObject({phase:'available',availableVersion:'0.9.6',currentVersion:'0.9.5'})
+    await checking;expect(manager.getUpdateStatus()).toMatchObject({phase:'available',availableVersion:'0.9.6',currentVersion:'0.9.5',releaseNotes:'本地合成检查，不提供下载或安装'})
     for(const channel of ['updates:download','updates:install'])await expect(Promise.resolve().then(()=>fake.handlers.get(channel)!(event))).rejects.toThrow(/检查|check/i)
     manager.startUpdateManager();expect(fake.power).not.toHaveBeenCalled();expect(fake.receipt).not.toHaveBeenCalled();expect(fake.recovery).not.toHaveBeenCalled();expect(fake.quit).not.toHaveBeenCalled();expect(fake.download).not.toHaveBeenCalled();expect(fake.check).not.toHaveBeenCalled()
     expect(requests).toHaveLength(1);expect(requests[0]).toMatch(/^\/latest(?:-mac)?\.yml/)
