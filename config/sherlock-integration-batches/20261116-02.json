@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "13aa3ae58b254642c10bbbe0437383093c0da420",
-        "tipCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
+        "baseCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
+        "tipCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
         "commits": [
           {
-            "commit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
+            "commit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
             "parents": [
-              "13aa3ae58b254642c10bbbe0437383093c0da420"
+              "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a"
             ],
-            "subject": "新增：按会话保存和恢复图像工厂的可编辑画布"
+            "subject": "修复：图像工厂独立画布草稿重启后可恢复"
           }
         ],
         "files": [
@@ -33,31 +33,7 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/pending-conversation.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/state/image-factory-canvases.ts"
-          },
-          {
-            "status": "A",
             "path": "src/preload/image-factory/canvas-workspace.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/style.css"
           },
           {
             "status": "M",
@@ -65,23 +41,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/shared/image-factory-canvas.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/image-factory-canvas-workspace.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/image-factory-canvases.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation.test.js"
+            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
@@ -93,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
-            "completedAt": "2026-11-16T14:37:05.464Z",
+            "verifiedCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
+            "completedAt": "2026-11-16T14:58:41.443Z",
             "timeoutMs": 120000
           },
           {
@@ -114,26 +74,27 @@
               "test/browser-sidebar-entry.test.ts"
             ],
             "outcome": "passed",
-            "summary": "65 项直接相关检查通过。",
-            "verifiedCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
-            "completedAt": "2026-11-16T14:37:05.464Z",
+            "summary": "66 项图像工厂及相关检查通过。",
+            "verifiedCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
+            "completedAt": "2026-11-16T14:58:41.443Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 通过真实前端和文件存储验证了刷新后重编、图层样式保留、会话隔离、后台回写和独立草稿绑定。签名客户端实机重启待包完成后验收。"
+          "summary": "Chromium 通过真实前端和文件存储验证了会话隔离、后台回写、草稿重启恢复、字体保留、首轮修改绑定及保留文本图层。签名包完成后进行客户端验收。"
         },
         "acceptanceCriteria": [
           "按账号和原生会话恢复图片、文字及堆叠顺序。",
           "切换会话不混用画布，后台结果写回原会话。",
+          "从首页打开图像工厂未聊天时，独立画布草稿重启后可恢复。",
           "先导图后首次聊天可将独立草稿绑定到新会话，普通对话行为保持。",
           "图层发生写入失败时支持重试。"
         ],
         "risks": [
           "此前未持久化的旧画布缺少可编辑图层记录。"
         ],
-        "generatedAt": "2026-11-16T14:37:05.464Z"
+        "generatedAt": "2026-11-16T14:58:41.443Z"
       }
     },
     {
