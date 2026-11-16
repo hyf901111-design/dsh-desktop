@@ -274,13 +274,16 @@ export class ScheduledTaskView {
       if (home.getAttribute('aria-pressed') !== pressed) home.setAttribute('aria-pressed', pressed)
     }
     if (!collapsed || !this.surfaceHost) {
-      group.querySelectorAll('[data-sidebar-browser],[data-sidebar-knowledge]').forEach(button => button.remove())
+      group.querySelectorAll('[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory]').forEach(button => button.remove())
       return
     }
     const more = group.querySelector('.st-more-zone')
     const english = this.document.documentElement.dataset.odysseyLocale === 'en'
     const entries = [
       { key: 'browser', label: english ? 'Browser' : '浏览器', open: () => this.openBrowser() },
+      { key: 'image-factory', label: english ? 'Image Factory' : '图像工厂', open: () => {
+        this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:image-factory-open'))
+      } },
       { key: 'knowledge', label: english ? 'Knowledge Base' : '知识库', open: () => this.openKnowledge() }
     ]
     const buttons = entries.map(({ key, label, open }) => {

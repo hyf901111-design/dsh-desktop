@@ -1,4 +1,4 @@
-export type WorkspaceSurface = 'scheduled' | 'integrations' | 'notes' | 'browser' | 'knowledge' | 'shared-session';
+export type WorkspaceSurface = 'scheduled' | 'integrations' | 'notes' | 'browser' | 'knowledge' | 'shared-session' | 'image-factory';
 type SurfaceLocation = {
     surface: WorkspaceSurface;
     route?: string;
@@ -48,7 +48,7 @@ export class WorkspaceSurfaceHost {
         element.dataset.workspaceSurface = surface;
         // Notes use viewport coordinates from the shared header and pane.
         // The blurred frame creates a fixed-position containing block.
-        (['notes','browser','knowledge','shared-session'].includes(surface) ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
+        (['notes','browser','knowledge','shared-session','image-factory'].includes(surface) ? this.document.body : this.document.querySelector('.pI_x6G_frame') || this.document.body).append(element);
         if (this.current()?.surface === surface) this.position();
     }
     open(surface: WorkspaceSurface, route?: string) {
@@ -193,7 +193,7 @@ export class WorkspaceSurfaceHost {
         if (target?.closest?.('.VOzbGW_trigger')) { if (!['notes','browser','knowledge','shared-session'].includes(this.current()?.surface ?? '')) this.closeAll(); return; }
         if (target?.closest?.('[data-sidebar-session-search],.st-more-zone'))
             return;
-        if (this.current()?.surface !== 'notes' && !target?.closest?.('[data-sidebar-browser],[data-sidebar-knowledge],.st-more-zone') && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
+        if (this.current()?.surface !== 'notes' && !target?.closest?.('[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory],.st-more-zone') && target?.closest?.('[data-dsh-sidebar-root] [class*="_sessionRow"],[data-dsh-sidebar-root] [role=row],.hHd-Xa_newSession'))
             this.closeAll();
     };
     dispose() {

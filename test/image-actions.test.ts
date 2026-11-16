@@ -34,3 +34,14 @@ it('rejects subframes, invalid images and oversized decoded dimensions before an
   await expect(call({ action: 'copy', data: large })).rejects.toThrow('dimensions')
   expect(native.clipboard).not.toHaveBeenCalled(); expect(native.save).not.toHaveBeenCalled()
 })
+
+it('exports JPEG from validated pixels using the native save dialog', async () => {
+  const jpeg = Buffer.from([255, 216, 255])
+  const toJPEG = vi.fn(() => jpeg)
+  native.decode.mockReturnValue({ isEmpty: () => false, toJPEG })
+  native.save.mockResolvedValue({ canceled: false, filePath: '/tmp/chosen.jpg' })
+  await call({ action: 'download', data: png(), name: '../../海报-v2.jpg', format: 'jpg' })
+  expect(native.save.mock.calls[0]?.[1]).toEqual({ defaultPath: '海报-v2.jpg', filters: [{ name: 'JPG', extensions: ['jpg'] }] })
+  expect(toJPEG).toHaveBeenCalledWith(92)
+  expect(native.write).toHaveBeenCalledWith('/tmp/chosen.jpg', jpeg)
+})
