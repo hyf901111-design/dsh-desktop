@@ -11,68 +11,68 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d",
-        "tipCommit": "4bb46730baa4798dff1198659c972fe1a9856e55",
+        "baseCommit": "4bb46730baa4798dff1198659c972fe1a9856e55",
+        "tipCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
         "commits": [
           {
-            "commit": "4bb46730baa4798dff1198659c972fe1a9856e55",
+            "commit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
             "parents": [
-              "bda6cf6d659a9a464c6ee9edddb97ee7a045d38d"
+              "4bb46730baa4798dff1198659c972fe1a9856e55"
             ],
-            "subject": "修复：图像工厂示例卡片使用正确缩略图"
+            "subject": "优化：统一图像工厂顶栏并改为循环图片画廊"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/blood-orange.jpg"
+            "path": "scripts/lib/image-factory-native.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/blue-hour.jpg"
+            "path": "src/preload/image-factory/actions-menu.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/coastal-museum.jpg"
+            "path": "src/preload/image-factory/gallery-examples.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/creative-drop.jpg"
+            "path": "src/preload/image-factory/gallery.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/flower-market.jpg"
+            "path": "src/preload/image-factory/raster.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/jiangnan.jpg"
+            "path": "src/preload/image-factory/style.css"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/lantern-fox.jpg"
+            "path": "src/preload/image-factory/view.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/liquid-silver.jpg"
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-art/night-shift.jpg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery-art/olive-perfume.jpg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery-art/ridge-walk.jpg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery-art/summer-fruit.jpg"
+            "path": "test/image-factory.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
+            "completedAt": "2026-11-16T12:35:43.496Z",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "node",
@@ -86,64 +86,27 @@
               "test/image-generation-tool.test.js"
             ],
             "outcome": "passed",
-            "summary": "47 项聚焦测试通过，覆盖全局右侧对话与画布协议、参考图、区域映射、入口和导出。",
-            "verifiedCommit": "4bb46730baa4798dff1198659c972fe1a9856e55",
-            "completedAt": "2026-11-16T12:09:20.785Z",
+            "summary": "48 项聚焦测试通过，覆盖全局右侧对话与画布协议、参考图、区域映射、入口和导出。",
+            "verifiedCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
+            "completedAt": "2026-11-16T12:35:43.496Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "上一候选包实机验证了顶栏间距、全局面板、画廊滚动与提示词填充及发送。该提交只修正打包缩略图。"
+          "summary": "上一包已验证图像工厂统一对话、真实生图、导入、框选和导出。本轮工作区拖窗、四个页签入口和反向循环画廊等待最新包验证。"
         },
         "acceptanceCriteria": [
-          "两处入口打开同一画布，右侧复用客户端全局面板和输入框。",
-          "欢迎语和用例专用于图像工厂，发送活跃画布命令可生图和框选改图；常规画布编辑与导出保持可用。",
-          "对话与输入区去除画布、版本和项目标签；导入和导出归入共用更多菜单；画布明确显示生成、裁剪、框选、预览和采用版本的下一步。",
-          "灵感画廊提供十二张可点选的示例卡，带动中文提示词与比例、保留用户已有草稿，支持直接描述生图与本地导入。",
-          "有图时可以从更多菜单回到灵感画廊，返回画布可取回当前图与版本，点击新示例发送后生成新图。"
+          "图像工厂顶栏应用名称与空白区域支持拖动窗口；应用名后展开并能切换至对话、研究、笔记、表格；保留全局右侧对话展开按钮。",
+          "画廊只显示图片，奇数列向下、偶数列向上循环；点击图片仍可填入原生右侧输入框。",
+          "画布不显示导入入口和比例按钮；右侧欢迎页可选择本地图片并导入画布；直接描述比例生成对应尺寸。",
+          "画布保留编辑、框选、预览/恢复历史和导出。"
         ],
         "risks": [
           "真实生图使用当前账号现有图片模型权限。",
           "当前运行期间保留图像版本与对话，可导出到本地。"
         ],
-        "generatedAt": "2026-11-16T12:09:20.785Z"
-      },
-      "merged": {
-        "mergeCommit": "fcf8747d278696cd098f43c566b300e7b7e99771",
-        "verificationCommit": "fcf8747d278696cd098f43c566b300e7b7e99771",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fcf8747d278696cd098f43c566b300e7b7e99771",
-            "completedAt": "2026-11-16T12:09:24.395Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory.test.js",
-              "test/image-actions.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
-            "verifiedCommit": "fcf8747d278696cd098f43c566b300e7b7e99771",
-            "completedAt": "2026-11-16T12:09:24.395Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T12:09:24.395Z"
+        "generatedAt": "2026-11-16T12:35:43.496Z"
       }
     }
   ],
