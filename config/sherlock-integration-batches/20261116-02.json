@@ -1,0 +1,274 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261116-02",
+  "branch": "codex/integration/20261116-02",
+  "baseMainCommit": "6cb33af84ccff5485760a1086fcaf5eb0cfaff53",
+  "expectedMainCommit": "6cb33af84ccff5485760a1086fcaf5eb0cfaff53",
+  "createdAt": "2026-11-16T10:46:06.921Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图像工厂 MVP",
+        "branch": "codex/feat/image-factory-20261116",
+        "baseCommit": "6cb33af84ccff5485760a1086fcaf5eb0cfaff53",
+        "tipCommit": "68c2b06e92ec23386865a163d2b01d94df328ec3",
+        "commits": [
+          {
+            "commit": "68c2b06e92ec23386865a163d2b01d94df328ec3",
+            "parents": [
+              "6cb33af84ccff5485760a1086fcaf5eb0cfaff53"
+            ],
+            "subject": "功能：接入图像工厂画布、对话生图与局部编辑"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-factory.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/image-actions.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/image-factory.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-app-shortcuts.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/adjust.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/arrow-up.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/check.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/chevron.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/close.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/compare.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/crop.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/download.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/factory.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/history.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/horizontal.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/image.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/left.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/mark.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/minus.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/paperclip.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/plus.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/redo.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/resize.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/right-panel.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/spark.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/square.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/type.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/undo.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/upload.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/vertical.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/icons.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/raster.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-actions.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/image-factory.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "68c2b06e92ec23386865a163d2b01d94df328ec3",
+            "completedAt": "2026-11-16T10:46:05.753Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory.test.js",
+              "test/image-actions.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/image-generation-tool.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "43 项聚焦测试通过，覆盖工作区导航、路由鉴权、参考图、框选映射和导出。",
+            "verifiedCommit": "68c2b06e92ec23386865a163d2b01d94df328ec3",
+            "completedAt": "2026-11-16T10:46:05.753Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能工作树执行聚焦检查；真实客户端验收在集成包进行。"
+        },
+        "acceptanceCriteria": [
+          "从对话首页和收起左侧栏进入图像工厂。",
+          "右侧描述生成图像、导入/编辑位图、框选修改并保留框外像素、对比版本、导出 PNG 与 JPG。"
+        ],
+        "risks": [
+          "真实生图需要当前账号具备图片模型权限或配置可用的 OpenAI 密钥。",
+          "工作区保留当前客户端运行期间的版本，可导出到本地。"
+        ],
+        "generatedAt": "2026-11-16T10:46:05.753Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-factory.test.js",
+        "test/image-actions.test.ts",
+        "test/browser-sidebar-entry.test.ts",
+        "test/workspace-surface-host.test.ts",
+        "test/image-generation-tool.test.js"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
