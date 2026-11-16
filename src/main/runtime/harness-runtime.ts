@@ -24,7 +24,6 @@ export interface HarnessRuntimeOptions {
   memoryEndpoint?: {url:string;token:string}
   localSearchUrl: string
   accountEndpoint?: { url: string; token: string }
-  imageFactoryToken?: string
   localSearchToken: string
   researchContext?: { url: string; token: string; boardsToken?:string }
   dshHome: string
@@ -223,7 +222,6 @@ export class HarnessRuntime {
           this.options.dshHome,
           process.platform,
           { ...process.env, SHERLOCK_ACCOUNT_BRIDGE: this.options.accountEndpoint ? JSON.stringify(this.options.accountEndpoint) : undefined,
-            SHERLOCK_IMAGE_FACTORY_TOKEN: this.options.imageFactoryToken,
             EWORK_COMPUTER_USE_BINARY:this.options.computerUseBinary,
             EWORK_COMPUTER_USE_EXECUTABLES: this.options.computerUseExecutables ? JSON.stringify(this.options.computerUseExecutables) : undefined,
             EWORK_INTEGRATION_BRIDGE:this.options.integrationEndpoint?JSON.stringify(this.options.integrationEndpoint):undefined,

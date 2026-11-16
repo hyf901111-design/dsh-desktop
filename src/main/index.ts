@@ -20,7 +20,6 @@ import {createConversationComponentService} from './conversation-components/serv
 import {installConversationComponentHandlers} from './conversation-components/ipc'
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import {registerImageActions} from './image-actions'
-import {installImageFactory} from './image-factory'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import { PptxAnnotationService, registerPptxAnnotationHandlers, type PptxAnnotationHistoryEvent } from './pptx/annotations'
 import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
@@ -1370,6 +1369,16 @@ async function bootstrap(): Promise<void> {
       sendKnowledgeChange()
     }, 150)
   })
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:archive', () => mainWindow, (_event, value: unknown) => {
+    const input = value as { id?: string; sessionId?: string; name?: string; data?: Uint8Array } | undefined
+    if (typeof input?.id !== 'string' || typeof input.sessionId !== 'string' || typeof input.name !== 'string' ||
+        input.name.length > 100 || !(input.data instanceof Uint8Array) || input.data.byteLength > 36 * 1024 * 1024) {
+      throw Error('生成图片的知识库参数无效。')
+    }
+    return knowledge.collectFactoryImage(Buffer.from(input.data), {
+      id: input.id, sessionId: input.sessionId, name: input.name, processed: true
+    })
+  })
   let historyScan: Promise<unknown> | undefined
   let rescanAll = false
   let knowledgeHistoryTimer: ReturnType<typeof setTimeout> | undefined
@@ -1394,7 +1403,7 @@ async function bootstrap(): Promise<void> {
         }
       }
       historyScanInProgress = true
-      historyScan = scanKnowledgeHistory({ sessionRoot: join(dshHome, 'sessions'), store: knowledge, only, check,
+      historyScan = scanKnowledgeHistory({ sessionRoot: join(dshHome, 'sessions'), attachmentsRoot: join(dshHome, 'attachments', 'v1', 'objects'), store: knowledge, only, check,
         allowSession: id => !researchBoardsService?.isSharedSession(id) && !isScheduledSession(id)
       }).then(result => {
         if (!only || result.failed) console.info('[knowledge] historical file collection', result)
@@ -1748,9 +1757,7 @@ async function bootstrap(): Promise<void> {
     runtimeSnapshot: () => ({ revision: 0, runtimeEpoch: 'unavailable', ownerAccountId: 'unavailable', connections: [], tools: [], skills: [], plugins: [] }),
     execute: async () => unavailableIntegration(), readSkill: async () => unavailableIntegration(),
   })
-  const imageFactory = installImageFactory(() => mainWindow, () => runtime?.snapshot().url)
   stopIntegrationIdentity = accountService.subscribeSessionChanged(() => {
-    imageFactory.reset()
     memoryService?.rotateIdentity()
     noteNativeMenu.close()
     integrationService?.rotateIdentity()
@@ -1784,7 +1791,6 @@ async function bootstrap(): Promise<void> {
     memoryEndpoint,
     integrationEndpoint,
     accountEndpoint,
-    imageFactoryToken: imageFactory.token,
     localSearchUrl: localSearchRuntime.endpoint.url,
     localSearchToken: localSearchRuntime.endpoint.token,
     researchContext: {...researchContext,boardsToken},

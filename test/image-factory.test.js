@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { createServer } from 'node:http'
-import { once } from 'node:events'
-import { imageFactoryInput, registerImageFactory } from '../packages/dsh-research-task-runtime/image-factory.js'
+import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
+import { drawLayers, moveLayer } from '../src/preload/image-factory/layers'
 import { applyRegion, between, canvasPoint, drawFit, providerSize, ratios, requestedImageSize, validSize } from '../src/preload/image-factory/raster'
 
-const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==', 'base64')
-const request = { requestId: '11898f5e-5fab-4913-b241-267ac863be0c', size: '1024x1536', prompt: 'Make a poster' }
 
 describe('image factory', () => {
   it('maps a reverse drag on a zoomed canvas to clipped original pixels', () => {
@@ -48,41 +45,31 @@ describe('image factory', () => {
     expect(operations).toEqual([[scene.image, 0, 0], ['clear', 51, 98, 20, 17], [edit.image, 51, 98, 20, 17]])
   })
 
-  it('requires a supported ratio and a reference matching its declared format', () => {
-    expect(imageFactoryInput({ ...request, reference: { mediaType: 'image/png', data: png.toString('base64') } }).references[0]?.data).toEqual(png)
-    expect(() => imageFactoryInput({ ...request, size: 'arbitrary' })).toThrow()
-    expect(() => imageFactoryInput({ ...request, reference: { mediaType: 'image/jpeg', data: png.toString('base64') } })).toThrow()
+  it('preserves the exact user comment while passing a bounded canvas context to the native tool', () => {
+    const context = { id: '11898f5e-5fab-4913-b241-267ac863be0c', size: '1024x1536',
+      operation: 'region', title: '活动海报', width: 43, height: 88, internalReference: true }
+    const text = '把标题旁的物件换成红色。\\n 保持原布局。'.replaceAll('\\n', '\n')
+    const prompt = imageFactoryPrompt(text, context)
+    expect(readImageFactoryContext(prompt)).toEqual({ ...context, text })
+    expect(stripImageFactoryContext(prompt)).toBe(text)
+    expect(readImageFactoryContext(imageFactoryPrompt(text, { ...context, width: 8000 }))).toBeUndefined()
   })
 
-  it('routes an authenticated workspace request through the active account provider, without retrying', async () => {
-    let handle
-    const calls = []
-    const server = createServer((req, res) => void handle(req, res))
-    const dispose = registerImageFactory({ webServer: { register: ({ handler }) => {
-      handle = handler
-      return () => {}
-    } } }, {
-      token: 'unit-test-secret', isTrustedRequest: () => true,
-      hosted: { ready: async () => {}, available: () => true, models: [{ id: 'hosted-image' }],
-        capture: () => async (input) => { calls.push(input); return { data: png } } },
-      local: { models: [], generate: async () => { throw Error('wrong provider') } },
-    })
-    server.listen(0, '127.0.0.1')
-    await once(server, 'listening')
-    const addr = server.address()
-    const post = (authorization, body) => fetch('http://127.0.0.1:' + addr.port, {
-      method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: JSON.stringify(body),
-    })
-    try {
-      expect((await post('incorrect', request)).status).toBe(403)
-      const generated = await post('Bearer unit-test-secret', request)
-      expect(generated.status).toBe(200)
-      expect(await generated.json()).toEqual({ data: png.toString('base64') })
-      const reference = { mediaType: 'image/png', data: png.toString('base64') }
-      expect((await post('Bearer unit-test-secret', { ...request, reference })).status).toBe(200)
-      expect(calls).toHaveLength(2)
-      expect(calls[0]).toMatchObject({ model: 'hosted-image', references: [] })
-      expect(calls[1]).toMatchObject({ model: 'hosted-image', references: [{ mediaType: 'image/png', data: png }] })
-    } finally { dispose(); server.close(); server.closeAllConnections() }
+  it('composites movable, formatted text layers in the same order as the layer list', () => {
+    const text = { id: 'heading', kind: 'text', text: '海报', x: .1, y: .2, width: .5,
+      fontSize: 30, family: 'Songti SC', weight: 700, align: 'right', color: '#ff0000' }
+    const image = { id: 'photo', kind: 'image', raster: { image: 'base' } }
+    const original = [image, text]
+    const layers = moveLayer(original, 'heading', 'photo', false)
+    expect(original.map(layer => layer.id)).toEqual(['photo', 'heading'])
+    expect(layers.map(layer => layer.id)).toEqual(['heading', 'photo'])
+    const calls = [], paint = {
+      measureText: s => ({ width: s.length * 16 }),
+      drawImage: (...args) => calls.push(['image', ...args]),
+      fillText: (...args) => calls.push(['text', ...args, paint.font, paint.fillStyle, paint.textAlign]),
+    }
+    drawLayers(paint, { width: 400, height: 300, layers })
+    expect(calls).toEqual([['text', '海报', 240, 78, '700 30px "Songti SC", "PingFang SC", sans-serif', '#ff0000', 'right'],
+      ['image', 'base', 0, 0, 400, 300]])
   })
 })

@@ -4,12 +4,12 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
  const publish=patch=>{state={...state,...patch};for(const fn of listeners)fn()};
  const target=()=>workspaces.list.getSnapshot().items.find(item=>item.workspaceId===state.workspaceId);
  const chooseDefault=()=>{if(disposed||explicit||target())return;const snapshot=workspaces.list.getSnapshot(),id=snapshot.recentWorkspaceId;if(snapshot.items.some(item=>item.workspaceId===id))publish({workspaceId:id})};
- const send=async(_text,_images,mode,admission)=>{
-  if(disposed||state.busy)return;
+ const send=async(_text,_images,mode,admission,external)=>{
+  if(disposed||state.busy){if(external)throw Error('正在准备对话，请稍候。');return}
   const draft=admission??shell.snapshot,project=target(),before=sessions.list.getSnapshot().current;
-  if(!draft.draft.trim()&&!draft.imageIds?.length)return;
-  if(!project){shell.notify('error','请先选择项目。');return}
-  if(before!==undefined){shell.notify('error','当前会话已变化，输入已保留。');return}
+  if(!external&&!draft.draft.trim()&&!draft.imageIds?.length)return;
+  if(!project){if(external)throw Error('请先选择项目。');shell.notify('error','请先选择项目。');return}
+  if(before!==undefined){if(external)throw Error('当前会话已变化，请重试。');shell.notify('error','当前会话已变化，输入已保留。');return}
   publish({busy:true});shell.setResearchContextPreparing(true);
   let handedOff;
   try{
@@ -29,27 +29,26 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    if(disposed||sessions.list.getSnapshot().current!==id||real.snapshot.draftRev!==transferredRevision)throw Error('当前会话或草稿已变化，首条消息保留在新会话中，请重新发送。');
    // The real shell owns file/reference serialization and command adjudication.
    real.setResearchContextPreparing?.(false);
-   real.submit(mode);
-  }catch(error){(handedOff??shell).notify?.('error',error?.message||'会话未能创建，输入已保留。')}
+   if(external)await external(id);else real.submit(mode);
+  }catch(error){if(external)throw error;(handedOff??shell).notify?.('error',error?.message||'会话未能创建，输入已保留。')}
   finally{handedOff?.setResearchContextPreparing?.(false);shell.setResearchContextPreparing(false);publish({busy:false})}
  };
  const shell=makeShell({defaultSink:send});
  // Keep raw occurrences until a real session supplies its registered codecs.
  shell.submit=mode=>send(shell.snapshot.draft,[...(shell.snapshot.imageIds??[])],mode||'queue',shell.snapshot);
  chooseDefault();const off=workspaces.list.subscribe?.(chooseDefault);
- return{shell,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},getSnapshot:()=>state,
+ return{shell,submitExternal:fn=>send(undefined,undefined,'queue',undefined,fn),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},getSnapshot:()=>state,
   selectWorkspace(id){if(state.busy)throw Error('正在发送，请稍候。');if(!workspaces.list.getSnapshot().items.some(item=>item.workspaceId===id))throw Error('项目已不可用。');explicit=true;publish({workspaceId:id})},
   dispose(){disposed=true;off?.();releaseImages?.(shell.snapshot.imageIds??[]);shell.dispose();listeners.clear()}}
 }
 /** Same native InputBar as ordinary chat, supplied by the pending draft. */
 export function EWorkPendingInputBar(props){
- if(!props.subagentPanel&&document.body.dataset.workspaceSurface==='browser')props={...props,eworkNotes:false,researchCanvasWorkspace:undefined,researchFileReferences:[],researchArtifactReferences:[]};
+ if(!props.subagentPanel&&['browser','image-factory'].includes(document.body.dataset.workspaceSurface))props={...props,eworkNotes:false,researchCanvasWorkspace:undefined,researchFileReferences:[],researchArtifactReferences:[]};
  const pending=eworkPendingConversation;
  const input=react.useSyncExternalStore(pending?.shell.state.subscribe||(()=>()=>{}),pending?.shell.state.getSnapshot||(()=>undefined));
  const notice=react.useSyncExternalStore(pending?.shell.notices.subscribe||(()=>()=>{}),pending?.shell.notices.getSnapshot||(()=>null));
  const preferences=react.useSyncExternalStore(pending?.preferences?.model.store.subscribe||(()=>()=>{}),pending?.preferences?.model.store.getSnapshot||(()=>undefined));
  const state=react.useSyncExternalStore(pending?.subscribe||(()=>()=>{}),pending?.getSnapshot||(()=>undefined));
- if(props.eworkImageFactory&&!props.subagentPanel)return react_jsx_runtime.jsx(EWorkImageFactoryInput,props);
  if(!props.pendingConversation||!pending)return react_jsx_runtime.jsx(EWorkSharedInputBar,props);
  const shell=pending.shell;
  return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,variant:'composer',disabled:!state.workspaceId||state.busy,
@@ -64,7 +63,7 @@ export function EWorkPendingInputBar(props){
   useNotices:select=>{props.useNotices(value=>value);return select(notice)},useLexicon:select=>{props.useLexicon(value=>value);return select(new Map())},
   addImages:files=>{try{const images=conversationController.createDraftImages(files);if(!shell.addImages(images.map(image=>image.id)))conversationController.releaseDraftImages(images);return null}catch(error){return error.message}},
   removeImage:id=>{conversationController.releaseDraftImage(id);shell.removeImage(id)},draftImages:ids=>conversationController.draftImages(ids),
-  placeholder:state.workspaceId?'输入你的问题…':'选择项目后开始对话',onRequestWorkspace:props.onRequestWorkspace});
+  placeholder:state.workspaceId?(props.eworkImageFactory?'描述要生成的图片或海报…':'输入你的问题…'):'选择项目后开始对话',onRequestWorkspace:props.onRequestWorkspace});
 }
 export function browserPromptReference(source){
  if(source===undefined||source===null)return '';

@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zstdCompressSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
 import { expect, it } from 'vitest'
 import { KnowledgeStore } from '../src/main/knowledge/store'
 import { scanKnowledgeHistory } from '../src/main/knowledge/history-backfill'
@@ -36,6 +37,48 @@ it('recovers closed historical deliveries from all frames without collecting inp
     await store.edit({ type: 'remove', id: before.find(row => row.name === '报告.pdf')!.id })
     await run()
     expect((await store.snapshot()).documents.map(row => [row.name, row.sessionId])).toEqual([['数据.xlsx', 'session-main']])
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})
+
+it('collects a factory result from the native turn, updates it with the full canvas and respects deletion', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ework-knowledge-factory-'))
+  try {
+    const sessionId = 'session-main', id = 'e6a48a78-afdf-4e08-8c8b-b7e987012fab'
+    const directory = join(root, 'sessions', 'project', sessionId)
+    const objects = join(root, 'objects')
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=', 'base64')
+    const hash = createHash('sha256').update(png).digest('hex')
+    await mkdir(directory, { recursive: true })
+    await mkdir(join(objects, hash.slice(0, 2)), { recursive: true })
+    await writeFile(join(objects, hash.slice(0, 2), hash), png)
+    const image = { attachmentId: 'sha256:' + hash, mediaType: 'image/png' }
+    const receipt = { kind: 'odyssey-image-generation', version: 1, ok: true, image, factory: { id, title: '活动海报' } }
+    const log = join(directory, 'session.jsonl')
+    const lines = [
+      { type: 'session', id: sessionId, cwd: root },
+      { type: 'session/title', data: { title: '图片会话' } },
+      { type: 'tool/code-dispatch', data: { name: 'image_generate', content: [
+        { type: 'text', text: JSON.stringify(receipt) }, { type: 'image', attachment: image }
+      ] } },
+    ]
+    const writeLog = () => writeFile(log, lines.map(row => JSON.stringify(row)).join('\n') + '\n')
+    await writeLog()
+    const store = new KnowledgeStore(join(root, 'library'), () => ({ owner: 'local', generation: 0 }), () => {})
+    const scan = () => scanKnowledgeHistory({ sessionRoot: join(root, 'sessions'), attachmentsRoot: objects, store,
+      allowSession: () => true, check: () => {} })
+    await scan()
+    const [collected] = (await store.snapshot()).documents
+    expect(collected).toMatchObject({ name: '活动海报.png', sessionId, source: 'generated', sessionTitle: '图片会话' })
+    await store.edit({ type: 'rename', id: collected!.id, name: '已整理.png' })
+    await store.collectFactoryImage(png, { id, name: '新名称', sessionId, processed: true })
+    expect((await store.snapshot()).documents).toEqual([expect.objectContaining({ id: collected!.id, name: '已整理.png' })])
+    await store.edit({ type: 'remove', id: collected!.id })
+    await writeFile(log, lines.map(row => JSON.stringify(row)).join('\n') + '\n\n')
+    await scan()
+    expect(await store.collectFactoryImage(png, { id, name: '新名称', sessionId, processed: true })).toBeUndefined()
+    expect((await store.snapshot()).documents).toEqual([])
   } finally {
     await rm(root, { force: true, recursive: true })
   }

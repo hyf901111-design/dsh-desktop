@@ -300,6 +300,49 @@ export class KnowledgeStore {
     return this.importOne(path, provenance)
   }
 
+  collectFactoryImage(bytes: Buffer, input: {
+    sessionId: string; id: string; name: string; sessionTitle?: string; updatedAt?: number; processed?: boolean
+  }, guard?: () => void) {
+    return this.run(async (state, directory, identityCurrent) => {
+      const current = () => { identityCurrent(); guard?.() }
+      current()
+      if (!uuid.test(input.id) || !input.sessionId || input.sessionId.length > 256 ||
+          bytes.length < 24 || bytes.length > 36 * 1024 * 1024 ||
+          !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+        throw Error('知识库只收录有效的生成图片。')
+      }
+      const origin = digest(JSON.stringify(['image-factory', input.sessionId, input.id]))
+      if (state.excludedOrigins.includes(origin)) return
+      const existing = state.documents.find(row => row.origin === origin)
+      if (existing && (!input.processed || existing.sourceVersion !== 'factory-provider' || existing.share))
+        return publicDocument(existing)
+
+      const id = existing?.id ?? randomUUID()
+      const name = (input.name.replace(/[\\/\p{Cc}]/gu, ' ').trim().slice(0, 120) || '生成图片') + '.png'
+      const storageName = randomUUID() + '.png'
+      const target = join(directory, 'files', id)
+      const path = join(target, storageName)
+      const row: StoredDocument = {
+        id, name, origin, source: 'generated', sessionId: input.sessionId, sessionTitle: input.sessionTitle,
+        saved: false, starred: false, updatedAt: input.updatedAt ?? Date.now(),
+        ...existing, storageName, size: bytes.length, sourceVersion: input.processed ? 'factory-canvas' : 'factory-provider'
+      }
+      try {
+        await mkdir(target, { recursive: true, mode: 0o700 })
+        current()
+        await atomicWrite(path, bytes)
+        await this.persist(state, {
+          ...state, documents: existing ? state.documents.map(item => item === existing ? row : item) : [...state.documents, row]
+        }, directory, current)
+        if (existing) await rm(join(target, existing.storageName), { force: true }).catch(() => {})
+        return publicDocument(row)
+      } catch (error) {
+        await rm(path, { force: true }).catch(() => {})
+        throw error
+      }
+    })
+  }
+
   private importOne(path: string, options: {
     folderId?: string
     sessionId?: string

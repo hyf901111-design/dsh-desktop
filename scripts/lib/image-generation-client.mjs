@@ -14,7 +14,7 @@ export function imageGenerationCalls(nodes,running){
    const stopped=root.error?.code==='interrupted'||root.isError&&/已取消|cancelled|canceled/i.test(errorText)
    const state=stopped?'cancelled':root.isError?'failed':image?'completed':'kind'in root?'failed':running?'running':'interrupted'
    const ratio=state==='completed'&&image.width>0&&image.height>0?`${image.width} / ${image.height}`:state==='running'?'2 / 3':args.size==='1536x1024'?'3 / 2':args.size==='1024x1536'?'2 / 3':'1 / 1'
-   calls.set(root.callId,{id:root.callId,state,ratio,...state==='completed'?{image}:{}})
+   calls.set(root.callId,{id:root.callId,state,ratio,...state==='completed'?{image,...receipt.factory&&{factory:receipt.factory}}:{}})
   }
   for(const child of root.subCalls??[])visit(child)
  }

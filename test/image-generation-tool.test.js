@@ -1,5 +1,6 @@
 import {afterEach, expect, it, vi} from 'vitest'
 import {registerImageGenerationTool,conversationImageReferences} from '../packages/dsh-research-task-runtime/image-generation-tool.js'
+import {imageFactoryPrompt} from '../packages/dsh-research-task-runtime/image-factory-context.js'
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=','base64')
 const cleanups=[]
@@ -41,6 +42,18 @@ it('edits only images already present in this session',async()=>{
  expect(url).toContain('/images/edits');expect(init.body).toBeInstanceOf(FormData);expect(init.body.get('image[]')).toBeInstanceOf(Blob)
  await expect(f.call({reference_image_ids:['another-session-image']})).rejects.toThrow(/当前会话/)
  expect(f.request).toHaveBeenCalledTimes(1)
+})
+it('routes a factory comment to the native image tool using the bound crop and output size',async()=>{
+ const f=fixture({uploaded:true}),content=f.agent.session.events[1].data.content
+ const workspace={id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'蓝色海报',operation:'region',
+  size:'1024x1536',width:180,height:300,internalReference:true}
+ content[0].text=imageFactoryPrompt('把这里换成蓝色',workspace)
+ content.splice(1,0,{type:'image',attachment:{...f.ref,attachmentId:'older'}})
+ const result=await f.call({size:'1536x1024',reference_image_ids:['older']})
+ expect(f.reads).toEqual([f.ref])
+ expect(f.request.mock.calls[0][1].body.get('size')).toBe('1024x1536')
+ expect(result.factory).toEqual({id:workspace.id,title:workspace.title,operation:'region'})
+ expect(f.prompts[0].text({agent:f.agent})).toContain('180 × 300')
 })
 it('uses the current upload directly and concludes only a successfully delivered standalone request',async()=>{
  const f=fixture({uploaded:true})

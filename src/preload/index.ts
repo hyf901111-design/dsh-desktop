@@ -423,8 +423,7 @@ function initializeUi(): void {
   scheduledView.mount()
   const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
     workspacePointerInBar,
-    generate: value => ipcRenderer.invoke('image-factory:generate', value),
-    cancel: id => ipcRenderer.invoke('image-factory:cancel', id),
+    archive: value => ipcRenderer.invoke('image-factory:archive', value),
     save: value => ipcRenderer.invoke('conversation:image-action', value),
   })
   const openImageFactory = () => { void flushBeforeCreate().then(imageFactory.open).catch(() => {}) }

@@ -45,7 +45,8 @@ function EWorkEditableUserMessage(props) {
  const busy=running||editBusy
  const [editing,setEditing]=react.useState(false),[draft,setDraft]=react.useState(''),[sending,setSending]=react.useState(false),[error,setError]=react.useState('')
  const submitting=react.useRef(false),revision=react.useRef(null),input=react.useRef(null)
- const raw=contentParts(data.content).text,research=parseResearchPrompt(raw)
+ const visibleContent=typeof imageFactoryDisplayContent==='function'?imageFactoryDisplayContent(data.content):data.content
+ const raw=contentParts(visibleContent).text,research=parseResearchPrompt(raw)
  const canEdit=!!editMessage&&!busy&&node.kind==='user'&&data.source?.kind==='user'&&data.content.every(p=>p.type==='text'||p.type==='image')
  react.useLayoutEffect(()=>{if(editing&&input.current){input.current.focus();input.current.setSelectionRange(input.current.value.length,input.current.value.length)}},[editing])
  react.useLayoutEffect(()=>{const el=input.current;if(el){el.style.height='auto';el.style.height=Math.min(320,Math.max(52,el.scrollHeight))+'px'}},[editing,draft])
@@ -56,13 +57,13 @@ function EWorkEditableUserMessage(props) {
   submitting.current=true;setSending(true);setError('')
   try{
    const text=raw.startsWith('␞SHERLOCK_RESEARCH_FILES_V1 ')?serializeResearchPrompt(research.files,draft,[],research.artifacts||[],[],research.canvasContext):draft
-   revision.current={...revision.current,seq:data.seq,content:data.content,text};await editMessage(revision.current);setEditing(false)
+   revision.current={...revision.current,seq:data.seq,content:visibleContent,text};await editMessage(revision.current);setEditing(false)
   }catch(e){setError(e.message||'发送失败，请重试。')}
   finally{submitting.current=false;setSending(false)}
  }
  const h=react.createElement
  const pencil=h('svg',{width:16,height:16,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},h('path',{d:'m16 3 5 5-12 12-6 1 1-6L16 3Zm-11 12 5 5M14 5l5 5'}))
- const images=contentParts(data.content).images
+ const images=contentParts(visibleContent).images
  return h('div',{'data-ework-user-message':'','data-editing':editing||undefined},editing?
   h('div',{'data-ework-message-editor':''},images.length>0&&h(_deepseek_ai_dsh_client_ui_attachment.ImageGallery,{images,load:loadImage,align:'end',labels:messageImageLabels(t)}),
    h('div',{'data-edit-bubble':''},h('textarea',{ref:input,value:draft,'aria-label':'编辑消息',disabled:sending,onChange:e=>setDraft(e.target.value),onKeyDown:e=>{if(e.nativeEvent.isComposing)return;if(e.key==='Escape'){e.preventDefault();cancel()}else if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();void send()}}}),
@@ -117,7 +118,10 @@ export function patchMessageEditClient(source){
  sessionId,
  isBusy:()=>{const state=sessions.binding(sessionId)?.session.getSnapshot();return !state||state.running||state.queue?.length>0},
  readImage:async attachment=>{const result=await sessions.binding(sessionId).session.readAttachment(attachment.attachmentId);if(!result.ok)throw Error(result.error.message);return {mediaType:result.value.attachment.mediaType,data:bytesToBase64(result.value.data)}},
- prompt:(target,content)=>sessions.binding(target).session.prompt(content,'queue')
+ prompt:(target,content)=>{
+  const session=sessions.binding(target).session;
+  return typeof eworkImageFactory!=='undefined'&&eworkImageFactory?eworkImageFactory.prompt(session,content,'queue'):session.prompt(content,'queue');
+ }
 },request),\n${anchor}`)
  return source+marker+JSON.stringify(swaps).replaceAll('*/','*\\u002f')+' */'
 }
