@@ -11,41 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "2208079e8c3cffc640662b9fae8c280ebe004b20",
-        "tipCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
+        "baseCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
+        "tipCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
         "commits": [
           {
-            "commit": "753ca1ede59115467b09e7beefe7d2361613552b",
+            "commit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
             "parents": [
-              "2208079e8c3cffc640662b9fae8c280ebe004b20"
+              "753ca1ede59115467b09e7beefe7d2361613552b"
             ],
-            "subject": "修复：图像工厂交付后结束原生对话并保留来源名称"
+            "subject": "优化：图像工厂成品入库时自动区分同名文件"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+            "path": "src/main/knowledge/store.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-generation-tool.test.js"
+            "path": "test/knowledge-library.test.ts"
           }
         ],
         "checks": [
@@ -57,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
-            "completedAt": "2026-11-16T19:31:30.993Z",
+            "verifiedCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
+            "completedAt": "2026-11-16T19:46:16.459Z",
             "timeoutMs": 120000
           },
           {
@@ -66,32 +50,29 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-generation-tool.test.js",
-              "test/image-factory-native.test.js",
+              "test/knowledge-library.test.ts",
               "test/knowledge-history-backfill.test.ts",
-              "test/image-factory.test.js",
-              "test/image-generation-client.test.js"
+              "test/image-factory-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "生图工具、通用会话、知识库、画布和结果显示共 45 项聚焦检查通过。",
-            "verifiedCommit": "753ca1ede59115467b09e7beefe7d2361613552b",
-            "completedAt": "2026-11-16T19:31:30.993Z",
+            "summary": "知识库、历史补收和图像工厂对话共 21 项聚焦检查通过。",
+            "verifiedCommit": "8c2b116c1abf70ef6b926243503625ffbc17b335",
+            "completedAt": "2026-11-16T19:46:16.459Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原签名版实际框选改图已生成、展示并入库，已捕获重复调用；修复待签名版复测。"
+          "summary": "原签名版可见同名文件；自动后缀需在新签名版复测。"
         },
         "acceptanceCriteria": [
-          "直接生图或框选改图一次交付后使用通用对话收尾。",
-          "同一来源的改图成品自动入库并按来源会话检索。",
-          "用户明确要求后续工作时原生工具可继续。"
+          "新归档成品遇到同名时分配可辨别的文件名。",
+          "会话历史补收、重试和补存画布沿用已分配或用户整理后的名称。"
         ],
         "risks": [
-          "实际生图复测使用现有图像模型连接。"
+          "自动命名只用于新归档，既有文件的名称由用户管理。"
         ],
-        "generatedAt": "2026-11-16T19:31:30.993Z"
+        "generatedAt": "2026-11-16T19:46:16.459Z"
       }
     },
     {
