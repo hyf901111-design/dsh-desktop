@@ -422,6 +422,7 @@ function initializeUi(): void {
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create,newSpreadsheet:sidebarNewSpreadsheet.create})
   scheduledView.mount()
   const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
+    workspacePointerInBar,
     generate: value => ipcRenderer.invoke('image-factory:generate', value),
     cancel: id => ipcRenderer.invoke('image-factory:cancel', id),
     save: value => ipcRenderer.invoke('conversation:image-action', value),
