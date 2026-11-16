@@ -41,6 +41,8 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
     })
     expect(handles().map(button => button.textContent)).toEqual(['底层', '顶层'])
     expect(write).toHaveBeenCalledWith(expect.objectContaining({ canvas: { ...canvas, layers: [top, bottom] } }))
+    await act(async () => document.querySelector<HTMLElement>('.if-raster')!.click())
+    expect(handles()).toHaveLength(0)
   } finally {
     await act(async () => factory.dispose())
     host.dispose()
@@ -147,6 +149,68 @@ it.each([
   } finally {
     await act(async () => factory.dispose())
     host.dispose()
+    vi.unstubAllGlobals()
+  }
+})
+
+it('opens an editable region comment when the pointer is released outside the image after losing capture', async () => {
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '测试画布', width: 800, height: 1000, layers: [
+    { kind: 'image', id: randomUUID(), assetId: randomUUID(), mediaType: 'image/png' },
+  ] }
+  const image = { data: Uint8Array.of(1, 2, 3), mediaType: 'image/png' as const }
+  vi.spyOn(HTMLImageElement.prototype, 'decode').mockResolvedValue()
+  vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(canvas.width)
+  vi.spyOn(HTMLImageElement.prototype, 'naturalHeight', 'get').mockReturnValue(canvas.height)
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    disconnect() {}
+  })
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1, canvas, image }), write: async () => {}, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const submitted = vi.fn((event: Event) => event.preventDefault())
+  document.addEventListener('sherlock:image-factory-comment', submitted)
+  try {
+    await act(async () => factory.open())
+    const frame = document.querySelector<HTMLElement>('.if-raster')!
+    const scroller = frame.closest<HTMLElement>('.if-stage-scroll')!
+    Object.defineProperty(frame, 'setPointerCapture', { value: vi.fn() })
+    vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 100, 800, 1000))
+    vi.spyOn(scroller.parentElement!, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 980, 1160))
+    const mark = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === '框选修改')!
+    await act(async () => mark.click())
+    const pointer = (type: string, target: Element, buttons: number, x: number, y: number) =>
+      target.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, pointerId: 1, buttons, clientX: x, clientY: y }))
+    await act(async () => {
+      pointer('pointerdown', frame, 1, 550, 800)
+      pointer('pointermove', frame, 1, 690, 990)
+      pointer('lostpointercapture', frame, 0, 925, 1120)
+      pointer('pointerup', scroller, 0, 925, 1120)
+    })
+    const selected = frame.querySelector<HTMLElement>('.if-region')
+    expect(selected?.style.left).toBe('56.25%')
+    expect(selected?.style.width).toBe('43.75%')
+    expect(selected?.style.height).toBe('30%')
+    const input = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="修改意见"]')!
+    expect(input).not.toBeNull()
+    expect(input.closest<HTMLElement>('.if-comment')?.style.visibility).not.toBe('hidden')
+    expect(document.activeElement).toBe(input)
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, '把区域改成浅蓝')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    const send = input.closest('form')!.querySelector<HTMLButtonElement>('button[type="submit"]')!
+    expect(send.disabled).toBe(false)
+    await act(async () => send.click())
+    expect(submitted).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ detail: expect.objectContaining({ prompt: '把区域改成浅蓝' }) }))
+  } finally {
+    document.removeEventListener('sherlock:image-factory-comment', submitted)
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.restoreAllMocks()
     vi.unstubAllGlobals()
   }
 })

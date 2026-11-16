@@ -1,8 +1,12 @@
 import { imageGenerationCalls } from './image-generation-client.mjs'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../../packages/dsh-research-task-runtime/image-factory-context.js'
+import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
-export function installImageFactoryContext({ sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt }) {
+export function installImageFactoryContext({
+  sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
+  getTaskWorkspace, setTaskView, taskStorage,
+}) {
   const jobs = new Map(), listeners = new Set()
   let state = { current: false, busy: false }
   let galleryDrafts = new WeakMap()
@@ -11,10 +15,12 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   const canvasScope = () => {
     const { current, byId } = sessions.list.getSnapshot()
     // The native sidebar only shows the currently selected empty session.
-    return current && byId?.[current]?.blank !== true ? current : null
+    return current && (current.startsWith('image-task-') || byId?.[current]?.blank !== true) ? current : null
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
+  const tasks = createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace: getTaskWorkspace,
+    setView: setTaskView, storage: taskStorage })
   const stateChange = event => {
     state = { current: event.detail?.current === true, busy: event.detail?.busy === true }
     for (const listener of listeners) listener()
@@ -87,14 +93,16 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   const promoteDraft = job => {
     if (job.draft && !job.promotion) {
       job.promotion = adopt(job.sessionId).catch(() => {})
+      tasks.bindDraft(job.sessionId)
       syncSession()
     }
     return job.promotion
   }
   function watch(session, job) {
+    const owns = content => content?.some(part => part.type === 'text' && readImageFactoryContext(part.text)?.id === job.id)
     const observe = () => {
       if (jobs.get(job.id) !== job || job.delivering) return
-      const { chat, running } = session.getSnapshot()
+      const { chat, running, queue } = session.getSnapshot()
       if (!chat) return
       const nodes = chat.order.slice(-150).map(key => chat.nodes.get(key)).filter(Boolean)
       const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
@@ -111,12 +119,17 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
         }).catch(() => finish(job.id))
         return
       }
-      win.clearTimeout(job.idle)
-      job.admitted ||= nodes.some(row => row.kind === 'user' && row.data?.content?.some(part =>
-        part.type === 'text' && readImageFactoryContext(part.text)?.id === job.id))
-      if (job.admitted) {
-        void promoteDraft(job)
-        if (!running) job.idle = win.setTimeout(() => { if (!job.delivering) finish(job.id) }, 1500)
+      const queued = queue?.some(row => owns(row.content))
+      job.wasQueued ||= queued
+      job.admitted ||= nodes.some(row => (row.kind === 'user' || row.kind === 'steering') && owns(row.data?.content))
+      if (job.admitted) void promoteDraft(job)
+      // The inbox may clear just before its durable turn appears. Allow that handoff,
+      // but settle a removed request even while a different turn is still running.
+      if (!queued && (job.admitted ? !running : job.wasQueued)) {
+        job.idle ??= win.setTimeout(() => { if (!job.delivering) finish(job.id) }, 1500)
+      } else {
+        win.clearTimeout(job.idle)
+        job.idle = undefined
       }
     }
     job.unsubscribe = session.subscribe(observe)
@@ -175,13 +188,22 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     // The list can stop reporting a blank conversation before its admitted user turn is visible.
     const awaitingAdmission = scope !== null && [...jobs.values()].some(job => job.sessionId === scope && job.draft && !job.promotion)
     const sessionId = awaitingAdmission ? null : scope
+    tasks.sync(sessionId)
     if (!force && sessionId === publishedScope) return
     publishedScope = sessionId
     signal('session', { sessionId })
   }
   const offSession = sessions.list.subscribe?.(() => syncSession())
-  const reset = () => { for (const id of jobs.keys()) finish(id, false); galleryDrafts = new WeakMap(); publishedScope = undefined }
-  const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
+  const reset = () => {
+    for (const id of jobs.keys()) finish(id, false)
+    galleryDrafts = new WeakMap()
+    publishedScope = undefined
+    tasks.reset()
+  }
+  const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt,
+    comment: submitComment, 'focus-chat': focus, reset,
+    'task-action': event => { void tasks.action(event.detail) }, 'task-title': event => tasks.setTitle(event.detail),
+    'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   signal('request-state', {})
   syncSession()
@@ -197,13 +219,33 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   }
 }
 
-function imageFactoryDisplayContent(content) {
+function imageFactoryDisplayContent(content, context = imageFactoryContentContext(content)) {
   if (!Array.isArray(content)) return content
-  const context = content.map(part => part.type === 'text' ? readImageFactoryContext(part.text) : undefined).find(Boolean)
   if (!context) return content
   const internal = context.internalReference ? content.findLastIndex(part => part.type === 'image') : -1
   return content.filter((_, index) => index !== internal).map(part =>
     part.type === 'text' ? { ...part, text: stripImageFactoryContext(part.text) } : part)
+}
+
+function imageFactoryContentContext(content) {
+  return Array.isArray(content) ? content.map(part => part.type === 'text' ? readImageFactoryContext(part.text) : undefined).find(Boolean) : undefined
+}
+
+function imageFactoryQueueRow(row) {
+  const context = imageFactoryContentContext(row.content)
+  if (!context) return row
+  const { text: _original, ...imageFactoryQueueContext } = context
+  const visible = imageFactoryDisplayContent(row.content, context)
+  const preview = Array.from(visible.map(part => part.type === 'text' ? part.text : '[' + part.type + ']')
+    .join(' ').replace(/\s+/g, ' ').trim())
+  const text = row.text === null ? null : visible.filter(part => part.type === 'text').map(part => part.text).join('')
+  return { ...row, text, preview: preview.slice(0, 200).join('') + (preview.length > 200 ? '…' : ''), imageFactoryQueueContext }
+}
+
+function imageFactoryQueueEditContent(row, text, serialize) {
+  if (row?.imageFactoryQueueContext && row.text !== null)
+    return [{ type: 'text', text: imageFactoryPrompt(text, row.imageFactoryQueueContext) }]
+  return canvasQueueEditContent(row, text, serialize)
 }
 
 function EWorkImageFactoryWelcome() {
@@ -234,6 +276,10 @@ let eworkImageFactory;
 ${readImageFactoryContext.toString()}
 ${stripImageFactoryContext.toString()}
 ${imageFactoryPrompt.toString()}
+${createImageFactoryTasks.toString()}
 ${imageFactoryDisplayContent.toString()}
+${imageFactoryContentContext.toString()}
+${imageFactoryQueueRow.toString()}
+${imageFactoryQueueEditContent.toString()}
 ${EWorkImageFactoryWelcome.toString()}
 `

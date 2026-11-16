@@ -698,7 +698,7 @@ it('keeps the Image Factory title visible and draggable at typical three-pane wi
             <div class="workspace-app-title"><i></i><span>图像工厂</span></div>
             <div class="eb-workspace-controls"><button class="eb-workspace-toggle" type="button">页签</button></div>
             <span class="if-top-title"></span>
-            <button type="button">更多</button>
+            <button type="button" class="if-more" aria-expanded="false">更多</button>
           </header>
         </section>
       </div>`)
@@ -712,6 +712,11 @@ it('keeps the Image Factory title visible and draggable at typical three-pane wi
     expect(await header.evaluate(region)).toBe('drag')
     expect(await header.locator('.if-top-title').evaluate(region)).toBe('drag')
     expect(await header.getByRole('button', { name: '页签' }).evaluate(region)).toBe('no-drag')
+    await header.getByRole('button', { name: '更多' }).evaluate(button => button.setAttribute('aria-expanded', 'true'))
+    expect(await title.evaluate(region)).toBe('no-drag')
+    expect(await header.evaluate(region)).toBe('no-drag')
+    await header.getByRole('button', { name: '更多' }).evaluate(button => button.setAttribute('aria-expanded', 'false'))
+    expect(await title.evaluate(region)).toBe('drag')
     await page.locator('.image-factory').evaluate(el => { el.style.width = '440px' })
     expect(await title.isVisible()).toBe(false)
   } finally {
@@ -731,6 +736,78 @@ it('centers Image Factory notices in the workspace', async () => {
     const toast = await page.getByRole('status').boundingBox()
     expect(toast.x + toast.width / 2).toBeCloseTo(workspace.x + workspace.width / 2)
     expect(toast.y + toast.height / 2).toBeCloseTo(workspace.y + workspace.height / 2)
+  } finally {
+    await page.close()
+  }
+})
+
+it('centers Image Factory resize handles on the text bounds, including at the image edges', async () => {
+  const page = await browser.newPage()
+  try {
+    const anchors = ['nw', 'ne', 'w', 'e', 'sw', 'se']
+    await page.setContent(`
+      <div class="image-factory" style="left:10px;width:590px">
+        <div class="if-raster" style="margin:32px;width:240px;height:150px;transform:translate(12px,21px)">
+          <div class="if-raster-artwork"></div>
+          <div class="if-text-bounds" style="left:0;top:0;width:100%;height:50px">
+            ${anchors.map(anchor => '<button class="if-text-handle" data-text-resize-handle="' + anchor + '"></button>').join('')}
+          </div>
+        </div>
+      </div>`)
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    const result = await page.locator('.if-text-bounds').evaluate(el => {
+      const bounds = el.getBoundingClientRect()
+      return {
+        offsets: Array.from(el.querySelectorAll('button'), button => {
+          const grip = button.getBoundingClientRect()
+          const anchor = button.dataset.textResizeHandle
+          const x = anchor.endsWith('w') ? bounds.left : bounds.right
+          const y = anchor.startsWith('n') ? bounds.top : anchor.startsWith('s') ? bounds.bottom : bounds.top + bounds.height / 2
+          return [grip.x + grip.width / 2 - x, grip.y + grip.height / 2 - y]
+        }),
+        edgeTarget: document.elementFromPoint(bounds.left - 5, bounds.top - 5)?.dataset.textResizeHandle,
+        artworkTarget: document.elementFromPoint(bounds.left + 24, bounds.top + 24)?.className,
+      }
+    })
+    expect(result.offsets).toEqual(anchors.map(() => [0, 0]))
+    expect(result.edgeTarget).toBe('nw')
+    expect(result.artworkTarget).toBe('if-raster')
+  } finally {
+    await page.close()
+  }
+})
+
+it('floats Image Factory layers without moving or resizing the image viewport', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.setContent(`
+      <div class="image-factory" style="left:10px;width:830px">
+        <section class="if-work">
+          <div class="if-stage">
+            <div class="if-stage-scroll"><div class="if-raster" style="width:600px;height:420px"></div></div>
+            <aside class="if-layers" hidden>图层</aside>
+          </div>
+        </section>
+      </div>`)
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    const viewport = page.locator('.if-stage-scroll')
+    const raster = page.locator('.if-raster')
+    const originalViewport = await viewport.boundingBox()
+    const originalRaster = await raster.boundingBox()
+    await page.locator('.if-stage').evaluate(el => {
+      el.dataset.layersOpen = 'true'
+      el.querySelector('.if-stage-scroll').dataset.layersOpen = 'true'
+      el.querySelector('.if-layers').hidden = false
+    })
+    const menu = page.locator('.if-layers')
+    expect(await menu.isVisible()).toBe(true)
+    expect(await viewport.boundingBox()).toEqual(originalViewport)
+    expect(await raster.boundingBox()).toEqual(originalRaster)
+    expect(await menu.evaluate(el => {
+      const bounds = el.getBoundingClientRect()
+      const image = el.parentElement.querySelector('.if-raster').getBoundingClientRect()
+      return document.elementFromPoint(bounds.right - 20, Math.max(bounds.bottom + 100, image.top + 20))?.className
+    })).toBe('if-raster')
   } finally {
     await page.close()
   }

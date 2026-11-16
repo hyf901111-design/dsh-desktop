@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 import {
   canvasFonts, canvasImageTypes, canvasUuid, maximumCanvasImageBytes, maximumCanvasLayers, validCanvasScope, validCanvasSize,
   type CanvasScope, type CanvasImageType, type CanvasRead, type CanvasWrite, type StoredCanvas, type StoredImageLayer,
+  type ImageFactoryTaskTab,
 } from '../../shared/image-factory-canvas'
 import { atomicWrite } from '../integrations/store'
 
@@ -15,6 +16,18 @@ const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'E
 const metadataName = 'canvas.json'
 type Identity = { owner: string; generation: number }
 const imageLayer = (canvas?: StoredCanvas) => canvas?.layers.find((layer): layer is StoredImageLayer => layer.kind === 'image')
+
+function readTaskTabs(value: unknown): ImageFactoryTaskTab[] {
+  if (!Array.isArray(value) || value.length > 32) throw Error('图片任务页签数据无效。')
+  const seen = new Set<string>()
+  return value.map(tab => {
+    if (!tab || typeof tab.scope !== 'string' || !validCanvasScope(tab.scope) || seen.has(tab.scope) ||
+        (tab.title !== undefined && (typeof tab.title !== 'string' || tab.title.length > 255)))
+      throw Error('图片任务页签数据无效。')
+    seen.add(tab.scope)
+    return { scope: tab.scope, ...(tab.title && { title: tab.title }) }
+  })
+}
 
 function readMetadata(value: unknown): StoredCanvas {
   const canvas = value as StoredCanvas
@@ -103,6 +116,30 @@ export class ImageFactoryCanvases {
       current()
       return { epoch, canvas, image }
     })
+  }
+
+  readTabs() {
+    return this.run(async (owner, epoch, current) => {
+      let tabs: ImageFactoryTaskTab[] = []
+      try {
+        const file = join(dirname(this.directory(owner, null)), 'task-tabs.json')
+        tabs = readTaskTabs(JSON.parse((await readBounded(file, 64 * 1024)).toString('utf8')))
+      } catch (error) { if (!missing(error)) throw error }
+      current()
+      return { epoch, tabs }
+    })
+  }
+
+  async writeTabs(value: unknown) {
+    const input = value as { epoch?: number; tabs?: unknown } | undefined
+    if (!input || typeof input.epoch !== 'number' || !Number.isSafeInteger(input.epoch)) throw Error('图片任务页签数据无效。')
+    const tabs = readTaskTabs(input.tabs)
+    return this.run(async (owner, _epoch, current) => {
+      const directory = dirname(this.directory(owner, null))
+      await mkdir(directory, { recursive: true, mode: 0o700 })
+      current()
+      await atomicWrite(join(directory, 'task-tabs.json'), JSON.stringify(tabs))
+    }, input.epoch)
   }
 
   async write(value: CanvasWrite) {

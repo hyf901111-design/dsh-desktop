@@ -3,8 +3,12 @@ import { expect, it, vi } from 'vitest'
 import { installImageFactoryContext } from '../scripts/lib/image-factory-native.mjs'
 import { readImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
 
-function fixture() {
+function fixture(taskStorage) {
   const win = new Window(), doc = win.document
+  if (vi.isFakeTimers()) {
+    win.setTimeout = (fn, ms) => setTimeout(fn, ms)
+    win.clearTimeout = timer => clearTimeout(timer)
+  }
   const snapshot = { draft: '保留未发送的文字', imageIds: [] }
   const shell = { snapshot, notify: vi.fn(), setDraft: vi.fn(draft => { snapshot.draft = draft }) }
   const listeners = new Set()
@@ -21,12 +25,26 @@ function fixture() {
     sessionsState.byId[session.sessionId].blank = blank
     for (const fn of listListeners) fn()
   }
+  const notifyList = () => { for (const fn of listListeners) fn() }
+  const setView = vi.fn()
+  const sessionCatalog = {
+    list: { getSnapshot: () => sessionsState, subscribe: fn => { listListeners.add(fn); return () => listListeners.delete(fn) } },
+    binding: id => sessionsState.byId[id] ? { session } : undefined,
+    create: vi.fn(async ({ sessionId }) => {
+      sessionsState.byId[sessionId] = { blank: true }
+      notifyList()
+      return sessionId
+    }),
+    open: vi.fn(id => { sessionsState.current = id; notifyList() }),
+    clear: vi.fn(() => { sessionsState.current = undefined; notifyList() }),
+  }
   const events = (name, detail, cancelable = false) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable }))
   const binding = installImageFactoryContext({
-    sessions: { list: { getSnapshot: () => sessionsState, subscribe: fn => { listListeners.add(fn); return () => listListeners.delete(fn) } }, binding: () => ({ session }) },
+    sessions: sessionCatalog,
     getInput: id => shells.get(id),
     getPending: () => ({ shell, submitExternal: async submit => { sessionsState.current = session.sessionId; await submit(session.sessionId) } }),
-    send: (...args) => binding.prompt(...args), doc, win,
+    send: (...args) => binding.prompt(...args), doc, win, taskStorage,
+    getTaskWorkspace: () => 'test-workspace', setTaskView: setView,
   })
   const respond = (error) => doc.addEventListener('sherlock:image-factory-prepare', ({ detail }) => {
     events('prepared', { id: detail.id, ...(error ? { error } : {
@@ -35,14 +53,49 @@ function fixture() {
       editBounds: detail.region ? { left: .2, top: .2, right: .8, bottom: .8 } : undefined,
     }) })
   })
-  return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank }
+  return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank, sessionCatalog, setView }
 }
+
+it('creates a fresh gallery scope per task, switches the native conversation and persists the open tabs', async () => {
+  const storage = { read: vi.fn(async () => ({ epoch: 4, tabs: [] })), write: vi.fn(async () => {}) }
+  const f = fixture(storage)
+  let tasks, scope
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    f.doc.addEventListener('sherlock:image-factory-session', event => { scope = event.detail.sessionId })
+    f.events('request-session')
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: 'native-session', busy: false }))
+    f.events('task-title', { scope: 'native-session', title: '原始海报' })
+    f.events('task-action', { kind: 'new' })
+    await vi.waitFor(() => expect(tasks.tabs).toHaveLength(2))
+    const newId = tasks.tabs[1].scope
+    expect(newId).toMatch(/^image-task-/)
+    expect(tasks.active).toBe(newId)
+    expect(scope).toBe(newId)
+    expect(f.sessionCatalog.create).toHaveBeenCalledWith({ workspaceId: 'test-workspace', sessionId: newId })
+    expect(f.setView).toHaveBeenCalledWith(newId)
+    expect(f.session.prompt).not.toHaveBeenCalled()
+    f.events('task-action', { kind: 'select', scope: 'native-session' })
+    expect(f.sessionsState.current).toBe('native-session')
+    expect(scope).toBe('native-session')
+    expect(tasks.tabs[0].title).toBe('原始海报')
+    f.events('task-action', { kind: 'select', scope: newId })
+    expect(scope).toBe(newId)
+    f.events('task-action', { kind: 'close', scope: newId })
+    expect(scope).toBe('native-session')
+    expect(f.sessionsState.byId[newId]).toBeDefined()
+    expect(storage.write).toHaveBeenLastCalledWith({ epoch: 4, tabs: [{ scope: 'native-session', title: '原始海报' }] })
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
 
 it('keeps an imported draft outside a blank native session until its first canvas prompt is admitted', async () => {
   const f = fixture()
   try {
     f.respond()
     const transitions = []
+    let tasks
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
     const selected = vi.fn(event => {
       transitions.push(['select', event.detail.sessionId])
       return event.detail.sessionId
@@ -55,7 +108,9 @@ it('keeps an imported draft outside a blank native session until its first canva
     f.doc.addEventListener('sherlock:image-factory-adopt', adoptions)
     f.doc.body.dataset.workspaceSurface = 'image-factory'
     f.updateBlank(true)
+    f.events('task-title', { scope: null, title: '导入的海报' })
     expect(selected.mock.results.at(-1)?.value).toBeNull()
+    expect(tasks.tabs).toEqual([{ scope: null, title: '导入的海报' }])
     const content = [{ type: 'text', text: '修改导入的海报' }]
     f.session.prompt.mockResolvedValueOnce({ ok: false })
     await f.binding.prompt(f.session, content, 'queue')
@@ -70,6 +125,7 @@ it('keeps an imported draft outside a blank native session until its first canva
     for (const listener of f.listeners) listener()
     expect(adoptions).toHaveBeenCalledOnce()
     expect(transitions.slice(-2)).toEqual([['adopt', f.session.sessionId], ['select', f.session.sessionId]])
+    expect(tasks.tabs).toEqual([{ scope: f.session.sessionId, title: '导入的海报' }])
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
@@ -122,6 +178,62 @@ it('unlocks the canvas when ordinary session admission rejects a command', async
     expect(settled).toHaveBeenCalledOnce()
     expect(f.listeners.size).toBe(0)
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+it('unlocks a removed queued image request while an unrelated turn keeps running', async () => {
+  vi.useFakeTimers()
+  const f = fixture()
+  try {
+    f.respond()
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.state.running = true
+    const settled = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-settled', settled)
+    await f.binding.prompt(f.session, [{ type: 'text', text: '第一张活动海报' }], 'queue')
+    const [[content]] = f.session.prompt.mock.calls
+    const id = readImageFactoryContext(content[0].text).id
+    const other = { placement: 'queued', content: [{ type: 'text', text: '无关的排队对话' }] }
+    const publish = queue => { f.state.queue = queue; for (const listener of f.listeners) listener() }
+    publish([{ placement: 'queued', content }, other])
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(settled).not.toHaveBeenCalled()
+    publish([other])
+    await vi.advanceTimersByTimeAsync(1000)
+    publish([other])
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(settled).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ detail: { id } }))
+    expect(f.listeners.size).toBe(0)
+  } finally { f.binding.dispose(); vi.useRealTimers(); await f.win.happyDOM.abort() }
+})
+
+it('keeps a queued image request through its handoff to the durable native turn', async () => {
+  vi.useFakeTimers()
+  const f = fixture()
+  try {
+    f.respond()
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const settled = vi.fn()
+    const publish = () => { for (const listener of f.listeners) listener() }
+    f.doc.addEventListener('sherlock:image-factory-settled', settled)
+    await f.binding.prompt(f.session, [{ type: 'text', text: '下一张海报' }], 'queue')
+    const [[content]] = f.session.prompt.mock.calls
+    f.state.queue = [{ placement: 'queued', content }]
+    publish()
+    f.state.queue = []
+    publish()
+    await vi.advanceTimersByTimeAsync(500)
+    f.state.chat.order.push('user')
+    f.state.chat.nodes.set('user', { kind: 'user', data: { content } })
+    f.state.running = true
+    publish()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(settled).not.toHaveBeenCalled()
+    expect(f.listeners.size).toBe(1)
+    f.state.running = false
+    publish()
+    await vi.advanceTimersByTimeAsync(1600)
+    expect(settled).toHaveBeenCalledOnce()
+  } finally { f.binding.dispose(); vi.useRealTimers(); await f.win.happyDOM.abort() }
 })
 
 it('projects a completed native tool receipt once even after the canvas is hidden', async () => {
