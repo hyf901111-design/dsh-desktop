@@ -41,8 +41,8 @@ export function requestedImageSize(prompt: string): Size | undefined {
     const width = Number(ratio[1]), height = Number(ratio[3])
     const shape = width / height
     const preset = Object.values(ratios).find(size => size.width / size.height === shape)
-    const scale = 1600 / Math.max(width, height)
-    return preset ?? { width: Math.round(width * scale), height: Math.round(height * scale) }
+    const scale = Math.floor(1600 / Math.max(width, height))
+    return preset ?? { width: width * scale, height: height * scale }
   }
 
   if (/横[版屏向]|\b(?:in landscape|landscape (?:format|orientation))\b/i.test(prompt)) return ratios['16:9']
@@ -117,7 +117,31 @@ export function drawFit(context: CanvasRenderingContext2D, source: Raster, targe
   const scale = Math.min(target.width / source.width, target.height / source.height)
   const width = Math.max(1, Math.round(source.width * scale))
   const height = Math.max(1, Math.round(source.height * scale))
-  context.drawImage(source.image, Math.floor((target.width - width) / 2), Math.floor((target.height - height) / 2), width, height)
+  const left = Math.floor((target.width - width) / 2), top = Math.floor((target.height - height) / 2)
+  context.drawImage(source.image, left, top, width, height)
+  if (width === target.width && height === target.height) return
+
+  const edges = width < target.width ? [
+    { x: left, y: top, width: 1, height, margin: { x: 0, y: top, width: left, height } },
+    { x: left + width - 1, y: top, width: 1, height, margin: { x: left + width, y: top, width: target.width - left - width, height } },
+  ] : [
+    { x: left, y: top, width, height: 1, margin: { x: left, y: 0, width, height: top } },
+    { x: left, y: top + height - 1, width, height: 1, margin: { x: left, y: top + height, width, height: target.height - top - height } },
+  ]
+  // Keep intentional transparency at the boundary. An opaque image can extend
+  // its outer pixels into the extra space without resizing the composition.
+  for (const edge of edges) {
+    const { data } = context.getImageData(edge.x, edge.y, edge.width, edge.height)
+    for (let alpha = 3; alpha < data.length; alpha += 4) if (data[alpha] !== 255) return
+  }
+  const smoothing = context.imageSmoothingEnabled
+  context.imageSmoothingEnabled = false
+  for (const { x, y, width, height, margin } of edges) {
+    if (margin.width && margin.height) {
+      context.drawImage(context.canvas, x, y, width, height, margin.x, margin.y, margin.width, margin.height)
+    }
+  }
+  context.imageSmoothingEnabled = smoothing
 }
 
 /** Sample the selected patch from the provider frame at uniform scale. */

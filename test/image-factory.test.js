@@ -20,18 +20,30 @@ describe('image factory', () => {
   it('uses dimensions or common and custom ratios described in chat without reading a time as a ratio', () => {
     expect(requestedImageSize('请做一张海报，画面比例为 9：16。')).toEqual({ width: 900, height: 1600 })
     expect(requestedImageSize('生成 16:9 的封面')).toEqual({ width: 1600, height: 900 })
-    expect(requestedImageSize('画布比例为 7 比 5')).toEqual({ width: 1600, height: 1143 })
+    expect(requestedImageSize('画布比例为 7 比 5')).toEqual({ width: 1596, height: 1140 })
     expect(requestedImageSize('Create a 1080 × 1920 px cover')).toEqual({ width: 1080, height: 1920 })
     expect(requestedImageSize('活动上午 10:30 开始')).toBeUndefined()
     expect(requestedImageSize('Make it in landscape format')).toEqual({ width: 1600, height: 900 })
   })
 
-  it('preserves the whole generated poster at a different canvas ratio', () => {
+  it('preserves the whole generated poster and fills the outside of an opaque image', () => {
     const image = { name: 'poster' }
     const calls = []
-    const context = { drawImage: (...args) => calls.push(args) }
+    const canvas = { name: 'composed poster' }
+    const context = { canvas, getImageData: () => ({ data: Uint8Array.from([40, 50, 60, 255]) }),
+      drawImage: (...args) => calls.push(args) }
     drawFit(context, { image, width: 1024, height: 1536 }, ratios['4:5'])
-    expect(calls).toEqual([[image, 90, 0, 900, 1350]])
+    expect(calls).toEqual([[image, 90, 0, 900, 1350],
+      [canvas, 90, 0, 1, 1350, 0, 0, 90, 1350],
+      [canvas, 989, 0, 1, 1350, 990, 0, 90, 1350]])
+  })
+
+  it('keeps the margins transparent when the fitted image has transparent edges', () => {
+    const image = { name: 'transparent artwork' }
+    const drawImage = vi.fn()
+    drawFit({ drawImage, getImageData: () => ({ data: Uint8Array.from([0, 0, 0, 0]) }) },
+      { image, width: 1536, height: 1024 }, ratios['16:9'])
+    expect(drawImage.mock.calls).toEqual([[image, 125, 0, 1350, 900]])
   })
 
   it('keeps the selected pixels inside a proportional edit frame at the canvas edge', () => {
