@@ -128,14 +128,36 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       reply()
     } catch (error) { reply(error.message) }
   }
-  const reset = () => { for (const id of jobs.keys()) finish(id); galleryDraft = undefined }
-  const events = { state: stateChange, 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
+  function adopt(sessionId) {
+    return new Promise((resolve, reject) => {
+      const cleanup = () => { win.clearTimeout(timer); doc.removeEventListener('sherlock:image-factory-adopted', reply) }
+      const reply = event => {
+        if (event.detail?.sessionId !== sessionId) return
+        cleanup()
+        if (event.detail.error) reject(Error(event.detail.error)); else resolve()
+      }
+      const timer = win.setTimeout(() => { cleanup(); reject(Error('画布未能绑定到会话，请重试。')) }, 12000)
+      doc.addEventListener('sherlock:image-factory-adopted', reply)
+      signal('adopt', { sessionId })
+    })
+  }
+  let publishedSession
+  const publishSession = () => {
+    const sessionId = currentId() ?? null
+    publishedSession = sessionId
+    signal('session', { sessionId })
+  }
+  const offSession = sessions.list.subscribe?.(() => { if ((currentId() ?? null) !== publishedSession) publishSession() })
+  const reset = () => { for (const id of jobs.keys()) finish(id); galleryDraft = undefined; publishedSession = undefined }
+  const events = { state: stateChange, 'request-session': publishSession, 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   signal('request-state', {})
+  publishSession()
   return {
-    prompt, fill, focus, action: kind => signal('action', { kind }),
+    prompt, adopt, fill, focus, action: kind => signal('action', { kind }),
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
+      offSession?.()
       reset()
       for (const [name, handler] of Object.entries(events)) doc.removeEventListener('sherlock:image-factory-' + name, handler)
       listeners.clear()

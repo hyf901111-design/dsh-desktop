@@ -1,3 +1,5 @@
+import { validCanvasSize as validSize } from '../../shared/image-factory-canvas'
+
 export const ratios = {
   '1:1': { width: 1024, height: 1024 },
   '4:5': { width: 1080, height: 1350 },
@@ -9,10 +11,7 @@ export type Size = { width: number; height: number }
 export type Region = { x: number; y: number; width: number; height: number }
 export type Point = { x: number; y: number }
 
-export function validSize(width: number, height: number) {
-  return Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 &&
-    width <= 4096 && height <= 4096 && width * height <= 8_000_000
-}
+export { validSize }
 
 const commonRatios = new Set(['1:1', '4:5', '5:4', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3', '2:1', '1:2', '21:9', '9:21'])
 

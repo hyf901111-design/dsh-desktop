@@ -22,9 +22,10 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    if(draft.imageIds?.length&&!real.addImages([...draft.imageIds]))throw Error('图片未能加入新会话，原输入已保留。');
    real.restoreDraftState(draft);
    handedOff=real;real.setResearchContextPreparing?.(true);
-   publish({rightSession:id});onCreated(id,context);sessions.open(id);
+   publish({rightSession:id});const handoff=onCreated(id,context);sessions.open(id);
    shell.commitSend([...(draft.imageIds??[])],draft.draft);
    const transferredRevision=real.snapshot.draftRev;
+   await handoff;
    await prepareSession?.(id);
    if(disposed||sessions.list.getSnapshot().current!==id||real.snapshot.draftRev!==transferredRevision)throw Error('当前会话或草稿已变化，首条消息保留在新会话中，请重新发送。');
    // The real shell owns file/reference serialization and command adjudication.

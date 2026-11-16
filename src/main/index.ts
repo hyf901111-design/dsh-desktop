@@ -20,6 +20,8 @@ import {createConversationComponentService} from './conversation-components/serv
 import {installConversationComponentHandlers} from './conversation-components/ipc'
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import {registerImageActions} from './image-actions'
+import { ImageFactoryCanvases } from './state/image-factory-canvases'
+import type { CanvasScope, CanvasWrite } from '../shared/image-factory-canvas'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import { PptxAnnotationService, registerPptxAnnotationHandlers, type PptxAnnotationHistoryEvent } from './pptx/annotations'
 import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
@@ -239,6 +241,7 @@ let researchClipboardService:ResearchCanvasClipboard|undefined
 let researchContextBridge: ResearchContextBridge | undefined
 let disposeResearchContextHandlers: (() => void) | undefined
 let launchDirectory: string
+let flushImageFactoryCanvases: (() => Promise<unknown>) | undefined
 let quitting = false
 let failureRecoveryVisible = false
 let harnessLaunchOperation: Promise<void> | undefined
@@ -1369,10 +1372,22 @@ async function bootstrap(): Promise<void> {
       sendKnowledgeChange()
     }, 150)
   })
+  const factoryCanvases = new ImageFactoryCanvases(join(app.getPath('userData'), 'image-factory-canvases'), () => {
+    const owner = integrationOwner()
+    if (!owner) throw Error('账号正在读取，请重新打开图像工厂。')
+    return { owner, generation: accountService!.generation }
+  })
+  flushImageFactoryCanvases = () => factoryCanvases.drain()
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:canvas-read', () => mainWindow, (_event, scope: CanvasScope) =>
+    factoryCanvases.read(scope))
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:canvas-write', () => mainWindow, (_event, value: CanvasWrite) =>
+    factoryCanvases.write(value))
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:canvas-adopt', () => mainWindow, (_event, sessionId: string, epoch: number) =>
+    factoryCanvases.adopt(sessionId, epoch))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:archive', () => mainWindow, (_event, value: unknown) => {
-    const input = value as { id?: string; sessionId?: string; name?: string; data?: Uint8Array } | undefined
+    const input = value as { id?: string; sessionId?: string; epoch?: number; name?: string; data?: Uint8Array } | undefined
     if (typeof input?.id !== 'string' || typeof input.sessionId !== 'string' || typeof input.name !== 'string' ||
-        input.name.length > 100 || !(input.data instanceof Uint8Array) || input.data.byteLength > 36 * 1024 * 1024) {
+        input.epoch !== knowledgeIdentity().generation || input.name.length > 100 || !(input.data instanceof Uint8Array) || input.data.byteLength > 36 * 1024 * 1024) {
       throw Error('生成图片的知识库参数无效。')
     }
     return knowledge.collectFactoryImage(Buffer.from(input.data), {
@@ -2006,7 +2021,7 @@ if (!singleInstance) {
     stopHarnessThemePreferenceSync()
     disposeResearchContextHandlers?.()
     void finishQuitCleanup(
-      [() => flushResearchNativeWeb?.(), () => componentDataService?.dispose(), () => noteComponentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => memoryEndpoint?.dispose(), () => memoryService?.close(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
+      [() => flushImageFactoryCanvases?.(), () => flushResearchNativeWeb?.(), () => componentDataService?.dispose(), () => noteComponentDataService?.dispose(), () => integrationService?.dispose(), () => integrationEndpoint?.dispose(), () => memoryEndpoint?.dispose(), () => memoryService?.close(), () => desktopComputer?.dispose(), () => stopUpdateManager(), () => runtime?.stop(), () => localSearchRuntime?.stop(), () => researchContextBridge?.stop()],
       () => app.quit(),
       message => console.warn('[shutdown]', message)
     )
