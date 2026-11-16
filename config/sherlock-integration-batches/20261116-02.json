@@ -11,29 +11,29 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
-        "tipCommit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
+        "baseCommit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
+        "tipCommit": "3e2b958471698905b23604f4274e859b5269f5a5",
         "commits": [
           {
-            "commit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
+            "commit": "3e2b958471698905b23604f4274e859b5269f5a5",
             "parents": [
-              "c9bf27ad4d49d77529fae0453f2c8820acdcc043"
+              "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192"
             ],
-            "subject": "修复：图像工厂多行文字拖动和编辑时保持完整"
+            "subject": "修复：知识库生成图片补齐来源会话名称"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
+            "path": "src/main/knowledge/history-backfill.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
+            "path": "src/main/knowledge/store.ts"
           },
           {
             "status": "M",
-            "path": "test/image-factory.test.js"
+            "path": "test/knowledge-history-backfill.test.ts"
           }
         ],
         "checks": [
@@ -45,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
-            "completedAt": "2026-11-16T18:36:59.254Z",
+            "verifiedCommit": "3e2b958471698905b23604f4274e859b5269f5a5",
+            "completedAt": "2026-11-16T18:56:05.060Z",
             "timeoutMs": 120000
           },
           {
@@ -54,30 +54,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-canvases.test.ts",
+              "test/knowledge-history-backfill.test.ts",
+              "test/knowledge-library.test.ts",
               "test/image-factory-native.test.js",
-              "test/image-factory-actions-menu.test.ts"
+              "test/image-generation-tool.test.js"
             ],
             "outcome": "passed",
-            "summary": "25 项图像工厂编辑、会话、保存和导出聚焦检查通过。",
-            "verifiedCommit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
-            "completedAt": "2026-11-16T18:36:59.254Z",
+            "summary": "知识库、图像工厂会话及生图工具共 41 项聚焦检查通过。",
+            "verifiedCommit": "3e2b958471698905b23604f4274e859b5269f5a5",
+            "completedAt": "2026-11-16T18:56:05.060Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "Chromium 用实际画布复现旧版三行文字拖到边缘后的 113px 溢出。新版验证拖到底部、双击新增一行、放大字号时文字框位于图片范围内。图层拖动上下、删除临时文字层通过。"
+          "outcome": "not-applicable",
+          "summary": "自动收录、搜索和来源画布已在上一签名版确认，来源会话名补齐待集成构建复测。"
         },
         "acceptanceCriteria": [
-          "多行文本拖到边缘时使用实际文字框高度。",
-          "增加文字或放大字号时保留可显示的完整排版。",
-          "独立图层仍可重新排序并持久记录。"
+          "图像工厂生图自动进入知识库所有文件，按会话名或文件名检索。",
+          "补齐来源会话名时保留成品文件和用户在知识库里的整理。"
         ],
-        "risks": [],
-        "generatedAt": "2026-11-16T18:36:59.254Z"
+        "risks": [
+          "本地启动后对旧会话扫描一次，用于补齐历史条目的来源。"
+        ],
+        "generatedAt": "2026-11-16T18:56:05.060Z"
       }
     },
     {
