@@ -1,7 +1,7 @@
 import {homeGuideTargetPoint,type HomeGuidePointerAction} from './home-guide-pointer'
 import type {HomeOperationActionContext} from './home-operations'
 import type {HomeGuideKind} from './home-guides'
-import {homeGuideMode,type HomeGuideEntryAction} from './home-guide-entry-native'
+import {homeGuideMode,isSidebarSpreadsheetMenuItem,type HomeGuideEntryAction} from './home-guide-entry-native'
 type Options={homeEmpty?:boolean;context:HomeOperationActionContext;signal:AbortSignal;pointer:{perform(action:HomeGuidePointerAction):Promise<void>};assert():void;nativeClick(target:HTMLElement):void;activate(target:HTMLElement,action:HomeGuideEntryAction,beforeCommit:()=>Promise<void>):Promise<void>}
 /** Only visible native controls. The final click consumes one prepared-session lease. */
 export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuideKind,options:Options){
@@ -27,6 +27,13 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
   if(!back)throw Error('请先返回应用后再播放演示。')
   await click(back);await wait(()=>(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')&&!document.querySelector('.VOzbGW_overlay')?true:undefined)
  }
+ if(kind==='spreadsheet'){
+  const more=await wait(()=>unique(document.querySelectorAll<HTMLButtonElement>('[data-dsh-sidebar-root] button.st-more')))
+  if(more.getAttribute('aria-expanded')!=='true')await click(more)
+  const target=await wait(()=>unique([...document.querySelectorAll<HTMLButtonElement>('[data-sidebar-more] button[role="menuitem"]')].filter(isSidebarSpreadsheetMenuItem)))
+  await activate(target,'new-spreadsheet')
+  return
+ }
  const root=document.body.dataset.workspaceSurface==='notes'?undefined:await wait(()=>unique(document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root')))
  const mode=homeGuideMode(kind)
  const emptyHome=options.homeEmpty!==false&&root?.dataset.odysseyPage==='home'&&![...root.querySelectorAll<HTMLTextAreaElement>('textarea')].some(input=>input.value.trim())&&!root.querySelector('[data-note-reference-chip],[data-research-inline-reference],[data-input-attachment]')
@@ -46,11 +53,11 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
  const sidebar=await wait(()=>unique(document.querySelectorAll<HTMLElement>('[data-dsh-sidebar-root]')))
  const home=unique(sidebar.querySelectorAll<HTMLButtonElement>('button[data-sidebar-home]'))
  if(home){await activate(home,'sidebar-home');return}
- const action:HomeGuideEntryAction=mode==='spreadsheet'?'new-spreadsheet':mode==='notes'?'new-note':mode==='research'?'new-research':'new-chat'
- const labels=action==='new-spreadsheet'?['新建表格','新表格','New spreadsheet','New Spreadsheet']:action==='new-note'?['新建笔记','新笔记','New note','New Note']:action==='new-research'?['新建研究','新研究','New research','New Research']:['新建对话','新对话','New chat','New Chat']
+ const action:HomeGuideEntryAction=mode==='notes'?'new-note':mode==='research'?'new-research':'new-chat'
+ const labels=action==='new-note'?['新建笔记','新笔记','New note','New Note']:action==='new-research'?['新建研究','新研究','New research','New Research']:['新建对话','新对话','New chat','New Chat']
  const matching=()=>unique([...sidebar.querySelectorAll<HTMLElement>('button,[role="menuitem"]'),...document.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"],[role="menu"] button,[data-sidebar-more] button')].filter(node=>labels.includes(node.getAttribute('aria-label')||node.textContent?.trim()||'')||node.hasAttribute('data-sidebar-'+action)))
  let target=matching()
- if(!target&&(action==='new-note'||action==='new-spreadsheet')){
+ if(!target&&action==='new-note'){
   const more=unique([...sidebar.querySelectorAll<HTMLElement>('button')].filter(node=>['更多','More','更多新建选项'].includes(node.getAttribute('aria-label')||'')))
   if(!more)throw Error('可见的新建笔记入口尚未就绪。')
   await click(more);target=await wait(matching)
