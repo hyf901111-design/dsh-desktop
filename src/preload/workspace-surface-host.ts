@@ -187,6 +187,11 @@ export class WorkspaceSurfaceHost {
         if (!this.current())
             return;
         const target = event.target as Element;
+        if (target?.closest?.('[data-dsh-sidebar-root] [data-sidebar-home]')) {
+            // Home starts a fresh conversation even when Notes was opened over Knowledge.
+            this.revealConversation();
+            return;
+        }
         if (this.current()?.surface === 'notes' && target?.closest?.('[data-srb-tabs] [data-conversation-view-id]:not([data-conversation-view-id="notes"])')) { this.closeAll(); return; }
         // Account/settings entries ultimately click this existing native trigger.
         // Release inert and cancel the active surface before React mounts settings.

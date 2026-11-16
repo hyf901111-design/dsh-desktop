@@ -71,6 +71,32 @@ it('reveals the conversation from nested management pages while retaining their 
     expect(doc.querySelector('textarea')!.value).toBe('会话草稿');
     host.dispose();
 });
+it('clears the knowledge history when the sidebar Home button leaves a note for a new chat', () => {
+    const w = new Window(); windows.push(w);
+    const doc = w.document as unknown as Document;
+    doc.body.innerHTML = '<aside data-dsh-sidebar-root><button class="hHd-Xa_newSession" data-sidebar-home><span>主页</span></button></aside><main class="pI_x6G_centerCol"></main>';
+    const host = new WorkspaceSurfaceHost(doc);
+    const knowledge = doc.createElement('section'), notes = doc.createElement('section');
+    host.register('knowledge', knowledge);
+    host.register('notes', notes);
+    host.open('knowledge');
+    host.open('notes');
+    host.close('notes');
+    expect(knowledge.hidden).toBe(false);
+    host.open('notes');
+
+    const home = doc.querySelector<HTMLButtonElement>('[data-sidebar-home]')!;
+    const startChat = vi.fn(() => host.close('notes'));
+    home.addEventListener('click', startChat);
+    home.querySelector<HTMLElement>('span')!.click();
+
+    expect(startChat).toHaveBeenCalledOnce();
+    expect(host.current()).toBeUndefined();
+    expect(knowledge.hidden).toBe(true);
+    expect(notes.hidden).toBe(true);
+    expect(doc.querySelector('main')!.hasAttribute('data-workspace-surface-hidden')).toBe(false);
+    host.dispose();
+});
 it('updates existing surfaces when the native body theme changes',async()=>{
  const w=new Window();windows.push(w);const doc=w.document as unknown as Document;const host=new WorkspaceSurfaceHost(doc);const surface=doc.createElement('section');host.register('integrations',surface);host.open('integrations');expect(surface.dataset.dark).toBe('false');doc.body.setAttribute('data-ds-dark-theme','');await w.happyDOM.whenAsyncComplete();expect(surface.dataset.dark).toBe('true');doc.body.removeAttribute('data-ds-dark-theme');await w.happyDOM.whenAsyncComplete();expect(surface.dataset.dark).toBe('false');host.dispose()
 })
