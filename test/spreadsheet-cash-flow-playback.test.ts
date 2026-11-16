@@ -63,3 +63,46 @@ it('starts empty, opens the import control, and uses the Insert menu before gene
   form.remove()
  }
 })
+
+it('types after a real range chip while its native display marker changes',async()=>{
+ const controller=new AbortController()
+ const toggle=document.createElement('button')
+ toggle.dataset.odysseyPanelEntry='right'
+ toggle.setAttribute('aria-expanded','false')
+ const panel=document.createElement('section')
+ panel.className='t8lSSG_panel'
+ panel.innerHTML='<div class="uV2eYG_root"><div class="uV2eYG_grow"><textarea data-odyssey-file-reference-session="test-session"></textarea><button class="uV2eYG_primary">发送</button></div></div>'
+ const input=panel.querySelector('textarea')!
+ const send=panel.querySelector('button')!
+ for(const control of [input,send])control.getBoundingClientRect=()=>new DOMRect(20,20,100,30)
+ input.addEventListener('input',()=>{input.value='\uE002'+input.value.slice(1)})
+ const submit=vi.fn(()=>input.value)
+ send.addEventListener('click',submit)
+ document.body.append(toggle,panel)
+ const view={
+  cashFlowGuideImportButton:()=>toggle,
+  referenceCashFlowGuideRange:()=>{
+   const chip=document.createElement('span')
+   chip.dataset.referenceSource='spreadsheet-range'
+   chip.textContent='季度分析!A1:C5'
+   input.parentElement!.append(chip)
+   input.value='\uE001 '
+  },
+  closeCashFlowGuideControls:vi.fn()
+ }
+ const fetch=vi.spyOn(window,'fetch').mockImplementation(async()=>new Response(JSON.stringify({ok:true})))
+ const adapter=mountCashFlowGuide(document,{
+  signal:controller.signal,runId:'test-run',sessionId:'test-session',cwd:'/tmp/demo',fresh:true,
+  wait:async()=>{},waitUntilPlaying:async()=>{},onStatus:()=>{}
+ },{cashFlowGuideView:()=>view} as unknown as Parameters<typeof mountCashFlowGuide>[2])
+ try{
+  await adapter.runStep('empty')
+  await adapter.runStep('ask-trend')
+  expect(submit.mock.results[0]?.value).toBe('\uE002 给选区画两条同比趋势线，指出利润与经营现金流背离最明显的一季。')
+ }finally{
+  adapter.dispose()
+  fetch.mockRestore()
+  toggle.remove()
+  panel.remove()
+ }
+})

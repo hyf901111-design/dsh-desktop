@@ -119,32 +119,47 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       .filter(input => input.dataset.odysseyFileReferenceSession === options.sessionId && !input.disabled && !input.readOnly && visible(input))
     return inputs.length === 1 ? inputs[0] : undefined
   }
-  const write = async (input: HTMLTextAreaElement, value: string, optionsForWrite: {dock?: boolean; prefix?: string} = {}) => {
-    const {dock, prefix = ''} = optionsForWrite
-    if (input.value !== prefix) throw Error('输入框已有草稿，已保留你的编辑。')
+  type DraftPrefix = (input: HTMLTextAreaElement) => string | undefined
+  const plainDraft = () => ''
+  const rangeDraft: DraftPrefix = input => {
+    const chip = input.closest('.uV2eYG_grow')?.querySelector('[data-reference-source="spreadsheet-range"]:not([data-provisional])')
+    if (!chip?.textContent?.includes(HOME_SPREADSHEET_GUIDE_TREND_REFERENCE[locale])) return
+    // The native input can remeasure this reference cell and replace the
+    // rendered marker while the canonical draft keeps the same occurrence.
+    return /^[\uFFFC\uE000-\uF8FF]\s*/u.exec(input.value)?.[0]
+  }
+  const matchesDraft = (input: HTMLTextAreaElement, text: string, prefix: DraftPrefix) => {
+    const current = prefix(input)
+    return current !== undefined && input.value === current + text
+  }
+  const write = async (input: HTMLTextAreaElement, value: string, optionsForWrite: {dock?: boolean; prefix?: DraftPrefix} = {}) => {
+    const {dock, prefix = plainDraft} = optionsForWrite
+    if (!matchesDraft(input, '', prefix)) throw Error('输入框已有草稿，已保留你的编辑。')
     await (dock ? pointWhenVisible : point)(input, 'click')
-    if (!input.isConnected || input.value !== prefix) throw abort()
+    if (!input.isConnected || !matchesDraft(input, '', prefix)) throw abort()
     input.focus({ preventScroll: true })
-    let previous = prefix
+    let written = ''
     const chunks = value.match(/.{1,3}/gu) ?? []
     const setValue = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value')!.set!
     for (const chunk of chunks) {
       check()
-      if (!input.isConnected || input.value !== previous) throw Error('输入框内容已变化，演示已停止。')
-      previous += chunk
-      setValue.call(input, previous)
-      input.setSelectionRange(previous.length, previous.length)
+      const current = prefix(input)
+      if (!input.isConnected || current === undefined || input.value !== current + written) throw Error('输入框内容已变化，演示已停止。')
+      written += chunk
+      const next = current + written
+      setValue.call(input, next)
+      input.setSelectionRange(next.length, next.length)
       input.dispatchEvent(new win.InputEvent('input', { bubbles: true, data: chunk, inputType: 'insertText' }))
       await options.wait(42, requestAbort.signal)
     }
   }
-  const sendPrompt = async (input: HTMLTextAreaElement, expected: string) => {
+  const sendPrompt = async (input: HTMLTextAreaElement, expected: string, prefix: DraftPrefix = plainDraft) => {
     const send = await waitFor(() => {
       const button = composer()?.closest('.uV2eYG_root')?.querySelector<HTMLButtonElement>('button.uV2eYG_primary')
       return button && !button.disabled && visible(button) ? button : undefined
     }, '表格对话发送按钮尚未就绪。')
     await point(send, 'click')
-    if (composer() !== input || input.value !== expected) throw abort()
+    if (composer() !== input || !matchesDraft(input, expected, prefix)) throw abort()
     if (!preparing) {
       preparing = true
       await rpc('prepare')
@@ -152,7 +167,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     await options.waitUntilPlaying()
     await rpc('arm')
     check()
-    if (composer() !== input || input.value !== expected || !send.isConnected || send.disabled) throw abort()
+    if (composer() !== input || !matchesDraft(input, expected, prefix) || !send.isConnected || send.disabled) throw abort()
     send.click()
     await rpc('accepted')
   }
@@ -209,14 +224,11 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         if (input.value) throw Error('输入框已有草稿，已保留你的编辑。')
         input.focus({preventScroll:true})
         check().referenceCashFlowGuideRange()
-        const prefix = await waitFor(() => {
-          const chip = input.closest('.uV2eYG_grow')?.querySelector('[data-reference-source="spreadsheet-range"]:not([data-provisional])')
-          return chip?.textContent?.includes(HOME_SPREADSHEET_GUIDE_TREND_REFERENCE[locale]) && /^\uFFFC\s*$/u.test(input.value) ? input.value : undefined
-        }, '表格选区未能加入对话。')
+        await waitFor(() => matchesDraft(input, '', rangeDraft) || undefined, '表格选区未能加入对话。')
         const prompt = HOME_SPREADSHEET_GUIDE_TREND_PROMPTS[locale]
-        await write(input, prompt, {prefix})
+        await write(input, prompt, {prefix:rangeDraft})
         await options.wait(750, requestAbort.signal)
-        await sendPrompt(input, prefix + prompt)
+        await sendPrompt(input, prompt, rangeDraft)
         return
       }
       if (step === 'analysis' || step === 'trend') {
