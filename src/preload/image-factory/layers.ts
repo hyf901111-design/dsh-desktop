@@ -1,4 +1,5 @@
 import type { Raster, Size } from './raster'
+import { imageFactoryExportFonts } from './fonts'
 
 import { canvasFonts as imageFonts, type CanvasImageType, type TextLayer } from '../../shared/image-factory-canvas'
 
@@ -71,6 +72,12 @@ async function drawTextLayers(context: CanvasRenderingContext2D, size: Size, lay
   content.setAttribute('height', '100%')
   const art = doc.createElement('div')
   Object.assign(art.style, { position: 'relative', width: '100%', height: '100%', overflow: 'hidden' })
+  const faces = await imageFactoryExportFonts(doc, layers)
+  if (faces) {
+    const style = doc.createElement('style')
+    style.textContent = faces
+    art.append(style)
+  }
   for (const layer of layers) {
     const text = doc.createElement('div')
     Object.assign(text.style, textLayerStyle(layer, size))

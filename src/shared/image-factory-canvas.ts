@@ -1,5 +1,11 @@
 export const canvasFonts = [
   { family: 'system-ui', label: '系统默认', english: 'System' },
+  { family: 'Source Han Sans CN', label: '思源黑体', english: 'Source Han Sans', asset: { file: 'SourceHanSansCN.woff2', weight: '250 900' } },
+  { family: 'STHeiti_YFD', label: '易方达华文黑体', english: 'E Fund STHeiti', asset: { file: 'STHeiti_YFD.ttf', weight: '400' } },
+  { family: 'ZCOOL XiaoWei', label: '站酷小薇', english: 'ZCOOL XiaoWei', asset: { file: 'ZCOOLXiaoWei.ttf', weight: '400' } },
+  { family: 'Montserrat', label: 'Montserrat', english: 'Montserrat', asset: { file: 'Montserrat.ttf', weight: '100 900' } },
+  { family: 'Archivo Black', label: 'Archivo Black', english: 'Archivo Black', asset: { file: 'ArchivoBlack.ttf', weight: '400' } },
+  { family: 'Playfair Display', label: 'Playfair Display', english: 'Playfair Display', asset: { file: 'PlayfairDisplay.ttf', weight: '400 900' } },
   { family: 'PingFang SC', label: '苹方', english: 'PingFang SC' },
   { family: 'Songti SC', label: '宋体', english: 'Songti SC' },
   { family: 'Arial', label: 'Arial', english: 'Arial' },

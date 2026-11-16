@@ -7,6 +7,7 @@ import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, type CanvasIma
   type ImageFactoryTaskTab } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu } from './actions-menu'
+import { imageFactoryFontFaces } from './fonts'
 import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
 import { useImageViewport } from './viewport'
@@ -229,8 +230,15 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (!resizableText) return
     const { id } = resizableText
     const element = imageFrame.current?.querySelector<HTMLElement>('[data-canvas-text-id="' + id + '"]')
-    const height = element?.getBoundingClientRect().height || resizableText.fontSize * 1.2 * displayScale
-    setTextBox(previous => previous?.id === id && previous.height === height ? previous : { id, height })
+    const measure = () => {
+      const height = element?.getBoundingClientRect().height || resizableText.fontSize * 1.2 * displayScale
+      setTextBox(previous => previous?.id === id && previous.height === height ? previous : { id, height })
+    }
+    measure()
+    if (!element) return
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
   }, [resizableText, displayScale])
   useLayoutEffect(() => {
     const pending = pendingTextLayout.current
@@ -842,7 +850,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   const root = doc.createElement('div')
   root.className = 'image-factory'
   const style = doc.createElement('style')
-  style.textContent = styles
+  style.textContent = imageFactoryFontFaces + '\n' + styles
   doc.head.append(style)
   host.register('image-factory', root)
   const react = createRoot(root)

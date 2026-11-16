@@ -1,5 +1,6 @@
 import { installBootBranding } from './lib/boot-branding.mjs'
 import {copySubagentAvatarAssets} from './lib/subagent-avatars.mjs'
+import { efundImageFactoryFont } from './lib/image-factory-web-font.mjs'
 import { copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -64,6 +65,10 @@ await copySubagentAvatarAssets(destinationDirectory)
 await copyFile(path.join(projectRoot, 'build/brand/figma-welcome-illustration.png'), path.join(destinationDirectory, 'figma-welcome-illustration.png'))
 await mkdir(path.join(destinationDirectory, 'fonts'), { recursive: true })
 await copyFile(path.join(projectRoot, 'build/fonts/NotoSansSC.woff2'), path.join(destinationDirectory, 'fonts/NotoSansSC.woff2'))
+const factoryFonts = path.join(destinationDirectory, 'fonts/image-factory')
+await cp(path.join(projectRoot, 'build/fonts/image-factory'), factoryFonts, { recursive: true })
+const efundFont = await readFile(path.join(projectRoot, 'skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf'))
+await writeFile(path.join(factoryFonts, 'STHeiti_YFD.ttf'), efundImageFactoryFont(efundFont))
 for (const name of ['figma-home-headline-light.svg','figma-home-headline-dark.svg','figma-home-mode.svg','figma-sidebar-chevron.svg','figma-sidebar-bell.svg','figma-people.svg','figma-self-avatar.png','figma-check.svg','figma-close.svg','figma-collaboration-plus.svg','figma-favorite.svg','figma-favorite-selected.svg','figma-glass-light-base.png','figma-glass-light-mesh.png','figma-glass-dark-base.png','figma-glass-dark-mesh.png','figma-glass-dark-overlay.png']) {
   await copyFile(path.join(projectRoot, 'build/brand', name), path.join(destinationDirectory, name))
 }
