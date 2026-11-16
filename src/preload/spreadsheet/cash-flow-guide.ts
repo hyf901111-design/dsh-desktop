@@ -65,6 +65,22 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     if (!element) return false
     try { homeGuideTargetPoint(document, element); return true } catch { return false }
   }
+  const controlPoint = (target: HTMLElement | undefined, caret?: HomeGuidePointerAction['targetPoint']) => {
+    if (!target?.isConnected || target.matches(':disabled,[aria-disabled=true]')) throw Error('操作目标不可用。')
+    const box = target.getBoundingClientRect()
+    const left = Math.max(0, box.left), top = Math.max(0, box.top)
+    const right = Math.min(win.innerWidth, box.right), bottom = Math.min(win.innerHeight, box.bottom)
+    if (right <= left || bottom <= top) throw Error('操作目标不可用，当前控件未显示。')
+    const point = caret?.() ?? {x:(left + right) / 2, y:(top + bottom) / 2}
+    const hit = document.elementFromPoint?.(point.x, point.y)
+    // A native workspace slot can have no layout box while the control
+    // painted through it is visible. The browser's hit test is authoritative.
+    if (hit && !target.contains(hit)) throw Error('操作目标不可用，当前控件被遮挡。')
+    return point
+  }
+  const clickable = (target: HTMLElement | undefined) => {
+    try { controlPoint(target); return true } catch { return false }
+  }
   const moveWhenVisible = async (target: HTMLElement) => {
     check()
     if (!visible(target)) return
@@ -74,14 +90,10 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     }
     check()
   }
-  const clickAt = async (target: HTMLElement, onClick: () => void, targetPoint?: HomeGuidePointerAction['targetPoint']) => {
+  const clickAt = async (target: HTMLElement, onClick: () => void, locate: NonNullable<HomeGuidePointerAction['targetPoint']> = () => controlPoint(target)) => {
     const readPoint = () => {
       check()
-      const fallback = homeGuideTargetPoint(document, target)
-      const point = targetPoint?.() ?? fallback
-      const hit = document.elementFromPoint?.(point.x, point.y)
-      if (hit && !target.contains(hit)) throw Error('操作目标不可用，当前控件被遮挡。')
-      return point
+      return locate()
     }
     if (options.point) await options.point({ target, action:'click', hover:'none', targetPoint:readPoint, onClick })
     else { readPoint(); onClick() }
@@ -92,16 +104,18 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       const target = await waitFor(() => {
         check()
         const control = read()
-        return control && visible(control) ? control : undefined
+        return control && clickable(control) ? control : undefined
       }, message)
       let clicked = false
       try {
         await clickAt(target, () => {
-          if (read() !== target || !target.isConnected || target.disabled) return
+          const current = read()
+          if (!current) return
+          controlPoint(current)
           beforeClick?.()
-          target.click()
+          current.click()
           clicked = true
-        })
+        }, () => controlPoint(read()))
       } catch (error) {
         if (clicked || !(error instanceof Error) || !error.message.startsWith('操作目标不可用') || read() === target) throw error
       }
@@ -117,7 +131,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
   }
   const composer = () => {
     const inputs = [...document.querySelectorAll<HTMLTextAreaElement>('.t8lSSG_panel textarea[data-odyssey-file-reference-session]')]
-      .filter(input => input.dataset.odysseyFileReferenceSession === options.sessionId && !input.disabled && !input.readOnly && visible(input))
+      .filter(input => input.dataset.odysseyFileReferenceSession === options.sessionId && !input.readOnly && clickable(input))
     return inputs.length === 1 ? inputs[0] : undefined
   }
   type DraftPrefix = (input: HTMLTextAreaElement) => string | undefined
@@ -160,7 +174,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
       clickedAt = caret()
       input.focus({ preventScroll: true })
       if (useRange) check().referenceCashFlowGuideRange()
-    }, caret)
+    }, () => controlPoint(input, caret))
     await waitFor(() => matchesDraft(input, '', prefix) || undefined, '输入框尚未就绪。')
     const typingAt = caret()
     if (clickedAt && Math.hypot(typingAt.x - clickedAt.x, typingAt.y - clickedAt.y) > 4) {
@@ -265,7 +279,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         return
       }
       if (step === 'open-component') {
-        if (!visible(check().cashFlowGuideInsertButton())) {
+        if (!clickable(check().cashFlowGuideInsertButton())) {
           await clickControl(() => check().cashFlowGuideMenuButton(), '表格菜单尚未就绪。')
           await options.wait(1050, requestAbort.signal)
         }

@@ -95,13 +95,17 @@ export function createHomeGuidePointer(document:Document,options:Options){
    ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true;onFrame=action.onFrame;hoverMode=action.hover
    if(hoverMode==='none')hover.clear()
    let completed=false
-   const readCanvasPoint=(read:()=>Point)=>{
-    if(!action.target.isConnected||action.target.ownerDocument!==document)throw aborted()
-    const {x,y}=read()
-    if(!Number.isFinite(x)||!Number.isFinite(y))throw Error('表格选区尚未显示。')
+   const viewportPoint=({x,y}:Point)=>{
+    if(!Number.isFinite(x)||!Number.isFinite(y))throw Error('演示位置尚未显示。')
     return {x:Math.max(0,Math.min(win.innerWidth-1,x)),y:Math.max(0,Math.min(win.innerHeight-1,y))}
    }
-   const readTarget=()=>action.targetPoint?readCanvasPoint(action.targetPoint):action.canvasPoints?readCanvasPoint(action.canvasPoints.to):point(action.target)
+   const readCanvasPoint=(read:()=>Point)=>{
+    if(!action.target.isConnected||action.target.ownerDocument!==document)throw aborted()
+    return viewportPoint(read())
+   }
+   // A menu or ribbon can replace a button while the cursor is traveling.
+   // Coordinate resolvers validate the live control they currently point to.
+   const readTarget=()=>action.targetPoint?viewportPoint(action.targetPoint()):action.canvasPoints?readCanvasPoint(action.canvasPoints.to):point(action.target)
    let clickPosition:Point|undefined
    try{
     await gate();const target=readTarget()
