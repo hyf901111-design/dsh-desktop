@@ -20,6 +20,23 @@ function financialFixture(){
  port(f.source,'watchlist-node','output','watchlist');port(f.target,'quote-node','input','quote');guide.append(canvas);document.body.append(guide)
  return{...f,guide,canvas,line:()=>document.querySelector<SVGSVGElement>('[data-home-guide-connection="run"]')}
 }
+test('can move through a menu without hovering intermediate rows',async()=>{
+ const {pointer,source,target}=fixture(),adjacent=document.createElement('button')
+ document.body.append(adjacent)
+ const hit=vi.spyOn(document,'elementFromPoint').mockImplementation(x=>x<100?source:x<320?adjacent:target)
+ const entered=vi.fn(),landed=vi.fn()
+ adjacent.addEventListener('mouseover',entered)
+ target.addEventListener('mouseover',landed)
+ try{
+  const start=pointer.perform({target:source,action:'move'})
+  await vi.runAllTimersAsync();await start
+  const choose=pointer.perform({target,action:'click',hover:'target'})
+  await vi.runAllTimersAsync();await choose
+  expect(entered).not.toHaveBeenCalled()
+  expect(landed).toHaveBeenCalledOnce()
+  expect(pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
+ }finally{hit.mockRestore()}
+})
 test('targets the visible text fragment of a wrapped AI mark rather than its empty union center',()=>{
  const f=fixture(),mark=document.createElement('span');mark.dataset.bnThreadId='one';document.body.append(mark)
  const rect=(left:number,top:number,right:number,bottom:number)=>({left,top,right,bottom,width:right-left,height:bottom-top,x:left,y:top,toJSON:()=>({})})

@@ -69,6 +69,7 @@ it('maintains the right chat and switches the generated component through the na
   expect(input.value).toContain('现金流拆解台')
   expect(view.insertCashFlowGuideComponent).toHaveBeenCalledOnce()
   expect(point.mock.calls.map(([action])=>action.target.textContent)).toEqual([originalUpload,upload,file,insert,smart,submit,more,theme,enterprise].map(target=>target.textContent))
+  expect(point.mock.lastCall?.[0]).toMatchObject({target:enterprise,action:'click',hover:'target'})
  }finally{
   adapter.dispose()
   toggle.remove()

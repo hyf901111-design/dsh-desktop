@@ -4,7 +4,7 @@ import {
   HOME_SPREADSHEET_GUIDE_TREND_PROMPTS,
   HOME_SPREADSHEET_GUIDE_TREND_REFERENCE
 } from '../../../packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js'
-import { homeGuideTargetPoint } from '../home-guide-pointer'
+import { homeGuideTargetPoint, type HomeGuidePointerAction } from '../home-guide-pointer'
 import type { HomeGuideAdapter, HomeGuideMountOptions } from '../home-guides'
 import type { mountSpreadsheet } from './view'
 
@@ -79,30 +79,30 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
     await options.point?.({ target, action })
     check()
   }
-  const pointWhenVisible = async (target: HTMLElement, action: 'move' | 'click') => {
+  const pointWhenVisible = async (target: HTMLElement, action: 'move' | 'click', hover?: HomeGuidePointerAction['hover']) => {
     check()
     // Docked controls can be painted outside the clipping rectangles used by
     // the visual cursor. The real form and its focus remain authoritative.
     if (!visible(target)) return
-    try { await options.point?.({ target, action }) }
+    try { await options.point?.({ target, action, hover }) }
     catch (error) {
       if (!(error instanceof Error) || !error.message.startsWith('操作目标不可用')) throw error
     }
     check()
   }
-  const clickControl = async (read: () => HTMLButtonElement | undefined, message: string, beforeClick?: () => void) => {
+  const clickControl = async (read: () => HTMLButtonElement | undefined, message: string, { beforeClick, hover }: { beforeClick?: () => void; hover?: HomeGuidePointerAction['hover'] } = {}) => {
     const ready = () => {
       check()
       const target = read()
       return target?.isConnected && !target.disabled ? target : undefined
     }
     const initial = await waitFor(ready, message)
-    await pointWhenVisible(initial, 'click')
+    await pointWhenVisible(initial, 'click', hover)
     // The spreadsheet can repaint its empty state and ribbon during layout.
     // Resolve the native control again after the visual cursor has traveled.
     let current = await waitFor(ready, message)
     if (current !== initial) {
-      await pointWhenVisible(current, 'click')
+      await pointWhenVisible(current, 'click', hover)
       current = await waitFor(ready, message)
     }
     beforeClick?.()
@@ -200,7 +200,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         return
       }
       if (step === 'import-file') {
-        await clickControl(() => check().cashFlowGuideImportButton(), '导入按钮尚未就绪。', () => check().armCashFlowGuideImport())
+        await clickControl(() => check().cashFlowGuideImportButton(), '导入按钮尚未就绪。', { beforeClick: () => check().armCashFlowGuideImport() })
         await options.wait(850, requestAbort.signal)
         await clickControl(() => check().cashFlowGuideFileButton(), '示例文件尚未就绪。')
         await waitFor(() => check().cashFlowGuideImported || undefined, '示例 Excel 尚未导入。')
@@ -270,7 +270,8 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         await options.wait(420, requestAbort.signal)
         await clickControl(() => check().cashFlowGuideThemeControl('theme'), '组件主题菜单尚未就绪。')
         await options.wait(420, requestAbort.signal)
-        await clickControl(() => check().cashFlowGuideThemeControl('theme-enterprise'), '易方达主题尚未就绪。')
+        // Crossing other rows in the parent menu can replace the open submenu.
+        await clickControl(() => check().cashFlowGuideThemeControl('theme-enterprise'), '易方达主题尚未就绪。', { hover: 'target' })
         await waitFor(() => check().cashFlowGuideEnterpriseThemeSaved || undefined, '易方达主题尚未保存。')
         completed = true
       }
