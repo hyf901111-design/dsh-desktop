@@ -5,7 +5,7 @@ import type { ImageLayer, ImageScene } from './layers'
 type RestoreStatus = 'idle' | 'loading' | 'ready' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type Entry = {
-  status: RestoreStatus; save: SaveStatus; epoch?: number; scene?: ImageScene
+  scope: CanvasScope; status: RestoreStatus; save: SaveStatus; epoch?: number; scene?: ImageScene
   reading?: Promise<void>; writing?: Promise<void>; assetId?: string; revision: number; retained: number; dirty?: boolean
 }
 
@@ -47,7 +47,7 @@ export class CanvasWorkspace {
   retain(scope: CanvasScope) {
     const entry = this.entry(scope)
     entry.retained++
-    return () => { entry.retained--; this.evict(scope) }
+    return () => { entry.retained--; this.evict(entry.scope) }
   }
 
   epoch(scope: CanvasScope) { return this.entries.get(scope)?.epoch }
@@ -83,7 +83,7 @@ export class CanvasWorkspace {
   private async moveDraft(sessionId: string) {
     await this.ready(null)
     const draft = this.entry(null)
-    if (draft.save === 'error') this.commit(null)
+    if (draft.dirty || draft.save === 'error') this.commit(null)
     await draft.writing
     if (this.disposed || draft.save === 'error' || draft.epoch === undefined) throw Error('草稿画布未保存，请重试。')
     if (draft.scene && await this.storage.adopt(sessionId, draft.epoch)) {
@@ -92,6 +92,7 @@ export class CanvasWorkspace {
       if (target) await target.reading?.catch(() => {})
       if (this.disposed) return
       this.drop(sessionId)
+      draft.scope = sessionId
       this.entries.set(sessionId, draft)
       this.entries.delete(null)
       this.publish(this.scope)
@@ -108,7 +109,7 @@ export class CanvasWorkspace {
   private entry(scope: CanvasScope) {
     let entry = this.entries.get(scope)
     if (!entry) {
-      entry = { status: 'idle', save: 'idle', revision: 0, retained: 0 }
+      entry = { scope, status: 'idle', save: 'idle', revision: 0, retained: 0 }
       this.entries.set(scope, entry)
     }
     return entry
