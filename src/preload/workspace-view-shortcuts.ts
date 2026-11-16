@@ -5,6 +5,7 @@ export const workspaceViews = [
 ] as const
 
 const sessionHeader = '.pI_x6G_centerCol .wSkVaW_root [data-srb-session-header][data-ework-notes-session]'
+const hoverDelay = 160
 
 export function findWorkspaceSession(document: Document, sessionId?: string) {
   return [...document.querySelectorAll<HTMLElement>(sessionHeader)].find(header =>
@@ -31,12 +32,16 @@ export class WorkspaceViewHover {
     private pointerInBar?: WorkspacePointerInBar
   ) {
     root.addEventListener('pointerover', this.over)
+    root.addEventListener('pointerdown', this.down)
     root.addEventListener('pointerout', this.out)
     root.addEventListener('focusout', this.out)
   }
 
   setExpanded(expanded: boolean) {
-    if (this.expanded === expanded) return
+    if (this.expanded === expanded) {
+      if (!expanded) this.cancel()
+      return
+    }
     this.reset(expanded)
     this.onChange(expanded)
     if (expanded && this.pointerInBar) this.schedule()
@@ -50,6 +55,7 @@ export class WorkspaceViewHover {
   dispose() {
     this.reset()
     this.root.removeEventListener('pointerover', this.over)
+    this.root.removeEventListener('pointerdown', this.down)
     this.root.removeEventListener('pointerout', this.out)
     this.root.removeEventListener('focusout', this.out)
   }
@@ -75,22 +81,32 @@ export class WorkspaceViewHover {
       if (generation !== this.generation || this.root.querySelector('.eb-workspace-controls :focus-visible')) return
       if (!inside) this.setExpanded(false)
       else if (this.pointerInBar) this.schedule()
-    }, 160)
+    }, hoverDelay)
   }
 
   private over = (event: PointerEvent) => {
     const target = event.target as Element
     if (event.pointerType === 'touch' || !target.closest?.('.workspace-app-topbar')) return
-    if (!this.pointerInBar) this.cancel()
+    if (this.expanded) {
+      if (!this.pointerInBar) this.cancel()
+      return
+    }
     if (target.closest('.eb-workspace-toggle') && !(event.relatedTarget as Element | null)?.closest?.('.eb-workspace-toggle')) {
-      this.setExpanded(true)
+      // Entering the button to click it should not open it just before the click toggles it.
+      this.cancel()
+      this.timer = setTimeout(() => this.setExpanded(true), hoverDelay)
     }
   }
 
+  private down = (event: PointerEvent) => {
+    if (!this.expanded && (event.target as Element).closest?.('.eb-workspace-toggle')) this.cancel()
+  }
+
   private out = (event: PointerEvent | FocusEvent) => {
-    if (!this.expanded || this.pointerInBar && event.type !== 'focusout') return
-    const boundary = event.type === 'focusout' ? '.eb-workspace-controls' : '.workspace-app-topbar'
+    const boundary = event.type === 'focusout' ? '.eb-workspace-controls'
+      : this.expanded ? '.workspace-app-topbar' : '.eb-workspace-toggle'
     if (!(event.target as Element).closest?.(boundary) || (event.relatedTarget as Element | null)?.closest?.(boundary)) return
-    this.schedule()
+    if (!this.expanded) this.cancel()
+    else if (!this.pointerInBar || event.type === 'focusout') this.schedule()
   }
 }
