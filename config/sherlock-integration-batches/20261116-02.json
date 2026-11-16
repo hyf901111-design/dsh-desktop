@@ -11,18 +11,38 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
-        "tipCommit": "dc63176ac75221354d250bc61344fafe134e2984",
+        "baseCommit": "dc63176ac75221354d250bc61344fafe134e2984",
+        "tipCommit": "8f9098fecb3a6aa8191e3c78a034356da8bb5621",
         "commits": [
           {
-            "commit": "dc63176ac75221354d250bc61344fafe134e2984",
+            "commit": "8f9098fecb3a6aa8191e3c78a034356da8bb5621",
             "parents": [
-              "7305b2a9bf7ded3707c56458fd200922f83632fe"
+              "dc63176ac75221354d250bc61344fafe134e2984"
             ],
-            "subject": "修复：图像工厂使用通用对话回执并及时清空草稿"
+            "subject": "优化：图像工厂复用原生会话并支持框选、文本图层和知识库收录"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-factory-context.js"
+          },
+          {
+            "status": "D",
+            "path": "packages/dsh-research-task-runtime/image-factory.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/lib/image-factory-native.mjs"
@@ -30,6 +50,54 @@
           {
             "status": "M",
             "path": "scripts/lib/image-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/message-edit.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-conversation.mjs"
+          },
+          {
+            "status": "D",
+            "path": "src/main/image-factory.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/history-backfill.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/actions-menu.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/grip.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/layers.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/trash.svg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/layers.ts"
           },
           {
             "status": "M",
@@ -41,7 +109,23 @@
           },
           {
             "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
             "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-history-backfill.test.ts"
           }
         ],
         "checks": [
@@ -53,8 +137,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "dc63176ac75221354d250bc61344fafe134e2984",
-            "completedAt": "2026-11-16T12:43:56.269Z",
+            "verifiedCommit": "8f9098fecb3a6aa8191e3c78a034356da8bb5621",
+            "completedAt": "2026-11-16T13:52:20.887Z",
             "timeoutMs": 120000
           },
           {
@@ -62,75 +146,41 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-native.test.js",
               "test/image-factory.test.js",
-              "test/image-actions.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js",
+              "test/image-factory-native.test.js",
               "test/image-generation-client.test.js",
-              "test/image-generation-ui.test.js"
+              "test/image-generation-tool.test.js",
+              "test/image-generation-ui.test.js",
+              "test/image-actions.test.ts",
+              "test/knowledge-library.test.ts",
+              "test/knowledge-history-backfill.test.ts",
+              "test/pending-conversation.test.js",
+              "test/message-edit.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/browser-sidebar-entry.test.ts"
             ],
             "outcome": "passed",
-            "summary": "57 项通过，包含普通图片生成组件和画布输入提交。",
-            "verifiedCommit": "dc63176ac75221354d250bc61344fafe134e2984",
-            "completedAt": "2026-11-16T12:43:56.269Z",
+            "summary": "86 项聚焦用例通过，覆盖通用会话、图片工具、图层、知识库及工作区。",
+            "verifiedCommit": "8f9098fecb3a6aa8191e3c78a034356da8bb5621",
+            "completedAt": "2026-11-16T13:52:20.887Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "上一包已验证图像工厂统一对话、真实生图、导入、框选和导出。本轮工作区拖窗、四个页签入口和反向循环画廊等待最新包验证。"
+          "summary": "修订版等待签名本地包的实际界面验收。"
         },
         "acceptanceCriteria": [
-          "图像工厂顶栏应用名称与空白区域支持拖动窗口；应用名后展开并能切换至对话、研究、笔记、表格；保留全局右侧对话展开按钮。",
-          "画廊只显示图片，奇数列向下、偶数列向上循环；点击图片仍可填入原生右侧输入框。",
-          "画布不显示导入入口和比例按钮；右侧欢迎页可选择本地图片并导入画布；直接描述比例生成对应尺寸。",
-          "画布保留编辑、框选、预览/恢复历史和导出。",
-          "原生输入框在接收命令后立即清空，图片工厂的记录复用普通对话的执行过程、计时、生成卡片和结果图片预览。"
+          "画布主工具只有框选修改、添加文本和图层。框选评论提交走普通对话。",
+          "文本独立图层可设置字号、字体、字重、对齐和颜色，可释放后双击编辑。图层可拖动排序与删除。",
+          "右侧复用普通会话输入、消息、工具及收尾操作。图像生成和选区编辑结果写回画布。",
+          "生成图片自动进入知识库所有文件，并随会话历史补收。",
+          "更多菜单的导出项向右展开。"
         ],
         "risks": [
-          "真实生图使用当前账号现有图片模型权限。",
-          "当前运行期间保留图像版本与对话，可导出到本地。",
-          "计时补丁严格锚点用例在变更前后同样有两项失败，实际补丁全流程与 UI 单独验收。"
+          "生图验收使用当前用户的现有模型能力。"
         ],
-        "generatedAt": "2026-11-16T12:43:56.269Z"
-      },
-      "merged": {
-        "mergeCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
-        "verificationCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
-            "completedAt": "2026-11-16T12:44:00.888Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory.test.js",
-              "test/image-actions.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
-            "verifiedCommit": "6a9c9b02f0a61d38f0bc09f60eb21e9666c733e0",
-            "completedAt": "2026-11-16T12:44:00.888Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T12:44:00.888Z"
+        "generatedAt": "2026-11-16T13:52:20.887Z"
       }
     },
     {
