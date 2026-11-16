@@ -11,49 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "858e55751f8945a5f4e1bf97861ff16d5157a2d6",
-        "tipCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
+        "baseCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
+        "tipCommit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
         "commits": [
           {
-            "commit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
+            "commit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
             "parents": [
-              "858e55751f8945a5f4e1bf97861ff16d5157a2d6"
+              "dfe23903ef049163e728a5bb3534a20c71c8fefe"
             ],
-            "subject": "修复：图像工厂框选改图保持选区比例"
+            "subject": "修复：消息定位栏隐藏图像工厂内部参数"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-factory-context.js"
+            "path": "scripts/lib/browser-app-native.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-generation-tool.test.js"
+            "path": "test/browser-app-native.test.js"
           }
         ],
         "checks": [
@@ -65,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
-            "completedAt": "2026-11-16T15:52:28.587Z",
+            "verifiedCommit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
+            "completedAt": "2026-11-16T16:06:27.067Z",
             "timeoutMs": 120000
           },
           {
@@ -74,35 +50,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory.test.js",
+              "test/browser-app-native.test.js",
+              "test/knowledge-composer.test.js",
               "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-generation-tool.test.js",
-              "test/image-generation-client.test.js",
-              "test/knowledge-history-backfill.test.ts",
-              "test/pending-conversation.test.js"
+              "test/image-factory.test.js",
+              "test/message-edit.test.js"
             ],
             "outcome": "passed",
-            "summary": "50 项图像工厂、原生生图工具和知识库聚焦检查通过。",
-            "verifiedCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
-            "completedAt": "2026-11-16T15:52:28.587Z",
+            "summary": "33 项原生对话、图像工厂和知识库聚焦检查通过。",
+            "verifiedCommit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
+            "completedAt": "2026-11-16T16:06:27.067Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 实际缩放画布、反向拖选、气泡填写和发送，600×60 框选收到 1536×1024 上下文参考图。用正方形模拟模型结果，框内 36000 像素更新，框外像素不变，圆形保持 42×42。"
+          "summary": "真实框选生成和 PNG 对比已通过，视觉编辑区域是 333×21，改动边界精确一致。对话定位栏改为使用与消息气泡相同的清理逻辑，已用真实打补丁的对话模块复现并验证。"
         },
         "acceptanceCriteria": [
-          "框选改图参考图包含选区周围的上下文。",
-          "框选改图的原生生图工具收到准确选区边界。",
-          "等比例将结果中的对应区域贴回，框外原始像素保持。"
+          "真实框选改单条背景正常回贴。",
+          "消息定位栏只显示原始用户内容。",
+          "同一投影保持气泡、复制和编辑一致。"
         ],
-        "risks": [
-          "当模型返回不同的整体比例时，居中对齐参考画面。"
-        ],
-        "generatedAt": "2026-11-16T15:52:28.587Z"
+        "risks": [],
+        "generatedAt": "2026-11-16T16:06:27.067Z"
       }
     },
     {
