@@ -1,4 +1,5 @@
 import { mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterEach, expect, it } from 'vitest'
@@ -82,6 +83,25 @@ it('collects a generated deliverable once, excludes process scripts, and honors 
   expect(await store.collectGenerated(report, origin)).toBeUndefined()
   expect((await store.snapshot()).documents).toHaveLength(0)
   expect((await store.collectGenerated(report, { ...origin, saved: true }))?.saved).toBe(true)
+})
+
+it('assigns distinct default file names to concurrent factory results and preserves a renamed result', async () => {
+  const { file, open } = await fixture()
+  const store = open()
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=', 'base64')
+  const source = { sessionId: 'factory-session', sessionTitle: '海报编辑', name: '活动海报' }
+  const ids = [randomUUID(), randomUUID(), randomUUID()]
+  const uploaded = await store.importFile(await file('活动海报（2）.PNG'))
+  const results = await Promise.all(ids.map(id => store.collectFactoryImage(png, { ...source, id })))
+  expect(results.map(row => row?.name)).toEqual(['活动海报.png', '活动海报（3）.png', '活动海报（4）.png'])
+  expect(new Set(results.map(row => row?.id)).size).toBe(3)
+  await store.edit({ type: 'rename', id: results[1]!.id, name: '已挑选.png' })
+  const reopened = open()
+  const updated = await reopened.collectFactoryImage(png, { ...source, id: ids[1]!, processed: true })
+  expect(updated).toMatchObject({ id: results[1]!.id, name: '已挑选.png', sessionTitle: '海报编辑' })
+  const listed = (await reopened.snapshot()).documents
+  expect(listed).toHaveLength(4)
+  expect(listed.find(row => row.id === uploaded.id)?.name).toBe('活动海报（2）.PNG')
 })
 
 it.each([false, true])('refreshes a regenerated file in place for preview and Agent references (legacy=%s)', async legacy => {
