@@ -1,212 +1,179 @@
-/** A mode-specific input shell bound to the existing global chat, like the notes input. */
-export function installImageFactoryInput({ makeShell, conversation, document: doc = document, window: win = window }) {
-  const initial = { messages: [], canSend: true }
-  const listeners = new Set()
-  let state = initial
-  let pending
+import { imageGenerationCalls } from './image-generation-client.mjs'
+import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../../packages/dsh-research-task-runtime/image-factory-context.js'
+
+/** Connect the current canvas to native admission, without owning a message list or a composer. */
+export function installImageFactoryContext({ sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt }) {
+  const jobs = new Map(), listeners = new Set()
+  let state = { current: false, busy: false }
   let galleryDraft
-  const publish = value => {
-    state = value
+  const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
+  const currentId = () => sessions.list.getSnapshot().current
+  const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
+  const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
+  const stateChange = event => {
+    state = { current: event.detail?.current === true, busy: event.detail?.busy === true }
     for (const listener of listeners) listener()
   }
-  const action = (kind, attrs) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-action', { detail: { kind, ...attrs } }))
-  const request = () => doc.dispatchEvent(new win.Event('sherlock:image-factory-request-state'))
   const focus = () => win.requestAnimationFrame(() => doc.querySelector('#odyssey-right-workspace-panel textarea:not([disabled])')?.focus({ preventScroll: true }))
-  const change = event => {
-    if (event.detail && Array.isArray(event.detail.messages)) publish(event.detail)
+  const finish = id => {
+    const job = jobs.get(id)
+    if (job) { win.clearTimeout(job.timer); win.clearTimeout(job.idle); job.unsubscribe?.(); jobs.delete(id) }
+    signal('settled', { id })
   }
-  const clearImages = ids => { for (const id of ids) conversation.releaseDraftImage(id) }
-  const reset = () => {
-    pending = undefined
-    galleryDraft = undefined
-    clearImages(shell.snapshot.imageIds)
-    shell.pruneImages([])
-    shell.setResearchContextPreparing(false)
-    shell.setDraft('')
-    publish(initial)
+  function fill(prompt, gallery = false) {
+    const shell = nativeInput()
+    if (!shell || shell.disposed || !isActive() || state.busy || typeof prompt !== 'string' || !prompt.trim()) return false
+    const draft = shell.snapshot.draft
+    if (!gallery && draft.trim()) { focus(); return true }
+    const original = galleryDraft?.shell === shell && draft === galleryDraft.combined ? galleryDraft.original : draft
+    const combined = original.trim() ? original.trimEnd() + '\n\n' + prompt : prompt
+    if (combined.length > 3600) { shell.notify('error', '添加示例后超出 3600 字，请先缩短当前描述。'); return false }
+    galleryDraft = gallery ? { shell, original, combined } : undefined
+    shell.setDraft(combined)
+    focus()
+    return true
   }
-  const finish = event => {
-    if (!pending || event.detail?.id !== pending.id) return
-    pending = undefined
-  }
-  function fileData(file) {
+  const usePrompt = event => { if (!state.current && fill(event.detail?.prompt, true)) event.preventDefault() }
+  function request(id, sessionId, prompt, uploaded, region) {
     return new Promise((resolve, reject) => {
-      const reader = new win.FileReader()
-      reader.onerror = () => reject(new Error('参考图无法读取。'))
-      reader.onload = () => resolve(String(reader.result).split(',')[1])
-      reader.readAsDataURL(file)
+      const cleanup = () => { win.clearTimeout(timer); doc.removeEventListener('sherlock:image-factory-prepared', reply) }
+      const reply = event => {
+        const data = event.detail
+        if (data?.id !== id) return
+        cleanup()
+        if (data.error) reject(Error(data.error))
+        else resolve(data)
+      }
+      const timer = win.setTimeout(() => { cleanup(); finish(id); reject(Error('图像画布尚未就绪，请重试。')) }, 12000)
+      doc.addEventListener('sherlock:image-factory-prepared', reply)
+      signal('prepare', { id, sessionId, prompt, uploaded, region })
     })
   }
-  const send = async () => {
-    if (pending || state.busy || !state.canSend || doc.body.dataset.workspaceSurface !== 'image-factory') return
-    const snapshot = shell.snapshot, prompt = snapshot.draft.trim(), ids = [...snapshot.imageIds]
-    if (!prompt) return shell.notify('error', '请输入想生成或修改的画面。')
-    if (prompt.length > 3600) return shell.notify('error', '图片描述不能超过 3600 字。')
-    if (ids.length && state.region) return shell.notify('error', '请在选区或参考图中保留一项。')
-    const job = { id: win.crypto.randomUUID(), revision: snapshot.draftRev, ids, prompt: snapshot.draft }
-    pending = job
-    shell.setResearchContextPreparing(true)
+  async function prepare(sessionId, content, region = false) {
+    if (!isActive() || currentId() !== sessionId) return { content }
+    const text = content.filter(part => part.type === 'text').map(part => part.text).join('\n')
+    if (!text.trim()) return { content }
+    if (!region && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
+    const id = win.crypto.randomUUID()
     try {
-      const file = ids.length ? conversation.draftImages(ids)[0]?.file : undefined
-      if (ids.length && !file) throw new Error('参考图已失效，请重新添加。')
-      const attachment = file && { name: file.name, type: file.type, data: await fileData(file) }
-      if (pending !== job || doc.body.dataset.workspaceSurface !== 'image-factory' || shell.snapshot.draftRev !== job.revision) {
-        throw new Error('画布或草稿已变化，请重新发送。')
-      }
-      const event = new win.CustomEvent('sherlock:image-factory-submit', { cancelable: true, detail: { id: job.id, prompt, file: attachment } })
-      if (doc.dispatchEvent(event)) throw new Error('图像工厂尚未就绪，请稍后重试。')
-      const unchanged = shell.snapshot.draftRev === job.revision && shell.snapshot.draft === job.prompt
-      shell.commitSend(job.ids, unchanged ? job.prompt : null)
-      clearImages(job.ids)
-      shell.setResearchContextPreparing(false)
-    } catch (error) {
-      if (pending === job) {
-        pending = undefined
-        shell.setResearchContextPreparing(false)
-        shell.notify('error', error?.message || '图片指令未能发送。')
-      }
-    }
+      const response = await request(id, sessionId, text, content.some(part => part.type === 'image'), region)
+      if (!isActive() || currentId() !== sessionId) throw Error('当前会话或画布已切换，草稿已保留。')
+      if (region && response.operation !== 'region') throw Error('选区已变化，请重新框选。')
+      const { operation, size, width, height, title, reference } = response
+      const next = [...content]
+      const index = next.findLastIndex(part => part.type === 'text')
+      next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height, title, internalReference: !!reference }) }
+      if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: '当前画布' })
+      jobs.set(id, { id, sessionId, timer: win.setTimeout(() => finish(id), 615000) })
+      return { content: next, id }
+    } catch (error) { finish(id); throw error }
   }
-  const shell = makeShell({ defaultSink: send })
-  // A factory message is a canvas command; it must never route to a resident session.
-  shell.submit = send
-  const addImages = files => {
-    if (state.region) return '请先移除框选引用。'
-    if (files.length !== 1 || shell.snapshot.imageIds.length) return '一次可添加一张参考图。'
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(files[0].type) || files[0].size > 20 * 1024 * 1024) {
-      return '请选择 20 MB 以内的 PNG、JPG 或 WebP 图片。'
+  function watch(session, job) {
+    const observe = () => {
+      if (jobs.get(job.id) !== job || job.delivering) return
+      const { chat, running } = session.getSnapshot()
+      if (!chat) return
+      const nodes = chat.order.slice(-150).map(key => chat.nodes.get(key)).filter(Boolean)
+      const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
+      if (delivered) {
+        job.delivering = true
+        void session.readAttachment(delivered.image.attachmentId).then(result => {
+          if (jobs.get(job.id) !== job) return
+          if (!result.ok) throw Error(result.error.message)
+          const bytes = Uint8Array.from(result.value.data)
+          const url = URL.createObjectURL(new Blob([bytes], { type: result.value.attachment.mediaType }))
+          signal('deliver', { id: job.id, sessionId: job.sessionId, url, revoke: true })
+          finish(job.id)
+        }).catch(() => finish(job.id))
+        return
+      }
+      win.clearTimeout(job.idle)
+      job.admitted ||= nodes.some(row => row.kind === 'user' && row.data?.content?.some(part =>
+        part.type === 'text' && readImageFactoryContext(part.text)?.id === job.id))
+      if (job.admitted && !running) job.idle = win.setTimeout(() => { if (!job.delivering) finish(job.id) }, 1500)
     }
+    job.unsubscribe = session.subscribe(observe)
+    observe()
+  }
+  async function prompt(session, content, mode, region = false) {
+    const next = await prepare(session.sessionId, content, region)
     try {
-      const images = conversation.createDraftImages(files)
-      if (!shell.addImages(images.map(image => image.id))) conversation.releaseDraftImages(images)
-      return null
-    } catch (error) { return error.message }
+      if (next.id) watch(session, jobs.get(next.id))
+      const result = await session.prompt(next.content, mode)
+      if (!result.ok && next.id) finish(next.id)
+      return result
+    } catch (error) { if (next.id) finish(next.id); throw error }
   }
-  const usePrompt = event => {
-    const prompt = event.detail?.prompt
-    if (doc.body.dataset.workspaceSurface !== 'image-factory' || state.busy || state.current ||
-        typeof prompt !== 'string' || !prompt.trim() || prompt.length > 3600) return
-    const draft = shell.snapshot.draft
-    const original = draft === galleryDraft?.combined ? galleryDraft.original : draft
-    const combined = original.trim() ? original.trimEnd() + '\n\n' + prompt : prompt
-    if (combined.length > 3600) {
-      shell.notify('error', '添加示例后超出 3600 字，请先缩短当前描述。')
-      return
-    }
-    galleryDraft = { original, combined }
-    shell.setDraft(combined)
+  async function submitComment(event) {
+    const { id, prompt: text } = event.detail ?? {}
+    if (!isActive() || typeof id !== 'string' || typeof text !== 'string' || !text.trim() || text.length > 3600) return
     event.preventDefault()
+    const reply = error => signal('comment-result', { id, error })
+    const submit = async sessionId => {
+      if (!isActive() || currentId() !== sessionId) throw Error('当前会话或画布已切换。')
+      const session = sessions.binding(sessionId)?.session
+      const snapshot = session?.getSnapshot()
+      if (!session || !snapshot || snapshot.running || snapshot.queue?.length || snapshot.subagent) throw Error('请等当前对话处理完成后再提交。')
+      const result = await send(session, [{ type: 'text', text: text.trim() }], 'queue', true)
+      if (!result?.ok) throw Error(result?.error?.message || '修改意见发送失败，请重试。')
+    }
+    try {
+      const sessionId = currentId()
+      if (sessionId) await submit(sessionId)
+      else {
+        const pending = getPending()
+        if (!pending) throw Error('对话服务尚未就绪。')
+        await pending.submitExternal(submit)
+      }
+      reply()
+    } catch (error) { reply(error.message) }
   }
-  const events = [
-    ['sherlock:image-factory-use-prompt', usePrompt],
-    ['sherlock:image-factory-state', change], ['sherlock:image-factory-result', finish],
-    ['sherlock:image-factory-reset', reset], ['sherlock:image-factory-focus-chat', focus],
-  ]
-  for (const [name, listener] of events) doc.addEventListener(name, listener)
-  request()
+  const reset = () => { for (const id of jobs.keys()) finish(id); galleryDraft = undefined }
+  const events = { state: stateChange, 'use-prompt': usePrompt, comment: submitComment, 'focus-chat': focus, reset }
+  for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
+  signal('request-state', {})
   return {
-    shell, addImages, action, focus, conversation,
-    getSnapshot: () => state,
-    subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
+    prompt, fill, focus, action: kind => signal('action', { kind }),
+    getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
-      for (const [name, listener] of events) doc.removeEventListener(name, listener)
       reset()
-      shell.dispose()
+      for (const [name, handler] of Object.entries(events)) doc.removeEventListener('sherlock:image-factory-' + name, handler)
       listeners.clear()
     },
   }
 }
 
-function useImageFactoryChat() {
-  return react.useSyncExternalStore(eworkImageFactory?.subscribe ?? (() => () => {}), eworkImageFactory?.getSnapshot ?? (() => imageFactoryEmpty), () => imageFactoryEmpty)
+function imageFactoryDisplayContent(content) {
+  if (!Array.isArray(content)) return content
+  const context = content.map(part => part.type === 'text' ? readImageFactoryContext(part.text) : undefined).find(Boolean)
+  if (!context) return content
+  const internal = context.internalReference ? content.findLastIndex(part => part.type === 'image') : -1
+  return content.filter((_, index) => index !== internal).map(part =>
+    part.type === 'text' ? { ...part, text: stripImageFactoryContext(part.text) } : part)
 }
 
-function EWorkImageFactoryInput(props) {
-  const app = eworkImageFactory, shell = app?.shell
-  const state = useImageFactoryChat()
-  const input = react.useSyncExternalStore(shell?.state.subscribe ?? (() => () => {}), shell?.state.getSnapshot ?? (() => undefined))
-  const notice = react.useSyncExternalStore(shell?.notices.subscribe ?? (() => () => {}), shell?.notices.getSnapshot ?? (() => null))
-  if (!shell) return null
+function EWorkImageFactoryWelcome() {
+  const app = eworkImageFactory
+  const state = react.useSyncExternalStore(app?.subscribe ?? (() => () => {}), app?.getSnapshot ?? (() => imageFactoryEmpty), () => imageFactoryEmpty)
+  const en = react.useSyncExternalStore(subscribeEWorkModeLocale, eworkModeLocale, eworkModeLocale) === 'en'
+  const labels = en ? ['Create an image or poster', 'Describe the image you want, add a reference, or select an area to edit on the canvas.', 'Make an event poster', 'Import an image']
+    : ['开始做图', '描述想做的图片、附加参考图，或在画布上框选要修改的位置。画面比例可以直接写在描述里。', '制作活动海报', '导入图片']
+  const prompt = en ? 'Create a Weekend Coffee Market poster for November 21–22. Use a warm brown palette and cream typography.' :
+    '做一张「周末咖啡市集」海报，活动为 11 月 21–22 日。用暖棕色和奶油白标题，右下放一杯咖啡。'
   const h = react.createElement
-  const en = document.documentElement.dataset.odysseyLocale === 'en'
-  return h(InputBar, {
-    ...props, sessionId: undefined, variant: 'composer', eworkNotes: false, eworkImageFactory: true, eworkSpreadsheet: false,
-    researchCanvasWorkspace: undefined, researchFileReferences: [], researchArtifactReferences: [], eworkNoteContext: undefined,
-    disabled: state.canSend === false && !state.busy, blocked: undefined, onRequestWorkspace: undefined, workspacePickerOpen: false,
-    keyboard: shell, inputActions: shell.actions,
-    useInput: select => { props.useInput(value => value); return select(input) },
-    useNotices: select => { props.useNotices(value => value); return select(notice) },
-    useLexicon: select => { props.useLexicon(value => value); return select(imageFactoryLexicon) },
-    useSession: select => props.useSession(value => select({ ...value, running: !!state.busy, promptError: null, removed: false, subagent: null })),
-    addImages: app.addImages, draftImages: ids => app.conversation.draftImages(ids),
-    removeImage: id => { app.conversation.releaseDraftImage(id); shell.removeImage(id) },
-    stop: () => app.action('cancel'),
-    placeholder: state.preview ? (en ? 'Return to editing to continue…' : '返回编辑后可以继续对话…')
-      : state.region ? (en ? 'Describe what to change in the selected area…' : '描述怎么修改框选区域…')
-        : state.marking ? (en ? 'Select the area to edit on the canvas…' : '在画布上选好要修改的区域…')
-          : state.editing ? (en ? 'Apply or cancel your canvas edit…' : '请先应用或取消画布修改…')
-            : state.current ? (en ? 'Describe an edit to the image…' : '描述想怎么改这张图…')
-              : (en ? 'Describe an image or poster…' : '描述要生成的图片或海报…'),
-  })
-}
-
-function EWorkImageFactoryConversation({ t }) {
-  const state = useImageFactoryChat(), h = react.createElement, app = eworkImageFactory
-  const language = react.useSyncExternalStore(subscribeEWorkModeLocale, eworkModeLocale, eworkModeLocale)
-  const en = language === 'en'
-  const welcome = en ? ['Create an image or poster', 'Describe an image, import a reference, or mark a region on the canvas. You can include the aspect ratio in your description.', 'Make an event poster', state.current ? 'Improve an existing image' : 'Import an image']
-    : ['开始做图', '描述要生成的画面、附加参考图，或框选画布上要修改的位置。画面比例可以直接写在描述里。', '制作活动海报', state.current ? '优化已有图片' : '导入图片']
-  function quick(index) {
-    if (index === 1 && !state.current) return app?.action('import')
-    if (app?.shell.snapshot.draft.trim()) return app.focus()
-    app?.shell.setDraft(index === 0
-      ? (en ? 'Make a Weekend Coffee Market poster with a cream title and a cup of coffee against a warm brown background. Nov 21–22 at Southbank Warehouse.'
-        : '做一张「周末咖啡市集」海报。暖棕色调，右下放一杯咖啡，标题用奶油白。活动为 11 月 21–22 日，地点是南岸仓库。')
-      : en ? 'Improve the lighting and contrast, and keep the original composition and text.' : '优化这张图片的光线和对比度，保留原来的构图和文字。')
-    app?.focus()
-  }
-  if (!state.messages.length) return h('div', { className: 'ew-sheet-welcome', 'data-mode-welcome': 'image-factory' },
-    h('div', { className: 'ew-sheet-welcome-content' },
-      h('h2', null, welcome[0]), h('p', null, welcome[1]),
-      h('div', { className: 'ew-sheet-welcome-actions' }, welcome.slice(2).map((label, index) =>
-        h('button', { key: label, type: 'button', onClick: () => quick(index) }, label)))))
-  const rows = state.messages.map(row => {
-    if (row.role !== 'user') return h('div', { key: row.id, className: 'Md3f7G_flowItem', role: row.error ? 'alert' : undefined },
-      h(AssistantMarkdown, { blocks: [{ kind: 'text', text: row.body }], streaming: false, t }))
-    const { execution, result } = row
-    const running = execution.state === 'running'
-    const status = execution.status
-    const timing = { visible: true, running, startTime: execution.startedAt }
-    const canvasTask = {
-      state: running ? 'running' : execution.state === 'completed' ? 'completed' : 'stopped',
-      createdAt: execution.startedAt, updatedAt: execution.finishedAt, reason: status,
-      history: execution.steps.map(reason => ({ reason })),
-    }
-    return h(react.Fragment, { key: row.id },
-      h(UserStyleBubble, { content: [{ type: 'text', text: row.body }], t }),
-      h(ExecutionStatusGroup, {
-        entry: { key: 'image-factory:' + row.id, running, canvasTask }, activityNodes: [],
-        startTime: execution.startedAt, endTime: execution.finishedAt ?? null, responseTiming: timing,
-        liveActivity: running ? { label: status, kind: 'tool' } : undefined, seatProps: {}, t,
-      }),
-      h('div', { className: 'Md3f7G_flowItem', role: execution.state === 'failed' ? 'alert' : undefined },
-        execution.receipt && h(AssistantMarkdown, { blocks: [{ kind: 'text', text: execution.receipt }], streaming: false, t }),
-        h(ImageGenerationCards, {
-          calls: [{ id: row.id, state: execution.state, ratio: execution.aspect, image: result && {
-            attachmentId: 'image-factory:' + row.id, name: result.label + '.png', mediaType: 'image/png',
-            width: result.width, height: result.height,
-          } }],
-          loadImage: result ? async () => result.url : undefined, t,
-        })))
-  })
-  return h('div', { className: 'Md3f7G_column', 'data-image-factory-conversation': '', role: 'log', 'aria-live': 'polite' }, rows)
-
+  return h('div', { className: 'ew-sheet-welcome', 'data-mode-welcome': 'image-factory' },
+    h('div', { className: 'ew-sheet-welcome-content' }, h('h2', null, labels[0]), h('p', null, labels[1]),
+      h('div', { className: 'ew-sheet-welcome-actions' },
+        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.fill(prompt) }, labels[2]),
+        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.action('import') }, labels[3]))))
 }
 
 export const imageFactoryNativeSource = `
-const imageFactoryEmpty={messages:[],canSend:true},imageFactoryLexicon=new Map();
+const imageFactoryEmpty={current:false,busy:false};
 let eworkImageFactory;
-${useImageFactoryChat.toString()}
-${EWorkImageFactoryInput.toString()}
-${EWorkImageFactoryConversation.toString()}
+${readImageFactoryContext.toString()}
+${stripImageFactoryContext.toString()}
+${imageFactoryPrompt.toString()}
+${imageFactoryDisplayContent.toString()}
+${EWorkImageFactoryWelcome.toString()}
 `

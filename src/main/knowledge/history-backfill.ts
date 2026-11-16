@@ -1,6 +1,7 @@
 import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
 import { canAutomaticallyCollect } from '../../shared/knowledge-library'
 import {
   deliveryPathsFromFinalText, homeGuideDeliveryPaths, presentationCodeDelivery,
@@ -9,13 +10,16 @@ import {
 import type { KnowledgeStore } from './store'
 
 type SessionHeader = { type: 'session'; id: string; cwd?: string; parentSession?: string; origin?: string }
-type Message = { source?: { kind?: string; callId?: string }; content?: { type: string; text?: string; isError?: boolean }[] }
+type Block = { type: string; text?: string; isError?: boolean; content?: Block[]; attachment?: { attachmentId?: string } }
+type Message = { source?: { kind?: string; callId?: string }; content?: Block[] }
+type FactoryImage = { id: string; name: string; hash: string }
 type LogRow = {
   type: string
   data?: {
     turn?: number; title?: string; callId?: string; name?: string
     arguments?: { path?: string; file_path?: string; command?: string }
     message?: Message
+    content?: Block[]; isError?: boolean
     reason?: { kind?: string }
   }
 }
@@ -48,8 +52,26 @@ function* logLines(bytes: Buffer, compressed: boolean) {
   if (pending) yield pending
 }
 
+function factoryImages(content: Block[] = []): FactoryImage[] {
+  const attachments = new Set(content.filter(part => part.type === 'image').map(part => part.attachment?.attachmentId))
+  return content.flatMap(part => {
+    if (part.type === 'tool-result') return part.isError ? [] : factoryImages(part.content)
+    if (part.type !== 'text' || !part.text?.startsWith('{') || part.text.length > 4096) return []
+    try {
+      const receipt = JSON.parse(part.text)
+      const digest = /^sha256:([a-f0-9]{64})$/u.exec(receipt.image?.attachmentId)?.[1]
+      if (receipt.kind !== 'odyssey-image-generation' || receipt.version !== 1 || receipt.ok !== true ||
+          receipt.image?.mediaType !== 'image/png' || !digest || !attachments.has(receipt.image.attachmentId) ||
+          !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(receipt.factory?.id) ||
+          typeof receipt.factory?.title !== 'string' || receipt.factory.title.length > 100) return []
+      return [{ id: receipt.factory.id, name: receipt.factory.title, hash: digest }]
+    } catch { return [] }
+  })
+}
+
 function deliveries(rows: Iterable<string>, cwd: string) {
   const found = new Set<string>()
+  const images = new Map<string, FactoryImage>()
   const turns = new Map<number, { final?: string; paths: string[] }>()
   const calls = new Map<string, NonNullable<LogRow['data']>>()
   let sessionTitle: string | undefined
@@ -63,6 +85,9 @@ function deliveries(rows: Iterable<string>, cwd: string) {
       continue
     }
     if (row.type === 'tool/code-dispatch') {
+      if (data?.name === 'image_generate' && !data.isError) {
+        for (const image of factoryImages(data.content)) images.set(image.id, image)
+      }
       const published = presentationCodeDelivery(row)
       if (!published) continue
       const turn = Number(published.turnId)
@@ -85,6 +110,9 @@ function deliveries(rows: Iterable<string>, cwd: string) {
       const call = callId ? calls.get(callId) : undefined
       if (callId) calls.delete(callId)
       const tool = call?.name
+      if (tool === 'image_generate') {
+        for (const image of factoryImages(message.content)) images.set(image.id, image)
+      }
       const output = call?.arguments?.path ?? call?.arguments?.file_path
       const writesFile = /^(?:write_file|edit_file|create_file)$/i.test(tool ?? '') ||
         (tool === 'str_replace_editor' && /^(?:create|str_replace|insert)$/.test(call?.arguments?.command ?? ''))
@@ -102,7 +130,7 @@ function deliveries(rows: Iterable<string>, cwd: string) {
       calls.clear()
     }
   }
-  return { sessionTitle, paths: [...found] }
+  return { sessionTitle, paths: [...found], images: [...images.values()] }
 }
 
 async function entries(path: string) {
@@ -123,8 +151,9 @@ async function historicalFile(root: string, cwd: string, candidate: string) {
   if (file?.isFile()) return { source, updatedAt: file.mtimeMs }
 }
 
-export async function scanKnowledgeHistory({ sessionRoot, store, allowSession, check, only }: {
+export async function scanKnowledgeHistory({ sessionRoot, attachmentsRoot, store, allowSession, check, only }: {
   sessionRoot: string
+  attachmentsRoot?: string
   store: KnowledgeStore
   allowSession(id: string): boolean
   check(): void
@@ -156,14 +185,14 @@ export async function scanKnowledgeHistory({ sessionRoot, store, allowSession, c
         if (header?.type !== 'session' || header.id !== session.name || header.parentSession ||
             header.origin === 'subagent' || !header.cwd || !isAbsolute(header.cwd)) continue
         const cwd = header.cwd
+        const { paths, images, sessionTitle } = deliveries(lines, cwd)
         const root = await realpath(cwd).catch(() => undefined)
-        if (!root) { result.missingOrExcluded++; continue }
-        const { paths, sessionTitle } = deliveries(lines, cwd)
+        if (!root && paths.length) result.missingOrExcluded += paths.length
         result.scanned++
         let retry = false
-        for (const candidate of paths) {
+        for (const candidate of root ? paths : []) {
           check()
-          const file = await historicalFile(root, cwd, candidate)
+          const file = await historicalFile(root!, cwd, candidate)
           if (!file) { result.missingOrExcluded++; continue }
           check()
           try {
@@ -176,6 +205,20 @@ export async function scanKnowledgeHistory({ sessionRoot, store, allowSession, c
             retry = true
             result.failed++
           }
+        }
+        if (attachmentsRoot) for (const image of images) {
+          check()
+          try {
+            const path = join(attachmentsRoot, image.hash.slice(0, 2), image.hash)
+            const info = await stat(path)
+            if (!info.isFile() || info.size > 20 * 1024 * 1024) throw Error('Invalid factory attachment')
+            const bytes = await readFile(path)
+            if (createHash('sha256').update(bytes).digest('hex') !== image.hash) throw Error('Corrupt factory attachment')
+            const document = await store.collectFactoryImage(bytes, {
+              id: image.id, name: image.name, sessionId: header.id, sessionTitle, updatedAt: info.mtimeMs,
+            }, check)
+            if (document) result.collected++
+          } catch { check(); retry = true; result.failed++ }
         }
         if (!retry) revisions[session.name] = revision
       } catch {

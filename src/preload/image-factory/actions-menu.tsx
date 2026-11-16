@@ -22,7 +22,10 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
   }
   function open() {
     const bounds = trigger.current?.getBoundingClientRect()
-    if (bounds) setPosition({ left: Math.max(8, bounds.right - 160), top: bounds.bottom + 5 })
+    if (bounds) {
+      const width = doc.defaultView?.innerWidth ?? bounds.right
+      setPosition({ left: Math.max(8, Math.min(bounds.right - 160, width - (canExport ? 328 : 168))), top: bounds.bottom + 5 })
+    }
   }
   function focusFirst(group?: HTMLDivElement | null) {
     group?.querySelector<HTMLElement>(':scope > button:not(:disabled)')?.focus()
@@ -52,7 +55,7 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
   }
   function onMenuKey(event: KeyboardEvent) {
     const insideFormats = formats.current?.contains(event.target as Node)
-    if (event.key === 'Escape' || insideFormats && event.key === 'ArrowRight') {
+    if (event.key === 'Escape' || insideFormats && event.key === 'ArrowLeft') {
       event.stopPropagation()
       event.preventDefault()
       if (insideFormats) { setBranch(false); exportItem.current?.focus() }
@@ -83,17 +86,17 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
       <button type="button" ref={exportItem} role="menuitem" aria-haspopup="menu" aria-expanded={branch} disabled={!canExport}
         onPointerEnter={event => { if (canExport && event.pointerType !== 'touch') showFormats(false) }}
         onKeyDown={event => {
-          if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); showFormats(true) }
+          if (event.key === 'ArrowRight') { event.preventDefault(); showFormats(true) }
         }}
         onClick={() => showFormats(true)}>{t('导出', 'Export')}
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-          <path d="M7.5 2.5 4 6l3.5 3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M4.5 2.5 8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       </button>
       {galleryAction && <button type="button" role="menuitem" onPointerEnter={() => setBranch(false)}
         onClick={() => { close(true); galleryAction.run() }}>{galleryAction.label}</button>}
       {branch && <div className="en-export-menu en-note-format-menu" role="menu" ref={formats}
-        aria-label={t('图像导出格式', 'Image export formats')} style={{ right: '100%', top: 0 }}>
+        aria-label={t('图像导出格式', 'Image export formats')} style={{ left: '100%', top: 0 }}>
         {(['png', 'jpg'] as const).map(format => <button key={format} type="button" role="menuitem"
           onClick={() => { close(true); exporting(format) }}>{format.toUpperCase()}</button>)}
       </div>}
