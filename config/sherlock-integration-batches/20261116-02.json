@@ -11,25 +11,29 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "0a7fb5f8e671406700a692564069d6fe2b6b08d9",
-        "tipCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
+        "baseCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
+        "tipCommit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
         "commits": [
           {
-            "commit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
+            "commit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
             "parents": [
-              "0a7fb5f8e671406700a692564069d6fe2b6b08d9"
+              "c9bf27ad4d49d77529fae0453f2c8820acdcc043"
             ],
-            "subject": "修复：图像工厂更多菜单对齐按钮并适配导出方向"
+            "subject": "修复：图像工厂多行文字拖动和编辑时保持完整"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/actions-menu.tsx"
+            "path": "src/preload/image-factory/layers.ts"
           },
           {
-            "status": "A",
-            "path": "test/image-factory-actions-menu.test.ts"
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory.test.js"
           }
         ],
         "checks": [
@@ -41,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
-            "completedAt": "2026-11-16T18:17:55.289Z",
+            "verifiedCommit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
+            "completedAt": "2026-11-16T18:36:59.254Z",
             "timeoutMs": 120000
           },
           {
@@ -50,28 +54,30 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-actions-menu.test.ts",
               "test/image-factory.test.js",
-              "test/image-factory-native.test.js"
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-native.test.js",
+              "test/image-factory-actions-menu.test.ts"
             ],
             "outcome": "passed",
-            "summary": "18 项图像工厂菜单、画布和会话聚焦检查通过。",
-            "verifiedCommit": "c9bf27ad4d49d77529fae0453f2c8820acdcc043",
-            "completedAt": "2026-11-16T18:17:55.289Z",
+            "summary": "25 项图像工厂编辑、会话、保存和导出聚焦检查通过。",
+            "verifiedCommit": "dafbec474cc4c74c41b1d2a33eb7de14ee0dc192",
+            "completedAt": "2026-11-16T18:36:59.254Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 使用实际菜单和共用样式验证侧屏展开、收起时主菜单右边缘和更多按钮一致，格式子菜单向左展开并可按右方向键返回。触发 JPG 格式导出。"
+          "summary": "Chromium 用实际画布复现旧版三行文字拖到边缘后的 113px 溢出。新版验证拖到底部、双击新增一行、放大字号时文字框位于图片范围内。图层拖动上下、删除临时文字层通过。"
         },
         "acceptanceCriteria": [
-          "主菜单贴着更多按钮。",
-          "方向箭头和子菜单实际展开方向一致。",
-          "键盘可进入、返回并选择导出格式。"
+          "多行文本拖到边缘时使用实际文字框高度。",
+          "增加文字或放大字号时保留可显示的完整排版。",
+          "独立图层仍可重新排序并持久记录。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T18:17:55.289Z"
+        "generatedAt": "2026-11-16T18:36:59.254Z"
       }
     },
     {
