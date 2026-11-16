@@ -54,17 +54,20 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       signal('prepare', { id, sessionId, scope, prompt, uploaded, region })
     })
   }
-  async function prepare(sessionId, content, region = false) {
-    if (!isActive() || currentId() !== sessionId) return { content }
+  async function prepare(sessionId, content, regionId) {
+    if (!isActive() || currentId() !== sessionId) {
+      if (regionId) throw Error('当前会话或画布已切换，修改意见已保留。')
+      return { content }
+    }
     const text = content.filter(part => part.type === 'text').map(part => part.text).join('\n')
     if (!text.trim()) return { content }
-    if (!region && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
-    const id = win.crypto.randomUUID()
+    if (!regionId && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
+    const id = regionId ?? win.crypto.randomUUID()
     const scope = canvasScope()
     try {
-      const response = await request(id, sessionId, scope, text, content.some(part => part.type === 'image'), region)
+      const response = await request(id, sessionId, scope, text, content.some(part => part.type === 'image'), !!regionId)
       if (!isActive() || currentId() !== sessionId || canvasScope() !== scope) throw Error('当前会话或画布已切换，草稿已保留。')
-      if (region && response.operation !== 'region') throw Error('选区已变化，请重新框选。')
+      if (regionId && response.operation !== 'region') throw Error('选区已变化，请重新框选。')
       const { operation, size, width, height, title, reference, editBounds } = response
       const next = [...content]
       const index = next.findLastIndex(part => part.type === 'text')
@@ -108,8 +111,8 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     job.unsubscribe = session.subscribe(observe)
     observe()
   }
-  async function prompt(session, content, mode, region = false) {
-    const next = await prepare(session.sessionId, content, region)
+  async function prompt(session, content, mode, regionId) {
+    const next = await prepare(session.sessionId, content, regionId)
     try {
       if (next.id) watch(session, jobs.get(next.id))
       const result = await session.prompt(next.content, mode)
@@ -119,7 +122,8 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
   }
   async function submitComment(event) {
     const { id, prompt: text } = event.detail ?? {}
-    if (!isActive() || typeof id !== 'string' || typeof text !== 'string' || !text.trim() || text.length > 3600) return
+    if (!isActive() || typeof id !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(id) ||
+        typeof text !== 'string' || !text.trim() || text.length > 3600) return
     event.preventDefault()
     const reply = error => signal('comment-result', { id, error })
     const submit = async sessionId => {
@@ -127,7 +131,7 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
       const session = sessions.binding(sessionId)?.session
       const snapshot = session?.getSnapshot()
       if (!session || !snapshot || snapshot.running || snapshot.queue?.length || snapshot.subagent) throw Error('请等当前对话处理完成后再提交。')
-      const result = await send(session, [{ type: 'text', text: text.trim() }], 'queue', true)
+      const result = await send(session, [{ type: 'text', text: text.trim() }], 'queue', id)
       if (!result?.ok) throw Error(result?.error?.message || '修改意见发送失败，请重试。')
     }
     try {
