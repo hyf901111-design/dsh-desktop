@@ -237,9 +237,15 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
   event.preventDefault()
  }
  const activate=()=>service.activateTab?.('sherlock-research-conversation',scope())
+ const openFactoryChat=()=>{
+  if(doc.body.dataset.workspaceSurface!=='image-factory')return
+  service.activateTab?.('sherlock-research-conversation',scope())
+  service.setPanelState?.({open:true},scope())
+ }
+ doc.addEventListener('sherlock:image-factory-show-chat',openFactoryChat)
  doc.addEventListener('sherlock:knowledge-preview-file',preview)
  doc.addEventListener('sherlock:knowledge-activate-chat',activate)
- return()=>{off();offFile();doc.removeEventListener('sherlock:knowledge-preview-file',preview);doc.removeEventListener('sherlock:knowledge-activate-chat',activate)}
+ return()=>{off();offFile();doc.removeEventListener('sherlock:image-factory-show-chat',openFactoryChat);doc.removeEventListener('sherlock:knowledge-preview-file',preview);doc.removeEventListener('sherlock:knowledge-activate-chat',activate)}
 }
 
 export function installKnowledgeSourceNavigation({ sessions, workspaces, selectView, boards, document: doc = document }) {

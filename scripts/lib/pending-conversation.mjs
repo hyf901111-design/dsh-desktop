@@ -49,6 +49,7 @@ export function EWorkPendingInputBar(props){
  const notice=react.useSyncExternalStore(pending?.shell.notices.subscribe||(()=>()=>{}),pending?.shell.notices.getSnapshot||(()=>null));
  const preferences=react.useSyncExternalStore(pending?.preferences?.model.store.subscribe||(()=>()=>{}),pending?.preferences?.model.store.getSnapshot||(()=>undefined));
  const state=react.useSyncExternalStore(pending?.subscribe||(()=>()=>{}),pending?.getSnapshot||(()=>undefined));
+ if(props.eworkImageFactory&&!props.subagentPanel)return react_jsx_runtime.jsx(EWorkImageFactoryInput,props);
  if(!props.pendingConversation||!pending)return react_jsx_runtime.jsx(EWorkSharedInputBar,props);
  const shell=pending.shell;
  return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,variant:'composer',disabled:!state.workspaceId||state.busy,
