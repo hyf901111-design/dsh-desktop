@@ -11,25 +11,25 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "44a9d377618f9e6ef869d4f84d5d9a2ddbf801b7",
-        "tipCommit": "69513f488f8cd8274f9e4dbbf3d69e7d8191a2d7",
+        "baseCommit": "69513f488f8cd8274f9e4dbbf3d69e7d8191a2d7",
+        "tipCommit": "d79b0ce47c3ec04383b2e777525790a0c105ad68",
         "commits": [
           {
-            "commit": "69513f488f8cd8274f9e4dbbf3d69e7d8191a2d7",
+            "commit": "d79b0ce47c3ec04383b2e777525790a0c105ad68",
             "parents": [
-              "44a9d377618f9e6ef869d4f84d5d9a2ddbf801b7"
+              "69513f488f8cd8274f9e4dbbf3d69e7d8191a2d7"
             ],
-            "subject": "修复：图像工厂保留当前画布并支持附图参考改图"
+            "subject": "修复：图像工厂首次发送时保持画布和编辑视图"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+            "path": "scripts/lib/image-factory-native.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
+            "path": "src/preload/image-factory/canvas-workspace.ts"
           },
           {
             "status": "M",
@@ -37,11 +37,11 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "path": "test/image-factory-canvas-workspace.test.ts"
           },
           {
             "status": "M",
-            "path": "test/image-generation-tool.test.js"
+            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
@@ -53,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过。",
-            "verifiedCommit": "69513f488f8cd8274f9e4dbbf3d69e7d8191a2d7",
-            "completedAt": "2026-11-16T17:24:13.478Z",
+            "verifiedCommit": "d79b0ce47c3ec04383b2e777525790a0c105ad68",
+            "completedAt": "2026-11-16T17:44:34.807Z",
             "timeoutMs": 120000
           },
           {
@@ -63,32 +63,30 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/image-factory-native.test.js",
-              "test/image-factory.test.js",
               "test/image-factory-canvas-workspace.test.ts",
-              "test/image-generation-tool.test.js",
-              "test/image-generation-client.test.js",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory.test.js",
+              "test/pending-conversation.test.js",
               "test/browser-app-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "48 项图像工厂、原生对话和生图工具聚焦检查通过。",
-            "verifiedCommit": "69513f488f8cd8274f9e4dbbf3d69e7d8191a2d7",
-            "completedAt": "2026-11-16T17:24:13.478Z",
+            "summary": "33 项图像工厂、通用对话和草稿切换聚焦检查通过。",
+            "verifiedCommit": "d79b0ce47c3ec04383b2e777525790a0c105ad68",
+            "completedAt": "2026-11-16T17:44:34.807Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在 Chromium 以真实画布和原生欢迎组件确认导入后切换编辑提示与用例；保留原文件名及 1080×1350 尺寸，将色卡和当前画布同时发送给通用对话。服务测试确认编辑主图顺序优先。"
+          "summary": "Chromium 用实际画布及消息协议模拟列表提前切换和存储延迟，导入图持续显示，图层面板保持展开，缩放维持 71%，画布正式归入新会话。"
         },
         "acceptanceCriteria": [
-          "导入后右侧欢迎提供当前图像的编辑用例。",
-          "整图改图保留原画布名称。",
-          "附图编辑以画布为主，附图为参考，区域编辑仍使用选区参考。"
+          "首次发送过程保留当前画布和原有视图。",
+          "画布绑定完成后按真实会话保存和切换。",
+          "已存在目标画布时显示对应会话的画布并保留草稿。"
         ],
-        "risks": [
-          "整图改图的画面变化由已配置的图片模型生成。"
-        ],
-        "generatedAt": "2026-11-16T17:24:13.478Z"
+        "risks": [],
+        "generatedAt": "2026-11-16T17:44:34.807Z"
       }
     },
     {
