@@ -44,6 +44,9 @@ function rendererFixture(){
   let globalAction=0
   global.addEventListener('click',()=>scheduled.showMenu(global,[{label:'Plugins',run:()=>globalAction++},{label:'Scheduled tasks',run:()=>globalAction++}]))
   async function openNotificationCenter(count){
+   const font=document.createElement('style')
+   font.textContent='@font-face{font-family:LongEmbeddedFixture;src:url("data:font/woff2;base64,'+'A'.repeat(90000)+'")}'
+   document.head.append(font)
    const host=document.createElement('div')
    host.dataset.researchBoardBellHost=''
    document.querySelector('[data-dsh-sidebar-root]').append(host)
@@ -162,41 +165,86 @@ async function nativeFixture(config){
   await request('select',{id});await until(()=>pageView.getVisible(),'original tab selected')
 
   await check('notification center projects its complete panel and owns scrolling above the live page',async()=>{
+   const centerPainted=async label=>{
+    await until(async()=>await activeMenu()&&painted?.id===wireState?.id&&painted?._request===wireState?._request,label)
+    assert.equal(pageView.getVisible(),true,'the live webpage stays visible behind the center')
+    return menuView.getBounds()
+   }
+   const centerKey=async key=>{
+    const input={key,code:key,windowsVirtualKeyCode:key==='Escape'?27:39}
+    await command('Input.dispatchKeyEvent',{...input,type:'rawKeyDown'})
+    await command('Input.dispatchKeyEvent',{...input,type:'keyUp'})
+   }
+   const centerClick=async selector=>{
+    const point=await menuDOM(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();
+     return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
+    await command('Input.dispatchMouseEvent',{...point,type:'mousePressed',button:'left',clickCount:1})
+    await command('Input.dispatchMouseEvent',{...point,type:'mouseReleased',button:'left',clickCount:1})
+   }
    await ui('document.body.setAttribute("data-ds-dark-theme","");qa.openNotificationCenter(1000)')
-   const bounds=await shown('notification center')
+   const bounds=await centerPainted('notification center painted')
    const panel=await menuDOM(`(()=>{
     const root=document.querySelector('.srb-notifications[data-native-menu-root]')
     const list=root?.querySelector('.srb-notification-list')
     return {roots:document.querySelectorAll('[data-native-menu-root]').length,
      title:root?.querySelector('h2')?.textContent,tabs:root?.querySelectorAll('[role=tab]').length,
      cards:list?.querySelectorAll('[data-notification-id]').length,scrollable:list?.scrollHeight>list?.clientHeight,
-     background:root&&getComputedStyle(root).backgroundColor,height:root?.offsetHeight}
+     background:root&&getComputedStyle(root).backgroundColor,height:root?.offsetHeight,
+     headerDisplay:root&&getComputedStyle(root.querySelector('header')).display,
+     tabDisplay:root&&getComputedStyle(root.querySelector('nav')).display,
+     rowHeight:list?.querySelector('article')?.offsetHeight,
+     linesDisplay:list&&getComputedStyle(list.querySelector('.srb-notification-lines')).display,
+     closeIcon:root?.querySelector('.srb-notifications-close img')?.naturalWidth,
+     unreadIcon:root?.querySelector('.srb-notification-unread')?.naturalWidth}
    })()`)
    assert.equal(panel.title,'消息中心','title and cards cross the native page boundary together')
    assert.equal(panel.roots,1,'rows are not separately projected')
    assert.equal(panel.tabs,2);assert.equal(panel.cards,1000);assert.equal(panel.scrollable,true)
+   assert.equal(panel.headerDisplay,'flex','the header retains its row layout')
+   assert.equal(panel.tabDisplay,'flex','filters retain their custom layout')
+   assert.equal(panel.height,340,'the design fixes the default panel height across filters')
+   assert.equal(panel.rowHeight,80,'two-line messages have the design row height')
+   assert.equal(panel.linesDisplay,'grid','text and time keep their two distinct columns')
+   assert.equal(panel.closeIcon,12);assert.equal(panel.unreadIcon,5)
    assert.match(panel.background,/^rgb\(/,'the page cannot show through the native panel')
    assert.ok(bounds.height<=panel.height+42,'hidden rows do not expand the native overlay')
+   const picture=await menu.webContents.capturePage()
+   await writeFile(join(config.evidence,'figma-notification-center-dark.png'),picture.toPNG())
    const point=await menuDOM(`(()=>{const r=document.querySelector('.srb-notification-list').getBoundingClientRect();
     return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`)
-   menu.webContents.sendInputEvent({type:'mouseWheel',...point,deltaY:-640,deltaX:0,canScroll:true})
+   await command('Input.dispatchMouseEvent',{type:'mouseWheel',...point,deltaY:640,deltaX:0})
    await until(()=>ui('document.querySelector(".srb-notification-list").scrollTop>0'),'scroll reaches the source list')
-   key('ArrowRight')
+   await centerKey('ArrowRight')
    await until(()=>menuDOM('document.querySelector("[data-notification-filter=unread]")?.getAttribute("aria-selected")==="true"'),'keyboard switches to unread')
    assert.equal(await menuDOM('document.querySelectorAll("[data-notification-id]").length'),1)
-   await clickNative('[data-notification-filter=all]')
+   assert.equal(await menuDOM('document.querySelector(".srb-notifications").offsetHeight'),340)
+   await centerClick('[data-notification-filter=all]')
    await until(()=>menuDOM('document.querySelectorAll("[data-notification-id]").length===1000'),'click restores all messages')
-   key('Escape')
+   await centerKey('Escape')
    await until(()=>!locateMenu(),'notification center closes on Escape')
    assert.equal(await ui('!!document.querySelector(".srb-notifications")'),false)
    assert.equal(pageView.getVisible(),true)
    await ui('document.body.removeAttribute("data-ds-dark-theme");qa.click(".srb-bell")')
-   await shown('light notification center')
+   await centerPainted('light notification center')
    const light=await menuDOM('getComputedStyle(document.querySelector(".srb-notifications")).backgroundColor')
    assert.match(light,/^rgb\(/);assert.notEqual(light,panel.background)
-   await clickNative('.srb-notifications-close')
+   await centerClick('.srb-notifications-close')
    await until(()=>!locateMenu(),'close button dismisses the light center')
-   return {bounds,darkBackground:panel.background,lightBackground:light,cards:panel.cards,scroll:true,keyboard:true}
+   const originalSize=win.getContentSize()
+   try {
+    win.setContentSize(600,420)
+    await until(()=>pageView.getVisible()&&pageView.getBounds().width<600,'narrow native webpage')
+    await ui('qa.click(".srb-bell")')
+    await centerPainted('narrow notification center')
+    const narrow=await menuDOM(`(()=>{
+      const root=document.querySelector('.srb-notifications'),list=root.querySelector('.srb-notification-list')
+      return {height:root.offsetHeight,scrollable:list.scrollHeight>list.clientHeight}
+    })()`)
+    assert.ok(narrow.height<=326&&narrow.scrollable,'the narrow viewport clips only the scrolling list')
+    await centerClick('.srb-notifications-close')
+    await until(()=>!locateMenu(),'narrow center closes')
+   } finally { win.setContentSize(...originalSize) }
+   return {bounds,darkBackground:panel.background,lightBackground:light,cards:panel.cards,scroll:true,keyboard:true,narrow:true}
   })
 
   await check('state updates do not restore a stale source address over the focused native menu',async()=>{

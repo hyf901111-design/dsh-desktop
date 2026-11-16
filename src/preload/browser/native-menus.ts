@@ -1,3 +1,5 @@
+import notificationCenterStyles from '../notification-center.css?inline'
+
 type MenuBridge={request(method:string,input?:Record<string,unknown>):Promise<any>;subscribeAction(listener:(value:any)=>void):()=>void}
 type Projected={element:HTMLElement;aria:string|null;inert:boolean}
 const hoverCardSelector='[data-odyssey-hover-card]'
@@ -12,7 +14,7 @@ export class NativeBrowserMenuProjection{
  private observer:MutationObserver;private resize:ResizeObserver|undefined;private frame=0;private disposed=false;private request=0
  private roots:Projected[]=[];private controls=new Map<string,Element>();private ids=new Map<string,string>();private nextId=0
  private context='';private group='';private id='';private revision=0;private signature='';private focusId='';private selection?:{start:number;end:number;direction?:string}
- private scrollStyles:string[]=[];private notificationStyles=new Map<string,number>();private fontStyles?:string;private unsubscribe:()=>void;private style:HTMLStyleElement
+ private scrollStyles:string[]=[];private fontStyles?:string;private unsubscribe:()=>void;private style:HTMLStyleElement
  constructor(private document:Document,private bridge:MenuBridge){
   this.style=document.createElement('style');this.style.textContent='[data-browser-projected]{opacity:0!important;pointer-events:none!important}';document.head.append(this.style)
   this.observer=new document.defaultView!.MutationObserver(records=>{if(records.some(record=>!this.style.contains(record.target)&&!(record.type==='attributes'&&['data-browser-projected','inert','aria-hidden'].includes(record.attributeName||'')&&this.roots.some(root=>root.element===record.target))))void this.sync()})
@@ -30,7 +32,29 @@ export class NativeBrowserMenuProjection{
   if(element===root&&root.matches(hoverCardSelector))return this.documentRootId(root)
   const path:number[]=[];let current:Element|null=element;while(current&&current!==root){path.unshift([...current.parentElement!.children].indexOf(current));current=current.parentElement}return [root.getAttribute('data-browser-panel')||root.className,element.tagName,...['data-field','data-action','data-id','data-row-id','data-folder','data-url','name','aria-label','role'].map(name=>element.getAttribute(name)||''),path.join('.')].join('|')}
  private controlId(element:Element,root:Element){const key=this.key(element,root);let id=this.ids.get(key);if(!id){id='c'+(++this.nextId);this.ids.set(key,id)}this.controls.set(id,element);return id}
- private fontCss(){if(this.fontStyles!==undefined)return this.fontStyles;const result:string[]=[];for(const sheet of this.document.styleSheets){try{for(const rule of sheet.cssRules)if(rule.type===5){const text=rule.cssText.replace(/url\((['"]?)(.*?)\1\)/g,(_match,quote,url)=>{try{const target=new URL(url,sheet.href||this.document.baseURI);return url.startsWith('data:font/')||target.origin===new URL(this.document.baseURI).origin?`url("${target.href}")`:'url("")'}catch{return'url("")'}});result.push(text)}}catch{}}return this.fontStyles=result.join('\n').slice(0,80000)}
+ private fontCss(){
+  if(this.fontStyles!==undefined)return this.fontStyles
+  const rules:string[]=[]
+  let size=0
+  for(const sheet of this.document.styleSheets){
+   try{
+    for(const rule of sheet.cssRules){
+     if(rule.type!==5)continue
+     const text=rule.cssText.replace(/url\((['"]?)(.*?)\1\)/g,(_match,_quote,url)=>{
+      try{
+       const target=new URL(url,sheet.href||this.document.baseURI)
+       return url.startsWith('data:font/')||target.origin===new URL(this.document.baseURI).origin?`url("${target.href}")`:'url("")'
+      }catch{return'url("")'}
+     })
+     // Copy whole rules. Truncating a data URL also leaves its @font-face open.
+     if(size+text.length+1>80000)continue
+     rules.push(text)
+     size+=text.length+1
+    }
+   }catch{}
+  }
+  return this.fontStyles=rules.join('\n')
+ }
  private scrollbar(element:Element,id:string,style:CSSStyleDeclaration){
   if(!['auto','scroll'].includes(style.overflowX)&&!['auto','scroll'].includes(style.overflowY))return
   for(const pseudo of ['::-webkit-scrollbar','::-webkit-scrollbar-thumb','::-webkit-scrollbar-track','::-webkit-scrollbar-corner']){
@@ -40,26 +64,21 @@ export class NativeBrowserMenuProjection{
  }
  private clone(element:Element,root:Element):Element|null{
   if(['SCRIPT','STYLE','LINK','IFRAME','OBJECT','EMBED'].includes(element.tagName))return null
-  const copy=element.cloneNode(false) as HTMLElement,style=this.document.defaultView!.getComputedStyle(element),id=this.controlId(element,root)
+  const copy=element.cloneNode(false) as HTMLElement,id=this.controlId(element,root)
   for(const attribute of [...copy.attributes])if(/^on/i.test(attribute.name)||['inert','autofocus','data-browser-projected'].includes(attribute.name))copy.removeAttribute(attribute.name)
-  this.scrollbar(element,id,style);copy.setAttribute('data-native-control',id);if(element.matches(actionable))copy.setAttribute('data-native-clickable','')
+  copy.setAttribute('data-native-control',id);if(element.matches(actionable))copy.setAttribute('data-native-clickable','')
   if(copy.hasAttribute('href'))copy.setAttribute('href','#')
   if(element instanceof this.document.defaultView!.HTMLImageElement)copy.setAttribute('src',element.currentSrc||element.src)
-  const properties=styleProperties.map(name=>name+':'+style.getPropertyValue(name))
-  const declaration=properties.join(';')+';animation:none;transition:none;caret-color:currentColor;pointer-events:auto'
-  if(element!==root&&root.matches(notificationCenterSelector)){
-   // The center can contain up to a thousand history rows. Share the many
-   // identical styles instead of repeating them in the IPC payload.
-   let styleId=this.notificationStyles.get(declaration)
-   if(styleId===undefined){styleId=this.notificationStyles.size;this.notificationStyles.set(declaration,styleId)}
-   copy.removeAttribute('style')
-   copy.setAttribute('data-native-notification-style',String(styleId))
-  }else copy.setAttribute('style',declaration)
-  if(element===root){copy.setAttribute('data-native-menu-root','');copy.removeAttribute('aria-hidden');copy.style.visibility='visible';copy.style.opacity='1';copy.style.pointerEvents='auto';copy.style.position='absolute';copy.style.margin='0';copy.style.transform='none';copy.style.translate='none';copy.style.maxHeight='none';copy.style.maxWidth='none'}
-  if(element===root&&root.matches(notificationCenterSelector)){
-   // A Chromium backdrop cannot sample the sibling that renders the webpage.
-   copy.style.backgroundColor=style.getPropertyValue('--center-native-bg').trim()||style.backgroundColor
+  const center=root.matches(notificationCenterSelector)
+  // The center's shared stylesheet retains its own row, focus and scroll styles.
+  if(!center||element===root){
+   const style=this.document.defaultView!.getComputedStyle(element)
+   this.scrollbar(element,id,style)
+   const properties=styleProperties.map(name=>name+':'+style.getPropertyValue(name))
+   copy.setAttribute('style',properties.join(';')+';animation:none;transition:none;caret-color:currentColor;pointer-events:auto')
+   if(center)copy.dataset.notificationTheme=style.getPropertyValue('--center-theme').trim()
   }
+  if(element===root){copy.setAttribute('data-native-menu-root','');copy.removeAttribute('aria-hidden');copy.style.visibility='visible';copy.style.opacity='1';copy.style.pointerEvents='auto';copy.style.position='absolute';copy.style.margin='0';copy.style.transform='none';copy.style.translate='none';copy.style.maxHeight='none';copy.style.maxWidth='none'}
   if(element instanceof this.document.defaultView!.HTMLInputElement){copy.setAttribute('value',element.value);if(element.checked)copy.setAttribute('checked','');else copy.removeAttribute('checked')}
   if(element instanceof this.document.defaultView!.HTMLTextAreaElement)copy.textContent=element.value
   else for(const child of element.childNodes){if(child.nodeType===3)copy.append(child.cloneNode());else if(child.nodeType===1){const cloned=this.clone(child as Element,root);if(cloned)copy.append(cloned)}}
@@ -95,10 +114,10 @@ export class NativeBrowserMenuProjection{
   if(group!==this.group){this.reset();this.group=group;this.id=crypto.randomUUID();this.revision++;this.ids.clear()}
   for(const previous of this.roots)if(!roots.includes(previous.element))this.restore(previous)
   const previous=new Map(this.roots.map(root=>[root.element,root]));this.roots=roots.map(element=>previous.get(element)||{element,aria:element.getAttribute('aria-hidden'),inert:element.inert})
-  this.controls.clear();this.scrollStyles=[];this.notificationStyles.clear();const boxes=roots.map(root=>root.getBoundingClientRect()),extent=candidates.filter(element=>roots.some(root=>root.contains(element))).map(element=>element.getBoundingClientRect()),win=this.document.defaultView!,material=!passive&&roots.every(root=>root.matches('.st-menu,.rScV5Q_contextMenu[data-browser-page-context-menu]'))&&/Mac/.test(win.navigator.platform)?'menu':undefined,inset=material?0:20,left=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.left))-(hoverCard?8:inset))),top=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.top))-inset)),right=Math.min(win.innerWidth,Math.ceil(Math.max(...extent.map(r=>r.right))+inset)),bottom=Math.min(win.innerHeight,Math.ceil(Math.max(...extent.map(r=>r.bottom))+inset))
+  this.controls.clear();this.scrollStyles=[];const boxes=roots.map(root=>root.getBoundingClientRect()),extent=candidates.filter(element=>roots.some(root=>root.contains(element))).map(element=>element.getBoundingClientRect()),win=this.document.defaultView!,material=!passive&&roots.every(root=>root.matches('.st-menu,.rScV5Q_contextMenu[data-browser-page-context-menu]'))&&/Mac/.test(win.navigator.platform)?'menu':undefined,inset=material?0:20,left=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.left))-(hoverCard?8:inset))),top=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.top))-inset)),right=Math.min(win.innerWidth,Math.ceil(Math.max(...extent.map(r=>r.right))+inset)),bottom=Math.min(win.innerHeight,Math.ceil(Math.max(...extent.map(r=>r.bottom))+inset))
   const copies=roots.map((root,index)=>{const copy=this.clone(root,root) as HTMLElement;copy.style.left=boxes[index]!.left-left+'px';copy.style.top=boxes[index]!.top-top+'px';copy.style.width=boxes[index]!.width+'px';copy.style.height=boxes[index]!.height+'px';return copy.outerHTML})
-  const notificationCss=[...this.notificationStyles].map(([declaration,id])=>`[data-native-notification-style="${id}"]{${declaration}}`).join('\n')
-  const dark=browser.dataset.dark==='true',pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=this.fontCss()+this.scrollStyles.join('\n')+notificationCss+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(:disabled):hover{background-color:var(--native-menu-hover)!important}`
+  const notificationCss=roots.some(root=>root.matches(notificationCenterSelector))?notificationCenterStyles:''
+  const dark=browser.dataset.dark==='true',pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
   const state={id:this.id,revision:this.revision,owner:browser.dataset.sessionId||'',tabId:browser.dataset.tabId,url:browser.dataset.url,bounds:{x:left,y:top,width:right-left,height:bottom-top},html:copies.join(''),css,focusId:passive?undefined:this.focusId||undefined,selection:this.selection,passive,material,hoverCard,focusOwner:hoverCard||roots.some(root=>root.classList.contains('eb-suggestions')),reducedMotion:win.matchMedia('(prefers-reduced-motion: reduce)').matches}
   for(const root of this.roots){root.element.dataset.browserProjected='true';root.element.setAttribute('aria-hidden','true');root.element.inert=true;this.resize?.observe(root.element)}
   const signature=JSON.stringify(state);if(signature===this.signature)return;this.signature=signature;const request=++this.request

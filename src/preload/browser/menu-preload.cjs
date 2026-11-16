@@ -3,7 +3,7 @@ window.addEventListener('DOMContentLoaded',()=>{
  document.documentElement.lang='zh-CN'
  const style=document.createElement('style'),reset=document.createElement('style'),content=document.createElement('main')
  content.id='native-menu-content'
- reset.textContent='html,body{margin:0!important;width:100%;height:100%;overflow:hidden!important;background:transparent!important}#native-menu-content{position:fixed;inset:0;overflow:visible}#native-menu-content :focus-visible{outline:2px solid #498df4;outline-offset:1px}[data-native-clickable]:not(:disabled):is(:hover,[data-native-hovered]){background-color:var(--native-menu-hover,#8882)!important}'
+ reset.textContent='html,body{margin:0!important;width:100%;height:100%;overflow:hidden!important;background:transparent!important}#native-menu-content{position:fixed;inset:0;overflow:visible}#native-menu-content :not(.srb-notifications *):focus-visible{outline:2px solid #498df4;outline-offset:1px}[data-native-clickable]:not(.srb-notifications *):not(:disabled):is(:hover,[data-native-hovered]){background-color:var(--native-menu-hover,#8882)!important}'
  document.head.append(style,reset);document.body.append(content)
  let state,composing,queued,lastComposition,paintToken=0,hoverId,hoverCardId
  const control=target=>target instanceof Element?target.closest('[data-native-control]'):null

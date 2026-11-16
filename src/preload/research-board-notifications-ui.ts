@@ -1,3 +1,7 @@
+import centerStyles from './notification-center.css?inline'
+import closeIcon from './notification-assets/close.svg?inline'
+import emptyIcon from './notification-assets/empty.svg?inline'
+import unreadIcon from './notification-assets/unread.svg?inline'
 import type { UpdateStatus } from '../shared/contracts'
 import { installSidebarNoticeStyles, noticeIcon, positionSidebarNotice } from './sidebar-notice'
 import { updateErrorCopy, updateErrorStage, updateMessage } from './update-view'
@@ -22,6 +26,13 @@ export function mountResearchBoardNotifications(
   const win = doc.defaultView!
   installBoardUiStyles(doc)
   installSidebarNoticeStyles(doc)
+  const styleId = 'sherlock-notification-center-style'
+  if (!doc.getElementById(styleId)) {
+    const style = doc.createElement('style')
+    style.id = styleId
+    style.textContent = centerStyles
+    doc.head.append(style)
+  }
   let state: ResearchBoardsState | undefined,
     bell: HTMLButtonElement | undefined,
     panel: HTMLElement | undefined,
@@ -35,6 +46,15 @@ export function mountResearchBoardNotifications(
     burst = 0,
     aggregate: Notification[] = []
   let panelSignature = ''
+  let renderedFilter: 'all' | 'unread' | undefined
+  let loadFailed = false
+  let reconnecting = false
+  let marking: { ids: string[]; version?: string; all: boolean } | undefined
+  let feedback: { text: string; retry?: () => Promise<void> } | undefined
+  let feedbackToast: HTMLElement | undefined
+  let feedbackTimer: number | undefined
+  let latestUpdateSeenAt: number | undefined
+  const invitationStates = new Map<string, { pending?: 'accept' | 'decline'; failed?: 'accept' | 'decline'; error?: string }>()
   let activeNotification: Notification | undefined
   let latestUpdate = readUpdateNotification(win.localStorage)
   let liveUpdatePhase: UpdateStatus['phase'] | undefined
@@ -59,13 +79,12 @@ export function mountResearchBoardNotifications(
     if (el.classList.contains('ework-sidebar-notice')) { positionSidebarNotice(doc, el); return }
     const sidebar = doc.querySelector<HTMLElement>('[data-dsh-sidebar-root]')
     const bounds = (doc.querySelector<HTMLElement>('.VOzbGW_nav') ?? sidebar)?.getBoundingClientRect()
-    const width = Math.min(384, win.innerWidth - 24)
-    el.style.left = `${Math.max(12, Math.min((bounds?.left ?? 0) + 16, win.innerWidth - width - 12))}px`
+    const width = Math.min(420, win.innerWidth - 24)
+    el.style.left = `${Math.max(12, Math.min((bounds?.left ?? 0) + 18, win.innerWidth - width - 12))}px`
     // Keep a fixed panel above the account footer; only its list scrolls.
-    const bottom = Math.min(76, Math.max(12, win.innerHeight - 92))
+    const bottom = Math.min(82, Math.max(12, win.innerHeight - 112))
     el.style.bottom = `${bottom}px`
-    el.style.maxHeight = `min(440px, calc(100vh - ${bottom + 12}px))`
-    el.style.height = el.style.maxHeight
+    el.style.maxHeight = `calc(100vh - ${bottom + 12}px)`
   }
   function pending(n: Notification) {
     return n.invitation?.status === 'pending'
@@ -115,14 +134,7 @@ export function mountResearchBoardNotifications(
       pendingAction.textContent = status.textContent
     }
     try {
-      const result = await call<{ invitation: { status: string } }>(
-        'invitation.respond',
-        {
-          invitationId: n.invitation?.invitationId ?? n.invitation?.id,
-          version: n.invitation?.version,
-          decision
-        }
-      )
+      const result = await replyToInvitation(n, decision)
       if (n.invitation)
         n.invitation.status =
           result.invitation?.status ??
@@ -160,6 +172,130 @@ export function mountResearchBoardNotifications(
       resume()
     }
   }
+  function icon(source: string, size: number, className = '') {
+    const image = doc.createElement('img')
+    image.src = source
+    image.alt = ''
+    image.width = size
+    image.height = size
+    if (className) image.className = className
+    return image
+  }
+  function appendLines(row: HTMLElement, title: HTMLElement, subtitle: HTMLElement, createdAt?: number) {
+    const lines = doc.createElement('div')
+    lines.className = 'srb-notification-lines'
+    const time = doc.createElement('time')
+    time.className = 'srb-notification-time'
+    const date = new Date(createdAt ?? NaN)
+    if (Number.isFinite(date.getTime())) {
+      const relative = boardEditTime(createdAt)
+      time.textContent = relative === '刚刚' ? relative : relative + '前'
+      time.title = date.toLocaleString()
+      time.dateTime = date.toISOString()
+    }
+    const meta = doc.createElement('div')
+    meta.className = 'srb-notification-meta'
+    lines.append(title, time, subtitle, meta)
+    if (row.dataset.unread === 'true') row.append(icon(unreadIcon, 5, 'srb-notification-unread'))
+    row.append(lines)
+    return meta
+  }
+  function clearFeedbackToast() {
+    win.clearTimeout(feedbackTimer)
+    feedbackToast?.remove()
+    feedbackToast = undefined
+  }
+  function showReadSuccess() {
+    clearFeedbackToast()
+    const toast = doc.createElement('div')
+    toast.className = 'srb-notifications-toast'
+    toast.role = 'status'
+    toast.textContent = '已全部标为已读'
+    feedbackToast = toast
+    doc.body.append(toast)
+    feedbackTimer = win.setTimeout(clearFeedbackToast, 2400)
+  }
+  async function respondInCenter(n: Notification, decision: 'accept' | 'decline') {
+    if (invitationStates.get(n.notificationId)?.pending) return
+    const operation = { pending: decision }
+    invitationStates.set(n.notificationId, operation)
+    renderPanel()
+    try {
+      const result = await replyToInvitation(n, decision)
+      if (invitationStates.get(n.notificationId) !== operation) return
+      if (n.invitation) n.invitation.status = result.invitation?.status ?? (decision === 'accept' ? 'accepted' : 'declined')
+      invitationStates.delete(n.notificationId)
+      renderPanel()
+      void refresh().catch(() => {})
+    } catch (error) {
+      if (invitationStates.get(n.notificationId) !== operation) return
+      const details = (error as Error & { details?: { invitation?: { status: string } } }).details
+      if (details?.invitation && n.invitation) n.invitation.status = details.invitation.status
+      invitationStates.set(n.notificationId, { failed: decision, error: decision === 'accept' ? '加入失败，请重试。' : '拒绝失败，请重试。' })
+      renderPanel()
+    }
+  }
+  function replyToInvitation(n: Notification, decision: 'accept' | 'decline') {
+    return call<{ invitation: { status: string } }>('invitation.respond', {
+      invitationId: n.invitation?.invitationId ?? n.invitation?.id,
+      version: n.invitation?.version,
+      decision
+    })
+  }
+  function appendCenterRecord(row: HTMLElement, n: Notification, title: HTMLElement, subtitle: HTMLElement) {
+    const status = n.invitation?.status
+    const operation = pending(n) ? invitationStates.get(n.notificationId) : undefined
+    if (status === 'accepted') {
+      row.dataset.openBoard = ''
+      const open = async () => {
+        const openedPanel = panel
+        try {
+          await requestBoardPageAction(doc, 'open', n.boardId)
+          if (panel === openedPanel) closePanel()
+        } catch {
+          if (panel === openedPanel) {
+            feedback = { text: '打开看板失败，请重试。', retry: open }
+            renderPanel()
+          }
+        }
+      }
+      const titleButton = boardButton(doc, n.boardTitle, open, '打开看板')
+      titleButton.className = 'srb-notification-open'
+      titleButton.title = n.boardTitle
+      title.replaceChildren(titleButton)
+      row.addEventListener('click', event => {
+        if (!(event.target as Element).closest('button')) void open()
+      })
+    } else title.title = n.boardTitle
+    subtitle.title = subtitle.textContent ?? ''
+    const meta = appendLines(row, title, subtitle, n.createdAt)
+    if (!n.readAt) appendMarkRead(meta, () => markRead([n.notificationId]), marking?.ids.includes(n.notificationId))
+    else meta.textContent = ({ accepted: '已加入', declined: '已拒绝', cancelled: '已撤销', expired: '已过期' } as Record<string, string>)[status ?? ''] ?? ''
+
+    if (operation?.error) {
+      const message = doc.createElement('p')
+      message.className = 'srb-notification-error'
+      message.role = 'alert'
+      message.textContent = operation.error
+      row.append(message)
+    }
+    if (pending(n)) {
+      const actions = doc.createElement('div')
+      actions.className = 'srb-notification-invitation-actions'
+      const accept = boardButton(doc, operation?.pending === 'accept' ? '加入中…' : operation?.failed === 'accept' ? '重试加入' : '接受', () => respondInCenter(n, 'accept'))
+      accept.className = 'srb-primary'
+      const decline = boardButton(doc, operation?.pending === 'decline' ? '处理中…' : operation?.failed === 'decline' ? '重试拒绝' : '拒绝', () => respondInCenter(n, 'decline'))
+      accept.disabled = decline.disabled = !!operation?.pending
+      actions.append(accept, decline)
+      row.append(actions)
+    } else if (status === 'expired') {
+      const disabled = boardButton(doc, '打开看板', () => {})
+      disabled.disabled = true
+      if (!n.readAt) meta.prepend(doc.createTextNode('已过期'))
+      meta.append(disabled)
+    }
+    return row
+  }
   function record(n: Notification, compact = false) {
     const row = doc.createElement('article')
     row.className = 'srb-notification'
@@ -196,6 +332,7 @@ export function mountResearchBoardNotifications(
               boardRestored: '协作看板已恢复',
               sharingReopened: '协作看板重新开放'
             }[n.type] ?? '协作状态更新')
+    if (!compact) return appendCenterRecord(row, n, title, subtitle)
     const time = doc.createElement('small')
     time.textContent = boardEditTime(n.createdAt)
     time.title = new Date(n.createdAt).toLocaleString()
@@ -240,9 +377,6 @@ export function mountResearchBoardNotifications(
         if (compact) footer.lastElementChild?.classList.add('ework-notice-primary')
       }
     }
-    if (!compact && !n.readAt) {
-      appendMarkRead(row, () => markRead([n.notificationId]))
-    }
     return row
   }
   function updateRecord() {
@@ -256,25 +390,24 @@ export function mountResearchBoardNotifications(
     const message = doc.createElement('p')
     message.className = 'srb-notification-subtitle'
     message.textContent = latestUpdate && liveUpdatePhase === latestUpdate.phase ? updateMessage(latestUpdate, 'zh') : ''
-    row.append(title, message)
-    const actions = doc.createElement('div')
-    actions.className = 'srb-notification-actions'
+    const actions = appendLines(row, title, message, latestUpdateSeenAt)
     actions.append(boardButton(doc, '详情', () => {
       closePanel()
-      if (latestUpdate?.releaseNotes && liveUpdatePhase === latestUpdate.phase &&
+      const browserPage = doc.querySelector('.eb-root:not([hidden])[data-native-page=true]')
+      if (!browserPage && latestUpdate?.releaseNotes && liveUpdatePhase === latestUpdate.phase &&
           ['available', 'downloading', 'preparing', 'downloaded', 'error'].includes(latestUpdate.phase)) {
         doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: 'show' }))
       } else doc.dispatchEvent(new win.Event('ework-open-about'))
     }))
     if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'downloaded' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'downloaded' ? '重启更新' : latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'downloaded' ? 'install' : latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
-    row.append(actions)
-    if (updateUnread()) appendMarkRead(row, () => markRead([], latestUpdate?.availableVersion))
+    if (updateUnread()) appendMarkRead(actions, () => markRead([], latestUpdate?.availableVersion), !!marking?.version)
     return row
   }
-  function appendMarkRead(row: HTMLElement, onRead: () => Promise<void>) {
-    const button = boardButton(doc, '标记已读', onRead)
+  function appendMarkRead(parent: HTMLElement, onRead: () => Promise<void>, pending = false) {
+    const button = boardButton(doc, pending ? '标记中…' : '标为已读', onRead, '标记已读')
     button.classList.add('srb-notification-mark-read')
-    row.append(button)
+    button.disabled = !!marking
+    parent.append(button)
   }
   function updateUnread() {
     return !!latestUpdate?.availableVersion && latestUpdate.availableVersion !== updateReadVersion
@@ -283,35 +416,58 @@ export function mountResearchBoardNotifications(
     panel?.remove()
     panel = undefined
     panelSignature = ''
+    renderedFilter = undefined
+    feedback = undefined
+    clearFeedbackToast()
     bell?.setAttribute('aria-expanded', 'false')
     bell?.focus()
   }
   async function markAllRead() {
     const ids = state?.account.user ? state.notifications.notifications.filter(n => !n.readAt).map(n => n.notificationId) : []
-    await markRead(ids, latestUpdate?.availableVersion)
+    await markRead(ids, updateUnread() ? latestUpdate?.availableVersion : undefined, true)
   }
-  async function markRead(ids: string[], version?: string) {
+  async function markRead(ids: string[], version?: string, all = false) {
+    if (marking || (!ids.length && !version)) return
     const openedPanel = panel, owner = account, generation = state?.account.generation
+    const operation = { ids, version, all }
+    marking = operation
+    feedback = undefined
+    renderPanel()
+    const current = () => marking === operation && owner === account && generation === state?.account.generation
     try {
       for (let start = 0; start < ids.length; start += 100) {
-        if (owner !== account || generation !== state?.account.generation) return
+        if (!current()) return
         await call('notifications.read', { notificationIds: ids.slice(start, start + 100) })
       }
-      if (owner !== account || generation !== state?.account.generation) return
+      if (!current()) return
       if (version) {
         updateReadVersion = version
         try { win.localStorage.setItem('ework.update.read', version) } catch {}
       }
-      reconcile()
-      renderPanel()
       if (ids.length) await refresh()
-    } catch (error) {
-      if (panel !== openedPanel || !panel || owner !== account || generation !== state?.account.generation) return
-      panel.querySelector('[role=alert]')?.remove()
-      const status = doc.createElement('p')
-      status.role = 'alert'
-      status.textContent = (error as Error).message || '标记已读失败，请重试。'
-      panel.append(status)
+      reconcile()
+      if (all && panel === openedPanel && current()) showReadSuccess()
+    } catch {
+      if (panel === openedPanel && current()) {
+        feedback = { text: '标记已读失败，请重试。', retry: all ? markAllRead : () => markRead(ids, version) }
+      }
+    } finally {
+      if (marking === operation) { marking = undefined; renderPanel() }
+    }
+  }
+  async function retryConnection() {
+    if (reconnecting) return
+    reconnecting = true
+    loadFailed = false
+    renderPanel()
+    try {
+      await call('boards.refresh')
+      await refresh()
+    } catch {
+      loadFailed = true
+    } finally {
+      reconnecting = false
+      renderPanel()
     }
   }
   function renderPanel() {
@@ -319,13 +475,16 @@ export function mountResearchBoardNotifications(
     // Transfer ticks must not replace controls between pointerdown and click.
     const signature = JSON.stringify([filter, state?.account.status, state?.account.user?.userId,
       state?.account.user ? state.notifications.notifications : [], updateReadVersion,
-      latestUpdate?.availableVersion, latestUpdate?.phase, latestUpdate?.errorStage, liveUpdatePhase])
+      latestUpdate?.availableVersion, latestUpdate?.phase, latestUpdate?.errorStage, liveUpdatePhase,
+      marking, feedback, loadFailed, reconnecting, [...invitationStates]])
     if (signature === panelSignature) {
       const message = panel.querySelector('[data-update-notification] .srb-notification-subtitle')
       if (message) message.textContent = latestUpdate && liveUpdatePhase === latestUpdate.phase ? updateMessage(latestUpdate, 'zh') : ''
       return
     }
     panelSignature = signature
+    const scrollTop = renderedFilter === filter ? panel.querySelector('.srb-notification-list')?.scrollTop ?? 0 : 0
+    renderedFilter = filter
     const active = panel.contains(doc.activeElement) ? doc.activeElement as HTMLElement : undefined
     const activeFilter = active?.dataset.notificationFilter
     const activeLabel = active?.getAttribute('aria-label')
@@ -336,19 +495,18 @@ export function mountResearchBoardNotifications(
     heading.textContent = '消息中心'
     header.append(heading)
     const notifications = state?.account.user ? state.notifications.notifications : []
-    if (notifications.length || latestUpdate) {
-      const read = boardButton(doc, '全部已读', markAllRead)
-      read.className = 'srb-notifications-read'
-      header.append(read)
-    }
+    const unread = notifications.filter(n => !n.readAt).length + Number(updateUnread())
+    const read = boardButton(doc, marking?.all ? '标记中…' : '全部已读', markAllRead, '全部已读')
+    read.className = 'srb-notifications-read'
+    read.disabled = unread === 0 || !!marking
+    header.append(read)
     const close = boardButton(doc, '', closePanel, '关闭消息中心')
     close.className = 'srb-notifications-close'
-    close.append(noticeIcon(doc, 'close'))
+    close.append(icon(closeIcon, 12))
     header.append(close)
     const tabs = doc.createElement('nav')
     tabs.role = 'tablist'
     tabs.setAttribute('aria-label', '消息筛选')
-    const unread = notifications.filter(n => !n.readAt).length + Number(updateUnread())
     for (const [key, label] of [['all', '全部'], ['unread', `未读 ${unread}`]] as const) {
       const tab = boardButton(doc, label, () => {
         filter = key
@@ -372,24 +530,56 @@ export function mountResearchBoardNotifications(
     if (latestUpdate && (filter === 'all' || updateUnread())) list.append(updateRecord())
     const items = notifications.filter(n => filter === 'all' || !n.readAt)
     for (const n of items) list.append(record(n))
+    const cached = notifications.length > 0 || !!latestUpdate
+    const loading = reconnecting || (!state && !loadFailed) || state?.account.status === 'loading'
+    const unavailable = loadFailed || state?.account.status === 'unavailable'
     if (!list.childElementCount) {
-      const empty = doc.createElement('div')
-      empty.className = 'srb-notification-empty'
-      const title = doc.createElement('strong')
-      title.textContent = filter === 'unread' ? '暂无未读消息' : '暂无消息'
-      const description = doc.createElement('p')
-      description.textContent = '协作邀请和版本更新会显示在这里'
-      empty.append(title, description)
-      list.append(empty)
-    }
-    if (state?.account.status === 'loading' || state?.account.status === 'unavailable') {
-      const status = doc.createElement('div')
-      status.className = 'srb-notifications-service'
-      status.append(doc.createTextNode(state.account.status === 'loading' ? '正在连接协作服务…' : '协作服务暂不可用。'),
-        boardButton(doc, '重试连接', async () => { await call('boards.refresh'); await refresh() }))
-      list.append(status)
+      if (!cached && loading) {
+        list.setAttribute('aria-busy', 'true')
+        for (let index = 0; index < 3; index++) {
+          const skeleton = doc.createElement('div')
+          skeleton.className = 'srb-notification-skeleton'
+          skeleton.setAttribute('aria-hidden', 'true')
+          skeleton.append(doc.createElement('span'), doc.createElement('span'), doc.createElement('span'))
+          list.append(skeleton)
+        }
+      } else {
+        const empty = doc.createElement('div')
+        empty.className = 'srb-notification-empty'
+        const title = doc.createElement('strong')
+        const initialError = !cached && unavailable
+        title.textContent = initialError ? '消息加载失败' : filter === 'unread' ? '暂无未读消息' : '暂无消息'
+        const description = doc.createElement('p')
+        description.textContent = initialError ? '请检查连接后重试' : filter === 'unread' ? '新的未读消息会出现在这里' : '协作邀请和版本更新会显示在这里'
+        empty.append(icon(emptyIcon, 22), title, description)
+        if (initialError) {
+          const retry = boardButton(doc, '重试', retryConnection)
+          retry.className = 'srb-primary'
+          empty.append(retry)
+        } else if (filter === 'unread') {
+          empty.append(boardButton(doc, '查看全部', () => panel?.querySelector<HTMLButtonElement>('[data-notification-filter=all]')?.click()))
+        }
+        list.append(empty)
+      }
     }
     panel.append(list)
+    if (cached && (loading || unavailable)) {
+      const status = doc.createElement('div')
+      status.className = 'srb-notifications-service'
+      status.role = 'status'
+      status.textContent = loading ? '正在重连协作服务…' : '协作服务暂不可用。'
+      if (!loading) status.append(boardButton(doc, '重试连接', retryConnection))
+      panel.append(status)
+    }
+    if (feedback) {
+      const status = doc.createElement('div')
+      status.className = 'srb-notifications-feedback'
+      status.role = 'alert'
+      status.textContent = feedback.text
+      if (feedback.retry) status.append(boardButton(doc, '重试', feedback.retry))
+      panel.append(status)
+    }
+    list.scrollTop = scrollTop
     anchor(panel)
     if (active) {
       const replacement = [...panel.querySelectorAll<HTMLButtonElement>('button')].find(button => activeFilter
@@ -534,12 +724,16 @@ export function mountResearchBoardNotifications(
       bell.className = 'srb-bell'
       bell.setAttribute('aria-haspopup', 'dialog')
       bell.setAttribute('aria-expanded', 'false')
-      bell.innerHTML = '<span class="srb-bell-icon" aria-hidden="true"></span>'
+      bell.innerHTML = '<span class="srb-bell-icon" aria-hidden="true"></span><span class="srb-bell-unread-count" aria-hidden="true" hidden></span>'
       host.append(bell)
     }
-    bell.dataset.unread = String(
-      updateUnread() || (!!state && state.notifications.unreadCount > 0)
-    )
+    const unread = (state?.account.user ? state.notifications.unreadCount : 0) + Number(updateUnread())
+    bell.dataset.unread = String(unread > 0)
+    bell.setAttribute('aria-description', unread ? `${unread} 条未读消息` : '')
+    const badge = bell.querySelector<HTMLElement>('.srb-bell-unread-count')!
+    badge.hidden = unread === 0
+    const count = unread > 99 ? '99+' : String(unread)
+    if (badge.textContent !== count) badge.textContent = count
     showNext()
     if (bubble) { anchor(bubble); resume() }
   }
@@ -549,11 +743,13 @@ export function mountResearchBoardNotifications(
     const id = next.account.user?.userId ?? ''
     if (id !== account) {
       closeBubble(false)
-      if (panel) closePanel()
+      if (panel && account) closePanel()
       queue = []
       aggregate = []
       burst = 0
       account = id
+      marking = undefined
+      invitationStates.clear()
       shown = new Map()
       try {
         shown = new Map(
@@ -566,6 +762,7 @@ export function mountResearchBoardNotifications(
       } catch {}
     }
     state = next
+    loadFailed = false
     const fresh = next.notifications.notifications.filter(
       (n) =>
         pending(n) && (shown.get(n.notificationId) ?? -1) < n.eventVersion
@@ -609,7 +806,11 @@ export function mountResearchBoardNotifications(
       liveUpdatePhase = update?.phase
       // A historical version supplies the record identity, not the failed operation.
       const next = normalizeUpdateNotification(update) ?? (['error', 'up-to-date'].includes(update?.phase ?? '') && latestUpdate ? normalizeUpdateNotification({ ...update, availableVersion: latestUpdate.availableVersion, errorStage: update?.phase === 'error' ? updateErrorStage(update) : undefined }) : undefined)
-      if (next) { latestUpdate = next; saveUpdateNotification(win.localStorage, next) }
+      if (next) {
+        if (update?.availableVersion && (!latestUpdateSeenAt || latestUpdate?.availableVersion !== next.availableVersion)) latestUpdateSeenAt = Date.now()
+        latestUpdate = next
+        saveUpdateNotification(win.localStorage, next)
+      }
       else if (latestUpdate?.availableVersion && update?.currentVersion && updateNotificationVersionInstalled(update.currentVersion, latestUpdate.availableVersion)) {
         latestUpdate = { currentVersion: update.currentVersion, availableVersion: latestUpdate.availableVersion, phase: 'up-to-date', manual: false }
         liveUpdatePhase = 'up-to-date'
@@ -630,7 +831,7 @@ export function mountResearchBoardNotifications(
   observer.observe(doc.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-notice-unpositioned'] })
   const visibility = () => { if (doc.visibilityState === 'hidden') pause(); else { reconcile(); resume() } }
   doc.addEventListener('visibilitychange', visibility)
-  void refresh().catch(() => {})
+  void refresh().catch(() => { loadFailed = true; renderPanel() })
   reconcile()
   const outside = (e: Event) => {
     if (
@@ -660,9 +861,15 @@ export function mountResearchBoardNotifications(
       tabs[next]?.click()
     } else if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
       event.preventDefault()
-      const buttons = [...panel.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]
-      const index = buttons.indexOf(target as HTMLButtonElement)
-      buttons[(index + (event.key === 'ArrowUp' ? -1 : 1) + buttons.length) % buttons.length]?.focus()
+      const rows = [...panel.querySelectorAll<HTMLElement>('.srb-notification')]
+        .flatMap(row => {
+          const action = row.querySelector<HTMLButtonElement>('button:not(:disabled)')
+          return action ? [{ row, action }] : []
+        })
+      if (!rows.length) return
+      const index = rows.findIndex(({ row }) => row.contains(target))
+      const next = event.key === 'ArrowUp' ? (index < 0 ? rows.length - 1 : (index + rows.length - 1) % rows.length) : (index + 1) % rows.length
+      rows[next]?.action.focus()
     }
   }
   doc.addEventListener('keydown', keyboard)
@@ -678,6 +885,7 @@ export function mountResearchBoardNotifications(
     observer.disconnect()
     doc.removeEventListener('visibilitychange', visibility)
     closeBubble(false)
+    clearFeedbackToast()
     panel?.remove()
     bell?.remove()
     doc.removeEventListener('keydown', keyboard)

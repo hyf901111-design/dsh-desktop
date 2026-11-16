@@ -650,13 +650,6 @@ body .odyssey-derived-detail-copy{gap:2px}
 body .rScV5Q_selectionActions{height:42px!important;padding:5px 8px!important;gap:4px}
 body .rScV5Q_selectionActions button{height:30px;padding:0 8px;gap:6px;font-size:13px;line-height:20px}
 body .rScV5Q_selectionActions button :is(svg,.odyssey-canvas-icon){width:16px;height:16px}
-body .srb-notifications{padding:10px;gap:6px}
-body .srb-notification-list{flex:1;gap:6px}
-body .srb-notifications .srb-notification{padding:10px;gap:3px}
-body .srb-notification-empty{flex:1;height:auto;min-height:120px}
-/* Message cards inherit the shared menu palette without stacked blur. */
-body .srb-notifications .srb-notification{backdrop-filter:none;-webkit-backdrop-filter:none}
-
 /* Questions live in either the main chat or a narrow research side pane.
    Respond to the card's container, not the full application window. */
 .Mbwy4a_frame,.LVzXQa_frame { container:odyssey-question / inline-size; min-width:0; box-sizing:border-box; }
@@ -687,7 +680,7 @@ body .srb-notifications .srb-notification{backdrop-filter:none;-webkit-backdrop-
 
 /* One neutral frosted material for every expanded menu, including portal menus.
    Deliberately leave layout, content, action colors and dialog surfaces to their owners. */
-body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],.sherlock-account-menu,.st-menu,.ig-menu,.srb-notifications,.srb-session-search,.srb-avatar-info,.srb-members-popover,.odyssey-subagent-composer-popover,.rScV5Q_mindMapMenu,.rScV5Q_contextMenu,.en-block-menu,.en-export-menu,.en-file-menu,.en-toc-popover,.bn-suggestion-menu,.bn-formatting-toolbar,.mantine-Menu-dropdown,.bn-menu-dropdown,.bn-panel,.mantine-Popover-dropdown:not(.bn-panel-popover):not(.bn-emoji-picker-popover)) {
+body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],.sherlock-account-menu,.st-menu,.ig-menu,.srb-session-search,.srb-avatar-info,.srb-members-popover,.odyssey-subagent-composer-popover,.rScV5Q_mindMapMenu,.rScV5Q_contextMenu,.en-block-menu,.en-export-menu,.en-file-menu,.en-toc-popover,.bn-suggestion-menu,.bn-formatting-toolbar,.mantine-Menu-dropdown,.bn-menu-dropdown,.bn-panel,.mantine-Popover-dropdown:not(.bn-panel-popover):not(.bn-emoji-picker-popover)) {
   background:var(--odyssey-menu)!important;
   border-color:var(--odyssey-menu-border)!important;
   outline-color:var(--odyssey-menu-border)!important;

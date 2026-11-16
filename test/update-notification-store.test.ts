@@ -59,7 +59,7 @@ it('never restores cached transfer progress as a live operation and reconciles t
  expect(record().textContent).toContain('版本更新 · 0.9.6')
  expect(record().textContent).not.toContain('校验')
  expect(record().textContent).not.toContain('%')
- expect([...record().querySelectorAll('button')].map(button => button.textContent)).toEqual(['详情', '标记已读'])
+ expect([...record().querySelectorAll('button')].map(button => button.textContent)).toEqual(['详情', '标为已读'])
  w.document.documentElement.dataset.eworkUpdateStatus=JSON.stringify({phase:'idle',currentVersion:'0.9.6',manual:false})
  w.document.dispatchEvent(new w.CustomEvent('ework-update-status'))
  expect(record().textContent).toContain('已是最新版本')
@@ -101,5 +101,25 @@ it('routes live download details to the release notes popup', async () => {
  ;(w.document.querySelector('[data-update-notification] button') as any).click()
  expect(show.mock.calls[0]?.[0].detail).toBe('show')
  expect(about).not.toHaveBeenCalled()
+ dispose()
+})
+
+it('opens About for update details while a native webpage is visible', async () => {
+ const {w,mount}=fixture()
+ const dispose=mount()
+ const page=w.document.createElement('section')
+ page.className='eb-root';page.dataset.nativePage='true'
+ w.document.body.append(page)
+ const show=vi.fn(),about=vi.fn()
+ w.document.addEventListener('ework-update-action',show)
+ w.document.addEventListener('ework-open-about',about)
+ w.document.documentElement.dataset.eworkUpdateStatus=JSON.stringify({
+  phase:'downloading',currentVersion:'0.9.5',availableVersion:'0.9.6',manual:false,releaseNotes:'- 新增趋势图'
+ })
+ w.document.dispatchEvent(new w.CustomEvent('ework-update-status'))
+ ;(w.document.querySelector('.srb-bell') as any).click()
+ ;(w.document.querySelector('[data-update-notification] button') as any).click()
+ expect(about).toHaveBeenCalledOnce()
+ expect(show).not.toHaveBeenCalled()
  dispose()
 })
