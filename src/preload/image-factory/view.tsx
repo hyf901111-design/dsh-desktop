@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent, type ReactNode, type RefObject } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
@@ -38,11 +38,12 @@ function Icon({ name, size }: { name: string; size?: number }) {
   const src = iconSource(name)
   return src ? <i className="if-symbol" style={{ '--if-icon': 'url("' + src.replaceAll('"', '%22') + '")', '--if-icon-size': size && size + 'px' } as CSSProperties} aria-hidden="true"/> : null
 }
-function Button({ icon, label, children, onClick, active, disabled, primary, type = 'button' }: {
+function Button({ icon, label, children, onClick, active, disabled, primary, elementRef, type = 'button' }: {
   icon?: string; label?: string; children?: ReactNode; onClick?: () => void; active?: boolean
   disabled?: boolean; primary?: boolean; type?: 'button' | 'submit'
+  elementRef?: RefObject<HTMLButtonElement>
 }) {
-  return <button type={type} className="if-button" aria-label={label} title={label}
+  return <button ref={elementRef} type={type} className="if-button" aria-label={label} title={label}
     aria-pressed={active} data-current={active} data-primary={primary} disabled={disabled} onClick={onClick}>
     {icon && <Icon name={icon}/>} {children}
   </button>
@@ -123,6 +124,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const file = useRef<HTMLInputElement>(null), scroll = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null)
   const imageFrame = useRef<HTMLDivElement>(null), commentBubble = useRef<HTMLDivElement>(null)
+  const layerPanel = useRef<HTMLElement>(null), layerToggle = useRef<HTMLButtonElement>(null)
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
@@ -155,6 +157,19 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     doc.addEventListener('sherlock:image-factory-show-canvas', showCanvas)
     return () => doc.removeEventListener('sherlock:image-factory-show-canvas', showCanvas)
   }, [doc])
+  useLayoutEffect(() => {
+    if (!layersOpen) return
+    const outside = (event: Event) => {
+      const target = event.target as Node
+      if (!layerPanel.current?.contains(target) && !layerToggle.current?.contains(target)) setLayersOpen(false)
+    }
+    doc.addEventListener('pointerdown', outside, true)
+    doc.addEventListener('click', outside, true)
+    return () => {
+      doc.removeEventListener('pointerdown', outside, true)
+      doc.removeEventListener('click', outside, true)
+    }
+  }, [doc, layersOpen])
 
   useLayoutEffect(() => {
     const bar = header.current
@@ -628,7 +643,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       void importFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''
     }}/>
     {current && <nav className="if-toolbar" aria-label={t('画布编辑工具', 'Canvas tools')}>
-      <Button icon="layers" active={layersOpen} onClick={() => setLayersOpen(value => !value)}>{t('图层', 'Layers')}</Button>
+      <Button icon="layers" elementRef={layerToggle} active={layersOpen} onClick={() => setLayersOpen(value => !value)}>{t('图层', 'Layers')}</Button>
       <Button icon="type" active={!!editing} disabled={busy} onClick={appendText}>{t('添加文本', 'Add text')}</Button>
       <Button icon="mark" active={marking || !!area} disabled={busy || !raster} onClick={() => {
         releaseText(); setSelectedId(undefined); clearSelection(); if (!marking && !area) setMarking(true)
@@ -721,7 +736,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             </form>}
         </div>}
         {selectedText && !marking && !area && !busy && <TextControls key={selectedText.id} layer={selectedText} change={patch => patchLayer(selectedText.id, patch)} t={t}/>}
-        {layersOpen && <aside className="if-layers" aria-label={t('图层', 'Layers')}
+        {layersOpen && <aside ref={layerPanel} className="if-layers" aria-label={t('图层', 'Layers')}
           onPointerDown={event => layerPointer(event, 'start')}
           onPointerMove={event => layerPointer(event, 'move')}
           onPointerUp={event => layerPointer(event, 'end')}

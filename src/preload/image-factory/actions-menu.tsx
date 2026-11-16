@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 
 type Format = 'png' | 'jpg'
@@ -34,19 +34,21 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
     group?.querySelector<HTMLElement>(':scope > button:not(:disabled)')?.focus()
   }
   useLayoutEffect(() => { if (position) focusFirst(menu.current) }, [position])
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!position) return
     const dismiss = () => close()
-    const outside = (event: PointerEvent) => {
+    const outside = (event: Event) => {
       const target = event.target as Node
-      if (!trigger.current?.contains(target) && !menu.current?.contains(target)) dismiss()
+      if (!trigger.current?.contains(target) && !menu.current?.contains(target) && !formats.current?.contains(target)) dismiss()
     }
     doc.addEventListener('pointerdown', outside, true)
+    doc.addEventListener('click', outside, true)
     doc.addEventListener('sherlock:workspace-surface-change', dismiss)
     doc.defaultView?.addEventListener('sherlock:global-right-panel-state', dismiss)
     doc.defaultView?.addEventListener('resize', dismiss)
     return () => {
       doc.removeEventListener('pointerdown', outside, true)
+      doc.removeEventListener('click', outside, true)
       doc.removeEventListener('sherlock:workspace-surface-change', dismiss)
       doc.defaultView?.removeEventListener('sherlock:global-right-panel-state', dismiss)
       doc.defaultView?.removeEventListener('resize', dismiss)
@@ -86,8 +88,9 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
         {[4, 10, 16].map(cx => <circle key={cx} cx={cx} cy="10" r="1.65"/>)}
       </svg>
     </button>
-    {position && createPortal(<div ref={menu} role="menu" aria-label={label} className="en-export-menu"
-      style={{ left: position.left, top: position.top }} onKeyDown={onMenuKey}>
+    {position && createPortal(<>
+      <div ref={menu} role="menu" aria-label={label} className="en-export-menu if-actions-popup"
+        style={{ left: position.left, top: position.top }} onKeyDown={onMenuKey}>
       <button type="button" ref={exportItem} role="menuitem" aria-haspopup="menu" aria-expanded={branch} disabled={!canExport}
         onPointerEnter={event => { if (canExport && event.pointerType !== 'touch') showFormats(false) }}
         onKeyDown={event => {
@@ -101,11 +104,13 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
       </button>
       {galleryAction && <button type="button" role="menuitem" onPointerEnter={() => setBranch(false)}
         onClick={() => { close(true); galleryAction.run() }}>{galleryAction.label}</button>}
-      {branch && <div className="en-export-menu en-note-format-menu" role="menu" ref={formats}
-        aria-label={t('图像导出格式', 'Image export formats')} style={{ top: -1, ...(position.opensLeft ? { right: '100%' } : { left: '100%' }) }}>
+      </div>
+      {branch && <div className="en-export-menu if-actions-popup" role="menu" ref={formats}
+        aria-label={t('图像导出格式', 'Image export formats')}
+        style={{ top: position.top, left: position.left + (position.opensLeft ? -menuWidth : menuWidth) }} onKeyDown={onMenuKey}>
         {(['png', 'jpg'] as const).map(format => <button key={format} type="button" role="menuitem"
           onClick={() => { close(true); exporting(format) }}>{format.toUpperCase()}</button>)}
       </div>}
-    </div>, doc.body)}
+    </>, doc.body)}
   </>
 }

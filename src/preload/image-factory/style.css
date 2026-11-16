@@ -24,6 +24,8 @@
 .if-top {height:var(--odyssey-workspace-header-height,44px);padding:0 14px;border-bottom:1px solid var(--if-line)}
 .if-top {-webkit-app-region:drag;user-select:none}
 .if-top button,.if-top .eb-workspace-controls {-webkit-app-region:no-drag}
+.if-work:has(.if-more[aria-expanded=true],.if-layers) .if-top,
+.if-work:has(.if-more[aria-expanded=true],.if-layers) .if-top :is(.workspace-app-title,.workspace-app-title *,.if-top-title) {-webkit-app-region:no-drag}
 .if-top .eb-workspace-toggle {color:var(--if-muted)}
 .if-top .eb-workspace-tabs {transition:flex-basis 200ms cubic-bezier(.2,.8,.2,1),opacity 200ms ease}
 .if-top-title {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;-webkit-app-region:drag}
@@ -34,6 +36,7 @@
   .if-top .workspace-app-title>span {display:inline}
 }
 .image-factory .if-more {background:var(--odyssey-header-icon-bg);border-radius:7px}
+.if-actions-popup,.if-layers {backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2))}
 .image-factory .if-more:not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]) {background:var(--odyssey-header-icon-hover)}
 .if-toolbar {height:48px;padding:0 14px;overflow:auto;scrollbar-width:none}
 .if-toolbar .if-button {flex:none}
@@ -150,7 +153,8 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-text-format :is(input,select) {font-size:12px;background:var(--if-field);border:1px solid var(--if-line);border-radius:6px;padding:3px 5px;color:var(--if-ink);height:28px}
 .if-text-format input[type=number] {width:60px}
 .if-text-format input[type=color] {width:27px;padding:3px}
-.if-layers {left:12px;top:12px;width:min(200px,calc(100% - 24px));max-height:calc(100% - 62px);padding:8px;overflow:auto;z-index:5}
+.if-layers {left:12px;top:12px;width:min(200px,calc(100% - 24px));max-height:calc(100% - 62px);padding:8px;overflow:auto;z-index:5;
+  background:var(--odyssey-menu,color-mix(in srgb,var(--if-panel) 72%,transparent));border-color:var(--odyssey-menu-border,var(--if-line))}
 .if-layers .if-float-header {padding-left:5px;margin-bottom:4px}
 .if-layers p {padding:0 6px;color:var(--if-muted);font-size:12px}
 .if-layer-row {position:relative;display:flex;align-items:center;gap:3px;border-radius:7px;min-height:34px;user-select:none;touch-action:none}

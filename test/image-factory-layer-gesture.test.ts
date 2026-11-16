@@ -41,6 +41,8 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
     })
     expect(handles().map(button => button.textContent)).toEqual(['底层', '顶层'])
     expect(write).toHaveBeenCalledWith(expect.objectContaining({ canvas: { ...canvas, layers: [top, bottom] } }))
+    await act(async () => document.querySelector<HTMLElement>('.if-raster')!.click())
+    expect(handles()).toHaveLength(0)
   } finally {
     await act(async () => factory.dispose())
     host.dispose()

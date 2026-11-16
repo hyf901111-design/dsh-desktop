@@ -698,7 +698,7 @@ it('keeps the Image Factory title visible and draggable at typical three-pane wi
             <div class="workspace-app-title"><i></i><span>图像工厂</span></div>
             <div class="eb-workspace-controls"><button class="eb-workspace-toggle" type="button">页签</button></div>
             <span class="if-top-title"></span>
-            <button type="button">更多</button>
+            <button type="button" class="if-more" aria-expanded="false">更多</button>
           </header>
         </section>
       </div>`)
@@ -712,6 +712,11 @@ it('keeps the Image Factory title visible and draggable at typical three-pane wi
     expect(await header.evaluate(region)).toBe('drag')
     expect(await header.locator('.if-top-title').evaluate(region)).toBe('drag')
     expect(await header.getByRole('button', { name: '页签' }).evaluate(region)).toBe('no-drag')
+    await header.getByRole('button', { name: '更多' }).evaluate(button => button.setAttribute('aria-expanded', 'true'))
+    expect(await title.evaluate(region)).toBe('no-drag')
+    expect(await header.evaluate(region)).toBe('no-drag')
+    await header.getByRole('button', { name: '更多' }).evaluate(button => button.setAttribute('aria-expanded', 'false'))
+    expect(await title.evaluate(region)).toBe('drag')
     await page.locator('.image-factory').evaluate(el => { el.style.width = '440px' })
     expect(await title.isVisible()).toBe(false)
   } finally {
