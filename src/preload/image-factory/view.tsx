@@ -66,6 +66,7 @@ async function referenceFor(doc: Document, raster: Raster, area?: Region): Promi
 function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; close(): void; t: T }) {
   const [history, setHistory] = useState<History>(emptyHistory)
   const [preview, setPreview] = useState<number>()
+  const [galleryOpen, setGalleryOpen] = useState(false)
   const [ratio, setRatio] = useState<Ratio>('4:5')
   const [messages, setMessages] = useState<Message[]>([])
   const [marking, setMarking] = useState(false)
@@ -86,8 +87,9 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   const mounted = useRef(true), drag = useRef<{ pointerId: number; start: Point }>()
   const count = useRef(0)
   const selected = history.path[history.cursor]
-  const current = history.all.find(version => version.id === selected)
-  const shown = history.all.find(version => version.id === preview) ?? current
+  const canvas = history.all.find(version => version.id === selected)
+  const current = galleryOpen ? undefined : canvas
+  const shown = galleryOpen ? undefined : history.all.find(version => version.id === preview) ?? current
   const prior = history.all.find(version => version.id === current?.basedOn)
   const region = mark?.version === current?.id ? mark?.rect : undefined
   const drawing = panel === 'crop' || marking
@@ -136,7 +138,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     const version = { ...raster, ...payload, id }
     setHistory(previous => ({ all: [...previous.all, version],
       path: [...previous.path.slice(0, previous.cursor + 1), id], cursor: previous.cursor + 1 }))
-    setPreview(undefined); clearMark(); setPanel(undefined); setZoom(1)
+    setGalleryOpen(false); setPreview(undefined); clearMark(); setPanel(undefined); setZoom(1)
     return version
   }
   function travel(delta: number) {
@@ -333,10 +335,13 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
   }
   function switchPreview(id: number | undefined) {
     if (busy) return
-    clearMark(); setPanel(undefined)
+    clearMark(); setPanel(undefined); setGalleryOpen(false)
     setPreview(id === selected ? undefined : id)
   }
 
+  function showGallery() {
+    setPanel(undefined); clearMark(); setPreview(undefined); setGalleryOpen(true)
+  }
   function usePreview() {
     if (busy || preview === undefined) return
     setHistory(h => ({ ...h, path: [...h.path.slice(0, h.cursor + 1), preview], cursor: h.cursor + 1 }))
@@ -404,9 +409,12 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       <header className="if-top">
         <Button icon="left" label={t('返回对话', 'Back to chat')} onClick={close}/>
         <Symbol name="factory" size={20}/><strong>{t('图像工厂', 'Image Factory')}</strong>
-        <span className="if-top-title" title={current?.title}>{current?.title ?? t('未命名画布', 'Untitled canvas')}</span>
+        <span className="if-top-title" title={current?.title}>{current?.title ?? t('灵感画廊', 'Inspiration gallery')}</span>
         <CanvasActionsMenu doc={doc} t={t} canImport={!busy} canExport={!!shown && !busy && !panel}
-          importing={() => file.current?.click()} exporting={exportImage}/>
+          importing={() => file.current?.click()} exporting={exportImage}
+          galleryAction={canvas ? galleryOpen
+            ? { label: t('返回画布', 'Return to canvas'), run: () => setGalleryOpen(false) }
+            : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: showGallery } : undefined}/>
       </header>
       <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => {
         importFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''
@@ -439,6 +447,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
       onDrop={event => { if (!event.dataTransfer.files.length) return; event.preventDefault(); setDrop(false); importFile(event.dataTransfer.files[0]) }}>
         {!shown ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}
           actions={<>
+            {canvas && <Button disabled={busy} onClick={() => setGalleryOpen(false)}>{t('返回画布', 'Return to canvas')}</Button>}
             <Button icon="upload" disabled={busy} onClick={() => file.current?.click()}>{importLabel}</Button>
             <Button icon="spark" primary disabled={busy} onClick={focusChat}>{t('用 AI 生图', 'Generate with AI')}</Button>
           </>}
@@ -468,7 +477,7 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
           </div>
         </>}
       </div>
-      {!!history.all.length && <footer className="if-history">
+      {shown && <footer className="if-history">
         <div className="if-history-head"><Symbol name="history"/>{t('版本记录', 'Version history')}
           {prior && preview === undefined && <Button icon="compare" disabled={busy} onClick={() => switchPreview(prior.id)}>
             {t('对比 V', 'Compare V') + prior.id}
