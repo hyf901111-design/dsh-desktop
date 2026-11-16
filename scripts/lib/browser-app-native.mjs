@@ -183,9 +183,9 @@ ctx.effect(()=>{
  const pending=(${createPendingConversation.toString()})({
   makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),
   sessions,workspaces,getInput:id=>inputHub.shell(id),
-  onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},
+  onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context?.factoryCanvas)return eworkImageFactory?.adopt(id);if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},
   prepareSession:async id=>{await window[Symbol.for('sherlock:pending-preset-flush')]?.(id);await preferences.apply(id);if(document.body.dataset.workspaceSurface==='knowledge')await window.dshDesktop?.clientCapabilities?.bind({sessionId:id,mode:'knowledge',active:true})},
-  prepareContext:async()=>{await permissionPreferences.ready();return document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined},
+  prepareContext:async()=>{await permissionPreferences.ready();const surface=document.body.dataset.workspaceSurface;return surface==='image-factory'?{factoryCanvas:true}:surface==='browser'?await window.dshDesktop?.browserApp?.context():undefined},
   releaseImages:ids=>{for(const id of ids)conversationController.releaseDraftImage(id)}
  });
  const refresh=()=>preferences.model.load().catch(()=>{});

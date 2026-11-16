@@ -4,6 +4,20 @@ function fixture(extra={}){let sink;const original={draft:'请总结当前网页
 it('selects a project and opens no session until the first nonempty send',async()=>{const f=fixture();f.pending.selectWorkspace('B');expect(f.sessions.create).not.toHaveBeenCalled();await f.send();expect(f.sessions.create).toHaveBeenCalledExactlyOnceWith({workspaceId:'B'});expect(f.real.restoreDraftState).toHaveBeenCalledWith(expect.objectContaining({draft:'请总结当前网页',draftRev:3}));expect(f.real.submit).toHaveBeenCalledExactlyOnceWith('queue');expect(f.onCreated).toHaveBeenCalledWith('new',expect.objectContaining({text:'真实正文'}));expect(f.shell.commitSend).toHaveBeenCalled()})
 it('deduplicates concurrent first sends and preserves the draft when creation fails',async()=>{const f=fixture();let release;f.sessions.create.mockImplementation(()=>new Promise((_,reject)=>{release=()=>reject(Error('创建失败'))}));const first=f.send();await Promise.resolve();await f.send();expect(f.sessions.create).toHaveBeenCalledTimes(1);release();await first;expect(f.shell.commitSend).not.toHaveBeenCalled();expect(f.shell.notify).toHaveBeenCalledWith('error','创建失败');expect(f.pending.getSnapshot().busy).toBe(false)})
 
+it('waits for the standalone canvas to enter the session before submitting the first prompt', async () => {
+ let transfer
+ const f = fixture({
+  prepareContext: async () => ({ factoryCanvas: true }),
+  onCreated: () => new Promise(resolve => { transfer = resolve }),
+ })
+ const sending = f.send()
+ await vi.waitFor(() => expect(f.sessions.open).toHaveBeenCalledWith('new'))
+ expect(f.real.submit).not.toHaveBeenCalled()
+ transfer()
+ await sending
+ expect(f.real.submit).toHaveBeenCalledExactlyOnceWith('queue')
+})
+
 it('hands raw reference occurrences to the real shell and locks it until native preferences are applied',async()=>{
  let finish,opened=false,current;const prepareSession=()=>new Promise(resolve=>{finish=resolve}),draft={draft:'阅读\uFFFC',draftRev:7,imageIds:[],occurrences:[{offset:2,source:'chat-file',ref:'/tmp/验收.txt'}]},shell={snapshot:draft,notify:vi.fn(),setResearchContextPreparing:vi.fn(),commitSend:vi.fn()},real={snapshot:{draft:'',imageIds:[]},restoreDraftState:vi.fn(),setResearchContextPreparing:vi.fn(),submit:vi.fn(),notify:vi.fn()};
  const p=createPendingConversation({makeShell:()=>shell,sessions:{list:{getSnapshot:()=>({current})},create:async()=> 'new',open:id=>{current=id;opened=true;expect(real.setResearchContextPreparing).toHaveBeenLastCalledWith(true)}},workspaces:{list:{getSnapshot:()=>({items:[{workspaceId:'A',path:'/a'}],recentWorkspaceId:'A'})}},getInput:()=>real,onCreated:()=>{},prepareSession});

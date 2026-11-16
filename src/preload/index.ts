@@ -423,6 +423,11 @@ function initializeUi(): void {
   scheduledView.mount()
   const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
     workspacePointerInBar,
+    storage: {
+      read: scope => ipcRenderer.invoke('image-factory:canvas-read', scope),
+      write: value => ipcRenderer.invoke('image-factory:canvas-write', value),
+      adopt: (sessionId, epoch) => ipcRenderer.invoke('image-factory:canvas-adopt', sessionId, epoch),
+    },
     archive: value => ipcRenderer.invoke('image-factory:archive', value),
     save: value => ipcRenderer.invoke('conversation:image-action', value),
   })

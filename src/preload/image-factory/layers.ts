@@ -1,20 +1,10 @@
 import type { Raster, Size } from './raster'
 
-export const imageFonts = [
-  { family: 'system-ui', label: '系统默认', english: 'System' },
-  { family: 'PingFang SC', label: '苹方', english: 'PingFang SC' },
-  { family: 'Songti SC', label: '宋体', english: 'Songti SC' },
-  { family: 'Arial', label: 'Arial', english: 'Arial' },
-  { family: 'Georgia', label: 'Georgia', english: 'Georgia' },
-  { family: 'Menlo', label: 'Menlo', english: 'Menlo' },
-] as const
+import { canvasFonts as imageFonts, type CanvasImageType, type TextLayer } from '../../shared/image-factory-canvas'
 
-export type ImageLayer = { id: string; kind: 'image'; raster: Raster }
-export type TextLayer = {
-  id: string; kind: 'text'; text: string; x: number; y: number; width: number
-  fontSize: number; family: typeof imageFonts[number]['family']; weight: number
-  align: 'left' | 'center' | 'right'; color: string
-}
+export { imageFonts, type TextLayer }
+
+export type ImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType; data: Uint8Array; raster: Raster }
 export type CanvasLayer = ImageLayer | TextLayer
 export type ImageScene = Size & { id: string; title: string; layers: CanvasLayer[] }
 
