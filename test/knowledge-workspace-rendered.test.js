@@ -772,6 +772,42 @@ it('centers Image Factory resize handles on the text bounds, including at the im
   }
 })
 
+it('floats Image Factory layers without moving or resizing the image viewport', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.setContent(`
+      <div class="image-factory" style="left:10px;width:830px">
+        <section class="if-work">
+          <div class="if-stage">
+            <div class="if-stage-scroll"><div class="if-raster" style="width:600px;height:420px"></div></div>
+            <aside class="if-layers" hidden>图层</aside>
+          </div>
+        </section>
+      </div>`)
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    const viewport = page.locator('.if-stage-scroll')
+    const raster = page.locator('.if-raster')
+    const originalViewport = await viewport.boundingBox()
+    const originalRaster = await raster.boundingBox()
+    await page.locator('.if-stage').evaluate(el => {
+      el.dataset.layersOpen = 'true'
+      el.querySelector('.if-stage-scroll').dataset.layersOpen = 'true'
+      el.querySelector('.if-layers').hidden = false
+    })
+    const menu = page.locator('.if-layers')
+    expect(await menu.isVisible()).toBe(true)
+    expect(await viewport.boundingBox()).toEqual(originalViewport)
+    expect(await raster.boundingBox()).toEqual(originalRaster)
+    expect(await menu.evaluate(el => {
+      const bounds = el.getBoundingClientRect()
+      const image = el.parentElement.querySelector('.if-raster').getBoundingClientRect()
+      return document.elementFromPoint(bounds.right - 20, Math.max(bounds.bottom + 100, image.top + 20))?.className
+    })).toBe('if-raster')
+  } finally {
+    await page.close()
+  }
+})
+
 it('keeps the four workspace shortcuts open across the draggable knowledge header', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
   try {

@@ -610,7 +610,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           <span>{t('画布暂时无法读取。', 'The canvas could not be opened.')}</span>
           <Button onClick={() => workspace.select(scope)}>{t('重新打开', 'Try again')}</Button>
         </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}/> : <>
-        <div className="if-stage-scroll" data-layers-open={layersOpen} data-pan-ready={spaceHeld} data-panning={panning} ref={scroll}
+        <div className="if-stage-scroll" data-pan-ready={spaceHeld} data-panning={panning} ref={scroll}
           onPointerDownCapture={event => panPointer(event, 'start')}
           onPointerMoveCapture={event => panPointer(event, 'move')}
           onPointerUpCapture={event => panPointer(event, 'end')}
