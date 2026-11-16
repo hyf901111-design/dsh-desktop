@@ -50,6 +50,14 @@ function validatedName(value: unknown): string {
   return name
 }
 
+function factoryFilename(documents: readonly KnowledgeDocument[], suggestion: string) {
+  const stem = suggestion.replace(/[\\/\p{Cc}]/gu, ' ').trim().normalize().slice(0, 120) || '生成图片'
+  const occupied = new Set(documents.map(row => row.name.normalize().toLowerCase()))
+  let name = stem + '.png'
+  for (let suffix = 2; occupied.has(name.toLowerCase()); suffix++) name = stem + '（' + suffix + '）.png'
+  return name
+}
+
 function publicDocument({ storageName: _storage, origin: _origin, sourceVersion, ...row }: StoredDocument): KnowledgeDocument {
   return sourceVersion === 'factory-canvas' || sourceVersion === 'factory-provider'
     ? { ...row, generatedBy: 'image-factory' }
@@ -326,14 +334,14 @@ export class KnowledgeStore {
       }
 
       const id = existing?.id ?? randomUUID()
-      const name = (input.name.replace(/[\\/\p{Cc}]/gu, ' ').trim().slice(0, 120) || '生成图片') + '.png'
+      const name = existing?.name ?? factoryFilename(state.documents, input.name)
       const storageName = randomUUID() + '.png'
       const target = join(directory, 'files', id)
       const path = join(target, storageName)
       const row: StoredDocument = {
-        id, name, origin, source: 'generated', sessionId: input.sessionId,
+        id, origin, source: 'generated', sessionId: input.sessionId,
         saved: false, starred: false, updatedAt: input.updatedAt ?? Date.now(),
-        ...existing, sessionTitle, storageName, size: bytes.length, sourceVersion: input.processed ? 'factory-canvas' : 'factory-provider'
+        ...existing, name, sessionTitle, storageName, size: bytes.length, sourceVersion: input.processed ? 'factory-canvas' : 'factory-provider'
       }
       try {
         await mkdir(target, { recursive: true, mode: 0o700 })
