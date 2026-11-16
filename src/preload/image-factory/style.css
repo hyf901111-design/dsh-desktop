@@ -108,6 +108,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-comment-footer .if-button:first-child {padding-inline:4px;color:var(--if-muted)}
 .if-comment-error {margin:0 0 5px;font-size:12px;color:#dd6969}
 .if-text-format {top:12px;left:50%;transform:translateX(-50%);display:flex;gap:9px;align-items:center;max-width:calc(100% - 22px);width:max-content;overflow:auto;font-size:12px;white-space:nowrap}
+.if-stage[data-layers-open=true] .if-text-format {left:222px;right:12px;margin-inline:auto;transform:none;max-width:calc(100% - 234px)}
 .if-text-format label {display:inline-flex;align-items:center;gap:5px;color:var(--if-muted)}
 .if-text-format :is(input,select) {font-size:12px;background:var(--if-field);border:1px solid var(--if-line);border-radius:6px;padding:3px 5px;color:var(--if-ink);height:28px}
 .if-text-format input[type=number] {width:60px}
@@ -115,7 +116,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-layers {left:12px;top:12px;width:min(200px,calc(100% - 24px));max-height:calc(100% - 62px);padding:8px;overflow:auto;z-index:5}
 .if-layers .if-float-header {padding-left:5px;margin-bottom:4px}
 .if-layers p {padding:0 6px;color:var(--if-muted);font-size:12px}
-.if-layer-row {position:relative;display:flex;align-items:center;gap:3px;border-radius:7px;min-height:34px}
+.if-layer-row {position:relative;display:flex;align-items:center;gap:3px;border-radius:7px;min-height:34px;user-select:none;touch-action:none}
 .if-layer-row[data-current=true] {background:var(--if-picked)}
 .if-layer-row[data-drop]::after {content:'';position:absolute;inset-inline:3px;height:2px;border-radius:2px;background:#5594ff;pointer-events:none}
 .if-layer-row[data-drop=above]::after{top:0}.if-layer-row[data-drop=below]::after{bottom:0}
@@ -128,4 +129,5 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
  .if-stage-scroll[data-layers-open=true]{inset-inline-start:0}
  .if-layers{max-width:150px}
  .if-text-format{top:auto;bottom:42px}
+ .if-stage[data-layers-open=true] .if-text-format{left:12px;max-width:calc(100% - 24px)}
 }
