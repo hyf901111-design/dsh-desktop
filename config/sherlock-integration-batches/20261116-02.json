@@ -11,29 +11,21 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
-        "tipCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
+        "baseCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
+        "tipCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
         "commits": [
           {
-            "commit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
+            "commit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
             "parents": [
-              "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a"
+              "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9"
             ],
-            "subject": "修复：图像工厂独立画布草稿重启后可恢复"
+            "subject": "新增：知识库生成图片可打开来源画布"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/canvas-workspace.ts"
+            "path": "src/main/knowledge/store.ts"
           },
           {
             "status": "M",
@@ -41,7 +33,19 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-library.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-history-backfill.test.ts"
           }
         ],
         "checks": [
@@ -53,8 +57,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
-            "completedAt": "2026-11-16T14:58:41.443Z",
+            "verifiedCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
+            "completedAt": "2026-11-16T15:18:12.291Z",
             "timeoutMs": 120000
           },
           {
@@ -62,39 +66,34 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-generation-tool.test.js",
-              "test/image-generation-client.test.js",
               "test/knowledge-history-backfill.test.ts",
-              "test/pending-conversation.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/browser-sidebar-entry.test.ts"
+              "test/knowledge-library.test.ts",
+              "test/knowledge-content.test.ts",
+              "test/knowledge-session-content.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-native.test.js",
+              "test/workspace-surface-host.test.ts"
             ],
             "outcome": "passed",
-            "summary": "66 项图像工厂及相关检查通过。",
-            "verifiedCommit": "2b90fdb7cc9cf2a685353750c77e0c59211dbfa9",
-            "completedAt": "2026-11-16T14:58:41.443Z",
+            "summary": "39 项知识库、画布与原生会话聚焦检查通过。",
+            "verifiedCommit": "a57be4ec9f15f6686f8adee38afa38633b8ab606",
+            "completedAt": "2026-11-16T15:18:12.291Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 通过真实前端和文件存储验证了会话隔离、后台回写、草稿重启恢复、字体保留、首轮修改绑定及保留文本图层。签名包完成后进行客户端验收。"
+          "summary": "Chromium 实际界面操作通过，归档文件打开正确的会话画布，字体字号和文字保留，普通会话入口可用，早期无画布提示后留在原列表。"
         },
         "acceptanceCriteria": [
-          "按账号和原生会话恢复图片、文字及堆叠顺序。",
-          "切换会话不混用画布，后台结果写回原会话。",
-          "从首页打开图像工厂未聊天时，独立画布草稿重启后可恢复。",
-          "先导图后首次聊天可将独立草稿绑定到新会话，普通对话行为保持。",
-          "图层发生写入失败时支持重试。"
+          "生成图片的更多操作提供打开来源画布。",
+          "采用原生导航激活来源会话和右侧对话。",
+          "来源缺少持久化画布时保留原知识库位置与文件。"
         ],
         "risks": [
-          "此前未持久化的旧画布缺少可编辑图层记录。"
+          "打开的是来源会话当前保存的画布。"
         ],
-        "generatedAt": "2026-11-16T14:58:41.443Z"
+        "generatedAt": "2026-11-16T15:18:12.291Z"
       }
     },
     {
