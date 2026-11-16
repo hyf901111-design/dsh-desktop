@@ -20,8 +20,10 @@ it('registers the browser view with the actual production module and restores ev
  expect(stripBrowserAppNative(patched)).toBe(before);expect(patchBrowserAppNative(patched)).toBe(patched);expect(()=>new Function(patched)).not.toThrow()
 })
 it('uses the original factory comment in the native query preview',()=>{
- const patched=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- const helper=patched.slice(patched.indexOf('function imageFactoryDisplayContent('),patched.indexOf('function EWorkImageFactoryWelcome('))
+ const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const patched=patchBrowserAppNative(stripBrowserAppNative(stripNewer(installed)))
+ // Use the installed helper's plain JavaScript, outside Vitest's import rewriting.
+ const helper=installed.slice(installed.indexOf('function imageFactoryDisplayContent('),installed.indexOf('function EWorkImageFactoryWelcome('))
  const query=patched.slice(patched.indexOf('const queries = (0, react.useMemo)'),patched.indexOf('const runningTurn = (0, react.useMemo)'))
  const render=new Function('nodeStore','contentParts','readImageFactoryContext','stripImageFactoryContext',
   'const react={useMemo:fn=>fn()}, order=[...nodeStore.keys()], researchTaskIdentity=null;'+
