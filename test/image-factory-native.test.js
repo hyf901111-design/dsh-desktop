@@ -62,3 +62,29 @@ it('keeps the native draft when a canvas command is unhandled and clears it on a
     expect(shell.setResearchContextPreparing).toHaveBeenLastCalledWith(false)
   } finally { binding.dispose(); await win.happyDOM.abort() }
 })
+
+it('fills a gallery prompt without sending and keeps manual text when switching examples', async () => {
+  const { win, doc, shell, binding, event } = fixture()
+  try {
+    shell.setDraft.mockImplementation(draft => { shell.snapshot.draft = draft })
+    const submit = vi.fn()
+    doc.addEventListener('sherlock:image-factory-submit', submit)
+    const use = prompt => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-use-prompt', {
+      detail: { prompt }, cancelable: true,
+    }))
+    doc.body.dataset.workspaceSurface = 'browser'
+    expect(use('样例一')).toBe(true)
+    expect(shell.setDraft).not.toHaveBeenCalled()
+
+    doc.body.dataset.workspaceSurface = 'image-factory'
+    expect(use('样例一')).toBe(false)
+    expect(shell.snapshot.draft).toBe('用文字生成海报\n\n样例一')
+    expect(use('样例二')).toBe(false)
+    expect(shell.snapshot.draft).toBe('用文字生成海报\n\n样例二')
+    expect(submit).not.toHaveBeenCalled()
+
+    event('state', { messages: [], current: true })
+    expect(use('样例三')).toBe(true)
+    expect(shell.snapshot.draft).toBe('用文字生成海报\n\n样例二')
+  } finally { binding.dispose(); await win.happyDOM.abort() }
+})
