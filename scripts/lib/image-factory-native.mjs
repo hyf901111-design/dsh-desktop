@@ -92,9 +92,10 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
     return job.promotion
   }
   function watch(session, job) {
+    const owns = content => content?.some(part => part.type === 'text' && readImageFactoryContext(part.text)?.id === job.id)
     const observe = () => {
       if (jobs.get(job.id) !== job || job.delivering) return
-      const { chat, running } = session.getSnapshot()
+      const { chat, running, queue } = session.getSnapshot()
       if (!chat) return
       const nodes = chat.order.slice(-150).map(key => chat.nodes.get(key)).filter(Boolean)
       const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
@@ -111,12 +112,17 @@ export function installImageFactoryContext({ sessions, getInput, getPending, sen
         }).catch(() => finish(job.id))
         return
       }
-      win.clearTimeout(job.idle)
-      job.admitted ||= nodes.some(row => row.kind === 'user' && row.data?.content?.some(part =>
-        part.type === 'text' && readImageFactoryContext(part.text)?.id === job.id))
-      if (job.admitted) {
-        void promoteDraft(job)
-        if (!running) job.idle = win.setTimeout(() => { if (!job.delivering) finish(job.id) }, 1500)
+      const queued = queue?.some(row => owns(row.content))
+      job.wasQueued ||= queued
+      job.admitted ||= nodes.some(row => (row.kind === 'user' || row.kind === 'steering') && owns(row.data?.content))
+      if (job.admitted) void promoteDraft(job)
+      // The inbox may clear just before its durable turn appears. Allow that handoff,
+      // but settle a removed request even while a different turn is still running.
+      if (!queued && (job.admitted ? !running : job.wasQueued)) {
+        job.idle ??= win.setTimeout(() => { if (!job.delivering) finish(job.id) }, 1500)
+      } else {
+        win.clearTimeout(job.idle)
+        job.idle = undefined
       }
     }
     job.unsubscribe = session.subscribe(observe)

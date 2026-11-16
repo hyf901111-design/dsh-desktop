@@ -5,6 +5,10 @@ import { readImageFactoryContext } from '../packages/dsh-research-task-runtime/i
 
 function fixture() {
   const win = new Window(), doc = win.document
+  if (vi.isFakeTimers()) {
+    win.setTimeout = (fn, ms) => setTimeout(fn, ms)
+    win.clearTimeout = timer => clearTimeout(timer)
+  }
   const snapshot = { draft: '保留未发送的文字', imageIds: [] }
   const shell = { snapshot, notify: vi.fn(), setDraft: vi.fn(draft => { snapshot.draft = draft }) }
   const listeners = new Set()
@@ -122,6 +126,62 @@ it('unlocks the canvas when ordinary session admission rejects a command', async
     expect(settled).toHaveBeenCalledOnce()
     expect(f.listeners.size).toBe(0)
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+it('unlocks a removed queued image request while an unrelated turn keeps running', async () => {
+  vi.useFakeTimers()
+  const f = fixture()
+  try {
+    f.respond()
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.state.running = true
+    const settled = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-settled', settled)
+    await f.binding.prompt(f.session, [{ type: 'text', text: '第一张活动海报' }], 'queue')
+    const [[content]] = f.session.prompt.mock.calls
+    const id = readImageFactoryContext(content[0].text).id
+    const other = { placement: 'queued', content: [{ type: 'text', text: '无关的排队对话' }] }
+    const publish = queue => { f.state.queue = queue; for (const listener of f.listeners) listener() }
+    publish([{ placement: 'queued', content }, other])
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(settled).not.toHaveBeenCalled()
+    publish([other])
+    await vi.advanceTimersByTimeAsync(1000)
+    publish([other])
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(settled).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ detail: { id } }))
+    expect(f.listeners.size).toBe(0)
+  } finally { f.binding.dispose(); vi.useRealTimers(); await f.win.happyDOM.abort() }
+})
+
+it('keeps a queued image request through its handoff to the durable native turn', async () => {
+  vi.useFakeTimers()
+  const f = fixture()
+  try {
+    f.respond()
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const settled = vi.fn()
+    const publish = () => { for (const listener of f.listeners) listener() }
+    f.doc.addEventListener('sherlock:image-factory-settled', settled)
+    await f.binding.prompt(f.session, [{ type: 'text', text: '下一张海报' }], 'queue')
+    const [[content]] = f.session.prompt.mock.calls
+    f.state.queue = [{ placement: 'queued', content }]
+    publish()
+    f.state.queue = []
+    publish()
+    await vi.advanceTimersByTimeAsync(500)
+    f.state.chat.order.push('user')
+    f.state.chat.nodes.set('user', { kind: 'user', data: { content } })
+    f.state.running = true
+    publish()
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(settled).not.toHaveBeenCalled()
+    expect(f.listeners.size).toBe(1)
+    f.state.running = false
+    publish()
+    await vi.advanceTimersByTimeAsync(1600)
+    expect(settled).toHaveBeenCalledOnce()
+  } finally { f.binding.dispose(); vi.useRealTimers(); await f.win.happyDOM.abort() }
 })
 
 it('projects a completed native tool receipt once even after the canvas is hidden', async () => {
