@@ -11,7 +11,7 @@ import { imageFactoryFontFaces } from './fonts'
 import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
 import { useImageViewport } from './viewport'
-import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, providerDimensions, providerSize, ratios,
+import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, preservesRegionTransparency, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
 import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
   type CanvasLayer, type ImageScene, type TextLayer, type TextResizeHandle } from './layers'
@@ -26,7 +26,7 @@ type Bridge = {
   save(value: { action: 'download'; data: Uint8Array; name: string; format: 'png' | 'jpg' }): Promise<{ cancelled?: boolean }>
 }
 type T = (zh: string, en: string) => string
-type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region };
+type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region; preserveTransparency: boolean };
   size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
 type TaskTabs = { tabs: ImageFactoryTaskTab[]; active?: CanvasScope; busy: boolean }
@@ -506,7 +506,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         const target = selection ?? size
         const output = providerSize(target)
         const outputSize = providerDimensions[output]
-        const edit = selection && image ? { area: selection, frame: regionEditFrame(selection, outputSize, image.raster) } : undefined
+        const edit = selection && image ? {
+          area: selection, frame: regionEditFrame(selection, outputSize, image.raster),
+          preserveTransparency: preservesRegionTransparency(prompt),
+        } : undefined
         job = { id, sessionId, scope: requestedScope, scene: base, edit, size, title, delivering: false, release: hold }
         active.current.set(id, job)
         const reference = image
@@ -564,7 +567,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         output = await loadRaster(doc, await response.blob())
         const { canvas, context } = canvasFor(doc, job.size)
         const previous = job.scene?.layers.find(layer => layer.kind === 'image')
-        if (job.edit && previous) applyRegion(context, previous.raster, output, job.edit.area, job.edit.frame)
+        if (job.edit && previous) applyRegion(context, previous.raster, output, job.edit.area, job.edit.frame, job.edit.preserveTransparency)
         else drawFit(context, output, job.size)
         const png = await encode(canvas)
         const layer = await createImageLayer(doc, png, job.id, previous?.id ?? crypto.randomUUID(), 'image/png')
