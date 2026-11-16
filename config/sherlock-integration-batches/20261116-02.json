@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "4bb46730baa4798dff1198659c972fe1a9856e55",
-        "tipCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
+        "baseCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
+        "tipCommit": "dc63176ac75221354d250bc61344fafe134e2984",
         "commits": [
           {
-            "commit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
+            "commit": "dc63176ac75221354d250bc61344fafe134e2984",
             "parents": [
-              "4bb46730baa4798dff1198659c972fe1a9856e55"
+              "7305b2a9bf7ded3707c56458fd200922f83632fe"
             ],
-            "subject": "优化：统一图像工厂顶栏并改为循环图片画廊"
+            "subject": "修复：图像工厂使用通用对话回执并及时清空草稿"
           }
         ],
         "files": [
@@ -29,19 +29,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/actions-menu.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery-examples.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
+            "path": "scripts/lib/image-generation-client.mjs"
           },
           {
             "status": "M",
@@ -53,11 +41,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory.test.js"
+            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
@@ -69,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
-            "completedAt": "2026-11-16T12:35:43.496Z",
+            "verifiedCommit": "dc63176ac75221354d250bc61344fafe134e2984",
+            "completedAt": "2026-11-16T12:43:56.269Z",
             "timeoutMs": 120000
           },
           {
@@ -83,12 +67,14 @@
               "test/image-actions.test.ts",
               "test/browser-sidebar-entry.test.ts",
               "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js"
+              "test/image-generation-tool.test.js",
+              "test/image-generation-client.test.js",
+              "test/image-generation-ui.test.js"
             ],
             "outcome": "passed",
-            "summary": "48 项聚焦测试通过，覆盖全局右侧对话与画布协议、参考图、区域映射、入口和导出。",
-            "verifiedCommit": "7305b2a9bf7ded3707c56458fd200922f83632fe",
-            "completedAt": "2026-11-16T12:35:43.496Z",
+            "summary": "57 项通过，包含普通图片生成组件和画布输入提交。",
+            "verifiedCommit": "dc63176ac75221354d250bc61344fafe134e2984",
+            "completedAt": "2026-11-16T12:43:56.269Z",
             "timeoutMs": 120000
           }
         ],
@@ -100,49 +86,15 @@
           "图像工厂顶栏应用名称与空白区域支持拖动窗口；应用名后展开并能切换至对话、研究、笔记、表格；保留全局右侧对话展开按钮。",
           "画廊只显示图片，奇数列向下、偶数列向上循环；点击图片仍可填入原生右侧输入框。",
           "画布不显示导入入口和比例按钮；右侧欢迎页可选择本地图片并导入画布；直接描述比例生成对应尺寸。",
-          "画布保留编辑、框选、预览/恢复历史和导出。"
+          "画布保留编辑、框选、预览/恢复历史和导出。",
+          "原生输入框在接收命令后立即清空，图片工厂的记录复用普通对话的执行过程、计时、生成卡片和结果图片预览。"
         ],
         "risks": [
           "真实生图使用当前账号现有图片模型权限。",
-          "当前运行期间保留图像版本与对话，可导出到本地。"
+          "当前运行期间保留图像版本与对话，可导出到本地。",
+          "计时补丁严格锚点用例在变更前后同样有两项失败，实际补丁全流程与 UI 单独验收。"
         ],
-        "generatedAt": "2026-11-16T12:35:43.496Z"
-      },
-      "merged": {
-        "mergeCommit": "8eec00fc0c8fee62d03a3d841e05405c36c08d20",
-        "verificationCommit": "8eec00fc0c8fee62d03a3d841e05405c36c08d20",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8eec00fc0c8fee62d03a3d841e05405c36c08d20",
-            "completedAt": "2026-11-16T12:35:47.675Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory.test.js",
-              "test/image-actions.test.ts",
-              "test/browser-sidebar-entry.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
-            "verifiedCommit": "8eec00fc0c8fee62d03a3d841e05405c36c08d20",
-            "completedAt": "2026-11-16T12:35:47.675Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-16T12:35:47.675Z"
+        "generatedAt": "2026-11-16T12:43:56.269Z"
       }
     }
   ],
