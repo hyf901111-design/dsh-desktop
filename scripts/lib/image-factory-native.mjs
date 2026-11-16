@@ -4,6 +4,7 @@ export function installImageFactoryInput({ makeShell, conversation, document: do
   const listeners = new Set()
   let state = initial
   let pending
+  let galleryDraft
   const publish = value => {
     state = value
     for (const listener of listeners) listener()
@@ -17,6 +18,7 @@ export function installImageFactoryInput({ makeShell, conversation, document: do
   const clearImages = ids => { for (const id of ids) conversation.releaseDraftImage(id) }
   const reset = () => {
     pending = undefined
+    galleryDraft = undefined
     clearImages(shell.snapshot.imageIds)
     shell.pruneImages([])
     shell.setResearchContextPreparing(false)
@@ -85,7 +87,23 @@ export function installImageFactoryInput({ makeShell, conversation, document: do
       return null
     } catch (error) { return error.message }
   }
+  const usePrompt = event => {
+    const prompt = event.detail?.prompt
+    if (doc.body.dataset.workspaceSurface !== 'image-factory' || state.busy || state.current ||
+        typeof prompt !== 'string' || !prompt.trim() || prompt.length > 3600) return
+    const draft = shell.snapshot.draft
+    const original = draft === galleryDraft?.combined ? galleryDraft.original : draft
+    const combined = original.trim() ? original.trimEnd() + '\n\n' + prompt : prompt
+    if (combined.length > 3600) {
+      shell.notify('error', '添加示例后超出 3600 字，请先缩短当前描述。')
+      return
+    }
+    galleryDraft = { original, combined }
+    shell.setDraft(combined)
+    event.preventDefault()
+  }
   const events = [
+    ['sherlock:image-factory-use-prompt', usePrompt],
     ['sherlock:image-factory-state', change], ['sherlock:image-factory-result', finish],
     ['sherlock:image-factory-reset', reset], ['sherlock:image-factory-focus-chat', focus],
   ]

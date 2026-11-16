@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { CanvasActionsMenu } from './actions-menu'
+import { ImageFactoryGallery } from './gallery'
 import { iconSource } from './icons'
 import { applyRegion, between, canvasFor, canvasPoint, cropRaster, drawFit, encode, loadRaster, providerSize, ratios, validSize,
   type Point, type Raster, type Ratio, type Region } from './raster'
@@ -289,6 +290,12 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-focus-chat'))
   }
+  function useGalleryPrompt(prompt: string, ratio: Ratio) {
+    const accepted = !doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt }, cancelable: true }))
+    if (accepted) setRatio(ratio)
+    focusChat()
+    return accepted
+  }
   function selectPanel(next: Panel) {
     if (busy || !current || preview !== undefined) return
     clearMark()
@@ -430,19 +437,15 @@ function Editor({ doc, bridge, close, t }: { doc: Document; bridge: Bridge; clos
         event.preventDefault(); event.dataTransfer.dropEffect = busy ? 'none' : 'copy'; setDrop(!busy)
       }} onDragLeave={event => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) setDrop(false) }}
       onDrop={event => { if (!event.dataTransfer.files.length) return; event.preventDefault(); setDrop(false); importFile(event.dataTransfer.files[0]) }}>
-        {!shown ? <div className="if-empty">
-          <div className="if-empty-logo"><Symbol name="factory" size={37}/></div>
-          <h2>{t('制作图片或海报', 'Create an image or poster')}</h2>
-          <p>{t('从一段描述开始，也可以导入已有图片进行编辑。', 'Start with a description, or import an image to edit.')}</p>
-          <div className="if-start-actions">
-            <Button icon="spark" primary disabled={busy} onClick={focusChat}>{t('用 AI 生图', 'Generate with AI')}</Button>
+        {!shown ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}
+          actions={<>
             <Button icon="upload" disabled={busy} onClick={() => file.current?.click()}>{importLabel}</Button>
-          </div>
-          <small>{t('也可拖入 PNG、JPG 或 WebP', 'You can also drop a PNG, JPG, or WebP')}</small>
-          <div className="if-ratios"><span>{t('生图比例', 'Generation ratio')}</span>
-            {(Object.keys(ratios) as Ratio[]).map(key => <Button key={key} icon={ratios[key].icon} active={ratio === key} disabled={busy} onClick={() => setRatio(key)}>{key}</Button>)}
-          </div>
-        </div> : <>
+            <Button icon="spark" primary disabled={busy} onClick={focusChat}>{t('用 AI 生图', 'Generate with AI')}</Button>
+          </>}
+          ratios={<div className="if-ratios"><span>{t('生图比例', 'Aspect ratio')}</span>
+            {(Object.keys(ratios) as Ratio[]).map(key =>
+              <Button key={key} icon={ratios[key].icon} active={ratio === key} disabled={busy} onClick={() => setRatio(key)}>{key}</Button>)}
+          </div>}/> : <>
           <div className="if-stage-scroll" ref={stage}>
             <div className="if-raster" data-selecting={drawing} style={{ width: Math.max(1, Math.floor(shown.width * fit * zoom)), height: Math.max(1, Math.floor(shown.height * fit * zoom)) }}
               onPointerDown={e => onPointer(e, 'start')} onPointerMove={e => onPointer(e, 'move')}
