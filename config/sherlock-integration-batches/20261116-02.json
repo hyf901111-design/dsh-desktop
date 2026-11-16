@@ -11,22 +11,15 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "dfe23903ef049163e728a5bb3534a20c71c8fefe",
-        "tipCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
+        "baseCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
+        "tipCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
         "commits": [
           {
-            "commit": "b79db81dddffa3d9349fec3e37c0542f66c57331",
+            "commit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
             "parents": [
-              "dfe23903ef049163e728a5bb3534a20c71c8fefe"
+              "25e407fb30d15ad974ab2415193dd5d926977b70"
             ],
-            "subject": "修复：消息定位栏隐藏图像工厂内部参数"
-          },
-          {
-            "commit": "25e407fb30d15ad974ab2415193dd5d926977b70",
-            "parents": [
-              "b79db81dddffa3d9349fec3e37c0542f66c57331"
-            ],
-            "subject": "测试：使用新补丁验证原生消息定位栏"
+            "subject": "优化：框选改图等待和失败时保留选区与意见"
           }
         ],
         "files": [
@@ -36,7 +29,19 @@
           },
           {
             "status": "M",
-            "path": "test/browser-app-native.test.js"
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
@@ -48,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
-            "completedAt": "2026-11-16T16:08:40.279Z",
+            "verifiedCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
+            "completedAt": "2026-11-16T16:26:45.127Z",
             "timeoutMs": 120000
           },
           {
@@ -57,30 +62,37 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/browser-app-native.test.js",
-              "test/knowledge-composer.test.js",
               "test/image-factory-native.test.js",
               "test/image-factory.test.js",
-              "test/message-edit.test.js"
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-generation-tool.test.js",
+              "test/image-generation-client.test.js",
+              "test/knowledge-history-backfill.test.ts",
+              "test/pending-conversation.test.js",
+              "test/browser-app-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "33 项原生对话、图像工厂和知识库聚焦检查通过。",
-            "verifiedCommit": "25e407fb30d15ad974ab2415193dd5d926977b70",
-            "completedAt": "2026-11-16T16:08:40.279Z",
+            "summary": "55 项图像工厂、原生发送和知识库聚焦检查通过。",
+            "verifiedCommit": "7d49d56b197b00c1f9f3cc511a2aa73fd915bc54",
+            "completedAt": "2026-11-16T16:26:45.127Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实框选生成和 PNG 对比已通过，视觉编辑区域是 333×21，改动边界精确一致。对话定位栏改为使用与消息气泡相同的清理逻辑，已用真实打补丁的对话模块复现并验证。"
+          "summary": "Chromium 挂载实际画布和原生对话适配，验证提交失败、等待、切换会话、失败后保留原意见和选区、显式重试及成功清理。"
         },
         "acceptanceCriteria": [
-          "真实框选改单条背景正常回贴。",
-          "消息定位栏只显示原始用户内容。",
-          "同一投影保持气泡、复制和编辑一致。"
+          "提交成功后，完整选区在处理过程中保留。",
+          "取消或失败后，修改意见和选区可以继续使用。",
+          "重试需要用户触发并保持原消息内容。",
+          "成功应用后清理选区与意见。"
         ],
-        "risks": [],
-        "generatedAt": "2026-11-16T16:08:40.279Z"
+        "risks": [
+          "选区及未提交意见保留在当前客户端运行期间。"
+        ],
+        "generatedAt": "2026-11-16T16:26:45.127Z"
       }
     },
     {
