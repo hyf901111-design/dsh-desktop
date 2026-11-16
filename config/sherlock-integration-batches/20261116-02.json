@@ -11,21 +11,49 @@
         "schemaVersion": 1,
         "featureName": "图像工厂 MVP",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "8f9098fecb3a6aa8191e3c78a034356da8bb5621",
-        "tipCommit": "13aa3ae58b254642c10bbbe0437383093c0da420",
+        "baseCommit": "13aa3ae58b254642c10bbbe0437383093c0da420",
+        "tipCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
         "commits": [
           {
-            "commit": "13aa3ae58b254642c10bbbe0437383093c0da420",
+            "commit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
             "parents": [
-              "8f9098fecb3a6aa8191e3c78a034356da8bb5621"
+              "13aa3ae58b254642c10bbbe0437383093c0da420"
             ],
-            "subject": "修复：完善图层拖拽和原生生图回执"
+            "subject": "新增：按会话保存和恢复图像工厂的可编辑画布"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/image-factory-canvases.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/canvas-workspace.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/layers.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/raster.ts"
           },
           {
             "status": "M",
@@ -37,7 +65,23 @@
           },
           {
             "status": "M",
-            "path": "test/image-generation-tool.test.js"
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/image-factory-canvas.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/image-factory-canvas-workspace.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/image-factory-canvases.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation.test.js"
           }
         ],
         "checks": [
@@ -49,8 +93,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "13aa3ae58b254642c10bbbe0437383093c0da420",
-            "completedAt": "2026-11-16T14:11:23.401Z",
+            "verifiedCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
+            "completedAt": "2026-11-16T14:37:05.464Z",
             "timeoutMs": 120000
           },
           {
@@ -58,34 +102,38 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
               "test/image-factory.test.js",
               "test/image-factory-native.test.js",
               "test/image-generation-tool.test.js",
               "test/image-generation-client.test.js",
-              "test/knowledge-history-backfill.test.ts"
+              "test/knowledge-history-backfill.test.ts",
+              "test/pending-conversation.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/browser-sidebar-entry.test.ts"
             ],
             "outcome": "passed",
-            "summary": "35 项直接相关用例通过。",
-            "verifiedCommit": "13aa3ae58b254642c10bbbe0437383093c0da420",
-            "completedAt": "2026-11-16T14:11:23.401Z",
+            "summary": "65 项直接相关检查通过。",
+            "verifiedCommit": "e42cd1c45581f75735eb95a8eeeba2d2fef24e0a",
+            "completedAt": "2026-11-16T14:37:05.464Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端验收生图、时间与复制编辑、画布文本可重编、删除图层、知识库自动收录与导出菜单；Chromium 真实画布验证双向拖拽、格式栏避让、评论发送、框外像素保持及文本图层保留，新回执规则待最新包复验。"
+          "summary": "Chromium 通过真实前端和文件存储验证了刷新后重编、图层样式保留、会话隔离、后台回写和独立草稿绑定。签名客户端实机重启待包完成后验收。"
         },
         "acceptanceCriteria": [
-          "主工具三项，无底部版本记录。",
-          "图层和文字设置不互相遮挡，拖拽改变顺序。",
-          "框选气泡经原生会话提交，只改变所选像素。",
-          "生图和局部编辑由原生对话保存，操作可用，结果进入知识库所有文件。",
-          "导出箭头与子菜单向右。"
+          "按账号和原生会话恢复图片、文字及堆叠顺序。",
+          "切换会话不混用画布，后台结果写回原会话。",
+          "先导图后首次聊天可将独立草稿绑定到新会话，普通对话行为保持。",
+          "图层发生写入失败时支持重试。"
         ],
         "risks": [
-          "真实桌面矩形拖拽工具停于起点，已用 Chromium真实指针轨迹验证相同画布源。"
+          "此前未持久化的旧画布缺少可编辑图层记录。"
         ],
-        "generatedAt": "2026-11-16T14:11:23.401Z"
+        "generatedAt": "2026-11-16T14:37:05.464Z"
       }
     },
     {
