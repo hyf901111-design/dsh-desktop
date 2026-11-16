@@ -150,5 +150,13 @@ export class ImageFactoryCanvases {
     }, epoch)
   }
 
+  /** Roll back a copy only after its new session is confirmed absent. */
+  discardStaged(sessionId: string, epoch: number) {
+    return this.run(async (owner, _epoch, current) => {
+      current()
+      await rm(this.directory(owner, sessionId), { force: true, recursive: true })
+    }, epoch)
+  }
+
   drain() { return Promise.allSettled(this.queues.values()) }
 }

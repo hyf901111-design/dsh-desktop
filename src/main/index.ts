@@ -1618,6 +1618,7 @@ async function bootstrap(): Promise<void> {
     identity: knowledgeIdentity, filePreview: knowledgeFilePreview,
     copySession: createKnowledgeSessionCopier({
       rpc: taskRpc, retain: retainKnowledgeCopy, notes: calendarNotes, workbooks: knowledgeWorkbooks, research: researchCanvasStorage,
+      canvases: factoryCanvases,
       fallbackWorkspacePath: join(app.getPath('userData'), 'knowledge-workspaces', '知识库副本')
     }),
     sessionEvidence: knowledgeSessionEvidence,
