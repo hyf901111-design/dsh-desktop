@@ -629,25 +629,31 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             onPointerUp={event => { onRectanglePointer(event, 'end'); textPointer(event, 'end') }}
             onPointerCancel={event => { onRectanglePointer(event, 'cancel'); textPointer(event, 'cancel') }}
             onLostPointerCapture={event => onRectanglePointer(event, 'cancel')}>
-            {current.layers.map(layer => {
-              if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
-              const style = { ...textLayerStyle(layer, current), transform: 'scale(' + displayScale + ')',
-                transformOrigin: 'top left', outlineWidth: 1 / displayScale }
-              return editing === layer.id ? <textarea key={layer.id} ref={element => {
-                if (!element) return
-                element.style.height = '0px'; element.style.height = element.scrollHeight + 'px'
-              }} className="if-text-layer" data-canvas-text-id={layer.id} data-selected="true" aria-label={t('编辑画布文本', 'Edit canvas text')}
-                autoFocus rows={1} spellCheck={false} value={layer.text} maxLength={500}
-                style={style} placeholder={t('输入文本', 'Enter text')} onChange={e => patchLayer(layer.id, { text: e.target.value })}
-                onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); releaseText(layer.id) } }}
-                onBlur={event => { if (!event.relatedTarget?.closest('.if-text-format')) releaseText(layer.id) }}/>
-                : <div key={layer.id} className="if-text-layer" data-canvas-text-id={layer.id} data-selected={selectedId === layer.id} style={style}
-                  tabIndex={marking || busy ? -1 : 0} role="button" aria-label={layer.text}
-                  onClick={() => { if (!marking && !area) setSelectedId(layer.id) }}
-                  onDoubleClick={() => { if (!marking && !area && !busy) { setSelectedId(layer.id); setEditing(layer.id) } }}
-                  onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
-                  onPointerDown={event => textPointer(event, 'start', layer)}>{layer.text}</div>
-            })}
+            <div className="if-raster-artwork">
+              {current.layers.map(layer => {
+                if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
+                const style = { ...textLayerStyle(layer, current), transform: 'scale(' + displayScale + ')',
+                  transformOrigin: 'top left', outlineWidth: 1 / displayScale }
+                return editing === layer.id ? <textarea key={layer.id} ref={element => {
+                  if (!element) return
+                  element.style.height = '0px'; element.style.height = element.scrollHeight + 'px'
+                }} className="if-text-layer" data-canvas-text-id={layer.id} data-selected="true" aria-label={t('编辑画布文本', 'Edit canvas text')}
+                  autoFocus rows={1} spellCheck={false} value={layer.text} maxLength={500}
+                  style={style} placeholder={t('输入文本', 'Enter text')} onChange={e => patchLayer(layer.id, { text: e.target.value })}
+                  onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); releaseText(layer.id) } }}
+                  onBlur={event => { if (!event.relatedTarget?.closest('.if-text-format')) releaseText(layer.id) }}/>
+                  : <div key={layer.id} className="if-text-layer" data-canvas-text-id={layer.id} data-selected={selectedId === layer.id} style={style}
+                    tabIndex={marking || busy ? -1 : 0} role="button" aria-label={layer.text}
+                    onClick={() => { if (!marking && !area) setSelectedId(layer.id) }}
+                    onDoubleClick={() => { if (!marking && !area && !busy) { setSelectedId(layer.id); setEditing(layer.id) } }}
+                    onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
+                    onPointerDown={event => textPointer(event, 'start', layer)}>{layer.text}</div>
+              })}
+              {rectangle && <div className="if-region" data-dragging={!!rubberband} style={{
+                left: rectangle.x / current.width * 100 + '%', top: rectangle.y / current.height * 100 + '%',
+                width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',
+              }}><i/><i/><i/><i/></div>}
+            </div>
             {resizableText && textBoxHeight > 0 && <div className="if-text-bounds" role="group" aria-label={t('调整文字图层大小', 'Resize text layer')}
               style={{ left: resizableText.x * 100 + '%', top: resizableText.y * 100 + '%', width: resizableText.width * 100 + '%', height: textBoxHeight }}>
               {textResizeHandles.map(handle => <button key={handle} type="button" className="if-text-handle" data-text-resize-handle={handle}
@@ -662,10 +668,6 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                   patchLayer(resizableText.id, patch)
                 }}/>)}
             </div>}
-            {rectangle && <div className="if-region" data-dragging={!!rubberband} style={{
-              left: rectangle.x / current.width * 100 + '%', top: rectangle.y / current.height * 100 + '%',
-              width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',
-            }}><i/><i/><i/><i/></div>}
           </div>
         </div>
         {marking && <div className="if-mark-hint" role="status">{t('在图上拖出要修改的区域 · Esc 取消', 'Drag over the area to edit · Esc to cancel')}</div>}

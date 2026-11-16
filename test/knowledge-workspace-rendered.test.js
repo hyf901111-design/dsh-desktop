@@ -736,6 +736,42 @@ it('centers Image Factory notices in the workspace', async () => {
   }
 })
 
+it('centers Image Factory resize handles on the text bounds, including at the image edges', async () => {
+  const page = await browser.newPage()
+  try {
+    const anchors = ['nw', 'ne', 'w', 'e', 'sw', 'se']
+    await page.setContent(`
+      <div class="image-factory" style="left:10px;width:590px">
+        <div class="if-raster" style="margin:32px;width:240px;height:150px;transform:translate(12px,21px)">
+          <div class="if-raster-artwork"></div>
+          <div class="if-text-bounds" style="left:0;top:0;width:100%;height:50px">
+            ${anchors.map(anchor => '<button class="if-text-handle" data-text-resize-handle="' + anchor + '"></button>').join('')}
+          </div>
+        </div>
+      </div>`)
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    const result = await page.locator('.if-text-bounds').evaluate(el => {
+      const bounds = el.getBoundingClientRect()
+      return {
+        offsets: Array.from(el.querySelectorAll('button'), button => {
+          const grip = button.getBoundingClientRect()
+          const anchor = button.dataset.textResizeHandle
+          const x = anchor.endsWith('w') ? bounds.left : bounds.right
+          const y = anchor.startsWith('n') ? bounds.top : anchor.startsWith('s') ? bounds.bottom : bounds.top + bounds.height / 2
+          return [grip.x + grip.width / 2 - x, grip.y + grip.height / 2 - y]
+        }),
+        edgeTarget: document.elementFromPoint(bounds.left - 5, bounds.top - 5)?.dataset.textResizeHandle,
+        artworkTarget: document.elementFromPoint(bounds.left + 24, bounds.top + 24)?.className,
+      }
+    })
+    expect(result.offsets).toEqual(anchors.map(() => [0, 0]))
+    expect(result.edgeTarget).toBe('nw')
+    expect(result.artworkTarget).toBe('if-raster')
+  } finally {
+    await page.close()
+  }
+})
+
 it('keeps the four workspace shortcuts open across the draggable knowledge header', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
   try {
