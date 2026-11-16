@@ -24,6 +24,7 @@ type Bridge = {
 type T = (zh: string, en: string) => string
 type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region };
   size: Size; title: string; delivering: boolean; release(): void }
+type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 
 function Icon({ name, size }: { name: string; size?: number }) {
@@ -92,11 +93,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const setGalleryOpen = (value: boolean) => setGalleryScope(value ? scope : undefined)
   const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
   const [marking, setMarking] = useState(false)
-  const [area, setArea] = useState<Region>()
   const [rubberband, setRubberband] = useState<Region>()
-  const [comment, setComment] = useState('')
-  const [commentError, setCommentError] = useState('')
-  const [commentSending, setCommentSending] = useState(false)
   const [commentPos, setCommentPos] = useState<Point>()
   const [layersOpen, setLayersOpen] = useState(false)
   const [selectedId, setSelectedId] = useState<string>()
@@ -108,21 +105,24 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const [zoom, setZoom] = useState(1)
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const file = useRef<HTMLInputElement>(null), scroll = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null)
-  const imageFrame = useRef<HTMLDivElement>(null), commentForm = useRef<HTMLFormElement>(null)
+  const imageFrame = useRef<HTMLDivElement>(null), commentBubble = useRef<HTMLDivElement>(null)
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
   const textDrag = useRef<{ id: string; pointer: number; start: Point; moved: boolean; x: number; y: number }>()
   const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef(new Map<string, CanvasJob>())
-  const commentCapture = useRef<{ id: string; sceneId: string; area: Region }>()
+  const selectionDrafts = useRef(new Map<string, SelectionDraft>())
   const refreshBusy = () => redrawBusy(value => value + 1)
   const isBusy = (key: CanvasScope) => uiOperations.current.has(key) ||
     [...active.current.values()].some(job => job.scope === key || job.sessionId === key)
-  const busy = status !== 'ready' || isBusy(scope)
   const setScene = (change: (old?: ImageScene) => ImageScene | undefined, persist = true) => workspace.change(scope, change, persist)
   const mounted = useRef(true)
   const current = galleryOpen ? undefined : scene
+  const selectionDraft = current && selectionDrafts.current.get(current.id)
+  const area = selectionDraft?.area
+  const commentPending = !!selectionDraft?.phase
+  const busy = status !== 'ready' || isBusy(scope) || commentPending
   const raster = current?.layers.find((layer): layer is Extract<CanvasLayer, { kind: 'image' }> => layer.kind === 'image')
   const selectedText = current?.layers.find((layer): layer is TextLayer => layer.kind === 'text' && layer.id === selectedId)
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
@@ -151,7 +151,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   useLayoutEffect(() => {
     setGalleryScope(undefined)
     setSelectedId(undefined); setEditing(undefined); setZoom(1); setLayersOpen(false)
-    setCommentSending(false); clearSelection()
+    resetSelectionGesture()
     textDrag.current = undefined; layerDrag.current = undefined; setDropTarget(undefined)
   }, [scope])
   useLayoutEffect(() => {
@@ -174,21 +174,32 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       const left = image.left - view.left + area.x / current.width * image.width
       const top = image.top - view.top + area.y / current.height * image.height
       const right = left + area.width / current.width * image.width, bottom = top + area.height / current.height * image.height
-      const popWidth = Math.min(320, view.width - 20), popHeight = commentForm.current?.offsetHeight ?? 178
+      const popWidth = commentBubble.current?.offsetWidth ?? Math.min(320, view.width - 20)
+      const popHeight = commentBubble.current?.offsetHeight ?? 178
       const x = right + popWidth + 14 <= view.width ? right + 10 : left - popWidth - 10 >= 10 ? left - popWidth - 10 : left
       const y = x === left ? (bottom + popHeight + 44 <= view.height ? bottom + 10 : top - popHeight - 10) : top
       setCommentPos({ x: Math.max(10, Math.min(view.width - popWidth - 10, x)), y: Math.max(10, Math.min(view.height - popHeight - 44, y)) })
     }
     locate()
     const observer = new ResizeObserver(locate); observer.observe(outer)
-    if (commentForm.current) observer.observe(commentForm.current)
+    if (commentBubble.current) observer.observe(commentBubble.current)
     scroller.addEventListener('scroll', locate, { passive: true })
     return () => { observer.disconnect(); scroller.removeEventListener('scroll', locate) }
-  }, [area, current?.id, current?.width, current?.height, displayScale])
+  }, [area, current?.id, current?.width, current?.height, displayScale, scope])
 
+  function setSelectionDraft(id: string, draft?: SelectionDraft) {
+    if (draft) selectionDrafts.current.set(id, draft)
+    else if (!selectionDrafts.current.delete(id)) return
+    if (mounted.current) refreshBusy()
+  }
+  function resetSelectionGesture() {
+    rectangleDrag.current = undefined; setMarking(false); setRubberband(undefined)
+    setCommentPos(undefined)
+  }
   function clearSelection() {
-    rectangleDrag.current = undefined; setMarking(false); setArea(undefined); setRubberband(undefined)
-    setComment(''); setCommentError(''); setCommentPos(undefined)
+    if (current && selectionDrafts.current.get(current.id)?.phase) return
+    if (current) setSelectionDraft(current.id)
+    resetSelectionGesture()
   }
   function patchLayer(id: string, patch: Partial<TextLayer>, persist = true) {
     setScene(old => old && { ...old, layers: old.layers.map(layer => layer.id === id && layer.kind === 'text' ? { ...layer, ...patch } : layer) }, persist)
@@ -286,7 +297,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (phase === 'move') { setRubberband(selection); return }
     rectangleDrag.current = undefined; setRubberband(undefined)
     if (phase === 'end' && selection.width >= 2 && selection.height >= 2) {
-      setMarking(false); setArea(selection)
+      setMarking(false)
+      setSelectionDraft(current.id, { area: selection, text: '' })
     }
   }
   async function importFile(image?: File) {
@@ -343,8 +355,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
         const base = galleryScope === requestedScope ? undefined : ready
         const image = base?.layers.find(layer => layer.kind === 'image')
-        const captured = commentCapture.current
-        const selection = region && captured?.sceneId === base?.id ? captured?.area : undefined
+        const draft = base && selectionDrafts.current.get(base.id)
+        const selection = region && draft?.requestId === id && draft.phase === 'sending' ? draft.area : undefined
         if (region && (!selection || !image)) throw Error(t('选区已变化，请重新框选。', 'The selection changed. Select the area again.'))
         const size = (selection ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
         const title = (selection ? base?.title : undefined) || titleFromPrompt(prompt, t)
@@ -369,9 +381,26 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         if (mounted.current) refreshBusy()
       }
     }
+    const failSelection = (job: CanvasJob, error: string) => {
+      if (!job.edit || !job.scene || !mounted.current) return
+      const draft = selectionDrafts.current.get(job.scene.id)
+      if (draft?.requestId === job.id) setSelectionDraft(job.scene.id, { ...draft, phase: undefined, error })
+    }
     const settled = (event: Event) => {
       const job = active.current.get((event as CustomEvent).detail?.id)
-      if (job && !job.delivering) release(job)
+      if (!job || job.delivering) return
+      failSelection(job, t('这次没有收到可应用的图片。', 'No image was received for this edit.'))
+      release(job)
+    }
+    const commentResult = (event: Event) => {
+      const { id, error } = (event as CustomEvent).detail ?? {}
+      if (typeof id !== 'string') return
+      for (const [sceneId, draft] of selectionDrafts.current) {
+        if (draft.requestId !== id) continue
+        if (typeof error === 'string' && error) setSelectionDraft(sceneId, { ...draft, phase: undefined, error })
+        else if (draft.phase === 'sending') setSelectionDraft(sceneId, { ...draft, phase: 'processing' })
+        break
+      }
     }
     const deliver = async (event: Event) => {
       const info = (event as CustomEvent).detail
@@ -401,10 +430,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         const others = job.scene?.layers ?? []
         const layers = previous ? others.map(item => item.id === previous.id ? layer : item) : [layer, ...others]
         const nextScene = { id: job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers }
-        if (!workspace.change(job.sessionId, () => nextScene)) return
+        if (!workspace.change(job.sessionId, () => nextScene)) throw Error(t('图片没能放到画布。', 'Could not place the image on the canvas.'))
         newRaster = undefined
+        if (job.scene) setSelectionDraft(job.scene.id)
         if (workspace.getSnapshot().scope === job.sessionId) {
-          clearSelection(); setGalleryScope(undefined); if (!job.scene) setZoom(1)
+          resetSelectionGesture(); setGalleryScope(undefined); if (!job.scene) setZoom(1)
         }
         try {
           let data = layer.data
@@ -419,7 +449,9 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         }
         catch { if (mounted.current && workspace.getSnapshot().scope === job.sessionId) setToast(t('画布已更新。知识库将从会话记录补收生成结果。', 'Canvas updated. The library will collect the generated result from chat history.')) }
       } catch (error) {
-        if (mounted.current && workspace.getSnapshot().scope === job.sessionId) setToast(errorLabel(error, t('图片没能放到画布。', 'Could not place the image on the canvas.')))
+        const reason = errorLabel(error, t('图片没能放到画布。', 'Could not place the image on the canvas.'))
+        if (job.edit) failSelection(job, reason)
+        else if (mounted.current && workspace.getSnapshot().scope === job.sessionId) setToast(reason)
       } finally {
         if (info.revoke) URL.revokeObjectURL(url)
         if (output) URL.revokeObjectURL(output.url)
@@ -432,33 +464,23 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       if (doc.body.dataset.workspaceSurface === 'image-factory' && (event as CustomEvent).detail?.kind === 'import' && !busy) file.current?.click()
     }
     const publish = () => emit('state', { current: !!current, busy })
-    const events = { prepare, settled, deliver, action, 'request-state': publish }
+    const events = { prepare, settled, deliver, action, 'comment-result': commentResult, 'request-state': publish }
     for (const [event, callback] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + event, callback)
     publish()
     return () => { for (const [event, callback] of Object.entries(events)) doc.removeEventListener('sherlock:image-factory-' + event, callback) }
   }, [doc, t, bridge, workspace, scope, galleryScope, current, busy])
   function sendComment() {
-    const value = comment.trim()
-    if (!value || busy || commentSending || !area || !current) return
+    if (!current || busy) return
+    const draft = selectionDrafts.current.get(current.id)
+    const value = draft?.text.trim()
+    if (!draft || !value || draft.phase) return
     const id = crypto.randomUUID()
-    commentCapture.current = { id, sceneId: current.id, area }
-    setCommentSending(true); setCommentError('')
+    setSelectionDraft(current.id, { ...draft, requestId: id, phase: 'sending', error: undefined })
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
-    const finish = (event: Event) => {
-      const data = (event as CustomEvent).detail
-      if (data?.id !== id) return
-      doc.removeEventListener('sherlock:image-factory-comment-result', finish)
-      if (!mounted.current || commentCapture.current?.id !== id) return
-      commentCapture.current = undefined
-      setCommentSending(false)
-      if (data.error) setCommentError(data.error)
-      else { setComment(''); setArea(undefined) }
-    }
     const admission = new CustomEvent('sherlock:image-factory-comment', { cancelable: true, detail: { id, prompt: value } })
-    doc.addEventListener('sherlock:image-factory-comment-result', finish)
-    if (doc.dispatchEvent(admission)) finish(new CustomEvent('sherlock:image-factory-comment-result', {
-      detail: { id, error: t('对话服务尚未就绪，请重试。', 'Chat is not ready. Try again.') },
-    }))
+    if (doc.dispatchEvent(admission)) {
+      setSelectionDraft(current.id, { ...draft, error: t('对话服务尚未就绪，请重试。', 'Chat is not ready. Try again.') })
+    }
   }
   function useGalleryPrompt(prompt: string) {
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
@@ -479,7 +501,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const hasWorkspaceSession = workspaceExpanded && !!findWorkspaceSession(doc)
   const tabsLabel = workspaceExpanded ? t('收起工作区页签', 'Collapse workspace tabs') : t('展开工作区页签', 'Expand workspace tabs')
   return <section className="if-work" aria-label={t('图像工厂画布', 'Image Factory canvas')} onKeyDown={event => {
-    if (event.key !== 'Escape' || commentSending || (!editing && !marking && !area)) return
+    if (event.key !== 'Escape' || commentPending || (!editing && !marking && !area)) return
     event.stopPropagation(); clearSelection(); releaseText()
   }}>
     <header className="if-top workspace-app-topbar" ref={header} onKeyDown={event => {
@@ -520,7 +542,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}/> : <>
         <div className="if-stage-scroll" data-layers-open={layersOpen} ref={scroll} onPointerDown={event => {
           if (event.target === event.currentTarget || event.target === imageFrame.current && !marking) {
-            releaseText(); setSelectedId(undefined); if (area && !commentSending) clearSelection()
+            releaseText(); setSelectedId(undefined); if (area && !commentPending) clearSelection()
           }
         }}>
           <div ref={imageFrame} className="if-raster" data-selecting={marking} style={{ width: Math.max(1, current.width * displayScale), height: Math.max(1, current.height * displayScale) }}
@@ -554,18 +576,26 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           </div>
         </div>
         {marking && <div className="if-mark-hint" role="status">{t('在图上拖出要修改的区域 · Esc 取消', 'Drag over the area to edit · Esc to cancel')}</div>}
-        {area && <form ref={commentForm} className="if-comment" role="dialog" aria-label={t('修改选区', 'Edit selected area')}
-          style={commentPos ? { left: commentPos.x, top: commentPos.y } : { visibility: 'hidden' }} onSubmit={event => { event.preventDefault(); sendComment() }}>
-          <div className="if-float-header"><strong>{t('修改选区', 'Edit selected area')}</strong><Button icon="close" label={t('取消框选', 'Cancel selection')} disabled={commentSending} onClick={clearSelection}/></div>
-          <textarea autoFocus aria-label={t('修改意见', 'Edit instructions')} placeholder={t('描述要怎么修改这个区域…', 'Describe how to edit this area…')}
-            ref={element => { if (element && commentPos && !comment && !commentSending && doc.activeElement === doc.body) element.focus({ preventScroll: true }) }}
-            value={comment} maxLength={3600} disabled={commentSending} onChange={event => setComment(event.target.value)} onKeyDown={event => {
-              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendComment() }
-            }}/>
-          {commentError && <p className="if-comment-error" role="alert">{commentError}</p>}
-          <div className="if-comment-footer"><Button onClick={clearSelection} disabled={commentSending}>{t('删除选区', 'Remove selection')}</Button>
-            <Button type="submit" primary disabled={!comment.trim() || busy || commentSending}>{commentSending ? t('发送中…', 'Sending…') : t('发送', 'Send')}</Button></div>
-        </form>}
+        {selectionDraft && <div ref={commentBubble} className="if-comment" data-processing={selectionDraft.phase === 'processing'}
+          style={commentPos ? { left: commentPos.x, top: commentPos.y } : { visibility: 'hidden' }}>
+          {selectionDraft.phase === 'processing' ? <div role="status">{t('正在修改选区…', 'Editing selected area…')}</div>
+            : <form role="dialog" aria-label={t('修改选区', 'Edit selected area')} onSubmit={event => { event.preventDefault(); sendComment() }}>
+              <div className="if-float-header"><strong>{t('修改选区', 'Edit selected area')}</strong><Button icon="close" label={t('取消框选', 'Cancel selection')} disabled={commentPending} onClick={clearSelection}/></div>
+              <textarea autoFocus={!selectionDraft.error} aria-label={t('修改意见', 'Edit instructions')} placeholder={t('描述要怎么修改这个区域…', 'Describe how to edit this area…')}
+                ref={element => { if (element && commentPos && !selectionDraft.text && !commentPending && doc.activeElement === doc.body) element.focus({ preventScroll: true }) }}
+                value={selectionDraft.text} maxLength={3600} disabled={commentPending}
+                onChange={event => setSelectionDraft(current.id, { ...selectionDraft, text: event.target.value })}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendComment() }
+                }}/>
+              {selectionDraft.error && <p className="if-comment-error" role="alert">{selectionDraft.error}</p>}
+              <div className="if-comment-footer"><Button onClick={clearSelection} disabled={commentPending}>{t('删除选区', 'Remove selection')}</Button>
+                <Button type="submit" primary disabled={!selectionDraft.text.trim() || busy || commentPending}>
+                  {commentPending ? t('发送中…', 'Sending…') : selectionDraft.error ? t('重试', 'Retry') : t('发送', 'Send')}
+                </Button>
+              </div>
+            </form>}
+        </div>}
         {selectedText && !marking && !area && !busy && <TextControls key={selectedText.id} layer={selectedText} change={patch => patchLayer(selectedText.id, patch)} t={t}/>}
         {layersOpen && <aside className="if-layers" aria-label={t('图层', 'Layers')}>
           <div className="if-float-header"><strong>{t('图层', 'Layers')}</strong><Button icon="close" label={t('关闭图层', 'Close layers')} onClick={() => setLayersOpen(false)}/></div>

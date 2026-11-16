@@ -157,7 +157,7 @@ export function patchBrowserAppNative(input){
 ctx.effect(()=>{
  const factory=(${installImageFactoryContext.toString()})({
    sessions,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,
-   send:(session,content,mode,region)=>factory.prompt(session,content,mode,region)
+   send:(session,content,mode,regionId)=>factory.prompt(session,content,mode,regionId)
  });
  eworkImageFactory=factory;
  return()=>{if(eworkImageFactory===factory)eworkImageFactory=undefined;factory.dispose()};

@@ -99,6 +99,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-mark-hint {position:absolute;z-index:4;top:14px;left:50%;transform:translateX(-50%);font-size:12px;max-width:calc(100% - 20px);padding:8px 12px;border:1px solid #ffffff18;border-radius:8px;color:#fff;background:#1d2639e8;pointer-events:none}
 .if-comment,.if-layers,.if-text-format {position:absolute;z-index:4;padding:10px 12px;border:1px solid var(--if-line);border-radius:11px;background:var(--if-panel);box-shadow:0 7px 26px #0004}
 .if-comment {width:min(320px,calc(100% - 20px));max-height:calc(100% - 50px);overflow:auto}
+.if-comment[data-processing=true] {width:max-content;max-width:calc(100% - 20px);font-size:12px;pointer-events:none}
 .if-float-header,.if-comment-footer {display:flex;align-items:center;justify-content:space-between;gap:8px}
 .if-float-header strong {font-size:13px;font-weight:600}
 .if-float-header .if-button {height:28px;min-width:28px;padding:0}

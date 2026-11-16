@@ -88,12 +88,13 @@ it('submits an anchored comment with a reference through the native session with
     f.respond()
     f.doc.body.dataset.workspaceSurface = 'image-factory'
     const submitted = new Promise(resolve => f.doc.addEventListener('sherlock:image-factory-comment-result', event => resolve(event.detail), { once: true }))
-    expect(f.events('comment', { id: 'local-comment', prompt: '把框内的物件换成绿色' }, true)).toBe(false)
-    expect(await submitted).toEqual({ id: 'local-comment', error: undefined })
+    const id = 'fc7906e2-8e95-4ccd-84af-a1e58247fe51'
+    expect(f.events('comment', { id, prompt: '把框内的物件换成绿色' }, true)).toBe(false)
+    expect(await submitted).toEqual({ id, error: undefined })
     expect(f.session.prompt).toHaveBeenCalledOnce()
     const [[content]] = f.session.prompt.mock.calls
     expect(readImageFactoryContext(content[0].text)).toMatchObject({
-      operation: 'region', internalReference: true, editBounds: { left: .2, top: .2, right: .8, bottom: .8 }
+      id, operation: 'region', internalReference: true, editBounds: { left: .2, top: .2, right: .8, bottom: .8 }
     })
     expect(content[1]).toMatchObject({ type: 'image', data: 'AAAA', mediaType: 'image/png' })
     expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
