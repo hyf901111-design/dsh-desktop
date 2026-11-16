@@ -61,12 +61,45 @@ it('moves a pending canvas after its unsaved edits finish and supports retrying 
     writes.mockRejectedValueOnce(Error('disk busy'))
     workspace.change(null, () => scene('待提交画布'))
     await vi.waitFor(() => expect(workspace.getSnapshot().save).toBe('error'))
+    const snapshots: ReturnType<typeof workspace.getSnapshot>[] = []
+    const unsubscribe = workspace.subscribe(() => snapshots.push(workspace.getSnapshot()))
     const transfer = workspace.adopt('created-conversation')
     workspace.select('created-conversation')
+    expect(workspace.getSnapshot()).toMatchObject({ scope: null, scene: { title: '待提交画布' } })
     await transfer
+    unsubscribe()
+    expect(snapshots.length).toBeGreaterThan(0)
+    expect(snapshots.every(snapshot => snapshot.status === 'ready' && snapshot.scene?.title === '待提交画布')).toBe(true)
     await workspace.ready('created-conversation')
     expect(workspace.getSnapshot()).toMatchObject({ scene: { title: '待提交画布' }, save: 'saved' })
     expect(records.get(null)).toBeUndefined()
     expect(records.get('created-conversation')?.title).toEqual('待提交画布')
+  } finally { workspace.dispose(); await win.happyDOM.abort() }
+})
+
+it('shows the saved target when draft adoption is declined', async () => {
+  const win = new Window()
+  const draft = scene('待提交画布')
+  const saved = scene('已有会话画布')
+  const workspace = new CanvasWorkspace(win.document as unknown as Document, {
+    read: async scope => ({ epoch: 1, canvas: scope === null ? draft : saved }),
+    write: async () => {},
+    adopt: async () => false,
+  })
+  try {
+    const release = workspace.retain('saved')
+    await workspace.ready('saved')
+    workspace.select(null)
+    await workspace.ready(null)
+    const adoption = workspace.adopt('saved')
+    workspace.select('saved')
+    expect(workspace.getSnapshot().scene?.title).toBe('待提交画布')
+    await adoption
+    await workspace.ready('saved')
+    expect(workspace.getSnapshot()).toMatchObject({ scope: 'saved', scene: { title: '已有会话画布' } })
+    workspace.select(null)
+    await workspace.ready(null)
+    expect(workspace.getSnapshot().scene?.title).toBe('待提交画布')
+    release()
   } finally { workspace.dispose(); await win.happyDOM.abort() }
 })

@@ -88,6 +88,7 @@ function TextControls({ layer, change, t }: { layer: TextLayer; change(patch: Pa
 
 function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: Bridge; workspace: CanvasWorkspace; close(): void; t: T }) {
   const { scope, scene, status, save: saveStatus } = useSyncExternalStore(workspace.subscribe, workspace.getSnapshot)
+  const previousCanvas = useRef({ scope, sceneId: scene?.id })
   const [galleryScope, setGalleryScope] = useState<CanvasScope>()
   const galleryOpen = galleryScope === scope
   const setGalleryOpen = (value: boolean) => setGalleryScope(value ? scope : undefined)
@@ -149,11 +150,18 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     active.current.clear()
   }, [])
   useLayoutEffect(() => {
+    const previous = previousCanvas.current
+    previousCanvas.current = { scope, sceneId: scene?.id }
+    if (scope === previous.scope) return
+    if (previous.scope === null && scene?.id && scene.id === previous.sceneId) {
+      setGalleryScope(value => value === null ? scope : value)
+      return
+    }
     setGalleryScope(undefined)
     setSelectedId(undefined); setEditing(undefined); setZoom(1); setLayersOpen(false)
     resetSelectionGesture()
     textDrag.current = undefined; layerDrag.current = undefined; setDropTarget(undefined)
-  }, [scope])
+  }, [scope, scene?.id])
   useLayoutEffect(() => {
     if (!scroll.current) return
     const observer = new ResizeObserver(([entry]) => { if (entry) setBounds({ width: entry.contentRect.width, height: entry.contentRect.height }) })

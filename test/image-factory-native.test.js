@@ -41,8 +41,15 @@ it('keeps an imported draft outside a blank native session until its first canva
   const f = fixture()
   try {
     f.respond()
-    const selected = vi.fn(event => event.detail.sessionId)
-    const adoptions = vi.fn(event => f.events('adopted', { sessionId: event.detail.sessionId }))
+    const transitions = []
+    const selected = vi.fn(event => {
+      transitions.push(['select', event.detail.sessionId])
+      return event.detail.sessionId
+    })
+    const adoptions = vi.fn(event => {
+      transitions.push(['adopt', event.detail.sessionId])
+      f.events('adopted', { sessionId: event.detail.sessionId })
+    })
     f.doc.addEventListener('sherlock:image-factory-session', selected)
     f.doc.addEventListener('sherlock:image-factory-adopt', adoptions)
     f.doc.body.dataset.workspaceSurface = 'image-factory'
@@ -58,9 +65,10 @@ it('keeps an imported draft outside a blank native session until its first canva
     f.state.chat.nodes.set('user', { kind: 'user', data: { content: f.session.prompt.mock.calls.at(-1)[0] } })
     f.state.running = true
     f.updateBlank(false)
+    expect(selected.mock.results.at(-1)?.value).toBeNull()
     for (const listener of f.listeners) listener()
     expect(adoptions).toHaveBeenCalledOnce()
-    expect(selected.mock.results.at(-1)?.value).toBe(f.session.sessionId)
+    expect(transitions.slice(-2)).toEqual([['adopt', f.session.sessionId], ['select', f.session.sessionId]])
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
