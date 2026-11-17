@@ -105,6 +105,69 @@ it('creates a fresh gallery scope per task, switches the native conversation and
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
+it('keeps a closed canvas tab closed when Home leaves an older native scope to be restored', async () => {
+  const saved = { epoch: 4, tabs: [] }
+  const storage = {
+    read: async () => structuredClone(saved),
+    write: async value => { Object.assign(saved, { ...value, closed: value.closed ?? [] }) },
+  }
+  const f = fixture(storage)
+  try {
+    const states = []
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => states.push(event.detail))
+    const latest = () => states.at(-1)
+    const show = () => { f.doc.body.dataset.workspaceSurface = 'image-factory'; f.events('request-session') }
+    show()
+    await vi.waitFor(() => expect(latest()).toMatchObject({ active: 'native-session', busy: false }))
+    f.events('task-action', { kind: 'new' })
+    await vi.waitFor(() => expect(latest().tabs).toHaveLength(2))
+    const closed = latest().active
+    f.events('task-action', { kind: 'close', scope: closed })
+    expect(latest().tabs.map(tab => tab.scope)).toEqual(['native-session'])
+    expect(saved.closed).toEqual([{ scope: closed }])
+
+    f.sessionCatalog.clear()
+    delete f.doc.body.dataset.workspaceSurface
+    // The native session can be reselected by the surrounding workspace.
+    f.sessionCatalog.open(closed)
+    show()
+    expect(latest().tabs.some(tab => tab.scope === closed)).toBe(false)
+    expect(f.sessionsState.current).toBe('native-session')
+
+    // A renderer/account reload starts by reading the durable closed record.
+    delete f.doc.body.dataset.workspaceSurface
+    f.events('reset')
+    saved.tabs.push({ scope: closed })
+    f.sessionCatalog.open(closed)
+    show()
+    await vi.waitFor(() => expect(latest()).toMatchObject({ active: 'native-session', busy: false }))
+    expect(latest().tabs.map(tab => tab.scope)).toEqual(['native-session'])
+
+    // Following an explicit canvas source can reopen the same stored work.
+    delete f.doc.body.dataset.workspaceSurface
+    f.sessionCatalog.open(closed)
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { reopen: closed })
+    expect(latest().active).toBe(closed)
+    expect(latest().tabs.map(tab => tab.scope)).toEqual(['native-session', closed])
+    expect(saved.closed).toEqual([])
+
+    // The close animation may deliver its action after Home has hidden Images.
+    f.sessionCatalog.clear()
+    delete f.doc.body.dataset.workspaceSurface
+    f.events('task-action', { kind: 'close', scope: closed })
+    expect(f.sessionsState.current).toBeUndefined()
+    f.sessionCatalog.open(closed)
+    show()
+    expect(latest().active).toBe('native-session')
+
+    f.events('canvas-intent', closed)
+    f.sessionCatalog.open(closed)
+    f.events('canvas-intent-ended', closed)
+    expect(latest().active).toBe(closed)
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('keeps an imported draft outside a blank native session until its first canvas prompt is admitted', async () => {
   const f = fixture()
   try {

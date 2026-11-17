@@ -105,7 +105,9 @@ function TextControls({ layer, change, t }: { layer: TextLayer; change(patch: Pa
   </div>
 }
 
-function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: Bridge; workspace: CanvasWorkspace; close(): void; t: T }) {
+function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
+  doc: Document; bridge: Bridge; workspace: CanvasWorkspace; close(): void; revealConversation(): void; t: T
+}) {
   const { scope, scene, status, save: saveStatus } = useSyncExternalStore(workspace.subscribe, workspace.getSnapshot)
   const previousCanvas = useRef({ scope, sceneId: scene?.id })
   const [galleryScope, setGalleryScope] = useState<CanvasScope>()
@@ -698,12 +700,12 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   }
   function openWorkspaceView(view: string) {
     const sessionId = findWorkspaceSession(doc)?.dataset.eworkNotesSession
-    if (!sessionId) { if (view === 'chat') close(); return }
+    if (!sessionId) { if (view === 'chat') revealConversation(); return }
     const button = workspaceViewButton(doc, sessionId, view)
     if (!button?.isConnected || button.disabled) {
       setToast(t('此会话视图暂不可用。', 'This conversation view is unavailable.')); return
     }
-    close()
+    revealConversation()
     workspaceViewButton(doc, sessionId, view)?.click()
   }
 
@@ -955,23 +957,24 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   doc.addEventListener('sherlock:image-factory-session', select)
   doc.addEventListener('sherlock:image-factory-adopt', adopt)
   let english = doc.documentElement.dataset.odysseyLocale === 'en'
-  const render = () => react.render(<Editor key={identity} doc={doc} bridge={bridge} workspace={workspace} close={() => host.back()} t={(zh, en) => english ? en : zh}/>)
+  const render = () => react.render(<Editor key={identity} doc={doc} bridge={bridge} workspace={workspace}
+    close={() => host.back()} revealConversation={() => host.revealConversation()} t={(zh, en) => english ? en : zh}/>)
   const language = new MutationObserver(() => {
     const now = doc.documentElement.dataset.odysseyLocale === 'en'
     if (now !== english) { english = now; render() }
   })
   language.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
-  const open = () => {
+  const open = (reopen?: string) => {
     host.open('image-factory')
     if (activeHere()) {
-      doc.dispatchEvent(new Event('sherlock:image-factory-request-session'))
+      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen } }))
       workspace.select(session)
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     }
   }
   render()
   return {
-    open,
+    open: () => open(),
     async openSessionCanvas(id: string, activateSession: () => Promise<boolean>) {
       if (!validCanvasScope(id)) throw Error('来源会话已不可用。')
       const origin = host.current()
@@ -982,13 +985,18 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
         const scene = await owner.ready(id)
         if (!stillCurrent()) return
         if (!scene) throw Error('来源会话没有已保存的画布，图片仍可在知识库预览。')
+        const intent = new CustomEvent('sherlock:image-factory-canvas-intent', { detail: id })
+        doc.dispatchEvent(intent)
         if (!await activateSession()) throw Error('来源会话已不可用。')
         if (!stillCurrent()) return
-        doc.dispatchEvent(new Event('sherlock:image-factory-request-session'))
+        doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen: id } }))
         if (session !== id) throw Error('来源会话已切换，请重试。')
         doc.dispatchEvent(new Event('sherlock:image-factory-show-canvas'))
-        open()
-      } finally { release() }
+        open(id)
+      } finally {
+        doc.dispatchEvent(new CustomEvent('sherlock:image-factory-canvas-intent-ended', { detail: id }))
+        release()
+      }
     },
     reset() {
       identity++; host.close('image-factory'); workspace.dispose()
