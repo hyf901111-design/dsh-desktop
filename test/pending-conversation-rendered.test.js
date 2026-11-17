@@ -7,11 +7,15 @@ import {EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
 import {patchPendingConversationPanel} from '../scripts/lib/pending-conversation-panel.mjs'
 import {patchBrowserAppNative} from '../scripts/lib/browser-app-native.mjs'
 import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
+import {patchSpreadsheetClient,stripSpreadsheetClient} from '../scripts/lib/spreadsheet-client.mjs'
+import {stripKnowledgeSharedResearch} from '../scripts/lib/knowledge-shared-research.mjs'
+import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-header-client.mjs'
 let browser,script,input,css
 const base='node_modules/@deepseek-ai/',expose=(source,names)=>source.replace('exports.apply = apply;',`exports.apply = apply;${names.map(name=>`exports.__test${name}=${name};`).join('')}`)
 beforeAll(async()=>{
  const installed=await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')
- const raw=patchBrowserAppNative(stripConversationPermissionDefault(installed)),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;')
+ const baseConversation=stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(installed))))
+ const raw=patchSpreadsheetClient(patchBrowserAppNative(baseConversation)),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8'),['WorkspacePicker'])}
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
  const result=await build({entryPoints:['test/fixtures/pending-conversation-browser.tsx'],bundle:true,platform:'browser',format:'iife',outfile:'pending.js',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl','.ttf':'dataurl'},plugins:[{name:'raw',setup(b){b.onResolve({filter:/\?raw$/},async args=>({path:(await b.resolve(args.path.slice(0,-4),{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css+='\n'+(result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')
@@ -20,17 +24,52 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 it('renders native welcome/project picker/input and creates the selected project session only on send',async()=>{
  const page=await browser.newPage({viewport:{width:600,height:800}}),errors=[];page.on('pageerror',error=>errors.push(error.stack));try{
-  await page.setContent('<html><head><style>'+css+'body{margin:0;background:#eee}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style></head><body><div id="app"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.getByText('探索更远，洞见更深',{exact:true}).waitFor({timeout:5000}).catch(error=>{console.log('pending errors',errors);throw error})
-  expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.evaluate(()=>{document.body.dataset.workspaceSurface='browser';const root=document.createElement('section');root.className='eb-root';Object.assign(root.dataset,{currentPageUrl:'https://example.com/',currentPageTitle:'Example Domain'});document.body.append(root)});expect(await page.getByText('参考当前网页',{exact:false}).count()).toBe(0);expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.getByRole('tab',{name:'对话',exact:true}).waitFor({state:'visible'});await page.getByRole('tab',{name:'文件',exact:true}).waitFor({state:'visible'});await page.screenshot({path:'/tmp/browser-pending-native-empty.png'});expect(await page.locator('[data-research-conversation-panel]').evaluate(el=>el.getBoundingClientRect().width)).toBe(340);const project=page.locator('.sRp_composer .wSkVaW_heroWorkspaceRow button').first();await project.click();await page.getByText('研究项目 B',{exact:true}).click();expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  await page.setContent('<html><head><style>'+css+'body{margin:0;background:#eee}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.evaluate(()=>window.pendingFixture.openSurface('browser'));await page.getByText('探索更远，洞见更深',{exact:true}).waitFor({timeout:5000}).catch(error=>{console.log('pending errors',errors);throw error})
+  expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.evaluate(()=>{const root=document.createElement('section');root.className='eb-root';Object.assign(root.dataset,{currentPageUrl:'https://example.com/',currentPageTitle:'Example Domain'});document.body.append(root)});expect(await page.getByText('参考当前网页',{exact:false}).count()).toBe(0);expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.getByRole('tab',{name:'对话',exact:true}).waitFor({state:'visible'});await page.getByRole('tab',{name:'文件',exact:true}).waitFor({state:'visible'});await page.screenshot({path:'/tmp/browser-pending-native-empty.png'});expect(await page.locator('[data-research-conversation-panel]').evaluate(el=>el.getBoundingClientRect().width)).toBe(340);const project=page.locator('.sRp_composer .wSkVaW_heroWorkspaceRow button').first();await project.click();await page.getByText('研究项目 B',{exact:true}).click();expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
   const textbox=page.locator('.sRp_composer textarea');await textbox.fill('请总结当前网页');await page.getByRole('button',{name:'发送消息',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'create',workspaceId:'B'});await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'send',text:'请总结当前网页',images:[]});expect(errors).toEqual([])
   await page.screenshot({path:'/tmp/browser-pending-native-input.png'})
  }finally{await page.close()}
 },15000)
 
 it('keeps the native draft editable and retryable after first-session creation fails',async()=>{const page=await browser.newPage({viewport:{width:600,height:800}});try{
- await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style></head><body><div id="app"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.getByText('探索更远，洞见更深',{exact:true}).waitFor();await page.locator('.sRp_composer .wSkVaW_heroWorkspaceRow button').first().click();await page.getByText('研究项目 A',{exact:true}).click();await page.evaluate(()=>window.pendingFixture.failOnce());const inputBox=page.locator('.sRp_composer textarea');await inputBox.fill('保留这个问题');await page.getByRole('button',{name:'发送消息',exact:true}).click();await page.getByText('测试创建失败，输入保留',{exact:true}).waitFor();expect(await inputBox.inputValue()).toBe('保留这个问题');expect(await inputBox.isEditable()).toBe(true);await page.getByRole('button',{name:'发送消息',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events.some(e=>e.type==='send'&&e.text==='保留这个问题'))).toBe(true)
+ await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.evaluate(()=>window.pendingFixture.openSurface('browser'));await page.getByText('探索更远，洞见更深',{exact:true}).waitFor();await page.locator('.sRp_composer .wSkVaW_heroWorkspaceRow button').first().click();await page.getByText('研究项目 A',{exact:true}).click();await page.evaluate(()=>window.pendingFixture.failOnce());const inputBox=page.locator('.sRp_composer textarea');await inputBox.fill('保留这个问题');await page.getByRole('button',{name:'发送消息',exact:true}).click();await page.getByText('测试创建失败，输入保留',{exact:true}).waitFor();expect(await inputBox.inputValue()).toBe('保留这个问题');expect(await inputBox.isEditable()).toBe(true);await page.getByRole('button',{name:'发送消息',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events.some(e=>e.type==='send'&&e.text==='保留这个问题'))).toBe(true)
  }finally{await page.close()}},15000)
 
-it('returns the original center composer when compact visibility differs from the stored pane state',async()=>{const page=await browser.newPage({viewport:{width:600,height:800}});try{
- await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style></head><body><div id="app"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.locator('.sRp_composer textarea').waitFor();await page.evaluate(()=>window.pendingFixture.setPaneOpen(false));expect(await page.evaluate(()=>window.pendingFixture.storedPaneOpen())).toBe(true);await page.locator('#app [data-center-composer-host] textarea').waitFor({state:'attached'});expect(await page.locator('.sRp_composer textarea').count()).toBe(0);await page.evaluate(()=>window.pendingFixture.setPaneOpen(true));await page.locator('.sRp_composer textarea').waitFor();
- }finally{await page.close()}},15000)
+it.each(['back', 'home'])('restores the conversation homepage with the right pane still open on %s', async action => {
+ const page=await browser.newPage({viewport:{width:1100,height:800}}), errors=[];
+ page.on('pageerror',error=>errors.push(error.message));
+ try {
+  await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh;width:740px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');
+  await page.evaluate(input=>window.pendingInput=input,input);
+  await page.addScriptTag({content:script});
+  const home=page.locator('#app [data-odyssey-page=home]');
+  const center=home.locator('textarea');
+  await center.waitFor({state:'visible'});
+  await page.evaluate(()=>window.pendingFixture.openSurface('browser'));
+  const right=page.locator('#right textarea');
+  await right.waitFor({state:'visible'});
+  await page.locator('#right .wSkVaW_heroWorkspaceRow button').first().click();
+  await page.getByText('研究项目 B',{exact:true}).click();
+  await right.fill('切换应用后回到首页');
+  await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
+  await page.evaluate(()=>window.pendingFixture.openSurface('knowledge'));
+  if(action==='back')await page.getByRole('button',{name:'返回工作区'}).click();
+  else await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened')));
+  await home.waitFor({state:'visible',timeout:3000}).catch(async error=>{
+   const center=await page.locator('#app').evaluate(node=>({phase:node.firstElementChild?.dataset.phase,outer:node.outerHTML.slice(0,500),surface:document.body.dataset.workspaceSurface}));
+   throw new Error(JSON.stringify({center,errors}),{cause:error});
+  });
+  await center.waitFor({state:'visible'});
+  expect(await center.inputValue()).toBe('切换应用后回到首页');
+  expect(await center.isEditable()).toBe(true);
+  expect(await home.getByText('研究项目 B',{exact:true}).count()).toBe(1);
+  expect(await right.count()).toBe(0);
+  expect(await page.evaluate(()=>document.body.dataset.odysseyGlobalRightOpen)).toBe('true');
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([]);
+  await home.getByRole('button',{name:'发送消息',exact:true}).click();
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   {type:'create',workspaceId:'B'},{type:'open',id:'new-session'},{type:'send',text:'切换应用后回到首页',images:[]},
+  ]);
+  expect(errors).toEqual([]);
+ } finally { await page.close() }
+},15000)

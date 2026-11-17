@@ -212,8 +212,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace(failed,`window[Symbol.for('sherlock:browser-question')]?.settled(shell,attempt.draftState,attempt.imageIds,false,'发送失败，草稿已保留。');
 						`+failed)
  const mode="const sidebarMode=(research || activeView==='notes')&&(!homeGuideResident||homeGuideSidebar);"
- replace(mode,`const browserAppActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);const off=eworkPendingConversation?.subscribe(callback);return()=>{document.removeEventListener('sherlock:workspace-surface-change',callback);off?.()}},()=>!subagentPanel&&(['browser','knowledge','image-factory'].includes(document.body.dataset.workspaceSurface)||!!sessionId&&eworkPendingConversation?.getSnapshot().rightSession===sessionId),()=>false);
-const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);`)
+ replace(mode,`const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);`)
  replace('if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar) return;', 'if (sessionId === void 0 || homeGuideResident&&!homeGuideSidebar&&!browserAppActive) return;')
  replace('[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, researchSidebar, sessionId]', '[resolvedActions, detailsSelection, sidebarMode, homeGuideResident, homeGuideSidebar, browserAppActive, researchSidebar, sessionId]')
  replace('}, EWorkSharedInputBar);','}, EWorkPendingInputBar);')
@@ -221,25 +220,28 @@ const sidebarMode=(research || activeView==='notes' || browserAppActive || pendi
  // Feed the native global ConversationRoot/Panel/ComposerSurface with a draft,
  // rather than constructing another conversation layout for the Browser.
  {const signature=source.match(/function HomeGuideNativeOriginalConversationRoot\([^\n]+\) \{/)?.[0];if(!signature)throw Error('Native conversation root signature drift');replace(signature,signature+`
- const pendingPaneOpen=react.useSyncExternalStore(callback=>{window.addEventListener('sherlock:global-right-panel-state',callback);return()=>window.removeEventListener('sherlock:global-right-panel-state',callback)},()=>document.body.dataset.odysseyGlobalRightOpen==='true',()=>false);
- const imageFactoryActive=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);return()=>document.removeEventListener('sherlock:workspace-surface-change',callback)},()=>!subagentPanel&&document.body.dataset.workspaceSurface==='image-factory',()=>false);
- const pendingRight=sessionId===undefined&&!subagentPanel&&(['browser','knowledge','image-factory'].includes(document.body.dataset.workspaceSurface)||pendingPaneOpen);`)}
+ const composerApp=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);return()=>document.removeEventListener('sherlock:workspace-surface-change',callback)},()=>subagentPanel?undefined:document.body.dataset.workspaceSurface,()=>undefined);
+ const imageFactoryActive=composerApp==='image-factory';
+ const browserAppActive=['browser','knowledge','image-factory'].includes(composerApp);
+ const pendingConversation=sessionId===undefined&&!subagentPanel&&!!eworkPendingConversation;
+ const pendingRight=pendingConversation&&browserAppActive;`)}
 
  replace('const inputState = useInput((s) => s);\n/* ework:notes-composer-slots:v1 */',`const nativeInputState = useInput((s) => s);
  const pendingDraft=react.useSyncExternalStore(eworkPendingConversation?.shell.state.subscribe||(()=>()=>{}),eworkPendingConversation?.shell.state.getSnapshot||(()=>undefined));
  const pendingChatState=react.useSyncExternalStore(eworkPendingConversation?.subscribe||(()=>()=>{}),eworkPendingConversation?.getSnapshot||(()=>undefined));
- const inputState=pendingRight?pendingDraft:nativeInputState;\n/* ework:notes-composer-slots:v1 */`)
+ const inputState=pendingConversation?pendingDraft:nativeInputState;\n/* ework:notes-composer-slots:v1 */`)
  replace('sessionId === void 0 ? ABSENT_RESEARCH_SIDEBAR_STORE : researchSidebar.storeFor(sessionId)', 'researchSidebar.storeFor(sessionId)')
  replace('if (sessionId === void 0) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {','if (subagentPanel) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {')
  replace('if (sessionId !== void 0) researchSidebar.publish(sessionId, null);','researchSidebar.publish(sessionId, null);')
- replace('const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);','const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === (pendingRight?pendingChatState?.workspaceId:pendingWorkspaceId));')
+ replace('const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);','const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === (pendingConversation?pendingChatState?.workspaceId:pendingWorkspaceId));')
  replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && !browserAppActive && (activeView == null || activeView === "chat")')
  replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || browserAppActive && conversationVacant || research && sessionId !== void 0 && conversationVacant;')
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)
- replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation:pendingRight,eworkImageFactory:imageFactoryActive,')
- replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingRight && session === void 0 || inputState === void 0 ? void 0 : {')
- replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(sessionId===undefined&&eworkPendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
- replace('selectWorkspace: async (workspaceId) => {','selectWorkspace: async (workspaceId) => {\n if(sessionId===undefined&&(["browser","knowledge","image-factory"].includes(document.body.dataset.workspaceSurface)||document.body.dataset.odysseyGlobalRightOpen==="true")){eworkPendingConversation?.selectWorkspace(workspaceId);return;}')
+ replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = sessionId === undefined ? !pendingConversation || pendingWorkspace === undefined : hero && chipTitle === undefined;')
+ replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation,eworkImageFactory:imageFactoryActive,')
+ replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
+ replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
+ replace('selectWorkspace: async (workspaceId) => {','selectWorkspace: async (workspaceId) => {\n if(sessionId===undefined&&eworkPendingConversation){eworkPendingConversation.selectWorkspace(workspaceId);return;}')
  {const start=source.indexOf('function ResearchConversationPanel('),end=source.indexOf('\n\t\t//#endregion',start),before=source.slice(start,end);replace(before,exact(before,'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);','const workspace = (0, react.useMemo)(() => sessionId===undefined?{...ABSENT_RESEARCH_WORKSPACE,getSnapshot:()=>ABSENT_PENDING_RESEARCH_SNAPSHOT,setAssistantActionsActive:()=>{},clearPendingMessageJump:()=>{}}:researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'))}
  for(const name of ['conversation.input.left']){
   const pattern='"'+name+'": {',start=source.indexOf(pattern),end=source.indexOf('}',start),before=source.slice(start,end);if(start<0||!before.includes('scope: "session"'))throw Error('Pending native slot scope missing '+name);replace(before,before.replace('scope: "session"','scope: "session-maybe"'))

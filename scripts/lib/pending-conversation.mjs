@@ -52,7 +52,7 @@ export function EWorkPendingInputBar(props){
  const state=react.useSyncExternalStore(pending?.subscribe||(()=>()=>{}),pending?.getSnapshot||(()=>undefined));
  if(!props.pendingConversation||!pending)return react_jsx_runtime.jsx(EWorkSharedInputBar,props);
  const shell=pending.shell;
- return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,variant:'composer',disabled:!state.workspaceId||state.busy,
+ return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,disabled:!state.workspaceId||state.busy,
   command:async line=>{
    const match=/^\/permission ([^\s]+)$/.exec(line);
    if(!match)return false;
@@ -64,7 +64,7 @@ export function EWorkPendingInputBar(props){
   useNotices:select=>{props.useNotices(value=>value);return select(notice)},useLexicon:select=>{props.useLexicon(value=>value);return select(new Map())},
   addImages:files=>{try{const images=conversationController.createDraftImages(files);if(!shell.addImages(images.map(image=>image.id)))conversationController.releaseDraftImages(images);return null}catch(error){return error.message}},
   removeImage:id=>{conversationController.releaseDraftImage(id);shell.removeImage(id)},draftImages:ids=>conversationController.draftImages(ids),
-  placeholder:state.workspaceId?(props.eworkImageFactory?'描述要生成的图片或海报…':'输入你的问题…'):'选择项目后开始对话',onRequestWorkspace:props.onRequestWorkspace});
+  placeholder:state.workspaceId?(props.eworkImageFactory?'描述要生成的图片或海报…':props.placeholder||'输入你的问题…'):'选择项目后开始对话',onRequestWorkspace:props.onRequestWorkspace});
 }
 export function browserPromptReference(source){
  if(source===undefined||source===null)return '';
