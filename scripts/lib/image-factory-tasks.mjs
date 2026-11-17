@@ -1,12 +1,20 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
 export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, setView, storage, isBoardOnly = () => false }) {
-  let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted
+  let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
   const validScope = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
   const publish = (force = false) => {
-    const busy = !!openToken || !!loading
-    if (!force && emitted?.tabs === tabs && emitted.active === active && emitted.busy === busy) return
-    emitted = { tabs, active, busy, canRestore: closed.some(tab => !tabs.some(open => open.scope === tab.scope) &&
-      (tab.scope === null || sessions.binding(tab.scope))) }
+    const creating = openToken?.tab.scope
+    const selected = creating ?? active
+    const busy = !!creating || !!loading
+    if (!force && publishedTabs === tabs && emitted?.active === selected &&
+        emitted.busy === busy && emitted.creating === creating) return
+    publishedTabs = tabs
+    const displayed = openToken
+      ? [...tabs.filter(tab => tab.scope !== openToken.replacing && tab.scope !== creating), openToken.tab]
+      : tabs
+    emitted = { tabs: displayed, active: selected, busy, creating, fresh: lastCreated,
+      canRestore: closed.some(tab => !tabs.some(open => open.scope === tab.scope) &&
+        (tab.scope === null || sessions.binding(tab.scope))) }
     signal('task-state', emitted)
   }
   const save = () => {
@@ -112,17 +120,18 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   async function create(replacing) {
     if (replacing === undefined && tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
     const before = sessions.list.getSnapshot().current
-    const token = {}
+    const id = 'image-task-' + win.crypto.randomUUID()
+    const token = { tab: { scope: id }, replacing }
     openToken = token
     publish()
     try {
       const workspaceId = getWorkspace?.()
-      const id = 'image-task-' + win.crypto.randomUUID()
       const sessionId = await sessions.create({ sessionId: id, ...(workspaceId && { workspaceId }) })
       if (openToken !== token) return
       if (sessionId !== id || !sessions.binding(id)) throw Error('新图片任务未能打开。')
       if (replacing !== undefined) tabs = tabs.filter(tab => tab.scope !== replacing)
-      tabs = [...tabs, { scope: id }]
+      lastCreated = id
+      tabs = [...tabs, token.tab]
       save()
       if (isActive() && sessions.list.getSnapshot().current === before) select(id)
       return id
@@ -192,8 +201,8 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   function reset() {
     tabs = []
     closed = []
-    active = draftSession = openToken = loading = pendingSync = epoch = undefined
+    active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = undefined
     publish()
   }
-  return { sync, action, setTitle, bindDraft, publish, reset }
+  return { sync, action, setTitle, bindDraft, publish, reset, isCreating: () => !!openToken }
 }

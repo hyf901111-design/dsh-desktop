@@ -4,7 +4,7 @@ import { browserIcons } from '../browser/icons'
 import { clipWorkspaceTabs, reserveWorkspaceRightControl, revealWorkspaceTab } from '../workspace-topbar'
 import { iconSource } from './icons'
 
-export type TaskTabs = { tabs: ImageFactoryTaskTab[]; active?: CanvasScope; busy: boolean; canRestore?: boolean }
+export type TaskTabs = { tabs: ImageFactoryTaskTab[]; active?: CanvasScope; busy: boolean; creating?: string; fresh?: string; canRestore?: boolean }
 export type TaskAction = { kind: 'new' | 'select' | 'close' | 'restore' | 'reorder' | 'pin' | 'close-others'; scope?: CanvasScope; before?: CanvasScope }
 type Translate = (zh: string, en: string) => string
 type Drag = { pointer: number; id: string; x: number; y: number; active: boolean }

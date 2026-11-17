@@ -506,3 +506,64 @@ it('opens a resident Workspace view from Images without triggering return to the
     vi.unstubAllGlobals()
   }
 })
+
+it('keeps the rendered gallery mounted while a fresh task waits for its session and canvas', async () => {
+  // @ts-expect-error The native renderer patch ships as untyped JavaScript.
+  const { installImageFactoryContext } = await import('../scripts/lib/image-factory-native.mjs')
+  const host = new WorkspaceSurfaceHost(document)
+  const state = { current: 'image-task-original', byId: {} as Record<string, { blank: boolean }> }
+  state.byId[state.current] = { blank: true }
+  const listeners = new Set<() => void>()
+  const notify = () => listeners.forEach(listener => listener())
+  let releaseSession: (() => void) | undefined
+  let releaseCanvas: (() => void) | undefined
+  const sessions = {
+    list: {
+      getSnapshot: () => state,
+      subscribe: (listener: () => void) => { listeners.add(listener); return () => listeners.delete(listener) },
+    },
+    binding: (id: string) => state.byId[id] ? {} : undefined,
+    open: (id: string) => { state.current = id; notify() },
+    create: ({ sessionId }: { sessionId: string }) => new Promise<string>(resolve => {
+      releaseSession = () => { state.byId[sessionId] = { blank: true }; notify(); resolve(sessionId) }
+    }),
+  }
+  const runtime = installImageFactoryContext({ sessions, doc: document, win: window } as any)
+  const factory = mountImageFactory(document, host, {
+    storage: {
+      read: scope => scope === 'image-task-original' ? Promise.resolve({ epoch: 1 })
+        : new Promise(resolve => { releaseCanvas = () => resolve({ epoch: 1 }) }),
+      write: async () => {}, adopt: async () => false,
+    },
+    archive: async () => {}, save: async () => ({}),
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const activeTask = () => document.querySelector<HTMLElement>('.if-top [role=tab][aria-selected=true]')
+  const gallery = () => document.querySelector('.if-gallery')
+  const galleryControl = () => gallery()?.querySelector<HTMLButtonElement>('.if-gallery-art')
+  try {
+    await act(async () => factory.open())
+    const firstGallery = gallery()
+    expect(firstGallery).not.toBeNull()
+    expect(activeTask()?.dataset.id).toBe('image-task-original')
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="新建图片任务"]')!.click())
+    const newTask = activeTask()?.dataset.id
+    expect(newTask).toMatch(/^image-task-/)
+    expect(newTask).not.toBe(state.current)
+    expect(gallery()).toBe(firstGallery)
+    expect(galleryControl()?.disabled).toBe(true)
+
+    await act(async () => releaseSession!())
+    expect(state.current).toBe(newTask)
+    expect(activeTask()?.dataset.id).toBe(newTask)
+    expect(gallery()).toBe(firstGallery)
+    expect(galleryControl()?.disabled).toBe(true)
+
+    await act(async () => releaseCanvas!())
+    expect(gallery()).toBe(firstGallery)
+    expect(galleryControl()?.disabled).toBe(false)
+  } finally {
+    await act(async () => { factory.dispose(); runtime.dispose(); host.dispose() })
+    vi.unstubAllGlobals()
+  }
+})

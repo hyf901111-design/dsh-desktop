@@ -68,7 +68,7 @@ it('creates a fresh gallery scope per task, switches the native conversation and
     await vi.waitFor(() => expect(tasks).toMatchObject({ active: 'native-session', busy: false }))
     f.events('task-title', { scope: 'native-session', title: '原始海报' })
     f.events('task-action', { kind: 'new' })
-    await vi.waitFor(() => expect(tasks.tabs).toHaveLength(2))
+    await vi.waitFor(() => { expect(tasks.tabs).toHaveLength(2); expect(tasks.busy).toBe(false) })
     const newId = tasks.tabs[1].scope
     expect(newId).toMatch(/^image-task-/)
     expect(tasks.active).toBe(newId)
@@ -105,6 +105,38 @@ it('creates a fresh gallery scope per task, switches the native conversation and
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
+it('shows a new tab while the Host is creating its session and rolls back on failure', async () => {
+  const storage = { read: async () => ({ epoch: 4, tabs: [] }), write: vi.fn(async () => {}) }
+  const f = fixture(storage)
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    let tasks, fail
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    const error = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-task-error', error)
+    f.events('request-session', { entry: true })
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: 'native-session', busy: false }))
+    storage.write.mockClear()
+
+    f.sessionCatalog.create.mockImplementationOnce(() => new Promise((_, reject) => { fail = reject }))
+    f.events('task-action', { kind: 'new' })
+    const provisional = tasks.tabs.at(-1).scope
+    expect(provisional).toMatch(/^image-task-/)
+    expect(tasks).toMatchObject({ active: provisional, creating: provisional, busy: true })
+    expect(f.sessionsState.current).toBe('native-session')
+    expect(storage.write).not.toHaveBeenCalled()
+    expect(f.binding.fill('旧会话不能收到这条提示词')).toBe(false)
+    await expect(f.binding.prompt(f.session, [{ type: 'text', text: '生成一张海报' }], 'queue')).rejects.toThrow('正在创建')
+    expect(f.session.prompt).not.toHaveBeenCalled()
+
+    fail(Error('Host 暂不可用'))
+    await vi.waitFor(() => expect(error).toHaveBeenCalledOnce())
+    expect(tasks).toMatchObject({ active: 'native-session', busy: false, tabs: [{ scope: 'native-session' }] })
+    expect(tasks.tabs).toHaveLength(1)
+    expect(storage.write).not.toHaveBeenCalled()
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('keeps a closed canvas tab closed when Home leaves an older native scope to be restored', async () => {
   const saved = { epoch: 4, tabs: [] }
   const storage = {
@@ -120,7 +152,7 @@ it('keeps a closed canvas tab closed when Home leaves an older native scope to b
     show()
     await vi.waitFor(() => expect(latest()).toMatchObject({ active: 'native-session', busy: false }))
     f.events('task-action', { kind: 'new' })
-    await vi.waitFor(() => expect(latest().tabs).toHaveLength(2))
+    await vi.waitFor(() => { expect(latest().tabs).toHaveLength(2); expect(latest().busy).toBe(false) })
     const closed = latest().active
     f.events('task-action', { kind: 'close', scope: closed })
     expect(latest().tabs.map(tab => tab.scope)).toEqual(['native-session'])

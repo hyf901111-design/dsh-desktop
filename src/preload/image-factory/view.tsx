@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
@@ -144,14 +144,17 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     [...active.current.values()].some(job => job.scope === key || job.sessionId === key)
   const setScene = (change: (old?: ImageScene) => ImageScene | undefined, persist = true) => workspace.change(scope, change, persist)
   const mounted = useRef(true)
-  const current = galleryOpen ? undefined : scene
+  const creating = tasks?.creating !== undefined
+  const current = galleryOpen || creating ? undefined : scene
+  const showOpening = !creating && (status === 'loading' || status === 'idle') &&
+    !(scope !== null && tasks?.fresh === scope)
   const { zoom, pan, reset: resetViewport, stepZoom, spaceHeld, panning, panPointer, panBy, canZoomIn, canZoomOut } =
     useImageViewport(doc, scroll, imageFrame, Boolean(current) && status === 'ready')
   const selectionDraft = current && selectionDrafts.current.get(current.id)
   const area = selectionDraft?.area
   const commentPending = !!selectionDraft?.phase
   const cutoutPending = cutouts.current.has(scope) || [...active.current.values()].some(job => job.cutout && job.sessionId === scope)
-  const busy = status !== 'ready' || isBusy(scope) || commentPending || cutoutPending
+  const busy = creating || status !== 'ready' || isBusy(scope) || commentPending || cutoutPending
   const raster = current?.layers.find((layer): layer is Extract<CanvasLayer, { kind: 'image' }> => layer.kind === 'image')
   const selectedText = current?.layers.find((layer): layer is TextLayer => layer.kind === 'text' && layer.id === selectedId)
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
@@ -690,10 +693,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       setSelectionDraft(current.id, { ...draft, error: t('对话服务尚未就绪，请重试。', 'Chat is not ready. Try again.') })
     }
   }
-  function useGalleryPrompt(prompt: string) {
+  const useGalleryPrompt = useCallback((prompt: string) => {
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt }, cancelable: true }))
-  }
+  }, [doc])
   function taskAction(detail: TaskAction) {
     if (detail.kind === 'select' || detail.kind === 'new' || detail.kind === 'close' || detail.kind === 'restore') releaseText()
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-action', { detail }))
@@ -768,8 +771,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       </button>
     </nav>}
     <div id="image-factory-task-workspace" className="if-stage" data-layers-open={layersOpen} ref={stage}>
-      {status === 'loading' || status === 'idle' ? <div className="if-canvas-message" role="status">{t('正在打开画布…', 'Opening canvas…')}</div>
-        : status === 'error' ? <div className="if-canvas-message" role="alert">
+      {showOpening ? <div className="if-canvas-message" role="status">{t('正在打开画布…', 'Opening canvas…')}</div>
+        : !creating && status === 'error' ? <div className="if-canvas-message" role="alert">
           <span>{t('画布暂时无法读取。', 'The canvas could not be opened.')}</span>
           <Button onClick={() => workspace.select(scope)}>{t('重新打开', 'Try again')}</Button>
         </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}/> : <>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { galleryExamples } from './gallery-examples'
 import { iconSource } from './icons'
 import type { Size } from './raster'
@@ -15,7 +15,7 @@ function imageRatio({ width, height }: Size) {
   return (width / a) + ':' + (height / a)
 }
 
-export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: string): void }) {
+export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: string): void }) {
   const [sizes, setSizes] = useState<Record<string, Size>>({})
   const viewport = useRef<HTMLDivElement>(null)
   const firstCycle = useRef<HTMLDivElement>(null)
@@ -152,7 +152,7 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
               <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
                 aria-label={title + ' · ' + useLabel}
                 onClick={() => onUse(ratio ? prompt + '\n' + t('画面比例为 ' + ratio + '。', 'Aspect ratio: ' + ratio + '.') : prompt)}>
-                <img alt="" src={art['./gallery-art/' + example.id + '.jpg']} draggable={false}
+                <img alt="" loading="lazy" decoding="async" src={art['./gallery-art/' + example.id + '.jpg']} draggable={false}
                   onLoad={({ currentTarget }) => {
                     const { naturalWidth: width, naturalHeight: height } = currentTarget
                     if (width && height) setSizes(current => current[example.id] ? current : { ...current, [example.id]: { width, height } })
@@ -191,4 +191,4 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
       })}
     </div>
   </div>
-}
+})
