@@ -94,9 +94,28 @@ it('restores the same open task tabs for the account without sharing them across
     owner = { owner: 'account-b', generation: 2 }
     expect(await reopened.readTabs()).toEqual({ epoch: 2, tabs: [] })
     await expect(reopened.writeTabs({ epoch: 1, tabs })).rejects.toThrow('账号已切换')
-    await expect(reopened.writeTabs({ epoch: 2, tabs: [{ scope: null }] })).rejects.toThrow('无效')
     owner = { owner: 'account-a', generation: 3 }
     await reopened.writeTabs({ epoch: 3, tabs: tabs.slice(1) })
     expect(await reopened.readTabs()).toEqual({ epoch: 3, tabs: tabs.slice(1) })
+  } finally { await rm(root, { force: true, recursive: true }) }
+})
+
+it('recovers an untracked legacy draft only from closed history and preserves its data', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'odyssey-factory-draft-tab-'))
+  try {
+    const identity = () => ({ owner: 'account-a', generation: 1 })
+    const studio = new ImageFactoryCanvases(root, identity)
+    const saved = canvas()
+    const legacy = { scope: null, title: saved.title }
+    const native = { scope: 'old-image-task', title: saved.title }
+    await studio.write({ scope: null, epoch: 1, canvas: saved, image: png })
+    await studio.writeTabs({ epoch: 1, tabs: [], closed: [native] })
+    expect(await studio.readTabs()).toEqual({ epoch: 1, tabs: [], closed: [legacy, native] })
+    await studio.writeTabs({ epoch: 1, tabs: [legacy], closed: [native] })
+    expect(await studio.readTabs()).toEqual({ epoch: 1, tabs: [legacy], closed: [native] })
+    await studio.writeTabs({ epoch: 1, tabs: [], closed: [legacy, native] })
+    const reopened = new ImageFactoryCanvases(root, identity)
+    expect(await reopened.readTabs()).toEqual({ epoch: 1, tabs: [], closed: [legacy, native] })
+    expect((await reopened.read(null)).canvas).toEqual(saved)
   } finally { await rm(root, { force: true, recursive: true }) }
 })

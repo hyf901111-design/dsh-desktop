@@ -1,7 +1,9 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
 export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, setView, storage, isBoardOnly = () => false }) {
   let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
-  const validScope = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
+  const validScope = value => value === null ||
+    typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
+  const canOpen = tab => tab.scope === null || sessions.binding(tab.scope)
   const publish = (force = false) => {
     const creating = openToken?.tab.scope
     const selected = creating ?? active
@@ -13,14 +15,12 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       ? [...tabs.filter(tab => tab.scope !== openToken.replacing && tab.scope !== creating), openToken.tab]
       : tabs
     emitted = { tabs: displayed, active: selected, busy, creating, fresh: lastCreated,
-      canRestore: closed.some(tab => !tabs.some(open => open.scope === tab.scope) &&
-        (tab.scope === null || sessions.binding(tab.scope))) }
+      canRestore: closed.some(tab => !tabs.some(open => open.scope === tab.scope) && canOpen(tab)) }
     signal('task-state', emitted)
   }
   const save = () => {
     if (epoch === undefined) return
-    const recent = closed.filter(tab => tab.scope !== null)
-    void storage.write({ epoch, tabs: tabs.filter(tab => tab.scope !== null), ...(recent.length > 0 && { closed: recent }) }).catch(() => {})
+    void storage.write({ epoch, tabs, ...(closed.length > 0 && { closed }) }).catch(() => {})
   }
   const load = () => {
     if (!storage || epoch !== undefined || loading) return
@@ -55,25 +55,31 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     pendingSync = { scope, reopen: reopen || (pendingSync?.scope === scope && pendingSync.reopen),
       entry: entry || pendingSync?.entry }
     publish()
-    return scope
+    return scope ?? undefined
   }
   function reconcile(scope, reopen, entry) {
-    const closedTab = scope === null ? undefined : closed.find(tab => tab.scope === scope)
+    const closedTab = closed.find(tab => tab.scope === scope)
     const skipClosed = closedTab && !reopen
     // Home clears the SDK selection before hiding Images. Keep the open tab
     // here, and only select its session when Images is explicitly entered.
     const home = scope === null && active !== null && sessions.list.getSnapshot().current === undefined
     if (skipClosed || home) {
-      const available = tabs.filter(tab => tab.scope !== null && sessions.binding(tab.scope))
+      const available = tabs.filter(tab => canOpen(tab) && (tab.scope !== null || skipClosed))
       const next = available.find(tab => tab.scope === active) ?? available.at(-1)
       if (next) {
         if (skipClosed || entry) select(next.scope, false)
         return next.scope
       }
       if (skipClosed) {
-        draftSession = undefined
-        sessions.clear()
-        return null
+        if (scope !== null) {
+          draftSession = undefined
+          sessions.clear()
+          return reconcile(null, false, entry)
+        }
+        active = undefined
+        if (entry && !openToken) void action({ kind: 'new' })
+        publish()
+        return undefined
       }
     }
     active = scope
@@ -117,7 +123,8 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     else throw Error('该图片任务的会话已不可用。')
     if (sync) syncSession(true)
   }
-  async function create(replacing) {
+  async function create(replacedTab) {
+    const replacing = replacedTab?.scope
     if (replacing === undefined && tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
     const before = sessions.list.getSnapshot().current
     const id = 'image-task-' + win.crypto.randomUUID()
@@ -129,7 +136,10 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       const sessionId = await sessions.create({ sessionId: id, ...(workspaceId && { workspaceId }) })
       if (openToken !== token) return
       if (sessionId !== id || !sessions.binding(id)) throw Error('新图片任务未能打开。')
-      if (replacing !== undefined) tabs = tabs.filter(tab => tab.scope !== replacing)
+      if (replacedTab) {
+        tabs = tabs.filter(tab => tab.scope !== replacing)
+        rememberClosed([replacedTab])
+      }
       lastCreated = id
       tabs = [...tabs, token.tab]
       save()
@@ -149,8 +159,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     try {
       if (kind === 'new') { await create(); return }
       if (kind === 'restore') {
-        const tab = closed.find(item => !tabs.some(open => open.scope === item.scope) &&
-          (item.scope === null || sessions.binding(item.scope)))
+        const tab = closed.find(item => !tabs.some(open => open.scope === item.scope) && canOpen(item))
         if (!tab) return
         if (tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
         closed = closed.filter(item => item !== tab)
@@ -185,13 +194,15 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
         publish()
       } else if (kind === 'close') {
         const tab = tabs[index]
-        const neighbor = tabs[index + 1] ?? tabs[index - 1]
-        if (!neighbor) {
-          if (!await create(scope)) return
-        } else if (isActive() && scope === active) select(neighbor.scope)
+        const neighbor = tabs.slice(index + 1).find(canOpen) ?? tabs.slice(0, index).findLast(canOpen)
+        if (!neighbor && (tabs.length === 1 || isActive() && scope === active)) {
+          await create(tab)
+          return
+        }
         tabs = tabs.filter(tab => tab.scope !== scope)
         rememberClosed([tab])
         save()
+        if (neighbor && isActive() && scope === active) select(neighbor.scope)
         publish()
       }
     } catch (error) {
