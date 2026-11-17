@@ -2168,7 +2168,10 @@ export class ResearchBoardsService {
         const binding = p.sessionId ? this.store.sharedSession(String(p.sessionId)) : undefined
         const ctx = binding ? this.context() : null
         if (binding && binding.accountId !== ctx!.userId) throw new ResearchBoardsError('PERMISSION_DENIED')
-        if (binding) this.requireBoard(binding.boardId)
+        if (binding) {
+          if (p.mode === 'app-workspace') await this.loadBoard(binding.boardId)
+          this.requireBoard(binding.boardId, binding.localSessionId)
+        }
         const result = await this.options.hooks.directory(p, this.generationAbort.signal)
         if (ctx) this.check(ctx)
         if (p.mode === 'associate') {
