@@ -1,6 +1,8 @@
 import type { BrandArtworkId, BrandOverlay, TextLayer } from '../../shared/image-factory-canvas'
 import { brandArtwork, brandColors as c } from './brand-artwork'
 import type { GalleryExample } from './gallery-examples'
+import { enterpriseTemplateLayers } from './enterprise-layout'
+import { templateTextLayer } from './template-text'
 import type { Size } from './raster'
 
 type T = (zh: string, en: string) => string
@@ -8,6 +10,7 @@ const ink = '#202f3a'
 
 /** The thumbnail and the new canvas use the same coordinates and layer order. */
 export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T, nextId: () => string): (BrandOverlay | TextLayer)[] {
+  if (example.enterprise) return enterpriseTemplateLayers(example, example.enterprise, size, t, nextId)
   const layers: (BrandOverlay | TextLayer)[] = []
   const artHeight = (asset: BrandArtworkId, width: number) =>
     width * size.width / size.height * brandArtwork[asset].size.height / brandArtwork[asset].size.width
@@ -19,12 +22,8 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
     art(asset, 1 - width, Math.max(0, 1 - artHeight(asset, width)), width)
   const block = (color: string, x: number, y: number, width: number, height: number) =>
     layers.push({ kind: 'shape', id: nextId(), color, x, y, width, height })
-  const copy = (text: string, x: number, y: number, width: number, em: number, color: string, weight = 400) => {
-    const longest = Math.max(1, ...text.split('\n').map(line => Array.from(line).reduce(
-      (length, character) => length + (/[^\x00-\x7f]/u.test(character) ? 1 : /[A-Z]/u.test(character) ? .7 : .56), 0)))
-    const fontSize = Math.max(8, Math.min(600, Math.floor(size.width * Math.min(em, width * .96 / longest))))
-    layers.push({ kind: 'text', id: nextId(), text, color, x, y, width, fontSize, weight, align: 'left', family: 'Source Han Sans CN' })
-  }
+  const copy = (text: string, x: number, y: number, width: number, em: number, color: string, weight = 400) =>
+    layers.push(templateTextLayer(nextId(), text, size.width, x, y, width, em, color, weight))
   const title = t(...example.title), subtitle = t(...example.subtitle)
   switch (example.id) {
     case 'steady-horizon':

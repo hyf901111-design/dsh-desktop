@@ -1,5 +1,5 @@
 import type { CanvasImageType, CanvasScope, CanvasStorage, StoredCanvas, StoredImageLayer } from '../../shared/image-factory-canvas'
-import { loadRaster } from './raster'
+import { loadRaster, type Raster } from './raster'
 import type { ImageLayer, ImageScene } from './layers'
 
 type RestoreStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -7,7 +7,15 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 type Entry = {
   scope: CanvasScope; status: RestoreStatus; save: SaveStatus; epoch?: number; scene?: ImageScene
   reading?: Promise<void>; writing?: Promise<void>; assetId?: string; revision: number; retained: number; dirty?: boolean
+  past: ImageScene[]; future: ImageScene[]; beforeEdit?: ImageScene; coalescing?: string; rasters: Set<Raster>
 }
+
+const historyLimit = 50
+const cachedHistories = 6
+const rasterHistoryLimit = 3
+const sameScene = (a: ImageScene, b: ImageScene) => a === b ||
+  a.id === b.id && a.title === b.title && a.width === b.width && a.height === b.height && a.aiWatermark === b.aiWatermark &&
+  a.layers.length === b.layers.length && a.layers.every((layer, index) => layer === b.layers[index])
 
 const imageLayer = (scene?: ImageScene) => scene?.layers.find((layer): layer is ImageLayer => layer.kind === 'image')
 
@@ -17,7 +25,7 @@ export class CanvasWorkspace {
   private readonly adoptions = new Map<string, Promise<void>>()
   private scope: CanvasScope = null
   private disposed = false
-  private current = { scope: null as CanvasScope, status: 'idle' as RestoreStatus, save: 'idle' as SaveStatus, scene: undefined as ImageScene | undefined }
+  private current = { scope: null as CanvasScope, status: 'idle' as RestoreStatus, save: 'idle' as SaveStatus, scene: undefined as ImageScene | undefined, canUndo: false, canRedo: false }
 
   constructor(private readonly doc: Document, private readonly storage: CanvasStorage) {}
 
@@ -26,8 +34,17 @@ export class CanvasWorkspace {
 
   select(scope: CanvasScope) {
     const previous = this.scope
-    if (previous !== scope && this.entries.get(previous)?.dirty) this.commit(previous)
+    if (previous !== scope) {
+      if (this.entries.get(previous)?.dirty) this.commit(previous)
+      this.finishEdit(previous)
+    }
     this.scope = scope
+    const selected = this.entries.get(scope)
+    if (selected) {
+      // Keep the most recently selected canvases at the end of the cache.
+      this.entries.delete(scope)
+      this.entries.set(scope, selected)
+    }
     // Continue showing the standalone canvas until the adopted session can display it.
     const keepDraftVisible = scope !== null && this.adoptions.has(scope) && this.current.scope === null && this.current.scene
     if (!keepDraftVisible) this.publish(scope)
@@ -56,23 +73,93 @@ export class CanvasWorkspace {
 
   epoch(scope: CanvasScope) { return this.entries.get(scope)?.epoch }
 
-  change(scope: CanvasScope, apply: (scene?: ImageScene) => ImageScene | undefined, persist = true) {
+  change(scope: CanvasScope, apply: (scene?: ImageScene) => ImageScene | undefined, persist = true, editKey?: string) {
     const entry = this.entries.get(scope)
     if (this.disposed || entry?.status !== 'ready') return false
     const previous = entry.scene
     const next = apply(previous)
-    if (!next || next === previous) return false
-    const oldRaster = imageLayer(previous)?.raster
-    if (oldRaster && oldRaster !== imageLayer(next)?.raster) URL.revokeObjectURL(oldRaster.url)
+    if (!next || next === previous || previous && sameScene(previous, next)) {
+      if (persist && entry.dirty) this.commit(scope)
+      return false
+    }
+    if (!editKey || editKey !== entry.coalescing) entry.beforeEdit ??= previous
     entry.scene = next
-    if (persist) this.save(scope, entry)
-    else { entry.dirty = true; this.publish(scope) }
+    if (persist) {
+      this.recordEdit(entry, editKey)
+      this.save(scope, entry)
+    } else {
+      entry.dirty = true
+      this.collectRasters(entry)
+      this.publish(scope)
+    }
     return true
   }
 
   commit(scope: CanvasScope) {
     const entry = this.entries.get(scope)
-    if (!this.disposed && entry?.status === 'ready' && entry.scene) this.save(scope, entry, entry.save === 'error')
+    if (!this.disposed && entry?.status === 'ready' && entry.scene) {
+      if (entry.dirty) this.recordEdit(entry)
+      this.save(scope, entry, entry.save === 'error')
+    }
+  }
+
+  finishEdit(scope: CanvasScope) {
+    const entry = this.entries.get(scope)
+    if (!entry?.coalescing) return
+    entry.coalescing = undefined
+    const previous = entry.past.at(-1)
+    if (previous && entry.scene && sameScene(previous, entry.scene)) entry.past.pop()
+    this.collectRasters(entry)
+    this.publish(scope)
+  }
+
+  undo(scope: CanvasScope) { return this.restore(scope, 'past', 'future') }
+  redo(scope: CanvasScope) { return this.restore(scope, 'future', 'past') }
+
+  private restore(scope: CanvasScope, from: 'past' | 'future', to: 'past' | 'future') {
+    const entry = this.entries.get(scope)
+    if (this.disposed || entry?.status !== 'ready' || !entry.scene) return false
+    if (entry.dirty) this.recordEdit(entry)
+    this.finishEdit(scope)
+    const next = entry[from].pop()
+    if (!next) return false
+    entry[to].push(entry.scene)
+    entry.scene = next
+    this.collectRasters(entry)
+    this.save(scope, entry)
+    return true
+  }
+
+  private recordEdit(entry: Entry, editKey?: string) {
+    const previous = entry.beforeEdit
+    entry.beforeEdit = undefined
+    if (previous && entry.scene && !sameScene(previous, entry.scene)) {
+      entry.past.push(previous)
+      entry.future = []
+      entry.past = entry.past.slice(-historyLimit)
+      const rasters = new Set([imageLayer(entry.scene)?.raster])
+      for (let index = entry.past.length - 1; index >= 0; index--) {
+        const raster = imageLayer(entry.past[index])?.raster
+        if (!raster) continue
+        rasters.add(raster)
+        if (rasters.size > rasterHistoryLimit) {
+          entry.past = entry.past.slice(index + 1)
+          break
+        }
+      }
+    }
+    entry.coalescing = editKey
+    this.collectRasters(entry)
+  }
+
+  private collectRasters(entry: Entry) {
+    const references = new Set<Raster>()
+    for (const scene of [entry.scene, entry.beforeEdit, ...entry.past, ...entry.future]) {
+      const raster = imageLayer(scene)?.raster
+      if (raster) references.add(raster)
+    }
+    for (const raster of entry.rasters) if (!references.has(raster)) URL.revokeObjectURL(raster.url)
+    entry.rasters = references
   }
 
   adopt(sessionId: string) {
@@ -113,7 +200,7 @@ export class CanvasWorkspace {
   private entry(scope: CanvasScope) {
     let entry = this.entries.get(scope)
     if (!entry) {
-      entry = { scope, status: 'idle', save: 'idle', revision: 0, retained: 0 }
+      entry = { scope, status: 'idle', save: 'idle', revision: 0, retained: 0, past: [], future: [], rasters: new Set() }
       this.entries.set(scope, entry)
     }
     return entry
@@ -121,20 +208,23 @@ export class CanvasWorkspace {
 
   private publish(scope: CanvasScope) {
     if (scope !== this.scope || this.disposed) return
-    const { scene, status = 'idle', save = 'idle' } = this.entries.get(scope) ?? {}
-    this.current = { scope, scene, status, save }
+    const { scene, status = 'idle', save = 'idle', past, future, beforeEdit } = this.entries.get(scope) ?? {}
+    this.current = { scope, scene, status, save, canUndo: !!(past?.length || beforeEdit), canRedo: !!future?.length && !beforeEdit }
     for (const listener of this.listeners) listener()
   }
 
   private drop(scope: CanvasScope) {
-    const raster = imageLayer(this.entries.get(scope)?.scene)?.raster
-    if (raster) URL.revokeObjectURL(raster.url)
+    for (const raster of this.entries.get(scope)?.rasters ?? []) URL.revokeObjectURL(raster.url)
     this.entries.delete(scope)
   }
 
   private evict(scope: CanvasScope) {
     const entry = this.entries.get(scope)
-    if (scope !== this.scope && entry && !entry.retained && !entry.reading && !entry.writing && entry.save !== 'error') this.drop(scope)
+    if (scope === this.scope || !entry || entry.retained || entry.reading || entry.writing || entry.save === 'error') return
+    if (!entry.past.length && !entry.future.length) { this.drop(scope); return }
+    const inactive = [...this.entries.values()].filter(item => item.scope !== this.scope &&
+      !item.retained && !item.reading && !item.writing && item.save !== 'error')
+    for (const item of inactive.slice(0, Math.max(0, inactive.length - cachedHistories))) this.drop(item.scope)
   }
 
   private async load(scope: CanvasScope, entry: Entry) {
@@ -157,6 +247,7 @@ export class CanvasWorkspace {
         const { version: _version, ...canvas } = data.canvas
         entry.scene = { ...canvas, layers }
         entry.assetId = restored?.assetId
+        this.collectRasters(entry)
         restored = undefined
       }
       entry.epoch = data.epoch

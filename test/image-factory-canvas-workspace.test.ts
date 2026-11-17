@@ -103,3 +103,36 @@ it('shows the saved target when draft adoption is declined', async () => {
     release()
   } finally { workspace.dispose(); await win.happyDOM.abort() }
 })
+
+it('undoes a complete pointer gesture per canvas and drops redo after a new edit', async () => {
+  const win = new Window()
+  const original = scene('画板')
+  const records = new Map<CanvasScope, StoredCanvas>([['one', original], ['two', scene('另一个画板')]])
+  const workspace = new CanvasWorkspace(win.document as unknown as Document, {
+    read: async scope => ({ epoch: 1, canvas: records.get(scope) }),
+    write: async write => { records.set(write.scope, write.canvas) },
+    adopt: async () => false,
+  })
+  const move = (x: number) => (current?: ReturnType<typeof workspace.getSnapshot>['scene']) =>
+    current && { ...current, layers: [{ ...original.layers[0]!, x }] }
+  try {
+    workspace.select('one')
+    await workspace.ready('one')
+    workspace.change('one', move(.3), false)
+    workspace.change('one', move(.4), false)
+    workspace.commit('one')
+    workspace.select('two')
+    await workspace.ready('two')
+    expect(workspace.undo('two')).toBe(false)
+    workspace.select('one')
+    await workspace.ready('one')
+    expect(workspace.undo('one')).toBe(true)
+    expect(records.get('one')?.layers[0]).toMatchObject({ x: .15 })
+    expect(workspace.undo('one')).toBe(false)
+    expect(workspace.redo('one')).toBe(true)
+    expect(records.get('one')?.layers[0]).toMatchObject({ x: .4 })
+    expect(workspace.undo('one')).toBe(true)
+    workspace.change('one', move(.6))
+    expect(workspace.redo('one')).toBe(false)
+  } finally { workspace.dispose(); await win.happyDOM.abort() }
+})

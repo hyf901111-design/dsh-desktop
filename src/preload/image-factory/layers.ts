@@ -50,15 +50,7 @@ export function resizeTextLayer(layer: TextLayer, canvas: Size, height: number, 
   }
 }
 
-export function moveLayer(layers: CanvasLayer[], id: string, targetId: string, above: boolean) {
-  const layer = layers.find(item => item.id === id)
-  if (!layer || id === targetId) return layers
-  const result = layers.filter(item => item.id !== id)
-  const index = result.findIndex(item => item.id === targetId)
-  if (index < 0) return layers
-  result.splice(index + Number(above), 0, layer)
-  return result
-}
+export { moveLayerUnits as moveLayer } from './layer-groups'
 
 async function drawTextLayers(context: CanvasRenderingContext2D, size: Size, layers: TextLayer[]) {
   const doc = context.canvas.ownerDocument

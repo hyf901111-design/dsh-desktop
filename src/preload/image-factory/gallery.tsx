@@ -1,38 +1,63 @@
-import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
+import type { GalleryCategory } from './enterprise-gallery'
 import { galleryTemplateLayers } from './gallery-layout'
+import { promptExamples, type PromptExample } from './prompt-gallery'
+import { textLayerStyle } from './layers'
 import { brandArtwork } from './brand-artwork'
 import { iconSource } from './icons'
 import type { Size } from './raster'
 
 const art = import.meta.glob('./gallery-art/*.jpg', { eager: true, query: '?inline', import: 'default' }) as Record<string, string>
 export const galleryArtwork = (id: string) => art['./gallery-art/' + id + '.jpg']
+export const templatePhoto = (example: GalleryExample) => example.enterprise ? example.enterprise.photo : example.id
+const categories = [
+  ['all', '全部', 'All'], ['efund', '易方达品牌', 'E Fund'], ['enterprise', '企业通用', 'Enterprise'],
+  ['events', '会议活动', 'Events'], ['brand', '品牌传播', 'Brand'], ['social', '社交媒体', 'Social'],
+  ['team', '内部沟通', 'Team'], ['report', '报告与洞察', 'Reports'], ['operations', '业务运营', 'Operations'],
+] as const satisfies readonly (readonly [GalleryCategory | 'all' | 'efund' | 'enterprise', string, string])[]
+const promptCases: PromptExample[] = [
+  ...promptExamples,
+  ...galleryExamples.flatMap(({ id, title, prompt, format, scenes }) => prompt ? [{ id, title, prompt, format, scenes }] : []),
+]
 const scrollSpeed = 30
 const pageDuration = 260
 const wrap = (position: number, width: number) => ((position % width) + width) % width
 type T = (zh: string, en: string) => string
 
-function TemplatePreview({ example, size, t }: { example: GalleryExample; size: Size; t: T }) {
+const TemplatePreview = memo(function TemplatePreview({ example, size, photo, t }: {
+  example: GalleryExample; size: Size; photo?: string; t: T
+}) {
   let index = 0
   const layers = galleryTemplateLayers(example, size, t, () => String(index++))
   return <svg className="if-gallery-layout" viewBox={`0 0 ${size.width} ${size.height}`} aria-hidden="true">
+    {photo && <image href={photo} width={size.width} height={size.height} preserveAspectRatio="xMidYMid slice"/>}
     {layers.map(layer => {
       const x = layer.x * size.width, y = layer.y * size.height, width = layer.width * size.width
       if (layer.kind === 'brand') return <image key={layer.id} href={brandArtwork[layer.asset].src}
         x={x} y={y} width={width} height={layer.height * size.height}/>
       if (layer.kind === 'shape') return <rect key={layer.id} x={x} y={y} width={width} height={layer.height * size.height} fill={layer.color}/>
-      return <text key={layer.id} x={x} y={y + layer.fontSize * .94} fill={layer.color}
-        fontFamily={layer.family + ', sans-serif'} fontWeight={layer.weight} fontSize={layer.fontSize}>
-        {layer.text.split('\n').map((line, index) => <tspan key={index} x={x} dy={index ? layer.fontSize * 1.2 : 0}>{line}</tspan>)}
-      </text>
+      return <foreignObject key={layer.id} x={x} y={y} width={width} height={Math.max(0, size.height - y)}>
+        <div data-template-copy style={{ ...textLayerStyle(layer, size), position: 'static' }}>{layer.text}</div>
+      </foreignObject>
     })}
   </svg>
-}
+})
 
-export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, onUse, onTemplate }: {
+export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, onUse, onTemplate, onClose, closeRef }: {
   t: T; busy: boolean; onUse(prompt: string): void; onTemplate(example: GalleryExample): void
+  onClose?: () => void; closeRef?: RefObject<HTMLButtonElement>
 }) {
   const [sizes, setSizes] = useState<Record<string, Size>>({})
+  const [mode, setMode] = useState<'templates' | 'prompts'>('templates')
+  const [category, setCategory] = useState<typeof categories[number][0]>('all')
+  const templates = galleryExamples.filter(example => {
+    if (category === 'all') return true
+    if (category === 'efund') return !example.enterprise
+    if (category === 'enterprise') return !!example.enterprise
+    return example.enterprise?.category === category
+  })
+  const cardCount = mode === 'templates' ? templates.length : promptCases.length
   const viewport = useRef<HTMLDivElement>(null)
   const firstCycle = useRef<HTMLDivElement>(null)
   const page = useRef<(direction: -1 | 1) => void>()
@@ -45,7 +70,8 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
     let cycleWidth = 0
     let frame = 0
     let previousTime: number | undefined
-    let position = node.scrollLeft
+    node.scrollLeft = 0
+    let position = 0
     let paging: { from: number; to: number; start?: number } | undefined
     let overContent = false
     let keyboardFocus = false
@@ -90,7 +116,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
 
     page.current = direction => {
       if (!cycleWidth || !node.clientWidth) return
-      const stride = cycleWidth / galleryExamples.length
+      const stride = cycleWidth / cardCount
       const step = stride * Math.max(1, Math.floor(node.clientWidth / stride)) * direction
       if (reducedMotion.matches) {
         const last = node.scrollWidth - node.clientWidth
@@ -151,55 +177,77 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
       reducedMotion.removeEventListener('change', updateMotion)
       node.removeEventListener('wheel', wheel)
     }
-  }, [])
+  }, [cardCount, mode, category])
 
   return <div className="if-gallery" role="region" aria-label={t('灵感画廊', 'Inspiration gallery')}>
+    <div className="if-gallery-heading">
+      <div className="if-gallery-mode" role="group" aria-label={t('画廊模式', 'Gallery mode')}>
+        <button type="button" className="if-button" data-current={mode === 'templates'} aria-pressed={mode === 'templates'}
+          onClick={() => setMode('templates')}>{t('基于模板修改', 'Edit a template')}</button>
+        <button type="button" className="if-button" data-current={mode === 'prompts'} aria-pressed={mode === 'prompts'}
+          onClick={() => setMode('prompts')}>{t('基于提示词生成', 'Generate from a prompt')}</button>
+      </div>
+      {onClose && <button ref={closeRef} type="button" className="if-button if-gallery-close" aria-label={t('关闭模板页', 'Close gallery')}
+        title={t('返回画板 · Esc', 'Return to canvas · Esc')} onClick={onClose}>
+        <i className="if-symbol" style={{ '--if-icon': 'url("' + iconSource('close') + '")' } as CSSProperties} aria-hidden="true"/>
+        {t('关闭', 'Close')}
+      </button>}
+      {mode === 'templates' && <div className="if-gallery-filters" role="group" aria-label={t('模板分类', 'Template categories')}>
+        {categories.map(([id, zh, en]) => <button key={id} type="button" className="if-button" data-current={category === id}
+          aria-pressed={category === id} onClick={() => setCategory(id)}>{t(zh, en)}</button>)}
+      </div>}
+    </div>
     <div className="if-gallery-viewport" ref={viewport}>
       <div className="if-gallery-track">
         {[false, true].map(repeated => <div className="if-gallery-cycle" key={String(repeated)}
           ref={repeated ? undefined : firstCycle} data-repeat={repeated} aria-hidden={repeated || undefined}>
-          {galleryExamples.map(example => {
+          {mode === 'templates' ? templates.map(example => {
             const title = t(...example.title)
-            const prompt = t(...example.prompt)
-            const size = sizes[example.id]
-            const { format } = example
+            const material = t(...example.material)
+            const size = example.enterprise ?? sizes[example.id]
+            const photo = galleryArtwork(templatePhoto(example) ?? '')
             const useLabel = t('做同款', 'Make something like this')
             const templateLabel = t('可编辑模板', 'Editable template')
-            return <article className="if-gallery-card" key={example.id}>
+            return <article className="if-gallery-card" key={example.id} data-gallery-kind="template">
               <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
-                aria-label={title + ' · ' + useLabel + ' · ' + templateLabel}
-                onClick={() => onTemplate(example)}>
-                <img alt="" loading="lazy" decoding="async" src={galleryArtwork(example.id)} draggable={false}
-                  onLoad={({ currentTarget }) => {
-                    const { naturalWidth: width, naturalHeight: height } = currentTarget
-                    if (width && height) setSizes(current => current[example.id] ? current : { ...current, [example.id]: { width, height } })
-                  }}/>
-                {size && <TemplatePreview example={example} size={size} t={t}/>}
-                <span className="if-gallery-template-badge" aria-hidden="true">{t(...example.material)}</span>
-                <span className="if-gallery-use">{useLabel}<i className="if-symbol"
-                  style={{ maskImage: `url("${iconSource('arrow-up')}")` }} aria-hidden="true"/></span>
+                aria-label={title + ' · ' + useLabel + ' · ' + templateLabel} onClick={() => onTemplate(example)}>
+                <span className="if-gallery-media">
+                  {!size && photo && <img alt="" loading="lazy" decoding="async" src={photo} draggable={false}
+                    onLoad={({ currentTarget }) => {
+                      const { naturalWidth: width, naturalHeight: height } = currentTarget
+                      if (width && height) setSizes(current => ({ ...current, [example.id]: { width, height } }))
+                    }}/>}
+                  {size && <TemplatePreview example={example} size={size} photo={photo} t={t}/>}
+                </span>
+                <span className="if-gallery-use">{useLabel}</span>
               </button>
-              <h3><span className="if-gallery-hover">{title}</span></h3>
-              <div className="if-gallery-prompt">
-                <span className="if-gallery-caption if-gallery-hover">{t('底图提示词', 'Background prompt')}</span>
-                <button type="button" className="if-gallery-prompt-button if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
-                  onClick={() => onUse(prompt + '\n' + (format === 'A4' ? t('画面为 A4 竖版。', 'Use A4 portrait.')
-                    : t('画面比例为 ' + format + '。', 'Aspect ratio: ' + format + '.')))}>{t('复用', 'Reuse')}</button>
+              <h3 className="if-gallery-hover">{material}</h3>
+              <p className="if-gallery-hover">{t(...example.subtitle)}</p>
+              <div className="if-gallery-details">
+                <span className="if-gallery-tag if-gallery-hover">{example.format}</span>
+                {size && <span className="if-gallery-tag if-gallery-hover">{size.width} × {size.height} px</span>}
               </div>
-              <p><span className="if-gallery-hover">{prompt}</span></p>
-              <dl>
-                <dt><span className="if-gallery-hover">{t('使用场景', 'Use cases')}</span></dt>
-                <dd>{t(...example.scenes).split(' · ').map(scene =>
-                  <span className="if-gallery-tag if-gallery-hover" key={scene}>{scene}</span>
-                )}</dd>
-                {size && <>
-                  <dt><span className="if-gallery-hover">{t('图像参数', 'Image settings')}</span></dt>
-                  <dd>
-                    <span className="if-gallery-tag if-gallery-hover">{format}</span>
-                    <span className="if-gallery-tag if-gallery-hover">{size.width} × {size.height} px</span>
-                  </dd>
-                </>}
-              </dl>
+            </article>
+          }) : promptCases.map(example => {
+            const title = t(...example.title)
+            const prompt = t(...example.prompt)
+            const useLabel = t('用同款提示词', 'Use this prompt')
+            return <article className="if-gallery-card" key={example.id} data-gallery-kind="prompt">
+              <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
+                aria-label={title + ' · ' + useLabel}
+                onClick={() => onUse(prompt + '\n' + t('画面比例为 ' + example.format + '。', 'Aspect ratio: ' + example.format + '.'))}>
+                <span className="if-gallery-media">
+                  <img alt="" loading="lazy" decoding="async" src={galleryArtwork(example.id)} draggable={false}/>
+                </span>
+                <span className="if-gallery-use">{useLabel}</span>
+              </button>
+              <h3 className="if-gallery-hover">{title}</h3>
+              <p className="if-gallery-hover">{prompt}</p>
+              <div className="if-gallery-details">
+                <span className="if-gallery-tag if-gallery-hover">{example.format}</span>
+                {example.scenes && t(...example.scenes).split(' · ').map(scene =>
+                  <span className="if-gallery-tag if-gallery-hover" key={scene}>{scene}</span>)}
+              </div>
             </article>
           })}
         </div>)}

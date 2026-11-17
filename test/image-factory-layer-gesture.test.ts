@@ -679,3 +679,67 @@ it('opens a wide gallery template in a fresh task with its own JPEG, artwork, sh
     vi.unstubAllGlobals()
   }
 })
+
+it('groups two selected layers, restores the group with redo, and returns from templates to the brand drawer', async () => {
+  const first = { kind: 'shape' as const, id: randomUUID(), x: .18, y: .25, width: .2, height: .18, color: '#005096' }
+  const second = { ...first, id: randomUUID(), x: .45, color: '#44bbff' }
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '编组画板', width: 800, height: 1000, layers: [first, second] }
+  const write = vi.fn(async (_value: CanvasWrite) => {})
+  const host = new WorkspaceSurfaceHost(document)
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  let factory!: ReturnType<typeof mountImageFactory>
+  try {
+    await act(async () => {
+      factory = mountImageFactory(document, host, {
+        storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
+        archive: async () => {}, save: async () => ({}),
+      })
+    })
+    await openCanvas(factory)
+    const tool = (label: string) => [...document.querySelectorAll<HTMLButtonElement>('.if-toolbar button')]
+      .find(button => (button.getAttribute('aria-label') ?? button.textContent)?.trim() === label)!
+    const row = (id: string) => document.querySelector<HTMLButtonElement>('[data-layer-id="' + id + '"] .if-layer-name')!
+    const frame = () => document.querySelector<HTMLElement>('.if-raster')!
+    const key = (key: string, shiftKey = false) => frame().dispatchEvent(new KeyboardEvent('keydown', { key, metaKey: true, shiftKey, bubbles: true, cancelable: true }))
+    const layers = () => write.mock.calls.at(-1)?.[0].canvas.layers
+    await act(async () => tool('图层').click())
+    await act(async () => {
+      row(first.id).click()
+      row(second.id).dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }))
+    })
+    await act(async () => tool('编组').click())
+    const groupId = (layers()?.[0] as typeof first & { groupId?: string })?.groupId
+    expect(groupId).toBeTruthy()
+    expect(layers()).toEqual([{ ...first, groupId }, { ...second, groupId }])
+    expect(row(groupId!)?.textContent).toBe('编组 · 2')
+    await act(async () => key('z'))
+    expect(layers()).toEqual([first, second])
+    await act(async () => key('Z', true))
+    expect(layers()).toEqual([{ ...first, groupId }, { ...second, groupId }])
+    await act(async () => tool('上一步').click())
+    expect(layers()).toEqual([first, second])
+    await act(async () => tool('下一步').click())
+    expect(layers()).toEqual([{ ...first, groupId }, { ...second, groupId }])
+
+    await act(async () => document.querySelector<HTMLButtonElement>('.if-drawer-header [data-drawer-tab="brand"]')!.click())
+    expect(document.querySelector('.if-layers')).toBeNull()
+    expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
+    await act(async () => document.querySelector<HTMLButtonElement>('.if-brand-templates')!.click())
+    expect(frame()).toBeNull()
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="关闭模板页"]')!.click())
+    expect(frame()).toBeTruthy()
+    expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>('.if-brand-templates')!.click()
+    })
+    await act(async () => {
+      document.querySelector('[aria-label="关闭模板页"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    })
+    expect(frame()).toBeTruthy()
+    expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
+  } finally {
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.unstubAllGlobals()
+  }
+})
