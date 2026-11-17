@@ -43,7 +43,7 @@ it('opens a submenu from the first-level slash menu on hover and keeps single-st
   expect(await knowledge.getByRole('button',{name:/返回|Back/}).count()).toBe(0)
   const directory=knowledge.getByRole('option',{name:'他人共享'})
   await directory.hover()
-  const flyout=knowledge.getByRole('group',{name:'他人共享分类'})
+  const flyout=page.getByRole('group',{name:'他人共享分类'})
   await flyout.getByRole('button',{name:'行业研究'}).waitFor()
   expect(await flyout.evaluate(menuMaterial)).toEqual(material)
   expect(await flyout.getByRole('button').allTextContents()).not.toContain('他人共享')
@@ -51,6 +51,23 @@ it('opens a submenu from the first-level slash menu on hover and keeps single-st
   const knowledgeBox=await knowledge.boundingBox()
   expect(Math.abs(flyoutBox.x-knowledgeBox.x-knowledgeBox.width)).toBeLessThanOrEqual(2)
   expect(flyoutBox.width).toBe(198)
+  const sampleX = Math.floor(flyoutBox.x + flyoutBox.width - 40)
+  const sampleY = Math.floor(flyoutBox.y + 18)
+  const checker = PNG.sync.read(await page.screenshot())
+  const brightness = Array.from({length: 32}, (_, dx) => checker.data[(sampleY * checker.width + sampleX + dx) * 4])
+  expect(Math.max(...brightness) - Math.min(...brightness)).toBeLessThan(12)
+  const backdrop = async background => {
+   await page.locator('.detail-background').evaluate((el, paint) => { el.style.background = paint }, background)
+   const pixels = PNG.sync.read(await page.screenshot())
+   const x = Math.floor(flyoutBox.x + flyoutBox.width - 25)
+   const y = Math.floor(flyoutBox.y + 22)
+   const offset = (y * pixels.width + x) * 4
+   return Array.from(pixels.data.subarray(offset, offset + 3))
+  }
+  const red = await backdrop('rgb(255,0,0)')
+  const blue = await backdrop('rgb(0,0,255)')
+  expect(red[0] - blue[0]).toBeGreaterThan(50)
+  expect(blue[2] - red[2]).toBeGreaterThan(50)
   await flyout.getByRole('button',{name:'行业研究'}).hover()
   expect(await flyout.isVisible()).toBe(true)
   expect(await page.evaluate(()=>window.probe.events)).toEqual([])
@@ -76,7 +93,7 @@ it.each([1380,800])('opens both submenu levels inward from a right-pane composer
   const mainBox=await slash.boundingBox(),subBox=await knowledge.boundingBox()
   expect(Math.abs(subBox.x+subBox.width-mainBox.x)).toBeLessThanOrEqual(2)
   await knowledge.getByRole('option',{name:'他人共享'}).hover()
-  const nested=knowledge.getByRole('group',{name:'他人共享分类'})
+  const nested=page.getByRole('group',{name:'他人共享分类'})
   await nested.waitFor()
   const nestedBox=await nested.boundingBox()
   expect(Math.abs(nestedBox.x+nestedBox.width-subBox.x)).toBeLessThanOrEqual(2)
@@ -112,7 +129,7 @@ it.each(['no-preference','reduce'])('navigates slash categories with %s motion w
   await slash.getByRole('option',{name:/Knowledge Base options/i}).click();
   const kb=page.locator('[data-ework-command=knowledge]');
   await checkMotion(kb);
-  const shared=kb.getByRole('group',{name:'他人共享分类'});
+  const shared=page.getByRole('group',{name:'他人共享分类'});
   const input=kb.getByRole('textbox');
   expect(await kb.locator('[data-knowledge-slash-group]').allTextContents()).toEqual(['分类','文件夹']);
   const all=kb.getByRole('option',{name:'所有文件',exact:true});
@@ -137,7 +154,7 @@ it.each(['no-preference','reduce'])('navigates slash categories with %s motion w
   await industry.waitFor();
   await checkMotion(shared);
   const position = await industry.evaluate(button => {
-   const card = button.closest('[data-ework-command=knowledge]').getBoundingClientRect();
+   const card = document.querySelector('[data-ework-command=knowledge]').getBoundingClientRect();
    const target = button.getBoundingClientRect();
    return {
     beside: target.left >= card.right - 1,
