@@ -104,6 +104,42 @@
           "独立图像草稿继续保存在原来的本地位置。"
         ],
         "generatedAt": "2026-11-17T08:22:39.195Z"
+      },
+      "merged": {
+        "mergeCommit": "7207777cbc9f101780d9a88bf38574f8251724ab",
+        "verificationCommit": "7207777cbc9f101780d9a88bf38574f8251724ab",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7207777cbc9f101780d9a88bf38574f8251724ab",
+            "completedAt": "2026-11-17T08:22:56.134Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-native.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/image-factory-native.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/knowledge-session-content.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/browser-app-native.test.js test/workspace-surface-host.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/knowledge-session-content.test.ts",
+            "verifiedCommit": "7207777cbc9f101780d9a88bf38574f8251724ab",
+            "completedAt": "2026-11-17T08:22:56.134Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-17T08:22:56.134Z"
       }
     }
   ],
