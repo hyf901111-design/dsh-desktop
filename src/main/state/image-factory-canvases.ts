@@ -43,11 +43,14 @@ function readMetadata(value: unknown): StoredCanvas {
     ids.add(layer.id)
     if (layer.kind === 'image' && ++images === 1 && validId(layer.assetId) && canvasImageTypes.includes(layer.mediaType))
       return { kind: layer.kind, id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType }
+    const groupId = 'groupId' in layer ? layer.groupId : undefined
+    if (groupId !== undefined && !validId(groupId)) throw Error('画布图层编组无效。')
+    const group = groupId ? { groupId } : {}
     if (layer.kind === 'brand' || layer.kind === 'shape') {
       const { id, x, y, width, height } = layer
       if (unit(x) && unit(y) && unit(width) && unit(height) && width > 0 && height > 0 &&
           x + width <= 1 + 1e-9 && y + height <= 1 + 1e-9) {
-        const bounds = { id, x, y, width, height }
+        const bounds = { id, x, y, width, height, ...group }
         if (layer.kind === 'brand' && brandArtworkIds.includes(layer.asset)) return { ...bounds, kind: layer.kind, asset: layer.asset }
         if (layer.kind === 'shape' && typeof layer.color === 'string' && /^#[a-fA-F0-9]{6}$/u.test(layer.color)) return { ...bounds, kind: layer.kind, color: layer.color }
       }
@@ -60,8 +63,9 @@ function readMetadata(value: unknown): StoredCanvas {
         !['left', 'center', 'right'].includes(layer.align) || !/^#[a-fA-F0-9]{6}$/u.test(layer.color))
       throw Error('画布图层无效。')
     const { id, kind, text, x, y, width, fontSize, family, weight, align, color } = layer
-    return { id, kind, text, x, y, width, fontSize, family, weight, align, color }
+    return { id, kind, text, x, y, width, fontSize, family, weight, align, color, ...group }
   })
+  if (layers.some(layer => 'groupId' in layer && layer.groupId && ids.has(layer.groupId))) throw Error('画布图层编组无效。')
   return { version: 1, id: canvas.id, title: canvas.title, width: canvas.width, height: canvas.height, layers,
     ...(canvas.aiWatermark && { aiWatermark: canvas.aiWatermark }),
   }

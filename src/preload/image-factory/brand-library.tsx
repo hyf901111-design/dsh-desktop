@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { brandArtwork } from './brand-artwork'
 import { artworkHeight, brandAssetSections, brandDragType, type BrandAsset } from './brand-assets'
 
@@ -18,17 +17,11 @@ function AssetPreview({ asset, t }: { asset: BrandAsset; t: Translate }) {
   </span>
 }
 
-export function BrandAssetLibrary({ t, close, disabled, insert, dragging, closeIcon, templateCount, showTemplates }: {
-  t: Translate; close(): void; disabled: boolean; insert(asset: BrandAsset): void; dragging(value: boolean): void; closeIcon: ReactNode; templateCount: number; showTemplates(): void
+export function BrandAssetLibrary({ t, disabled, insert, dragging, templateCount, showTemplates }: {
+  t: Translate; disabled: boolean; insert(asset: BrandAsset): void
+  dragging(value: boolean): void; templateCount: number; showTemplates(): void
 }) {
-  return <aside className="if-brand-library" id="image-factory-brand-library" aria-labelledby="image-factory-brand-heading">
-    <div className="if-brand-header">
-      <div>
-        <strong id="image-factory-brand-heading">{t('品牌资产', 'Brand assets')}</strong>
-        <p>{t('易方达 · 视觉识别系统', 'E Fund · Visual identity')}</p>
-      </div>
-      <button type="button" className="if-button" onClick={close} aria-label={t('关闭品牌资产', 'Close brand assets')}>{closeIcon}</button>
-    </div>
+  return <div className="if-brand-library" aria-label={t('品牌资产', 'Brand assets')}>
     <div className="if-brand-body">
       <button type="button" className="if-brand-templates" onClick={showTemplates} disabled={disabled}>
         <span>{t('宣传物料模板', 'Marketing templates')}</span><span>{templateCount} <i aria-hidden="true">›</i></span>
@@ -49,5 +42,5 @@ export function BrandAssetLibrary({ t, close, disabled, insert, dragging, closeI
         </div>
       </section>)}
     </div>
-  </aside>
+  </div>
 }

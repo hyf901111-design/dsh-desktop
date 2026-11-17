@@ -22,14 +22,14 @@ export const canvasUuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u
 export type CanvasScope = string | null
 export type ImageFactoryTaskTab = { scope: CanvasScope; title?: string; pinned?: boolean }
 export type TextLayer = {
-  id: string; kind: 'text'; text: string; x: number; y: number; width: number
+  id: string; groupId?: string; kind: 'text'; text: string; x: number; y: number; width: number
   fontSize: number; family: typeof canvasFonts[number]['family']; weight: number
   align: 'left' | 'center' | 'right'; color: string
 }
 export const brandArtworkIds = ['logo-blue', 'logo-white', 'container-left', 'container-right',
   'container-left-white', 'container-right-white', 'graphic-top', 'graphic-bottom', 'graphic-top-bright', 'graphic-bottom-bright'] as const
 export type BrandArtworkId = typeof brandArtworkIds[number]
-type OverlayBounds = { id: string; x: number; y: number; width: number; height: number }
+type OverlayBounds = { id: string; groupId?: string; x: number; y: number; width: number; height: number }
 export type BrandArtworkLayer = OverlayBounds & { kind: 'brand'; asset: BrandArtworkId }
 export type ShapeLayer = OverlayBounds & { kind: 'shape'; color: string }
 export type BrandOverlay = BrandArtworkLayer | ShapeLayer
