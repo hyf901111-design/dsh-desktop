@@ -12,7 +12,7 @@
         "featureName": "修复工作区应用返回、知识库对话屏和图像草稿恢复",
         "branch": "codex/feat/workspace-app-back-20261117",
         "baseCommit": "7a0d9c4e52c8c0b8b0fe0a0bea43fc5836bd9a2d",
-        "tipCommit": "e8d2bc8df611b497d0e1e0ef898626adca697a95",
+        "tipCommit": "28e495064d72aa4eef989661af2389e7b4a1749e",
         "commits": [
           {
             "commit": "e8d2bc8df611b497d0e1e0ef898626adca697a95",
@@ -20,6 +20,13 @@
               "7a0d9c4e52c8c0b8b0fe0a0bea43fc5836bd9a2d"
             ],
             "subject": "修复：旧图像草稿仅在手动恢复时打开"
+          },
+          {
+            "commit": "28e495064d72aa4eef989661af2389e7b4a1749e",
+            "parents": [
+              "e8d2bc8df611b497d0e1e0ef898626adca697a95"
+            ],
+            "subject": "测试：图像画布交互验收模拟真实页签选中状态"
           }
         ],
         "files": [
@@ -41,6 +48,10 @@
           },
           {
             "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
             "path": "test/image-factory-native.test.js"
           }
         ],
@@ -53,8 +64,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "e8d2bc8df611b497d0e1e0ef898626adca697a95",
-            "completedAt": "2026-11-17T08:20:12.069Z",
+            "verifiedCommit": "28e495064d72aa4eef989661af2389e7b4a1749e",
+            "completedAt": "2026-11-17T08:22:39.195Z",
             "timeoutMs": 120000
           },
           {
@@ -67,18 +78,20 @@
               "test/workspace-surface-host.test.ts",
               "test/knowledge-composer.test.js",
               "test/pending-conversation-panel.test.js",
-              "test/browser-app-native.test.js"
+              "test/browser-app-native.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/knowledge-session-content.test.ts"
             ],
             "outcome": "passed",
-            "summary": "61 项聚焦测试通过，覆盖旧图像草稿、关闭持久化和知识库对话屏",
-            "verifiedCommit": "e8d2bc8df611b497d0e1e0ef898626adca697a95",
-            "completedAt": "2026-11-17T08:20:12.069Z",
+            "summary": "78 项聚焦测试通过，包括图像草稿真实存储、画布交互和知识库对话屏。",
+            "verifiedCommit": "28e495064d72aa4eef989661af2389e7b4a1749e",
+            "completedAt": "2026-11-17T08:22:39.195Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "上一签名包确认真实主界面启动并复现同名旧草稿，修复在实际记录结构上通过聚焦回归，新的签名包仍待集成验收。"
+          "summary": "渲染器交互检查和持久化回归通过，当前提交的签名包桌面验证将在集成构建后进行。"
         },
         "acceptanceCriteria": [
           "从知识库打开工作区表格，进入图像并切换任务，点击返回恢复该会话的表格模式。",
@@ -90,7 +103,7 @@
         "risks": [
           "独立图像草稿继续保存在原来的本地位置。"
         ],
-        "generatedAt": "2026-11-17T08:20:12.069Z"
+        "generatedAt": "2026-11-17T08:22:39.195Z"
       }
     }
   ],
