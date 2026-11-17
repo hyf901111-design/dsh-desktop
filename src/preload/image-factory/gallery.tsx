@@ -136,12 +136,14 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
         </div>)}
       </div>
     </div>
-    {([-1, 1] as const).map(direction => {
-      const label = direction < 0 ? t('向左翻页', 'Scroll gallery left') : t('向右翻页', 'Scroll gallery right')
-      return <button key={direction} type="button" className="if-gallery-page" data-direction={direction < 0 ? 'left' : 'right'}
-        aria-label={label} title={label} onClick={() => page.current?.(direction)}>
-        <i className="if-symbol" aria-hidden="true" style={{ '--if-icon': 'url("' + iconSource('chevron') + '")' } as CSSProperties}/>
-      </button>
-    })}
+    <div className="if-gallery-controls">
+      {([-1, 1] as const).map(direction => {
+        const label = direction < 0 ? t('向左翻页', 'Scroll gallery left') : t('向右翻页', 'Scroll gallery right')
+        return <button key={direction} type="button" className="if-gallery-page" data-direction={direction < 0 ? 'left' : 'right'}
+          aria-label={label} title={label} onClick={() => page.current?.(direction)}>
+          <i className="if-symbol" aria-hidden="true" style={{ '--if-icon': 'url("' + iconSource('chevron') + '")' } as CSSProperties}/>
+        </button>
+      })}
+    </div>
   </div>
 }
