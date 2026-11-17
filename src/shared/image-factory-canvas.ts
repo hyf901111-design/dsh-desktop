@@ -29,6 +29,7 @@ export type TextLayer = {
 export type StoredImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType }
 export type StoredCanvas = {
   version: 1; id: string; title: string; width: number; height: number; layers: (StoredImageLayer | TextLayer)[]
+  aiWatermark?: true
 }
 export type CanvasImage = { data: Uint8Array; mediaType: CanvasImageType }
 export type CanvasRead = { epoch: number; canvas?: StoredCanvas; image?: CanvasImage }

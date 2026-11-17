@@ -1,7 +1,25 @@
 import {Window} from 'happy-dom'
 import {expect,it,vi} from 'vitest'
 import {BrowserAppView} from '../src/preload/browser/view'
+import {WorkspaceSurfaceHost} from '../src/preload/workspace-surface-host'
 const initial=()=>({tabs:[{id:'one',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'one',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}})
+it('does not reopen a browser that finishes loading after the user changes apps',async()=>{
+ const w=new Window(),doc=w.document as unknown as Document,host=new WorkspaceSurfaceHost(doc)
+ let resolveSnapshot!: (value: ReturnType<typeof initial>)=>void
+ const snapshot=new Promise<ReturnType<typeof initial>>(resolve=>{resolveSnapshot=resolve})
+ const view=new BrowserAppView(doc,{request:vi.fn(async method=>method==='snapshot'?snapshot:undefined),subscribe:()=>()=>{},source:vi.fn()},host)
+ try{
+  const pending=view.open('research')
+  expect(host.current()?.surface).toBe('browser')
+  host.open('knowledge')
+  resolveSnapshot(initial())
+  await pending
+  expect(host.current()?.surface).toBe('knowledge')
+  expect(view.root.hidden).toBe(true)
+  host.back()
+  expect(host.current()).toBeUndefined()
+ }finally{view.dispose();host.dispose();await w.happyDOM.abort()}
+})
 it('opens the app without a session and keeps context-only actions explicit',async()=>{
  const w=new Window(),state=initial();state.tabs[0]!.url='https://example.com/'
  const bridge={request:vi.fn(async()=>structuredClone(state)),subscribe:()=>()=>{},source:vi.fn()};const host={register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})}

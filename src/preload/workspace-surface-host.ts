@@ -3,6 +3,7 @@ type SurfaceLocation = {
     surface: WorkspaceSurface;
     route?: string;
 };
+const switchableApps = new Set<WorkspaceSurface>(['browser', 'image-factory', 'knowledge', 'integrations', 'scheduled']);
 /** Coordinates owned workspace surfaces without unmounting their drafts or the conversation. */
 export class WorkspaceSurfaceHost {
     private surfaces = new Map<WorkspaceSurface, HTMLElement>();
@@ -26,6 +27,7 @@ export class WorkspaceSurfaceHost {
             document.head.append(style);
         }
         document.addEventListener('sherlock:search-session-opened', this.onSessionOpened);
+        document.addEventListener('sherlock:sidebar-home-opened', this.closeAll);
         document.addEventListener('click', this.onNavigate, true);
         document.defaultView?.addEventListener('resize', this.schedulePosition);
         document.defaultView?.addEventListener('sherlock:workspace-panel-state', this.onPanelState);
@@ -54,8 +56,12 @@ export class WorkspaceSurfaceHost {
     open(surface: WorkspaceSurface, route?: string) {
         if (this.settingsOpen() && !['notes','browser','knowledge','shared-session'].includes(surface)) { this.closeAll(); return; }
         const current = this.history.at(-1);
-        if (current?.surface !== surface || current.route !== route)
-            this.history.push({ surface, route });
+        if (current?.surface !== surface || current.route !== route) {
+            const next = { surface, route };
+            if (current && switchableApps.has(current.surface) && switchableApps.has(surface))
+                this.history[this.history.length - 1] = next;
+            else this.history.push(next);
+        }
         this.sync();
     }
     back() { this.history.pop(); this.sync(); }
@@ -141,10 +147,13 @@ export class WorkspaceSurfaceHost {
                     const box = center.getBoundingClientRect();
                     const view = this.document.defaultView;
                     const reserved = name !== 'knowledge' ? 0 : Math.max(0, parseFloat(view?.getComputedStyle(html).getPropertyValue('--dsh-sidebar-height') || '') || 0);
-                    const height = Math.max(0, Math.min(box.bottom, view?.innerHeight ?? box.bottom) - box.top - reserved);
-                    const bounds = { left: box.left, top: box.top, width: box.width, height };
-                    for (const [property, pixels] of Object.entries(bounds)) {
-                        const next = String(pixels) + 'px';
+                    const paneHeight = Math.max(0, Math.min(box.bottom, view?.innerHeight ?? box.bottom) - box.top);
+                    // The native splitter updates this CSS variable throughout dragging.
+                    const height = name === 'image-factory'
+                        ? `max(0px, calc(${paneHeight}px - var(--dsh-sidebar-height, 0px)))`
+                        : `${Math.max(0, paneHeight - reserved)}px`;
+                    const bounds = { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height };
+                    for (const [property, next] of Object.entries(bounds)) {
                         if (element.style.getPropertyValue(property) !== next) element.style.setProperty(property, next);
                     }
                     this.resizeObserver?.observe(center);
@@ -187,11 +196,7 @@ export class WorkspaceSurfaceHost {
         if (!this.current())
             return;
         const target = event.target as Element;
-        if (target?.closest?.('[data-dsh-sidebar-root] [data-sidebar-home]')) {
-            // Home starts a fresh conversation even when Notes was opened over Knowledge.
-            this.revealConversation();
-            return;
-        }
+        if (target?.closest?.('[data-sidebar-home]')) return;
         if (this.current()?.surface === 'notes' && target?.closest?.('[data-srb-tabs] [data-conversation-view-id]:not([data-conversation-view-id="notes"])')) { this.closeAll(); return; }
         // Account/settings entries ultimately click this existing native trigger.
         // Release inert and cancel the active surface before React mounts settings.
@@ -206,6 +211,7 @@ export class WorkspaceSurfaceHost {
         this.observer?.disconnect();
         this.resizeObserver?.disconnect();
         this.document.removeEventListener('sherlock:search-session-opened', this.onSessionOpened);
+        this.document.removeEventListener('sherlock:sidebar-home-opened', this.closeAll);
         this.document.removeEventListener('click', this.onNavigate, true);
         this.document.defaultView?.removeEventListener('resize', this.schedulePosition);
         this.document.defaultView?.removeEventListener('sherlock:workspace-panel-state', this.onPanelState);

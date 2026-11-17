@@ -1,5 +1,7 @@
 const branchCommands = '["model","permission","skills","knowledge"]'
 const tag = '/* ework:slash-command-flyout */'
+const primaryFlyoutHit = 'if (listRef.current?.contains(ev.target) || listRef.current?.eworkCommandChild?.element.contains(ev.target)) return;'
+const primarySharedHit = 'if (listRef.current?.contains(ev.target) || listRef.current?.eworkCommandChild?.element.contains(ev.target) || listRef.current?.eworkCommandChild?.element.eworkSharedMenu?.contains(ev.target)) return;'
 
 function replace(source, from, to) {
   if (source.split(from).length !== 2) throw Error('Slash flyout anchor missing or ambiguous: ' + from.slice(0, 90))
@@ -7,7 +9,7 @@ function replace(source, from, to) {
 }
 
 export function patchSlashFlyoutPrimary(source) {
-  if (source.includes(tag)) return source
+  if (source.includes(tag)) return source.includes(primarySharedHit) ? source : replace(source, primaryFlyoutHit, primarySharedHit)
   source = replace(source, 'const hoverTimer = (0, react.useRef)();', `${tag}
  const flyoutFor = (row,command,focus) => ({
   row, primary:listRef.current, command, focus,
@@ -23,7 +25,7 @@ export function patchSlashFlyoutPrimary(source) {
   source = replace(source, '    onPick(group.source, index);\n   }', '    onPick(group.source, index, flyoutFor(row,item.name,false));\n   }')
   source = replace(source, 'onPick(group.source, index);\n\t\t\t\t\t\t\t},', `onPick(group.source, index,state.hit?.trigger==="/"&&group.source==="command"&&${branchCommands}.includes(item.name)?flyoutFor(ev.currentTarget,item.name,true):undefined);
 \t\t\t\t\t\t\t},`)
-  source = replace(source, 'if (listRef.current?.contains(ev.target)) return;', 'if (listRef.current?.contains(ev.target) || listRef.current?.eworkCommandChild?.element.contains(ev.target)) return;')
+  source = replace(source, 'if (listRef.current?.contains(ev.target)) return;', primarySharedHit)
   source = replace(source, 'pick(source, index) {', 'pick(source, index, flyout) {')
   source = replace(source, 'via: "menu",\n\t\t\t\t\tspan: hit.span', 'via: "menu",\n\t\t\t\t\tflyout,\n\t\t\t\t\tspan: hit.span')
   source = replace(source, 'this.reduce({ type: "close" });\n\t\t\t\tthis.execute(outcome, hit.span);',
@@ -130,6 +132,36 @@ export function migrateSlashFlyoutOptions(source) {
  useSlashCommandFlyout(cardRef,popup,flyout,state.open,state.confirming);`, flyoutCall + nativeSurfaceCall)
 }
 
+function patchSharedMenuBackdrop(source) {
+  const marker = '/* ework:knowledge-shared-backdrop */'
+  if (source.includes(marker)) return source
+  const start = ` , state.command==="knowledge" && shared && !state.search && rows.some(sharedChild) && react_jsx_runtime.jsx('div',{`
+  const end = '\n })\n\t\t\t\t]\n\t\t\t}), confirmation !== void 0'
+  const from = source.indexOf(start), to = source.indexOf(end, from)
+  if (from < 0 || to < 0) throw Error('Knowledge shared submenu fragment missing')
+  // The submenu needs a sibling surface to sample pixels outside the parent blur.
+  const nested = source.slice(from + ' , '.length, to)
+  let sibling = replace(nested, `onPointerDown:event=>event.stopPropagation(),
+  style:{position:'absolute',inset:'auto',zIndex:10},
+  ref:element=>{
+   if(!element)return;
+   const card=cardRef.current??element.closest('[data-ework-command=knowledge]');`, `${marker}
+  onKeyDown,popover:'manual','data-ework-command-surface':true,
+  style:{position:'fixed',inset:'auto'},
+  ref:element=>{
+   const card=cardRef.current;
+   if(!card)return;
+   card.eworkSharedMenu=element;
+   if(!element)return;
+   if(element.showPopover&&!element.matches(':popover-open'))element.showPopover();`)
+  sibling = replace(sibling, "element.style.left=(left-box.left-card.clientLeft)+'px';", "element.style.left=left+'px';")
+  sibling = replace(sibling, "element.style.top=(top-box.top-card.clientTop)+'px';", "element.style.top=top+'px';")
+  source = source.slice(0, from) + '\n\t\t\t\t]\n\t\t\t}), state.confirming === null && ' + sibling +
+    '\n }), confirmation !== void 0' + source.slice(to + end.length)
+  return replace(source, 'cardRef.current.contains(ev.target)||flyout?.primary?.contains(ev.target)',
+    'cardRef.current.contains(ev.target)||cardRef.current.eworkSharedMenu?.contains(ev.target)||flyout?.primary?.contains(ev.target)')
+}
+
 export function patchSlashFlyoutOptions(source) {
   const back = 'const showBack=["knowledge","model","permission","skills"].includes(state.command);'
   const hideCascadeBack = input => {
@@ -140,7 +172,7 @@ export function patchSlashFlyoutOptions(source) {
       'if(flyout||isKnowledge&&shared&&!state.search){ev.preventDefault();goBack();}'
     )
   }
-  if (source.includes(tag)) return hideCascadeBack(source)
+  if (source.includes(tag)) return patchSharedMenuBackdrop(hideCascadeBack(source))
   const wrappedSegment = 'via: "menu",\n\t\t\t\t\t\tspan: pick.span'
   if (source.split(wrappedSegment).length !== 3) throw Error('Slash branch dispatch anchors changed')
   source = source.replaceAll(wrappedSegment, 'via: "menu",\n\t\t\t\t\t\tflyout: pick.flyout,\n\t\t\t\t\t\tspan: pick.span')
@@ -161,5 +193,5 @@ export function patchSlashFlyoutOptions(source) {
   source = replace(source, '  const launcher=cardRef.current?.closest', '  if(flyout){popup.dismiss({focusComposer:true});return;}\n  const launcher=cardRef.current?.closest')
   source = replace(source, 'const left=box.right+width-1<=window.innerWidth-8?box.right-1:Math.max(8,box.left-width+1);',
     'const opensLeft=card.dataset.eworkCascadeSide==="left";\n   const left=!opensLeft&&box.right+width-1<=window.innerWidth-8?box.right-1:Math.max(8,box.left-width+1);')
-  return hideCascadeBack(source)
+  return patchSharedMenuBackdrop(hideCascadeBack(source))
 }
