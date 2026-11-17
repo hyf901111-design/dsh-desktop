@@ -329,8 +329,8 @@ body[data-workspace-surface=image-factory] #odyssey-right-workspace-panel .uV2eY
 .if-prompt-lane:nth-child(3n) {--if-prompt-delay:-31s}
 .if-prompt-lane:hover .if-prompt-track {animation-play-state:paused}
 .if-prompt-cycle {display:grid;gap:var(--if-prompt-gap);padding-block-end:var(--if-prompt-gap)}
-.image-factory .if-prompt-image {display:block;width:100%;min-height:calc(100cqh / var(--if-prompt-count));aspect-ratio:1;padding:0;overflow:hidden;border-radius:8px;background:var(--if-field)}
-.if-prompt-image > img {display:block;width:100%;height:100%;object-fit:cover;user-select:none}
+.image-factory .if-prompt-image {min-height:calc(100cqh / var(--if-prompt-count));aspect-ratio:1;border-radius:8px}
+.if-prompt-image > img {object-fit:cover}
 .if-prompt-image:focus-visible {outline-offset:-3px}
 .if-prompt-gallery:has(.if-prompt-image:focus-visible) {overflow:auto}
 .if-prompt-gallery:has(.if-prompt-image:focus-visible) .if-prompt-track {animation:none;will-change:auto}
