@@ -4,7 +4,7 @@ import {BrowserBookmarkManager} from './bookmark-manager'
 import {BrowserActivityPage} from './activity-page'
 import {downloadDetails,downloadIndicator} from './download-details'
 import type {WorkspaceSurfaceHost} from '../workspace-surface-host'
-import {mountWorkspaceTopbarStyles,workspaceBackButton} from '../workspace-topbar'
+import {clipWorkspaceTabs,mountWorkspaceTopbarStyles,reserveWorkspaceRightControl,revealWorkspaceTab,workspaceBackButton} from '../workspace-topbar'
 import {workspaceViews, workspaceViewButton, WorkspaceViewHover} from '../workspace-view-shortcuts'
 import {browserIcons} from './icons'
 import css from './style.css?inline'
@@ -136,7 +136,7 @@ export class BrowserAppView {
    // The resident bottom pane owns this reserved strip, including live drag sizes.
    const reserved=Math.max(0,parseFloat(win.getComputedStyle(this.document.documentElement).getPropertyValue('--dsh-sidebar-height'))||0)
    this.root.style.left=box.left+'px';this.root.style.top=box.top+'px';this.root.style.width=box.width+'px';this.root.style.height=Math.max(0,bottom-box.top-reserved)+'px';this.root.dataset.dark=String(this.document.body.hasAttribute('data-ds-dark-theme')||this.document.documentElement.dataset.theme==='dark'||this.document.documentElement.classList.contains('dark'));if(center)this.resize?.observe(center)}
-  if(box){const entry=this.document.querySelector<HTMLElement>('[data-odyssey-panel-entry=right][aria-expanded=false]'),r=entry?.getBoundingClientRect();const reserve=r&&r.width>0&&r.height>0&&r.bottom>box.top&&r.top<box.top+44&&r.left<box.right?Math.max(12,box.right-r.left+8):12;this.root.style.setProperty('--eb-tabs-right',reserve+'px')}
+  const header=this.root.querySelector<HTMLElement>('.eb-tabs');if(header)reserveWorkspaceRightControl(header)
   if(this.panel==='bookmarks')this.positionBookmarks();if(this.panel==='tab-list')this.positionTabList()
   if(this.panel==='recent-downloads')this.positionDownloads()
   this.revealActiveTab();if(this.workspaceMotionUntil>this.document.defaultView!.performance.now())this.schedule()
@@ -415,8 +415,8 @@ export class BrowserAppView {
   this.closingTab='';if(this.disposed)return;if(!this.holdTabWidths){this.frozenTabs=undefined;this.tabMotionUntil=this.document.defaultView!.performance.now()+180}
   try{if(this.state!.tabs.some(tab=>tab.id===id))await this.run('close',{id});else this.render();this.focusTab()}catch(error){this.frozenTabs=this.holdTabWidths?original:undefined;this.render();throw error}finally{closing?.cancel();growing?.cancel()}
  }
- private revealActiveTab(){const list=this.root.querySelector<HTMLElement>('.eb-tab-scroll'),tab=list?.querySelector<HTMLElement>('[aria-selected=true]');if(!list||!tab)return;const bounds=list.getBoundingClientRect(),box=tab.getBoundingClientRect();if(box.left<bounds.left)list.scrollLeft-=bounds.left-box.left;else if(box.right>bounds.right)list.scrollLeft+=box.right-bounds.right;this.clipTabs()}
- private clipTabs=()=>{const list=this.root.querySelector<HTMLElement>('.eb-tab-scroll');if(!list)return;const box=list.getBoundingClientRect();for(const tab of list.querySelectorAll<HTMLElement>('.eb-tab')){const r=tab.getBoundingClientRect();tab.dataset.clipped=String(r.left<box.left-1||r.right>box.right+1);tab.dataset.compact=String(r.width<(tab.getAttribute('aria-selected')==='true'?44:64))}}
+ private revealActiveTab(){const list=this.root.querySelector<HTMLElement>('.eb-tab-scroll');if(list)revealWorkspaceTab(list)}
+ private clipTabs=()=>{const list=this.root.querySelector<HTMLElement>('.eb-tab-scroll');if(list)clipWorkspaceTabs(list)}
  private middleClick=(event:MouseEvent)=>{const tab=(event.target as Element).closest<HTMLElement>('.eb-tab');if(event.button!==1||!tab)return;event.preventDefault();void this.action('close',tab).catch(error=>this.toast(error.message,true))}
  private key=(event:KeyboardEvent)=>{
   if(event.isComposing||this.composing)return

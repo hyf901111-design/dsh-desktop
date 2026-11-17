@@ -22,10 +22,11 @@ function readTaskTabs(value: unknown): ImageFactoryTaskTab[] {
   const seen = new Set<string>()
   return value.map(tab => {
     if (!tab || typeof tab.scope !== 'string' || !validCanvasScope(tab.scope) || seen.has(tab.scope) ||
-        (tab.title !== undefined && (typeof tab.title !== 'string' || tab.title.length > 255)))
+        (tab.title !== undefined && (typeof tab.title !== 'string' || tab.title.length > 255)) ||
+        (tab.pinned !== undefined && typeof tab.pinned !== 'boolean'))
       throw Error('图片任务页签数据无效。')
     seen.add(tab.scope)
-    return { scope: tab.scope, ...(tab.title && { title: tab.title }) }
+    return { scope: tab.scope, ...(tab.title && { title: tab.title }), ...(tab.pinned && { pinned: true }) }
   })
 }
 
@@ -121,24 +122,28 @@ export class ImageFactoryCanvases {
   readTabs() {
     return this.run(async (owner, epoch, current) => {
       let tabs: ImageFactoryTaskTab[] = []
+      let closed: ImageFactoryTaskTab[] = []
       try {
         const file = join(dirname(this.directory(owner, null)), 'task-tabs.json')
-        tabs = readTaskTabs(JSON.parse((await readBounded(file, 64 * 1024)).toString('utf8')))
+        const stored = JSON.parse((await readBounded(file, 128 * 1024)).toString('utf8'))
+        tabs = readTaskTabs(Array.isArray(stored) ? stored : stored?.tabs)
+        if (!Array.isArray(stored)) closed = readTaskTabs(stored?.closed)
       } catch (error) { if (!missing(error)) throw error }
       current()
-      return { epoch, tabs }
+      return { epoch, tabs, ...(closed.length && { closed }) }
     })
   }
 
   async writeTabs(value: unknown) {
-    const input = value as { epoch?: number; tabs?: unknown } | undefined
+    const input = value as { epoch?: number; tabs?: unknown; closed?: unknown } | undefined
     if (!input || typeof input.epoch !== 'number' || !Number.isSafeInteger(input.epoch)) throw Error('图片任务页签数据无效。')
     const tabs = readTaskTabs(input.tabs)
+    const closed = input.closed === undefined ? [] : readTaskTabs(input.closed)
     return this.run(async (owner, _epoch, current) => {
       const directory = dirname(this.directory(owner, null))
       await mkdir(directory, { recursive: true, mode: 0o700 })
       current()
-      await atomicWrite(join(directory, 'task-tabs.json'), JSON.stringify(tabs))
+      await atomicWrite(join(directory, 'task-tabs.json'), JSON.stringify(closed.length ? { tabs, closed } : tabs))
     }, input.epoch)
   }
 

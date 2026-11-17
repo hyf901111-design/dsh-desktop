@@ -1,15 +1,18 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
 export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, setView, storage }) {
-  let tabs = [], active, draftSession, openToken, loading, epoch, emitted
+  let tabs = [], closed = [], active, draftSession, openToken, loading, epoch, emitted
   const validScope = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value)
   const publish = (force = false) => {
     const busy = !!openToken || !!loading
     if (!force && emitted?.tabs === tabs && emitted.active === active && emitted.busy === busy) return
-    emitted = { tabs, active, busy }
+    emitted = { tabs, active, busy, canRestore: closed.some(tab => !tabs.some(open => open.scope === tab.scope) &&
+      (tab.scope === null || sessions.binding(tab.scope))) }
     signal('task-state', emitted)
   }
   const save = () => {
-    if (epoch !== undefined) void storage.write({ epoch, tabs: tabs.filter(tab => tab.scope !== null) }).catch(() => {})
+    if (epoch === undefined) return
+    const recent = closed.filter(tab => tab.scope !== null)
+    void storage.write({ epoch, tabs: tabs.filter(tab => tab.scope !== null), ...(recent.length > 0 && { closed: recent }) }).catch(() => {})
   }
   const load = () => {
     if (!storage || epoch !== undefined || loading) return
@@ -20,7 +23,9 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       epoch = value.epoch
       const restored = Array.isArray(value.tabs) ? value.tabs.filter(tab => validScope(tab?.scope)) : []
       const current = new Map(tabs.map(tab => [tab.scope, tab]))
-      tabs = [...restored.map(tab => current.get(tab.scope) ?? tab), ...tabs.filter(tab => !restored.some(saved => saved.scope === tab.scope))].slice(-32)
+      tabs = [...restored.map(tab => ({ ...tab, ...current.get(tab.scope) })),
+        ...tabs.filter(tab => !restored.some(saved => saved.scope === tab.scope))].slice(-32)
+      closed = Array.isArray(value.closed) ? value.closed.filter(tab => validScope(tab?.scope)) : []
     }).catch(() => {}).finally(() => {
       if (loading !== token) return
       loading = undefined
@@ -81,25 +86,64 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       tabs = [...tabs, { scope: id }]
       save()
       if (isActive() && sessions.list.getSnapshot().current === before) select(id)
+      return id
     } finally {
       if (openToken === token) { openToken = undefined; publish() }
     }
   }
-  async function action({ kind, scope } = {}) {
+  function rememberClosed(removed) {
+    const scopes = new Set(removed.map(tab => tab.scope))
+    closed = [...removed, ...closed.filter(tab => !scopes.has(tab.scope))].slice(0, 32)
+  }
+  const pinnedFirst = (left, right) => Number(!!right.pinned) - Number(!!left.pinned)
+  async function action({ kind, scope, before } = {}) {
     if (!isActive() || openToken || loading) return
     try {
       if (kind === 'new') { await create(); return }
+      if (kind === 'restore') {
+        const tab = closed.find(item => !tabs.some(open => open.scope === item.scope) &&
+          (item.scope === null || sessions.binding(item.scope)))
+        if (!tab) return
+        if (tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
+        tabs = [...tabs, tab].sort(pinnedFirst)
+        select(tab.scope)
+        closed = closed.filter(item => item !== tab)
+        save()
+        publish()
+        return
+      }
       const index = tabs.findIndex(tab => tab.scope === scope)
       if (index < 0) return
       if (kind === 'select') {
         if (scope !== active) select(scope)
+      } else if (kind === 'pin') {
+        tabs = tabs.map(item => item.scope === scope ? { ...item, pinned: !item.pinned } : item).sort(pinnedFirst)
+        save()
+        publish()
+      } else if (kind === 'close-others') {
+        if (scope !== active) select(scope)
+        const removed = tabs.filter(item => item.scope !== scope)
+        tabs = tabs.filter(item => item.scope === scope)
+        rememberClosed(removed.reverse())
+        save()
+        publish()
+      } else if (kind === 'reorder') {
+        if (scope === before || before !== undefined && !tabs.some(item => item.scope === before)) return
+        const tab = tabs[index]
+        const next = tabs.filter(item => item !== tab)
+        next.splice(before === undefined ? next.length : next.findIndex(item => item.scope === before), 0, tab)
+        tabs = next
+        save()
+        publish()
       } else if (kind === 'close') {
+        const tab = tabs[index]
         if (scope === active) {
           const neighbor = tabs[index + 1] ?? tabs[index - 1]
-          if (!neighbor) { await create(scope); return }
-          select(neighbor.scope)
+          if (neighbor) select(neighbor.scope)
+          else if (!await create(scope)) return
         }
         tabs = tabs.filter(tab => tab.scope !== scope)
+        rememberClosed([tab])
         save()
         publish()
       }
@@ -109,6 +153,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   }
   function reset() {
     tabs = []
+    closed = []
     active = draftSession = openToken = loading = epoch = undefined
     publish()
   }

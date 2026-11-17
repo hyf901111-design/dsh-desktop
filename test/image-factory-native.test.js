@@ -85,7 +85,23 @@ it('creates a fresh gallery scope per task, switches the native conversation and
     f.events('task-action', { kind: 'close', scope: newId })
     expect(scope).toBe('native-session')
     expect(f.sessionsState.byId[newId]).toBeDefined()
-    expect(storage.write).toHaveBeenLastCalledWith({ epoch: 4, tabs: [{ scope: 'native-session', title: '原始海报' }] })
+    expect(storage.write).toHaveBeenLastCalledWith({
+      epoch: 4, tabs: [{ scope: 'native-session', title: '原始海报' }], closed: [{ scope: newId }]
+    })
+    expect(tasks.canRestore).toBe(true)
+    f.events('task-action', { kind: 'restore' })
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual(['native-session', newId])
+    expect(scope).toBe(newId)
+    f.events('task-action', { kind: 'reorder', scope: newId, before: 'native-session' })
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual([newId, 'native-session'])
+    expect(scope).toBe(newId)
+    expect(storage.write).toHaveBeenLastCalledWith({ epoch: 4, tabs: [{ scope: newId }, { scope: 'native-session', title: '原始海报' }] })
+    f.events('task-action', { kind: 'pin', scope: 'native-session' })
+    expect(tasks.tabs.map(tab => [tab.scope, !!tab.pinned])).toEqual([['native-session', true], [newId, false]])
+    f.events('task-action', { kind: 'close-others', scope: 'native-session' })
+    expect(tasks.tabs).toEqual([{ scope: 'native-session', title: '原始海报', pinned: true }])
+    expect(tasks.canRestore).toBe(true)
+    expect(scope).toBe('native-session')
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
