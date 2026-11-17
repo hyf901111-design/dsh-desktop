@@ -9,14 +9,16 @@ export function installImageFactoryContext({
 }) {
   const jobs = new Map(), listeners = new Set()
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false }
-  let galleryDrafts = new WeakMap()
+  let galleryDrafts = new WeakMap(), draftOwner
   const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
   const currentId = () => sessions.list.getSnapshot().current
   const canvasScope = () => {
-    const { current, byId } = sessions.list.getSnapshot()
-    // Explicit task and board workspace sessions own their scope even before the first message.
-    return current && !isBoardOnly(current) &&
-      (current.startsWith('image-task-') || current.startsWith('board-app-') || byId?.[current]?.blank !== true) ? current : null
+    const id = currentId()
+    return id && id !== draftOwner && !isBoardOnly(id) ? id : null
+  }
+  const pendingCreated = ({ detail }) => {
+    // Only the first-message handoff may carry the standalone canvas into a session.
+    if (isActive() && typeof detail?.sessionId === 'string') draftOwner = detail.sessionId
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
@@ -107,6 +109,7 @@ export function installImageFactoryContext({
   const promoteDraft = job => {
     if (job.draft && !job.promotion) {
       job.promotion = adopt(job.sessionId).catch(() => {})
+      if (draftOwner === job.sessionId) draftOwner = undefined
       tasks.bindDraft(job.sessionId)
       syncSession()
     }
@@ -199,9 +202,7 @@ export function installImageFactoryContext({
   let publishedScope, intendedCanvas
   function syncSession(force = false, reopen, entry = false) {
     const scope = canvasScope()
-    // The list can stop reporting a blank conversation before its admitted user turn is visible.
-    const awaitingAdmission = scope !== null && [...jobs.values()].some(job => job.sessionId === scope && job.draft && !job.promotion)
-    const sessionId = tasks.sync(awaitingAdmission ? null : scope, scope !== null && (scope === reopen || scope === intendedCanvas), entry)
+    const sessionId = tasks.sync(scope, scope !== null && (scope === reopen || scope === intendedCanvas), entry)
     if (!force && sessionId === publishedScope) return
     publishedScope = sessionId
     signal('session', { sessionId })
@@ -210,7 +211,7 @@ export function installImageFactoryContext({
   const reset = () => {
     for (const id of jobs.keys()) finish(id, false)
     galleryDrafts = new WeakMap()
-    publishedScope = intendedCanvas = undefined
+    publishedScope = intendedCanvas = draftOwner = undefined
     tasks.reset()
   }
   const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt,
@@ -222,6 +223,7 @@ export function installImageFactoryContext({
     'task-action': event => { void tasks.action(event.detail) }, 'task-title': event => tasks.setTitle(event.detail),
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
+  win.addEventListener('sherlock:pending-conversation-created', pendingCreated)
   signal('request-state', {})
   syncSession()
   return {
@@ -229,6 +231,7 @@ export function installImageFactoryContext({
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
       offSession?.()
+      win.removeEventListener('sherlock:pending-conversation-created', pendingCreated)
       reset()
       for (const [name, handler] of Object.entries(events)) doc.removeEventListener('sherlock:image-factory-' + name, handler)
       listeners.clear()

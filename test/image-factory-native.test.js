@@ -39,10 +39,14 @@ function fixture(taskStorage) {
     clear: vi.fn(() => { sessionsState.current = undefined; notifyList() }),
   }
   const events = (name, detail, cancelable = false) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable }))
+  const handoff = () => {
+    win.dispatchEvent(new win.CustomEvent('sherlock:pending-conversation-created', { detail: { sessionId: session.sessionId } }))
+    sessionCatalog.open(session.sessionId)
+  }
   const binding = installImageFactoryContext({
     sessions: sessionCatalog,
     getInput: id => shells.get(id),
-    getPending: () => ({ shell, submitExternal: async submit => { sessionsState.current = session.sessionId; await submit(session.sessionId) } }),
+    getPending: () => ({ shell, submitExternal: async submit => { handoff(); await submit(session.sessionId) } }),
     send: (...args) => binding.prompt(...args), doc, win, taskStorage,
     getTaskWorkspace: () => 'test-workspace', setTaskView: setView,
   })
@@ -53,7 +57,7 @@ function fixture(taskStorage) {
       editBounds: detail.region ? { left: .2, top: .2, right: .8, bottom: .8 } : undefined,
     }) })
   })
-  return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank, sessionCatalog, setView }
+  return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank, sessionCatalog, setView, handoff }
 }
 
 it('creates a fresh gallery scope per task, switches the native conversation and persists the open tabs', async () => {
@@ -221,6 +225,25 @@ it('opens a blank board workspace session in its own canvas scope', async () => 
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
+it('uses a blank spreadsheet session scope instead of the detached image draft', async () => {
+  const closed = 'image-task-closed-alpha'
+  const storage = { read: async () => ({ epoch: 4, tabs: [], closed: [{ scope: closed, title: 'alpha-257x149' }] }), write: vi.fn(async () => {}) }
+  const f = fixture(storage)
+  try {
+    f.sessionsState.byId[closed] = { blank: true }
+    f.updateBlank(true)
+    let tasks
+    const canvas = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    f.doc.addEventListener('sherlock:image-factory-session', canvas)
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { entry: true })
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: f.session.sessionId, busy: false,
+      tabs: [{ scope: f.session.sessionId }] }))
+    expect(canvas).toHaveBeenLastCalledWith(expect.objectContaining({ detail: { sessionId: f.session.sessionId } }))
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('keeps an imported draft outside a blank native session until its first canvas prompt is admitted', async () => {
   const f = fixture()
   try {
@@ -238,9 +261,12 @@ it('keeps an imported draft outside a blank native session until its first canva
     })
     f.doc.addEventListener('sherlock:image-factory-session', selected)
     f.doc.addEventListener('sherlock:image-factory-adopt', adoptions)
-    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.sessionCatalog.clear()
     f.updateBlank(true)
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { entry: true })
     f.events('task-title', { scope: null, title: '导入的海报' })
+    f.handoff()
     expect(selected.mock.results.at(-1)?.value).toBeNull()
     expect(tasks.tabs).toEqual([{ scope: null, title: '导入的海报' }])
     const content = [{ type: 'text', text: '修改导入的海报' }]
