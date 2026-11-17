@@ -1130,12 +1130,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const entry = await flight; valid()
     return { ...entry, fresh: !previous }
   }
-  const showHomeGuideConversation = (kind: GuideKind, sessionId: string) => {
-    if (homeGuideMode(kind) === 'chat') return
+  const configureHomeGuideConversation = (kind: GuideKind, sessionId: string) => {
     const service = deps.researchSidebar?.service
     const scope = { sessionId }
-    service?.activateTab('sherlock-research-conversation', scope)
-    service?.setPanelState({ open: true }, scope)
+    const open = homeGuideMode(kind) !== 'chat'
+    if (open) service?.activateTab('sherlock-research-conversation', scope)
+    service?.setPanelState({ open }, scope)
   }
   const receiveHomeGuideSession = (event: Event) => {
     const request = (event as CustomEvent).detail
@@ -1186,7 +1186,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       navigation++
       valid()
       if (kind === 'spreadsheet') deps.chatStore?.create(entry.sessionId).actions.setView('spreadsheet')
-      showHomeGuideConversation(kind, entry.sessionId)
+      configureHomeGuideConversation(kind, entry.sessionId)
       valid()
       deps.sessions.open(entry.sessionId)
       if (kind === 'board' || kind === 'workbench') selectBoardSession(entry.sessionId)
@@ -1209,7 +1209,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       check();const registered=getHomeGuideSession(entry.sessionId)
       if(!registered||registered.kind!==kind||registered.cwd!==entry.cwd||!deps.chatStore)throw Error('原生示例入口已变化。')
       deps.chatStore.create(entry.sessionId).actions.setView(homeGuideMode(kind));check()
-      showHomeGuideConversation(kind, entry.sessionId);check()
+      configureHomeGuideConversation(kind, entry.sessionId);check()
       navigation++;deps.sessions.open(entry.sessionId)
       if(kind==='board'||kind==='workbench')selectBoardSession(entry.sessionId)
     }

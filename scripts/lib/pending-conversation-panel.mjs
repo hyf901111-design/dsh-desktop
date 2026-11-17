@@ -77,8 +77,10 @@ function Workbench(props) {`);
  if(current===undefined)pendingCompactHandoff.current=pendingChatOpen;
  react.useLayoutEffect(()=>{
   const root=document.documentElement;
-  const demo=root.dataset.homeGuideTransitionSession===sessionId&&root.hasAttribute('data-home-guide-transition-sidebar');
-  setCompactPanelOpen(sessionId!==undefined&&(pendingCompactHandoff.current||knowledgeCompactHandoff.current===sessionId||demo));
+  const demo=root.dataset.homeGuideTransitionSession===sessionId&&root.hasAttribute('data-home-guide-transition');
+  setCompactPanelOpen(sessionId!==undefined&&(demo
+   ? root.hasAttribute('data-home-guide-transition-sidebar')
+   : pendingCompactHandoff.current||knowledgeCompactHandoff.current===sessionId));
   knowledgeCompactHandoff.current=undefined;
   if(sessionId!==undefined)pendingCompactHandoff.current=false;
  },[sessionId]);`);

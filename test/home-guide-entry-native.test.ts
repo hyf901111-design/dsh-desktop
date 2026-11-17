@@ -53,7 +53,7 @@ it.each(['board','workbench','note','ppt','report']as HomeGuideEntryKind[])('ope
  expect(f.panelEvents).toEqual([])
  const pending=client.commit(target);expect(target.getAttribute('data-home-guide-entry-click')).toBeNull();expect(await pending).toMatchObject({sessionId:entry.sessionId})
  expect(f.opened).toEqual([entry.sessionId]);expect(f.normal()).toBe(0);expect(f.modes).toEqual([[entry.sessionId,kind==='note'?'notes':kind==='board'||kind==='workbench'?'research':'chat']]);expect(JSON.stringify(f.ordinary.snapshot)).toBe(before)
- expect(f.panelEvents).toEqual(kind==='ppt'||kind==='report'?[]:[
+ expect(f.panelEvents).toEqual(kind==='ppt'||kind==='report'?[['state',false,entry.sessionId,'A']]:[
   ['activate','sherlock-research-conversation',entry.sessionId,'A'],
   ['state',true,entry.sessionId,'A'],
  ])

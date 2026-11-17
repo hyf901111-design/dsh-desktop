@@ -44,12 +44,12 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
   return { win, page, sessions, workspaces, state, requests, opened, archived, panelEvents, disk, replies, send, reply,nativeSessions, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
-it.each(['board','workbench','note','spreadsheet','ppt','report'])('initializes only the right conversation needed by the %s demo before navigation',async kind=>{
+it.each(['board','workbench','note','spreadsheet','ppt','report'])('sets the right conversation visibility for the %s demo before navigation',async kind=>{
  const f=await fixture(),entry=await f.reply(f.send(kind))
  expect(entry.ok).toBe(true)
  expect(f.panelEvents).toEqual([])
  expect(await f.reply(f.send(kind,'open',{sessionId:entry.sessionId}))).toMatchObject({ok:true})
- expect(f.panelEvents).toEqual(kind==='ppt'||kind==='report'?[]:[
+ expect(f.panelEvents).toEqual(kind==='ppt'||kind==='report'?[['state',false,entry.sessionId,'original']]:[
   ['activate','sherlock-research-conversation',entry.sessionId,'original'],
   ['state',true,entry.sessionId,'original'],
  ])

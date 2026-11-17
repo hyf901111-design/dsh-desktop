@@ -11,7 +11,11 @@ it('preserves native pane behavior, removes eager creation, and keeps compact fi
  const refs=[{current:false},{current:undefined}],values=[]
  let nextRef=0,sessionId,showChat
  const react={useRef:()=>refs[nextRef++],useLayoutEffect:fn=>fn()}
- const document={documentElement:{dataset:{},hasAttribute:()=>false},addEventListener:(_name,handler)=>{showChat=handler}}
+ const root={dataset:{},hasAttribute(name){
+  const key={'data-home-guide-transition':'homeGuideTransition','data-home-guide-transition-sidebar':'homeGuideTransitionSidebar'}[name]
+  return key in this.dataset
+ }}
+ const document={documentElement:root,addEventListener:(_name,handler)=>{showChat=handler}}
  const store={getSnapshot:()=>({sessionId})}
  const render=new Function('react','document','store','current','sessionId','state','setCompactPanelOpen',fragment)
  const select=(id)=>{
@@ -25,6 +29,11 @@ it('preserves native pane behavior, removes eager creation, and keeps compact fi
  select('unrelated');expect(values.at(-1)).toBe(false)
  select('from-knowledge');expect(values.at(-1)).toBe(false)
  showChat({detail:{sessionId:'from-knowledge'}});expect(values.at(-1)).toBe(true)
+ select(undefined)
+ root.dataset={homeGuideTransition:'entry',homeGuideTransitionSession:'ppt'}
+ select('ppt');expect(values.at(-1)).toBe(false)
+ root.dataset={homeGuideTransition:'entry',homeGuideTransitionSession:'research',homeGuideTransitionSidebar:''}
+ select('research');expect(values.at(-1)).toBe(true)
 })
 it('uses the global sidebar store without persisting a fake session, then hands its tabs to the created session',()=>{
  const source=patchPendingConversationPanel(readFileSync('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),start=source.indexOf('function makePendingPanelState'),end=source.indexOf('\n\t\t//#endregion',start);
