@@ -7,15 +7,19 @@ import {stripConversationPermissionDefault} from '../scripts/lib/conversation-pe
 import {imageFactoryPrompt,readImageFactoryContext,stripImageFactoryContext} from '../packages/dsh-research-task-runtime/image-factory-context.js'
 const stripNewer = source => stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(source)))
 import {installBrowserNative,installWorkspaceAppSessions,browserSourceCodec,patchBrowserAppNative,stripBrowserAppNative,browserUserTextSegments} from '../scripts/lib/browser-app-native.mjs'
+import {installImageFactoryContext} from '../scripts/lib/image-factory-native.mjs'
+import {installKnowledgeSourceNavigation} from '../scripts/lib/knowledge-client.mjs'
+import {openKnowledgeSession} from '../src/preload/knowledge/session-directory'
 import {WorkspaceSurfaceHost} from '../src/preload/workspace-surface-host'
 
 it.each(['browser','image-factory','knowledge'])('keeps %s and other apps in the selected board file workspace until back', async app => {
  const win=new Window(), doc=win.document, host=new WorkspaceSurfaceHost(doc);
  let current='pinned-board';
  const sessions={list:{getSnapshot:()=>({current})},
-  clear:vi.fn(()=>{current=undefined}),open:vi.fn(id=>{current=id})};
+  binding:()=>({state:'open'}),clear:vi.fn(()=>{current=undefined}),open:vi.fn(id=>{current=id})};
  const workspaceSession=vi.fn(async id=>id+'-file-session');
- const dispose=installWorkspaceAppSessions({sessions,doc,workspaceSession,showError:vi.fn(),isBoardOnly:id=>id==='pinned-board'||id==='notification-board'});
+ const dispose=installWorkspaceAppSessions({sessions,doc,workspaceSession,viewFor:()=>({getSnapshot:()=>({view:'research'})}),
+  showError:vi.fn(),isBoardOnly:id=>id==='pinned-board'||id==='notification-board'});
  try {
   for(const surface of ['browser','image-factory','knowledge'])host.register(surface,doc.createElement('div'));
   host.open(app);
@@ -45,6 +49,61 @@ it.each(['browser','image-factory','knowledge'])('keeps %s and other apps in the
   expect(current).toBe('ordinary-research');
  } finally {dispose();host.dispose();await win.happyDOM.abort();}
 });
+it.each(['other-image','workspace-sheet'])('returns to the spreadsheet opened from Knowledge after selecting %s in Images', async selected => {
+ const win = new Window(), doc = win.document, host = new WorkspaceSurfaceHost(doc)
+ const byId = { 'workspace-sheet': { blank:false }, 'other-image': { blank:false } }
+ const state = { current: undefined, byId }
+ const listeners = new Set()
+ const select = id => { state.current = id; for (const fn of listeners) fn() }
+ const sessions = {
+  list: { getSnapshot: () => state, subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) } },
+  binding: id => byId[id], subagentAddress: () => undefined, open: select, clear: () => select(undefined),
+ }
+ const views = new Map([['other-image', 'chat']])
+ const selectView = (id, view) => views.set(id, view)
+ const viewFor = id => ({ getSnapshot: () => ({ view: views.get(id) }), actions: { setView: view => selectView(id, view) } })
+ const emit = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
+ const disposeApps = installWorkspaceAppSessions({ sessions, doc, isBoardOnly: () => false, viewFor })
+ const disposeKnowledge = installKnowledgeSourceNavigation({ sessions, selectView, document: doc })
+ const image = installImageFactoryContext({ sessions, doc, win, setTaskView: id => selectView(id, 'chat'),
+  taskStorage: { read: async () => ({ epoch:1, tabs:Object.keys(byId).map(scope => ({ scope })) }), write: async () => {} } })
+ try {
+  host.register('knowledge', doc.createElement('div'))
+  host.register('image-factory', doc.createElement('div'))
+  host.register('browser', doc.createElement('div'))
+  host.open('knowledge')
+  expect(await openKnowledgeSession(doc, 'workspace-sheet', 'spreadsheet')).toBe(true)
+  host.revealConversation()
+  expect(views.get(state.current)).toBe('spreadsheet')
+
+  let tabs
+  doc.addEventListener('sherlock:image-factory-task-state', event => { tabs = event.detail })
+  host.open('image-factory')
+  emit('request-session', { entry:true })
+  await vi.waitFor(() => expect(tabs).toMatchObject({ active:'workspace-sheet', busy:false }))
+  emit('task-action', { kind:'select', scope:'other-image' })
+  emit('task-action', { kind:'select', scope:selected })
+  expect([state.current, views.get(state.current)]).toEqual([selected, 'chat'])
+
+  host.back()
+  expect([state.current, views.get(state.current)]).toEqual(['workspace-sheet', 'spreadsheet'])
+
+  host.open('image-factory')
+  emit('request-session', { entry:true })
+  emit('task-action', { kind:'select', scope:'other-image' })
+  host.open('browser')
+  host.back()
+  expect([state.current, views.get(state.current)]).toEqual(['workspace-sheet', 'spreadsheet'])
+
+  host.open('image-factory')
+  emit('request-session', { entry:true })
+  emit('task-action', { kind:'select', scope:'other-image' })
+  host.revealConversation()
+  expect([state.current, views.get(state.current)]).toEqual(['other-image', 'chat'])
+ } finally {
+  image.dispose(); disposeKnowledge(); disposeApps(); host.dispose(); await win.happyDOM.abort()
+ }
+})
 it('patches the canvas action before its translated ternary is split into per-label calls',()=>{
  const raw=stripBrowserAppNative(stripNewer(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  const before=raw.replace('"aria-label": (notes?workbenchText("添加到笔记"):workbenchText("添加到画布")),','"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),')

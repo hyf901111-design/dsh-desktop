@@ -1,20 +1,40 @@
 import {installImageFactoryContext,imageFactoryNativeSource} from './image-factory-native.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
 import {createPendingConversation,EWorkPendingInputBar,browserPromptReference} from './pending-conversation.mjs'
-/** Open apps in the board's file workspace and retain the board as the back destination. */
-export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSession,showError,doc=document}) {
+/** Keep the native session and view underneath a sequence of workspace apps. */
+export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSession,viewFor,showError,doc=document}) {
  const apps=new Set(['browser','image-factory','knowledge'])
- let boardToReturn, revision=0
+ let origin, revision=0
  const current=()=>sessions.list.getSnapshot().current
+ const restore=({id,view})=>{
+  if(id===undefined){
+   if(current()!==undefined)sessions.clear()
+   return
+  }
+  const binding=sessions.binding(id)
+  if(!binding||binding.state==='removed')return
+  if(view!==undefined){
+   const store=viewFor(id)
+   if(store.getSnapshot().view!==view)store.actions.setView(view)
+  }
+  if(current()!==id)sessions.open(id)
+ }
+ const reset=()=>{
+  revision++
+  origin=undefined
+  delete doc.body.dataset.boardWorkspacePending
+ }
  const surfaceChanged=({detail})=>{
   const turn=++revision
+  const selected=current()
+  if(detail?.appInHistory && !origin){
+   origin={id:selected,view:selected&&!isBoardOnly(selected)?viewFor(selected).getSnapshot().view:undefined}
+  }
   if(apps.has(detail?.surface)){
-   const selected=current()
    if(!selected||!isBoardOnly(selected)){
     delete doc.body.dataset.boardWorkspacePending
     return
    }
-   boardToReturn=selected
    doc.body.dataset.boardWorkspacePending='true'
    void workspaceSession(selected).then(id=>{
     if(turn!==revision || current()!==selected)return
@@ -25,17 +45,18 @@ export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSessi
    })
   }else{
    delete doc.body.dataset.boardWorkspacePending
-   if(detail?.active!==false)return
-   const board=boardToReturn
-   boardToReturn=undefined
-   if(detail.back&&board&&current()!==board&&isBoardOnly(board))sessions.open(board)
+   if(detail?.appInHistory)return
+   const previous=origin
+   origin=undefined
+   if(detail?.back&&previous)restore(previous)
   }
  }
  doc.addEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
+ doc.addEventListener('sherlock:knowledge-identity-changed',reset)
  return()=>{
-  revision++
-  delete doc.body.dataset.boardWorkspacePending
+  reset()
   doc.removeEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
+  doc.removeEventListener('sherlock:knowledge-identity-changed',reset)
  }
 }
 /** Browser is an application; conversation context is optional and never created by entry. */
@@ -196,7 +217,7 @@ ctx.effect(()=>{
    sessions,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
    getTaskWorkspace:()=>{const state=workspaces.list.getSnapshot(), current=sessions.list.getSnapshot().current;
      return state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??eworkPendingConversation?.getSnapshot().workspaceId??state.recentWorkspaceId},
-   setTaskView:id=>chatStore.create(id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
+   setTaskView:id=>slots.resolveStore(chatStore,id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
    send:(session,content,mode,action)=>factory.prompt(session,content,mode,action)
  });
  eworkImageFactory=factory;
@@ -219,6 +240,7 @@ ctx.effect(()=>{
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  replace(anchor,anchor+`\nctx.effect(()=>(${installWorkspaceAppSessions.toString()})({
   sessions,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
+  viewFor:id=>slots.resolveStore(chatStore,id),
   workspaceSession:id=>sherlockBoardsAdapter.appWorkspaceSession(id),
   showError:error=>sherlockBoardsAdapter?.showError(error)
 }),'Workspace application sessions');
