@@ -313,7 +313,15 @@ it('lists real session modes under all files and opens each one in its native vi
     const badge = element => getComputedStyle(element).backgroundColor
     const fill = await total.locator('span').evaluate(badge)
     expect(fill).not.toBe('rgba(0, 0, 0, 0)')
-    expect(await library.getByRole('button', { name: '新建文件夹' }).evaluate(badge)).toBe(fill)
+    const nav = library.getByRole('navigation', { name: '知识库分类' })
+    const allIcon = library.getByRole('button', { name: /^所有文件 / }).locator('svg path')
+    const filesIcon = group.getByRole('button', { name: /^文件资料 / }).locator('svg path')
+    expect(await allIcon.getAttribute('d')).not.toBe(await filesIcon.getAttribute('d'))
+    expect(await nav.evaluate(el => el.getBoundingClientRect().left - el.closest('.knowledge-workspace').getBoundingClientRect().left)).toBe(10)
+    const add = library.getByRole('button', { name: '新建文件夹' })
+    expect(await add.evaluate(badge)).toBe('rgba(0, 0, 0, 0)')
+    await add.hover()
+    expect(await add.evaluate(badge)).toBe('rgba(0, 0, 0, 0)')
     const sizes = await total.locator('span').evaluate(element => {
       const previous = element.textContent
       const measure = value => {
