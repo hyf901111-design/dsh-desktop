@@ -104,4 +104,18 @@ it('routes material menu navigation from the parent and webpage only under the l
 
 it('cancels selection on actual parent-surface mouse down and removes that listener at disposal',async()=>{const f=await fixture();f.mainWC.emit('before-mouse-event',{}, {type:'mouseMove'});expect(mock.region.cancelSelecting).not.toHaveBeenCalled();f.mainWC.emit('before-mouse-event',{}, {type:'mouseDown'});expect(mock.region.cancelSelecting).toHaveBeenCalledOnce();f.service.dispose();f.mainWC.emit('before-mouse-event',{}, {type:'mouseDown'});expect(mock.region.cancelSelecting).toHaveBeenCalledOnce()})
 
+it('notifies shell menus about a click in the visible webpage without consuming the click', async () => {
+ const f=await fixture(), event={preventDefault:vi.fn()}
+ f.mainWC.send.mockClear()
+ f.page.webContents.emit('before-mouse-event',event,{type:'mouseMove'})
+ expect(f.mainWC.send).not.toHaveBeenCalled()
+ f.page.webContents.emit('before-mouse-event',event,{type:'mouseDown'})
+ expect(f.mainWC.send).toHaveBeenCalledWith('browser-app:page-pointer-down',f.state.activeId)
+ expect(event.preventDefault).not.toHaveBeenCalled()
+ await f.layout({active:false})
+ f.mainWC.send.mockClear()
+ f.page.webContents.emit('before-mouse-event',event,{type:'mouseDown'})
+ expect(f.mainWC.send).not.toHaveBeenCalled()
+})
+
 it('does not reorder native corner views underneath an active selection during stable layout',async()=>{const f=await fixture();await f.capture();mock.corners.layout.mockClear();await f.layout();await f.layout();expect(mock.corners.layout).not.toHaveBeenCalled();await f.service.request('region-cancel');await f.layout();expect(mock.corners.layout).toHaveBeenCalledOnce()})

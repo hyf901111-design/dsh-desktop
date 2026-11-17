@@ -152,6 +152,10 @@ export class NativeBrowserMenuProjection{
    }
   }finally{for(const root of roots)if(root.isConnected)root.inert=true;this.schedule()}
  }
+ pagePointerDown(tabId:string){
+  const browser=this.document.querySelector<HTMLElement>('.eb-root:not([hidden])[data-native-page=true]')
+  if(!this.disposed&&browser?.dataset.tabId===tabId)this.dismiss()
+ }
  private dismiss(){const win=this.document.defaultView!;this.reset();for(const type of ['pointerdown','mousedown','click'])this.document.body.dispatchEvent(type==='pointerdown'?new win.PointerEvent(type,{bubbles:true}):new win.MouseEvent(type,{bubbles:true}));this.document.dispatchEvent(new win.CustomEvent('sherlock:browser-native-menu-dismiss'));this.schedule()}
  dispose(){this.disposed=true;this.reset();this.unsubscribe();this.observer.disconnect();this.resize?.disconnect();this.document.defaultView!.cancelAnimationFrame(this.frame);this.document.removeEventListener('scroll',this.schedule,true);this.document.removeEventListener('focusin',this.focus,true);this.document.defaultView!.removeEventListener('resize',this.schedule);this.style.remove()}
 }

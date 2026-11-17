@@ -136,8 +136,13 @@ export function registerBrowserApp(options:Options){
   wc.once('destroyed',()=>imageDownloads.delete(wc.id))
   wc.on('will-navigate',valid);wc.on('will-redirect',valid)
   let popupGestureAt=0
-  wc.on('before-mouse-event',(_event,input)=>{if(input.type==='mouseDown')popupGestureAt=Date.now()})
-  wc.on('before-mouse-event',(_event,mouse)=>{if(mouse.type==='mouseDown'&&menu.isShown())hideMenu(true)})
+  wc.on('before-mouse-event',(_event,input)=>{
+   if(input.type!=='mouseDown')return
+   popupGestureAt=Date.now()
+   if(disposed||!appActive||!visible||model.activeId!==tab.id||live.get(tab.id)!==e)return
+   if(menu.isShown()&&menuScope)hideMenu(true)
+   else window().webContents.send('browser-app:page-pointer-down',tab.id)
+  })
   wc.on('before-input-event',(event,input)=>{if(routeMenuKey(event,input))return;if(input.type==='keyDown')popupGestureAt=Date.now()})
   wc.setWindowOpenHandler(({url})=>{try{const origin=new URL(wc.getURL()).origin,gesture=Date.now()-popupGestureAt<1000;popupGestureAt=0;if(!gesture&&permissions.get(permissionKey(tab,origin))?.popups!=='allow')return {action:'deny'};const target=browserAddress(url);const next=model.newTab(tab.private);void navigate(next,target);publish()}catch{}return {action:'deny'}})
   wc.on('did-start-loading',()=>{if(model.activeId===tab.id){appEpoch++;pageEdited=false}tab.loading=true;tab.error=undefined;publish()})

@@ -373,6 +373,7 @@ function initializeUi(): void {
   ipcRenderer.on('browser-app:region-event',(_event,value)=>browserApp.regionEvent(value))
   ipcRenderer.on('browser-app:shortcut',(_event,value)=>window.dispatchEvent(new CustomEvent('sherlock:browser-shortcut',{detail:value})))
   const browserMenus=new NativeBrowserMenuProjection(document,{request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),subscribeAction:listener=>{const handle=(_event:unknown,value:any)=>listener(value);ipcRenderer.on('browser-app:menu-event',handle);return()=>ipcRenderer.removeListener('browser-app:menu-event',handle)}})
+  ipcRenderer.on('browser-app:page-pointer-down',(_event,tabId:string)=>browserMenus.pagePointerDown(tabId))
   window.addEventListener('unload',()=>{browserMenus.dispose();browserApp.dispose()},{once:true})
   const noteOwners = new Map<string, string>()
   let noteIdentityEpoch=0
