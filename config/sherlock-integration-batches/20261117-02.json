@@ -217,6 +217,12 @@
           "模拟资料字段须在正式投放前替换为已审核的产品内容。"
         ],
         "generatedAt": "2026-11-17T11:59:38.022Z"
+      },
+      "merged": {
+        "mergeCommit": "4663ee26aecae987c205564f2d2996032f96b555",
+        "verificationCommit": "4663ee26aecae987c205564f2d2996032f96b555",
+        "checks": [],
+        "recordedAt": "2026-11-17T11:59:54.330Z"
       }
     }
   ],
