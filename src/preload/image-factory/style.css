@@ -323,10 +323,10 @@ body[data-workspace-surface=image-factory] #odyssey-right-workspace-panel .uV2eY
   min-height:0;display:flex;gap:var(--if-prompt-gap);overflow:hidden;container-type:size;padding-inline:var(--if-prompt-gap);
 }
 .if-prompt-lane {min-width:0;flex:1}
-.if-prompt-track {animation:if-prompt-up 110s linear infinite;will-change:transform}
-.if-prompt-lane:nth-child(odd) .if-prompt-track {animation-name:if-prompt-down}
-.if-prompt-lane:nth-child(2n) .if-prompt-track {animation-delay:-19s}
-.if-prompt-lane:nth-child(3n) .if-prompt-track {animation-delay:-31s}
+.if-prompt-track {animation:var(--if-prompt-direction,if-prompt-up) 110s linear var(--if-prompt-delay,0s) infinite;will-change:transform}
+.if-prompt-lane:nth-child(odd) {--if-prompt-direction:if-prompt-down}
+.if-prompt-lane:nth-child(2n) {--if-prompt-delay:-19s}
+.if-prompt-lane:nth-child(3n) {--if-prompt-delay:-31s}
 .if-prompt-lane:hover .if-prompt-track {animation-play-state:paused}
 .if-prompt-cycle {display:grid;gap:var(--if-prompt-gap);padding-block-end:var(--if-prompt-gap)}
 .image-factory .if-prompt-image {display:block;width:100%;min-height:calc(100cqh / var(--if-prompt-count));aspect-ratio:1;padding:0;overflow:hidden;border-radius:8px;background:var(--if-field)}
