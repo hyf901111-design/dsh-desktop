@@ -967,7 +967,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   const open = (reopen?: string) => {
     host.open('image-factory')
     if (activeHere()) {
-      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen } }))
+      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen, entry: true } }))
       workspace.select(session)
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     }
