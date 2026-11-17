@@ -5,6 +5,7 @@ import { basename, extname, isAbsolute, join } from 'node:path'
 import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportProgress, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
 import { atomicWrite } from '../integrations/store'
 import type { KnowledgeSessionShare } from '../../shared/knowledge-sessions'
+import { maximumCanvasImageBytes, type CanvasRead, type StoredCanvas } from '../../shared/image-factory-canvas'
 import { copyResearchFile } from '../state/research-owned-files'
 
 interface StoredDocument extends KnowledgeDocument {
@@ -59,7 +60,7 @@ function factoryFilename(documents: readonly KnowledgeDocument[], suggestion: st
 }
 
 function publicDocument({ storageName: _storage, origin: _origin, sourceVersion, ...row }: StoredDocument): KnowledgeDocument {
-  return sourceVersion === 'factory-canvas' || sourceVersion === 'factory-provider'
+  return row.imageProject || sourceVersion === 'factory-canvas' || sourceVersion === 'factory-provider'
     ? { ...row, generatedBy: 'image-factory' }
     : row
 }
@@ -310,52 +311,74 @@ export class KnowledgeStore {
     return this.importOne(path, provenance)
   }
 
-  collectFactoryImage(bytes: Buffer, input: {
-    sessionId: string; id: string; name: string; sessionTitle?: string; updatedAt?: number; processed?: boolean
-  }, guard?: () => void) {
+  saveImageProject(bytes: Buffer, snapshot: Pick<CanvasRead, 'image'> & { canvas: StoredCanvas },
+    scope: NonNullable<KnowledgeDocument['imageProject']>['scope'], guard: () => void) {
     return this.run(async (state, directory, identityCurrent) => {
-      const current = () => { identityCurrent(); guard?.() }
+      const current = () => { identityCurrent(); guard() }
       current()
-      if (!uuid.test(input.id) || !input.sessionId || input.sessionId.length > 256 ||
-          bytes.length < 24 || bytes.length > 36 * 1024 * 1024 ||
-          !bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
-        throw Error('知识库只收录有效的生成图片。')
-      }
-      const origin = digest(JSON.stringify(['image-factory', input.sessionId, input.id]))
-      if (state.excludedOrigins.includes(origin)) return
+      const { canvas, image } = snapshot
+      const origin = digest('image-project:' + canvas.id)
       const existing = state.documents.find(row => row.origin === origin)
-      const sessionTitle = input.sessionTitle ?? existing?.sessionTitle
-      if (existing && (!input.processed || existing.sourceVersion !== 'factory-provider' || existing.share)) {
-        if (existing.sessionTitle === sessionTitle) return publicDocument(existing)
-        const row = { ...existing, sessionTitle }
-        await this.persist(state, { ...state, documents: state.documents.map(item => item === existing ? row : item) },
-          directory, current)
-        return publicDocument(row)
-      }
-
       const id = existing?.id ?? randomUUID()
-      const name = existing?.name ?? factoryFilename(state.documents, input.name)
       const storageName = randomUUID() + '.png'
       const target = join(directory, 'files', id)
       const path = join(target, storageName)
       const row: StoredDocument = {
-        id, origin, source: 'generated', sessionId: input.sessionId,
-        saved: false, starred: false, updatedAt: input.updatedAt ?? Date.now(),
-        ...existing, name, sessionTitle, storageName, size: bytes.length, sourceVersion: input.processed ? 'factory-canvas' : 'factory-provider'
+        id, origin, source: 'generated', saved: false, starred: false,
+        name: factoryFilename(state.documents, canvas.title), ...existing,
+        sessionId: scope ?? undefined, updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1),
+        storageName, size: bytes.length, imageProject: { canvasId: canvas.id, scope },
+      }
+      const removeRevision = async (file: string) => {
+        await Promise.all([file, file + '.canvas', file + '.original'].map(path => rm(path, { force: true }).catch(() => {})))
       }
       try {
         await mkdir(target, { recursive: true, mode: 0o700 })
         current()
         await atomicWrite(path, bytes)
+        await atomicWrite(path + '.canvas', JSON.stringify(canvas))
+        if (image) await atomicWrite(path + '.original', image.data)
         await this.persist(state, {
-          ...state, documents: existing ? state.documents.map(item => item === existing ? row : item) : [...state.documents, row]
+          ...state, documents: existing ? state.documents.map(item => item === existing ? row : item) : [...state.documents, row],
+          excludedOrigins: state.excludedOrigins.filter(value => value !== origin),
         }, directory, current)
-        if (existing) await rm(join(target, existing.storageName), { force: true }).catch(() => {})
-        return publicDocument(row)
       } catch (error) {
-        await rm(path, { force: true }).catch(() => {})
+        await removeRevision(path)
         throw error
       }
+      if (existing) await removeRevision(join(target, existing.storageName))
+      return publicDocument(row)
+    })
+  }
+
+  imageProject(id: string) {
+    return this.run(async (state, directory, current) => {
+      const row = state.documents.find(item => item.id === id)
+      if (!row?.imageProject) throw Error('图像工程已不存在。')
+      const path = join(directory, 'files', row.id, row.storageName)
+      const readBounded = async (file: string, limit: number) => {
+        const info = await stat(file)
+        if (!info.isFile() || info.size > limit) throw Error('已保存的图像工程无法读取。')
+        return readFile(file)
+      }
+      const canvas = JSON.parse((await readBounded(path + '.canvas', 320 * 1024)).toString('utf8')) as StoredCanvas
+      if (canvas?.id !== row.imageProject.canvasId || !Array.isArray(canvas.layers)) throw Error('已保存的图像工程无法读取。')
+      const asset = canvas.layers.find(layer => layer.kind === 'image')
+      const image = asset ? { data: await readBounded(path + '.original', maximumCanvasImageBytes), mediaType: asset.mediaType } : undefined
+      current()
+      return { canvas, image, revision: row.storageName }
+    })
+  }
+
+  linkImageProject(id: string, revision: string, scope: string, guard: () => void) {
+    return this.run(async (state, directory, current) => {
+      const row = state.documents.find(item => item.id === id)
+      if (!row?.imageProject || row.storageName !== revision) return false
+      const updated = { ...row, sessionId: scope, imageProject: { ...row.imageProject, scope } }
+      await this.persist(state, {
+        ...state, documents: state.documents.map(item => item === row ? updated : item),
+      }, directory, () => { current(); guard() }, false)
+      return true
     })
   }
 

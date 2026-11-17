@@ -73,6 +73,15 @@ export class CanvasWorkspace {
 
   epoch(scope: CanvasScope) { return this.entries.get(scope)?.epoch }
 
+  async flush(scope: CanvasScope, scene: ImageScene) {
+    const entry = this.entries.get(scope)
+    if (!entry || entry.scene !== scene || entry.epoch === undefined || this.disposed) throw Error('画板已变化，请重新保存。')
+    if (entry.dirty || entry.save === 'error' || entry.save === 'idle') this.commit(scope)
+    await entry.writing
+    if (entry.save !== 'saved' || entry.scene !== scene || this.disposed) throw Error('画板尚未保存，请重试。')
+    return entry.epoch
+  }
+
   change(scope: CanvasScope, apply: (scene?: ImageScene) => ImageScene | undefined, persist = true, editKey?: string) {
     const entry = this.entries.get(scope)
     if (this.disposed || entry?.status !== 'ready') return false

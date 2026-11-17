@@ -26,11 +26,11 @@ import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, tex
 import styles from './style.css?raw'
 
 export const imageFactoryOpenEvent = 'sherlock:image-factory-open'
-type FactoryAsset = { id: string; sessionId: string; sessionTitle?: string; epoch: number; name: string; data: Uint8Array }
+type FactoryProject = { sceneId: string; scope: CanvasScope; epoch: number; data: Uint8Array }
 type Bridge = {
   workspacePointerInBar?: WorkspacePointerInBar
   storage: CanvasStorage
-  archive(value: FactoryAsset): Promise<unknown>
+  saveProject(value: FactoryProject): Promise<unknown>
   save(value: { action: 'download'; data: Uint8Array; name: string; format: 'png' | 'jpg' }): Promise<{ cancelled?: boolean }>
 }
 type T = (zh: string, en: string) => string
@@ -854,20 +854,39 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     } catch (error) { if (mounted.current) setToast(errorLabel(error, t('图片无法读取。', 'Image could not be read.'))) }
     finally { uiOperations.current.delete(scope); release(); if (mounted.current) refreshBusy() }
   }
+  async function renderImage(scene: ImageScene, opaque = false) {
+    const { canvas, context } = canvasFor(doc, scene)
+    if (opaque) { context.fillStyle = '#fff'; context.fillRect(0, 0, scene.width, scene.height) }
+    await drawLayers(context, scene)
+    if (scene.aiWatermark) drawAiWatermark(context, scene)
+    return new Uint8Array(await (await encode(canvas)).arrayBuffer())
+  }
+
   async function exportImage(format: 'png' | 'jpg') {
-    if (!current || busy) return
+    if (!current || busy || uiOperations.current.has(scope)) return
     uiOperations.current.add(scope); refreshBusy()
     try {
-      const { canvas, context } = canvasFor(doc, current)
-      if (format === 'jpg') { context.fillStyle = '#fff'; context.fillRect(0, 0, current.width, current.height) }
-      await drawLayers(context, current)
-      if (current.aiWatermark) drawAiWatermark(context, current)
-      const data = new Uint8Array(await (await encode(canvas)).arrayBuffer())
+      const data = await renderImage(current, format === 'jpg')
       const result = await bridge.save({ action: 'download', data, format, name: current.title })
-      if (!result.cancelled && mounted.current) setToast(t('图片已保存。', 'Image saved.'))
+      if (!result.cancelled && mounted.current) setToast(t('图片已导出。', 'Image exported.'))
     } catch (error) { if (mounted.current) setToast(errorLabel(error, t('图片导出失败。', 'Image export failed.'))) }
     finally { uiOperations.current.delete(scope); if (mounted.current) refreshBusy() }
   }
+
+  async function saveToKnowledge() {
+    if (!current || busy || uiOperations.current.has(scope)) return
+    const release = workspace.retain(scope)
+    uiOperations.current.add(scope); refreshBusy()
+    try {
+      const epoch = await workspace.flush(scope, current)
+      const data = await renderImage(current)
+      if (!mounted.current) return
+      await bridge.saveProject({ scope, sceneId: current.id, epoch, data })
+      if (mounted.current) setToast(t('已保存至知识库 · 我的图像', 'Saved to Knowledge · My Images'))
+    } catch (error) { if (mounted.current) setToast(errorLabel(error, t('图像未能保存至知识库。', 'Could not save the image to Knowledge.'))) }
+    finally { uiOperations.current.delete(scope); release(); if (mounted.current) refreshBusy() }
+  }
+
   function finishCutout(id: string, error?: string) {
     for (const [owner, request] of cutouts.current) {
       if (request !== id) continue
@@ -1084,7 +1103,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         if (!mounted.current || active.current.get(job.id) !== job) return
         const others = job.scene?.layers ?? []
         const layers = previous ? others.map(item => item.id === previous.id ? layer : item) : [layer, ...others]
-        const nextScene: ImageScene = { id: job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers,
+        const nextScene: ImageScene = { id: job.scene?.id ?? job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers,
           ...(job.scene?.aiWatermark && { aiWatermark: job.scene.aiWatermark }),
         }
         if (!workspace.change(job.sessionId, () => nextScene)) throw Error(t('图片没能放到画布。', 'Could not place the image on the canvas.'))
@@ -1094,19 +1113,6 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         if (workspace.getSnapshot().scope === job.sessionId) {
           resetSelectionGesture(); setGalleryScope(undefined); if (!job.scene) resetViewport()
         }
-        try {
-          let data = layer.data
-          if (layers.some(item => item.kind !== 'image' && (item.kind !== 'text' || item.text.trim()))) {
-            const flattened = canvasFor(doc, nextScene)
-            await drawLayers(flattened.context, nextScene)
-            data = new Uint8Array(await (await encode(flattened.canvas)).arrayBuffer())
-          }
-          const epoch = workspace.epoch(job.sessionId)
-          if (!mounted.current || active.current.get(job.id) !== job || epoch === undefined) return
-          const sessionTitle = typeof info.sessionTitle === 'string' ? info.sessionTitle : undefined
-          await bridge.archive({ id: job.id, sessionId: job.sessionId, sessionTitle, epoch, name: job.title.slice(0, 100), data })
-        }
-        catch { if (mounted.current && workspace.getSnapshot().scope === job.sessionId) setToast(t('画布已更新。知识库将从会话记录补收生成结果。', 'Canvas updated. The library will collect the generated result from chat history.')) }
       } catch (error) {
         const reason = errorLabel(error, t('图片没能放到画布。', 'Could not place the image on the canvas.'))
         if (job.edit) failSelection(job, reason)
@@ -1273,6 +1279,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         ({ id, icon: id, label: t(zh, en), controls: 'image-factory-drawer', checked: drawer === id, run: () => chooseDrawer(id) })) },
     { id: 'text', commands: [{ id: 'text', icon: 'type', label: t('添加文本', 'Add text'),
       checked: placingText, disabled: busy, run: () => activateTool('text') }] },
+    { id: 'export', commands: [{ id: 'export', label: t('导出', 'Export'),
+      disabled: busy || !current?.layers.length, exporting: exportImage }] },
+    { id: 'save-project', commands: [{ id: 'save-project', icon: 'bookmark', label: t('保存至知识库', 'Save to Knowledge'),
+      disabled: busy || !current?.layers.length, run: saveToKnowledge }] },
     { id: 'region', commands: [{ id: 'region', icon: 'mark', label: t('框选修改', 'Edit selected area'),
       checked: marking || !!area, disabled: busy || !raster, run: () => activateTool('region') }] },
     { id: 'cutout', commands: [{ id: 'cutout', icon: 'spark', disabled: busy || !raster, run: removeBackground,
@@ -1344,7 +1354,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         return <div key={group.id} className={'if-toolbar-entry ' + (group.label ? group.id : '')}
           role={group.label ? 'group' : undefined} aria-label={group.label} data-overflow={overflow || undefined}
           aria-hidden={overflow || undefined}>
-          {group.commands.map(command => <button key={command.id} type="button" data-tool={command.id}
+          {group.commands.map(command => command.exporting
+            ? <CanvasActionsMenu key={command.id} doc={doc} t={t} canExport={!command.disabled} exporting={command.exporting} exportOnly />
+            : <button key={command.id} type="button" data-tool={command.id}
             className={'if-button' + (command.switch ? ' if-watermark-switch' : '')}
             role={command.switch ? 'switch' : undefined} aria-checked={command.switch ? command.checked : undefined}
             aria-label={command.iconOnly ? command.label : undefined} aria-keyshortcuts={command.shortcut}
@@ -1623,7 +1635,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   render()
   return {
     open: () => open(),
-    async openSessionCanvas(id: string, activateSession: () => Promise<boolean>) {
+    async openSessionCanvas(id: string, activateSession: () => Promise<boolean>, expectedCanvasId?: string) {
       if (!validCanvasScope(id)) throw Error('来源会话已不可用。')
       const origin = host.current()
       const owner = workspace
@@ -1632,7 +1644,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
       try {
         const scene = await owner.ready(id)
         if (!stillCurrent()) return
-        if (!scene) throw Error('来源会话没有已保存的画布，图片仍可在知识库预览。')
+        if (!scene || expectedCanvasId && scene.id !== expectedCanvasId) throw Error('来源会话没有对应的画布。')
         const intent = new CustomEvent('sherlock:image-factory-canvas-intent', { detail: id })
         doc.dispatchEvent(intent)
         if (!await activateSession()) throw Error('来源会话已不可用。')

@@ -764,3 +764,5 @@
     transition: none;
   }
 }
+
+.knowledge-workspace tr[data-image-project] {cursor:pointer}

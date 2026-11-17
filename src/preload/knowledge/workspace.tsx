@@ -33,6 +33,7 @@ interface Bridge {
   openFileInEditor?(source: FileEditorSource, mode: FileEditorMode): Promise<void>
   openImageFactorySource?(sessionId: string): Promise<void>
   openImageFactoryCopy?(id: string): Promise<void>
+  openImageProject?(id: string): Promise<void>
   workspacePointerInBar?: WorkspacePointerInBar
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
@@ -137,7 +138,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [received, setReceived] = useState<KnowledgeDocument[]>([])
   const [receivedStatus, setReceivedStatus] = useState<{ loading: boolean; error?: string }>({ loading: false })
   const snapshot = { ...local, documents: [...local.documents, ...received] }
-  const fileCount = listKnowledgeDocuments(snapshot, { category: 'all' }).length
+  const allFiles = listKnowledgeDocuments(snapshot, { category: 'all' })
+  const imageCount = listKnowledgeDocuments(snapshot, { category: 'images' }).length
+  const fileCount = allFiles.length - imageCount
   const [filter, setFilter] = useState<KnowledgeFilter>(defaultFilter)
   const filterState = useRef({ revision: crypto.randomUUID(), filter: defaultFilter, assistantFilter: false })
   const previousFilter = useRef<typeof filterState.current>()
@@ -147,7 +150,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [ready, setReady] = useState(false)
   const sessionCounts = sessionSections.map(([mode]) => sessionDirectories[mode]?.entries?.length)
   const totalFileCount = ready && sessionCounts.every(count => count !== undefined)
-    ? sessionCounts.reduce<number>((total, count) => total + (count ?? 0), fileCount)
+    ? sessionCounts.reduce<number>((total, count) => total + (count ?? 0), allFiles.length)
     : '—'
   const [loadError, setLoadError] = useState<string>()
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>()
@@ -176,7 +179,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const appliedSharedCatalog = useRef(false)
   const dragDepth = useRef(0)
   const selection = filter.category ?? 'all'
-  const canDropFiles = ready && !busy && !choosingFiles && selection !== 'received'
+  const canDropFiles = ready && !busy && !choosingFiles && selection !== 'received' && selection !== 'images'
   useEffect(() => {
     dragDepth.current = 0
     setDragging(false)
@@ -185,7 +188,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const selectedFolder = snapshot.folders.find(folder => folder.id === filter.folderId)
   const title = selectedFolder?.name ?? knowledgeCategories[selection]
   const publishedSessions = usePublishedKnowledgeSessions(document, local, surfaceVisible && selection === 'shared' && !sessionMode)
-  const rows = listKnowledgeRows(snapshot, filter, publishedSessions)
+  const rows = listKnowledgeRows(snapshot, filter, publishedSessions).filter(row =>
+    selection !== 'all' || filter.folderId || !row.imageProject)
   const { page, pages, setPage, scrollRef, start, end } = useKnowledgePagination<HTMLDivElement>(rows.length)
   const receivedCategories = [...new Set(snapshot.documents.flatMap(row => row.received ? [row.received.category] : []))]
     .sort((a, b) => a.localeCompare(b))
@@ -749,6 +753,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   async function openPreview(row: KnowledgeDocument) {
+    if (row.imageProject && bridge.openImageProject) {
+      await openImageCanvas(() => bridge.openImageProject!(row.id))
+      return
+    }
     if (openSharedKnowledgeSession(document, row)) return
     const request = ++previewRequest.current
     const openInPane = new CustomEvent('sherlock:knowledge-preview-file', {
@@ -884,7 +892,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     </header>
     {tab === 'memory' ? bridge.memory && <KnowledgeMemory document={document} bridge={bridge.memory} /> : <div className="knowledge-body">
       <nav className="knowledge-navigation" aria-label="知识库分类">
-        {(Object.keys(knowledgeCategories) as KnowledgeCategory[]).map(category => <React.Fragment key={category}>
+        {(Object.keys(knowledgeCategories) as KnowledgeCategory[]).filter(category => category !== 'images').map(category => <React.Fragment key={category}>
           <button type="button" aria-current={!sessionMode && !filter.folderId && selection === category && category !== 'all' ? 'page' : undefined}
             onClick={() => selectCategory(category)}>
             {buttonIcon(categoryIcons[category], knowledgeCategories[category])}
@@ -894,6 +902,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           {category === 'all' && <div className="knowledge-session-sections" role="group" aria-label="所有文件子分类">
             <button type="button" aria-current={!sessionMode && !filter.folderId && selection === 'all' ? 'page' : undefined}
               onClick={() => selectCategory('all')}>{buttonIcon('document', '文件资料')}<small><span>{fileCount}</span></small></button>
+            <button type="button" aria-current={!sessionMode && selection === 'images' ? 'page' : undefined}
+              onClick={() => selectCategory('images')}>{buttonIcon('images', knowledgeCategories.images)}<small><span>{imageCount}</span></small></button>
             {sessionSections.map(([mode, icon]) => <button key={mode} type="button" aria-current={sessionMode === mode ? 'page' : undefined}
               onClick={() => {
                 setSessionMode(mode)
@@ -961,7 +971,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
               change={query => updateFilter({ query })} remember={query => loadSearchHistory(query)} />
             {selection === 'received' && <button type="button" title="刷新共享目录" aria-label="刷新共享目录"
               disabled={receivedStatus.loading} onClick={() => void refreshReceived(true)}>刷新</button>}
-            {selection !== 'received' && <button type="button" className="knowledge-primary" disabled={busy || choosingFiles || !ready} onClick={() => void addFiles()}>
+            {selection !== 'received' && selection !== 'images' && <button type="button" className="knowledge-primary" disabled={busy || choosingFiles || !ready} onClick={() => void addFiles()}>
               {buttonIcon('add', '添加文件')}
             </button>}
             {draftFilter && <FilterMenu draft={draftFilter} change={setDraftFilter}
@@ -1051,7 +1061,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     const updatedAt = new Date(row.updatedAt)
                     const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
                     return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
-                      data-knowledge-file-context-menu={row.received ? undefined : true}
+                      data-knowledge-file-context-menu={row.received ? undefined : true} data-image-project={!!row.imageProject || undefined}
+                      onClick={row.imageProject ? event => {
+                        if (!(event.target as Element).closest('button, a, input') && !busy) void openPreview(row)
+                      } : undefined}
                       onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
                       <td><button className="knowledge-file-name" type="button" title={title}
                         onClick={event => {
@@ -1130,9 +1143,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       role="group" tabIndex={-1} aria-label="更多操作">
       {target && <>
         <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>移动到文件夹…</button>
-        {target.generatedBy === 'image-factory' && bridge.openImageFactoryCopy &&
+        {target.imageProject && bridge.openImageProject &&
+          <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageProject!(target.id))}>在「图像」中继续编辑</button>}
+        {!target.imageProject && target.generatedBy === 'image-factory' && bridge.openImageFactoryCopy &&
           <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageFactoryCopy!(target.id))}>在「图像」中编辑副本</button>}
-        {target.generatedBy === 'image-factory' && target.sessionId && bridge.openImageFactorySource &&
+        {!target.imageProject && target.generatedBy === 'image-factory' && target.sessionId && bridge.openImageFactorySource &&
           <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageFactorySource!(target.sessionId!))}>打开来源画布</button>}
         {target.sessionId && <button type="button" onClick={async () => {
           setMenu(undefined)

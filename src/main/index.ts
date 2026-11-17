@@ -21,7 +21,7 @@ import {installConversationComponentHandlers} from './conversation-components/ip
 import {registerDeliveryFileClipboard} from './delivery-file-clipboard'
 import {registerImageActions} from './image-actions'
 import { ImageFactoryCanvases } from './state/image-factory-canvases'
-import type { CanvasScope, CanvasWrite } from '../shared/image-factory-canvas'
+import { canvasUuid, maximumCanvasImageBytes, validCanvasScope, type CanvasScope, type CanvasWrite } from '../shared/image-factory-canvas'
 import { PptxEditorService, registerPptxEditorHandlers } from './pptx/service'
 import { PptxAnnotationService, registerPptxAnnotationHandlers, type PptxAnnotationHistoryEvent } from './pptx/annotations'
 import { createHomeGuideAssetService, registerHomeGuideAssetHandlers } from './home-guide-assets'
@@ -1386,16 +1386,24 @@ async function bootstrap(): Promise<void> {
     factoryCanvases.adopt(sessionId, epoch))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:tabs-read', () => mainWindow, () => factoryCanvases.readTabs())
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:tabs-write', () => mainWindow, (_event, value: unknown) => factoryCanvases.writeTabs(value))
-  registerTrustedMainWindowHandler(ipcMain, 'image-factory:archive', () => mainWindow, (_event, value: unknown) => {
-    const input = value as { id?: string; sessionId?: string; sessionTitle?: unknown; epoch?: number; name?: string; data?: Uint8Array } | undefined
-    if (typeof input?.id !== 'string' || typeof input.sessionId !== 'string' || typeof input.name !== 'string' ||
-        input.epoch !== knowledgeIdentity().generation || input.name.length > 100 || !(input.data instanceof Uint8Array) || input.data.byteLength > 36 * 1024 * 1024) {
-      throw Error('生成图片的知识库参数无效。')
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:save-to-library', () => mainWindow, async (_event, value: unknown) => {
+    const input = value as { sceneId?: string; scope?: CanvasScope; epoch?: number; data?: Uint8Array } | undefined
+    const owner = knowledgeIdentity()
+    const check = () => {
+      const current = knowledgeIdentity()
+      if (current.owner !== owner.owner || current.generation !== owner.generation) throw Error('当前账号已变化，请重试。')
     }
-    const sessionTitle = typeof input.sessionTitle === 'string' ? input.sessionTitle.trim().slice(0, 256) || undefined : undefined
-    return knowledge.collectFactoryImage(Buffer.from(input.data), {
-      id: input.id, sessionId: input.sessionId, sessionTitle, name: input.name, processed: true
-    })
+    if (typeof input?.sceneId !== 'string' || !canvasUuid.test(input.sceneId) || !validCanvasScope(input.scope) ||
+        input.epoch !== owner.generation || !(input.data instanceof Uint8Array) ||
+        input.data.byteLength < 24 || input.data.byteLength > maximumCanvasImageBytes) throw Error('保存图像的参数无效。')
+    const data = Buffer.from(input.data)
+    const snapshot = await factoryCanvases.read(input.scope)
+    check()
+    const canvas = snapshot.canvas
+    if (snapshot.epoch !== owner.generation || !canvas || canvas.id !== input.sceneId) throw Error('画板已变化，请重新保存。')
+    if (data.toString('hex', 0, 8) !== '89504e470d0a1a0a' || data.toString('ascii', 12, 16) !== 'IHDR' ||
+        data.readUInt32BE(16) !== canvas.width || data.readUInt32BE(20) !== canvas.height) throw Error('图像预览无法保存。')
+    return knowledge.saveImageProject(data, { canvas, image: snapshot.image }, input.scope, check)
   })
   let historyScan: Promise<unknown> | undefined
   let rescanAll = false
@@ -1421,7 +1429,7 @@ async function bootstrap(): Promise<void> {
         }
       }
       historyScanInProgress = true
-      historyScan = scanKnowledgeHistory({ sessionRoot: join(dshHome, 'sessions'), attachmentsRoot: join(dshHome, 'attachments', 'v1', 'objects'), store: knowledge, only, check,
+      historyScan = scanKnowledgeHistory({ sessionRoot: join(dshHome, 'sessions'), store: knowledge, only, check,
         allowSession: id => !researchBoardsService?.isSharedSession(id) && !isScheduledSession(id)
       }).then(result => {
         if (!only || result.failed) console.info('[knowledge] historical file collection', result)
@@ -1617,7 +1625,7 @@ async function bootstrap(): Promise<void> {
   }
   installKnowledgeIpc({
     store: knowledge, sharing: knowledgeShared, content: knowledgeContent, window: () => mainWindow,
-    identity: knowledgeIdentity, filePreview: knowledgeFilePreview,
+    identity: knowledgeIdentity, filePreview: knowledgeFilePreview, imageCanvases: factoryCanvases,
     copySession: createKnowledgeSessionCopier({
       rpc: taskRpc, retain: retainKnowledgeCopy, notes: calendarNotes, workbooks: knowledgeWorkbooks, research: researchCanvasStorage,
       canvases: factoryCanvases,

@@ -6,6 +6,7 @@ import type { NotesStore } from '../notes/store'
 import type { SpreadsheetStore } from '../spreadsheet/store'
 import type { ResearchCanvasStorage } from '../state/research-canvas-storage'
 import type { ImageFactoryCanvases } from '../state/image-factory-canvases'
+import type { StoredCanvas } from '../../shared/image-factory-canvas'
 import type { Rpc } from '../scheduled/task-runner'
 
 type Workspace = { workspaceId: string; sessionIds: string[] }
@@ -13,8 +14,8 @@ type RetainCopy = (id: string, title: string, existing?: boolean, imported?: boo
 export type KnowledgeSessionSeed = SharedKnowledgeSession | {
   mode: 'notes'; title: string; note: Pick<import('../../shared/workspace-notes').NoteContent, 'title' | 'blocks'>
 } | {
-  mode: 'image-factory'; title: string; image: Uint8Array; width: number; height: number; epoch: number
-}
+  mode: 'image-factory'; title: string; epoch: number
+} & ({ canvas: StoredCanvas; image?: Uint8Array } | { image: Uint8Array; width: number; height: number })
 const copySuffix = '（副本）'
 
 export function knowledgeCopyRetention(runtimeUrl: () => string | undefined): RetainCopy {
@@ -121,14 +122,18 @@ export function createKnowledgeSessionCopier(options: {
           break
         }
         case 'image-factory': {
-          const id = randomUUID()
-          const { width, height, image, epoch } = source
+          const { image, epoch } = source
           undo.push(() => canvases.discardStaged(sessionId, epoch))
-          await canvases.write({ scope: sessionId, epoch, image, canvas: {
-            version: 1, id, title, width, height, layers: [
-              { kind: 'image', id: randomUUID(), assetId: id, mediaType: 'image/png' }
-            ]
-          } })
+          if ('canvas' in source) {
+            await canvases.write({ scope: sessionId, epoch, image, canvas: { ...source.canvas, title } })
+          } else {
+            const id = randomUUID()
+            await canvases.write({ scope: sessionId, epoch, image, canvas: {
+              version: 1, id, title, width: source.width, height: source.height, layers: [
+                { kind: 'image', id: randomUUID(), assetId: id, mediaType: 'image/png' }
+              ]
+            } })
+          }
           break
         }
       }

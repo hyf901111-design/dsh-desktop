@@ -27,7 +27,7 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
@@ -81,7 +81,7 @@ it('arms the text tool and places a focused, editable layer at the clicked posit
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   try {
     await openCanvas(factory)
@@ -150,7 +150,7 @@ it.each([false, true])('moves and resizes the selected text box (lost capture: %
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
@@ -239,7 +239,7 @@ it('recovers a distant text layer from Layers without altering its formatting', 
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
@@ -275,7 +275,7 @@ it.each(['Backspace', 'Delete'])('deletes the selected text layer with %s after 
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
@@ -310,7 +310,7 @@ it.each([
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas }), write: async () => {}, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
@@ -351,7 +351,7 @@ it('opens an editable region comment when the pointer is released outside the im
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas, image }), write: async () => {}, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const submitted = vi.fn((event: Event) => event.preventDefault())
@@ -430,7 +430,7 @@ it('zooms around the Command-wheel position and pans with Space without editing 
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const input = document.body.appendChild(document.createElement('textarea'))
@@ -489,7 +489,7 @@ it('opens a resident Workspace view from Images without triggering return to the
   const host = new WorkspaceSurfaceHost(document)
   const factory = mountImageFactory(document, host, {
     storage: { read: async () => ({ epoch: 1 }), write: async () => {}, adopt: async () => false },
-    archive: async () => {}, save: async () => ({})
+    saveProject: async () => {}, save: async () => ({})
   })
   const returns: unknown[] = []
   const surfaceChanged = (event: Event) => {
@@ -546,7 +546,7 @@ it('keeps the rendered gallery mounted while a fresh task waits for its session 
         : new Promise(resolve => { releaseCanvas = () => resolve({ epoch: 1 }) }),
       write: async () => {}, adopt: async () => false,
     },
-    archive: async () => {}, save: async () => ({}),
+    saveProject: async () => {}, save: async () => ({}),
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const activeTask = () => document.querySelector<HTMLElement>('.if-top [role=tab][aria-selected=true]')
@@ -588,7 +588,7 @@ it('drops a colorful poster preset into the zoomed frame as editable layers', as
   await act(async () => {
     factory = mountImageFactory(document, host, {
       storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-      archive: async () => {}, save: async () => ({})
+      saveProject: async () => {}, save: async () => ({})
     })
   })
   try {
@@ -656,7 +656,7 @@ it('opens a wide gallery template in a fresh task with its own JPEG, artwork, sh
   document.addEventListener('sherlock:image-factory-task-action', action)
   try {
     await act(async () => {
-      factory = mountImageFactory(document, host, { storage: { read, write, adopt: async () => false }, archive: async () => {}, save: async () => ({}) })
+      factory = mountImageFactory(document, host, { storage: { read, write, adopt: async () => false }, saveProject: async () => {}, save: async () => ({}) })
     })
     await openCanvas(factory)
     const card = document.querySelector<HTMLButtonElement>('.if-gallery-art[aria-label^="奔流的线 ·"]')!
@@ -692,7 +692,7 @@ it('groups two selected layers, restores the group with redo, and returns from t
     await act(async () => {
       factory = mountImageFactory(document, host, {
         storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
-        archive: async () => {}, save: async () => ({}),
+        saveProject: async () => {}, save: async () => ({}),
       })
     })
     await openCanvas(factory)
@@ -761,7 +761,7 @@ it('marquee-selects enclosed canvas elements and adds another element with Shift
     await act(() => {
       factory = mountImageFactory(document, host, {
         storage: { read: async () => ({ epoch: 1, canvas }), write: async () => {}, adopt: async () => false },
-        archive: async () => {}, save: async () => ({}),
+        saveProject: async () => {}, save: async () => ({}),
       })
     })
     await openCanvas(factory)

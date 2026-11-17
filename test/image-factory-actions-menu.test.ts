@@ -110,3 +110,25 @@ it('offers overflow tools in the separate toolbar menu and preserves the waterma
     vi.unstubAllGlobals()
   }
 })
+
+it('offers PNG and JPG directly from the toolbar export control', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const mount = document.body.appendChild(document.createElement('div'))
+  const root = createRoot(mount)
+  const exporting = vi.fn()
+  try {
+    await act(() => root.render(createElement(CanvasActionsMenu, { doc: document, t: zh => zh, canExport: true, exporting, exportOnly: true })))
+    const trigger = mount.querySelector<HTMLButtonElement>('button')!
+    await act(() => trigger.click())
+    const menu = document.querySelector('[role="menu"][aria-label="导出"]')!
+    const formats = [...menu.querySelectorAll<HTMLButtonElement>('button')]
+    expect(formats.map(button => button.textContent)).toEqual(['PNG', 'JPG'])
+    await act(() => formats[1]!.click())
+    expect(exporting).toHaveBeenCalledExactlyOnceWith('jpg')
+    expect(document.activeElement).toBe(trigger)
+  } finally {
+    await act(() => root.unmount())
+    mount.remove()
+    vi.unstubAllGlobals()
+  }
+})

@@ -9,6 +9,7 @@ import { atomicWrite } from '../integrations/store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
+import type { ImageFactoryCanvases } from '../state/image-factory-canvases'
 import type { KnowledgeStore } from './store'
 import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 import { maximumCanvasImageBytes, validCanvasSize } from '../../shared/image-factory-canvas'
@@ -42,9 +43,10 @@ async function copyKnowledgeFile(source: string, target: string, check: () => vo
 }
 
 export function installKnowledgeIpc({
-  store, window, identity, generatedWorkspace, sharing, content, filePreview, sessionEvidence, sessionSnapshot, copySession
+  store, window, identity, generatedWorkspace, sharing, content, filePreview, sessionEvidence, sessionSnapshot, copySession, imageCanvases
 }: {
   store: KnowledgeStore
+  imageCanvases: ImageFactoryCanvases
   sharing: KnowledgeSharing
   content: KnowledgeContent
   filePreview: KnowledgeFilePreview
@@ -198,6 +200,31 @@ export function installKnowledgeIpc({
           sessionId, saved: args.saved,
           sessionTitle: typeof args.sessionTitle === 'string' ? args.sessionTitle.trim().slice(0, 160) || undefined : undefined
         })
+      }
+      case 'open-image-project': {
+        const documentId = id(args.id)
+        const key = owner.owner + ':image-project:' + documentId
+        if (activeCopies.has(key)) throw Error('正在打开这份图像工程。')
+        activeCopies.add(key)
+        try {
+          const { document } = await store.file(documentId)
+          check()
+          const project = document.imageProject
+          if (!project) throw Error('请选择已保存的图像工程。')
+          if (project.scope && args.restore !== true) {
+            const live = await imageCanvases.read(project.scope).catch(() => undefined)
+            check()
+            if (live?.canvas?.id === project.canvasId) return { id: project.scope, canvasId: project.canvasId, restored: false }
+          }
+          const snapshot = await store.imageProject(documentId)
+          check()
+          const copy = await copySession(owner.owner, {
+            mode: 'image-factory', title: snapshot.canvas.title, epoch: owner.generation,
+            image: snapshot.image?.data, canvas: snapshot.canvas,
+          }, project.scope ?? undefined, check, true)
+          await store.linkImageProject(documentId, snapshot.revision, copy.id, check)
+          return { id: copy.id, canvasId: snapshot.canvas.id, restored: true }
+        } finally { activeCopies.delete(key) }
       }
       case 'copy-image-factory-file': {
         const documentId = id(args.id)
