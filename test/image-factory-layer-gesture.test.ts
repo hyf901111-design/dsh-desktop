@@ -628,3 +628,54 @@ it('drops a colorful poster preset into the zoomed frame as editable layers', as
     vi.unstubAllGlobals()
   }
 })
+
+it('opens a wide gallery template in a fresh task with its own JPEG, artwork, shape and text layers', async () => {
+  const target = 'image-task-website-banner'
+  const jpeg = new Blob([new Uint8Array([255, 216, 255])], { type: 'image/jpeg' })
+  const write = vi.fn(async (_value: CanvasWrite) => {})
+  const read = vi.fn(async () => ({ epoch: 3 }))
+  const load = vi.fn(async () => ({ ok: true, blob: async () => jpeg }))
+  vi.stubGlobal('fetch', load)
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  vi.spyOn(HTMLImageElement.prototype, 'decode').mockResolvedValue()
+  vi.spyOn(HTMLImageElement.prototype, 'naturalWidth', 'get').mockReturnValue(1440)
+  vi.spyOn(HTMLImageElement.prototype, 'naturalHeight', 'get').mockReturnValue(480)
+  const host = new WorkspaceSurfaceHost(document)
+  let factory!: ReturnType<typeof mountImageFactory>
+  const onUsePrompt = vi.fn()
+  const action = (event: Event) => {
+    const { requestId, kind } = (event as CustomEvent).detail
+    if (kind !== 'new' || !requestId) return
+    document.dispatchEvent(new CustomEvent('sherlock:image-factory-session', { detail: { sessionId: target } }))
+    document.dispatchEvent(new CustomEvent('sherlock:image-factory-task-state', {
+      detail: { tabs: [{ scope: null }, { scope: target }], active: target, busy: false },
+    }))
+    document.dispatchEvent(new CustomEvent('sherlock:image-factory-task-created', { detail: { requestId, scope: target } }))
+  }
+  document.addEventListener('sherlock:image-factory-use-prompt', onUsePrompt)
+  document.addEventListener('sherlock:image-factory-task-action', action)
+  try {
+    await act(async () => {
+      factory = mountImageFactory(document, host, { storage: { read, write, adopt: async () => false }, archive: async () => {}, save: async () => ({}) })
+    })
+    await openCanvas(factory)
+    const card = document.querySelector<HTMLButtonElement>('.if-gallery-art[aria-label^="奔流的线 ·"]')!
+    await act(async () => card.click())
+    const [{ scope, canvas, image }] = write.mock.calls[0]!
+    expect(scope).toBe(target)
+    expect(canvas).toMatchObject({ title: '奔流的线', width: 1440, height: 480 })
+    expect(canvas.layers.map(layer => layer.kind)).toEqual(['image', 'shape', 'shape', 'brand', 'brand', 'text', 'text'])
+    expect(canvas.layers).toContainEqual(expect.objectContaining({ kind: 'text', text: '奔流的线' }))
+    expect(canvas.layers).toContainEqual(expect.objectContaining({ kind: 'brand', asset: 'logo-white' }))
+    expect(image).toEqual(new Uint8Array([255, 216, 255]))
+    expect(onUsePrompt).not.toHaveBeenCalled()
+    expect(document.querySelector('.if-raster')).toBeTruthy()
+  } finally {
+    document.removeEventListener('sherlock:image-factory-task-action', action)
+    document.removeEventListener('sherlock:image-factory-use-prompt', onUsePrompt)
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  }
+})

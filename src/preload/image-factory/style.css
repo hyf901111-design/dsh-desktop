@@ -274,3 +274,13 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
   .if-brand-body {padding-inline:9px}
   .if-brand-header {padding-inline:9px}
 }
+.if-gallery-layout {position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.if-gallery-art::before,.if-gallery-use {z-index:1}
+.if-gallery-template-badge {position:absolute;z-index:1;top:9px;right:9px;padding:3px 7px;
+  border:1px solid #ffffff33;border-radius:5px;background:#111c29de;color:#fff;font-size:10px;line-height:15px;pointer-events:none}
+.if-gallery-prompt {display:flex;align-items:center;gap:6px;justify-content:space-between}
+.image-factory .if-gallery-prompt-button {padding:1px 5px;font-size:11px;color:var(--if-accent)}
+.image-factory .if-brand-templates {width:100%;display:flex;align-items:center;justify-content:space-between;gap:5px;
+  margin-bottom:9px;padding:7px 9px;background:var(--if-picked);color:var(--if-accent);font-size:12px;line-height:17px;text-align:left}
+.if-brand-templates > span:last-child {white-space:nowrap}
+.if-brand-templates i {font-size:14px;font-style:normal}

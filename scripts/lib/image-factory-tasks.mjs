@@ -157,7 +157,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   async function action({ kind, scope, before } = {}) {
     if ((!isActive() && kind !== 'close') || openToken || loading) return
     try {
-      if (kind === 'new') { await create(); return }
+      if (kind === 'new') return await create()
       if (kind === 'restore') {
         const tab = closed.find(item => !tabs.some(open => open.scope === item.scope) && canOpen(item))
         if (!tab) return

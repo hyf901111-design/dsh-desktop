@@ -11,17 +11,17 @@ it('uses the displayed asset dimensions for both the readout and the Make someth
   const root = createRoot(mount)
   const use = vi.fn()
   try {
-    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: use })))
-    const card = mount.querySelector('article')!
+    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: use, onTemplate: vi.fn() })))
+    const card = [...mount.querySelectorAll('article')].find(item => item.querySelector('h3')?.textContent === '向上生长')!
     const image = card.querySelector('img')!
     const tags = () => Array.from(card.querySelectorAll('.if-gallery-tag'), tag => tag.textContent)
-    await vi.waitFor(() => expect(tags()).toEqual(['绘本封面', '故事插画', '1:1', '512 × 512 px']))
+    await vi.waitFor(() => expect(tags()).toEqual(['建筑摄影', '行业专题', '2:5', '640 × 1600 px']))
     const button = card.querySelector('button')!
     expect(button.contains(image)).toBe(true)
     expect(button.textContent).toContain('做同款')
     expect(card.textContent).not.toContain('使用提示词')
-    await act(() => button.click())
-    expect(use).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/画面比例为 1:1。$/u))
+    await act(() => card.querySelector<HTMLButtonElement>('.if-gallery-prompt-button')!.click())
+    expect(use).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/画面比例为 2:5。$/u))
   } finally {
     await act(() => root.unmount())
     mount.remove()
@@ -51,7 +51,7 @@ it('pages several cards in either direction and pauses only over content or whil
   const mount = document.body.appendChild(document.createElement('div'))
   const root = createRoot(mount)
   try {
-    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: () => {} })))
+    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: () => {}, onTemplate: () => {} })))
     setCycleWidth!(3000)
     expect(request).toHaveBeenCalledOnce()
     const visibleFrame = request.mock.results[0]?.value
@@ -103,6 +103,28 @@ it('pages several cards in either direction and pauses only over content or whil
     await act(() => root.unmount())
     mount.remove()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  }
+})
+
+it('uses the editable project route for a preview with a logo and poster title', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const mount = document.body.appendChild(document.createElement('div'))
+  const root = createRoot(mount)
+  const onUse = vi.fn(), onTemplate = vi.fn()
+  try {
+    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse, onTemplate })))
+    const card = mount.querySelector('article')!
+    const button = card.querySelector('button')!
+    expect(button.getAttribute('aria-label')).toBe('山海长跑 · 做同款 · 可编辑模板')
+    await vi.waitFor(() => expect(card.querySelector('.if-gallery-layout text')?.textContent).toBe('山海长跑'))
+    expect(card.querySelector('.if-gallery-layout image')?.getAttribute('href')).toMatch(/^data:image\/svg\+xml/u)
+    await act(() => button.click())
+    expect(onTemplate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: 'steady-horizon', material: ['品牌海报', 'Brand poster'] }))
+    expect(onUse).not.toHaveBeenCalled()
+  } finally {
+    await act(() => root.unmount())
+    mount.remove()
     vi.unstubAllGlobals()
   }
 })

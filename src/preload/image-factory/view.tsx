@@ -10,7 +10,9 @@ import { brandArtwork } from './brand-artwork'
 import { brandDragType, findBrandAsset, moveBrandOverlay, placeBrandAsset, resizeBrandOverlay, type BrandAsset } from './brand-assets'
 import { BrandAssetLibrary } from './brand-library'
 import { imageFactoryFontFaces } from './fonts'
-import { ImageFactoryGallery } from './gallery'
+import { galleryArtwork, ImageFactoryGallery } from './gallery'
+import { galleryExamples, type GalleryExample } from './gallery-examples'
+import { galleryTemplateLayers } from './gallery-layout'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
 import { iconSource } from './icons'
 import { useImageViewport } from './viewport'
@@ -66,6 +68,25 @@ function titleFromPrompt(prompt: string, t: T) {
   return prompt.match(/[「“"《]([^」”"》\n]{1,36})[」”"》]/)?.[1] ||
     prompt.split(/[\n。！？；]/u)[0]?.trim().slice(0, 30) || t('生成图片', 'Generated image')
 }
+function requestGalleryTask(doc: Document): Promise<string | undefined> {
+  return new Promise(resolve => {
+    const requestId = crypto.randomUUID()
+    const done = (result?: string) => {
+      clearTimeout(timer)
+      doc.removeEventListener('sherlock:image-factory-task-created', receive)
+      resolve(result)
+    }
+    const receive = (event: Event) => {
+      const detail = (event as CustomEvent).detail
+      if (detail?.requestId !== requestId) return
+      done(typeof detail.scope === 'string' && validCanvasScope(detail.scope) ? detail.scope : undefined)
+    }
+    const timer = setTimeout(done, 15_000)
+    doc.addEventListener('sherlock:image-factory-task-created', receive)
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-action', { detail: { kind: 'new', requestId } }))
+  })
+}
+
 function startsNewImage(prompt: string) {
   const text = prompt.trim()
   return /^(?:请(?:帮我)?|帮我)?\s*(?:(?:另|从头|从零)(?:生成|制作|设计|创建|做|画)\s*一[张幅]|(?:生成|制作|设计|创建|做|画)\s*一[张幅]\s*(?:全新的?|新的))/u.test(text) ||
@@ -130,6 +151,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const [layersOpen, setLayersOpen] = useState(false)
   const [brandScope, setBrandScope] = useState<CanvasScope>()
   const [brandDragging, setBrandDragging] = useState(false)
+  const creatingTemplate = useRef(false)
   const brandOpen = brandScope === scope
   const brandToggle = useRef<HTMLButtonElement>(null)
   const [selectedId, setSelectedId] = useState<string>()
@@ -168,7 +190,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const area = selectionDraft?.area
   const commentPending = !!selectionDraft?.phase
   const cutoutPending = cutouts.current.has(scope) || [...active.current.values()].some(job => job.cutout && job.sessionId === scope)
-  const busy = !canvasSelected || status !== 'ready' || isBusy(scope) || commentPending || cutoutPending
+  const busy = creatingTemplate.current || !canvasSelected || status !== 'ready' || isBusy(scope) || commentPending || cutoutPending
   const raster = current?.layers.find((layer): layer is Extract<CanvasLayer, { kind: 'image' }> => layer.kind === 'image')
   const selectedText = current?.layers.find((layer): layer is TextLayer => layer.kind === 'text' && layer.id === selectedId)
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
@@ -758,10 +780,53 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       setSelectionDraft(current.id, { ...draft, error: t('对话服务尚未就绪，请重试。', 'Chat is not ready. Try again.') })
     }
   }
+  function showGallery() {
+    releaseText()
+    clearSelection()
+    setBrandScope(undefined)
+    setBrandDragging(false)
+    setGalleryOpen(true)
+  }
   const useGalleryPrompt = useCallback((prompt: string) => {
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt }, cancelable: true }))
   }, [doc])
+  async function openGalleryTemplate(example: GalleryExample) {
+    if (busy || creatingTemplate.current) return
+    const inImages = () => mounted.current && doc.body.dataset.workspaceSurface === 'image-factory'
+    creatingTemplate.current = true
+    refreshBusy()
+    let background: Awaited<ReturnType<typeof createImageLayer>> | undefined
+    try {
+      const source = galleryArtwork(example.id)
+      if (!source) throw Error(t('模板底图不可用。', 'The template background is unavailable.'))
+      const result = await fetch(source)
+      if (!result.ok) throw Error(t('模板底图无法读取。', 'The template background could not be loaded.'))
+      const id = crypto.randomUUID()
+      background = await createImageLayer(doc, await result.blob(), id, crypto.randomUUID(), 'image/jpeg')
+      if (!inImages() || workspace.getSnapshot().scope !== scope) return
+      const target = await requestGalleryTask(doc)
+      if (!target) throw Error(t('未能打开新的图片任务。', 'Could not open a new image task.'))
+      await workspace.ready(target)
+      if (!inImages() || workspace.getSnapshot().scope !== target) return
+      const { width, height } = background.raster
+      const layers = [background, ...galleryTemplateLayers(example, { width, height }, t, () => crypto.randomUUID())]
+      if (!workspace.change(target, old => old ?? { id, width, height, title: t(...example.title), layers }))
+        throw Error(t('未能将模板放到画布。', 'Could not place the template on the canvas.'))
+      background = undefined
+      setGalleryOpen(false)
+      resetViewport()
+      setSelectedId(undefined)
+      setEditing(undefined)
+      setLayersOpen(true)
+    } catch (error) {
+      if (inImages()) setToast(errorLabel(error, t('模板暂时无法打开，请重试。', 'The template could not be opened. Try again.')))
+    } finally {
+      if (background) URL.revokeObjectURL(background.raster.url)
+      creatingTemplate.current = false
+      if (mounted.current) refreshBusy()
+    }
+  }
   function taskAction(detail: TaskAction) {
     if (detail.kind === 'select' || detail.kind === 'new' || detail.kind === 'close' || detail.kind === 'restore') releaseText()
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-action', { detail }))
@@ -824,7 +889,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         : <span className="if-top-title" title={current?.title}>{current?.title}</span>}
       <CanvasActionsMenu doc={doc} t={t} canExport={!!current?.layers.length && !busy} exporting={exportImage}
         galleryAction={scene && !busy ? galleryOpen ? { label: t('返回画布', 'Return to canvas'), run: () => setGalleryOpen(false) }
-          : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: () => { releaseText(); clearSelection(); setGalleryOpen(true) } } : undefined}/>
+          : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: showGallery } : undefined}/>
     </header>
     <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => {
       void importFile(event.currentTarget.files?.[0]); event.currentTarget.value = ''
@@ -850,7 +915,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         : !creating && status === 'error' ? <div className="if-canvas-message" role="alert">
           <span>{t('画布暂时无法读取。', 'The canvas could not be opened.')}</span>
           <Button onClick={() => workspace.select(scope)}>{t('重新打开', 'Try again')}</Button>
-        </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt}/> : <>
+        </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt} onTemplate={openGalleryTemplate}/> : <>
         <div className="if-stage-scroll" data-pan-ready={spaceHeld} data-panning={panning} ref={scroll}
           onPointerDownCapture={event => panPointer(event, 'start')}
           onPointerMoveCapture={event => panPointer(event, 'move')}
@@ -984,7 +1049,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           </form>
         </div>}
         {brandOpen && <BrandAssetLibrary t={t} disabled={busy} insert={insertBrandAsset} dragging={setBrandDragging}
-          close={closeBrandLibrary} closeIcon={<Icon name="close"/>}/>}
+          close={closeBrandLibrary} closeIcon={<Icon name="close"/>} templateCount={galleryExamples.length} showTemplates={showGallery}/>}
         {resizableOverlay?.kind === 'shape' && <div className="if-text-format" role="group" aria-label={t('色块样式', 'Block style')}>
           <label><span>{t('填充色', 'Fill')}</span><input type="color" aria-label={t('色块填充色', 'Block fill color')}
             value={resizableOverlay.color} onChange={event => patchOverlay(resizableOverlay.id, { color: event.target.value })}/></label>
@@ -1042,7 +1107,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         </div></div>
       </>}
     </div>
-    {toast && <div className="if-toast" role="status">{toast}</div>}
+    {(creatingTemplate.current || toast) && <div className="if-toast" role="status">
+      {creatingTemplate.current ? t('正在打开模板…', 'Opening template…') : toast}
+    </div>}
   </section>
 }
 
