@@ -73,6 +73,27 @@ function Workbench(props) {`);
   document.addEventListener('sherlock:knowledge-session-chat',showChat);
   return()=>document.removeEventListener('sherlock:knowledge-session-chat',showChat);
  },[store]);
+ react.useLayoutEffect(()=>{
+  const collapseHomePanel=event=>{
+   const collapse=value=>value.panelOpen?{...value,panelOpen:false}:value;
+   const current=store.getSnapshot().sessionId;
+   if(current===undefined)store.reduce(collapse);
+   else store.savePending(collapse(store.pendingState));
+   const id=event.detail?.sessionId;
+   if(typeof id==='string'&&id){
+    if(current===id)store.reduce(collapse);
+    else store.reduceFor(id,collapse);
+   }
+   pendingCompactHandoff.current=false;
+   setCompactPanelOpen(false);
+  };
+  document.addEventListener('sherlock:sidebar-home-opened',collapseHomePanel);
+  window.addEventListener('sherlock:conversation-initial-chat',collapseHomePanel);
+  return()=>{
+   document.removeEventListener('sherlock:sidebar-home-opened',collapseHomePanel);
+   window.removeEventListener('sherlock:conversation-initial-chat',collapseHomePanel);
+  };
+ },[store]);
  const pendingChatOpen=state?.panelOpen===true;
  if(current===undefined)pendingCompactHandoff.current=pendingChatOpen;
  react.useLayoutEffect(()=>{
