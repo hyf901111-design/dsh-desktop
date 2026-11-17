@@ -266,7 +266,8 @@ ctx.effect(()=>{
  void refresh();pending.preferences=preferences;eworkPendingConversation=pending;window[Symbol.for('sherlock:pending-conversation')]=pending;
  return()=>{offSettings();if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}
 },'Pending first-message conversation');
-ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));`)
+ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));
+ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource(imageLayerReferenceCodec()),'Image factory layer codec'));`)
  const sharedSubmit='if (this.deps.sharedSubmit?.(mode)) return;'
  replace(sharedSubmit,`if(document.body.dataset.boardWorkspacePending==='true'){
    this.notify('error','看板工作区会话尚在打开，输入已保留。');return;
