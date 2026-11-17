@@ -182,6 +182,36 @@ it.each([false, true])('moves and resizes the selected text box (lost capture: %
     await act(async () => label.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
     expect(document.querySelector<HTMLTextAreaElement>('textarea[data-canvas-text-id]')?.value).toBe(text.text)
     expect(frame.querySelectorAll('[data-text-resize-handle]')).toHaveLength(0)
+
+    const scroller = frame.closest<HTMLElement>('.if-stage-scroll')!
+    await act(async () => pointer('pointerdown', scroller, 1, 0, 0))
+    const layerText = frame.querySelector<HTMLElement>('[data-canvas-text-id]')!
+    Object.defineProperty(layerText, 'setPointerCapture', { value: vi.fn() })
+    const position = vi.spyOn(layerText, 'getBoundingClientRect').mockReturnValue(new DOMRect(240, 600, 300, 33))
+    await act(async () => {
+      pointer('pointerdown', layerText, 1, 260, 610)
+      pointer('pointerup', scroller, 0, -340, -90)
+    })
+    const outside = write.mock.calls.at(-1)?.[0].canvas.layers[0] as TextLayer
+    expect(outside.x).toBeCloseTo(-.45)
+    expect(outside.y).toBeCloseTo(-.1)
+
+    await act(async () => pointer('pointerdown', scroller, 1, 0, 0))
+    const toggle = Array.from(document.querySelectorAll('.if-toolbar button')).find(button => button.textContent?.trim() === '图层')!
+    await act(async () => (toggle as HTMLButtonElement).click())
+    vi.spyOn(scroller, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 800, 1000))
+    position.mockReturnValue(new DOMRect(-360, -100, 300, 33))
+    const row = document.querySelector<HTMLButtonElement>('.if-layer-name')!
+    await act(async () => row.click())
+    expect(row.getAttribute('aria-pressed')).toBe('true')
+    expect(frame.style.transform).toBe('translate(610px, 583.5px)')
+    await act(async () => {
+      pointer('pointerdown', layerText, 1, 260, 490)
+      pointer('pointerup', scroller, 0, 860, 1190)
+    })
+    const returned = write.mock.calls.at(-1)?.[0].canvas.layers[0] as TextLayer
+    expect(returned.x).toBeCloseTo(scaled.x)
+    expect(returned.y).toBeCloseTo(scaled.y)
   } finally {
     await act(async () => factory.dispose())
     host.dispose()

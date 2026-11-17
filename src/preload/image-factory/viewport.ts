@@ -136,5 +136,9 @@ export function useImageViewport(doc: Document, scroll: RefObject<HTMLDivElement
     setZoom(old => Math.min(maxZoom, Math.max(minZoom, old * factor)))
   }
 
-  return { zoom, pan, reset, stepZoom, spaceHeld, panning, panPointer, canZoomIn: zoom < maxZoom, canZoomOut: zoom > minZoom }
+  function panBy(x: number, y: number) {
+    setPan(previous => ({ x: previous.x + x, y: previous.y + y }))
+  }
+
+  return { zoom, pan, reset, stepZoom, spaceHeld, panning, panPointer, panBy, canZoomIn: zoom < maxZoom, canZoomOut: zoom > minZoom }
 }
