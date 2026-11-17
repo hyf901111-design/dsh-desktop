@@ -6,12 +6,12 @@ export function readImageFactoryContext(text) {
   try {
     const value = JSON.parse(match[1])
     if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(value.id) ||
-        !['generate', 'edit', 'region'].includes(value.operation) ||
+        !['generate', 'edit', 'region', 'cutout'].includes(value.operation) ||
         !['1024x1024', '1024x1536', '1536x1024'].includes(value.size) ||
         !Number.isInteger(value.width) || value.width < 1 || value.width > 4096 ||
         !Number.isInteger(value.height) || value.height < 1 || value.height > 4096 ||
         typeof value.title !== 'string' || value.title.length < 1 || value.title.length > 100 ||
-        typeof value.internalReference !== 'boolean') return
+        typeof value.internalReference !== 'boolean' || value.operation === 'cutout' && !value.internalReference) return
     let editBounds
     if (value.editBounds !== undefined) {
       if (value.operation !== 'region' || !value.internalReference || !value.editBounds) return

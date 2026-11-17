@@ -280,7 +280,7 @@ it('opens an editable region comment when the pointer is released outside the im
     expect(send.disabled).toBe(false)
     await act(async () => send.click())
     expect(submitted).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ detail: expect.objectContaining({ prompt: '把区域改成浅蓝' }) }))
-    const { id } = (submitted.mock.calls[0][0] as CustomEvent).detail
+    const { id } = (submitted.mock.calls[0]![0] as CustomEvent).detail
     const report = (error?: string) =>
       document.dispatchEvent(new CustomEvent('sherlock:image-factory-comment-result', { detail: { id, error } }))
     expect(selected?.dataset.processing).toBe('true')
