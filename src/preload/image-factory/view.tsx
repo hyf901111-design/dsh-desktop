@@ -924,7 +924,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   doc.addEventListener('sherlock:image-factory-session', select)
   doc.addEventListener('sherlock:image-factory-adopt', adopt)
   let english = doc.documentElement.dataset.odysseyLocale === 'en'
-  const render = () => react.render(<Editor key={identity} doc={doc} bridge={bridge} workspace={workspace} close={() => host.revealConversation()} t={(zh, en) => english ? en : zh}/>)
+  const render = () => react.render(<Editor key={identity} doc={doc} bridge={bridge} workspace={workspace} close={() => host.back()} t={(zh, en) => english ? en : zh}/>)
   const language = new MutationObserver(() => {
     const now = doc.documentElement.dataset.odysseyLocale === 'en'
     if (now !== english) { english = now; render() }

@@ -111,19 +111,32 @@ export function patchSidebarNewNoteShell(input){
   if(start<0||stop<0)throw Error('Native Sidebar New Session group drift')
   const group=source.slice(start,stop)
 
-  const home='(0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.newSessionGroup,children:(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("sidebar.home.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-home":"","aria-label":t("sidebar.home.label"),onClick:()=>startSession()})})})'
+  const home='(0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.newSessionGroup,children:(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("sidebar.home.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-home":"","aria-label":t("sidebar.home.label"),onClick:openHome})})})'
+  const props='function SidebarRoot({ collapsed, width, startSession, startResearchSession, toggleSidebar, t, renderSlot })'
+  const inject='const injectProps = () => ({'
   const root='\t\t\treturn (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\tref: column,'
   const foot='(0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.footArea,'
   return apply(source,'shell',[
     [group,'wide && newSessionControls'],
+    [props,props.replace('startSession,','openHome, startSession,')],
+    [inject,inject+`
+                openHome: () => {
+                    ctx.sessions.clear();
+                    document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
+                },`],
     [root,'\t\t\tconst newSessionControls = '+group+';\n'+`
     react.useEffect(()=>{
       if(wide)return;
       const rail=column.current;
+      const openChat=()=>startSession();
       const openResearch=()=>startResearchSession();
+      rail?.addEventListener('sherlock:sidebar-new-chat',openChat);
       rail?.addEventListener('sherlock:sidebar-new-research',openResearch);
-      return()=>rail?.removeEventListener('sherlock:sidebar-new-research',openResearch);
-    },[wide,startResearchSession]);
+      return()=>{
+        rail?.removeEventListener('sherlock:sidebar-new-chat',openChat);
+        rail?.removeEventListener('sherlock:sidebar-new-research',openResearch);
+      };
+    },[wide,startSession,startResearchSession]);
 `+root],
     [foot,'!wide && '+home+',\n'+foot],
     ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "新建研究",\n"sidebar.home.label":"主页",'],

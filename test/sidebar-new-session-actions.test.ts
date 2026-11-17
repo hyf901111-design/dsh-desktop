@@ -239,23 +239,27 @@ describe('normal new Note workspace flow',()=>{
  })
 })
 
-it('uses the existing New Chat action for the single collapsed Home entry', async () => {
+it('opens Home directly and keeps New Chat and New Research as separate actions', async () => {
   const w = new Window({ url: 'https://sherlock.local/' })
   installBrowserGlobals(w)
   const client = await loadClientBundle('dsh-client-ui-sidebar', w, ['SidebarRoot'], patchSidebarNewNoteShell)
   const root = createRoot(w.document.body as unknown as Element)
   const startSession = vi.fn()
   const startResearchSession = vi.fn()
+  const openHome = vi.fn()
   try {
     await act(async () => root.render(createElement(client.__testSidebarRoot, {
       collapsed: true, width: 240, t: (key: string) => key, toggleSidebar: vi.fn(),
-      startSession, startResearchSession, renderSlot: () => null
+      openHome, startSession, startResearchSession, renderSlot: () => null
     })))
     const creation = w.document.querySelectorAll('button.hHd-Xa_newSession')
     expect(creation).toHaveLength(1)
     const home = w.document.querySelector('button[data-sidebar-home]')
     expect(home?.getAttribute('aria-label')).toBe('sidebar.home.label')
     home?.dispatchEvent(new w.MouseEvent('click', { bubbles: true }))
+    expect(openHome).toHaveBeenCalledOnce()
+    expect(startSession).not.toHaveBeenCalled()
+    home?.dispatchEvent(new w.CustomEvent('sherlock:sidebar-new-chat', { bubbles: true }))
     expect(startSession).toHaveBeenCalledOnce()
     expect(startResearchSession).not.toHaveBeenCalled()
     home?.dispatchEvent(new w.CustomEvent('sherlock:sidebar-new-research', { bubbles: true }))

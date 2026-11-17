@@ -13,26 +13,50 @@ it('preserves the browser through settings and returns to the workspace on expli
     const overlay=doc.createElement('div');overlay.className='VOzbGW_overlay';doc.body.append(overlay);await new Promise(resolve=>setTimeout(resolve,20));expect(host.current()?.surface).toBe('browser');
     overlay.remove();doc.querySelector<HTMLButtonElement>('[role=row]')!.click();expect(browser.hidden).toBe(true);expect(browser.querySelector('input')!.value).toBe('尚未提交的网址');host.dispose();
 });
-it('returns to the previous surface without replacing its draft DOM', () => {
+it('switches applications in place and returns directly to the original research workspace', () => {
     const w = new Window();
     windows.push(w);
     const doc = w.document as unknown as Document;
-    doc.body.innerHTML = '<main class="pI_x6G_centerCol"><textarea>会话草稿</textarea></main>';
+    doc.body.innerHTML = '<main class="pI_x6G_centerCol"><div data-odyssey-page="research"><textarea>研究草稿</textarea></div></main>';
     const host = new WorkspaceSurfaceHost(doc);
-    const scheduled = doc.createElement('section');
-    scheduled.innerHTML = '<textarea>定时任务草稿</textarea>';
-    const integrations = doc.createElement('section');
-    host.register('scheduled', scheduled);
-    host.register('integrations', integrations);
-    host.open('scheduled');
-    host.open('integrations');
-    expect(scheduled.hidden).toBe(true);
+    const appNames = ['browser', 'image-factory', 'integrations', 'scheduled', 'knowledge'] as const;
+    const apps = appNames.map(name => {
+        const app = doc.createElement('section');
+        app.innerHTML = '<textarea>应用草稿</textarea>';
+        host.register(name, app);
+        return app;
+    });
+    for (const [index, name] of appNames.entries()) {
+        host.open(name);
+        expect(apps.filter(app => !app.hidden)).toEqual([apps[index]]);
+    }
     host.back();
-    expect(scheduled.hidden).toBe(false);
-    expect(scheduled.querySelector('textarea')!.value).toBe('定时任务草稿');
-    host.back();
-    expect(doc.querySelector<HTMLTextAreaElement>('.pI_x6G_centerCol textarea')!.value).toBe('会话草稿');
+    expect(host.current()).toBeUndefined();
+    expect(apps.every(app => app.hidden)).toBe(true);
+    expect(doc.querySelector<HTMLTextAreaElement>('[data-odyssey-page="research"] textarea')!.value).toBe('研究草稿');
     expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(false);
+    host.open('browser');
+    expect(apps[0]!.querySelector('textarea')!.value).toBe('应用草稿');
+    host.dispose();
+});
+it('retains the native notes view under application switches and closes it on direct Home navigation', () => {
+    const w = new Window(); windows.push(w);
+    const doc = w.document as unknown as Document;
+    doc.body.innerHTML = '<main class="pI_x6G_centerCol"></main><aside data-dsh-sidebar-root><button class="hHd-Xa_newSession" data-sidebar-home>主页</button></aside>';
+    const host = new WorkspaceSurfaceHost(doc);
+    for (const name of ['notes', 'image-factory', 'knowledge'] as const) host.register(name, doc.createElement('section'));
+    host.open('notes'); host.open('image-factory'); host.open('knowledge');
+    host.back();
+    expect(host.current()?.surface).toBe('notes');
+    host.open('image-factory');
+    doc.querySelector<HTMLButtonElement>('[data-sidebar-home]')!.addEventListener('click', () => {
+        expect(host.current()?.surface).toBe('image-factory');
+        doc.querySelector('main')!.innerHTML = '<div data-odyssey-page="home">对话首页</div>';
+        doc.dispatchEvent(new w.CustomEvent('sherlock:sidebar-home-opened') as unknown as Event);
+    });
+    doc.querySelector<HTMLButtonElement>('[data-sidebar-home]')!.click();
+    expect(host.current()).toBeUndefined();
+    expect(doc.querySelector('main')?.textContent).toBe('对话首页');
     host.dispose();
 });
 it('preserves surface through search overlay and panel toggle; only an opened session closes it', () => {

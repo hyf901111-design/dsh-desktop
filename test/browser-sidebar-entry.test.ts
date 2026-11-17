@@ -55,7 +55,7 @@ it('reuses one collapsed browser entry between quick creation and More across si
 it('routes the five collapsed creation entries with the filled sidebar icons', async () => {
  const {w,actions}=fixture(false),workspace=vi.fn(),chat=vi.fn(),research=vi.fn()
  w.document.querySelector('[data-sidebar-add-workspace]')!.addEventListener('click',workspace)
- w.document.querySelector('[data-sidebar-home]')!.addEventListener('click',chat)
+ w.document.querySelector('[data-dsh-sidebar-root]')!.addEventListener('sherlock:sidebar-new-chat',chat)
  w.document.querySelector('[data-dsh-sidebar-root]')!.addEventListener('sherlock:sidebar-new-research',research)
  const more=w.document.querySelector<TestButton>('.st-more')!
  try {

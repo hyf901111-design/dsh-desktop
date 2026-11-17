@@ -50,8 +50,15 @@ export class BrowserAppView {
   if(win.ResizeObserver){this.resize=new win.ResizeObserver(this.schedule);this.resize.observe(this.root)}
  }
  async open(sessionId='',url?:string){
-  this.closePageContextMenu();this.sessionId=sessionId;const epoch=++this.epoch;this.state=await this.bridge.request('snapshot');if(this.disposed||epoch!==this.epoch)return
-  this.host.open('browser');this.root.hidden=false;this.render()
+  this.closePageContextMenu();this.sessionId=sessionId;const epoch=++this.epoch
+  this.host.open('browser')
+  this.root.hidden=false
+  this.render();this.schedule()
+  let snapshot: BrowserSnapshot
+  try{snapshot=await this.bridge.request('snapshot')}
+  catch(error){if(this.disposed||epoch!==this.epoch)return;if(!this.state)this.host.close('browser');throw error}
+  if(this.disposed||epoch!==this.epoch)return
+  this.state=snapshot;this.render()
   if(url)await this.run('new',{url});else if(this.tab()?.url)await this.run('select',{id:this.state!.activeId})
   this.schedule()
  }
@@ -59,7 +66,7 @@ export class BrowserAppView {
  private onOpen=(event:Event)=>{const d=(event as CustomEvent).detail;void this.open(typeof d?.sessionId==='string'?d.sessionId:'',d?.url).catch(error=>this.toast(error.message,true))}
  private onContext=(event:Event)=>{const id=(event as CustomEvent).detail?.sessionId;const next=typeof id==='string'?id:'';if(next!==this.sessionId){const q=this.question;if(q?.pendingHandoff){if(next===q.pendingHandoff)q.pendingHandoff=undefined;else this.cancelQuestion()}this.sessionId=next;this.render()}this.schedule()}
  private onClose=(event:Event)=>this.close((event as CustomEvent).detail?.sessionId)
- private surface=()=>{if(this.host.current()?.surface!=='browser'){this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();this.workspaceHover.reset();this.managingBookmarks=false;this.root.hidden=true;this.panel='';this.panelPresented=false;this.suggestions=false;this.image='';}this.schedule()}
+ private surface=()=>{if(this.host.current()?.surface!=='browser'){this.epoch++;this.closePageContextMenu();this.cancelQuestion();this.cancelFocusRestore();this.clearTabDrag();this.workspaceHover.reset();this.managingBookmarks=false;this.root.hidden=true;this.panel='';this.panelPresented=false;this.suggestions=false;this.image='';}this.schedule()}
  private tabIcon(tab:BrowserTab){if(tab.page)return icon(tab.page==='history'?'history':'download');if(tab.loading)return `<span class="eb-tab-loading" aria-hidden="true">${icon('ring')}</span>`;const source=tab.favicon;return tab.url&&typeof source==='string'&&source.length<=32768&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(source)?`<span class="eb-tab-site-icon" aria-hidden="true"><img class="eb-tab-favicon" src="${source}" alt="" draggable="false" referrerpolicy="no-referrer">${icon('globe')}</span>`:icon(tab.private?'moon':'globe')}
  private faviconError=(event:Event)=>{const image=event.target as HTMLImageElement;if(image.matches?.('img.eb-tab-favicon')){image.hidden=true;image.parentElement!.dataset.faviconFailed='true'}}
  private tab(){return this.state?.tabs.find(t=>t.id===this.state?.activeId)}
