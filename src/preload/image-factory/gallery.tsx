@@ -165,10 +165,15 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
               <p><span className="if-gallery-hover">{prompt}</span></p>
               <dl>
                 <dt><span className="if-gallery-hover">{t('使用场景', 'Use cases')}</span></dt>
-                <dd><span className="if-gallery-hover">{t(...example.scenes)}</span></dd>
+                <dd>{t(...example.scenes).split(' · ').map(scene =>
+                  <span className="if-gallery-tag if-gallery-hover" key={scene}>{scene}</span>
+                )}</dd>
                 {size && <>
                   <dt><span className="if-gallery-hover">{t('图像参数', 'Image settings')}</span></dt>
-                  <dd><span className="if-gallery-hover">{ratio} · {size.width} × {size.height} px</span></dd>
+                  <dd>
+                    <span className="if-gallery-tag if-gallery-hover">{ratio}</span>
+                    <span className="if-gallery-tag if-gallery-hover">{size.width} × {size.height} px</span>
+                  </dd>
                 </>}
               </dl>
             </article>

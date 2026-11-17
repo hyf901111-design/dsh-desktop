@@ -43,7 +43,7 @@ function readMetadata(value: unknown): StoredCanvas {
     if (layer.kind === 'image' && ++images === 1 && validId(layer.assetId) && canvasImageTypes.includes(layer.mediaType))
       return { kind: layer.kind, id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType }
     if (layer.kind !== 'text' || typeof layer.text !== 'string' || layer.text.length > 500 ||
-        !unit(layer.x) || !unit(layer.y) || !unit(layer.width) || layer.width <= 0 || layer.x + layer.width > 1.001 ||
+        !Number.isFinite(layer.x) || !Number.isFinite(layer.y) || !unit(layer.width) || layer.width <= 0 ||
         !Number.isFinite(layer.fontSize) || layer.fontSize < 8 || layer.fontSize > 600 ||
         !canvasFonts.some(font => font.family === layer.family) || ![400, 500, 600, 700].includes(layer.weight) ||
         !['left', 'center', 'right'].includes(layer.align) || !/^#[a-fA-F0-9]{6}$/u.test(layer.color))

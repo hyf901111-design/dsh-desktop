@@ -2,7 +2,7 @@ import {defineTool} from '@deepseek-ai/dsh-tools'
 import {createHash} from 'node:crypto'
 import {createOpenAIImageProvider,ImageGenerationError,validateGeneratedImage} from './image-generation-provider.js'
 import {readImageFactoryContext} from './image-factory-context.js'
-import {cutoutMaskPrompt,prepareImageCutout} from './image-cutout.js'
+import {cutoutMaskPrompt,describeCutoutSubjects,prepareImageCutout} from './image-cutout.js'
 
 const TOOL='image_generate',KIND='odyssey-image-generation',MAX_BYTES=20*1024*1024,MAX_PROMPT=16_000
 const fail=message=>{throw new ImageGenerationError(message)}
@@ -27,7 +27,7 @@ export function conversationImageReferences(session){
  return images
 }
 function argumentsFor(args,models,defaultModel,attachedIds){
- if(!object(args)||Object.keys(args).some(k=>!['prompt','model','size','quality','background','reference_image_ids','continue_after_delivery'].includes(k))||typeof args.prompt!=='string'||!args.prompt.trim()||args.prompt.length>MAX_PROMPT)fail('图片生成参数无效，请提供不超过 16000 字的描述。')
+ if(!object(args)||Object.keys(args).some(k=>!['prompt','model','size','quality','background','reference_image_ids','foreground_subjects','continue_after_delivery'].includes(k))||typeof args.prompt!=='string'||!args.prompt.trim()||args.prompt.length>MAX_PROMPT)fail('图片生成参数无效，请提供不超过 16000 字的描述。')
  if(args.continue_after_delivery!==undefined&&typeof args.continue_after_delivery!=='boolean')fail('继续执行参数无效。')
  const input={prompt:args.prompt.trim(),model:args.model??defaultModel,size:args.size??'auto',quality:args.quality??'auto',background:args.background??'auto',reference_image_ids:args.reference_image_ids??attachedIds}
  if(!models.has(input.model))fail('此图片模型尚未接入。')
@@ -63,7 +63,7 @@ export function registerImageGenerationTool(ctx,options={}){
  const unregister=ctx.tools.register(defineTool({
   name:TOOL,
   description:'直接生成或修改图片并在当前对话中交付。参考图随本轮消息上传时，省略 reference_image_ids 即可使用这些附件，无需用 Bash 或其他工具查找。prompt 描述最终画面；一次生成一张真实图片。成功交付单纯的生图请求后结束当前轮次。用户还有后续任务时设置 continue_after_delivery。不得自动重试失败的付费请求。',
-  parameters:{prompt:{type:'string',required:true,description:'完整画面描述，保留用户要求的文字、构图与风格。'},model:{type:'string',...(options.hosted?{description:'省略时使用默认模型；仅使用系统上下文列出的模型。'}:{enum:[...models.keys()]})},size:{type:'string',enum:['auto','1024x1024','1024x1536','1536x1024']},quality:{type:'string',enum:['auto','low','medium','high','xhigh','max']},background:{type:'string',enum:['auto','opaque','transparent']},reference_image_ids:{type:'array',items:{type:'string'},description:'最多四个本会话图片附件 ID。省略时使用本轮上传图；需要引用历史图或指定图片时填入对应 ID；明确不使用参考图时传空数组。'},continue_after_delivery:{type:'boolean',description:'生图后还有用户明确要求的后续工作（例如制作幻灯片）时传 true；仅需交付图片时省略。'}},
+  parameters:{prompt:{type:'string',required:true,description:'完整画面描述，保留用户要求的文字、构图与风格。'},model:{type:'string',...(options.hosted?{description:'省略时使用默认模型；仅使用系统上下文列出的模型。'}:{enum:[...models.keys()]})},size:{type:'string',enum:['auto','1024x1024','1024x1536','1536x1024']},quality:{type:'string',enum:['auto','low','medium','high','xhigh','max']},background:{type:'string',enum:['auto','opaque','transparent']},reference_image_ids:{type:'array',items:{type:'string'},description:'最多四个本会话图片附件 ID。省略时使用本轮上传图；需要引用历史图或指定图片时填入对应 ID；明确不使用参考图时传空数组。'},foreground_subjects:{type:'array',items:{type:'string'},description:'仅供「去背景」按钮使用。描述画布参考图中实际应保留的主要实体，每项用一个短语注明物体及可辨认特征。'},continue_after_delivery:{type:'boolean',description:'生图后还有用户明确要求的后续工作（例如制作幻灯片）时传 true；仅需交付图片时省略。'}},
   output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)},{type:'image',attachment:value.image}]},
   isConcurrencySafe:()=>false,
   presentCall:()=>({card:'generic',title:'生成图片',kind:'write'}),
@@ -137,7 +137,9 @@ export function registerImageGenerationTool(ctx,options={}){
      const requestId=createHash('sha256').update(JSON.stringify([session.id,key])).digest('hex')
      const matte=cutout?await prepareImageCutout(loaded[0].data,input.size):undefined
      check(agent,session,authority,signal)
-     const result=await generate({...input,references:matte?[matte.reference]:loaded},{signal,maxBytes,requestId,assertCurrent:()=>check(agent,session,authority,signal)})
+     // Subject hints refine the mask without changing the receipt for this canvas action.
+     const prompt=matte?describeCutoutSubjects(args.foreground_subjects)+input.prompt:input.prompt
+     const result=await generate({...input,prompt,references:matte?[matte.reference]:loaded},{signal,maxBytes,requestId,assertCurrent:()=>check(agent,session,authority,signal)})
      check(agent,session,authority,signal)
      validateGeneratedImage(result.data,maxBytes)
      const data=matte?await matte.applyMask(result.data):result.data
@@ -169,7 +171,7 @@ export function registerImageGenerationTool(ctx,options={}){
   const available=[...models.values()].filter(({provider})=>hosted?provider===hosted:provider!==options.hosted)
   const factory=factoryContext(human(agent?.session))
   const framing=factory?.operation==='cutout'
-   ? '本轮来自「去背景」按钮，直接调用 image_generate 抠出当前画布的主体，保留透明区域。'
+   ? '本轮来自「去背景」按钮。看随消息附带的画布图像，把可辨认的主要前景实体填入 foreground_subjects 后直接调用 image_generate。用物体名称、位置或材质等特征区分主体与布景。保留多个明确的主体，排除台面、投影、环境光斑和倒影；无法辨认时可省略该参数。'
    : factory?.editBounds
    ? '随消息提供了带周边上下文的选区参考图。'+selectedRegionInstructions(factory.editBounds)
    : factory ? '目标区域宽高为 '+factory.width+' × '+factory.height+'，按该比例构图。' : ''

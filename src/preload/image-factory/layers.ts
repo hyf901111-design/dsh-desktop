@@ -27,26 +27,23 @@ export function textTopInsideCanvas(y: number, textHeight: number, canvasHeight:
 
 export function resizeTextLayer(layer: TextLayer, canvas: Size, height: number, handle: TextResizeHandle, dx: number, dy: number) {
   const width = layer.width * canvas.width
-  const left = Math.min(layer.x * canvas.width, canvas.width - 1), top = layer.y * canvas.height
-  const right = Math.min(canvas.width, left + width)
   const west = handle.endsWith('w'), north = handle.startsWith('n')
-  const widthLimit = west ? right : canvas.width - left
   const horizontalDelta = west ? -dx : dx
+  const xForWidth = (nextWidth: number) => west ? layer.x + (width - nextWidth) / canvas.width : layer.x
   if (handle.length === 1) {
-    const minimumWidth = Math.min(widthLimit, Math.max(1, Math.min(width, 24)))
-    const nextWidth = Math.min(widthLimit, Math.max(minimumWidth, width + horizontalDelta))
-    return { x: (west ? right - nextWidth : left) / canvas.width, width: nextWidth / canvas.width }
+    const minimumWidth = Math.max(1, Math.min(width, 24))
+    const nextWidth = Math.min(canvas.width, Math.max(minimumWidth, width + horizontalDelta))
+    return { x: xForWidth(nextWidth), width: nextWidth / canvas.width }
   }
 
   const verticalDelta = north ? -dy : dy
-  const heightLimit = north ? top + height : canvas.height - top
   const requested = 1 + (width * horizontalDelta + height * verticalDelta) / (width ** 2 + height ** 2)
-  const maximumScale = Math.min(600 / layer.fontSize, widthLimit / width, heightLimit / height)
-  const scale = Math.max(8 / layer.fontSize, Math.min(maximumScale, requested))
-  const nextWidth = Math.min(widthLimit, width * scale)
+  const maximumScale = Math.min(600 / layer.fontSize, canvas.width / width)
+  const scale = Math.min(maximumScale, Math.max(8 / layer.fontSize, requested))
+  const nextWidth = Math.min(canvas.width, width * scale)
   return {
-    x: (west ? right - nextWidth : left) / canvas.width,
-    y: north ? Math.max(0, top + height - height * scale) / canvas.height : layer.y,
+    x: xForWidth(nextWidth),
+    y: north ? layer.y + height * (1 - scale) / canvas.height : layer.y,
     width: nextWidth / canvas.width,
     fontSize: Math.min(600, Math.max(8, Math.round(layer.fontSize * scale * 10) / 10)),
   }

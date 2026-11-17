@@ -127,11 +127,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const file = useRef<HTMLInputElement>(null), scroll = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null)
   const imageFrame = useRef<HTMLDivElement>(null), commentBubble = useRef<HTMLDivElement>(null)
+  const layersPanel = useRef<HTMLElement>(null)
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
   const textDrag = useRef<{ layer: TextLayer; pointer: number; start: Point; moved: boolean; height: number; handle?: TextResizeHandle }>()
-  const pendingTextLayout = useRef<{ id: string; scope: CanvasScope; commit: boolean }>()
   const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef(new Map<string, CanvasJob>())
   const selectionDrafts = useRef(new Map<string, SelectionDraft>())
@@ -142,7 +142,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const setScene = (change: (old?: ImageScene) => ImageScene | undefined, persist = true) => workspace.change(scope, change, persist)
   const mounted = useRef(true)
   const current = galleryOpen ? undefined : scene
-  const { zoom, pan, reset: resetViewport, stepZoom, spaceHeld, panning, panPointer, canZoomIn, canZoomOut } =
+  const { zoom, pan, reset: resetViewport, stepZoom, spaceHeld, panning, panPointer, panBy, canZoomIn, canZoomOut } =
     useImageViewport(doc, scroll, imageFrame, Boolean(current) && status === 'ready')
   const selectionDraft = current && selectionDrafts.current.get(current.id)
   const area = selectionDraft?.area
@@ -222,20 +222,6 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     observer.observe(element)
     return () => observer.disconnect()
   }, [resizableText, displayScale])
-  useLayoutEffect(() => {
-    const pending = pendingTextLayout.current
-    if (!pending) return
-    pendingTextLayout.current = undefined
-    if (pending.scope !== scope) return
-    const text = current?.layers.find(layer => layer.id === pending.id)
-    const element = imageFrame.current?.querySelector<HTMLElement>('[data-canvas-text-id="' + pending.id + '"]')
-    if (current && text?.kind === 'text' && element) {
-      const height = Math.ceil(element.getBoundingClientRect().height / displayScale)
-      const y = textTopInsideCanvas(text.y, height, current.height)
-      if (y !== text.y) { patchLayer(text.id, { y }); return }
-    }
-    if (pending.commit) workspace.commit(scope)
-  }, [current, displayScale, editing, scope, workspace])
   useEffect(() => {
     if (!toast) return
     const timer = setTimeout(() => setToast(''), 5000)
@@ -321,15 +307,12 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     resetSelectionGesture()
   }
   function patchLayer(id: string, patch: Partial<TextLayer>, persist = true) {
-    const resize = persist && [patch.text, patch.fontSize, patch.family, patch.weight, patch.width].some(value => value !== undefined)
-    if (resize) pendingTextLayout.current = { id, scope, commit: true }
-    const changed = setScene(old => old && { ...old, layers: old.layers.map(layer => layer.id === id && layer.kind === 'text' ? { ...layer, ...patch } : layer) }, persist && !resize)
-    if (resize && !changed) pendingTextLayout.current = undefined
+    setScene(old => old && {
+      ...old, layers: old.layers.map(layer => layer.id === id && layer.kind === 'text' ? { ...layer, ...patch } : layer),
+    }, persist)
   }
   function releaseText(id = editing) {
     if (!id) return
-    // The canvas text and textarea can differ by a fraction of a pixel after wrapping.
-    pendingTextLayout.current ??= { id, scope, commit: false }
     setEditing(undefined)
     setScene(old => {
       if (!old?.layers.some(layer => layer.id === id && layer.kind === 'text' && !layer.text.trim())) return old
@@ -356,6 +339,25 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       color: '#ffffff', family: 'system-ui', weight: 600, align: 'left' }
     setScene(old => old && { ...old, layers: [...old.layers, layer] })
     setSelectedId(id); setEditing(id)
+  }
+  function selectLayer(layer: CanvasLayer) {
+    releaseText()
+    clearSelection()
+    setSelectedId(layer.id)
+    if (layer.kind !== 'text') return
+    const box = imageFrame.current?.querySelector('[data-canvas-text-id="' + layer.id + '"]')?.getBoundingClientRect()
+    const viewport = scroll.current?.getBoundingClientRect()
+    if (!box || !viewport?.width || !viewport.height) return
+
+    // Leave enough of a selected off-screen text layer exposed to grab it again.
+    const panel = layersPanel.current?.getBoundingClientRect()
+    const overlapsPanel = panel && box.bottom > panel.top && box.top < panel.bottom && box.left < panel.right
+    const left = overlapsPanel ? Math.min(panel.right, viewport.left + viewport.width * .65) : viewport.left
+    const visibleWidth = Math.min(box.right, viewport.right) - Math.max(box.left, left)
+    const visibleHeight = Math.min(box.bottom, viewport.bottom) - Math.max(box.top, viewport.top)
+    const dx = visibleWidth < Math.min(24, box.width) ? (left + viewport.right - box.left - box.right) / 2 : 0
+    const dy = visibleHeight < Math.min(16, box.height) ? (viewport.top + viewport.bottom - box.top - box.bottom) / 2 : 0
+    if (dx || dy) panBy(dx, dy)
   }
   function layerMove(id: string, target: string, above: boolean) {
     setScene(old => old && { ...old, layers: moveLayer(old.layers, id, target, above) })
@@ -425,8 +427,8 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (!drag.moved && Math.hypot(dx, dy) < 3) return
     drag.moved = true
     const patch = drag.handle ? resizeTextLayer(drag.layer, current, drag.height, drag.handle, dx / displayScale, dy / displayScale) : {
-      x: Math.min(1 - drag.layer.width, Math.max(0, drag.layer.x + dx / (current.width * displayScale))),
-      y: textTopInsideCanvas(drag.layer.y + dy / (current.height * displayScale), drag.height, current.height),
+      x: drag.layer.x + dx / (current.width * displayScale),
+      y: drag.layer.y + dy / (current.height * displayScale),
     }
     patchLayer(drag.layer.id, patch, released)
   }
@@ -747,6 +749,9 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           onPointerMoveCapture={event => panPointer(event, 'move')}
           onPointerUpCapture={event => panPointer(event, 'end')}
           onPointerCancelCapture={event => panPointer(event, 'cancel')}
+          onPointerMove={event => textPointer(event, 'move')}
+          onPointerUp={event => textPointer(event, 'end')}
+          onPointerCancel={event => textPointer(event, 'cancel')}
           onLostPointerCapture={event => panPointer(event, 'cancel')} onPointerDown={event => {
           if (event.target === event.currentTarget && placingText && event.button === 0) event.preventDefault()
           if (event.target === event.currentTarget || event.target === imageFrame.current && !tool) {
@@ -763,10 +768,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                 event.preventDefault()
                 appendText({ x: current.width / 2, y: current.height / 2 })
               }
-            }}
-            onPointerMove={event => textPointer(event, 'move')}
-            onPointerUp={event => textPointer(event, 'end')}
-            onPointerCancel={event => textPointer(event, 'cancel')}>
+            }}>
             <div className="if-raster-artwork">
               {current.layers.map(layer => {
                 if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
@@ -829,7 +831,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
           </form>
         </div>}
         {selectedText && !tool && !area && !busy && <TextControls key={selectedText.id} layer={selectedText} change={patch => patchLayer(selectedText.id, patch)} t={t}/>}
-        {layersOpen && <aside className="if-layers" aria-label={t('图层', 'Layers')}
+        {layersOpen && <aside ref={layersPanel} className="if-layers" aria-label={t('图层', 'Layers')}
           onPointerDown={event => layerPointer(event, 'start')}
           onPointerMove={event => layerPointer(event, 'move')}
           onPointerUp={event => layerPointer(event, 'end')}
@@ -846,7 +848,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             return <div key={layer.id} className="if-layer-row" data-layer-id={layer.id}
               data-current={selectedId === layer.id} data-drop={dropTarget?.id === layer.id ? dropTarget.above ? 'above' : 'below' : undefined}>
               <button type="button" className="if-layer-name" aria-pressed={selectedId === layer.id} title={name}
-                onClick={() => { releaseText(); clearSelection(); setSelectedId(layer.id) }}
+                onClick={() => selectLayer(layer)}
                 onDoubleClick={() => { if (layer.kind === 'text' && !busy) setEditing(layer.id) }}
                 onKeyDown={event => {
                   if (busy || !event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return

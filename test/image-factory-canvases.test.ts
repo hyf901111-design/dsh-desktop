@@ -23,7 +23,8 @@ it('restores original pixels and editable layers after restart and stores indepe
     const original = canvas()
     const persistence = new ImageFactoryCanvases(root, identity)
     const first = persistence.write({ scope: 'studio-a', epoch: 5, canvas: original, image: png })
-    const revised = { ...original, layers: [{ ...original.layers[1] as TextLayer, text: '修改后的标题' }, original.layers[0]!] }
+    const moved = { ...original.layers[1] as TextLayer, text: '移出画框的标题', x: -.8, y: 1.25 }
+    const revised = { ...original, layers: [moved, original.layers[0]!] }
     const second = persistence.write({ scope: 'studio-a', epoch: 5, canvas: revised })
     const other = canvas()
     const third = persistence.write({ scope: 'studio-b', epoch: 5, canvas: other, image: png })

@@ -160,7 +160,7 @@ function KnowledgeImageCanvasActions({ row, ToolbarAction, onError }) {
   })
   return react_jsx_runtime.jsxs(react_jsx_runtime.Fragment, { children: [
     row.sessionId && button('source', row.sessionId, english ? 'Open source canvas' : '打开来源画布',
-      _deepseek_ai_dsh_client_ui_primitives.IconImageOutline16),
+      IconImageOutline16),
     button('copy', row.id, english ? 'Edit a copy in Images' : '在「图像」中编辑副本',
       _deepseek_ai_dsh_client_ui_primitives.IconCopyOutline16)
   ] })
@@ -174,8 +174,13 @@ const scopedReplace = (source, from, to) => {
 }
 
 function patchImageCanvasActions(source) {
-  const marker = '/* sherlock:knowledge-preview-image-actions:v1 */'
+  const previousMarker = '/* sherlock:knowledge-preview-image-actions:v1 */'
+  const marker = '/* sherlock:knowledge-preview-image-actions:v2 */'
   if (source.includes(marker)) return source
+  if (source.includes(previousMarker)) {
+    return scopedReplace(source, '_deepseek_ai_dsh_client_ui_primitives.IconImageOutline16', 'IconImageOutline16')
+      .replace(previousMarker, marker)
+  }
   const patched = scopedReplace(source, 'function EditorHost(props) {',
     marker + '\n' + KnowledgeImageCanvasActions.toString() + '\nfunction EditorHost(props) {')
   const download = 'managedId && managedSource && (0, react_jsx_runtime.jsx)(PptxToolbarAction,{hint:true,label:pptToolbarLabel("download"),type:"button",'

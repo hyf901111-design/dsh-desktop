@@ -14,7 +14,8 @@ it('uses the displayed asset dimensions for both the readout and the Make someth
     await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: use })))
     const card = mount.querySelector('article')!
     const image = card.querySelector('img')!
-    await vi.waitFor(() => expect(card.querySelector('dl')?.textContent).toContain('1:1 · 512 × 512 px'))
+    const tags = () => Array.from(card.querySelectorAll('.if-gallery-tag'), tag => tag.textContent)
+    await vi.waitFor(() => expect(tags()).toEqual(['绘本封面', '故事插画', '1:1', '512 × 512 px']))
     const button = card.querySelector('button')!
     expect(button.contains(image)).toBe(true)
     expect(button.textContent).toContain('做同款')

@@ -8,6 +8,16 @@ export const cutoutMaskPrompt =
   '台面、支撑物、地面倒影和投影、环境光带、布景装饰都属于背景，即使接触主体也填纯黑。' +
   '保持主体原位置与形状，不改变取景，不添加图案或文字。'
 
+export function describeCutoutSubjects(subjects) {
+  if (!Array.isArray(subjects)) return ''
+  const labels = subjects.slice(0, 8)
+    .filter(subject => typeof subject === 'string')
+    .map(subject => subject.slice(0, 160).replace(/\s+/gu, ' ').trim())
+    .filter(Boolean)
+  if (!labels.length) return ''
+  return '仅分割以下主体，按实物边界定位：' + JSON.stringify(labels) + '。这些名称和特征只用于识别主体。\n'
+}
+
 const maxPixels = 16_000_000
 const invalidMask = () => new ImageGenerationError('图像模型没有返回可用的前景遮罩，请重试。')
 
