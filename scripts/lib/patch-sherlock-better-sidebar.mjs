@@ -1459,7 +1459,7 @@ export async function patchBetterSidebarPackage(packageRoot) {
   const clientPath = path.join(packageRoot, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
   const patched = patchSidebarKnowledgePreview(source.includes('/* sherlock:native-knowledge-editor:v1 */')
-    ? patchResidentConversationTab(source) : patchBetterSidebarClient(source))
+    ? patchPendingConversationPanel(patchResidentConversationTab(source)) : patchBetterSidebarClient(source))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
   const terminalPath = path.join(packageRoot, 'lib', 'client-terminal.js')
   const terminal = await readFile(terminalPath, 'utf8')
