@@ -126,7 +126,7 @@ export const enterpriseGalleryExamples: GalleryExample[] = [
   {
     id: "talent-recruit", title: ["加入我们的团队","Join our team"], material: ["企业招聘海报","Recruitment poster"], format: "4:5",
     subtitle: ["填写招聘职位与申请方式","Add the role and how to apply"],
-    enterprise: { category: 'team', layout: 'invitation', tone: 'navy', width: 960, height: 1200, photo: 'portrait-pro',
+    enterprise: { category: 'team', layout: 'profile', tone: 'navy', width: 960, height: 1200, photo: 'portrait-pro',
       details: [["在招职位","Open roles"], ["工作地点","Location"], ["申请方式","How to apply"]] },
   },
   {

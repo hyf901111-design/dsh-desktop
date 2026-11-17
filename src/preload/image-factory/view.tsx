@@ -10,9 +10,10 @@ import { brandArtwork } from './brand-artwork'
 import { brandDragType, findBrandAsset, moveBrandOverlay, placeBrandAsset, resizeBrandOverlay, type BrandAsset } from './brand-assets'
 import { BrandAssetLibrary } from './brand-library'
 import { imageFactoryFontFaces } from './fonts'
-import { galleryArtwork, ImageFactoryGallery, templatePhoto } from './gallery'
+import { galleryArtwork, ImageFactoryGallery } from './gallery'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
 import { galleryTemplateLayers } from './gallery-layout'
+import { drawTemplatePhoto, templatePhoto, templatePhotoFrame } from './template-photo'
 import { groupLayers, isEditableLayer, layerUnitId, removeLayerUnits, translateLayers, ungroupLayers,
   type EditableLayer } from './layer-groups'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
@@ -931,9 +932,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           const raster = await loadRaster(doc, blob)
           try {
             const { canvas, context } = canvasFor(doc, design)
-            const scale = Math.max(design.width / raster.width, design.height / raster.height)
-            const width = raster.width * scale, height = raster.height * scale
-            context.drawImage(raster.image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height)
+            drawTemplatePhoto(context, raster, templatePhotoFrame(example, design))
             background = await createImageLayer(doc, await encode(canvas, 'image/jpeg', .92), id, crypto.randomUUID(), 'image/jpeg')
           } finally { URL.revokeObjectURL(raster.url) }
         } else background = await createImageLayer(doc, blob, id, crypto.randomUUID(), 'image/jpeg')

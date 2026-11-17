@@ -74,7 +74,8 @@ export function enterpriseTemplateLayers(
       copy(details[0] ?? label, .088, .625, .367, .030, white, 700)
       copy(title, .066, .711, .86, .086, white, 700)
       copy(subtitle, .066, .811, .85, .037, light)
-      copy(details[1], .066, .909, .84, .024, white)
+      copy(details[1], .066, .909, details[2] ? .425 : .84, .024, white)
+      copy(details[2], .53, .909, .402, .024, white)
       break
     case 'countdown':
       rect(0, 0, .62, 1, deep)
