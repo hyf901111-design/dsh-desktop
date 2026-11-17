@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "图像画板编辑与企业模板画廊",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
-        "tipCommit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
+        "baseCommit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
+        "tipCommit": "df1cc29f384220aae529a68bf47cc7d540fe607e",
         "commits": [
           {
-            "commit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
+            "commit": "df1cc29f384220aae529a68bf47cc7d540fe607e",
             "parents": [
-              "e4f996b1d53ce1138d50c8d383ee70609c9ceca0"
+              "bffefe9bd2957c74417306bf844e4a8f8c424dd2"
             ],
-            "subject": "功能：支持对话引用并修改单个图层，完善画板动效"
+            "subject": "优化：恢复易方达画廊并支持确认式多图层引用"
           }
         ],
         "files": [
@@ -33,14 +33,6 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-inline-references-client.mjs"
-          },
-          {
-            "status": "A",
             "path": "scripts/lib/image-factory-layer-references.mjs"
           },
           {
@@ -52,6 +44,22 @@
             "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
+            "status": "D",
+            "path": "src/preload/image-factory/enterprise-gallery.ts"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/enterprise-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-examples.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-layout.ts"
+          },
+          {
             "status": "M",
             "path": "src/preload/image-factory/gallery.tsx"
           },
@@ -60,8 +68,20 @@
             "path": "src/preload/image-factory/style.css"
           },
           {
+            "status": "D",
+            "path": "src/preload/image-factory/template-photo.ts"
+          },
+          {
             "status": "M",
             "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
           },
           {
             "status": "M",
@@ -81,8 +101,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
-            "completedAt": "2026-11-17T10:09:00.412Z",
+            "verifiedCommit": "df1cc29f384220aae529a68bf47cc7d540fe607e",
+            "completedAt": "2026-11-17T10:37:55.602Z",
             "timeoutMs": 120000
           },
           {
@@ -94,36 +114,30 @@
               "test/image-generation-tool.test.js",
               "test/image-factory-gallery.test.ts",
               "test/image-factory-layer-gesture.test.ts",
-              "test/image-generation-flow.test.js"
+              "test/image-generation-flow.test.js",
+              "test/image-factory.test.js"
             ],
             "outcome": "passed",
-            "summary": "64 项聚焦测试通过，覆盖图层行内引用、图层范围校验、编辑工具、模板与图层操作。",
-            "verifiedCommit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
-            "completedAt": "2026-11-17T10:09:00.413Z",
+            "summary": "86 项聚焦测试通过，覆盖图层待插入、多标签位置、联合回写、品牌画廊与画板。",
+            "verifiedCommit": "df1cc29f384220aae529a68bf47cc7d540fe607e",
+            "completedAt": "2026-11-17T10:37:55.603Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原生客户端已验证企业模板、提示词画廊、左侧栏和编组；图层引用、定向生成和动效等待新版客户端复验。"
+          "summary": "聚焦检查完成，更新后的流程将用集成签名客户端复验。"
         },
         "acceptanceCriteria": [
-          "图像工具栏和快捷键撤销与重做，Shift 多选图层后编组、移动、取消编组。",
-          "图层与品牌资产从同一左栏切换，关闭模板页回到原画板。",
-          "保留 12 套易方达模板并新增 30 套通用企业模板，提示词模式提供 22 个可复用案例。",
-          "点击图层在共用对话输入框加行内引用，发送后仅编辑图片、文字、色块或品牌标识目标图层。",
-          "画廊分类、左侧栏和资产落点提供动效，遵循减少动态效果设置。"
+          "工具栏保留图层与品牌资产切换，侧栏只显示标题和关闭。",
+          "图层选中显示待插入标签，点击输入框按光标位置插入。输入框可混排多个标签。",
+          "同一条指令分别修改多个已引用图层，一次撤销恢复本次修改。",
+          "画廊仅包含十二套易方达可编辑模板。提示词画廊仅显示错落循环图片，点击复用提示词，无二级分类。"
         ],
         "risks": [
           "未合入正式分支。"
         ],
-        "generatedAt": "2026-11-17T10:09:00.413Z"
-      },
-      "merged": {
-        "mergeCommit": "7437003a7d362b573e4b16f3d34fc8551e81467d",
-        "verificationCommit": "7437003a7d362b573e4b16f3d34fc8551e81467d",
-        "checks": [],
-        "recordedAt": "2026-11-17T10:09:22.899Z"
+        "generatedAt": "2026-11-17T10:37:55.603Z"
       }
     }
   ],
