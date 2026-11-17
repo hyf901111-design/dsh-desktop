@@ -6,6 +6,7 @@ import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import {createPendingComposerPreferences} from '../../scripts/lib/pending-composer-preferences.mjs'
 import {createPendingConversation} from '../../scripts/lib/pending-conversation.mjs'
 import {mountDesktopShellStyles} from '../../src/preload/shell-style'
+import {WorkspaceSurfaceHost} from '../../src/preload/workspace-surface-host'
 declare global{interface Window{pendingInput:any;pendingFixture:any;__ModuleLoader__:any}}
 const data=window.pendingInput,fake:any=new Proxy(function(){},{get:(_target,key)=>key===Symbol.toPrimitive?()=> 'unused':fake,apply:()=>fake,construct:()=>({})});let runtime:any
 function load(source:string){let result:any;window.__ModuleLoader__={load:({factory}:any)=>{result=factory((name:string)=>name==='react'?React:name==='react/jsx-runtime'?jsx:name==='react-dom'?{createPortal}:name==='@deepseek-ai/dsh-client-runtime/client'?runtime:name==='@deepseek-ai/dsh-client-ui-primitives'?primitives:name==='@deepseek-ai/cordis'?new Proxy({Context:{filter:Symbol('filter')}},{get:(target,key)=>Reflect.get(target,key)??fake}):fake)}};new Function(source)();return result}
@@ -28,4 +29,11 @@ coordinator.service={getSnapshot:()=>sidebarStore.getSnapshot(),subscribeState:(
 const nativeRenderSlot=(name:string,props:any)=>name==='conversation.composer.bar'?<NativePendingBar {...hooks} {...props} renderSlot={()=>null}/>:renderSlot(name,props);
 createRoot(document.getElementById('app')!).render(<native.__testHomeGuideNativeOriginalConversationRoot sessionId={undefined} useSession={()=>undefined} useSessions={(select:any)=>select(emptySessions)} useWorkspaces={useWorkspaces} useInput={()=>undefined} useComposerBlock={()=>undefined} useStore={(select:any)=>select(view)} actions={actions} researchSidebar={coordinator} researchWorkspaces={registry} useProjection={()=>undefined} renderSlot={nativeRenderSlot} renderSlotChain={(_name:any,_props:any,{fallback}:any)=>fallback} selectWorkspace={async(id:string)=>record.selectWorkspace(id)} t={t}/>);
 createRoot(document.getElementById('right-body')!).render(<NativeRight/>);
-window.pendingFixture={setPaneOpen:(open:boolean)=>{document.body.dataset.odysseyGlobalRightOpen=String(open);window.dispatchEvent(new Event('sherlock:global-right-panel-state'))},storedPaneOpen:()=>sidebarStore.getSnapshot().state.panelOpen,events,record,real,current,failOnce:()=>{failCreate=true}};document.documentElement.dataset.ready='true'
+const surfaces=new WorkspaceSurfaceHost(document)
+for (const name of ['browser','image-factory','knowledge'] as const) {
+ const surface=document.createElement('section')
+ surface.innerHTML='<button type="button">返回工作区</button>'
+ surface.firstElementChild!.addEventListener('click',()=>surfaces.back())
+ surfaces.register(name,surface)
+}
+window.pendingFixture={openSurface:(name:'browser'|'image-factory'|'knowledge')=>surfaces.open(name),events,record,real,current,failOnce:()=>{failCreate=true}};document.documentElement.dataset.ready='true'
