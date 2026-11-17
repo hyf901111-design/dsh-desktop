@@ -156,6 +156,11 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const displayScale = fit * zoom
   const resizableText = !tool && !area && !busy && !editing ? selectedText : undefined
   const textBoxHeight = resizableText && textBox?.id === resizableText.id ? textBox.height : 0
+  const inside = current && resizableText && textBoxHeight > 0 ? {
+    x: Math.max(0, Math.min(1 - resizableText.width, resizableText.x)),
+    y: textTopInsideCanvas(resizableText.y, textBoxHeight / displayScale, current.height),
+  } : undefined
+  const textOutside = inside && resizableText && (inside.x !== resizableText.x || inside.y !== resizableText.y)
 
   useLayoutEffect(() => {
     const showCanvas = () => setGalleryScope(undefined)
@@ -857,7 +862,16 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             // Chromium can release capture just before sending pointerup to the destination row.
             if (event.buttons) layerPointer(event, 'cancel')
           }}>
-          <div className="if-float-header"><strong>{t('图层', 'Layers')}</strong><Button icon="close" label={t('关闭图层', 'Close layers')} onClick={() => setLayersOpen(false)}/></div>
+          <div className="if-float-header">
+            <strong>{t('图层', 'Layers')}</strong>
+            {textOutside && <button type="button" className="if-button if-return-text" onClick={event => {
+              event.currentTarget.closest('.if-layers')
+                ?.querySelector<HTMLButtonElement>('.if-layer-name[aria-pressed="true"]')?.focus({ preventScroll: true })
+              patchLayer(resizableText.id, inside)
+              resetViewport()
+            }}>{t('移回画框', 'Move inside')}</button>}
+            <Button icon="close" label={t('关闭图层', 'Close layers')} onClick={() => setLayersOpen(false)}/>
+          </div>
           {!current.layers.length && <p>{t('画布上还没有图层。', 'The canvas has no layers.')}</p>}
           {[...current.layers].reverse().map(layer => {
             const name = layer.kind === 'image' ? t('图片', 'Image') : layer.text.trim() || t('文本', 'Text')
