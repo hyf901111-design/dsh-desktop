@@ -40,7 +40,7 @@
 .if-tab-list[data-tab-context=true] {padding:16px;gap:8px}
 .image-factory .if-tab-list .eb-menu-item {display:flex;align-items:center;gap:10px;height:32px;padding:0 10px!important;text-align:left}
 .if-tab-list .eb-menu-item > kbd {margin-left:auto;font-family:inherit;font-size:12px;line-height:16px;color:var(--eb-muted)}
-.image-factory .if-more {background:var(--odyssey-header-icon-bg);border-radius:7px}
+.image-factory .if-more {margin-inline-start:auto;background:var(--odyssey-header-icon-bg);border-radius:7px}
 .if-actions-popup,.if-layers {backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2))}
 .image-factory .if-more:not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]) {background:var(--odyssey-header-icon-hover)}
 .if-toolbar {height:48px;padding:0 14px;overflow:auto;scrollbar-width:none}
