@@ -34,6 +34,8 @@ it('migrates both previous task layouts to a single header resume icon',()=>{
  const current=patchTaskProgressClient(source),legacy=legacyTaskResumeClient(current)
  expect(legacy).not.toContain('sherlock:task-continue-footer:v1')
  expect(patchTaskProgressClient(legacy)).toBe(current)
+ const styles='\nconst taskStyles = "[data-odyssey-task-header-row] { position:relative }";\n'
+ expect(patchTaskProgressClient(legacy+styles)).toBe(current+styles)
  expect(patchTaskProgressClient(current)).toBe(current)
  expect(current).toContain('return react_jsx_runtime.jsx(TodoPanel,{todos,running,objective,t,continuation:canContinue&&')
  expect(current).toContain('IconPlayOutline16')

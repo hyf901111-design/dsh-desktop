@@ -87,7 +87,7 @@ function patchTaskContinueHeader(source) {
         headerPairs.some(([,after])=>source.split(after).length!==2))throw Error('Task continuation header installation drifted')
     return source
   }
-  if(source.includes('data-odyssey-task-header-row'))throw Error('Task continuation header installation is incomplete')
+  if(source.includes('"data-odyssey-task-header-row":""'))throw Error('Task continuation header installation is incomplete')
   if(source.includes(legacy))apply(footerPairs.map(([before,after])=>[after,before]),'footer')
   else if(hasFooter)throw Error('Task continuation footer installation is incomplete')
   apply(headerPairs,'header')
