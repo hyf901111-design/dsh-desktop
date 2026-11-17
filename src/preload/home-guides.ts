@@ -194,8 +194,9 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     checkDraft=()=>{if(selected()===pending.source&&original.some(({node,value})=>node.isConnected&&node.value!==value))throw aborted()}
     const takeover=(event:Event)=>{if(event.isTrusted&&preparing===pending)controller.abort()}
     entry.signal.addEventListener('abort',cancel,{once:true});for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.addEventListener(name,takeover,true)
-    clearEntry=()=>{entry.signal.removeEventListener('abort',cancel);for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.removeEventListener(name,takeover,true);checkDraft=undefined}
+    clearEntry=()=>{entry.signal.removeEventListener('abort',cancel);for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.removeEventListener(name,takeover,true);if(document.body.dataset.homeGuideEntryRun===id)delete document.body.dataset.homeGuideEntryRun;checkDraft=undefined}
     controller.signal.addEventListener('abort',clearEntry,{once:true})
+    if(document.body.dataset.workspaceSurface==='browser')document.body.dataset.homeGuideEntryRun=id
     const gate=async()=>{ensurePending();while(document.hidden||!document.hasFocus()){await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending()}}
     const bounds=entry.demoEntry!.closeTarget.getBoundingClientRect(),origin=entry.origin??{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}
     if(!Number.isFinite(origin.x)||!Number.isFinite(origin.y)||origin.x<0||origin.y<0||origin.x>win.innerWidth||origin.y>win.innerHeight)throw aborted()

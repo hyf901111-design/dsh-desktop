@@ -17,6 +17,30 @@ afterAll(async()=>browser?.close())
 async function fixture({dark=false,width=800,height=600}={}){const page=await browser.newPage({viewport:{width,height}}),errors=[];page.setDefaultTimeout(1800);page.on('pageerror',error=>errors.push(error.message));await page.route('http://127.0.0.1:59560/',route=>route.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('http://127.0.0.1:59560/');await page.setContent(`<html><head><style>${boardBase}body{margin:0;--odyssey-font-ui:Inter,'Noto Sans SC',system-ui;--odyssey-text:${dark?'#eee':'#292b2f'}}.pI_x6G_centerCol{position:fixed;left:10px;right:10px;top:10px;bottom:10px}</style></head><body ${dark?'data-ds-dark-theme':''}><main class="pI_x6G_centerCol" style="position:fixed;left:10px;right:10px;top:10px;bottom:10px;margin:0;width:auto;height:auto"></main><button id="outside" style="position:fixed;left:0;top:0;z-index:4000" onclick="window.outsideClicks=(window.outsideClicks||0)+1">外部按钮</button></body></html>`);await page.addScriptTag({content:code});await page.locator('.eb-root:not([hidden])').waitFor();return{page,errors}}
 const menu=page=>page.locator('[data-browser-page-context-menu]')
 const commands=page=>page.evaluate(()=>window.calls.filter(([method])=>method==='context-command'))
+it('keeps the sidebar menu in the shell during Explore entry and restores the same native tab when it ends',async()=>{
+ const {page}=await fixture()
+ try{
+  await page.evaluate(()=>window.startProjection())
+  await page.locator('.eb-root[data-native-page=true][data-tab-id=A]').waitFor()
+  await page.evaluate(()=>{
+   document.body.dataset.homeGuideEntryRun='demo-run'
+   const popup=document.createElement('div')
+   popup.className='st-menu'
+   popup.dataset.sidebarMore='true'
+   popup.style.cssText='position:fixed;left:70px;top:280px;width:220px;height:90px;z-index:4000'
+   popup.innerHTML='<button role="menuitem">新建表格</button>'
+   document.body.append(popup)
+  })
+  await page.locator('.eb-root[data-native-page=false][data-tab-id=A]').waitFor()
+  const layout=()=>page.evaluate(()=>window.calls.filter(([method])=>method==='layout').at(-1)?.[1])
+  expect(await layout()).toMatchObject({active:true,visible:false,sessionId:'owner-A'})
+  expect(await page.getByRole('menuitem',{name:'新建表格'}).isVisible()).toBe(true)
+  expect(await page.locator('.st-menu').getAttribute('data-browser-projected')).toBeNull()
+  await page.evaluate(()=>{document.querySelector('.st-menu')?.remove();delete document.body.dataset.homeGuideEntryRun})
+  await page.locator('.eb-root[data-native-page=true][data-tab-id=A]').waitFor()
+  expect(await layout()).toMatchObject({active:true,visible:true,sessionId:'owner-A'})
+ }finally{await page.close()}
+})
 it('dismisses a shell workspace menu from the active native webpage only',async()=>{
  const {page}=await fixture({width:1200})
  try{
