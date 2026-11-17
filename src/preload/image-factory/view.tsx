@@ -240,7 +240,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     return () => clearTimeout(timer)
   }, [toast])
   useLayoutEffect(() => {
-    if (!area || !current) return
+    if (!area || !current || commentPending) return
     const outer = stage.current, frame = imageFrame.current, scroller = scroll.current
     if (!outer || !frame || !scroller) return
     const locate = () => {
@@ -259,7 +259,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
     if (commentBubble.current) observer.observe(commentBubble.current)
     scroller.addEventListener('scroll', locate, { passive: true })
     return () => { observer.disconnect(); scroller.removeEventListener('scroll', locate) }
-  }, [area, current?.id, current?.width, current?.height, displayScale, pan, scope])
+  }, [area, current?.id, current?.width, current?.height, commentPending, displayScale, pan, scope])
 
   const focusComment = !!area && !!commentPos && !commentPending && !selectionDraft?.error
   useLayoutEffect(() => {
@@ -736,10 +736,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                     onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
                     onPointerDown={event => textPointer(event, 'start', layer)}>{layer.text}</div>
               })}
-              {rectangle && <div className="if-region" data-dragging={!!rubberband} style={{
+              {rectangle && <div className="if-region" aria-hidden="true" data-dragging={!!rubberband} data-processing={commentPending} style={{
                 left: rectangle.x / current.width * 100 + '%', top: rectangle.y / current.height * 100 + '%',
                 width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',
-              }}><i/><i/><i/><i/></div>}
+              }}>{!commentPending && <><i/><i/><i/><i/></>}</div>}
             </div>
             {resizableText && textBoxHeight > 0 && <div className="if-text-bounds" role="group" aria-label={t('调整文字图层大小', 'Resize text layer')}
               style={{ left: resizableText.x * 100 + '%', top: resizableText.y * 100 + '%', width: resizableText.width * 100 + '%', height: textBoxHeight }}>
@@ -757,27 +757,25 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             </div>}
           </div>
         </div>
-        {marking && <div className="if-mark-hint" role="status">{t('在图上拖出要修改的区域 · Esc 取消', 'Drag over the area to edit · Esc to cancel')}</div>}
         {placingText && !busy && <div className="if-mark-hint" role="status">{t('点击图像放置文本 · Esc 取消', 'Click the image to place text · Esc to cancel')}</div>}
-        {selectionDraft && <div ref={commentBubble} className="if-comment" data-processing={selectionDraft.phase === 'processing'}
+        {selectionDraft && !commentPending && <div ref={commentBubble} className="if-comment"
           style={commentPos ? { left: commentPos.x, top: commentPos.y } : { visibility: 'hidden' }}>
-          {selectionDraft.phase === 'processing' ? <div role="status">{t('正在修改选区…', 'Editing selected area…')}</div>
-            : <form role="dialog" aria-label={t('修改选区', 'Edit selected area')} onSubmit={event => { event.preventDefault(); sendComment() }}>
-              <div className="if-float-header"><strong>{t('修改选区', 'Edit selected area')}</strong><Button icon="close" label={t('取消框选', 'Cancel selection')} disabled={commentPending} onClick={clearSelection}/></div>
-              <textarea aria-label={t('修改意见', 'Edit instructions')} placeholder={t('描述要怎么修改这个区域…', 'Describe how to edit this area…')}
-                ref={element => { if (element && commentPos && !selectionDraft.text && !commentPending && doc.activeElement === doc.body) element.focus({ preventScroll: true }) }}
-                value={selectionDraft.text} maxLength={3600} disabled={commentPending}
-                onChange={event => setSelectionDraft(current.id, { ...selectionDraft, text: event.target.value })}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendComment() }
-                }}/>
-              {selectionDraft.error && <p className="if-comment-error" role="alert">{selectionDraft.error}</p>}
-              <div className="if-comment-footer"><Button onClick={clearSelection} disabled={commentPending}>{t('删除选区', 'Remove selection')}</Button>
-                <Button type="submit" primary disabled={!selectionDraft.text.trim() || busy || commentPending}>
-                  {commentPending ? t('发送中…', 'Sending…') : selectionDraft.error ? t('重试', 'Retry') : t('发送', 'Send')}
-                </Button>
-              </div>
-            </form>}
+          <form role="dialog" aria-label={t('修改选区', 'Edit selected area')} onSubmit={event => { event.preventDefault(); sendComment() }}>
+            <div className="if-float-header"><strong>{t('修改选区', 'Edit selected area')}</strong><Button icon="close" label={t('取消框选', 'Cancel selection')} onClick={clearSelection}/></div>
+            <textarea aria-label={t('修改意见', 'Edit instructions')} placeholder={t('描述要怎么修改这个区域…', 'Describe how to edit this area…')}
+              ref={element => { if (element && commentPos && !selectionDraft.text && doc.activeElement === doc.body) element.focus({ preventScroll: true }) }}
+              value={selectionDraft.text} maxLength={3600}
+              onChange={event => setSelectionDraft(current.id, { ...selectionDraft, text: event.target.value })}
+              onKeyDown={event => {
+                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendComment() }
+              }}/>
+            {selectionDraft.error && <p className="if-comment-error" role="alert">{selectionDraft.error}</p>}
+            <div className="if-comment-footer"><Button onClick={clearSelection}>{t('删除选区', 'Remove selection')}</Button>
+              <Button type="submit" primary disabled={!selectionDraft.text.trim() || busy}>
+                {selectionDraft.error ? t('重试', 'Retry') : t('发送', 'Send')}
+              </Button>
+            </div>
+          </form>
         </div>}
         {selectedText && !tool && !area && !busy && <TextControls key={selectedText.id} layer={selectedText} change={patch => patchLayer(selectedText.id, patch)} t={t}/>}
         {layersOpen && <aside className="if-layers" aria-label={t('图层', 'Layers')}

@@ -64,6 +64,37 @@
 .if-region i {position:absolute;width:6px;height:6px;background:var(--if-mark);border-radius:1px}
 .if-region i:nth-of-type(1) {top:-4px;left:-4px}.if-region i:nth-of-type(2) {top:-4px;right:-4px}
 .if-region i:nth-of-type(3) {bottom:-4px;left:-4px}.if-region i:nth-of-type(4) {bottom:-4px;right:-4px}
+.if-region[data-processing=true] {
+  overflow:hidden;border:1px solid #e0eaff91;border-radius:6px;
+  background:#becbff20;backdrop-filter:blur(8px) saturate(1.12);
+  box-shadow:inset 0 0 0 1px #fff1,inset 0 0 18px #cbd7ff35;
+}
+.if-region[data-processing=true]::before,.if-region[data-processing=true]::after {
+  content:"";position:absolute;inset:-30%;pointer-events:none;
+}
+.if-region[data-processing=true]::before {
+  background:radial-gradient(ellipse at 36% 38%,#a3d6ff78,transparent 42%),
+    radial-gradient(ellipse at 67% 58%,#c4a6ff6b,transparent 45%),
+    radial-gradient(ellipse at 52% 17%,#c0ffed44,transparent 32%);
+  animation:if-region-flow 4s ease-in-out infinite alternate;
+}
+.if-region[data-processing=true]::after {
+  background:linear-gradient(113deg,transparent 38%,#eaf6ff0d 46%,#f1f8ff4a 50%,#eaf6ff0d 54%,transparent 62%);
+  animation:if-region-sheen 3.8s ease-in-out infinite;
+}
+@keyframes if-region-flow {
+  from {transform:translate(-17%,-9%) rotate(-8deg);opacity:.55}
+  to {transform:translate(15%,10%) rotate(9deg);opacity:1}
+}
+@keyframes if-region-sheen {
+  0% {transform:translateX(-70%);opacity:0}
+  24% {opacity:1}
+  67%,100% {transform:translateX(70%);opacity:0}
+}
+@media(prefers-reduced-motion:reduce) {
+  .if-region[data-processing=true]::before {animation:none;opacity:.6}
+  .if-region[data-processing=true]::after {display:none;animation:none}
+}
 .if-canvas-status {position:absolute;bottom:0;left:0;right:0;height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;color:var(--if-muted);font-size:12px;pointer-events:none}
 .if-canvas-status .if-zoom {display:flex;align-items:center;gap:3px;pointer-events:auto}
 .if-zoom .if-button {height:27px;min-width:24px;padding:0 5px}
@@ -155,7 +186,6 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-mark-hint {position:absolute;z-index:4;top:14px;left:50%;transform:translateX(-50%);font-size:12px;max-width:calc(100% - 20px);padding:8px 12px;border:1px solid #ffffff18;border-radius:8px;color:#fff;background:#1d2639e8;pointer-events:none}
 .if-comment,.if-layers,.if-text-format {position:absolute;z-index:4;padding:10px 12px;border:1px solid var(--if-line);border-radius:11px;background:var(--if-panel);box-shadow:0 7px 26px #0004}
 .if-comment {width:min(320px,calc(100% - 20px));max-height:calc(100% - 50px);overflow:auto;z-index:6}
-.if-comment[data-processing=true] {width:max-content;max-width:calc(100% - 20px);font-size:12px;pointer-events:none}
 .if-float-header,.if-comment-footer {display:flex;align-items:center;justify-content:space-between;gap:8px}
 .if-float-header strong {font-size:13px;font-weight:600}
 .if-float-header .if-button {height:28px;min-width:28px;padding:0}

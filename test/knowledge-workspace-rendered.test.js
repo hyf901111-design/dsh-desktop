@@ -767,6 +767,39 @@ it('centers Image Factory notices in the workspace', async () => {
   }
 })
 
+it('clips the Image Factory editing animation to the frosted selection and respects reduced motion', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.setContent(`
+      <section class="image-factory">
+        <div class="if-raster" style="width:800px;height:600px">
+          <div class="if-raster-artwork">
+            <div class="if-region" data-processing="true" style="left:20%;top:10%;width:60%;height:25%"></div>
+          </div>
+        </div>
+      </section>`)
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    const selection = page.locator('.if-region')
+    const surface = () => selection.evaluate(element => ({
+      backdrop: getComputedStyle(element).backdropFilter,
+      overflow: getComputedStyle(element).overflow,
+      animations: ['::before', '::after'].map(pseudo => getComputedStyle(element, pseudo).animationName)
+    }))
+    const bounds = await selection.boundingBox()
+    expect(bounds).toMatchObject({ width: 480, height: 150 })
+    expect(await surface()).toEqual({
+      backdrop: expect.stringContaining('blur('),
+      overflow: 'hidden',
+      animations: ['if-region-flow', 'if-region-sheen']
+    })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    expect(await surface()).toMatchObject({ backdrop: expect.stringContaining('blur('), animations: ['none', 'none'] })
+    expect(await selection.boundingBox()).toEqual(bounds)
+  } finally {
+    await page.close()
+  }
+})
+
 it('centers Image Factory resize handles on the text bounds, including at the image edges', async () => {
   const page = await browser.newPage()
   try {
