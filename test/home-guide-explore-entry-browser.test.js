@@ -6,6 +6,7 @@ let browser,script,css,runtimeSource
 beforeAll(async()=>{
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'ts',contents:`
  import{playExploreHomeGuideEntry}from'./src/preload/home-guide-explore-entry';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';import{installResidentEntryFixture}from'./test/fixtures/home-guide-resident-entry-browser';window.installResidentEntryFixture=installResidentEntryFixture;
+ import{WorkspaceSurfaceHost}from'./src/preload/workspace-surface-host';
  window.entryFixture=(page,kind)=>{
   const moreButton='<button class="st-more" aria-label="更多" aria-haspopup="menu" aria-expanded="false">更多</button>';
   document.body.innerHTML='<nav data-dsh-sidebar-root><button aria-label="新建对话">新建对话</button><button aria-label="新建研究">新建研究</button><button data-sidebar-new-note aria-label="新建笔记">新建笔记</button>'+moreButton+'</nav><main class="pI_x6G_centerCol"><div class="wSkVaW_root"><div data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="research">研究</button><button data-conversation-view-id="notes">笔记</button><button data-conversation-view-id="spreadsheet">表格</button></div><textarea></textarea><article>原有正文</article></div></main><button id="other-session">用户切换会话</button><dialog data-explore-menu><button data-explore-close>关闭探索</button><p>当前探索用例菜单</p></dialog>';
@@ -29,7 +30,22 @@ beforeAll(async()=>{
   const context={signal:controller.signal,revealComposer:async()=>{throw Error('programmatic reveal forbidden')},demoEntry:{closeTarget:close,closeOwned:async()=>close.click()}};
   window.entryProbe={controller,actions,nativeClicks,pointer,frames,preparing:false,snapshot:()=>({owner,draft:input.value,body:root.querySelector('article').textContent,activated}),start:()=>playExploreHomeGuideEntry(document,kind,{homeEmpty:window.entryHomeEmpty,context,signal:controller.signal,pointer:drawn,assert:()=>{if(owner!=='source')throw new DOMException('owner changed','AbortError')},nativeClick:node=>node.click(),activate:async(node,action,beforeCommit)=>{window.entryProbe.preparing=true;await window.entryPrepareGate;await beforeCommit();actions.push('activate:'+action);node.click();if(node===input)node.focus();activated=true}}).finally(()=>pointer.dispose())};
   if(page==='surface'||page.startsWith('knowledge-')){document.body.dataset.workspaceSurface=page==='surface'?'plugin':'knowledge';root.style.display='none';const back=document.createElement('button');const label=page==='surface'?'返回应用':'返回工作区';back.className='workspace-back-button';back.setAttribute('aria-label',label);back.textContent=label;back.onclick=()=>{actions.push('back');delete document.body.dataset.workspaceSurface;root.style.display=''};document.body.append(back)}
-  if(page==='unsupported'){document.body.dataset.workspaceSurface='settings';root.style.display='none'}
+  if(page==='browser-over-image'||page==='settings-over-browser'){
+   const host=new WorkspaceSurfaceHost(document)
+   for(const surface of ['image-factory','browser']){
+    const layer=document.createElement('section');layer.style.cssText='position:absolute;left:200px;top:30px;width:800px;height:650px'
+    const back=document.createElement('button');back.className='workspace-back-button';back.setAttribute('aria-label','返回工作区');back.textContent='返回工作区'
+    back.onclick=()=>{actions.push('back:'+surface);host.back()};layer.append(back);host.register(surface,layer);host.open(surface)
+   }
+  }
+  if(page==='settings-over-browser'||page==='unsupported'){
+   const settings=document.createElement('div');settings.className='VOzbGW_overlay';settings.style.cssText='position:fixed;inset:0;z-index:200';
+   if(page==='settings-over-browser'){
+    const back=document.createElement('button');back.className='sherlock-settings-back';back.textContent='返回应用';
+    back.onclick=()=>{actions.push('close-settings');settings.remove()};settings.append(back)
+   }
+   document.body.append(settings)
+  }
  };
  `},bundle:true,format:'iife',platform:'browser',write:false,logLevel:'silent',plugins:[{name:'raw-css',setup(build){build.onResolve({filter:/\.css\?raw$/},args=>({path:args.resolveDir+'/'+args.path.slice(0,-4),namespace:'raw-css'}));build.onLoad({filter:/.*/,namespace:'raw-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles[0].text;css=await readFile('src/preload/home-guides.css','utf8');runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
  const p=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(p.chromium??p.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -53,19 +69,32 @@ it.each(['board','note','ppt','report','workbench'])('uses the only visible Home
 it('uses collapsed More then its actual Note menu item and keeps the pointer above both top layers',async()=>{
  const{context,page}=await fixture('collapsed-note','note',false);try{await page.evaluate(()=>{window.entryRun=window.entryProbe.start();window.pointerSamples=[];window.entrySampling=setInterval(()=>{const node=document.querySelector('[data-home-guide-pointer]');if(node&&!node.hidden)window.pointerSamples.push({top:node.matches(':popover-open'),state:node.dataset.state,run:node.dataset.homeGuidePointer})},8)});await page.evaluate(()=>window.entryRun);const result=await page.evaluate(()=>{clearInterval(window.entrySampling);return{actions:window.entryProbe.actions,samples:window.pointerSamples,clicks:window.entryProbe.nativeClicks}});expect(result.actions).toEqual(['close','more','activate:new-note']);expect(result.clicks).toEqual(['更多','新笔记']);expect(result.samples.length).toBeGreaterThan(15);expect(result.samples.every(x=>x.top&&x.run==='entry-note')).toBe(true);expect(result.samples.some(x=>x.state==='moving')).toBe(true)}finally{await context.close()}
 })
-it.each(['surface','knowledge-surface','unsupported'])('uses only a visible back control or safely stops on %s',async start=>{const{context,page}=await fixture(start,'report');try{const result=await page.evaluate(async()=>{try{await window.entryProbe.start();return'ok'}catch(error){return error.message}});if(start!=='unsupported'){expect(result).toBe('ok');expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close','back','activate:new-chat'])}else{expect(result).toContain('返回应用');expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close'])}}finally{await context.close()}})
+it.each(['surface','knowledge-surface','browser-over-image'])('uses the visible New Chat entry directly from %s',async start=>{const{context,page}=await fixture(start,'report');try{await page.evaluate(()=>window.entryProbe.start());expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close','activate:new-chat'])}finally{await context.close()}})
+it('stops if settings has no visible exit control',async()=>{const{context,page}=await fixture('unsupported','report');try{const result=await page.evaluate(async()=>{try{await window.entryProbe.start();return'ok'}catch(error){return error.message}});expect(result).toContain('返回应用');expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close'])}finally{await context.close()}})
 it.each(['knowledge-collapsed','knowledge-surface','home','chat'])('uses sidebar More to create the spreadsheet demo from %s',async start=>{
  const {context,page}=await fixture(start,'spreadsheet')
  try{
   const before=await page.evaluate(()=>window.entryProbe.snapshot())
   await page.evaluate(()=>window.entryProbe.start())
   const result=await page.evaluate(()=>({actions:window.entryProbe.actions,clicks:window.entryProbe.nativeClicks,state:window.entryProbe.snapshot()}))
-  expect(result.actions).toEqual(['close',...start.startsWith('knowledge-')?['back']:[],'more','activate:new-spreadsheet'])
+  expect(result.actions).toEqual(['close','more','activate:new-spreadsheet'])
   expect(result.clicks).toEqual(['更多','新建表格'])
   expect(result.state).toMatchObject({...before,activated:true})
   expect(await page.locator('[data-sidebar-more]').count()).toBe(0)
  }finally{await context.close()}
 })
+it.each(['browser-over-image','settings-over-browser'])('uses More and New Spreadsheet with Browser on top of Images from %s', async start => {
+ const {context,page}=await fixture(start,'spreadsheet')
+ try{
+  const before=await page.evaluate(()=>window.entryProbe.snapshot())
+  await page.evaluate(()=>window.entryProbe.start())
+  const result=await page.evaluate(()=>({actions:window.entryProbe.actions,clicks:window.entryProbe.nativeClicks,state:window.entryProbe.snapshot(),surface:document.body.dataset.workspaceSurface}))
+  expect(result.actions).toEqual(['close',...start==='settings-over-browser'?['close-settings']:[],'more','activate:new-spreadsheet'])
+  expect(result.clicks).toEqual(['更多','新建表格'])
+  expect(result.state).toMatchObject({...before,activated:true})
+  expect(result.surface).toBe('browser')
+ }finally{await context.close()}
+},12000)
 it.each(['cancel','navigate'])('stops before dismissal or activation on %s during the visible opening motion',async action=>{const{context,page}=await fixture('chat','ppt',false);try{await page.evaluate(()=>{window.entryRun=window.entryProbe.start().then(()=>({ok:true}),e=>({ok:false,name:e.name}))});await page.waitForTimeout(60);if(action==='cancel')await page.evaluate(()=>window.entryProbe.controller.abort());else await page.locator('#other-session').evaluate(button=>button.click());const result=await page.evaluate(()=>window.entryRun);expect(result.ok).toBe(false);expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual([]);expect(await page.evaluate(()=>window.entryProbe.snapshot().activated)).toBe(false)}finally{await context.close()}})
 
 it.each([['board','home-research'],['workbench','home-research'],['note','home-notes'],['ppt','home'],['report','home']])('uses already selected %s homepage input without clicking a selected tab',async(kind,start)=>{const{context,page}=await fixture(start,kind);try{await page.evaluate(()=>window.entryProbe.start());expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close','activate:home-input'])}finally{await context.close()}})
