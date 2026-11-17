@@ -121,10 +121,14 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery {
   --if-gallery-gap:clamp(12px,1.5cqw,20px);
   --if-gallery-card-width:clamp(208px,min(37cqw,48cqh),440px);
-  position:absolute;inset:0;display:grid;min-height:0;background:var(--if-main);container-type:size;
+  --if-gallery-top:clamp(38px,11.5cqh,128px);
+  --if-gallery-media-height:max(64px,calc(100cqh - var(--if-gallery-top) - 150px));
+  position:absolute;inset:0;display:grid;min-height:0;container-type:size;
+  background:radial-gradient(circle,var(--odyssey-dot,var(--if-dot)) .675px,transparent .85px)
+    6px 1px/13.71px 13.71px,var(--odyssey-canvas,var(--if-main));
   grid-template-rows:minmax(0,1fr);
 }
-.if-gallery-viewport {min-width:0;overflow:auto;scrollbar-width:none;overscroll-behavior-inline:contain}
+.if-gallery-viewport {min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-x pinch-zoom}
 .if-gallery-controls {
   position:absolute;z-index:1;inset-inline:12px;top:50%;transform:translateY(-50%);
   display:flex;justify-content:space-between;pointer-events:none;
@@ -139,10 +143,11 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-page[data-direction=left] .if-symbol {transform:translateX(-.25px) rotate(90deg)}
 .if-gallery-track {
   display:flex;align-items:flex-start;width:max-content;min-height:100%;
-  padding-block:clamp(52px,13cqh,128px) 76px;padding-inline-start:12px
+  padding-block:var(--if-gallery-top) 54px;padding-inline-start:12px
 }
 .if-gallery-cycle {display:flex;align-items:flex-start;gap:var(--if-gallery-gap);padding-inline-end:var(--if-gallery-gap)}
-.if-gallery-card {width:var(--if-gallery-card-width);position:relative}
+.if-gallery-column {display:flex;flex:none;flex-direction:column;align-items:flex-start;gap:16px}
+.if-gallery-card {width:min(var(--if-gallery-card-width),calc(var(--if-gallery-media-height) * var(--if-card-ratio)));position:relative}
 .image-factory .if-gallery-art {
   position:relative;display:block;width:100%;overflow:hidden;padding:0;border-radius:7px;background:var(--if-field);
 }
@@ -168,9 +173,10 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-card > .if-gallery-tag {font-size:11px;color:var(--if-muted)}
 .if-gallery-art::before,.if-gallery-use {position:absolute;inset:auto 0 0;opacity:0;transition:opacity .2s ease;pointer-events:none}
 .if-gallery-art::before {
-  content:"";height:42%;backdrop-filter:blur(16px) saturate(1.2);
-  border-end-start-radius:inherit;border-end-end-radius:inherit;
-  mask-image:linear-gradient(transparent,#000 92%);background:linear-gradient(transparent,#090c13a3);
+  content:"";inset:auto -2px -2px;height:calc(42% + 2px);
+  backdrop-filter:blur(16px) saturate(1.2);
+  mask-image:linear-gradient(transparent,#000 80%);
+  background:linear-gradient(transparent 10%,#111722b3 82%,#111722e8);
 }
 .if-gallery-use {
   display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;color:#fff;

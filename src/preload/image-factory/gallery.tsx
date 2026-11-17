@@ -17,6 +17,26 @@ const promptCases: PromptExample[] = [
 ]
 const scrollSpeed = 30
 const pageDuration = 260
+const templateRatio = (example: GalleryExample) => {
+  const [w, h] = example.format === 'A4' ? [210, 297] : example.format.split(':').map(Number)
+  return w! / h!
+}
+
+function templateColumns({ width, height }: Size) {
+  const top = Math.min(128, Math.max(38, height * .115))
+  const widthLimit = Math.min(440, Math.max(208, Math.min(width * .37, height * .48)))
+  const available = height - top - 80
+  const rowGap = 16
+  const heightOf = (example: GalleryExample) => widthLimit / templateRatio(example) + 75
+  const remaining = [...galleryExamples]
+  const columns: GalleryExample[][] = []
+  while (remaining.length) {
+    const first = remaining.shift()!
+    const second = remaining.findIndex(item => heightOf(first) + heightOf(item) + rowGap <= available)
+    columns.push(second < 0 ? [first] : [first, remaining.splice(second, 1)[0]!])
+  }
+  return columns
+}
 const wrap = (position: number, width: number) => ((position % width) + width) % width
 type T = (zh: string, en: string) => string
 
@@ -48,10 +68,23 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
 }) {
   const [sizes, setSizes] = useState<Record<string, Size>>({})
   const [mode, setMode] = useState<'templates' | 'prompts'>('templates')
-  const cardCount = galleryExamples.length
+  const [viewportSize, setViewportSize] = useState<Size>({ width: 0, height: 0 })
+  const columns = templateColumns(viewportSize)
+  const cardCount = columns.length
   const viewport = useRef<HTMLDivElement>(null)
   const firstCycle = useRef<HTMLDivElement>(null)
   const page = useRef<(direction: -1 | 1) => void>()
+  useLayoutEffect(() => {
+    const node = viewport.current
+    if (!node) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      const { width, height } = entry.contentRect
+      setViewportSize(previous => previous.width === width && previous.height === height ? previous : { width, height })
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [mode])
   useEffect(() => {
     const node = viewport.current
     const cycle = firstCycle.current
@@ -122,8 +155,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
     }
 
     const wheel = (event: WheelEvent) => {
-      if (event.ctrlKey || event.metaKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) ||
-          node.scrollHeight > node.clientHeight) return
+      if (event.ctrlKey || event.metaKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return
       const scale = event.deltaMode === WheelEvent.DOM_DELTA_PAGE ? node.clientWidth
         : event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : 1
       event.preventDefault()
@@ -197,17 +229,20 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
       <div className="if-gallery-track">
         {[false, true].map(repeated => <div className="if-gallery-cycle" key={String(repeated)}
           ref={repeated ? undefined : firstCycle} data-repeat={repeated} aria-hidden={repeated || undefined}>
-          {galleryExamples.map(example => {
+          {columns.map(column => <div className="if-gallery-column" key={column[0]!.id}>
+          {column.map(example => {
             const title = t(...example.title)
             const material = t(...example.material)
             const size = sizes[example.id]
             const photo = galleryArtwork(example.id)
+            const ratio = size ? size.width / size.height : templateRatio(example)
             const useLabel = t('做同款', 'Make something like this')
             const templateLabel = t('可编辑模板', 'Editable template')
-            return <article className="if-gallery-card" key={example.id} data-gallery-kind="template">
+            return <article className="if-gallery-card" key={example.id} data-gallery-kind="template"
+              style={{ '--if-card-ratio': ratio } as CSSProperties}>
               <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
                 aria-label={title + ' · ' + useLabel + ' · ' + templateLabel} onClick={() => onTemplate(example)}>
-                <span className="if-gallery-media" style={{ aspectRatio: size ? size.width + ' / ' + size.height : example.format.replace(':', ' / ') }}>
+                <span className="if-gallery-media" style={{ aspectRatio: size ? size.width + ' / ' + size.height : ratio }}>
                   {!size && photo && <img alt="" loading="lazy" decoding="async" src={photo} draggable={false}
                     onLoad={({ currentTarget }) => {
                       const { naturalWidth: width, naturalHeight: height } = currentTarget
@@ -225,6 +260,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
               </div>
             </article>
           })}
+          </div>)}
         </div>)}
       </div>
     </div>
