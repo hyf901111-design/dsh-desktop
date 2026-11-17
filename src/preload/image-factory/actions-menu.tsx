@@ -12,19 +12,29 @@ export type CanvasToolAction = {
 }
 const menuWidth = 160, edgeInset = 8
 
-export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction, toolActions = [] }: {
+type CanvasActionsProps = {
   doc: Document
   t(zh: string, en: string): string
+} & ({
   canExport: boolean
   exporting(format: Format): void
   galleryAction?: { label: string; run(): void }
-  toolActions?: readonly CanvasToolAction[]
-}) {
+  toolActions?: never
+} | {
+  toolActions: readonly CanvasToolAction[]
+  canExport?: never
+  exporting?: never
+  galleryAction?: never
+})
+
+export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction, toolActions }: CanvasActionsProps) {
   const trigger = useRef<HTMLButtonElement>(null), menu = useRef<HTMLDivElement>(null)
   const exportItem = useRef<HTMLButtonElement>(null), formats = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ left: number; top: number; opensLeft: boolean }>()
   const [branch, setBranch] = useState(false)
-  const label = t('更多图像操作', 'More image actions')
+  const toolbarMenu = toolActions !== undefined
+  const hasTools = Boolean(toolActions?.length)
+  const label = toolbarMenu ? t('更多工具', 'More tools') : t('更多图像操作', 'More image actions')
   function close(restoreFocus = false) {
     setBranch(false)
     setPosition(undefined)
@@ -43,6 +53,9 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction,
     group?.querySelector<HTMLElement>(':scope > button:not(:disabled)')?.focus()
   }
   useLayoutEffect(() => { if (position) focusFirst(menu.current) }, [position])
+  useLayoutEffect(() => {
+    if (toolbarMenu && !hasTools) setPosition(undefined)
+  }, [toolbarMenu, hasTools])
   useLayoutEffect(() => {
     if (!position) return
     const dismiss = () => close()
@@ -88,8 +101,8 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction,
     }
   }
   return <>
-    <button type="button" ref={trigger} className="en-header-export if-more" aria-label={label} title={label}
-      aria-haspopup="menu" aria-expanded={!!position} disabled={!galleryAction && !canExport && !toolActions.length}
+    <button type="button" ref={trigger} className={toolbarMenu ? 'if-button if-toolbar-more' : 'en-header-export if-more'} aria-label={label} title={label}
+      aria-haspopup="menu" aria-expanded={!!position} disabled={toolbarMenu ? !hasTools : !galleryAction && !canExport}
       onClick={() => position ? close() : open()} onKeyDown={event => {
         if (event.key === 'ArrowDown' && !position) { event.preventDefault(); open() }
       }}>
@@ -100,7 +113,7 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction,
     {position && createPortal(<>
       <div ref={menu} role="menu" aria-label={label} className="en-export-menu if-actions-popup"
         style={{ left: position.left, top: position.top }} onKeyDown={onMenuKey}>
-      <button type="button" ref={exportItem} role="menuitem" aria-haspopup="menu" aria-expanded={branch} disabled={!canExport}
+      {!toolbarMenu && <button type="button" ref={exportItem} role="menuitem" aria-haspopup="menu" aria-expanded={branch} disabled={!canExport}
         onPointerEnter={event => { if (canExport && event.pointerType !== 'touch') showFormats(false) }}
         onKeyDown={event => {
           if (event.key === (position.opensLeft ? 'ArrowLeft' : 'ArrowRight')) { event.preventDefault(); showFormats(true) }
@@ -110,11 +123,10 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction,
           style={{ transform: position.opensLeft ? 'scaleX(-1)' : undefined }}>
           <path d="M4.5 2.5 8 6l-3.5 3.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-      </button>
+      </button>}
       {galleryAction && <button type="button" role="menuitem" onPointerEnter={() => setBranch(false)}
         onClick={() => { close(true); galleryAction.run() }}>{galleryAction.label}</button>}
-      {toolActions.length > 0 && <hr className="if-actions-divider" role="separator"/>}
-      {toolActions.map(action => <button key={action.id} type="button" role={action.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+      {toolActions?.map(action => <button key={action.id} type="button" role={action.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
         aria-checked={action.checked} aria-keyshortcuts={action.shortcut} disabled={action.disabled}
         onPointerEnter={() => setBranch(false)} onClick={() => { close(true); action.run() }}>
         {action.label}{action.checked && <span aria-hidden="true">✓</span>}
@@ -124,7 +136,7 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction,
         aria-label={t('图像导出格式', 'Image export formats')}
         style={{ top: position.top, left: position.left + (position.opensLeft ? -menuWidth : menuWidth) }} onKeyDown={onMenuKey}>
         {(['png', 'jpg'] as const).map(format => <button key={format} type="button" role="menuitem"
-          onClick={() => { close(true); exporting(format) }}>{format.toUpperCase()}</button>)}
+          onClick={() => { close(true); exporting?.(format) }}>{format.toUpperCase()}</button>)}
       </div>}
     </>, doc.body)}
   </>

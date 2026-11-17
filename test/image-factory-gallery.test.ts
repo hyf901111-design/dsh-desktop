@@ -19,6 +19,9 @@ it('shows only E Fund templates and offers a separate image-only prompt gallery 
     const rollup = cards().find(item => item.querySelector('h3')?.textContent === '线下易拉宝')!
     await vi.waitFor(() => expect(Array.from(rollup.querySelectorAll('.if-gallery-tag'), tag => tag.textContent))
       .toEqual(['2:5', '640 × 1600 px']))
+    expect(rollup.querySelector<HTMLElement>('.if-gallery-media')?.style.aspectRatio).toBe('640 / 1600')
+    const banner = cards().find(item => item.querySelector('h3')?.textContent === '会议背景')!
+    await vi.waitFor(() => expect(banner.querySelector<HTMLElement>('.if-gallery-media')?.style.aspectRatio).toBe('1280 / 720'))
     await act(async () => button('基于提示词生成').click())
     const prompts = [...mount.querySelectorAll<HTMLButtonElement>('.if-prompt-cycle[data-repeat="false"] button')]
     expect(prompts).toHaveLength(22)

@@ -208,7 +208,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
             return <article className="if-gallery-card" key={example.id} data-gallery-kind="template">
               <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
                 aria-label={title + ' · ' + useLabel + ' · ' + templateLabel} onClick={() => onTemplate(example)}>
-                <span className="if-gallery-media">
+                <span className="if-gallery-media" style={{ aspectRatio: size ? size.width + ' / ' + size.height : example.format.replace(':', ' / ') }}>
                   {!size && photo && <img alt="" loading="lazy" decoding="async" src={photo} draggable={false}
                     onLoad={({ currentTarget }) => {
                       const { naturalWidth: width, naturalHeight: height } = currentTarget
