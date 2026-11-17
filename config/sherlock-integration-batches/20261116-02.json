@@ -9,17 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "探索：浏览器中可见地走侧栏菜单",
+        "featureName": "画廊暂停与翻页、探索演示入口、浏览器窗口拖动",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "7098529573b6088349c4f8de4c1fb8f9a040cc8a",
-        "tipCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
+        "baseCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
+        "tipCommit": "cf5411001a35512d192226225f99c41537cd57c7",
         "commits": [
           {
-            "commit": "0b8c6418f697ef025a829a61b771259bf3b99799",
+            "commit": "248b0f4476444381c0af590fc7db1bbff397f6ec",
             "parents": [
-              "7098529573b6088349c4f8de4c1fb8f9a040cc8a"
+              "0b8c6418f697ef025a829a61b771259bf3b99799"
             ],
-            "subject": "修复：探索演示期间让浏览器网页层避开侧栏菜单"
+            "subject": "调整：画廊仅在内容上暂停并居中翻页按钮"
+          },
+          {
+            "commit": "169cbe048aa2f92bce1be4b3910690a3a0abd121",
+            "parents": [
+              "248b0f4476444381c0af590fc7db1bbff397f6ec"
+            ],
+            "subject": "修复：探索演示使用对应的新建入口"
+          },
+          {
+            "commit": "cf5411001a35512d192226225f99c41537cd57c7",
+            "parents": [
+              "169cbe048aa2f92bce1be4b3910690a3a0abd121"
+            ],
+            "subject": "修复：浏览器顶栏留白支持拖动窗口"
           }
         ],
         "files": [
@@ -29,14 +43,107 @@
           },
           {
             "status": "M",
-            "path": "src/preload/home-guides.ts"
+            "path": "src/preload/home-guide-entry-native.ts"
           },
           {
             "status": "M",
-            "path": "test/browser-page-context-rendered.test.js"
+            "path": "src/preload/home-guide-explore-entry.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-native.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-explore-entry-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory-gallery.test.ts",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "Image Factory|uses the displayed asset|pages several cards",
+              "--hookTimeout",
+              "25000"
+            ],
+            "outcome": "passed",
+            "summary": "画廊内容才触发暂停，翻页按钮居中且画布全宽。",
+            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
+            "completedAt": "2026-11-17T02:36:23.152Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-explore-entry-browser.test.js",
+              "test/browser-sidebar-entry.test.ts",
+              "--hookTimeout",
+              "25000"
+            ],
+            "outcome": "passed",
+            "summary": "验证收起侧栏时的不同探索演示入口和原生会话接管。",
+            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
+            "completedAt": "2026-11-17T02:36:23.152Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-rendered.test.js",
+              "-t",
+              "drags the window|opens workspace tabs only|places the shared workspace back button|reorders|opens a browser menu when pointerdown",
+              "--hookTimeout",
+              "25000"
+            ],
+            "outcome": "passed",
+            "summary": "浏览器留白可拖动，页签、菜单可操作。",
+            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
+            "completedAt": "2026-11-17T02:36:23.152Z",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "node",
@@ -49,24 +156,9 @@
               "25000"
             ],
             "outcome": "passed",
-            "summary": "真实 Chromium 验证菜单保留在主界面且浏览器网页层结束后恢复同一标签。",
-            "verifiedCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
-            "completedAt": "2026-11-17T02:11:18.603Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guides.test.ts",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-explore-entry-browser.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "177 项演示流程、真实应用堆栈和原生入口权限检查通过。",
-            "verifiedCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
-            "completedAt": "2026-11-17T02:11:18.603Z",
+            "summary": "探索入口让出原生网页层且现有工作区菜单可关闭。",
+            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
+            "completedAt": "2026-11-17T02:36:23.152Z",
             "timeoutMs": 120000
           },
           {
@@ -77,23 +169,24 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
-            "completedAt": "2026-11-17T02:11:18.603Z",
+            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
+            "completedAt": "2026-11-17T02:36:23.152Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 验证正确点击路径，并验证准备期间网页的原生层未遮挡侧栏菜单。"
+          "summary": "真实 Chromium 验证画廊布局、控制区点击、探索入口和浏览器顶栏交互。"
         },
         "acceptanceCriteria": [
-          "从图像到浏览器启动探索表格演示可点侧栏更多与新建表格。",
-          "探索演示接管前保留原标签，结束或取消释放网页层。"
+          "仅画廊图文暂停滚动，箭头与画布竖直居中。",
+          "探索研究看板走新建研究，表格走新建表格。",
+          "浏览器顶栏留白可移动窗口，打开菜单时仍可点击留白关闭。"
         ],
         "risks": [
-          "需使用最终本地包完整播放确认。"
+          "最终包需实测原生窗口拖动及看板入口。"
         ],
-        "generatedAt": "2026-11-17T02:11:18.603Z"
+        "generatedAt": "2026-11-17T02:36:23.152Z"
       }
     },
     {
