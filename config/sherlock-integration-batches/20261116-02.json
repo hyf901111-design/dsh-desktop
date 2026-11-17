@@ -9,35 +9,46 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "应用退出后恢复中央对话首页",
+        "featureName": "找回画框外文字与托管生图水印配置",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-        "tipCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
+        "baseCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
+        "tipCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
         "commits": [
           {
-            "commit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
+            "commit": "04b8213b51f32602038113f69f0f8f5f39b5b3bb",
             "parents": [
-              "752ccfc8a4b0fdf10e0f3fd61248bd3111903585"
+              "6a3c7b367b956dc6c713fd5c8d0041e83a02200a"
             ],
-            "subject": "修复：应用退出后恢复中央对话首页"
+            "subject": "修复：托管生图关闭供应商可见水印"
+          },
+          {
+            "commit": "5b293d88803b1614aa2de350ac4cd680b986f263",
+            "parents": [
+              "04b8213b51f32602038113f69f0f8f5f39b5b3bb"
+            ],
+            "subject": "优化：从图层面板找回画框外的文字"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
+            "path": "scripts/test-hosted-ai-worker.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/pending-conversation.mjs"
+            "path": "services/hosted-ai/worker.js"
           },
           {
             "status": "M",
-            "path": "test/fixtures/pending-conversation-browser.tsx"
+            "path": "src/preload/image-factory/style.css"
           },
           {
             "status": "M",
-            "path": "test/pending-conversation-rendered.test.js"
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
           }
         ],
         "checks": [
@@ -46,16 +57,16 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/pending-conversation-rendered.test.js",
-              "test/pending-conversation.test.js",
-              "test/browser-region-native.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/browser-app-native.test.js"
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-canvases.test.ts",
+              "test/knowledge-native-preview.test.ts",
+              "test/knowledge-session-copy.test.ts"
             ],
             "outcome": "passed",
-            "summary": "首页回归、草稿发送、浏览器会话交接及应用切换",
-            "verifiedCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
-            "completedAt": "2026-11-17T04:34:08.174Z",
+            "summary": "图层找回、拖拽和保存、归档预览与副本",
+            "verifiedCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
+            "completedAt": "2026-11-17T04:52:32.384Z",
             "timeoutMs": 150000
           },
           {
@@ -66,24 +77,35 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
-            "completedAt": "2026-11-17T04:34:08.174Z",
+            "verifiedCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
+            "completedAt": "2026-11-17T04:52:32.384Z",
+            "timeoutMs": 150000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-hosted-ai-worker.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "本地网关上游请求关闭可见水印",
+            "verifiedCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
+            "completedAt": "2026-11-17T04:52:32.384Z",
             "timeoutMs": 150000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 使用真实会话组件及 WorkspaceSurfaceHost 验证右侧屏开启时的返回和主页，保留原草稿及项目并从首页发送。"
+          "summary": "真实 Chromium 的中英文宽窄窗口，验证视口外文字选中后通过键盘移回画框，单次保存并恢复焦点。"
         },
         "acceptanceCriteria": [
-          "从独立应用退出，按当前会话进入中央首页或原会话。",
-          "右侧屏展开时，中央首页仍可见并复用待发草稿。",
-          "连续切换多个应用后，返回仅执行一次。"
+          "选中画框外文字时可直接移回画框，文字格式保持。",
+          "托管生图请求关闭供应商可见水印。"
         ],
         "risks": [
-          "集成包装后需复验真实桌面窗口。"
+          "桌面测试包仍需验收本次新增操作。",
+          "线上水印取决于网关部署。"
         ],
-        "generatedAt": "2026-11-17T04:34:08.174Z"
+        "generatedAt": "2026-11-17T04:52:32.384Z"
       }
     },
     {
