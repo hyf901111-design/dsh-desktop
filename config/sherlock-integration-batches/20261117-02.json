@@ -9,55 +9,151 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像画布 · 易方达品牌资产",
+        "featureName": "图像画廊十二类宣传物料与品牌资产",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "12b2a2f85a51546e65a758a6231fbb34472a8a51",
-        "tipCommit": "3bb02ebc79a79849f7d23dbfbca3469f79a06aec",
+        "baseCommit": "3bb02ebc79a79849f7d23dbfbca3469f79a06aec",
+        "tipCommit": "dbee80e686113918d97d35bcf7bc04c4a8f4139f",
         "commits": [
           {
-            "commit": "3bb02ebc79a79849f7d23dbfbca3469f79a06aec",
+            "commit": "dbee80e686113918d97d35bcf7bc04c4a8f4139f",
             "parents": [
-              "12b2a2f85a51546e65a758a6231fbb34472a8a51"
+              "3bb02ebc79a79849f7d23dbfbca3469f79a06aec"
             ],
-            "subject": "功能：为图像画布添加易方达品牌资产库"
+            "subject": "功能：将图像画廊更新为十二类易方达宣传物料模板"
           }
         ],
         "files": [
           {
-            "status": "A",
+            "status": "M",
             "path": "docs/image-factory-efund-brand-assets.md"
           },
           {
             "status": "M",
-            "path": "src/main/state/image-factory-canvases.ts"
+            "path": "scripts/lib/image-factory-native.mjs"
           },
           {
-            "status": "A",
-            "path": "src/preload/image-factory/assets/brand.svg"
+            "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/image-factory/brand-artwork.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/image-factory/brand-assets.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/image-factory/brand-library.tsx"
           },
           {
-            "status": "M",
-            "path": "src/preload/image-factory/canvas-workspace.ts"
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/architecture.jpg"
           },
           {
             "status": "A",
-            "path": "src/preload/image-factory/efund-outlines.ts"
+            "path": "src/preload/image-factory/gallery-art/beacon.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/blood-orange.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/blue-hour.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/blueprint-city.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/coastal-museum.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/craft.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/creative-drop.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/first-light.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/flower-market.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/forward.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/jiangnan.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/lantern-fox.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/liquid-silver.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/momentum.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/new-year-light.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/night-shift.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/olive-perfume.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/open-water.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/product-prism.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/research-desk.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/ridge-walk.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/steady-horizon.jpg"
+          },
+          {
+            "status": "D",
+            "path": "src/preload/image-factory/gallery-art/summer-fruit.jpg"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
+            "path": "src/preload/image-factory/gallery-examples.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
           },
           {
             "status": "M",
@@ -73,11 +169,15 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory-canvases.test.ts"
+            "path": "test/image-factory-gallery.test.ts"
           },
           {
             "status": "M",
             "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
@@ -89,8 +189,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "3bb02ebc79a79849f7d23dbfbca3469f79a06aec",
-            "completedAt": "2026-11-17T08:58:54.682Z",
+            "verifiedCommit": "dbee80e686113918d97d35bcf7bc04c4a8f4139f",
+            "completedAt": "2026-11-17T09:13:49.325Z",
             "timeoutMs": 120000
           },
           {
@@ -101,34 +201,31 @@
               "test/image-factory-layer-gesture.test.ts",
               "test/image-factory-canvases.test.ts",
               "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-actions-menu.test.ts"
+              "test/image-factory-actions-menu.test.ts",
+              "test/image-factory-gallery.test.ts",
+              "test/image-factory-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "27 项图像应用聚焦测试通过。",
-            "verifiedCommit": "3bb02ebc79a79849f7d23dbfbca3469f79a06aec",
-            "completedAt": "2026-11-17T08:58:54.682Z",
+            "summary": "49 项图像应用聚焦测试通过，覆盖画廊同款、独立任务、品牌素材插入和可编辑图层保存。",
+            "verifiedCommit": "dbee80e686113918d97d35bcf7bc04c4a8f4139f",
+            "completedAt": "2026-11-17T09:13:49.325Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "渲染器交互验证：拖入产品宣传版式可按画布坐标落位、拆为图层并编辑标题；签名客户端验证在集成后进行。"
+          "summary": "拖放品牌资产与独立同款任务的渲染器验证已通过；本地签名客户端验证在新集成提交上进行。"
         },
         "acceptanceCriteria": [
           "打开品牌资产，拖动任一标识、容器或品牌图形到画布。图形可移动和等比缩放。",
           "拖入产品色块组合或产品海报。色块可移动、缩放和换色，标题及产品代码可双击编辑。",
-          "保存并重开画布后仍可编辑，导出 PNG 保留标识、色块和已修改的文字。"
+          "保存并重开画布后仍可编辑，导出 PNG 保留标识、色块和已修改的文字。",
+          "首页 12 张全新底图各关联一种宣传物料模板。易拉宝 2:5、官网 Banner 3:1，做同款后生成独立工程，底图提示词可单独复用。"
         ],
         "risks": [
           "新图层使用内置素材 ID 保存，仅支持包含品牌资产功能的客户端继续编辑。"
         ],
-        "generatedAt": "2026-11-17T08:58:54.682Z"
-      },
-      "merged": {
-        "mergeCommit": "6e1e78dfcfaa83879fd39020e1b3b9cd5e372934",
-        "verificationCommit": "6e1e78dfcfaa83879fd39020e1b3b9cd5e372934",
-        "checks": [],
-        "recordedAt": "2026-11-17T08:59:22.006Z"
+        "generatedAt": "2026-11-17T09:13:49.325Z"
       }
     }
   ],
