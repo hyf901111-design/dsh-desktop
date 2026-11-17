@@ -20,12 +20,12 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
  const entry=options.context.demoEntry;if(!entry)throw Error('探索演示入口已变化。')
  await options.pointer.perform({target:entry.closeTarget,action:'click'});check();homeGuideTargetPoint(document,entry.closeTarget);await entry.closeOwned();check()
  if(document.querySelector('dialog[data-explore-menu][open]'))throw Error('探索尚未关闭，未继续操作。')
- // Settings/plugin surfaces may hide a perfectly valid old conversation root.
- // Return through the visible application control, otherwise stop safely.
- if(document.body.dataset.workspaceSurface&&document.body.dataset.workspaceSurface!=='notes'||document.querySelector('.VOzbGW_overlay')){
-  const back=unique(document.querySelectorAll<HTMLElement>('button[aria-label="返回应用"],button[aria-label="Back to app"],button.workspace-back-button[aria-label="返回工作区"]'))
+ // Settings covers the sidebar. Use its own exit control before navigating.
+ const settings=document.querySelector('.VOzbGW_overlay')
+ if(settings){
+  const back=unique(settings.querySelectorAll<HTMLButtonElement>('button.sherlock-settings-back,button[aria-label="返回应用"],button[aria-label="Back to app"]'))
   if(!back)throw Error('请先返回应用后再播放演示。')
-  await click(back);await wait(()=>(!document.body.dataset.workspaceSurface||document.body.dataset.workspaceSurface==='notes')&&!document.querySelector('.VOzbGW_overlay')?true:undefined)
+  await click(back);await wait(()=>!document.querySelector('.VOzbGW_overlay')?true:undefined)
  }
  if(kind==='spreadsheet'){
   const more=await wait(()=>unique(document.querySelectorAll<HTMLButtonElement>('[data-dsh-sidebar-root] button.st-more')))
@@ -34,7 +34,9 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
   await activate(target,'new-spreadsheet')
   return
  }
- const root=document.body.dataset.workspaceSurface==='notes'?undefined:await wait(()=>unique(document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root')))
+ // An app's back button follows surface history. Choose the real sidebar
+ // entry while an app owns the center, and reveal the new session at commit.
+ const root=document.body.dataset.workspaceSurface?undefined:await wait(()=>unique(document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root')))
  const mode=homeGuideMode(kind)
  const emptyHome=options.homeEmpty!==false&&root?.dataset.odysseyPage==='home'&&![...root.querySelectorAll<HTMLTextAreaElement>('textarea')].some(input=>input.value.trim())&&!root.querySelector('[data-note-reference-chip],[data-research-inline-reference],[data-input-attachment]')
  if(emptyHome){
