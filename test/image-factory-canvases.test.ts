@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { ImageFactoryCanvases } from '../src/main/state/image-factory-canvases'
+import { galleryTemplateLayers } from '../src/preload/image-factory/gallery-layout'
+import { marketingExamples } from '../src/preload/image-factory/marketing-templates'
 import type { StoredCanvas, TextLayer } from '../src/shared/image-factory-canvas'
 
 const png = new Uint8Array(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=', 'base64'))
@@ -134,5 +136,20 @@ it('round-trips editable brand overlays alongside the original raster and reject
     const invalid = { ...brand, asset: 'https://example.org/art.svg' } as unknown as typeof brand
     await expect(storage.write({ scope: 'poster', epoch: 3, canvas: { ...revised, layers: [invalid] } })).rejects.toThrow('画布图层无效')
     expect((await storage.read('poster')).canvas).toEqual(revised)
+  } finally { await rm(root, { force: true, recursive: true }) }
+})
+
+it('persists and reopens every campaign with all editable layers and the original image', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'odyssey-marketing-canvases-'))
+  try {
+    const identity = () => ({ owner: 'account-a', generation: 1 })
+    const store = new ImageFactoryCanvases(root, identity)
+    for (const example of marketingExamples) {
+      const [width, height] = example.format.split(':').map(part => Number(part) * 100) as [number, number]
+      const base = { ...canvas(), width, height, title: example.title[0] }
+      const project = { ...base, layers: [base.layers[0]!, ...galleryTemplateLayers(example, base, zh => zh, randomUUID)] }
+      await store.write({ scope: example.id, epoch: 1, canvas: project, image: png })
+      expect((await new ImageFactoryCanvases(root, identity).read(example.id)).canvas).toEqual(project)
+    }
   } finally { await rm(root, { force: true, recursive: true }) }
 })
