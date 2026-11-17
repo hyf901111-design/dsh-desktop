@@ -9,27 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "探索：演示从侧栏进入目标会话",
+        "featureName": "探索：浏览器中可见地走侧栏菜单",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "b005b6a8a90488f6199085f543978d42c590628c",
-        "tipCommit": "7098529573b6088349c4f8de4c1fb8f9a040cc8a",
+        "baseCommit": "7098529573b6088349c4f8de4c1fb8f9a040cc8a",
+        "tipCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
         "commits": [
           {
-            "commit": "7098529573b6088349c4f8de4c1fb8f9a040cc8a",
+            "commit": "0b8c6418f697ef025a829a61b771259bf3b99799",
             "parents": [
-              "b005b6a8a90488f6199085f543978d42c590628c"
+              "7098529573b6088349c4f8de4c1fb8f9a040cc8a"
             ],
-            "subject": "修复：探索演示直接使用侧栏入口，避免落回上一个应用"
+            "subject": "修复：探索演示期间让浏览器网页层避开侧栏菜单"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/home-guide-explore-entry.ts"
+            "path": "src/preload/browser/view.ts"
           },
           {
             "status": "M",
-            "path": "test/home-guide-explore-entry-browser.test.js"
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-context-rendered.test.js"
           }
         ],
         "checks": [
@@ -38,15 +42,31 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-explore-entry-browser.test.js",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-operations-entry.test.ts",
-              "test/workspace-surface-host.test.ts"
+              "test/browser-page-context-rendered.test.js",
+              "-t",
+              "Explore entry|active native webpage",
+              "--hookTimeout",
+              "25000"
             ],
             "outcome": "passed",
-            "summary": "144 项聚焦测试通过，含浏览器叠在图像上、设置叠在浏览器上、原草稿及原生入口权限。",
-            "verifiedCommit": "7098529573b6088349c4f8de4c1fb8f9a040cc8a",
-            "completedAt": "2026-11-17T02:05:28.637Z",
+            "summary": "真实 Chromium 验证菜单保留在主界面且浏览器网页层结束后恢复同一标签。",
+            "verifiedCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
+            "completedAt": "2026-11-17T02:11:18.603Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guides.test.ts",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-explore-entry-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "177 项演示流程、真实应用堆栈和原生入口权限检查通过。",
+            "verifiedCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
+            "completedAt": "2026-11-17T02:11:18.603Z",
             "timeoutMs": 120000
           },
           {
@@ -57,23 +77,23 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "7098529573b6088349c4f8de4c1fb8f9a040cc8a",
-            "completedAt": "2026-11-17T02:05:28.637Z",
+            "verifiedCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
+            "completedAt": "2026-11-17T02:11:18.603Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Chromium 中使用 WorkspaceSurfaceHost 复现应用堆栈，验证演示入口只点击关闭探索、侧栏更多和新建表格。"
+          "summary": "Chromium 验证正确点击路径，并验证准备期间网页的原生层未遮挡侧栏菜单。"
         },
         "acceptanceCriteria": [
-          "从图像进入浏览器后启动探索表格演示，直接使用侧栏更多的新建表格。",
-          "原会话草稿在演示接管前保留；设置只通过自己的退出入口关闭。"
+          "从图像到浏览器启动探索表格演示可点侧栏更多与新建表格。",
+          "探索演示接管前保留原标签，结束或取消释放网页层。"
         ],
         "risks": [
-          "已完成渲染入口验证，打包后进行实际表格演示复测。"
+          "需使用最终本地包完整播放确认。"
         ],
-        "generatedAt": "2026-11-17T02:05:28.637Z"
+        "generatedAt": "2026-11-17T02:11:18.603Z"
       }
     },
     {
