@@ -9,54 +9,167 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "继续任务：完整构建中的安装标记识别",
+        "featureName": "图像：全宽画廊、做同款、框选动效和模型去背景",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
-        "tipCommit": "2612d4a03a93930b014659bfd586887ad423ba89",
+        "baseCommit": "2612d4a03a93930b014659bfd586887ad423ba89",
+        "tipCommit": "0c7161f2fd617f85f3e92c924ca6e5fcb40af6b1",
         "commits": [
           {
-            "commit": "2612d4a03a93930b014659bfd586887ad423ba89",
+            "commit": "dd1ce8303e51fd62a285f233ec7e916eaef8df45",
             "parents": [
-              "28abf482226659cf2e9311b0bfd78cba3d498eeb"
+              "2612d4a03a93930b014659bfd586887ad423ba89"
             ],
-            "subject": "修复：区分任务按钮安装标记和样式选择器"
+            "subject": "调整：框选改图生成时使用选区毛玻璃动效"
+          },
+          {
+            "commit": "420f9da5939d81b3e6fad4f1902b21bc623ed454",
+            "parents": [
+              "dd1ce8303e51fd62a285f233ec7e916eaef8df45"
+            ],
+            "subject": "修复：图像画廊铺满左右边缘，翻页按钮下移"
+          },
+          {
+            "commit": "f65d6f143159f48390f354ca88a836b011bdc2b1",
+            "parents": [
+              "420f9da5939d81b3e6fad4f1902b21bc623ed454"
+            ],
+            "subject": "调整：画廊显示原图参数并悬停做同款"
+          },
+          {
+            "commit": "0c7161f2fd617f85f3e92c924ca6e5fcb40af6b1",
+            "parents": [
+              "f65d6f143159f48390f354ca88a836b011bdc2b1"
+            ],
+            "subject": "功能：用图像模型去除背景并保留 PNG 透明通道"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/task-progress-client.mjs"
+            "path": "package-lock.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-cutout.js"
           },
           {
             "status": "M",
-            "path": "test/task-progress-client.test.js"
+            "path": "packages/dsh-research-task-runtime/image-factory-context.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-examples.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "0c7161f2fd617f85f3e92c924ca6e5fcb40af6b1",
+            "completedAt": "2026-11-17T01:35:54.768Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/task-progress-client.test.js",
-              "test/task-continuation-upgrade.test.js"
+              "test/image-generation-tool.test.js",
+              "test/image-factory-native.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-generation-flow.test.js",
+              "test/image-generation-client.test.js",
+              "test/image-actions.test.ts"
             ],
             "outcome": "passed",
-            "summary": "11 项续跑与迁移检查通过，覆盖已注入标题行 CSS 的构建输入。",
-            "verifiedCommit": "2612d4a03a93930b014659bfd586887ad423ba89",
-            "completedAt": "2026-11-17T01:14:48.928Z",
+            "summary": "54 项检查通过，覆盖模型分割、透明通道、共享对话及画布编辑。",
+            "verifiedCommit": "0c7161f2fd617f85f3e92c924ca6e5fcb40af6b1",
+            "completedAt": "2026-11-17T01:35:54.768Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory-gallery.test.ts",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "Image Factory|displayed asset|pages several"
+            ],
+            "outcome": "passed",
+            "summary": "8 项画廊和编辑渲染检查通过。",
+            "verifiedCommit": "0c7161f2fd617f85f3e92c924ca6e5fcb40af6b1",
+            "completedAt": "2026-11-17T01:35:54.768Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "实际前端安装脚本执行通过，生成客户端 JS 已通过语法检查。"
+          "outcome": "passed",
+          "summary": "真实 Chromium 验证画廊视区铺满工作区、箭头位于内容下方及选区动效样式。"
         },
         "acceptanceCriteria": [
-          "生成样式与续跑按钮安装标记可在同一次本地构建中正确识别。"
+          "画廊显示原图尺寸和比例，悬停图片即可做同款。",
+          "框选编辑生成期间收起锚点和提示，只在选区内显示毛玻璃动效。",
+          "去背景走共享右侧对话和图像模型，保留图片透明通道和独立文字图层。"
         ],
-        "risks": [],
-        "generatedAt": "2026-11-17T01:14:48.928Z"
+        "risks": [
+          "图像模型的主体遮罩效果以实际模型输出为准。"
+        ],
+        "generatedAt": "2026-11-17T01:35:54.768Z"
       }
     },
     {
