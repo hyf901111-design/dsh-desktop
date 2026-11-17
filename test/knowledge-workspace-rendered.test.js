@@ -670,7 +670,7 @@ it('opens the selected archived image separately from its source canvas', async 
     await page.setContent('<body data-test-factory-archive><main class="pI_x6G_centerCol" style="position:fixed;inset:0"></main>')
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
-    const copy = library.getByRole('button', { name: '在图像工厂中编辑副本' })
+    const copy = library.getByRole('button', { name: '在「图像」中编辑副本' })
     const more = name => library.getByRole('button', { name: name + '的更多操作', exact: true })
     await more('初稿.png').click()
     await copy.click()
@@ -695,7 +695,7 @@ it('uses the browser title collapse and drag regions in Image Factory', async ()
         <section class="if-work">
           <header class="if-top workspace-app-topbar">
             <button type="button">返回对话</button>
-            <div class="workspace-app-title"><i></i><span>图像工厂</span></div>
+            <div class="workspace-app-title"><i></i><span>图像</span></div>
             <div class="eb-workspace-controls"><button class="eb-workspace-toggle" type="button">页签</button></div>
             <span class="if-top-title"></span>
             <button type="button" class="if-more" aria-expanded="false">更多</button>
@@ -705,7 +705,7 @@ it('uses the browser title collapse and drag regions in Image Factory', async ()
     await page.addScriptTag({ content: bundle })
     await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
     const header = page.locator('.if-top')
-    const title = header.getByText('图像工厂')
+    const title = header.getByText('图像',{exact:true})
     const region = el => getComputedStyle(el).getPropertyValue('-webkit-app-region')
     expect(await title.isVisible()).toBe(true)
     expect(await title.evaluate(region)).toBe('drag')

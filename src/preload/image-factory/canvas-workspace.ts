@@ -39,7 +39,7 @@ export class CanvasWorkspace {
 
   async ready(scope: CanvasScope): Promise<ImageScene | undefined> {
     if (scope !== null) await this.adoptions.get(scope)?.catch(() => {})
-    if (this.disposed) throw Error('图像工厂已关闭。')
+    if (this.disposed) throw Error('「图像」应用已关闭。')
     const entry = this.entry(scope)
     if (entry.status !== 'ready') {
       entry.reading ??= this.load(scope, entry)

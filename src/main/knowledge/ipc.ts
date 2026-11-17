@@ -208,7 +208,7 @@ export function installKnowledgeIpc({
           const { document, path } = await store.file(documentId)
           check()
           if (document.generatedBy !== 'image-factory' || document.size > maximumCanvasImageBytes) {
-            throw Error('请选择图像工厂生成的图片。')
+            throw Error('请选择在「图像」中生成的图片。')
           }
           const image = await readFile(path)
           check()
@@ -216,7 +216,7 @@ export function installKnowledgeIpc({
             throw Error('归档 PNG 图片无法读取。')
           }
           const width = image.readUInt32BE(16), height = image.readUInt32BE(20)
-          if (!validCanvasSize(width, height)) throw Error('图片尺寸超出图像工厂画布限制。')
+          if (!validCanvasSize(width, height)) throw Error('图片尺寸超出「图像」画布限制。')
           if (nativeImage.createFromBuffer(image).isEmpty()) throw Error('归档 PNG 图片无法读取。')
           const title = basename(document.name, extname(document.name)).trim() || '生成图片'
           return await copySession(owner.owner, { mode: 'image-factory', title, image, width, height, epoch: owner.generation },

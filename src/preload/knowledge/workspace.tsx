@@ -1131,7 +1131,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       {target && <>
         <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>移动到文件夹…</button>
         {target.generatedBy === 'image-factory' && bridge.openImageFactoryCopy &&
-          <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageFactoryCopy!(target.id))}>在图像工厂中编辑副本</button>}
+          <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageFactoryCopy!(target.id))}>在「图像」中编辑副本</button>}
         {target.generatedBy === 'image-factory' && target.sessionId && bridge.openImageFactorySource &&
           <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageFactorySource!(target.sessionId!))}>打开来源画布</button>}
         {target.sessionId && <button type="button" onClick={async () => {
