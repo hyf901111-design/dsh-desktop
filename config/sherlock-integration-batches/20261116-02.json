@@ -9,69 +9,69 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "画廊暂停与翻页、探索演示入口、浏览器窗口拖动",
+        "featureName": "探索演示右侧对话、探索图标与图像消息动作",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "0b8c6418f697ef025a829a61b771259bf3b99799",
-        "tipCommit": "cf5411001a35512d192226225f99c41537cd57c7",
+        "baseCommit": "cf5411001a35512d192226225f99c41537cd57c7",
+        "tipCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
         "commits": [
           {
-            "commit": "248b0f4476444381c0af590fc7db1bbff397f6ec",
+            "commit": "1300a3d885b644fa5cc246c2692985c1898b4b7e",
             "parents": [
-              "0b8c6418f697ef025a829a61b771259bf3b99799"
+              "cf5411001a35512d192226225f99c41537cd57c7"
             ],
-            "subject": "调整：画廊仅在内容上暂停并居中翻页按钮"
+            "subject": "修复：恢复探索按钮的渐变流动动画"
           },
           {
-            "commit": "169cbe048aa2f92bce1be4b3910690a3a0abd121",
+            "commit": "12cffdd6ef63d43a15a2918a1f4358ecae006556",
             "parents": [
-              "248b0f4476444381c0af590fc7db1bbff397f6ec"
+              "1300a3d885b644fa5cc246c2692985c1898b4b7e"
             ],
-            "subject": "修复：探索演示使用对应的新建入口"
+            "subject": "修复：演示切换模式时保留右侧对话"
           },
           {
-            "commit": "cf5411001a35512d192226225f99c41537cd57c7",
+            "commit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
             "parents": [
-              "169cbe048aa2f92bce1be4b3910690a3a0abd121"
+              "12cffdd6ef63d43a15a2918a1f4358ecae006556"
             ],
-            "subject": "修复：浏览器顶栏留白支持拖动窗口"
+            "subject": "修复：图像工作区隐藏回复的画布和笔记操作"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
+            "path": "scripts/lib/calendar-tool-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-entry-native.ts"
+            "path": "scripts/lib/home-guide-native.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-explore-entry.ts"
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery.tsx"
+            "path": "scripts/lib/pending-conversation-panel.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/style.css"
+            "path": "src/preload/explore-menu.css"
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/view.ts"
+            "path": "src/preload/figma-panels.css"
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-topbar.ts"
+            "path": "src/preload/home-guides.ts"
           },
           {
             "status": "M",
-            "path": "test/browser-app-rendered.test.js"
+            "path": "src/preload/research-boards-ui.ts"
           },
           {
             "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
+            "path": "test/explore-menu-browser.test.ts"
           },
           {
             "status": "M",
@@ -79,11 +79,7 @@
           },
           {
             "status": "M",
-            "path": "test/home-guide-explore-entry-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-gallery.test.ts"
+            "path": "test/home-guide-session.test.ts"
           },
           {
             "status": "M",
@@ -96,35 +92,17 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-gallery.test.ts",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "Image Factory|uses the displayed asset|pages several cards",
-              "--hookTimeout",
-              "25000"
-            ],
-            "outcome": "passed",
-            "summary": "画廊内容才触发暂停，翻页按钮居中且画布全宽。",
-            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
-            "completedAt": "2026-11-17T02:36:23.152Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/home-guides.test.ts",
+              "test/home-guide-session.test.ts",
               "test/home-guide-entry-native.test.ts",
               "test/home-guide-explore-entry-browser.test.js",
-              "test/browser-sidebar-entry.test.ts",
+              "test/home-guides.test.ts",
               "--hookTimeout",
               "25000"
             ],
             "outcome": "passed",
-            "summary": "验证收起侧栏时的不同探索演示入口和原生会话接管。",
-            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
-            "completedAt": "2026-11-17T02:36:23.152Z",
+            "summary": "在切换到目标研究、笔记、表格会话前打开共享右侧对话。",
+            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           },
           {
@@ -132,16 +110,16 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/browser-app-rendered.test.js",
+              "test/explore-menu-browser.test.ts",
               "-t",
-              "drags the window|opens workspace tabs only|places the shared workspace back button|reorders|opens a browser menu when pointerdown",
+              "always-flowing orb|Explore orb moving|restores the sidebar trigger",
               "--hookTimeout",
               "25000"
             ],
             "outcome": "passed",
-            "summary": "浏览器留白可拖动，页签、菜单可操作。",
-            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
-            "completedAt": "2026-11-17T02:36:23.152Z",
+            "summary": "验证探索按钮展开、收起时持续渐变以及系统减少动态效果。",
+            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           },
           {
@@ -149,16 +127,34 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/browser-page-context-rendered.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "test/image-factory-gallery.test.ts",
               "-t",
-              "Explore entry|active native webpage",
+              "Image Factory|hides the native add actions|uses the displayed asset|pages several cards",
               "--hookTimeout",
               "25000"
             ],
             "outcome": "passed",
-            "summary": "探索入口让出原生网页层且现有工作区菜单可关闭。",
-            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
-            "completedAt": "2026-11-17T02:36:23.152Z",
+            "summary": "在图像与浏览器隐藏画布和笔记插入操作并保留其它按钮。",
+            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "completedAt": "2026-11-17T03:00:40.584Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-native.test.js",
+              "-t",
+              "patches the canvas action|registers the browser view",
+              "--hookTimeout",
+              "25000"
+            ],
+            "outcome": "passed",
+            "summary": "验证共用对话的原生操作标识及运行时安装。",
+            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           },
           {
@@ -169,24 +165,24 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "cf5411001a35512d192226225f99c41537cd57c7",
-            "completedAt": "2026-11-17T02:36:23.152Z",
+            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Chromium 验证画廊布局、控制区点击、探索入口和浏览器顶栏交互。"
+          "summary": "原生会话测试验证右侧对话打开时机，真实 Chromium 验证图像操作可见性与探索动画。"
         },
         "acceptanceCriteria": [
-          "仅画廊图文暂停滚动，箭头与画布竖直居中。",
-          "探索研究看板走新建研究，表格走新建表格。",
-          "浏览器顶栏留白可移动窗口，打开菜单时仍可点击留白关闭。"
+          "研究、笔记和表格演示打开目标会话右侧对话。",
+          "探索图标在展开与收起侧栏中持续渐变。",
+          "图像历史回复隐藏添加到画布和笔记。"
         ],
         "risks": [
-          "最终包需实测原生窗口拖动及看板入口。"
+          "最终客户端需检查右侧对话就绪并实测播放跨过输入步骤。"
         ],
-        "generatedAt": "2026-11-17T02:36:23.152Z"
+        "generatedAt": "2026-11-17T03:00:40.584Z"
       }
     },
     {
