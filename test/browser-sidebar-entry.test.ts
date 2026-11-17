@@ -99,7 +99,7 @@ it('closes More as soon as the spreadsheet demo clicks New Spreadsheet',async()=
   const client=await createHomeGuideEntryClient(document,{runId:'spreadsheet-more-test',kind:'spreadsheet',signal:controller.signal,sourceSessionId:selected})
   const home=document.querySelector<HTMLButtonElement>('[data-sidebar-home]')!
   home.getBoundingClientRect=()=>new w.DOMRect(10,10,100,35) as unknown as DOMRect
-  await expect(client.prepare(home,'sidebar-home')).rejects.toMatchObject({name:'AbortError'})
+  await expect(client.prepare(home,'new-spreadsheet')).rejects.toMatchObject({name:'AbortError'})
   more.click()
   expect(more.getAttribute('aria-expanded')).toBe('true')
   const menu=document.querySelector('[data-sidebar-more]')!
@@ -122,6 +122,44 @@ it('closes More as soon as the spreadsheet demo clicks New Spreadsheet',async()=
   release()
   await pending?.catch(()=>{})
   spreadsheet.dispose()
+  dispose()
+  await w.happyDOM.abort()
+  vi.unstubAllGlobals()
+ }
+})
+
+it.each([['board','新建研究','new-research'],['workbench','新建研究','new-research'],['ppt','新建对话','new-chat'],['report','新建对话','new-chat']] as const)('closes More and opens only the prepared %s through its matching action',async(kind,label,action)=>{
+ const {w}=fixture(false),document=w.document as unknown as Document
+ const more=document.querySelector<HTMLButtonElement>('.st-more')!
+ const home=document.querySelector<HTMLButtonElement>('[data-sidebar-home]')!
+ const ordinaryAction=vi.fn()
+ home.addEventListener('click',ordinaryAction)
+ document.querySelector('[data-dsh-sidebar-root]')!.addEventListener('sherlock:sidebar-new-research',ordinaryAction)
+ const entry={sessionId:'demo',cwd:'/demo',title:'示例'}
+ let selected='source'
+ const input={snapshot:{phase:'plain',draft:'原会话草稿',draftRev:1}}
+ const open=vi.fn(()=>{selected=entry.sessionId})
+ const dispose=installHomeGuideEntryNative({
+  document,context:()=>({owner:'owner',generation:1,identityRevision:0,sessionId:selected,input}),
+  subscribe:()=>()=>{},prepare:async()=>entry,open
+ })
+ const controller=new AbortController()
+ try{
+  const client=await createHomeGuideEntryClient(document,{runId:kind+'-more-test',kind,signal:controller.signal,sourceSessionId:selected})
+  home.getBoundingClientRect=()=>new w.DOMRect(10,10,100,35) as unknown as DOMRect
+  await expect(client.prepare(home,action)).rejects.toMatchObject({name:'AbortError'})
+  more.click()
+  const target=[...document.querySelectorAll<HTMLButtonElement>('[data-sidebar-more] [role="menuitem"]')].find(button=>button.textContent===label)!
+  target.getBoundingClientRect=()=>new w.DOMRect(10,10,100,35) as unknown as DOMRect
+  await client.prepare(target,action)
+  const pending=client.commit(target)
+  expect(document.querySelector('[data-sidebar-more]')).toBeNull()
+  expect(more.getAttribute('aria-expanded')).toBe('false')
+  await expect(pending).resolves.toMatchObject(entry)
+  expect(open).toHaveBeenCalledExactlyOnceWith(entry,kind,expect.any(Function))
+  expect(ordinaryAction).not.toHaveBeenCalled()
+ }finally{
+  controller.abort()
   dispose()
   await w.happyDOM.abort()
   vi.unstubAllGlobals()
