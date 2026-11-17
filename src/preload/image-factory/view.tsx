@@ -10,7 +10,7 @@ import { brandArtwork } from './brand-artwork'
 import { brandDragType, findBrandAsset, moveBrandOverlay, placeBrandAsset, resizeBrandOverlay, type BrandAsset } from './brand-assets'
 import { BrandAssetLibrary } from './brand-library'
 import { imageFactoryFontFaces } from './fonts'
-import { galleryArtwork, ImageFactoryGallery } from './gallery'
+import { galleryArtwork, ImageFactoryGallery, templatePhoto } from './gallery'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
 import { galleryTemplateLayers } from './gallery-layout'
 import { groupLayers, isEditableLayer, layerUnitId, removeLayerUnits, translateLayers, ungroupLayers,
@@ -918,19 +918,36 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     refreshBusy()
     let background: Awaited<ReturnType<typeof createImageLayer>> | undefined
     try {
-      const source = galleryArtwork(example.id)
-      if (!source) throw Error(t('模板底图不可用。', 'The template background is unavailable.'))
-      const result = await fetch(source)
-      if (!result.ok) throw Error(t('模板底图无法读取。', 'The template background could not be loaded.'))
+      const photo = templatePhoto(example)
       const id = crypto.randomUUID()
-      background = await createImageLayer(doc, await result.blob(), id, crypto.randomUUID(), 'image/jpeg')
+      const design = example.enterprise
+      if (photo) {
+        const source = galleryArtwork(photo)
+        if (!source) throw Error(t('模板底图不可用。', 'The template background is unavailable.'))
+        const result = await fetch(source)
+        if (!result.ok) throw Error(t('模板底图无法读取。', 'The template background could not be loaded.'))
+        const blob = await result.blob()
+        if (design) {
+          const raster = await loadRaster(doc, blob)
+          try {
+            const { canvas, context } = canvasFor(doc, design)
+            const scale = Math.max(design.width / raster.width, design.height / raster.height)
+            const width = raster.width * scale, height = raster.height * scale
+            context.drawImage(raster.image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height)
+            background = await createImageLayer(doc, await encode(canvas, 'image/jpeg', .92), id, crypto.randomUUID(), 'image/jpeg')
+          } finally { URL.revokeObjectURL(raster.url) }
+        } else background = await createImageLayer(doc, blob, id, crypto.randomUUID(), 'image/jpeg')
+      }
+      const size = design ?? background?.raster
+      if (!size) throw Error(t('模板尺寸不可用。', 'The template size is unavailable.'))
       if (!inImages() || workspace.getSnapshot().scope !== scope) return
       const target = await requestGalleryTask(doc)
       if (!target) throw Error(t('未能打开新的图片任务。', 'Could not open a new image task.'))
       await workspace.ready(target)
       if (!inImages() || workspace.getSnapshot().scope !== target) return
-      const { width, height } = background.raster
-      const layers = [background, ...galleryTemplateLayers(example, { width, height }, t, () => crypto.randomUUID())]
+      const { width, height } = size
+      const layers: CanvasLayer[] = [...(background ? [background] : []),
+        ...galleryTemplateLayers(example, { width, height }, t, () => crypto.randomUUID())]
       if (!workspace.change(target, old => old ?? { id, width, height, title: t(...example.title), layers }))
         throw Error(t('未能将模板放到画布。', 'Could not place the template on the canvas.'))
       background = undefined
@@ -1108,16 +1125,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         : !creating && status === 'error' ? <div className="if-canvas-message" role="alert">
           <span>{t('画布暂时无法读取。', 'The canvas could not be opened.')}</span>
           <Button onClick={() => workspace.select(scope)}>{t('重新打开', 'Try again')}</Button>
-        </div> : !current ? <>
-          {galleryOpen && scene && <header className="if-gallery-return">
-            <strong>{t('宣传物料模板', 'Marketing templates')}</strong>
-            <button ref={galleryClose} type="button" className="if-button" aria-label={t('关闭模板页', 'Close templates')}
-              title={t('返回画板 · Esc', 'Return to canvas · Esc')} onClick={closeGallery}>
-              <Icon name="close"/> {t('关闭', 'Close')}
-            </button>
-          </header>}
-          <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt} onTemplate={openGalleryTemplate}/>
-        </> : <>
+        </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt} onTemplate={openGalleryTemplate}
+          onClose={galleryOpen && !!scene ? closeGallery : undefined} closeRef={galleryClose}/> : <>
         <div className="if-stage-scroll" data-pan-ready={spaceHeld} data-panning={panning} ref={scroll}
           onPointerDownCapture={event => panPointer(event, 'start')}
           onPointerMoveCapture={event => panPointer(event, 'move')}
