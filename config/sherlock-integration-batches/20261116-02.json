@@ -9,35 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "找回画框外文字与托管生图水印配置",
+        "featureName": "文字删除键、淡水印和消息中心直达",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
-        "tipCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
+        "baseCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
+        "tipCommit": "9b2cb71573414329b8f2b44a64b4c48f22074c45",
         "commits": [
           {
-            "commit": "04b8213b51f32602038113f69f0f8f5f39b5b3bb",
+            "commit": "d368defb463373d98c42de2d17afefc9328fac81",
             "parents": [
-              "6a3c7b367b956dc6c713fd5c8d0041e83a02200a"
+              "5b293d88803b1614aa2de350ac4cd680b986f263"
             ],
-            "subject": "修复：托管生图关闭供应商可见水印"
+            "subject": "优化：支持键盘删除文字并减淡图像水印"
           },
           {
-            "commit": "5b293d88803b1614aa2de350ac4cd680b986f263",
+            "commit": "9b2cb71573414329b8f2b44a64b4c48f22074c45",
             "parents": [
-              "04b8213b51f32602038113f69f0f8f5f39b5b3bb"
+              "d368defb463373d98c42de2d17afefc9328fac81"
             ],
-            "subject": "优化：从图层面板找回画框外的文字"
+            "subject": "修复：消息中心直达目标页面并简化页签样式"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/test-hosted-ai-worker.mjs"
-          },
-          {
-            "status": "M",
-            "path": "services/hosted-ai/worker.js"
-          },
           {
             "status": "M",
             "path": "src/preload/image-factory/style.css"
@@ -48,7 +40,27 @@
           },
           {
             "status": "M",
+            "path": "src/preload/image-factory/watermark.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notification-center.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
             "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-notifications-center.test.ts"
           }
         ],
         "checks": [
@@ -58,15 +70,15 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/knowledge-native-preview.test.ts",
-              "test/knowledge-session-copy.test.ts"
+              "test/research-board-notifications-center.test.ts",
+              "test/update-notification-store.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/session-completion-notifications.test.js"
             ],
             "outcome": "passed",
-            "summary": "图层找回、拖拽和保存、归档预览与副本",
-            "verifiedCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
-            "completedAt": "2026-11-17T04:52:32.384Z",
+            "summary": "文字编辑和键盘删除、协作消息和版本详情、应用覆盖层切换",
+            "verifiedCommit": "9b2cb71573414329b8f2b44a64b4c48f22074c45",
+            "completedAt": "2026-11-17T04:59:56.000Z",
             "timeoutMs": 150000
           },
           {
@@ -77,35 +89,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
-            "completedAt": "2026-11-17T04:52:32.384Z",
-            "timeoutMs": 150000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-hosted-ai-worker.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "本地网关上游请求关闭可见水印",
-            "verifiedCommit": "5b293d88803b1614aa2de350ac4cd680b986f263",
-            "completedAt": "2026-11-17T04:52:32.384Z",
+            "verifiedCommit": "9b2cb71573414329b8f2b44a64b4c48f22074c45",
+            "completedAt": "2026-11-17T04:59:56.000Z",
             "timeoutMs": 150000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Chromium 的中英文宽窄窗口，验证视口外文字选中后通过键盘移回画框，单次保存并恢复焦点。"
+          "summary": "Chromium 深浅主题验证文字编辑与 Delete 删除，透明 PNG 水印像素 alpha 最大 153，消息页签透明且打开目标后退出应用。"
         },
         "acceptanceCriteria": [
-          "选中画框外文字时可直接移回画框，文字格式保持。",
-          "托管生图请求关闭供应商可见水印。"
+          "Backspace 和 Delete 删除已选中的文字图层。",
+          "AI 水印白字 60% 不透明度，预览和导出均为透明背景。",
+          "消息中心页签透明，点击可打开的消息内容直达目标。"
         ],
         "risks": [
-          "桌面测试包仍需验收本次新增操作。",
-          "线上水印取决于网关部署。"
+          "实机包需验证消息打开真实协作看板。"
         ],
-        "generatedAt": "2026-11-17T04:52:32.384Z"
+        "generatedAt": "2026-11-17T04:59:56.000Z"
       }
     },
     {
