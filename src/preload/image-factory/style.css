@@ -43,7 +43,10 @@
 .image-factory .if-more {margin-inline-start:auto;background:var(--odyssey-header-icon-bg);border-radius:7px}
 .if-actions-popup {backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2))}
 .image-factory .if-more:not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]) {background:var(--odyssey-header-icon-hover)}
-.if-toolbar {height:48px;padding:0 14px;overflow:auto;scrollbar-width:none}
+.if-toolbar {position:relative;height:48px;padding:0 14px;overflow:hidden}
+.if-toolbar-entry {display:flex;align-items:center;flex:none;width:max-content}
+.if-toolbar-entry[data-overflow] {position:absolute;inset-inline-start:0;visibility:hidden;pointer-events:none}
+.if-actions-divider {margin:4px 3px;border:0;border-top:1px solid var(--odyssey-menu-border)}
 .if-toolbar .if-button {flex:none}
 .if-button {display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:32px;height:34px;padding:0 9px;white-space:nowrap;line-height:1.1}
 .if-button[data-current=true] {color:var(--if-accent);background:var(--if-picked)}
@@ -56,6 +59,9 @@
 .if-stage {position:relative;flex:1;min-height:0;overflow:hidden;background:radial-gradient(circle,var(--if-dot) 1px,transparent 1px) 0 0/28px 28px,var(--if-canvas);display:grid;place-items:center}
 .if-stage-scroll {position:absolute;inset:0 0 38px;overflow:auto;display:grid;place-items:safe center;padding:22px}
 .if-stage-scroll[data-pan-ready=true],.if-stage-scroll[data-pan-ready=true] * {cursor:grab!important}
+.if-stage-scroll[data-selecting-elements=true] {touch-action:none}
+.if-stage-scroll[data-selecting-elements=true],.if-stage-scroll[data-selecting-elements=true] .if-raster * {cursor:crosshair}
+.if-marquee {position:absolute;z-index:4;pointer-events:none;border:1px solid var(--if-mark);background:#3b82f629}
 .if-stage-scroll[data-panning=true],.if-stage-scroll[data-panning=true] * {cursor:grabbing!important}
 .if-raster {position:relative;flex:none;box-shadow:0 12px 32px #0004;user-select:none;background:repeating-conic-gradient(#8b8c8f29 0% 25%,transparent 0% 50%) 0 0/16px 16px,var(--if-canvas)}
 .if-raster-artwork {position:absolute;inset:0;pointer-events:none}
