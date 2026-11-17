@@ -225,6 +225,48 @@ it('opens a blank board workspace session in its own canvas scope', async () => 
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
+it('keeps a legacy standalone draft parked even when its neighboring task is unavailable', async () => {
+  const draft = { scope: null, title: 'alpha-257x149' }
+  let saved = { epoch: 4, tabs: [{ scope: 'unavailable-session' }], closed: [draft] }
+  const storage = { read: async () => structuredClone(saved),
+    write: vi.fn(async value => { saved = structuredClone(value) }) }
+  const f = fixture(storage)
+  try {
+    f.sessionCatalog.clear()
+    const scope = vi.fn()
+    let tasks
+    f.doc.addEventListener('sherlock:image-factory-session', event => scope(event.detail.sessionId))
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    const show = () => {
+      f.doc.body.dataset.workspaceSurface = 'image-factory'
+      f.events('request-session', { entry: true })
+    }
+    show()
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: expect.stringMatching(/^image-task-/), busy: false }))
+    const created = tasks.active
+    expect(scope).not.toHaveBeenCalledWith(null)
+    expect(tasks.tabs).not.toContainEqual(draft)
+    f.events('task-action', { kind: 'restore' })
+    expect(tasks.active).toBeNull()
+    expect(scope).toHaveBeenLastCalledWith(null)
+
+    delete f.sessionsState.byId[created]
+    storage.write.mockClear()
+    f.events('task-action', { kind: 'close', scope: null })
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: expect.stringMatching(/^image-task-/), busy: false }))
+    expect(tasks.active).not.toBe(created)
+    expect(storage.write).toHaveBeenCalledOnce()
+    expect(saved.closed).toEqual([draft])
+    delete f.doc.body.dataset.workspaceSurface
+    f.sessionCatalog.clear()
+    f.events('reset')
+    show()
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: expect.stringMatching(/^image-task-/), busy: false }))
+    expect(tasks.tabs).not.toContainEqual(draft)
+    expect(scope).toHaveBeenLastCalledWith(tasks.active)
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('uses a blank spreadsheet session scope instead of the detached image draft', async () => {
   const closed = 'image-task-closed-alpha'
   const storage = { read: async () => ({ epoch: 4, tabs: [], closed: [{ scope: closed, title: 'alpha-257x149' }] }), write: vi.fn(async () => {}) }

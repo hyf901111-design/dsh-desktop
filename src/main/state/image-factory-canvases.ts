@@ -19,9 +19,9 @@ const imageLayer = (canvas?: StoredCanvas) => canvas?.layers.find((layer): layer
 
 function readTaskTabs(value: unknown): ImageFactoryTaskTab[] {
   if (!Array.isArray(value) || value.length > 32) throw Error('图片任务页签数据无效。')
-  const seen = new Set<string>()
+  const seen = new Set<CanvasScope>()
   return value.map(tab => {
-    if (!tab || typeof tab.scope !== 'string' || !validCanvasScope(tab.scope) || seen.has(tab.scope) ||
+    if (!tab || !validCanvasScope(tab.scope) || seen.has(tab.scope) ||
         (tab.title !== undefined && (typeof tab.title !== 'string' || tab.title.length > 255)) ||
         (tab.pinned !== undefined && typeof tab.pinned !== 'boolean'))
       throw Error('图片任务页签数据无效。')
@@ -126,12 +126,18 @@ export class ImageFactoryCanvases {
     return this.run(async (owner, epoch, current) => {
       let tabs: ImageFactoryTaskTab[] = []
       let closed: ImageFactoryTaskTab[] = []
+      const draftDirectory = this.directory(owner, null)
       try {
-        const file = join(dirname(this.directory(owner, null)), 'task-tabs.json')
+        const file = join(dirname(draftDirectory), 'task-tabs.json')
         const stored = JSON.parse((await readBounded(file, 128 * 1024)).toString('utf8'))
         tabs = readTaskTabs(Array.isArray(stored) ? stored : stored?.tabs)
         if (!Array.isArray(stored)) closed = readTaskTabs(stored?.closed)
       } catch (error) { if (!missing(error)) throw error }
+      if (![...tabs, ...closed].some(tab => tab.scope === null)) {
+        // Older builds saved the drawing without tracking whether its tab was still open.
+        const draft = await this.readCanvas(draftDirectory).catch(() => undefined)
+        if (draft) closed = [{ scope: null, title: draft.title }, ...closed.slice(0, 31)]
+      }
       current()
       return { epoch, tabs, ...(closed.length && { closed }) }
     })

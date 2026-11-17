@@ -145,16 +145,17 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const setScene = (change: (old?: ImageScene) => ImageScene | undefined, persist = true) => workspace.change(scope, change, persist)
   const mounted = useRef(true)
   const creating = tasks?.creating !== undefined
-  const current = galleryOpen || creating ? undefined : scene
-  const showOpening = !creating && (status === 'loading' || status === 'idle') &&
-    !(scope !== null && tasks?.fresh === scope)
+  const canvasSelected = tasks?.active !== undefined && !tasks.busy
+  const current = galleryOpen || !canvasSelected ? undefined : scene
+  const showOpening = !creating && (tasks?.busy || tasks?.active !== undefined &&
+    (status === 'loading' || status === 'idle') && !(scope !== null && tasks?.fresh === scope))
   const { zoom, pan, reset: resetViewport, stepZoom, spaceHeld, panning, panPointer, panBy, canZoomIn, canZoomOut } =
     useImageViewport(doc, scroll, imageFrame, Boolean(current) && status === 'ready')
   const selectionDraft = current && selectionDrafts.current.get(current.id)
   const area = selectionDraft?.area
   const commentPending = !!selectionDraft?.phase
   const cutoutPending = cutouts.current.has(scope) || [...active.current.values()].some(job => job.cutout && job.sessionId === scope)
-  const busy = creating || status !== 'ready' || isBusy(scope) || commentPending || cutoutPending
+  const busy = !canvasSelected || status !== 'ready' || isBusy(scope) || commentPending || cutoutPending
   const raster = current?.layers.find((layer): layer is Extract<CanvasLayer, { kind: 'image' }> => layer.kind === 'image')
   const selectedText = current?.layers.find((layer): layer is TextLayer => layer.kind === 'text' && layer.id === selectedId)
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
@@ -944,13 +945,13 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   const react = createRoot(root)
   let identity = 0
   let workspace = new CanvasWorkspace(doc, bridge.storage)
-  let session: CanvasScope = null
+  let session: CanvasScope | undefined
   const activeHere = () => host.current()?.surface === 'image-factory'
   const select = (event: Event) => {
     const scope = (event as CustomEvent).detail?.sessionId
-    if (!validCanvasScope(scope)) return
+    if (scope !== undefined && !validCanvasScope(scope)) return
     session = scope
-    if (activeHere()) workspace.select(scope)
+    if (scope !== undefined && activeHere()) workspace.select(scope)
   }
   const adopt = (event: Event) => {
     const id = (event as CustomEvent).detail?.sessionId
@@ -974,7 +975,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
     host.open('image-factory')
     if (activeHere()) {
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen, entry: true } }))
-      workspace.select(session)
+      if (session !== undefined) workspace.select(session)
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     }
   }
@@ -1007,7 +1008,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
     reset() {
       identity++; host.close('image-factory'); workspace.dispose()
       workspace = new CanvasWorkspace(doc, bridge.storage)
-      session = null
+      session = undefined
       doc.dispatchEvent(new Event('sherlock:image-factory-reset')); render()
     },
     dispose() {
