@@ -125,6 +125,8 @@ export function patchSidebarNewNoteShell(input){
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
                     ctx.sessions.clear();
                 },`],
+    ['startSession: (workspaceId) => {', `startSession: (workspaceId) => {
+                    document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));`],
     [root,'\t\t\tconst newSessionControls = '+group+';\n'+`
     react.useEffect(()=>{
       if(wide)return;

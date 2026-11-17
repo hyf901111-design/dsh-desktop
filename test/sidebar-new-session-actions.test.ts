@@ -355,7 +355,9 @@ describe('Sherlock sidebar new-session actions', () => {
   it('requests Chat view before reopening a workspace blank session', async () => {
     const browserWindow = new Window({ url: 'https://sherlock.local/' })
     installBrowserGlobals(browserWindow)
-    const client = await loadClientBundle('dsh-client-ui-sidebar', browserWindow)
+    const client = await loadClientBundle('dsh-client-ui-sidebar', browserWindow, [], patchSidebarNewNoteShell)
+    const navigation: string[] = []
+    browserWindow.document.addEventListener('sherlock:sidebar-home-opened', () => navigation.push('home'))
     let registration: {
       inject: () => {
         startSession: (workspaceId?: string) => void
@@ -365,10 +367,12 @@ describe('Sherlock sidebar new-session actions', () => {
       _workspaceId?: string,
       beforeOpen?: (sessionId: string) => void
     ) => {
+      navigation.push('connect')
       beforeOpen?.('session-reused-from-research')
     })
     const requested: Array<{ sessionId?: string }> = []
     browserWindow.addEventListener('sherlock:conversation-initial-chat', (event) => {
+      navigation.push('chat')
       requested.push((event as unknown as { detail: { sessionId?: string } }).detail)
     })
 
@@ -389,6 +393,7 @@ describe('Sherlock sidebar new-session actions', () => {
 
     expect(startSession).toHaveBeenCalledWith(undefined, expect.any(Function))
     expect(requested).toEqual([{ sessionId: 'session-reused-from-research' }])
+    expect(navigation).toEqual(['home', 'connect', 'chat'])
   })
 
   it('prepares a requested session before opening it', async () => {
