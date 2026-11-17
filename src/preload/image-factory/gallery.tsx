@@ -1,21 +1,37 @@
 import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { galleryExamples } from './gallery-examples'
+import { galleryExamples, type GalleryExample } from './gallery-examples'
+import { galleryTemplateLayers } from './gallery-layout'
+import { brandArtwork } from './brand-artwork'
 import { iconSource } from './icons'
 import type { Size } from './raster'
 
 const art = import.meta.glob('./gallery-art/*.jpg', { eager: true, query: '?inline', import: 'default' }) as Record<string, string>
+export const galleryArtwork = (id: string) => art['./gallery-art/' + id + '.jpg']
 const scrollSpeed = 30
 const pageDuration = 260
 const wrap = (position: number, width: number) => ((position % width) + width) % width
 type T = (zh: string, en: string) => string
 
-function imageRatio({ width, height }: Size) {
-  let a = width, b = height
-  while (b) [a, b] = [b, a % b]
-  return (width / a) + ':' + (height / a)
+function TemplatePreview({ example, size, t }: { example: GalleryExample; size: Size; t: T }) {
+  let index = 0
+  const layers = galleryTemplateLayers(example, size, t, () => String(index++))
+  return <svg className="if-gallery-layout" viewBox={`0 0 ${size.width} ${size.height}`} aria-hidden="true">
+    {layers.map(layer => {
+      const x = layer.x * size.width, y = layer.y * size.height, width = layer.width * size.width
+      if (layer.kind === 'brand') return <image key={layer.id} href={brandArtwork[layer.asset].src}
+        x={x} y={y} width={width} height={layer.height * size.height}/>
+      if (layer.kind === 'shape') return <rect key={layer.id} x={x} y={y} width={width} height={layer.height * size.height} fill={layer.color}/>
+      return <text key={layer.id} x={x} y={y + layer.fontSize * .94} fill={layer.color}
+        fontFamily={layer.family + ', sans-serif'} fontWeight={layer.weight} fontSize={layer.fontSize}>
+        {layer.text.split('\n').map((line, index) => <tspan key={index} x={x} dy={index ? layer.fontSize * 1.2 : 0}>{line}</tspan>)}
+      </text>
+    })}
+  </svg>
 }
 
-export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: string): void }) {
+export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, onUse, onTemplate }: {
+  t: T; busy: boolean; onUse(prompt: string): void; onTemplate(example: GalleryExample): void
+}) {
   const [sizes, setSizes] = useState<Record<string, Size>>({})
   const viewport = useRef<HTMLDivElement>(null)
   const firstCycle = useRef<HTMLDivElement>(null)
@@ -146,22 +162,30 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
             const title = t(...example.title)
             const prompt = t(...example.prompt)
             const size = sizes[example.id]
-            const ratio = size && imageRatio(size)
+            const { format } = example
             const useLabel = t('做同款', 'Make something like this')
+            const templateLabel = t('可编辑模板', 'Editable template')
             return <article className="if-gallery-card" key={example.id}>
               <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
-                aria-label={title + ' · ' + useLabel}
-                onClick={() => onUse(ratio ? prompt + '\n' + t('画面比例为 ' + ratio + '。', 'Aspect ratio: ' + ratio + '.') : prompt)}>
-                <img alt="" loading="lazy" decoding="async" src={art['./gallery-art/' + example.id + '.jpg']} draggable={false}
+                aria-label={title + ' · ' + useLabel + ' · ' + templateLabel}
+                onClick={() => onTemplate(example)}>
+                <img alt="" loading="lazy" decoding="async" src={galleryArtwork(example.id)} draggable={false}
                   onLoad={({ currentTarget }) => {
                     const { naturalWidth: width, naturalHeight: height } = currentTarget
                     if (width && height) setSizes(current => current[example.id] ? current : { ...current, [example.id]: { width, height } })
                   }}/>
+                {size && <TemplatePreview example={example} size={size} t={t}/>}
+                <span className="if-gallery-template-badge" aria-hidden="true">{t(...example.material)}</span>
                 <span className="if-gallery-use">{useLabel}<i className="if-symbol"
                   style={{ maskImage: `url("${iconSource('arrow-up')}")` }} aria-hidden="true"/></span>
               </button>
               <h3><span className="if-gallery-hover">{title}</span></h3>
-              <span className="if-gallery-caption if-gallery-hover">{t('提示词', 'Prompt')}</span>
+              <div className="if-gallery-prompt">
+                <span className="if-gallery-caption if-gallery-hover">{t('底图提示词', 'Background prompt')}</span>
+                <button type="button" className="if-gallery-prompt-button if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
+                  onClick={() => onUse(prompt + '\n' + (format === 'A4' ? t('画面为 A4 竖版。', 'Use A4 portrait.')
+                    : t('画面比例为 ' + format + '。', 'Aspect ratio: ' + format + '.')))}>{t('复用', 'Reuse')}</button>
+              </div>
               <p><span className="if-gallery-hover">{prompt}</span></p>
               <dl>
                 <dt><span className="if-gallery-hover">{t('使用场景', 'Use cases')}</span></dt>
@@ -171,7 +195,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
                 {size && <>
                   <dt><span className="if-gallery-hover">{t('图像参数', 'Image settings')}</span></dt>
                   <dd>
-                    <span className="if-gallery-tag if-gallery-hover">{ratio}</span>
+                    <span className="if-gallery-tag if-gallery-hover">{format}</span>
                     <span className="if-gallery-tag if-gallery-hover">{size.width} × {size.height} px</span>
                   </dd>
                 </>}

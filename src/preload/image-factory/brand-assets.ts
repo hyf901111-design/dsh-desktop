@@ -51,6 +51,15 @@ export const brandAssetSections: { label: BrandLabel; assets: BrandAsset[] }[] =
     { id: 'product-blocks', label: ['产品宣传色块', 'Product layout blocks'], width: 600, height: 408, coverage: .72,
       parts: product.map(part => ({ ...part, y: part.y - 440 })) },
   ] },
+  { label: ['品牌色板', 'Brand palette'], assets: [
+    { id: 'swatch-deep-blue', label: ['易方达深蓝', 'E Fund deep blue'], color: palette.blue },
+    { id: 'swatch-bright-blue', label: ['易方达亮蓝', 'E Fund bright blue'], color: palette.bright },
+    { id: 'swatch-medium-blue', label: ['易方达中蓝', 'E Fund mid blue'], color: palette.medium },
+    { id: 'swatch-light-gray', label: ['易方达浅灰', 'E Fund light gray'], color: palette.gray },
+    { id: 'swatch-gold', label: ['易方达金色', 'E Fund gold'], color: palette.gold },
+    { id: 'swatch-white', label: ['白色', 'White'], color: palette.white },
+  ].map(({ id, label, color }): BrandAsset => ({ id, label: [label[0]!, label[1]!], width: 420, height: 146, coverage: .38,
+    parts: [block(color, 0, 0, 420, 146)] })) },
   { label: ['可编辑文字版式', 'Layouts with editable text'], assets: [
     { id: 'simple-poster', label: ['简洁海报', 'Simple poster'], width: 600, height: 848, coverage: .82, parts: [
       ...header, text(['海报主标题', 'Poster title'], 42, 295, 516, 54, palette.blue, 700),

@@ -27,7 +27,7 @@ export type TextLayer = {
   align: 'left' | 'center' | 'right'; color: string
 }
 export const brandArtworkIds = ['logo-blue', 'logo-white', 'container-left', 'container-right',
-  'container-left-white', 'container-right-white', 'graphic-top', 'graphic-bottom'] as const
+  'container-left-white', 'container-right-white', 'graphic-top', 'graphic-bottom', 'graphic-top-bright', 'graphic-bottom-bright'] as const
 export type BrandArtworkId = typeof brandArtworkIds[number]
 type OverlayBounds = { id: string; x: number; y: number; width: number; height: number }
 export type BrandArtworkLayer = OverlayBounds & { kind: 'brand'; asset: BrandArtworkId }

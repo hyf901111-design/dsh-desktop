@@ -538,3 +538,20 @@ it('replaces each conversation’s gallery example after switching conversations
     expect(f.session.prompt).not.toHaveBeenCalled()
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
+
+it('returns a fresh session to the gallery template without sending a prompt', async () => {
+  const f = fixture()
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session')
+    const completed = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-task-created', ({ detail }) => completed(detail))
+    const requestId = f.win.crypto.randomUUID()
+    f.events('task-action', { kind: 'new', requestId })
+    await vi.waitFor(() => expect(completed).toHaveBeenCalledOnce())
+    expect(completed).toHaveBeenCalledWith({ requestId, scope: f.sessionsState.current })
+    expect(f.sessionsState.current).toMatch(/^image-task-/)
+    expect(f.session.prompt).not.toHaveBeenCalled()
+    expect(f.shell.setDraft).not.toHaveBeenCalled()
+  } finally { f.binding.dispose(); await f.win.close() }
+})

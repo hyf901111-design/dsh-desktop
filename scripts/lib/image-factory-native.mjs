@@ -220,7 +220,13 @@ export function installImageFactoryContext({
     'focus-chat': focus, reset,
     'canvas-intent': event => { intendedCanvas = event.detail },
     'canvas-intent-ended': event => { if (event.detail === intendedCanvas) intendedCanvas = undefined },
-    'task-action': event => { void tasks.action(event.detail) }, 'task-title': event => tasks.setTitle(event.detail),
+    'task-action': event => {
+      const detail = event.detail
+      const pending = tasks.action(detail)
+      if (detail?.kind !== 'new' || typeof detail.requestId !== 'string' || !/^[a-f0-9-]{36}$/u.test(detail.requestId)) return
+      void pending.then(scope => signal('task-created', { requestId: detail.requestId,
+        scope: isActive() && canvasScope() === scope ? scope : undefined }))
+    }, 'task-title': event => tasks.setTitle(event.detail),
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   win.addEventListener('sherlock:pending-conversation-created', pendingCreated)

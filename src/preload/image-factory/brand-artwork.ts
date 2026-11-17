@@ -32,4 +32,6 @@ export const brandArtwork: Record<BrandArtworkId, Artwork> = {
   'container-right-white': artwork(right, logoRight, blue, ['右侧标识容器 · 白底', 'Right logo container · White'], white),
   'graphic-top': artwork([693.28, 181.28, 144, 109.46], graphicTop, blue, ['右上品牌图形', 'Top-right brand graphic']),
   'graphic-bottom': artwork([1072.33, 495.37, 144.01, 93.21], graphicBottom, blue, ['右下品牌图形', 'Bottom-right brand graphic']),
+  'graphic-top-bright': artwork([693.28, 181.28, 144, 109.46], graphicTop, brandColors.bright, ['右上品牌图形 · 亮蓝', 'Top-right graphic · Bright blue'], undefined, true),
+  'graphic-bottom-bright': artwork([1072.33, 495.37, 144.01, 93.21], graphicBottom, brandColors.bright, ['右下品牌图形 · 亮蓝', 'Bottom-right graphic · Bright blue'], undefined, true),
 }
