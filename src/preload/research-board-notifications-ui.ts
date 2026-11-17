@@ -21,7 +21,8 @@ import {
 } from './research-board-dialogs'
 export function mountResearchBoardNotifications(
   doc: Document,
-  bridge: ResearchBoardsBridge
+  bridge: ResearchBoardsBridge,
+  revealWorkspace?: () => void
 ) {
   const win = doc.defaultView!
   installBoardUiStyles(doc)
@@ -148,7 +149,7 @@ export function mountResearchBoardNotifications(
       if (decision === 'accept')
         root.append(
           boardButton(doc, '打开看板', () =>
-            requestBoardPageAction(doc, 'open', n.boardId).catch((e) => {
+            openBoardDestination(n.boardId).catch((e) => {
               status.textContent = e.message
             })
           )
@@ -242,6 +243,13 @@ export function mountResearchBoardNotifications(
       decision
     })
   }
+  async function openBoardDestination(boardId: string) {
+    const openedPanel = panel
+    await requestBoardPageAction(doc, 'open', boardId)
+    if (panel !== openedPanel) return
+    revealWorkspace?.()
+    if (openedPanel) closePanel()
+  }
   function appendCenterRecord(row: HTMLElement, n: Notification, title: HTMLElement, subtitle: HTMLElement) {
     const status = n.invitation?.status
     const operation = pending(n) ? invitationStates.get(n.notificationId) : undefined
@@ -250,8 +258,7 @@ export function mountResearchBoardNotifications(
       const open = async () => {
         const openedPanel = panel
         try {
-          await requestBoardPageAction(doc, 'open', n.boardId)
-          if (panel === openedPanel) closePanel()
+          await openBoardDestination(n.boardId)
         } catch {
           if (panel === openedPanel) {
             feedback = { text: '打开看板失败，请重试。', retry: open }
@@ -371,7 +378,7 @@ export function mountResearchBoardNotifications(
       if (n.invitation?.status === 'accepted') {
         footer.append(
           boardButton(doc, '打开看板', () =>
-            requestBoardPageAction(doc, 'open', n.boardId)
+            openBoardDestination(n.boardId)
           )
         )
         if (compact) footer.lastElementChild?.classList.add('ework-notice-primary')
@@ -391,14 +398,19 @@ export function mountResearchBoardNotifications(
     message.className = 'srb-notification-subtitle'
     message.textContent = latestUpdate && liveUpdatePhase === latestUpdate.phase ? updateMessage(latestUpdate, 'zh') : ''
     const actions = appendLines(row, title, message, latestUpdateSeenAt)
-    actions.append(boardButton(doc, '详情', () => {
-      closePanel()
+    const details = () => {
       const browserPage = doc.querySelector('.eb-root:not([hidden])[data-native-page=true]')
+      closePanel()
+      revealWorkspace?.()
       if (!browserPage && latestUpdate?.releaseNotes && liveUpdatePhase === latestUpdate.phase &&
           ['available', 'downloading', 'preparing', 'downloaded', 'error'].includes(latestUpdate.phase)) {
         doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: 'show' }))
       } else doc.dispatchEvent(new win.Event('ework-open-about'))
-    }))
+    }
+    actions.append(boardButton(doc, '详情', details))
+    row.addEventListener('click', event => {
+      if (!(event.target as Element).closest('button')) details()
+    })
     if (liveUpdatePhase === latestUpdate?.phase && (latestUpdate?.phase === 'available' || latestUpdate?.phase === 'downloaded' || latestUpdate?.phase === 'error')) actions.append(boardButton(doc, latestUpdate.phase === 'downloaded' ? '重启更新' : latestUpdate.phase === 'available' ? '更新' : updateErrorCopy(latestUpdate, 'zh').retryLabel, () => { doc.dispatchEvent(new win.CustomEvent('ework-update-action', { detail: latestUpdate?.phase === 'downloaded' ? 'install' : latestUpdate?.phase === 'error' ? 'retry' : 'download' })) }))
     if (updateUnread()) appendMarkRead(actions, () => markRead([], latestUpdate?.availableVersion), !!marking?.version)
     return row

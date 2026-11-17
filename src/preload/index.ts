@@ -251,7 +251,6 @@ function initializeUi(): void {
     const block=anchor?.closest<HTMLElement>('.bn-block-outer[data-id]'),note=anchor?.closest<HTMLElement>('[data-note-source-revision]'),message=anchor?.closest<HTMLElement>('[data-event-seq],[data-message-id]')
     document.dispatchEvent(new CustomEvent('sherlock:memory-save-selection',{detail:{content:value.content,title:'选中的内容',sessionId,source:{kind:inNote?'note':'conversation',sessionId,...(inNote&&block&&note?{noteId:block.dataset.id,noteRevision:Number(note.dataset.noteSourceRevision)}:{}),...(!inNote&&message?{...(message.dataset.eventSeq?{seq:Number(message.dataset.eventSeq)}:{}),...(message.dataset.messageId?{messageId:message.dataset.messageId}:{})}:{}),title:'客户端中选中的内容',excerpt:value.content,createdAt:Date.now()}}}))
   })
-  mountResearchBoardNotifications(document, boards)
   window.addEventListener('unload', mountImageGenerationFlow(document), { once: true })
   mountDeveloperModeUi()
   if (process.platform === 'win32') {
@@ -282,6 +281,7 @@ function initializeUi(): void {
   }
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
+  mountResearchBoardNotifications(document, boards, () => workspaceSurfaceHost.revealConversation())
   openFileInEditor = async (source, mode) => {
     try {
       const locale = document.documentElement.dataset.odysseyLocale
