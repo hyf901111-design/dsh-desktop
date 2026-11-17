@@ -205,6 +205,12 @@ ${welcomeAnchor}`,'right pane welcome component')
  change(chip,chip.replace('children: [',`children: [chip.source==='image-factory-layer' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5'})), chip.source==='spreadsheet-range' && ${gridIcon}, chip.source==='knowledge-reference' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1zm0 0v14'})), `),'range chip icon')
  const remove='(researchReference !== null || chip.source === "pptx-annotation") && selectedResearchOccurrenceId'
  change(remove,remove.replace('|| chip.source', '|| chip.source === "spreadsheet-range" || chip.source === "knowledge-reference" || chip.source === "image-factory-layer" || chip.source'),'range chip removal')
+ const nativeDrag='draggable: researchReference !== null && !provisionalResearchReferences.has(chip.occurrenceId) && !locked && !machineBusy,'
+ change(nativeDrag,nativeDrag.replace('researchReference !== null', '(researchReference !== null || chip.source === "image-factory-layer")'),'layer chip dragging')
+ for(const kind of ['onDragStart','onDragEnd']){
+  const disabled=kind+': researchReference === null ? void 0 :'
+  change(disabled,disabled.replace('researchReference === null','researchReference === null && chip.source !== "image-factory-layer"'),'layer chip '+kind)
+ }
  const history='function projectUserText(text, openFile) {'
  change(history,history+`
  const sheetParts=(${spreadsheetMessageParts.toString()})(text)

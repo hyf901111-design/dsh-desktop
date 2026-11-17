@@ -1,21 +1,14 @@
-import { memo, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
-import type { GalleryCategory } from './enterprise-gallery'
 import { galleryTemplateLayers } from './gallery-layout'
 import { promptExamples, type PromptExample } from './prompt-gallery'
 import { textLayerStyle } from './layers'
-import { templatePhoto, templatePhotoFrame } from './template-photo'
 import { brandArtwork } from './brand-artwork'
 import { iconSource } from './icons'
 import type { Size } from './raster'
 
 const art = import.meta.glob('./gallery-art/*.jpg', { eager: true, query: '?inline', import: 'default' }) as Record<string, string>
 export const galleryArtwork = (id: string) => art['./gallery-art/' + id + '.jpg']
-const categories = [
-  ['all', '全部', 'All'], ['efund', '易方达品牌', 'E Fund'], ['enterprise', '企业通用', 'Enterprise'],
-  ['events', '会议活动', 'Events'], ['brand', '品牌传播', 'Brand'], ['social', '社交媒体', 'Social'],
-  ['team', '内部沟通', 'Team'], ['report', '报告与洞察', 'Reports'], ['operations', '业务运营', 'Operations'],
-] as const satisfies readonly (readonly [GalleryCategory | 'all' | 'efund' | 'enterprise', string, string])[]
 const promptCases: PromptExample[] = [
   ...promptExamples,
   ...galleryExamples.flatMap(({ id, title, prompt, format, scenes }) => prompt ? [{ id, title, prompt, format, scenes }] : []),
@@ -30,11 +23,10 @@ const TemplatePreview = memo(function TemplatePreview({ example, size, photo, t 
 }) {
   let index = 0
   const layers = galleryTemplateLayers(example, size, t, () => String(index++))
-  const frame = templatePhotoFrame(example, size)
   return <svg className="if-gallery-layout" viewBox={`0 0 ${size.width} ${size.height}`} aria-hidden="true">
     {photo && <>
       <rect width={size.width} height={size.height} fill="#ffffff"/>
-      <image href={photo} x={frame.x} y={frame.y} width={frame.width} height={frame.height} preserveAspectRatio="xMidYMid slice"/>
+      <image href={photo} width={size.width} height={size.height} preserveAspectRatio="xMidYMid slice"/>
     </>}
     {layers.map(layer => {
       const x = layer.x * size.width, y = layer.y * size.height, width = layer.width * size.width
@@ -54,14 +46,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
 }) {
   const [sizes, setSizes] = useState<Record<string, Size>>({})
   const [mode, setMode] = useState<'templates' | 'prompts'>('templates')
-  const [category, setCategory] = useState<typeof categories[number][0]>('all')
-  const templates = galleryExamples.filter(example => {
-    if (category === 'all') return true
-    if (category === 'efund') return !example.enterprise
-    if (category === 'enterprise') return !!example.enterprise
-    return example.enterprise?.category === category
-  })
-  const cardCount = mode === 'templates' ? templates.length : promptCases.length
+  const cardCount = galleryExamples.length
   const viewport = useRef<HTMLDivElement>(null)
   const firstCycle = useRef<HTMLDivElement>(null)
   const page = useRef<(direction: -1 | 1) => void>()
@@ -181,7 +166,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
       reducedMotion.removeEventListener('change', updateMotion)
       node.removeEventListener('wheel', wheel)
     }
-  }, [cardCount, mode, category])
+  }, [cardCount, mode])
 
   useEffect(() => {
     const node = viewport.current?.querySelector('.if-gallery-track')
@@ -192,7 +177,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
     const reduce = () => { if (motion.matches) animation.cancel() }
     motion.addEventListener('change', reduce)
     return () => { motion.removeEventListener('change', reduce); animation.cancel() }
-  }, [mode, category])
+  }, [mode])
 
   return <div className="if-gallery" role="region" aria-label={t('灵感画廊', 'Inspiration gallery')}>
     <div className="if-gallery-heading">
@@ -207,20 +192,17 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
         <i className="if-symbol" style={{ '--if-icon': 'url("' + iconSource('close') + '")' } as CSSProperties} aria-hidden="true"/>
         {t('关闭', 'Close')}
       </button>}
-      {mode === 'templates' && <div className="if-gallery-filters" role="group" aria-label={t('模板分类', 'Template categories')}>
-        {categories.map(([id, zh, en]) => <button key={id} type="button" className="if-button" data-current={category === id}
-          aria-pressed={category === id} onClick={() => setCategory(id)}>{t(zh, en)}</button>)}
-      </div>}
     </div>
+    {mode === 'prompts' ? <PromptGallery t={t} busy={busy} onUse={onUse}/> : <>
     <div className="if-gallery-viewport" ref={viewport}>
       <div className="if-gallery-track">
         {[false, true].map(repeated => <div className="if-gallery-cycle" key={String(repeated)}
           ref={repeated ? undefined : firstCycle} data-repeat={repeated} aria-hidden={repeated || undefined}>
-          {mode === 'templates' ? templates.map(example => {
+          {galleryExamples.map(example => {
             const title = t(...example.title)
             const material = t(...example.material)
-            const size = example.enterprise ?? sizes[example.id]
-            const photo = galleryArtwork(templatePhoto(example) ?? '')
+            const size = sizes[example.id]
+            const photo = galleryArtwork(example.id)
             const useLabel = t('做同款', 'Make something like this')
             const templateLabel = t('可编辑模板', 'Editable template')
             return <article className="if-gallery-card" key={example.id} data-gallery-kind="template">
@@ -243,27 +225,6 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
                 {size && <span className="if-gallery-tag if-gallery-hover">{size.width} × {size.height} px</span>}
               </div>
             </article>
-          }) : promptCases.map(example => {
-            const title = t(...example.title)
-            const prompt = t(...example.prompt)
-            const useLabel = t('用同款提示词', 'Use this prompt')
-            return <article className="if-gallery-card" key={example.id} data-gallery-kind="prompt">
-              <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
-                aria-label={title + ' · ' + useLabel}
-                onClick={() => onUse(prompt + '\n' + t('画面比例为 ' + example.format + '。', 'Aspect ratio: ' + example.format + '.'))}>
-                <span className="if-gallery-media">
-                  <img alt="" loading="lazy" decoding="async" src={galleryArtwork(example.id)} draggable={false}/>
-                </span>
-                <span className="if-gallery-use">{useLabel}</span>
-              </button>
-              <h3 className="if-gallery-hover">{title}</h3>
-              <p className="if-gallery-hover">{prompt}</p>
-              <div className="if-gallery-details">
-                <span className="if-gallery-tag if-gallery-hover">{example.format}</span>
-                {example.scenes && t(...example.scenes).split(' · ').map(scene =>
-                  <span className="if-gallery-tag if-gallery-hover" key={scene}>{scene}</span>)}
-              </div>
-            </article>
           })}
         </div>)}
       </div>
@@ -277,5 +238,38 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
         </button>
       })}
     </div>
+    </>}
   </div>
 })
+
+function PromptGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: string): void }) {
+  const viewport = useRef<HTMLDivElement>(null)
+  const [columns, setColumns] = useState(3)
+  useLayoutEffect(() => {
+    const element = viewport.current
+    if (!element) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return
+      const width = entry.contentRect.width
+      setColumns(width >= 1280 ? 4 : width >= 650 ? 3 : width >= 340 ? 2 : 1)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  const lanes = Array.from({ length: columns }, (_, column) => promptCases.filter((_, index) => index % columns === column))
+  return <div className="if-prompt-gallery" ref={viewport} role="region" aria-label={t('提示词图片画廊', 'Prompt image gallery')}>
+    {lanes.map((examples, column) => <div key={column} className="if-prompt-lane" style={{ '--if-prompt-count': examples.length } as CSSProperties}>
+      <div className="if-prompt-track">
+        {[false, true].map(repeated => <div key={String(repeated)} className="if-prompt-cycle"
+          data-repeat={repeated} aria-hidden={repeated || undefined}>
+          {examples.map(({ id, title, prompt, format }) => <button type="button" className="if-prompt-image" key={id}
+            tabIndex={repeated ? -1 : undefined} disabled={busy}
+            aria-label={t(...title) + ' · ' + t('用同款提示词', 'Use this prompt')}
+            onClick={() => onUse(t(...prompt) + '\n' + t('画面比例为 ' + format + '。', 'Aspect ratio: ' + format + '.'))}>
+            <img alt="" src={galleryArtwork(id)} draggable={false} decoding="async"/>
+          </button>)}
+        </div>)}
+      </div>
+    </div>)}
+  </div>
+}

@@ -721,7 +721,8 @@ it('groups two selected layers, restores the group with redo, and returns from t
     await act(async () => tool('下一步').click())
     expect(layers()).toEqual([{ ...first, groupId }, { ...second, groupId }])
 
-    await act(async () => document.querySelector<HTMLButtonElement>('.if-drawer-header [data-drawer-tab="brand"]')!.click())
+    expect(document.querySelector('.if-drawer [data-drawer-tab]')).toBeNull()
+    await act(async () => document.querySelector<HTMLButtonElement>('.if-toolbar [data-drawer-tab="brand"]')!.click())
     expect(document.querySelector('.if-layers')).toBeNull()
     expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
     await act(async () => document.querySelector<HTMLButtonElement>('.if-brand-templates')!.click())

@@ -5,28 +5,30 @@ import { expect, it, vi } from 'vitest'
 import { ImageFactoryGallery } from '../src/preload/image-factory/gallery'
 import { galleryExamples } from '../src/preload/image-factory/gallery-examples'
 
-it('filters enterprise templates and offers distinct prompt-only generation cases', async () => {
+it('shows only E Fund templates and offers a separate image-only prompt gallery without category filters', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const mount = document.body.appendChild(document.createElement('div'))
   const root = createRoot(mount)
-  const use = vi.fn()
+  const use = vi.fn(), onTemplate = vi.fn()
   try {
-    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: use, onTemplate: vi.fn() })))
+    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: use, onTemplate })))
     const cards = () => Array.from(mount.querySelectorAll('.if-gallery-cycle[data-repeat="false"] article'))
     const button = (label: string) => [...mount.querySelectorAll<HTMLButtonElement>('button')].find(item => item.textContent === label)!
-    expect(cards()).toHaveLength(42)
+    expect(cards()).toHaveLength(12)
+    expect(mount.querySelector('[aria-label="模板分类"]')).toBeNull()
     const rollup = cards().find(item => item.querySelector('h3')?.textContent === '线下易拉宝')!
     await vi.waitFor(() => expect(Array.from(rollup.querySelectorAll('.if-gallery-tag'), tag => tag.textContent))
       .toEqual(['2:5', '640 × 1600 px']))
-    await act(async () => button('企业通用').click())
-    expect(cards()).toHaveLength(30)
-    expect(new Set(cards().map(card => card.querySelector('h3')?.textContent)).size).toBe(30)
     await act(async () => button('基于提示词生成').click())
-    expect(cards()).toHaveLength(22)
-    expect(cards().every(card => card.getAttribute('data-gallery-kind') === 'prompt')).toBe(true)
-    expect(cards()[0]!.querySelector('.if-gallery-layout')).toBeNull()
-    await act(async () => cards()[0]!.querySelector('button')!.click())
+    const prompts = [...mount.querySelectorAll<HTMLButtonElement>('.if-prompt-cycle[data-repeat="false"] button')]
+    expect(prompts).toHaveLength(22)
+    expect(mount.querySelectorAll('.if-prompt-lane').length).toBeGreaterThan(1)
+    expect(mount.querySelector('.if-prompt-gallery')?.textContent).toBe('')
+    expect(prompts.every(item => item.querySelector('img') && item.getAttribute('aria-label'))).toBe(true)
+    expect(cards()).toHaveLength(0)
+    await act(async () => prompts[0]!.click())
     expect(use).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/画面比例为 16:9。$/u))
+    expect(onTemplate).not.toHaveBeenCalled()
   } finally {
     await act(() => root.unmount())
     mount.remove()
@@ -131,24 +133,5 @@ it('uses the editable project route for a preview with a logo and poster title',
     await act(() => root.unmount())
     mount.remove()
     vi.unstubAllGlobals()
-  }
-})
-
-it('produces thirty distinct editable enterprise canvases without invalid layer bounds or clipping', async () => {
-  const { enterpriseGalleryExamples } = await import('../src/preload/image-factory/enterprise-gallery')
-  const { galleryTemplateLayers } = await import('../src/preload/image-factory/gallery-layout')
-  const { validCanvasSize } = await import('../src/shared/image-factory-canvas')
-  expect(enterpriseGalleryExamples).toHaveLength(30)
-  for (const item of enterpriseGalleryExamples) {
-    const size = item.enterprise!
-    expect(validCanvasSize(size.width, size.height), item.id).toBe(true)
-    const layers = galleryTemplateLayers(item, size, zh => zh, () => crypto.randomUUID())
-    expect(layers.filter(layer => layer.kind === 'text').length, item.id).toBeGreaterThanOrEqual(3)
-    expect(layers.some(layer => layer.kind === 'shape'), item.id).toBe(true)
-    for (const layer of layers) {
-      const height = layer.kind === 'text' ? layer.fontSize * 1.2 / size.height : layer.height
-      expect(layer.x + layer.width, item.id + ' width').toBeLessThanOrEqual(1.00001)
-      expect(layer.y + height, item.id + ' height').toBeLessThanOrEqual(1.00001)
-    }
   }
 })

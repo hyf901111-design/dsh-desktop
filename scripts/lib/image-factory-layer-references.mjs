@@ -21,25 +21,46 @@ export function imageLayerReferenceParts(text) {
   return typeof text === 'string' ? [...text.matchAll(/〔odyssey-layer:([^〕\n]{1,2300})〕/gu)] : []
 }
 
-export function readImageLayerReceipt(nodes, id) {
+/** Assign stable turn-local numbers in draft order, preserving every occurrence. */
+export function bindImageLayerReferences(content) {
+  const references = new Map()
+  let hasInstructions = false
+  const parts = content.map(part => {
+    if (part.type !== 'text') return part
+    const matches = imageLayerReferenceParts(part.text)
+    let cursor = 0, text = ''
+    for (const match of matches) {
+      const reference = readImageLayerReference(decodeURIComponent(match[1]))
+      const id = JSON.stringify([reference.scope, reference.sceneId, reference.layerId])
+      const target = references.get(id) ?? { ...reference, key: references.size + 1 }
+      references.set(id, target)
+      const before = part.text.slice(cursor, match.index)
+      hasInstructions ||= !!before.trim()
+      text += before + '〔图层 ' + target.key + '：' + target.label.replace(/[〔〕]/gu, '') + '〕'
+      cursor = match.index + match[0].length
+    }
+    const remaining = part.text.slice(cursor)
+    hasInstructions ||= !!remaining.trim()
+    return { ...part, text: text + remaining }
+  })
+  return { parts, layers: [...references.values()], hasInstructions }
+}
+
+export function readImageLayerReceipts(nodes, id) {
+  const edits = new Map()
   function visit(call) {
     if ((call?.name ?? call?.call?.name) === 'image_edit_layer' && !call.isError) {
       for (const block of call.content ?? []) {
         if (block.type !== 'text') continue
         try {
           const value = JSON.parse(block.text)
-          if (value.kind === 'odyssey-image-layer-edit' && value.id === id) return value.patch
+          if (value.kind === 'odyssey-image-layer-edit' && value.id === id && value.patch && typeof value.patch === 'object')
+            edits.set(value.target ?? 1, { ...edits.get(value.target ?? 1), ...value.patch })
         } catch {}
       }
     }
-    for (const child of call?.subCalls ?? []) {
-      const found = visit(child)
-      if (found) return found
-    }
+    for (const child of call?.subCalls ?? []) visit(child)
   }
-  for (const node of nodes) {
-    if (node.kind !== 'tool-call') continue
-    const found = visit(node.data?.root)
-    if (found) return found
-  }
+  for (const node of nodes) if (node.kind === 'tool-call') visit(node.data?.root)
+  return edits
 }

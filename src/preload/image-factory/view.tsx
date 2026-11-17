@@ -13,7 +13,6 @@ import { imageFactoryFontFaces } from './fonts'
 import { galleryArtwork, ImageFactoryGallery } from './gallery'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
 import { galleryTemplateLayers } from './gallery-layout'
-import { drawTemplatePhoto, templatePhoto, templatePhotoFrame } from './template-photo'
 import { groupLayers, isEditableLayer, layerUnitId, removeLayerUnits, translateLayers, ungroupLayers,
   type EditableLayer } from './layer-groups'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
@@ -36,7 +35,7 @@ type Bridge = {
 }
 type T = (zh: string, en: string) => string
 type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region; preserveTransparency: boolean };
-  targetLayer?: CanvasLayer; cutout?: boolean; size: Size; title: string; delivering: boolean; release(): void }
+  targets?: { key: number; layer: CanvasLayer }[]; cutout?: boolean; size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
 type DrawerTab = 'layers' | 'brand'
 const overlayHandles = ['nw', 'ne', 'sw', 'se'] as const
@@ -65,6 +64,20 @@ function Button({ icon, label, children, onClick, active, disabled, primary, typ
     {icon && <Icon name={icon}/>} {children}
   </button>
 }
+function patchTargetLayer(layer: EditableLayer, patch: Record<string, unknown>): EditableLayer {
+  const color = typeof patch.color === 'string' && /^#[a-f0-9]{6}$/iu.test(patch.color) ? patch.color : undefined
+  if (layer.kind === 'text') return {
+    ...layer, color: color ?? layer.color,
+    text: typeof patch.text === 'string' && patch.text.length <= 500 ? patch.text : layer.text,
+    fontSize: typeof patch.fontSize === 'number' && patch.fontSize >= 8 && patch.fontSize <= 600 ? patch.fontSize : layer.fontSize,
+    weight: typeof patch.weight === 'number' && [400, 500, 600, 700].includes(patch.weight) ? patch.weight : layer.weight,
+    align: patch.align === 'left' || patch.align === 'center' || patch.align === 'right' ? patch.align : layer.align,
+  }
+  if (layer.kind === 'shape' && color) return { ...layer, color }
+  if (layer.kind === 'brand' && brandArtworkIds.includes(patch.asset as BrandArtworkId)) return { ...layer, asset: patch.asset as BrandArtworkId }
+  return layer
+}
+
 function errorLabel(error: unknown, fallback: string) {
   return error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': Error: /, '') : fallback
 }
@@ -415,8 +428,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     setBrandDragging(false)
     toolbar.current?.querySelector<HTMLButtonElement>('[data-drawer-tab="' + tab + '"]')?.focus({ preventScroll: true })
   }
-  function chooseDrawer(tab: DrawerTab, toggle: boolean) {
-    if (toggle && drawer === tab) closeDrawer()
+  function chooseDrawer(tab: DrawerTab) {
+    if (drawer === tab) closeDrawer()
     else {
       setDrawer(tab)
       setBrandDragging(false)
@@ -605,6 +618,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     if (busy) return
     releaseText()
     clearSelection()
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-reference-clear'))
     setSelectedIds(previous => previous.filter(id => !ids.includes(id)))
     setScene(old => old && { ...old, layers: removeLayerUnits(old.layers, ids) })
   }
@@ -744,7 +758,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       job.release(); if (mounted.current) refreshBusy()
     }
     const prepare = async (event: Event) => {
-      const { id, sessionId, scope: requestedScope, prompt, uploaded, region, cutout, layer } = (event as CustomEvent).detail ?? {}
+      const { id, sessionId, scope: requestedScope, prompt, uploaded, region, cutout, layers } = (event as CustomEvent).detail ?? {}
       if (doc.body.dataset.workspaceSurface !== 'image-factory' || typeof id !== 'string' ||
           typeof sessionId !== 'string' || !validCanvasScope(sessionId) || typeof prompt !== 'string') return
       const reply = (data: object) => emit('prepared', { id, ...data })
@@ -760,18 +774,20 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         const ready = await workspace.ready(requestedScope)
         if (!mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' || workspace.getSnapshot().scope !== requestedScope)
           throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
-        const newImage = !layer && !region && !cutout && (galleryScope === requestedScope || startsNewImage(prompt))
+        const newImage = !layers && !region && !cutout && (galleryScope === requestedScope || startsNewImage(prompt))
         const base = newImage ? undefined : ready
-        const targetLayer = layer && base && base.id === layer.sceneId && base.layers.find(item => item.id === layer.layerId) || undefined
-        if (layer && !targetLayer) throw Error(t('引用的图层已变化，请重新选择。', 'The referenced layer changed. Select it again.'))
-        const vectorEdit = targetLayer && targetLayer.kind !== 'image'
-        const image = vectorEdit ? undefined : base?.layers.find(layer => layer.kind === 'image')
+        const targets: CanvasJob['targets'] = layers?.map((reference: { sceneId: string; layerId: string; key: number; label: string }) => {
+          const layer = base?.id === reference.sceneId ? base.layers.find(item => item.id === reference.layerId) : undefined
+          if (!layer) throw Error(t('引用的图层已变化，请重新选择。', 'A referenced layer changed. Select it again.'))
+          return { key: reference.key, layer }
+        })
+        const image = (targets ? targets.map(item => item.layer) : base?.layers)?.find(item => item.kind === 'image')
         const draft = base && selectionDrafts.current.get(base.id)
         const selection = region && draft?.requestId === id && draft.phase === 'sending' ? draft.area : undefined
         if (region && (!selection || !image)) throw Error(t('选区已变化，请重新框选。', 'The selection changed. Select the area again.'))
         if (cutout && (pendingCutout !== id || !image || galleryScope === requestedScope))
           throw Error(t('当前图片已变化，请重试。', 'The current image changed. Try again.'))
-        const size = (selection || cutout || targetLayer ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
+        const size = (selection || cutout || targets ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
         const title = base?.title ?? titleFromPrompt(prompt, t)
         const target = selection ?? size
         const output = providerSize(target)
@@ -780,7 +796,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           area: selection, frame: regionEditFrame(selection, outputSize, image.raster),
           preserveTransparency: preservesRegionTransparency(prompt),
         } : undefined
-        job = { id, sessionId, scope: requestedScope, scene: base, edit, targetLayer, cutout: cutout === true, size, title, delivering: false, release: hold }
+        job = { id, sessionId, scope: requestedScope, scene: base, edit, targets, cutout: cutout === true, size, title, delivering: false, release: hold }
         active.current.set(id, job)
         let reference
         if (cutout && image) {
@@ -798,11 +814,14 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           : undefined
         if (!active.current.has(id) || !mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' ||
             workspace.getSnapshot().scope !== requestedScope) throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
-        const description = targetLayer?.kind === 'text' ? JSON.stringify({ text: targetLayer.text, color: targetLayer.color,
-          fontSize: targetLayer.fontSize, weight: targetLayer.weight, align: targetLayer.align }) : targetLayer?.kind === 'shape' ? targetLayer.color :
-          targetLayer?.kind === 'brand' ? targetLayer.asset : ''
-        reply({ operation: vectorEdit ? 'layer' : cutout ? 'cutout' : edit ? 'region' : reference || uploaded ? 'edit' : 'generate', size: output,
-          width: target.width, height: target.height, title, reference, targetLayer: targetLayer && { kind: targetLayer.kind, label: layer.label, description }, editBounds: edit && regionEditBounds(edit.area, edit.frame) })
+        const targetLayers = targets?.map(({ key, layer }, index) => {
+          const description = layer.kind === 'text' ? JSON.stringify({ text: layer.text, color: layer.color,
+            fontSize: layer.fontSize, weight: layer.weight, align: layer.align }) : layer.kind === 'shape' ? layer.color :
+            layer.kind === 'brand' ? layer.asset : ''
+          return { key, kind: layer.kind, label: layers[index].label, description: description.slice(0, 1800) }
+        })
+        reply({ operation: targets ? 'layer' : cutout ? 'cutout' : edit ? 'region' : reference || uploaded ? 'edit' : 'generate', size: output,
+          width: target.width, height: target.height, title, reference, targetLayers, editBounds: edit && regionEditBounds(edit.area, edit.frame) })
       } catch (error) {
         if (job) release(job); else hold()
         reply({ error: errorLabel(error, t('无法读取画布。', 'Could not read the canvas.')) })
@@ -837,42 +856,68 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       const { id, error } = (event as CustomEvent).detail ?? {}
       if (typeof id === 'string' && typeof error === 'string' && error) finishCutout(id, error)
     }
-    const updateTarget = (job: CanvasJob, apply: (layer: CanvasLayer) => CanvasLayer) => {
-      if (!workspace.change(job.sessionId, live => {
-        if (!live || live.id !== job.scene?.id || !live.layers.includes(job.targetLayer!)) return live
-        return { ...live, layers: live.layers.map(layer => layer === job.targetLayer ? apply(layer) : layer) }
-      })) throw Error(t('引用的图层已变化或没有可应用的修改。', 'The referenced layer changed or there are no edits to apply.'))
-    }
-    const deliverLayer = async (event: Event) => {
-      const { id, sessionId, patch } = (event as CustomEvent).detail ?? {}
+    const deliverLayers = async (event: Event) => {
+      const { id, sessionId, edits, url, imageKey, imageError } = (event as CustomEvent).detail ?? {}
       const job = active.current.get(id)
-      if (!job?.targetLayer || job.targetLayer.kind === 'image' || job.sessionId !== sessionId || job.delivering || !patch) return
+      const blobUrl = typeof url === 'string' && url.startsWith('blob:') ? url : undefined
+      if (!job?.targets || job.sessionId !== sessionId || job.delivering) {
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
+        return
+      }
       job.delivering = true
       const holdTarget = workspace.retain(job.sessionId)
+      const replacements = new Map<CanvasLayer, CanvasLayer>()
+      let output: Raster | undefined
+      let pendingRaster: Raster | undefined
+      let failedImage = imageError === true
       try {
         await workspace.ready(job.sessionId)
+        const patches = new Map<number, Record<string, unknown>>(edits.map(({ key, patch }: { key: number; patch: Record<string, unknown> }) => [key, patch]))
+        for (const { key, layer } of job.targets) {
+          const patch = patches.get(key)
+          if (layer.kind !== 'image') {
+            if (patch) replacements.set(layer, patchTargetLayer(layer, patch))
+            continue
+          }
+          if (!blobUrl || key !== imageKey) continue
+          try {
+            const response = await fetch(blobUrl)
+            if (!response.ok) throw Error('Image attachment unavailable')
+            output = await loadRaster(doc, await response.blob())
+            const { canvas, context } = canvasFor(doc, job.size)
+            drawFit(context, output, job.size)
+            const next = await createImageLayer(doc, await encode(canvas), job.id, layer.id, 'image/png')
+            pendingRaster = next.raster
+            replacements.set(layer, next)
+          } catch { failedImage = true }
+        }
         if (!mounted.current || active.current.get(id) !== job) return
-        const color = typeof patch.color === 'string' && /^#[a-f0-9]{6}$/iu.test(patch.color) ? patch.color : undefined
-        updateTarget(job, layer => {
-          if (layer.kind === 'text') return { ...layer, color: color ?? layer.color,
-            text: typeof patch.text === 'string' && patch.text.length <= 500 ? patch.text : layer.text,
-            fontSize: Number.isFinite(patch.fontSize) && patch.fontSize >= 8 && patch.fontSize <= 600 ? patch.fontSize : layer.fontSize,
-            weight: [400, 500, 600, 700].includes(patch.weight) ? patch.weight : layer.weight,
-            align: ['left', 'center', 'right'].includes(patch.align) ? patch.align : layer.align }
-          if (layer.kind === 'shape' && color) return { ...layer, color }
-          if (layer.kind === 'brand' && brandArtworkIds.includes(patch.asset as BrandArtworkId)) return { ...layer, asset: patch.asset }
-          return layer
+        const changed = workspace.change(job.sessionId, live => {
+          if (!live || live.id !== job.scene?.id || job.targets!.some(({ layer }) => !live.layers.includes(layer))) return live
+          return { ...live, layers: live.layers.map(layer => replacements.get(layer) ?? layer) }
         })
-        if (workspace.getSnapshot().scope === job.sessionId) setToast(t('图层已更新。', 'Layer updated.'))
+        if (changed) pendingRaster = undefined
+        if (workspace.getSnapshot().scope === job.sessionId) {
+          setToast(changed ? failedImage ? t('其他图层已更新，图片结果无法读取。', 'Other layers updated. The image result could not be read.') :
+            t('引用的图层已更新。', 'Referenced layers updated.') :
+            t('图层已变化或没有可应用的修改。', 'Layers changed or no applicable edits were returned.'))
+        }
       } catch (error) {
-        if (mounted.current && workspace.getSnapshot().scope === job.sessionId) setToast(errorLabel(error, t('图层未能更新。', 'Could not update the layer.')))
-      } finally { holdTarget(); release(job) }
+        if (mounted.current && workspace.getSnapshot().scope === job.sessionId)
+          setToast(errorLabel(error, t('图层未能更新。', 'Could not update the layers.')))
+      } finally {
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
+        if (output) URL.revokeObjectURL(output.url)
+        if (pendingRaster) URL.revokeObjectURL(pendingRaster.url)
+        holdTarget()
+        release(job)
+      }
     }
     const deliver = async (event: Event) => {
       const info = (event as CustomEvent).detail
       const job = active.current.get(info?.id)
       const url = typeof info?.url === 'string' && info.url.startsWith('blob:') ? info.url : undefined
-      if (!job || info.sessionId !== job.sessionId || !url || job.delivering || job.targetLayer && job.targetLayer.kind !== 'image') {
+      if (!job || info.sessionId !== job.sessionId || !url || job.delivering || job.targets) {
         if (url && info.revoke) URL.revokeObjectURL(url)
         return
       }
@@ -894,12 +939,6 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         const layer = await createImageLayer(doc, png, job.id, previous?.id ?? crypto.randomUUID(), 'image/png')
         newRaster = layer.raster
         if (!mounted.current || active.current.get(job.id) !== job) return
-        if (job.targetLayer) {
-          updateTarget(job, () => layer)
-          newRaster = undefined
-          if (workspace.getSnapshot().scope === job.sessionId) setToast(t('图片图层已更新。', 'Image layer updated.'))
-          return
-        }
         const others = job.scene?.layers ?? []
         const layers = previous ? others.map(item => item.id === previous.id ? layer : item) : [layer, ...others]
         const nextScene: ImageScene = { id: job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers,
@@ -942,7 +981,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       if (doc.body.dataset.workspaceSurface === 'image-factory' && (event as CustomEvent).detail?.kind === 'import' && !busy) file.current?.click()
     }
     const publish = () => emit('state', { current: !!current, busy })
-    const events = { prepare, settled, deliver, 'deliver-layer': deliverLayer, action, 'comment-result': commentResult, 'cutout-result': cutoutResult, 'request-state': publish }
+    const events = { prepare, settled, deliver, 'deliver-layers': deliverLayers, action, 'comment-result': commentResult, 'cutout-result': cutoutResult, 'request-state': publish }
     for (const [event, callback] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + event, callback)
     publish()
     return () => { for (const [event, callback] of Object.entries(events)) doc.removeEventListener('sherlock:image-factory-' + event, callback) }
@@ -981,33 +1020,19 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     refreshBusy()
     let background: Awaited<ReturnType<typeof createImageLayer>> | undefined
     try {
-      const photo = templatePhoto(example)
+      const source = galleryArtwork(example.id)
+      if (!source) throw Error(t('模板底图不可用。', 'The template background is unavailable.'))
       const id = crypto.randomUUID()
-      const design = example.enterprise
-      if (photo) {
-        const source = galleryArtwork(photo)
-        if (!source) throw Error(t('模板底图不可用。', 'The template background is unavailable.'))
-        const result = await fetch(source)
-        if (!result.ok) throw Error(t('模板底图无法读取。', 'The template background could not be loaded.'))
-        const blob = await result.blob()
-        if (design) {
-          const raster = await loadRaster(doc, blob)
-          try {
-            const { canvas, context } = canvasFor(doc, design)
-            drawTemplatePhoto(context, raster, templatePhotoFrame(example, design))
-            background = await createImageLayer(doc, await encode(canvas, 'image/jpeg', .92), id, crypto.randomUUID(), 'image/jpeg')
-          } finally { URL.revokeObjectURL(raster.url) }
-        } else background = await createImageLayer(doc, blob, id, crypto.randomUUID(), 'image/jpeg')
-      }
-      const size = design ?? background?.raster
-      if (!size) throw Error(t('模板尺寸不可用。', 'The template size is unavailable.'))
+      const result = await fetch(source)
+      if (!result.ok) throw Error(t('模板底图无法读取。', 'The template background could not be loaded.'))
+      background = await createImageLayer(doc, await result.blob(), id, crypto.randomUUID(), 'image/jpeg')
       if (!inImages() || workspace.getSnapshot().scope !== scope) return
       const target = await requestGalleryTask(doc)
       if (!target) throw Error(t('未能打开新的图片任务。', 'Could not open a new image task.'))
       await workspace.ready(target)
       if (!inImages() || workspace.getSnapshot().scope !== target) return
-      const { width, height } = size
-      const layers: CanvasLayer[] = [...(background ? [background] : []),
+      const { width, height } = background.raster
+      const layers: CanvasLayer[] = [background,
         ...galleryTemplateLayers(example, { width, height }, t, () => crypto.randomUUID())]
       if (!workspace.change(target, old => old ?? { id, width, height, title: t(...example.title), layers }))
         throw Error(t('未能将模板放到画布。', 'Could not place the template on the canvas.'))
@@ -1093,11 +1118,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       ]
     })
   }
-  function drawerTabs(inDrawer = false) {
+  function drawerTabs() {
     return <div className="if-drawer-tabs" role="group" aria-label={t('画板侧栏', 'Canvas sidebar')}>
       {([['layers', '图层', 'Layers'], ['brand', '品牌资产', 'Brand assets']] as const).map(([id, zh, en]) =>
         <button key={id} type="button" className="if-button" data-drawer-tab={id} data-current={drawer === id}
-          aria-pressed={drawer === id} aria-controls="image-factory-drawer" onClick={() => chooseDrawer(id, !inDrawer)}>
+          aria-pressed={drawer === id} aria-controls="image-factory-drawer" onClick={() => chooseDrawer(id)}>
           <Icon name={id}/> {t(zh, en)}
         </button>)}
     </div>
@@ -1199,7 +1224,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           onLostPointerCapture={event => panPointer(event, 'cancel')} onPointerDown={event => {
           if (event.target === event.currentTarget && placingText && event.button === 0) event.preventDefault()
           if (event.target === event.currentTarget || event.target === imageFrame.current && !tool) {
-            releaseText(); setSelectedId(undefined); if (area && !commentPending) clearSelection()
+            releaseText(); setSelectedId(undefined); doc.dispatchEvent(new CustomEvent('sherlock:image-factory-reference-clear')); if (area && !commentPending) clearSelection()
           }
         }}>
           <div ref={imageFrame} className="if-raster" data-selecting={marking} data-placing-text={placingText && !busy} tabIndex={-1}
@@ -1337,7 +1362,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         {selectedText && !tool && !area && !busy && <TextControls key={selectedText.id} layer={selectedText} change={patch => patchLayer(selectedText.id, patch)} t={t}/>}
         {drawer && <aside className="if-drawer" id="image-factory-drawer" aria-label={t('画板侧栏', 'Canvas sidebar')}>
           <header className="if-drawer-header">
-            {drawerTabs(true)}
+            <strong>{drawer === 'layers' ? t('图层', 'Layers') : t('品牌资产', 'Brand assets')}</strong>
             <Button icon="close" label={t('关闭侧栏', 'Close sidebar')} onClick={closeDrawer}/>
           </header>
           {brandOpen && <BrandAssetLibrary t={t} disabled={busy} insert={insertBrandAsset} dragging={setBrandDragging}
