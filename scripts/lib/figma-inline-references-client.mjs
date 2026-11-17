@@ -94,7 +94,7 @@ export function useReferenceProjection(react, inputRef, draft, occurrences, sele
   const committed = react.useRef(null)
   const pendingSelection = react.useRef(null)
   const marker = composition.current?.marker ?? referenceMarkerForDraft(draft)
-  const measuredSources = ['ework-managed-skill', 'pptx-annotation', 'spreadsheet-range', 'knowledge-reference']
+  const measuredSources = ['ework-managed-skill', 'pptx-annotation', 'spreadsheet-range', 'knowledge-reference', 'image-factory-layer']
   const measuredLabel = item => item.source === 'ework-managed-skill' ? item.label : {label:item.label,source:item.source,selected:item.occurrenceId===selectedId}
   const skillKey = JSON.stringify([...new Map(occurrences.filter(item => measuredSources.includes(item.source) && typeof item.label === 'string').map(item => {
     const value=measuredLabel(item)

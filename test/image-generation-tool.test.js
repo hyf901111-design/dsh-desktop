@@ -271,3 +271,19 @@ it('rechecks the live human authority after credentials resolve, before a billed
  release({value:'test-private-key'})
  await expect(pending).rejects.toThrow(/会话|要求/);expect(f.request).not.toHaveBeenCalled()
 })
+
+it('validates targeted edits by layer type and emits a patch without rasterizing text', async () => {
+ const f=fixture(),content=f.agent.session.events[1].data.content
+ const edit=f.tools.get('image_edit_layer'),exec={agent:f.agent,concludeTurn:f.concludeTurn}
+ await expect(edit.execute({text:'新品发布'},exec)).rejects.toThrow('选择要修改的图层')
+ const id='11898f5e-5fab-4913-b241-267ac863be0c'
+ const workspace={id,title:'企业模板',operation:'layer',size:'1024x1536',width:1080,height:1350,
+  internalReference:false,targetLayer:{kind:'text',label:'主标题',description:'原始标题'}}
+ content[0].text=imageFactoryPrompt('把标题改为新品发布',workspace)
+ expect(f.prompts[0].text({agent:f.agent})).toContain('image_edit_layer')
+ await expect(f.call()).rejects.toThrow('image_edit_layer')
+ await expect(edit.execute({asset:'logo-blue'},exec)).rejects.toThrow('无法应用')
+ expect(await edit.execute({text:'新品发布'},exec)).toEqual({kind:'odyssey-image-layer-edit',id,patch:{text:'新品发布'}})
+ expect(f.request).not.toHaveBeenCalled()
+ expect(f.concludeTurn).toHaveBeenCalledOnce()
+})

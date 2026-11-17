@@ -1,3 +1,4 @@
+import { imageLayerReferenceCodec, imageLayerReferenceParts, readImageLayerReference, readImageLayerReceipt } from './image-factory-layer-references.mjs'
 import { imageGenerationCalls } from './image-generation-client.mjs'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../../packages/dsh-research-task-runtime/image-factory-context.js'
 import { createImageFactoryTasks } from './image-factory-tasks.mjs'
@@ -63,7 +64,28 @@ export function installImageFactoryContext({
     return true
   }
   const usePrompt = event => { if (!state.current && fill(event.detail?.prompt, true)) event.preventDefault() }
-  function request(id, sessionId, scope, prompt, uploaded, operation) {
+  const referenceLayer = event => {
+    if (!isActive() || !state.current || state.busy || event.detail?.scope !== canvasScope()) return
+    const shell = nativeInput(), before = shell?.snapshot
+    if (!before || shell.disposed || before.phase !== 'plain' || before.researchContextPreparing) return
+    const reference = readImageLayerReference(JSON.stringify(event.detail))
+    const ref = JSON.stringify(reference)
+    const previous = before.occurrences.find(item => item.source === 'image-factory-layer' && before.draft[item.offset] === '\uFFFC')
+    if (previous?.ref === ref) return
+    const input = doc.querySelector('#odyssey-right-workspace-panel textarea:not([disabled])')
+    const offset = previous?.offset ?? (input?.value.length === before.draft.length ? input.selectionEnd : before.draft.length)
+    const inserted = shell.insertReference({ source: 'image-factory-layer', ref, label: reference.label, clipboardText: reference.label },
+      { start: offset, end: previous ? offset + 1 : offset, draftRev: before.draftRev })
+    if (inserted && input) {
+      const revision = shell.snapshot.draftRev
+      win.requestAnimationFrame(() => {
+        if (!input.isConnected || shell.snapshot.draftRev !== revision || input.value.length !== shell.snapshot.draft.length) return
+        input.setSelectionRange(offset + 1, offset + 1)
+      })
+    }
+  }
+
+  function request(id, sessionId, scope, prompt, uploaded, operation, layer) {
     return new Promise((resolve, reject) => {
       const cleanup = () => { win.clearTimeout(timer); doc.removeEventListener('sherlock:image-factory-prepared', reply) }
       const reply = event => {
@@ -75,33 +97,39 @@ export function installImageFactoryContext({
       }
       const timer = win.setTimeout(() => { cleanup(); finish(id); reject(Error('图像画布尚未就绪，请重试。')) }, 12000)
       doc.addEventListener('sherlock:image-factory-prepared', reply)
-      signal('prepare', { id, sessionId, scope, prompt, uploaded, region: operation === 'region', cutout: operation === 'cutout' })
+      signal('prepare', { id, sessionId, scope, prompt, uploaded, region: operation === 'region', cutout: operation === 'cutout', layer })
     })
   }
   async function prepare(sessionId, content, action) {
+    const markers = content.flatMap(part => part.type === 'text' ? imageLayerReferenceParts(part.text) : [])
+    if (markers.length > 1) throw Error('每条消息可修改一个图层，请保留一个图层标签。')
+    const layer = markers.length ? readImageLayerReference(decodeURIComponent(markers[0][1])) : undefined
     if (isActive() && tasks.isCreating()) throw Error('正在创建图片任务，输入已保留。')
     if (!isActive() || currentId() !== sessionId || isBoardOnly(sessionId)) {
-      if (action) throw Error('当前会话或画布已切换。')
+      if (action || layer) throw Error('当前会话或画布已切换。')
       return { content }
     }
+    if (layer) content = content.map(part => part.type === 'text' ? { ...part, text: part.text.replace(markers[0][0], '') } : part)
     const text = content.filter(part => part.type === 'text').map(part => part.text).join('\n')
+    if (layer && !text.trim()) throw Error('请在图层标签后输入修改要求。')
     if (!text.trim()) return { content }
-    if (!action && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
+    if (!action && !layer && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
     const id = action?.id ?? win.crypto.randomUUID()
     const scope = canvasScope()
+    if (layer && layer.scope !== scope) throw Error('图层属于另一个画板，请重新选择图层。')
     try {
       const imageCount = content.filter(part => part.type === 'image').length
-      const response = await request(id, sessionId, scope, text, imageCount > 0, action?.operation)
+      const response = await request(id, sessionId, scope, text, imageCount > 0, action?.operation, layer)
       if (!isActive() || currentId() !== sessionId || canvasScope() !== scope) throw Error('当前会话或画布已切换，草稿已保留。')
       if (action && response.operation !== action.operation) throw Error('当前画布已变化，请重试。')
-      const { operation, size, width, height, title, reference, editBounds } = response
+      const { operation, size, width, height, title, reference, editBounds, targetLayer } = response
       if (reference && imageCount > 3) throw Error('编辑当前画布时，最多可再附加三张参考图。')
       const next = [...content]
       const index = next.findLastIndex(part => part.type === 'text')
       const receiptTitle = title.replace(/[\p{Cc}]/gu, ' ').trim().slice(0, 100) || '画布'
       next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height,
-        title: receiptTitle, internalReference: !!reference, editBounds }) }
-      if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: '当前画布' })
+        title: receiptTitle, internalReference: !!reference, editBounds, targetLayer }) }
+      if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: layer?.label ?? '当前画布' })
       jobs.set(id, { id, sessionId, draft: scope === null, timer: win.setTimeout(() => finish(id), 615000) })
       return { content: next, id }
     } catch (error) { finish(id); throw error }
@@ -122,6 +150,16 @@ export function installImageFactoryContext({
       const { chat, running, queue } = session.getSnapshot()
       if (!chat) return
       const nodes = chat.order.slice(-150).map(key => chat.nodes.get(key)).filter(Boolean)
+      const patch = readImageLayerReceipt(nodes, job.id)
+      if (patch) {
+        job.delivering = true
+        void Promise.resolve(promoteDraft(job)).then(() => {
+          if (jobs.get(job.id) !== job) return
+          signal('deliver-layer', { id: job.id, sessionId: job.sessionId, patch })
+          finish(job.id)
+        }).catch(() => finish(job.id))
+        return
+      }
       const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
       if (delivered) {
         job.delivering = true
@@ -214,7 +252,7 @@ export function installImageFactoryContext({
     publishedScope = intendedCanvas = draftOwner = undefined
     tasks.reset()
   }
-  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt,
+  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt, 'reference-layer': referenceLayer,
     comment: event => { void submitCanvasAction(event, 'region') },
     cutout: event => { void submitCanvasAction(event, 'cutout') },
     'focus-chat': focus, reset,
@@ -250,7 +288,7 @@ function imageFactoryDisplayContent(content, context = imageFactoryContentContex
   if (!context) return content
   const internal = context.internalReference ? content.findLastIndex(part => part.type === 'image') : -1
   return content.filter((_, index) => index !== internal).map(part =>
-    part.type === 'text' ? { ...part, text: stripImageFactoryContext(part.text) } : part)
+    part.type === 'text' ? { ...part, text: stripImageFactoryContext(part.text) + (readImageFactoryContext(part.text)?.targetLayer ? '\n\n〔图层 ' + JSON.stringify(context.targetLayer.label) + '〕' : '') } : part)
 }
 
 function imageFactoryContentContext(content) {
@@ -269,8 +307,12 @@ function imageFactoryQueueRow(row) {
 }
 
 function imageFactoryQueueEditContent(row, text, serialize) {
-  if (row?.imageFactoryQueueContext && row.text !== null)
-    return [{ type: 'text', text: imageFactoryPrompt(text, row.imageFactoryQueueContext) }]
+  if (row?.imageFactoryQueueContext && row.text !== null) {
+    const context = row.imageFactoryQueueContext
+    const label = context.targetLayer && '\n\n〔图层 ' + JSON.stringify(context.targetLayer.label) + '〕'
+    const updated = label && text.endsWith(label) ? text.slice(0, -label.length) : text
+    return [{ type: 'text', text: imageFactoryPrompt(updated, context) }, ...(row.content ?? []).filter(part => part.type !== 'text')]
+  }
   return canvasQueueEditContent(row, text, serialize)
 }
 
@@ -306,6 +348,10 @@ ${readImageFactoryContext.toString()}
 ${stripImageFactoryContext.toString()}
 ${imageFactoryPrompt.toString()}
 ${createImageFactoryTasks.toString()}
+${imageLayerReferenceCodec.toString()}
+${imageLayerReferenceParts.toString()}
+${readImageLayerReference.toString()}
+${readImageLayerReceipt.toString()}
 ${imageFactoryDisplayContent.toString()}
 ${imageFactoryContentContext.toString()}
 ${imageFactoryQueueRow.toString()}

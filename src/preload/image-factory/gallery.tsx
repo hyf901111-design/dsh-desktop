@@ -183,6 +183,17 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
     }
   }, [cardCount, mode, category])
 
+  useEffect(() => {
+    const node = viewport.current?.querySelector('.if-gallery-track')
+    const motion = viewport.current?.ownerDocument.defaultView?.matchMedia('(prefers-reduced-motion: reduce)')
+    if (!node || !motion || motion.matches || typeof node.animate !== 'function') return
+    const animation = node.animate([{ opacity: .48, transform: 'translateY(5px)' }, { opacity: 1, transform: 'translateY(0)' }],
+      { duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' })
+    const reduce = () => { if (motion.matches) animation.cancel() }
+    motion.addEventListener('change', reduce)
+    return () => { motion.removeEventListener('change', reduce); animation.cancel() }
+  }, [mode, category])
+
   return <div className="if-gallery" role="region" aria-label={t('灵感画廊', 'Inspiration gallery')}>
     <div className="if-gallery-heading">
       <div className="if-gallery-mode" role="group" aria-label={t('画廊模式', 'Gallery mode')}>

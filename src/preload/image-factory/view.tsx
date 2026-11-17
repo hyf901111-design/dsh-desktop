@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
 import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
-import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, type BrandOverlay, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
+import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, brandArtworkIds, type BrandArtworkId, type BrandOverlay, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu } from './actions-menu'
 import { brandArtwork } from './brand-artwork'
@@ -36,7 +36,7 @@ type Bridge = {
 }
 type T = (zh: string, en: string) => string
 type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region; preserveTransparency: boolean };
-  cutout?: boolean; size: Size; title: string; delivering: boolean; release(): void }
+  targetLayer?: CanvasLayer; cutout?: boolean; size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
 type DrawerTab = 'layers' | 'brand'
 const overlayHandles = ['nw', 'ne', 'sw', 'se'] as const
@@ -156,6 +156,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const layersOpen = drawer === 'layers'
   const brandOpen = drawer === 'brand'
   const [brandDragging, setBrandDragging] = useState(false)
+  const [placedLayerIds, setPlacedLayerIds] = useState<string[]>([])
   const creatingTemplate = useRef(false)
   const toolbar = useRef<HTMLElement>(null)
   const galleryClose = useRef<HTMLButtonElement>(null)
@@ -484,6 +485,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     const layers = placeBrandAsset(asset, current, point ?? { x: current.width / 2, y: current.height / 2 }, label => t(...label))
     if (setScene(old => old && { ...old, layers: [...old.layers, ...layers] })) {
       setSelectedId(layers.find(layer => layer.kind === 'text')?.id ?? layers.at(-1)?.id)
+      setPlacedLayerIds(layers.map(layer => layer.id))
     }
   }
   function brandDrop(event: DragEvent<HTMLDivElement>, dropped: boolean) {
@@ -529,10 +531,24 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     setScene(old => old && { ...old, layers: [...old.layers, layer] }, false)
     setSelectedId(id); setEditing(id)
   }
-  function selectLayer(layer: CanvasLayer, toggle = false, id = layerUnitId(layer)) {
+  function canvasLayerName(layer: CanvasLayer) {
+    return layer.kind === 'image' ? t('图片', 'Image') :
+      layer.kind === 'text' ? layer.text.trim() || t('文本', 'Text') : overlayName(layer)
+  }
+  function referenceLayer(layer: CanvasLayer) {
+    if (!current || busy) return
+    const label = canvasLayerName(layer).replace(/[\p{Cc}]/gu, ' ').trim().slice(0, 64).trim()
+    if (!label) return
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-reference-layer', {
+      detail: { scope, sceneId: current.id, layerId: layer.id, label },
+    }))
+  }
+  function selectLayer(layer: CanvasLayer, toggle = false, id = layerUnitId(layer), group = false) {
     releaseText()
     clearSelection()
     chooseSelection(id, toggle && isEditableLayer(layer))
+    if (!toggle && !group) referenceLayer(layer)
     if (layer.kind === 'image' || toggle) return
     const selector = layer.kind === 'text' ? 'data-canvas-text-id' : 'data-brand-layer-id'
     const box = imageFrame.current?.querySelector('[' + selector + '="' + layer.id + '"]')?.getBoundingClientRect()
@@ -626,7 +642,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     if (released) canvasLayerDrag.current = undefined
     else if (!(event.buttons & 1)) return
     const dx = event.clientX - drag.start.x, dy = event.clientY - drag.start.y
-    if (!drag.moved && Math.hypot(dx, dy) < 3) return
+    if (!drag.moved && Math.hypot(dx, dy) < 3) {
+      if (released && !drag.handle) referenceLayer(drag.layer)
+      return
+    }
     drag.moved = true
     if (drag.moving && drag.moving.length > 1) {
       moveSelection(drag.moving, dx / (current.width * displayScale), dy / (current.height * displayScale), released)
@@ -725,7 +744,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       job.release(); if (mounted.current) refreshBusy()
     }
     const prepare = async (event: Event) => {
-      const { id, sessionId, scope: requestedScope, prompt, uploaded, region, cutout } = (event as CustomEvent).detail ?? {}
+      const { id, sessionId, scope: requestedScope, prompt, uploaded, region, cutout, layer } = (event as CustomEvent).detail ?? {}
       if (doc.body.dataset.workspaceSurface !== 'image-factory' || typeof id !== 'string' ||
           typeof sessionId !== 'string' || !validCanvasScope(sessionId) || typeof prompt !== 'string') return
       const reply = (data: object) => emit('prepared', { id, ...data })
@@ -741,15 +760,18 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         const ready = await workspace.ready(requestedScope)
         if (!mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' || workspace.getSnapshot().scope !== requestedScope)
           throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
-        const newImage = !region && !cutout && (galleryScope === requestedScope || startsNewImage(prompt))
+        const newImage = !layer && !region && !cutout && (galleryScope === requestedScope || startsNewImage(prompt))
         const base = newImage ? undefined : ready
-        const image = base?.layers.find(layer => layer.kind === 'image')
+        const targetLayer = layer && base && base.id === layer.sceneId && base.layers.find(item => item.id === layer.layerId) || undefined
+        if (layer && !targetLayer) throw Error(t('引用的图层已变化，请重新选择。', 'The referenced layer changed. Select it again.'))
+        const vectorEdit = targetLayer && targetLayer.kind !== 'image'
+        const image = vectorEdit ? undefined : base?.layers.find(layer => layer.kind === 'image')
         const draft = base && selectionDrafts.current.get(base.id)
         const selection = region && draft?.requestId === id && draft.phase === 'sending' ? draft.area : undefined
         if (region && (!selection || !image)) throw Error(t('选区已变化，请重新框选。', 'The selection changed. Select the area again.'))
         if (cutout && (pendingCutout !== id || !image || galleryScope === requestedScope))
           throw Error(t('当前图片已变化，请重试。', 'The current image changed. Try again.'))
-        const size = (selection || cutout ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
+        const size = (selection || cutout || targetLayer ? undefined : requestedImageSize(prompt)) ?? base ?? ratios['4:5']
         const title = base?.title ?? titleFromPrompt(prompt, t)
         const target = selection ?? size
         const output = providerSize(target)
@@ -758,7 +780,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           area: selection, frame: regionEditFrame(selection, outputSize, image.raster),
           preserveTransparency: preservesRegionTransparency(prompt),
         } : undefined
-        job = { id, sessionId, scope: requestedScope, scene: base, edit, cutout: cutout === true, size, title, delivering: false, release: hold }
+        job = { id, sessionId, scope: requestedScope, scene: base, edit, targetLayer, cutout: cutout === true, size, title, delivering: false, release: hold }
         active.current.set(id, job)
         let reference
         if (cutout && image) {
@@ -776,8 +798,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           : undefined
         if (!active.current.has(id) || !mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' ||
             workspace.getSnapshot().scope !== requestedScope) throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
-        reply({ operation: cutout ? 'cutout' : edit ? 'region' : reference || uploaded ? 'edit' : 'generate', size: output,
-          width: target.width, height: target.height, title, reference, editBounds: edit && regionEditBounds(edit.area, edit.frame) })
+        const description = targetLayer?.kind === 'text' ? JSON.stringify({ text: targetLayer.text, color: targetLayer.color,
+          fontSize: targetLayer.fontSize, weight: targetLayer.weight, align: targetLayer.align }) : targetLayer?.kind === 'shape' ? targetLayer.color :
+          targetLayer?.kind === 'brand' ? targetLayer.asset : ''
+        reply({ operation: vectorEdit ? 'layer' : cutout ? 'cutout' : edit ? 'region' : reference || uploaded ? 'edit' : 'generate', size: output,
+          width: target.width, height: target.height, title, reference, targetLayer: targetLayer && { kind: targetLayer.kind, label: layer.label, description }, editBounds: edit && regionEditBounds(edit.area, edit.frame) })
       } catch (error) {
         if (job) release(job); else hold()
         reply({ error: errorLabel(error, t('无法读取画布。', 'Could not read the canvas.')) })
@@ -812,11 +837,42 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       const { id, error } = (event as CustomEvent).detail ?? {}
       if (typeof id === 'string' && typeof error === 'string' && error) finishCutout(id, error)
     }
+    const updateTarget = (job: CanvasJob, apply: (layer: CanvasLayer) => CanvasLayer) => {
+      if (!workspace.change(job.sessionId, live => {
+        if (!live || live.id !== job.scene?.id || !live.layers.includes(job.targetLayer!)) return live
+        return { ...live, layers: live.layers.map(layer => layer === job.targetLayer ? apply(layer) : layer) }
+      })) throw Error(t('引用的图层已变化或没有可应用的修改。', 'The referenced layer changed or there are no edits to apply.'))
+    }
+    const deliverLayer = async (event: Event) => {
+      const { id, sessionId, patch } = (event as CustomEvent).detail ?? {}
+      const job = active.current.get(id)
+      if (!job?.targetLayer || job.targetLayer.kind === 'image' || job.sessionId !== sessionId || job.delivering || !patch) return
+      job.delivering = true
+      const holdTarget = workspace.retain(job.sessionId)
+      try {
+        await workspace.ready(job.sessionId)
+        if (!mounted.current || active.current.get(id) !== job) return
+        const color = typeof patch.color === 'string' && /^#[a-f0-9]{6}$/iu.test(patch.color) ? patch.color : undefined
+        updateTarget(job, layer => {
+          if (layer.kind === 'text') return { ...layer, color: color ?? layer.color,
+            text: typeof patch.text === 'string' && patch.text.length <= 500 ? patch.text : layer.text,
+            fontSize: Number.isFinite(patch.fontSize) && patch.fontSize >= 8 && patch.fontSize <= 600 ? patch.fontSize : layer.fontSize,
+            weight: [400, 500, 600, 700].includes(patch.weight) ? patch.weight : layer.weight,
+            align: ['left', 'center', 'right'].includes(patch.align) ? patch.align : layer.align }
+          if (layer.kind === 'shape' && color) return { ...layer, color }
+          if (layer.kind === 'brand' && brandArtworkIds.includes(patch.asset as BrandArtworkId)) return { ...layer, asset: patch.asset }
+          return layer
+        })
+        if (workspace.getSnapshot().scope === job.sessionId) setToast(t('图层已更新。', 'Layer updated.'))
+      } catch (error) {
+        if (mounted.current && workspace.getSnapshot().scope === job.sessionId) setToast(errorLabel(error, t('图层未能更新。', 'Could not update the layer.')))
+      } finally { holdTarget(); release(job) }
+    }
     const deliver = async (event: Event) => {
       const info = (event as CustomEvent).detail
       const job = active.current.get(info?.id)
       const url = typeof info?.url === 'string' && info.url.startsWith('blob:') ? info.url : undefined
-      if (!job || info.sessionId !== job.sessionId || !url || job.delivering) {
+      if (!job || info.sessionId !== job.sessionId || !url || job.delivering || job.targetLayer && job.targetLayer.kind !== 'image') {
         if (url && info.revoke) URL.revokeObjectURL(url)
         return
       }
@@ -838,6 +894,12 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         const layer = await createImageLayer(doc, png, job.id, previous?.id ?? crypto.randomUUID(), 'image/png')
         newRaster = layer.raster
         if (!mounted.current || active.current.get(job.id) !== job) return
+        if (job.targetLayer) {
+          updateTarget(job, () => layer)
+          newRaster = undefined
+          if (workspace.getSnapshot().scope === job.sessionId) setToast(t('图片图层已更新。', 'Image layer updated.'))
+          return
+        }
         const others = job.scene?.layers ?? []
         const layers = previous ? others.map(item => item.id === previous.id ? layer : item) : [layer, ...others]
         const nextScene: ImageScene = { id: job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers,
@@ -880,7 +942,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       if (doc.body.dataset.workspaceSurface === 'image-factory' && (event as CustomEvent).detail?.kind === 'import' && !busy) file.current?.click()
     }
     const publish = () => emit('state', { current: !!current, busy })
-    const events = { prepare, settled, deliver, action, 'comment-result': commentResult, 'cutout-result': cutoutResult, 'request-state': publish }
+    const events = { prepare, settled, deliver, 'deliver-layer': deliverLayer, action, 'comment-result': commentResult, 'cutout-result': cutoutResult, 'request-state': publish }
     for (const [event, callback] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + event, callback)
     publish()
     return () => { for (const [event, callback] of Object.entries(events)) doc.removeEventListener('sherlock:image-factory-' + event, callback) }
@@ -1003,7 +1065,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           <Icon name="chevron" size={14}/>
         </button>}
         <button type="button" className="if-layer-name" aria-pressed={active} title={name}
-          onClick={event => selectLayer(layer, event.shiftKey, event.shiftKey ? layerUnitId(layer) : id)}
+          onClick={event => selectLayer(layer, event.shiftKey, event.shiftKey ? layerUnitId(layer) : id, group)}
           onDoubleClick={() => {
             if (!busy && !group && layer.kind === 'text') { setSelectedId(layer.id); setEditing(layer.id) }
           }}
@@ -1154,15 +1216,16 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
             }}>
             <div className="if-raster-artwork">
               {current.layers.map(layer => {
-                if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
-                if (layer.kind !== 'text') return <div key={layer.id} className="if-brand-layer" data-brand-layer-id={layer.id}
+                if (layer.kind === 'image') return <img key={layer.id} className="if-image-layer" draggable={false} src={layer.raster.url} alt={current.title}
+                  onClick={() => { if (!tool && !area && !busy) selectLayer(layer) }}/>
+                if (layer.kind !== 'text') return <div key={layer.id} className="if-brand-layer" data-brand-layer-id={layer.id} data-just-placed={placedLayerIds.includes(layer.id)}
                   data-selected={selectedIds.includes(layer.id) || selectedIds.includes(layerUnitId(layer))} tabIndex={tool || area || busy ? -1 : 0} role="button"
                   aria-label={overlayName(layer)} aria-pressed={selectedIds.includes(layer.id) || selectedIds.includes(layerUnitId(layer))}
-                  onClick={event => { if (!tool && !area && !busy && event.detail === 0) chooseSelection(layerUnitId(layer), event.shiftKey) }}
+                  onClick={event => { if (!tool && !area && !busy && event.detail === 0) selectLayer(layer, event.shiftKey) }}
                   onPointerDown={event => canvasLayerPointer(event, 'start', layer)}
                   onKeyDown={event => {
                     if (tool || area || busy) return
-                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); chooseSelection(layerUnitId(layer), event.shiftKey); return }
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectLayer(layer, event.shiftKey); return }
                     const dx = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
                     const dy = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
                     if (!dx && !dy) return
@@ -1197,9 +1260,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
                     releaseText(layer.id)
                   }}
                   onBlur={event => { if (!event.relatedTarget?.closest('.if-text-format')) releaseText(layer.id) }}/>
-                  : <div key={layer.id} className="if-text-layer" data-canvas-text-id={layer.id} data-selected={selectedIds.includes(layer.id) || selectedIds.includes(layerUnitId(layer))} style={style}
+                  : <div key={layer.id} className="if-text-layer" data-canvas-text-id={layer.id} data-just-placed={placedLayerIds.includes(layer.id)} data-selected={selectedIds.includes(layer.id) || selectedIds.includes(layerUnitId(layer))} style={style}
                     tabIndex={tool || busy ? -1 : 0} role="button" aria-label={layer.text}
-                    onClick={event => { if (!tool && !area && !busy && event.detail === 0) chooseSelection(layerUnitId(layer), event.shiftKey) }}
+                    onClick={event => { if (!tool && !area && !busy && event.detail === 0) selectLayer(layer, event.shiftKey) }}
                     onDoubleClick={() => { if (!tool && !area && !busy) { setSelectedId(layer.id); setEditing(layer.id) } }}
                     onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
                     onPointerDown={event => canvasLayerPointer(event, 'start', layer)}>{layer.text}</div>

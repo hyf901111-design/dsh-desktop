@@ -202,9 +202,9 @@ ${welcomeAnchor}`,'right pane welcome component')
  change(selectEnd,selectEnd.replace('[actions, sessionId]','[actions, sessionId, active?.id]'),'view lifecycle')
  const chip='children: [chip.source === "pptx-annotation" && renderPptxAnnotationPin'
  const gridIcon=`react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('rect',{x:4,y:4,width:16,height:16,rx:2}),react.createElement('path',{d:'M4 9h16M4 14h16M10 4v16'}))`
- change(chip,chip.replace('children: [',`children: [chip.source==='spreadsheet-range' && ${gridIcon}, chip.source==='knowledge-reference' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1zm0 0v14'})), `),'range chip icon')
+ change(chip,chip.replace('children: [',`children: [chip.source==='image-factory-layer' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5'})), chip.source==='spreadsheet-range' && ${gridIcon}, chip.source==='knowledge-reference' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1zm0 0v14'})), `),'range chip icon')
  const remove='(researchReference !== null || chip.source === "pptx-annotation") && selectedResearchOccurrenceId'
- change(remove,remove.replace('|| chip.source', '|| chip.source === "spreadsheet-range" || chip.source === "knowledge-reference" || chip.source'),'range chip removal')
+ change(remove,remove.replace('|| chip.source', '|| chip.source === "spreadsheet-range" || chip.source === "knowledge-reference" || chip.source === "image-factory-layer" || chip.source'),'range chip removal')
  const history='function projectUserText(text, openFile) {'
  change(history,history+`
  const sheetParts=(${spreadsheetMessageParts.toString()})(text)
