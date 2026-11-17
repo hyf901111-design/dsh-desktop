@@ -34,7 +34,8 @@ function readMetadata(value: unknown): StoredCanvas {
   const canvas = value as StoredCanvas
   if (!canvas || canvas.version !== 1 || !validId(canvas.id) || typeof canvas.title !== 'string' ||
       !canvas.title.trim() || canvas.title.length > 255 || !validCanvasSize(canvas.width, canvas.height) ||
-      !Array.isArray(canvas.layers) || canvas.layers.length > maximumCanvasLayers) throw Error('画布数据无效。')
+      !Array.isArray(canvas.layers) || canvas.layers.length > maximumCanvasLayers ||
+      (canvas.aiWatermark !== undefined && canvas.aiWatermark !== true)) throw Error('画布数据无效。')
   const ids = new Set<string>()
   let images = 0
   const layers = canvas.layers.map(layer => {
@@ -51,7 +52,9 @@ function readMetadata(value: unknown): StoredCanvas {
     const { id, kind, text, x, y, width, fontSize, family, weight, align, color } = layer
     return { id, kind, text, x, y, width, fontSize, family, weight, align, color }
   })
-  return { version: 1, id: canvas.id, title: canvas.title, width: canvas.width, height: canvas.height, layers }
+  return { version: 1, id: canvas.id, title: canvas.title, width: canvas.width, height: canvas.height, layers,
+    ...(canvas.aiWatermark && { aiWatermark: canvas.aiWatermark }),
+  }
 }
 
 async function readBounded(path: string, limit: number) {

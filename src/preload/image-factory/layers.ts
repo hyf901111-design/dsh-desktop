@@ -7,7 +7,7 @@ export { imageFonts, type TextLayer }
 
 export type ImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType; data: Uint8Array; raster: Raster }
 export type CanvasLayer = ImageLayer | TextLayer
-export type ImageScene = Size & { id: string; title: string; layers: CanvasLayer[] }
+export type ImageScene = Size & { id: string; title: string; layers: CanvasLayer[]; aiWatermark?: true }
 export const textResizeHandles = ['nw', 'ne', 'w', 'e', 'sw', 'se'] as const
 export type TextResizeHandle = typeof textResizeHandles[number]
 

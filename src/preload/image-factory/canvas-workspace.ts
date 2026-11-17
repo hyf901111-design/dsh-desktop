@@ -154,7 +154,8 @@ export class CanvasWorkspace {
         throw Error('保存的图片与画布尺寸不一致。')
       if (data.canvas) {
         const layers = data.canvas.layers.map(layer => layer.kind === 'image' ? restored! : layer)
-        entry.scene = { id: data.canvas.id, title: data.canvas.title, width: data.canvas.width, height: data.canvas.height, layers }
+        const { version: _version, ...canvas } = data.canvas
+        entry.scene = { ...canvas, layers }
         entry.assetId = restored?.assetId
         restored = undefined
       }
@@ -180,6 +181,7 @@ export class CanvasWorkspace {
     const revision = ++entry.revision
     const canvas: StoredCanvas = {
       version: 1, id: scene.id, title: scene.title, width: scene.width, height: scene.height,
+      ...(scene.aiWatermark && { aiWatermark: scene.aiWatermark }),
       layers: scene.layers.filter(layer => layer.kind === 'image' || layer.text.trim()).map(layer => layer.kind === 'image' ? { kind: 'image', id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType } : layer),
     }
     entry.assetId = asset?.assetId

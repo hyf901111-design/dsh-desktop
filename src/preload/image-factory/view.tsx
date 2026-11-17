@@ -11,6 +11,7 @@ import { ImageFactoryGallery } from './gallery'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
 import { iconSource } from './icons'
 import { useImageViewport } from './viewport'
+import { aiWatermarkBackground, aiWatermarkFamily, aiWatermarkLayout, aiWatermarkText, drawAiWatermark } from './watermark'
 import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, preservesRegionTransparency, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
 import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
@@ -454,8 +455,9 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         throw Error(t('请选择 20 MB 以内的 PNG、JPG 或 WebP 图片。', 'Choose a PNG, JPG, or WebP image up to 20 MB.'))
       const id = crypto.randomUUID()
       const layer = await createImageLayer(doc, image, id, crypto.randomUUID(), image.type as CanvasImageType)
-      const stored = workspace.change(scope, () => ({ id, width: layer.raster.width, height: layer.raster.height,
-        title: image.name.replace(/\.[^.]+$/, '').trim().slice(0, 255) || t('导入图片', 'Imported image'), layers: [layer] }))
+      const stored = workspace.change(scope, old => ({ id, width: layer.raster.width, height: layer.raster.height,
+        title: image.name.replace(/\.[^.]+$/, '').trim().slice(0, 255) || t('导入图片', 'Imported image'), layers: [layer],
+        ...(old?.aiWatermark && { aiWatermark: old.aiWatermark }) }))
       if (!stored) URL.revokeObjectURL(layer.raster.url)
       if (stored && workspace.getSnapshot().scope === scope) {
         clearSelection(); setSelectedId(undefined); setEditing(undefined); setGalleryOpen(false); resetViewport()
@@ -470,6 +472,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       const { canvas, context } = canvasFor(doc, current)
       if (format === 'jpg') { context.fillStyle = '#fff'; context.fillRect(0, 0, current.width, current.height) }
       await drawLayers(context, current)
+      if (current.aiWatermark) drawAiWatermark(context, current)
       const data = new Uint8Array(await (await encode(canvas)).arrayBuffer())
       const result = await bridge.save({ action: 'download', data, format, name: current.title })
       if (!result.cancelled && mounted.current) setToast(t('图片已保存。', 'Image saved.'))
@@ -622,7 +625,9 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
         if (!mounted.current || active.current.get(job.id) !== job) return
         const others = job.scene?.layers ?? []
         const layers = previous ? others.map(item => item.id === previous.id ? layer : item) : [layer, ...others]
-        const nextScene = { id: job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers }
+        const nextScene: ImageScene = { id: job.id, title: job.title, width: layer.raster.width, height: layer.raster.height, layers,
+          ...(job.scene?.aiWatermark && { aiWatermark: job.scene.aiWatermark }),
+        }
         if (!workspace.change(job.sessionId, () => nextScene)) throw Error(t('图片没能放到画布。', 'Could not place the image on the canvas.'))
         newRaster = undefined
         emit('task-title', { scope: job.sessionId, title: nextScene.title })
@@ -700,6 +705,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const rectangle = rubberband ?? area
   const hasWorkspaceSession = workspaceExpanded && !!findWorkspaceSession(doc)
   const tabsLabel = workspaceExpanded ? t('收起工作区页签', 'Collapse workspace tabs') : t('展开工作区页签', 'Expand workspace tabs')
+  const watermark = current?.aiWatermark ? aiWatermarkLayout(current, displayScale) : undefined
   return <section className="if-work" aria-label={t('图像画布', 'Images canvas')} onKeyDown={event => {
     if (event.key !== 'Escape' || commentPending || (!editing && !tool && !area)) return
     event.stopPropagation(); clearSelection(); releaseText()
@@ -737,6 +743,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       <Button icon="spark" disabled={busy || !raster} onClick={removeBackground}>
         {cutoutPending ? <span role="status">{t('正在去背景…', 'Removing background…')}</span> : t('去背景', 'Remove background')}
       </Button>
+      <button type="button" role="switch" className="if-button if-watermark-switch" aria-checked={Boolean(current.aiWatermark)}
+        disabled={busy} onClick={() => setScene(old => old && { ...old, aiWatermark: old.aiWatermark ? undefined : true })}>
+        <i aria-hidden="true"/>{t('AI 水印', 'AI watermark')}
+      </button>
     </nav>}
     <div id="image-factory-task-workspace" className="if-stage" data-layers-open={layersOpen} ref={stage}>
       {status === 'loading' || status === 'idle' ? <div className="if-canvas-message" role="status">{t('正在打开画布…', 'Opening canvas…')}</div>
@@ -789,6 +799,12 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                     onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
                     onPointerDown={event => textPointer(event, 'start', layer)}>{layer.text}</div>
               })}
+              {watermark && <span className="if-watermark" style={{
+                right: watermark.inset, bottom: watermark.inset,
+                maxWidth: `calc(100% - ${watermark.inset * 2}px)`,
+                fontFamily: aiWatermarkFamily, fontSize: watermark.fontSize, lineHeight: watermark.height + 'px',
+                borderRadius: watermark.radius, paddingInline: watermark.padding, background: aiWatermarkBackground,
+              }}>{aiWatermarkText}</span>}
               {rectangle && <div className="if-region" aria-hidden="true" data-dragging={!!rubberband} data-processing={commentPending} style={{
                 left: rectangle.x / current.width * 100 + '%', top: rectangle.y / current.height * 100 + '%',
                 width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',
