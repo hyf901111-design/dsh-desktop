@@ -2152,13 +2152,16 @@ export class ResearchBoardsService {
     switch (action) {
       case 'local.directory': {
         const p = exact(input, ['mode'], ['basePath', 'title', 'sessionId', 'directoryId', 'targetSessionId', 'workspaceId', 'workspaceTitle'])
-        if (!['reserve', 'bind', 'workspace', 'associate', 'ensure', 'fork'].includes(String(p.mode))) throw new ResearchBoardsError('INVALID_REQUEST')
+        if (!['reserve', 'bind', 'workspace', 'associate', 'ensure', 'fork', 'app-workspace'].includes(String(p.mode))) throw new ResearchBoardsError('INVALID_REQUEST')
         if (p.sessionId !== undefined) safeId(p.sessionId)
         if (p.directoryId !== undefined) safeId(p.directoryId)
         if (p.targetSessionId !== undefined) safeId(p.targetSessionId)
         if (p.workspaceId !== undefined) safeId(p.workspaceId)
         if (p.workspaceTitle !== undefined) text(p.workspaceTitle)
         if (p.mode === 'associate' && !this.store.snapshot().favorites.some(f => f.sessionId === p.sessionId && f.dedicated)) throw new ResearchBoardsError('BINDING_CONFLICT')
+        if (p.mode === 'app-workspace' && !this.store.sharedSession(String(p.sessionId)) &&
+          !this.store.snapshot().favorites.some(f => f.sessionId === p.sessionId && f.pinned !== false))
+          throw new ResearchBoardsError('BINDING_CONFLICT')
         if (p.title !== undefined) text(p.title)
         if (p.basePath !== undefined) text(p.basePath, 4096)
         if (!this.options.hooks?.directory) throw new ResearchBoardsError('CAPTURE_UNAVAILABLE')

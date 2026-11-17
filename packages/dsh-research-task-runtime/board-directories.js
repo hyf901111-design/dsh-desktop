@@ -59,7 +59,7 @@ export class BoardDirectories {
       }
       return row
     }
-    if (input.mode === 'fork') {
+    if (input.mode === 'fork' || input.mode === 'app-workspace') {
       const source = await this.inspect(input.sessionId)
       const path = source.meta.cwd
       if (typeof path !== 'string' || !isAbsolute(path)) throw Error('DIRECTORY_BINDING_CONFLICT')
@@ -71,6 +71,10 @@ export class BoardDirectories {
       if (!workspace) {
         workspace = await this.ctx.workspaceRegistry.create(path)
         if (row?.path === path) await workspace.setTitle(row.title)
+      }
+      if (input.mode === 'app-workspace') {
+        const sessionKey = createHash('sha256').update(input.sessionId).digest('hex')
+        return { workspaceId: workspace.id, path, appSessionId: 'board-app-' + sessionKey }
       }
       // The normal Host fork inherits project membership from its source.
       await workspace.attachSession(input.sessionId)

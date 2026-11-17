@@ -346,7 +346,7 @@ export class BrowserAppView {
   if(action==='add-link'){await this.show('add-link');return}
   if(action==='add-link-save'){const url=this.field('link-url').trim();if(!/^https?:\/\/[^\s]+$/i.test(url)&&!(/^[^\s/]+\.[^\s/]+(?:\/[^\s]*)?$/.test(url))){this.toast('请输入有效的网址。',true);return}await this.run('bookmark',{url,title:this.field('link-title'),folder:this.startSection==='research'?'研究资料':''});this.dismiss();this.toast('网址已添加');return}
   if(action==='home')this.startSection=''
-  if(action==='exit'){this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:browser-request',{detail:{close:true}}));return}
+  if(action==='exit'){this.host.back();return}
   if(action==='dismiss'){this.dismiss();return}
   if(action==='toggle-bookmark'){if(!t.url||this.bookmarkBusy)return;this.bookmarkBusy=true;try{await this.run('bookmark',{url:t.url,title:t.title,remove:this.state!.bookmarks.some(b=>b.url===t.url)})}finally{this.bookmarkBusy=false}return}
   if(action==='save')this.editingBookmark=undefined;

@@ -5,7 +5,7 @@ import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
 export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
-  getTaskWorkspace, setTaskView, taskStorage,
+  getTaskWorkspace, setTaskView, taskStorage, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
   let state = { current: false, busy: false }
@@ -15,12 +15,12 @@ export function installImageFactoryContext({
   const canvasScope = () => {
     const { current, byId } = sessions.list.getSnapshot()
     // The native sidebar only shows the currently selected empty session.
-    return current && (current.startsWith('image-task-') || byId?.[current]?.blank !== true) ? current : null
+    return current && !isBoardOnly(current) && (current.startsWith('image-task-') || byId?.[current]?.blank !== true) ? current : null
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
   const tasks = createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace: getTaskWorkspace,
-    setView: setTaskView, storage: taskStorage })
+    setView: setTaskView, storage: taskStorage, isBoardOnly })
   const stateChange = event => {
     state = { current: event.detail?.current === true, busy: event.detail?.busy === true }
     for (const listener of listeners) listener()
@@ -64,7 +64,7 @@ export function installImageFactoryContext({
     })
   }
   async function prepare(sessionId, content, action) {
-    if (!isActive() || currentId() !== sessionId) {
+    if (!isActive() || currentId() !== sessionId || isBoardOnly(sessionId)) {
       if (action) throw Error('当前会话或画布已切换。')
       return { content }
     }

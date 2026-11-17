@@ -64,7 +64,7 @@ export class WorkspaceSurfaceHost {
         }
         this.sync();
     }
-    back() { this.history.pop(); this.sync(); }
+    back() { const previous = this.history.pop(); this.sync(!!previous); }
     close(surface: WorkspaceSurface) { this.history = this.history.filter(location => location.surface !== surface); this.sync(); }
     revealConversation() { this.closeAll(); }
     current() { return this.history.at(-1); }
@@ -78,7 +78,7 @@ export class WorkspaceSurfaceHost {
         if (EventType)
             this.document.dispatchEvent(new EventType(name, { detail, bubbles: true }));
     }
-    private sync() {
+    private sync(back = false) {
         const current = this.current();
         for (const [name, element] of this.surfaces) {
             element.hidden = name !== current?.surface;
@@ -107,7 +107,7 @@ export class WorkspaceSurfaceHost {
             delete this.document.body.dataset.workspaceRightExpanded;
         }
         this.position();
-        this.dispatch('sherlock:workspace-surface-change', { ...current, active: !!current });
+        this.dispatch('sherlock:workspace-surface-change', { ...current, active: !!current, ...(back && { back }) });
     }
     private settingsOpen() { return !!this.document.querySelector('.VOzbGW_overlay'); }
     private onDomChanged = () => {

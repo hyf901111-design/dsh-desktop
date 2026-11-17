@@ -85,6 +85,7 @@ async function loadClientBundle(
   runInNewContext(source, {
     TextEncoder,
     TextDecoder,
+    AbortController,
     window: bundleWindow,
     document: browserWindow?.document,
     navigator: browserWindow?.navigator ?? { userAgent: '' },
@@ -183,6 +184,27 @@ async function newNoteFixture(){
 }
 
 describe('normal new Note workspace flow',()=>{
+ it.each(['note','spreadsheet'] as const)('opens a new %s session without reusing the research board session',async kind=>{
+  const f=await newNoteFixture()
+  const doc=f.w.document as unknown as Document
+  const action=createSidebarNewNoteAction(doc,async()=>{},kind)
+  const fetch=vi.fn(async()=>Response.json({ok:true}))
+  vi.stubGlobal('fetch',fetch)
+  try {
+   f.chatStore.create('old').actions.setView('research')
+   const before=JSON.stringify(f.shell.snapshot)
+   await action.create()
+   const id=f.sessions.list.getSnapshot().current
+   expect(id).toBeTruthy()
+   expect(id).not.toBe('old')
+   expect(f.chatStore.create(id).getSnapshot().view).toBe(kind==='note'?'notes':'spreadsheet')
+   expect(f.chatStore.create('old').getSnapshot().view).toBe('research')
+   expect(JSON.stringify(f.shell.snapshot)).toBe(before)
+   if(kind==='spreadsheet')expect(fetch).toHaveBeenCalledWith('/sherlock/spreadsheet/session',expect.objectContaining({
+    body:expect.stringContaining(id)
+   }))
+  } finally { action.dispose(); f.stop() }
+ })
  it('uses the real SDK fresh create/current workspace and persists Notes without consuming the old draft',async()=>{
   const f=await newNoteFixture();try{
    const before=JSON.stringify(f.shell.snapshot);expect(f.sessions.list.getSnapshot().current).toBe('old')
