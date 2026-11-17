@@ -9,20 +9,92 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像工厂：保留顶栏任务名的可用宽度",
+        "featureName": "图像：画廊留白、统一命名、预览操作与共用对话改进",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
-        "tipCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
+        "baseCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
+        "tipCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
         "commits": [
           {
-            "commit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
+            "commit": "b14bd5a9aa2a98513f6256949e396d0fa29e8abe",
             "parents": [
-              "71b4efee531f9354f0cfb31794201c528d6a8b01"
+              "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01"
             ],
-            "subject": "修复：图像工作区的空白不挤占页签宽度"
+            "subject": "修复：画廊翻页按钮避开滚动卡片"
+          },
+          {
+            "commit": "379c50f7c5c445e77cfa64a3dccb3842b9c594a2",
+            "parents": [
+              "b14bd5a9aa2a98513f6256949e396d0fa29e8abe"
+            ],
+            "subject": "调整：应用名称统一为图像"
+          },
+          {
+            "commit": "062c211d70fd95df95046a854aeb46e01e90b57e",
+            "parents": [
+              "379c50f7c5c445e77cfa64a3dccb3842b9c594a2"
+            ],
+            "subject": "修复：点击浏览器网页时关闭侧屏菜单"
+          },
+          {
+            "commit": "3fe85d310e1ee8a393973d761d01f83c41955925",
+            "parents": [
+              "062c211d70fd95df95046a854aeb46e01e90b57e"
+            ],
+            "subject": "调整：续跑任务改用标题行的播放按钮"
+          },
+          {
+            "commit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
+            "parents": [
+              "3fe85d310e1ee8a393973d761d01f83c41955925"
+            ],
+            "subject": "功能：知识库图片预览可直接打开图像画布"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-knowledge-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-progress-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/browser/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/image-factory-canvases.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/native-menus.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-app-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/canvas-workspace.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/image-factory/style.css"
@@ -30,6 +102,66 @@
           {
             "status": "M",
             "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-actions-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-context-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-native-preview.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-note-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-continuation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-continuation-upgrade.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-progress-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-resume-layout-browser.test.js"
           }
         ],
         "checks": [
@@ -41,8 +173,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
-            "completedAt": "2026-11-17T00:44:01.952Z",
+            "verifiedCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
+            "completedAt": "2026-11-17T01:11:45.894Z",
             "timeoutMs": 120000
           },
           {
@@ -50,14 +182,48 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-gallery.test.ts",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-native.test.js"
+              "test/task-continuation-upgrade.test.js",
+              "test/task-progress-client.test.js",
+              "test/task-resume-layout-browser.test.js",
+              "test/task-continuation-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "21 项图像工厂聚焦检查通过。",
-            "verifiedCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
-            "completedAt": "2026-11-17T00:44:01.952Z",
+            "summary": "21 项继续任务聚焦验证通过，包含两种对话布局、折叠/展开、双击和草稿。",
+            "verifiedCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
+            "completedAt": "2026-11-17T01:11:45.894Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-page-actions-service.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/scheduled-task-view.test.ts",
+              "test/image-generation-tool.test.js",
+              "test/image-factory-gallery.test.ts",
+              "test/knowledge-native-preview.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "验证浏览器网页点击、图像入口与归档预览、左右翻页。",
+            "verifiedCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
+            "completedAt": "2026-11-17T01:11:45.894Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-page-context-rendered.test.js",
+              "-t",
+              "active native webpage only"
+            ],
+            "outcome": "passed",
+            "summary": "实际 Chromium 验证网页点击通过共享菜单关闭路径，忽略失效页签。",
+            "verifiedCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
+            "completedAt": "2026-11-17T01:11:45.894Z",
             "timeoutMs": 120000
           },
           {
@@ -70,22 +236,40 @@
               "Image Factory"
             ],
             "outcome": "passed",
-            "summary": "4 项图像工厂 Chromium 布局检查通过。",
-            "verifiedCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
-            "completedAt": "2026-11-17T00:44:01.952Z",
+            "summary": "实际 Chromium 验证窄/宽画廊不会压住滚动卡片。",
+            "verifiedCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
+            "completedAt": "2026-11-17T01:11:45.894Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sidebar-new-note-browser.test.js",
+              "-t",
+              "real expanded menu"
+            ],
+            "outcome": "passed",
+            "summary": "展开侧栏的真实菜单使用图像名称。",
+            "verifiedCommit": "28abf482226659cf2e9311b0bfd78cba3d498eeb",
+            "completedAt": "2026-11-17T01:11:45.894Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "签名版确认画廊翻页，发现空白挤压页签；修正通过新建任务、排序、固定、恢复和标题宽度的 Chromium 检查。"
+          "summary": "旧签名版已经实测从知识库归档回原画布与编辑副本，以及画廊遮挡；修复在签名版启动后复测。"
         },
         "acceptanceCriteria": [
-          "有任务页签时，中央空白不挤占页签宽度。",
-          "已打开的页签、添加页签与更多按钮保留显示，画廊按钮按当前宽度翻页。"
+          "左右翻页按钮在独立留白区。",
+          "首页、左栏和顶栏使用图像名称。",
+          "共享继续任务行为由标题行播放图标触发。",
+          "真实网页点击能关掉右侧项目菜单。",
+          "图片预览可打开来源画布或创建副本。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-17T00:44:01.952Z"
+        "generatedAt": "2026-11-17T01:11:45.894Z"
       }
     },
     {
