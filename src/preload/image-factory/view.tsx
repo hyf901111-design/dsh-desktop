@@ -1034,14 +1034,16 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         }
         if (!mounted.current || active.current.get(id) !== job) return
         const changed = workspace.change(job.sessionId, live => {
-          if (!live || live.id !== job.scene?.id || job.targets!.some(({ layer }) => !live.layers.includes(layer))) return live
+          if (!replacements.size || !live || live.id !== job.scene?.id || job.targets!.some(({ layer }) => !live.layers.includes(layer))) return live
           return { ...live, layers: live.layers.map(layer => replacements.get(layer) ?? layer) }
         })
         if (changed) pendingRaster = undefined
         if (workspace.getSnapshot().scope === job.sessionId) {
-          setToast(changed ? failedImage ? t('其他图层已更新，图片结果无法读取。', 'Other layers updated. The image result could not be read.') :
-            t('引用的图层已更新。', 'Referenced layers updated.') :
-            t('图层已变化或没有可应用的修改。', 'Layers changed or no applicable edits were returned.'))
+          setToast(failedImage ? changed
+            ? t('其他图层已更新。图片修改未完成，已保留原图。', 'Other layers updated. The image edit did not complete, so the original was kept.')
+            : t('图片修改未完成，已保留原图。', 'The image edit did not complete, so the original was kept.')
+            : changed ? t('引用的图层已更新。', 'Referenced layers updated.')
+            : t('图层已变化或没有可应用的修改。', 'Layers changed or no applicable edits were returned.'))
         }
       } catch (error) {
         if (mounted.current && workspace.getSnapshot().scope === job.sessionId)

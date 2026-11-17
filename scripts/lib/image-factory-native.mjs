@@ -186,7 +186,9 @@ export function installImageFactoryContext({
       const nodes = chat.order.slice(-150).map(key => chat.nodes.get(key)).filter(Boolean)
       const queued = queue?.some(row => owns(row.content))
       job.wasQueued ||= queued
-      job.admitted ||= nodes.some(row => (row.kind === 'user' || row.kind === 'steering') && owns(row.data?.content))
+      const startsTurn = row => row.kind === 'user' || row.kind === 'steering'
+      const turnIndex = nodes.findIndex(row => startsTurn(row) && owns(row.data?.content))
+      job.admitted ||= turnIndex >= 0
       if (job.admitted) void promoteDraft(job)
       const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
       if (job.targetLayers) {
@@ -194,6 +196,11 @@ export function installImageFactoryContext({
         for (const [key, patch] of readImageLayerReceipts(nodes, job.id))
           job.edits.set(key, { ...job.edits.get(key), ...patch })
         job.image ??= delivered
+        if (!job.image && !job.imageFailed && turnIndex >= 0 && job.targetLayers.some(layer => layer.kind === 'image')) {
+          const nextTurn = nodes.findIndex((row, index) => index > turnIndex && startsTurn(row))
+          const turn = nodes.slice(turnIndex + 1, nextTurn === -1 ? undefined : nextTurn)
+          job.imageFailed = imageGenerationCalls(turn, running).some(call => call.state === 'failed' || call.state === 'cancelled')
+        }
         // Each tool may finish at a different time. Apply the turn's results together
         // once its native admission and model execution have settled.
         if (!queued && (job.admitted ? !running : job.wasQueued)) {
@@ -204,11 +211,11 @@ export function installImageFactoryContext({
             if ((job.admitted && settled.running) || settled.queue?.some(row => owns(row.content))) return
             const edits = [...job.edits].map(([key, patch]) => ({ key, patch }))
             const image = job.image
-            if (!edits.length && !image) return finish(job.id)
+            if (!edits.length && !image && !job.imageFailed) return finish(job.id)
             job.delivering = true
             void (async () => {
               let url
-              let imageError = false
+              let imageError = !image && job.imageFailed === true
               try {
                 await promoteDraft(job)
                 if (image) {
