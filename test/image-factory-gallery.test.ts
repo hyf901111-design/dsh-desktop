@@ -5,6 +5,29 @@ import { expect, it, vi } from 'vitest'
 import { ImageFactoryGallery } from '../src/preload/image-factory/gallery'
 import { galleryExamples } from '../src/preload/image-factory/gallery-examples'
 
+it('uses the displayed asset dimensions for both the readout and the Make something like this prompt', async () => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const mount = document.body.appendChild(document.createElement('div'))
+  const root = createRoot(mount)
+  const use = vi.fn()
+  try {
+    await act(() => root.render(createElement(ImageFactoryGallery, { t: zh => zh, busy: false, onUse: use })))
+    const card = mount.querySelector('article')!
+    const image = card.querySelector('img')!
+    await vi.waitFor(() => expect(card.querySelector('dl')?.textContent).toContain('1:1 · 512 × 512 px'))
+    const button = card.querySelector('button')!
+    expect(button.contains(image)).toBe(true)
+    expect(button.textContent).toContain('做同款')
+    expect(card.textContent).not.toContain('使用提示词')
+    await act(() => button.click())
+    expect(use).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/画面比例为 1:1。$/u))
+  } finally {
+    await act(() => root.unmount())
+    mount.remove()
+    vi.unstubAllGlobals()
+  }
+})
+
 it('pages several cards in either direction, wraps the loop, and pauses while concealed', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const win = document.defaultView!

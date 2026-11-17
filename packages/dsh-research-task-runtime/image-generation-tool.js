@@ -2,6 +2,7 @@ import {defineTool} from '@deepseek-ai/dsh-tools'
 import {createHash} from 'node:crypto'
 import {createOpenAIImageProvider,ImageGenerationError,validateGeneratedImage} from './image-generation-provider.js'
 import {readImageFactoryContext} from './image-factory-context.js'
+import {cutoutMaskPrompt,prepareImageCutout} from './image-cutout.js'
 
 const TOOL='image_generate',KIND='odyssey-image-generation',MAX_BYTES=20*1024*1024,MAX_PROMPT=16_000
 const fail=message=>{throw new ImageGenerationError(message)}
@@ -81,15 +82,17 @@ export function registerImageGenerationTool(ctx,options={}){
      ? {...args,model:undefined}
      : args
    const factory=factoryContext(authority)
+   const cutout=factory?.operation==='cutout'
    const canvasReference=factory?.internalReference ? turnImages.at(-1) : undefined
    if(factory?.internalReference&&!canvasReference)fail('当前画布未能作为图片参考，请重试。')
    const input=argumentsFor(factory ? {
     ...routed, size:factory.size,
-    ...(canvasReference&&{reference_image_ids:factory.operation==='region' ? [canvasReference]
+    ...(cutout&&{prompt:cutoutMaskPrompt,background:'opaque'}),
+    ...(canvasReference&&{reference_image_ids:factory.operation==='region'||cutout ? [canvasReference]
       : [canvasReference,...attachedIds.filter(id=>id!==canvasReference)]}),
    } : routed,models,hosted?.models[0]?.id??defaultModel,attachedIds)
    const provider=models.get(input.model).provider
-   const hostedCanvas=!!factory&&factory.operation!=='region'&&provider===hosted
+   const hostedCanvas=!!factory&&!cutout&&factory.operation!=='region'&&provider===hosted
    // The hosted gateway appends its own aspect-ratio hint to preset sizes.
    // Use its resolution preset alone and supply the actual canvas proportions.
    if(hostedCanvas)input.size='auto'
@@ -132,15 +135,20 @@ export function registerImageGenerationTool(ctx,options={}){
      for(const ref of references){check(agent,session,authority,signal);if(ref.bytes>maxBytes)fail('参考图过大，请使用 20MB 以内的图片。');const image=await attachments.readImage(ref,signal);loaded.push({data:image.data,mediaType:image.ref.mediaType})}
      check(agent,session,authority,signal)
      const requestId=createHash('sha256').update(JSON.stringify([session.id,key])).digest('hex')
-     const result=await generate({...input,references:loaded},{signal,maxBytes,requestId,assertCurrent:()=>check(agent,session,authority,signal)})
+     const matte=cutout?await prepareImageCutout(loaded[0].data,input.size):undefined
+     check(agent,session,authority,signal)
+     const result=await generate({...input,references:matte?[matte.reference]:loaded},{signal,maxBytes,requestId,assertCurrent:()=>check(agent,session,authority,signal)})
      check(agent,session,authority,signal)
      validateGeneratedImage(result.data,maxBytes)
+     const data=matte?await matte.applyMask(result.data):result.data
+     check(agent,session,authority,signal)
+     validateGeneratedImage(data,maxBytes)
      const name=factory?.title.replace(/[\\/\p{Cc}]/gu,' ').trim()
-     let image;try{image=await attachments.saveImage({data:result.data,mediaType:'image/png',name:(name||'生成图片')+'.png'})}catch{fail('生成结果未能保存为有效图片，请检查附件存储空间。')}
+     let image;try{image=await attachments.saveImage({data,mediaType:'image/png',name:(name||'生成图片')+'.png'})}catch{fail('生成结果未能保存为有效图片，请检查附件存储空间。')}
      check(agent,session,authority,signal)
      return{kind:KIND,version:1,ok:true,requestKey:key,model:input.model,image,
       ...(factory&&{factory:{id:factory.id,title:factory.title,operation:factory.operation}}),
-      guidance:factory ? '图片已放入当前图像画布。'+(factory.operation==='region' ? '' :
+      guidance:cutout ? '已移除当前画布的图片背景，结果为保留透明通道的 PNG。' : factory ? '图片已放入当前图像画布。'+(factory.operation==='region' ? '' :
        '画布目标尺寸为 '+factory.width+' × '+factory.height+' 像素。使用画布尺寸报告本轮结果。')+
        '用户明确要求后续工作时继续完成。' :
        '图片已直接显示在当前会话。继续完成用户明确要求的其他工作，无需重复展示或生成。'}
@@ -160,7 +168,9 @@ export function registerImageGenerationTool(ctx,options={}){
   const refs=[...conversationImageReferences(agent?.session).values()].slice(-20).map(({attachmentId,width,height,name})=>({id:attachmentId,width,height,name}))
   const available=[...models.values()].filter(({provider})=>hosted?provider===hosted:provider!==options.hosted)
   const factory=factoryContext(human(agent?.session))
-  const framing=factory?.editBounds
+  const framing=factory?.operation==='cutout'
+   ? '本轮来自「去背景」按钮，直接调用 image_generate 抠出当前画布的主体，保留透明区域。'
+   : factory?.editBounds
    ? '随消息提供了带周边上下文的选区参考图。'+selectedRegionInstructions(factory.editBounds)
    : factory ? '目标区域宽高为 '+factory.width+' × '+factory.height+'，按该比例构图。' : ''
   const workspace=factory

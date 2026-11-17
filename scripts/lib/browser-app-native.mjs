@@ -160,7 +160,7 @@ ctx.effect(()=>{
    getTaskWorkspace:()=>{const state=workspaces.list.getSnapshot(), current=sessions.list.getSnapshot().current;
      return state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??eworkPendingConversation?.getSnapshot().workspaceId??state.recentWorkspaceId},
    setTaskView:id=>chatStore.create(id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
-   send:(session,content,mode,regionId)=>factory.prompt(session,content,mode,regionId)
+   send:(session,content,mode,action)=>factory.prompt(session,content,mode,action)
  });
  eworkImageFactory=factory;
  return()=>{if(eworkImageFactory===factory)eworkImageFactory=undefined;factory.dispose()};

@@ -48,7 +48,7 @@ export function installImageFactoryContext({
     return true
   }
   const usePrompt = event => { if (!state.current && fill(event.detail?.prompt, true)) event.preventDefault() }
-  function request(id, sessionId, scope, prompt, uploaded, region) {
+  function request(id, sessionId, scope, prompt, uploaded, operation) {
     return new Promise((resolve, reject) => {
       const cleanup = () => { win.clearTimeout(timer); doc.removeEventListener('sherlock:image-factory-prepared', reply) }
       const reply = event => {
@@ -60,24 +60,24 @@ export function installImageFactoryContext({
       }
       const timer = win.setTimeout(() => { cleanup(); finish(id); reject(Error('图像画布尚未就绪，请重试。')) }, 12000)
       doc.addEventListener('sherlock:image-factory-prepared', reply)
-      signal('prepare', { id, sessionId, scope, prompt, uploaded, region })
+      signal('prepare', { id, sessionId, scope, prompt, uploaded, region: operation === 'region', cutout: operation === 'cutout' })
     })
   }
-  async function prepare(sessionId, content, regionId) {
+  async function prepare(sessionId, content, action) {
     if (!isActive() || currentId() !== sessionId) {
-      if (regionId) throw Error('当前会话或画布已切换，修改意见已保留。')
+      if (action) throw Error('当前会话或画布已切换。')
       return { content }
     }
     const text = content.filter(part => part.type === 'text').map(part => part.text).join('\n')
     if (!text.trim()) return { content }
-    if (!regionId && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
-    const id = regionId ?? win.crypto.randomUUID()
+    if (!action && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
+    const id = action?.id ?? win.crypto.randomUUID()
     const scope = canvasScope()
     try {
       const imageCount = content.filter(part => part.type === 'image').length
-      const response = await request(id, sessionId, scope, text, imageCount > 0, !!regionId)
+      const response = await request(id, sessionId, scope, text, imageCount > 0, action?.operation)
       if (!isActive() || currentId() !== sessionId || canvasScope() !== scope) throw Error('当前会话或画布已切换，草稿已保留。')
-      if (regionId && response.operation !== 'region') throw Error('选区已变化，请重新框选。')
+      if (action && response.operation !== action.operation) throw Error('当前画布已变化，请重试。')
       const { operation, size, width, height, title, reference, editBounds } = response
       if (reference && imageCount > 3) throw Error('编辑当前画布时，最多可再附加三张参考图。')
       const next = [...content]
@@ -135,8 +135,8 @@ export function installImageFactoryContext({
     job.unsubscribe = session.subscribe(observe)
     observe()
   }
-  async function prompt(session, content, mode, regionId) {
-    const next = await prepare(session.sessionId, content, regionId)
+  async function prompt(session, content, mode, action) {
+    const next = await prepare(session.sessionId, content, action)
     try {
       if (next.id) watch(session, jobs.get(next.id))
       const result = await session.prompt(next.content, mode)
@@ -144,19 +144,19 @@ export function installImageFactoryContext({
       return result
     } catch (error) { if (next.id) finish(next.id); throw error }
   }
-  async function submitComment(event) {
+  async function submitCanvasAction(event, operation) {
     const { id, prompt: text } = event.detail ?? {}
     if (!isActive() || typeof id !== 'string' || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u.test(id) ||
         typeof text !== 'string' || !text.trim() || text.length > 3600) return
     event.preventDefault()
-    const reply = error => signal('comment-result', { id, error })
+    const reply = error => signal(operation === 'region' ? 'comment-result' : 'cutout-result', { id, error })
     const submit = async sessionId => {
       if (!isActive() || currentId() !== sessionId) throw Error('当前会话或画布已切换。')
       const session = sessions.binding(sessionId)?.session
       const snapshot = session?.getSnapshot()
       if (!session || !snapshot || snapshot.running || snapshot.queue?.length || snapshot.subagent) throw Error('请等当前对话处理完成后再提交。')
-      const result = await send(session, [{ type: 'text', text: text.trim() }], 'queue', id)
-      if (!result?.ok) throw Error(result?.error?.message || '修改意见发送失败，请重试。')
+      const result = await send(session, [{ type: 'text', text: text.trim() }], 'queue', { id, operation })
+      if (!result?.ok) throw Error(result?.error?.message || '图片请求发送失败，请重试。')
     }
     try {
       const sessionId = currentId()
@@ -201,7 +201,9 @@ export function installImageFactoryContext({
     tasks.reset()
   }
   const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt,
-    comment: submitComment, 'focus-chat': focus, reset,
+    comment: event => { void submitCanvasAction(event, 'region') },
+    cutout: event => { void submitCanvasAction(event, 'cutout') },
+    'focus-chat': focus, reset,
     'task-action': event => { void tasks.action(event.detail) }, 'task-title': event => tasks.setTitle(event.detail),
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)

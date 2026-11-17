@@ -48,8 +48,8 @@ function fixture(taskStorage) {
   })
   const respond = (error) => doc.addEventListener('sherlock:image-factory-prepare', ({ detail }) => {
     events('prepared', { id: detail.id, ...(error ? { error } : {
-      operation: detail.region ? 'region' : 'generate', size: '1024x1536', width: 200, height: 280, title: '海报',
-      reference: detail.region ? { data: 'AAAA', mediaType: 'image/png' } : undefined,
+      operation: detail.cutout ? 'cutout' : detail.region ? 'region' : 'generate', size: '1024x1536', width: 200, height: 280, title: '海报',
+      reference: detail.region || detail.cutout ? { data: 'AAAA', mediaType: 'image/png' } : undefined,
       editBounds: detail.region ? { left: .2, top: .2, right: .8, bottom: .8 } : undefined,
     }) })
   })
@@ -158,6 +158,24 @@ it('adds workspace context to the real native prompt while leaving ordinary chat
     const [nativeContent, mode] = f.session.prompt.mock.calls.at(-1)
     expect(mode).toBe('queue')
     expect(readImageFactoryContext(nativeContent[0].text)).toMatchObject({ operation: 'generate', text: content[0].text })
+    expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+it('sends background removal through the shared native session with only the current canvas reference', async () => {
+  const f = fixture()
+  try {
+    f.respond()
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const id = f.win.crypto.randomUUID()
+    const reported = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-cutout-result', reported)
+    expect(f.events('cutout', { id, prompt: '去除当前图片的背景，保留主体。' }, true)).toBe(false)
+    await vi.waitFor(() => expect(reported).toHaveBeenCalledTimes(1))
+    const [[content, mode]] = f.session.prompt.mock.calls
+    expect(mode).toBe('queue')
+    expect(readImageFactoryContext(content[0].text)).toMatchObject({ id, operation: 'cutout', internalReference: true })
+    expect(content.slice(1)).toEqual([{ type: 'image', data: 'AAAA', mediaType: 'image/png', name: '当前画布' }])
     expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })

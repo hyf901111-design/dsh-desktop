@@ -1,6 +1,7 @@
 import {afterEach, expect, it, vi} from 'vitest'
 import {registerImageGenerationTool,conversationImageReferences} from '../packages/dsh-research-task-runtime/image-generation-tool.js'
 import {imageFactoryPrompt} from '../packages/dsh-research-task-runtime/image-factory-context.js'
+import sharp from 'sharp'
 
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=','base64')
 const cleanups=[]
@@ -86,6 +87,34 @@ it('requires the promised canvas reference before dispatching an edit', async ()
  await expect(f.call()).rejects.toThrow('当前画布未能作为图片参考')
  expect(f.request).not.toHaveBeenCalled()
 })
+it('uses the hosted image model mask to deliver an aligned transparent PNG with the original foreground colors',async()=>{
+ const width=12,height=6
+ const rgba=Buffer.from(Array.from({length:width*height},(_,i)=>[170,70,35,i%width===7?150:255]).flat())
+ const source=await sharp(rgba,{raw:{width,height,channels:4}}).png().toBuffer()
+ const generate=vi.fn(async({references})=>{
+  const {data,info}=await sharp(references[0].data).removeAlpha().raw().toBuffer({resolveWithObject:true})
+  const mask=Buffer.from(Array.from({length:info.width*info.height},(_,pixel)=>pixel%info.width>=info.width/2&&data[pixel*3]>20?255:0))
+  return {data:await sharp(mask,{raw:{width:info.width,height:info.height,channels:1}}).png().toBuffer()}
+ })
+ const f=fixture({uploaded:true,hosted:{models:[{id:'mask-model'}],available:()=>true,generate}})
+ f.attachments.readImage=async ref=>({ref,data:source})
+ f.agent.session.events[1].data.content[0].text=imageFactoryPrompt('去除背景',{
+  id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'商品照片',operation:'cutout',
+  size:'1536x1024',width,height,internalReference:true
+ })
+ const result=await f.call({prompt:'把背景换成红色',background:'transparent',reference_image_ids:[]})
+ expect(generate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+  prompt:expect.stringContaining('前景分割遮罩'),background:'opaque',size:'1536x1024'
+ }),expect.anything())
+ expect(result).toMatchObject({factory:{operation:'cutout'},guidance:expect.stringContaining('透明通道')})
+ const output=await sharp(f.saved[0].data).raw().toBuffer({resolveWithObject:true})
+ expect(output.info).toMatchObject({width,height,channels:4})
+ const pixel=(x,y)=>Array.from(output.data.subarray((y*width+x)*4,(y*width+x+1)*4))
+ expect(pixel(1,3)[3]).toBe(0)
+ expect(pixel(7,3)).toEqual([170,70,35,150])
+ expect(pixel(10,3)).toEqual([170,70,35,255])
+})
+
 it('sends the framed selection to the image provider with its bounds and full-frame composition',async()=>{
  const f=fixture({uploaded:true})
  f.agent.session.events[1].data.content[0].text=imageFactoryPrompt('只移动选区里的花', {

@@ -254,6 +254,7 @@ it('opens an editable region comment when the pointer is released outside the im
     vi.spyOn(scroller.parentElement!, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 980, 1160))
     const mark = Array.from(document.querySelectorAll('button')).find(button => button.textContent?.trim() === '框选修改')!
     await act(async () => mark.click())
+    expect(document.querySelector('.if-mark-hint')).toBeNull()
     const pointer = (type: string, target: Element, buttons: number, x: number, y: number) =>
       target.dispatchEvent(new PointerEvent(type, { bubbles: true, isPrimary: true, pointerId: 1, buttons, clientX: x, clientY: y }))
     await act(async () => {
@@ -266,6 +267,7 @@ it('opens an editable region comment when the pointer is released outside the im
     expect(selected?.style.left).toBe('56.25%')
     expect(selected?.style.width).toBe('43.75%')
     expect(selected?.style.height).toBe('30%')
+    expect(selected?.querySelectorAll('i')).toHaveLength(4)
     const input = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="修改意见"]')!
     expect(input).not.toBeNull()
     expect(input.closest<HTMLElement>('.if-comment')?.style.visibility).not.toBe('hidden')
@@ -278,6 +280,22 @@ it('opens an editable region comment when the pointer is released outside the im
     expect(send.disabled).toBe(false)
     await act(async () => send.click())
     expect(submitted).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ detail: expect.objectContaining({ prompt: '把区域改成浅蓝' }) }))
+    const { id } = (submitted.mock.calls[0]![0] as CustomEvent).detail
+    const report = (error?: string) =>
+      document.dispatchEvent(new CustomEvent('sherlock:image-factory-comment-result', { detail: { id, error } }))
+    expect(selected?.dataset.processing).toBe('true')
+    expect(selected?.querySelectorAll('i')).toHaveLength(0)
+    expect(document.querySelector('.if-comment')).toBeNull()
+    await act(async () => { report() })
+    expect(selected?.dataset.processing).toBe('true')
+    expect(document.querySelector('.if-comment')).toBeNull()
+    await act(async () => { report('服务暂时不可用') })
+    const restored = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="修改意见"]')
+    expect(selected?.dataset.processing).toBe('false')
+    expect(selected?.querySelectorAll('i')).toHaveLength(4)
+    expect(restored?.value).toBe('把区域改成浅蓝')
+    expect(restored?.closest('form')?.querySelector('[role=alert]')?.textContent).toBe('服务暂时不可用')
+    expect(restored?.closest('form')?.querySelector('button[type=submit]')?.textContent?.trim()).toBe('重试')
   } finally {
     document.removeEventListener('sherlock:image-factory-comment', submitted)
     await act(async () => factory.dispose())

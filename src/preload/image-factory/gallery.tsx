@@ -1,7 +1,7 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { galleryExamples } from './gallery-examples'
 import { iconSource } from './icons'
-import { ratios } from './raster'
+import type { Size } from './raster'
 
 const art = import.meta.glob('./gallery-art/*.jpg', { eager: true, query: '?inline', import: 'default' }) as Record<string, string>
 const scrollSpeed = 30
@@ -9,7 +9,14 @@ const pageDuration = 260
 const wrap = (position: number, width: number) => ((position % width) + width) % width
 type T = (zh: string, en: string) => string
 
+function imageRatio({ width, height }: Size) {
+  let a = width, b = height
+  while (b) [a, b] = [b, a % b]
+  return (width / a) + ':' + (height / a)
+}
+
 export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: string): void }) {
+  const [sizes, setSizes] = useState<Record<string, Size>>({})
   const viewport = useRef<HTMLDivElement>(null)
   const firstCycle = useRef<HTMLDivElement>(null)
   const page = useRef<(direction: -1 | 1) => void>()
@@ -115,33 +122,41 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
           {galleryExamples.map(example => {
             const title = t(...example.title)
             const prompt = t(...example.prompt)
-            const { width, height } = ratios[example.ratio]
-            const useLabel = t('使用提示词', 'Use prompt')
+            const size = sizes[example.id]
+            const ratio = size && imageRatio(size)
+            const useLabel = t('做同款', 'Make something like this')
             return <article className="if-gallery-card" key={example.id}>
-              <img alt="" src={art['./gallery-art/' + example.id + '.jpg']} draggable={false} data-ratio={example.ratio}/>
+              <button type="button" className="if-gallery-art" disabled={busy} tabIndex={repeated ? -1 : undefined}
+                aria-label={title + ' · ' + useLabel}
+                onClick={() => onUse(ratio ? prompt + '\n' + t('画面比例为 ' + ratio + '。', 'Aspect ratio: ' + ratio + '.') : prompt)}>
+                <img alt="" src={art['./gallery-art/' + example.id + '.jpg']} draggable={false}
+                  onLoad={({ currentTarget }) => {
+                    const { naturalWidth: width, naturalHeight: height } = currentTarget
+                    if (width && height) setSizes(current => current[example.id] ? current : { ...current, [example.id]: { width, height } })
+                  }}/>
+                <span className="if-gallery-use">{useLabel}<i className="if-symbol"
+                  style={{ maskImage: `url("${iconSource('arrow-up')}")` }} aria-hidden="true"/></span>
+              </button>
               <h3>{title}</h3>
               <span className="if-gallery-caption">{t('提示词', 'Prompt')}</span>
               <p>{prompt}</p>
               <dl>
                 <dt>{t('使用场景', 'Use cases')}</dt><dd>{t(...example.scenes)}</dd>
-                <dt>{t('图像参数', 'Image settings')}</dt><dd>{example.ratio} · {width} × {height}</dd>
+                {size && <><dt>{t('图像参数', 'Image settings')}</dt><dd>{ratio} · {size.width} × {size.height} px</dd></>}
               </dl>
-              <button type="button" className="if-gallery-use" disabled={busy} tabIndex={repeated ? -1 : undefined}
-                aria-label={title + ' · ' + useLabel}
-                onClick={() => onUse(prompt + '\n' + t('画面比例为 ' + example.ratio + '。', 'Aspect ratio: ' + example.ratio + '.'))}>
-                {useLabel}<span className="if-symbol" style={{ maskImage: `url("${iconSource('arrow-up')}")` }} aria-hidden="true"/>
-              </button>
             </article>
           })}
         </div>)}
       </div>
     </div>
-    {([-1, 1] as const).map(direction => {
-      const label = direction < 0 ? t('向左翻页', 'Scroll gallery left') : t('向右翻页', 'Scroll gallery right')
-      return <button key={direction} type="button" className="if-gallery-page" data-direction={direction < 0 ? 'left' : 'right'}
-        aria-label={label} title={label} onClick={() => page.current?.(direction)}>
-        <i className="if-symbol" aria-hidden="true" style={{ '--if-icon': 'url("' + iconSource('chevron') + '")' } as CSSProperties}/>
-      </button>
-    })}
+    <div className="if-gallery-controls">
+      {([-1, 1] as const).map(direction => {
+        const label = direction < 0 ? t('向左翻页', 'Scroll gallery left') : t('向右翻页', 'Scroll gallery right')
+        return <button key={direction} type="button" className="if-gallery-page" data-direction={direction < 0 ? 'left' : 'right'}
+          aria-label={label} title={label} onClick={() => page.current?.(direction)}>
+          <i className="if-symbol" aria-hidden="true" style={{ '--if-icon': 'url("' + iconSource('chevron') + '")' } as CSSProperties}/>
+        </button>
+      })}
+    </div>
   </div>
 }
