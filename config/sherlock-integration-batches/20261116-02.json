@@ -9,23 +9,103 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "探索演示右侧对话、探索图标与图像消息动作",
+        "featureName": "图像画布、画廊和知识库预览修复",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
-        "tipCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
+        "baseCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
+        "tipCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
         "commits": [
           {
-            "commit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
+            "commit": "96238297736cca2a950cbfbf5255eb2ff03418f5",
             "parents": [
-              "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5"
+              "d940356a83e41fac66fa0e2785d329cdc3372b7a"
             ],
-            "subject": "修复：本地包更新窄窗口的演示右栏"
+            "subject": "优化：去背景使用明确的主体描述"
+          },
+          {
+            "commit": "a1b45e56bd12535a58dc9a5e2dde8bb895b3edce",
+            "parents": [
+              "96238297736cca2a950cbfbf5255eb2ff03418f5"
+            ],
+            "subject": "修复：支持文字图层移出画框并从图层列表找回"
+          },
+          {
+            "commit": "7d53d93831e3c0e1d3cce5269c5e10eaa0713117",
+            "parents": [
+              "a1b45e56bd12535a58dc9a5e2dde8bb895b3edce"
+            ],
+            "subject": "修复：透明棋盘格遮住画板点阵"
+          },
+          {
+            "commit": "cdc7fd2f7d06a884810cd62e61dc0d6b92ac6b00",
+            "parents": [
+              "7d53d93831e3c0e1d3cce5269c5e10eaa0713117"
+            ],
+            "subject": "优化：校准画廊箭头并添加图像信息标签"
+          },
+          {
+            "commit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+            "parents": [
+              "cdc7fd2f7d06a884810cd62e61dc0d6b92ac6b00"
+            ],
+            "subject": "修复：知识库可以预览图像应用生成的图片"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+            "path": "packages/dsh-research-task-runtime/image-cutout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-knowledge-preview.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/image-factory-canvases.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/layers.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/viewport.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-canvases.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-native-preview.test.ts"
           }
         ],
         "checks": [
@@ -34,17 +114,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/home-guide-session.test.ts",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-explore-entry-browser.test.js",
-              "test/home-guides.test.ts",
-              "--hookTimeout",
-              "25000"
+              "test/knowledge-native-preview.test.ts",
+              "test/image-factory-native.test.js",
+              "test/image-generation-tool.test.js"
             ],
             "outcome": "passed",
-            "summary": "在切换到目标研究、笔记、表格会话前打开共享右侧对话。",
-            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
-            "completedAt": "2026-11-17T03:00:40.584Z",
+            "summary": "已有生成图片的知识库预览、来源图标、图像模型去背景",
+            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+            "completedAt": "2026-11-17T03:36:08.234Z",
             "timeoutMs": 120000
           },
           {
@@ -52,16 +129,15 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/explore-menu-browser.test.ts",
-              "-t",
-              "always-flowing orb|Explore orb moving|restores the sidebar trigger",
-              "--hookTimeout",
-              "25000"
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory.test.js",
+              "test/image-factory-canvas-workspace.test.ts"
             ],
             "outcome": "passed",
-            "summary": "验证探索按钮展开、收起时持续渐变以及系统减少动态效果。",
-            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
-            "completedAt": "2026-11-17T03:00:40.584Z",
+            "summary": "画框外文字、图层重新选中、移动和保存",
+            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+            "completedAt": "2026-11-17T03:36:08.234Z",
             "timeoutMs": 120000
           },
           {
@@ -69,34 +145,18 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/knowledge-workspace-rendered.test.js",
               "test/image-factory-gallery.test.ts",
+              "test/knowledge-workspace-rendered.test.js",
+              "test/image-factory-fonts-rendered.test.js",
               "-t",
-              "Image Factory|hides the native add actions|uses the displayed asset|pages several cards",
+              "displayed asset|pages several|Image Factory|poster typefaces",
               "--hookTimeout",
               "25000"
             ],
             "outcome": "passed",
-            "summary": "在图像与浏览器隐藏画布和笔记插入操作并保留其它按钮。",
-            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
-            "completedAt": "2026-11-17T03:00:40.584Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/browser-app-native.test.js",
-              "-t",
-              "patches the canvas action|registers the browser view",
-              "--hookTimeout",
-              "25000"
-            ],
-            "outcome": "passed",
-            "summary": "验证共用对话的原生操作标识及运行时安装。",
-            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
-            "completedAt": "2026-11-17T03:00:40.584Z",
+            "summary": "画廊实际尺寸、标签、滚动与光标交互",
+            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+            "completedAt": "2026-11-17T03:36:08.234Z",
             "timeoutMs": 120000
           },
           {
@@ -106,25 +166,38 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
-            "completedAt": "2026-11-17T03:00:40.584Z",
+            "summary": "类型检查",
+            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+            "completedAt": "2026-11-17T03:36:08.234Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check"
+            ],
+            "outcome": "passed",
+            "summary": "差异检查",
+            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+            "completedAt": "2026-11-17T03:36:08.234Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生会话测试验证右侧对话打开时机，真实 Chromium 验证图像操作可见性与探索动画。 已验证本地包的侧栏模块可升级到窄窗口演示规则。"
+          "summary": "Chromium 已检查画廊悬浮滚动区、箭头光学中心和两种主题的棋盘格像素。原生旧包已复现知识库报错。"
         },
         "acceptanceCriteria": [
-          "研究、笔记和表格演示打开目标会话右侧对话。",
-          "探索图标在展开与收起侧栏中持续渐变。",
-          "图像历史回复隐藏添加到画布和笔记。"
+          "画框外文字可在图层列表选中，并拖回画框。",
+          "画板点阵停留在画框外。",
+          "画廊按钮居中，使用场景和图像参数有标签底色。",
+          "最近入库的生成图能在右侧预览。"
         ],
         "risks": [
-          "最终客户端需检查右侧对话就绪并实测播放跨过输入步骤。"
+          "须在本地新包里用现有归档图片实测右栏预览。"
         ],
-        "generatedAt": "2026-11-17T03:05:42.957Z"
+        "generatedAt": "2026-11-17T03:36:08.234Z"
       }
     },
     {
