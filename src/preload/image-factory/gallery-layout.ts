@@ -2,6 +2,7 @@ import type { BrandArtworkId, BrandOverlay, TextLayer } from '../../shared/image
 import { brandArtwork, brandColors as c } from './brand-artwork'
 import type { GalleryExample } from './gallery-examples'
 import { templateTextLayer } from './template-text'
+import { drawMarketingLayout } from './marketing-layout'
 import type { Size } from './raster'
 
 type T = (zh: string, en: string) => string
@@ -20,8 +21,10 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
     art(asset, 1 - width, Math.max(0, 1 - artHeight(asset, width)), width)
   const block = (color: string, x: number, y: number, width: number, height: number) =>
     layers.push({ kind: 'shape', id: nextId(), color, x, y, width, height })
-  const copy = (text: string, x: number, y: number, width: number, em: number, color: string, weight = 400) =>
-    layers.push(templateTextLayer(nextId(), text, size.width, x, y, width, em, color, weight))
+  const copy = (text: string, x: number, y: number, width: number, em: number, color: string, weight = 400,
+    align: TextLayer['align'] = 'left', family: TextLayer['family'] = 'Source Han Sans CN') =>
+    layers.push({ ...templateTextLayer(nextId(), text, size.width, x, y, width, em, color, weight, align), family })
+  if (drawMarketingLayout(example, t, copy, block, art)) return layers
   const title = t(...example.title), subtitle = t(...example.subtitle)
   switch (example.id) {
     case 'steady-horizon':

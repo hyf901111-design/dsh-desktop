@@ -120,7 +120,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 
 .if-gallery {
   --if-gallery-gap:clamp(12px,1.5cqw,20px);
-  --if-gallery-card-width:clamp(178px,22.5cqw,288px);
+  --if-gallery-card-width:clamp(208px,min(37cqw,48cqh),440px);
   position:absolute;inset:0;display:grid;min-height:0;background:var(--if-main);container-type:size;
   grid-template-rows:minmax(0,1fr);
 }
@@ -139,7 +139,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-page[data-direction=left] .if-symbol {transform:translateX(-.25px) rotate(90deg)}
 .if-gallery-track {
   display:flex;align-items:flex-start;width:max-content;min-height:100%;
-  padding-block:clamp(28px,5cqh,52px) 76px;padding-inline-start:12px
+  padding-block:clamp(52px,13cqh,128px) 76px;padding-inline-start:12px
 }
 .if-gallery-cycle {display:flex;align-items:flex-start;gap:var(--if-gallery-gap);padding-inline-end:var(--if-gallery-gap)}
 .if-gallery-card {width:var(--if-gallery-card-width);position:relative}
@@ -153,12 +153,19 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
   transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px;
 }
 .if-gallery-mode::before {
-  content:"";position:absolute;inset:-16px -28px;z-index:0;pointer-events:none;border-radius:999px;
-  background:color-mix(in srgb,var(--if-main) 79%,transparent);backdrop-filter:blur(20px) saturate(1.2);
-  mask-image:radial-gradient(ellipse at center,#000 49%,#000c 64%,transparent 100%);
+  content:"";position:absolute;inset:-15px -22px;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,#0b101bba 12%,#0b101b72 46%,transparent 76%);
+  backdrop-filter:blur(12px) saturate(.95);
+  mask-image:radial-gradient(ellipse at center,#000 20%,#0009 50%,transparent 76%);
 }
 .image-factory .if-gallery-mode .if-button {
-  position:relative;z-index:1;height:35px;padding-inline:11px;border-radius:999px;font-size:13px;
+  position:relative;z-index:1;height:35px;padding-inline:11px;border-radius:4px;font-size:13px;font-weight:500;
+  color:#ffffffe0;background:transparent;text-shadow:0 1px 6px #000b;
+}
+.image-factory .if-gallery-mode .if-button:not(:disabled):hover {background:transparent;color:#fff}
+.image-factory .if-gallery-mode .if-button[aria-pressed=true] {color:#fff;background:transparent;font-weight:650}
+.if-gallery-mode .if-button[aria-pressed=true]::after {
+  content:"";position:absolute;left:50%;bottom:1px;width:16px;height:2px;transform:translateX(-50%);border-radius:2px;background:#fff;
 }
 .image-factory .if-gallery-close {
   position:absolute;z-index:3;inset-inline-end:14px;inset-block-start:14px;width:36px;height:36px;padding:0;border-radius:50%;
@@ -327,14 +334,6 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
   .if-gallery-art:enabled,.if-brand-card:enabled {transition:box-shadow 160ms ease}
   .if-gallery-art:enabled:hover,.if-brand-card:enabled:hover {box-shadow:inset 0 0 0 1px var(--if-mark)}
 }
-
-body[data-workspace-surface=image-factory] #odyssey-right-workspace-panel .uV2eYG_grow:has([data-image-layer-preview][data-after-draft]) .uV2eYG_mirror {padding-bottom:26px}
-body[data-workspace-surface=image-factory] #odyssey-right-workspace-panel .uV2eYG_grow:has([data-image-layer-preview]) textarea::placeholder {color:transparent!important}
-[data-image-layer-preview] {display:inline-block;max-width:100%;padding:0 6px;border-radius:6px;vertical-align:middle;
-  border:1px dashed currentColor;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.58;pointer-events:none;font-size:13px;line-height:21px}
-[data-image-layer-preview][data-after-draft] {display:table;margin-block-start:4px}
-[data-image-layer-preview]::before {content:'';display:inline-block;width:13px;height:13px;margin-inline-end:5px;vertical-align:-2px;
-  background:currentColor;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5'%3E%3Cpath d='m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5'/%3E%3C/svg%3E") center/contain no-repeat}
 
 .if-prompt-gallery {
   --if-prompt-gap:clamp(6px,1cqw,13px);

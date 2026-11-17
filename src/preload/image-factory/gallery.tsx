@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties,
 import { galleryExamples, type GalleryExample } from './gallery-examples'
 import { galleryTemplateLayers } from './gallery-layout'
 import { promptExamples, type PromptExample } from './prompt-gallery'
+import { marketingPrompts } from './marketing-prompts'
 import { textLayerStyle } from './layers'
 import { brandArtwork } from './brand-artwork'
 import { iconSource } from './icons'
@@ -10,6 +11,7 @@ import type { Size } from './raster'
 const art = import.meta.glob('./gallery-art/*.jpg', { eager: true, query: '?inline', import: 'default' }) as Record<string, string>
 export const galleryArtwork = (id: string) => art['./gallery-art/' + id + '.jpg']
 const promptCases: PromptExample[] = [
+  ...marketingPrompts,
   ...promptExamples,
   ...galleryExamples.flatMap(({ id, title, prompt, format, scenes }) => prompt ? [{ id, title, prompt, format, scenes }] : []),
 ]
