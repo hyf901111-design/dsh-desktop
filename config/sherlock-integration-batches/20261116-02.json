@@ -9,82 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像工厂：浏览器式顶栏与画廊手动翻页",
+        "featureName": "图像工厂：保留顶栏任务名的可用宽度",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
-        "tipCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
+        "baseCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
+        "tipCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
         "commits": [
           {
-            "commit": "55f9959d7a12b07eebb3ac385f922d2e6daa1bf1",
+            "commit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
             "parents": [
-              "548fae75cff65bf3a71bff6acfe1180acdfcd62d"
+              "71b4efee531f9354f0cfb31794201c528d6a8b01"
             ],
-            "subject": "调整：图像工厂顶栏对齐浏览器页签交互"
-          },
-          {
-            "commit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
-            "parents": [
-              "55f9959d7a12b07eebb3ac385f922d2e6daa1bf1"
-            ],
-            "subject": "功能：图像工厂画廊支持左右手动翻页"
+            "subject": "修复：图像工作区的空白不挤占页签宽度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/image-factory-tasks.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/image-factory-canvases.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery.tsx"
-          },
-          {
-            "status": "M",
             "path": "src/preload/image-factory/style.css"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/task-tabs.tsx"
           },
           {
             "status": "M",
             "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-topbar.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/image-factory-canvas.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-canvases.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-gallery.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -96,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
-            "completedAt": "2026-11-17T00:33:02.116Z",
+            "verifiedCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
+            "completedAt": "2026-11-17T00:44:01.952Z",
             "timeoutMs": 120000
           },
           {
@@ -105,33 +50,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvases.test.ts",
               "test/image-factory-gallery.test.ts",
               "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory.test.js",
-              "test/browser-app-native.test.js",
-              "test/browser-app-model.test.ts"
+              "test/image-factory-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "61 项图像与浏览器聚焦检查通过。",
-            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
-            "completedAt": "2026-11-17T00:33:02.116Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/browser-app-rendered.test.js",
-              "-t",
-              "square tab switcher|native right-pane entry|many tabs compressed|crowded active tab|crowded narrow strip|animates closing tabs|drags tabs"
-            ],
-            "outcome": "passed",
-            "summary": "浏览器 7 项实际 Chromium 页签与右侧屏位置回归通过。",
-            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
-            "completedAt": "2026-11-17T00:33:02.116Z",
+            "summary": "21 项图像工厂聚焦检查通过。",
+            "verifiedCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
+            "completedAt": "2026-11-17T00:44:01.952Z",
             "timeoutMs": 120000
           },
           {
@@ -144,23 +70,22 @@
               "Image Factory"
             ],
             "outcome": "passed",
-            "summary": "图像工厂 4 项实际 Chromium 悬浮与拖动布局检查通过。",
-            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
-            "completedAt": "2026-11-17T00:33:02.116Z",
+            "summary": "4 项图像工厂 Chromium 布局检查通过。",
+            "verifiedCommit": "6fbdccb75d1c7791d8f69c2d13f3c8f06bb74f01",
+            "completedAt": "2026-11-17T00:44:01.952Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "独立 Chromium 通过页签列表、拖拽、固定、恢复和左右翻页，签名预览构建后实窗复测。"
+          "summary": "签名版确认画廊翻页，发现空白挤压页签；修正通过新建任务、排序、固定、恢复和标题宽度的 Chromium 检查。"
         },
         "acceptanceCriteria": [
-          "图像工厂顶栏复用浏览器的返回、标签页列表、溢出裁切和右侧屏留白。",
-          "任务可切换、拖拽排序、固定及重新打开；加号创建新任务并显示画廊。",
-          "画廊两侧箭头按当前宽度快速滑过数张图片，自动循环从新位置继续。"
+          "有任务页签时，中央空白不挤占页签宽度。",
+          "已打开的页签、添加页签与更多按钮保留显示，画廊按钮按当前宽度翻页。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-17T00:33:02.116Z"
+        "generatedAt": "2026-11-17T00:44:01.952Z"
       }
     },
     {
