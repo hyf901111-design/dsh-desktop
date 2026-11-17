@@ -9,24 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像页签关闭状态与视图切换修复",
+        "featureName": "图像重进时恢复仍打开的页签",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "c433ad07f6b2fbf9873a195290cf03053b9997b2",
-        "tipCommit": "75ce44904f78a0b1bca703cfbf19077f48edf153",
+        "baseCommit": "75ce44904f78a0b1bca703cfbf19077f48edf153",
+        "tipCommit": "348070537c29ea2dc5983e730c36954c9ab48905",
         "commits": [
           {
-            "commit": "9a8b30dbcfcdca51fc8ce376b14740b2194c8d44",
+            "commit": "348070537c29ea2dc5983e730c36954c9ab48905",
             "parents": [
-              "c433ad07f6b2fbf9873a195290cf03053b9997b2"
+              "75ce44904f78a0b1bca703cfbf19077f48edf153"
             ],
-            "subject": "修复：重新进入图像时保留页签关闭状态"
-          },
-          {
-            "commit": "75ce44904f78a0b1bca703cfbf19077f48edf153",
-            "parents": [
-              "9a8b30dbcfcdca51fc8ce376b14740b2194c8d44"
-            ],
-            "subject": "修复：图像切换工作区视图时沿用当前会话"
+            "subject": "修复：从主页进入图像时恢复仍打开的页签"
           }
         ],
         "files": [
@@ -44,10 +37,6 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/image-factory-native.test.js"
           }
         ],
@@ -60,12 +49,13 @@
               "test/image-factory-native.test.js",
               "test/browser-app-native.test.js",
               "test/image-factory-layer-gesture.test.ts",
-              "test/workspace-surface-host.test.ts"
+              "test/workspace-surface-host.test.ts",
+              "test/image-factory-canvases.test.ts"
             ],
             "outcome": "passed",
-            "summary": "49 项聚焦检查覆盖页签关闭、恢复、导航和画布",
-            "verifiedCommit": "75ce44904f78a0b1bca703cfbf19077f48edf153",
-            "completedAt": "2026-11-17T05:51:06.707Z",
+            "summary": "54 项聚焦检查，包括主页清空会话时同名草稿的回归",
+            "verifiedCommit": "348070537c29ea2dc5983e730c36954c9ab48905",
+            "completedAt": "2026-11-17T06:05:06.520Z",
             "timeoutMs": 150000
           },
           {
@@ -76,14 +66,14 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "75ce44904f78a0b1bca703cfbf19077f48edf153",
-            "completedAt": "2026-11-17T05:51:06.707Z",
+            "verifiedCommit": "348070537c29ea2dc5983e730c36954c9ab48905",
+            "completedAt": "2026-11-17T06:05:06.520Z",
             "timeoutMs": 150000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "旧预览实机复现关闭 alpha-257x149、点击主页后重开图像时页签重现。修复在聚焦回归中通过。新预览需再走同一路径。"
+          "summary": "实机复验确定已关闭记录写入正常，重现的是仍保存的空会话草稿。路径在回归用例中由失败转为通过。"
         },
         "acceptanceCriteria": [
           "关闭图像页签后，从主页或其他应用重新进入图像保持已关闭。",
@@ -93,7 +83,7 @@
         "risks": [
           "需在签名预览实测完整点击路径。"
         ],
-        "generatedAt": "2026-11-17T05:51:06.707Z"
+        "generatedAt": "2026-11-17T06:05:06.520Z"
       }
     },
     {
