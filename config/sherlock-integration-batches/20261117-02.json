@@ -9,54 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "人物专访封面与演示对话侧栏",
+        "featureName": "主页直达与图像导航",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "95ea1a791f8a77d01ce869b1e42aa6c9ab32b0fb",
-        "tipCommit": "57bf5c07e8153e88d2eea63c7e7c6113a322cd27",
+        "baseCommit": "57bf5c07e8153e88d2eea63c7e7c6113a322cd27",
+        "tipCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
         "commits": [
           {
-            "commit": "2424be8e3c4bdc751e09a74dce7de540264b6f1c",
+            "commit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
             "parents": [
-              "95ea1a791f8a77d01ce869b1e42aa6c9ab32b0fb"
+              "57bf5c07e8153e88d2eea63c7e7c6113a322cd27"
             ],
-            "subject": "调整人物专访模板构图和底部信息区"
-          },
-          {
-            "commit": "57bf5c07e8153e88d2eea63c7e7c6113a322cd27",
-            "parents": [
-              "2424be8e3c4bdc751e09a74dce7de540264b6f1c"
-            ],
-            "subject": "修复演示会话首页残留右侧对话区"
+            "subject": "修复图像应用抢占主页导航的会话竞态"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/pending-conversation-panel.mjs"
+            "path": "scripts/lib/image-factory-tasks.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-layout.ts"
+            "path": "scripts/lib/sidebar-new-note.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-entry-native.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-session.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-gallery.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation-panel.test.js"
+            "path": "test/sidebar-new-session-actions.test.ts"
           }
         ],
         "checks": [
@@ -68,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "57bf5c07e8153e88d2eea63c7e7c6113a322cd27",
-            "completedAt": "2026-11-17T14:20:43.860Z",
+            "verifiedCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
+            "completedAt": "2026-11-17T14:29:08.468Z",
             "timeoutMs": 120000
           },
           {
@@ -77,15 +54,28 @@
               "npx",
               "vitest",
               "run",
-              "test/image-factory-gallery.test.ts",
-              "test/home-guide-session.test.ts",
-              "test/home-guide-entry-native.test.ts",
-              "test/pending-conversation-panel.test.js"
+              "test/sidebar-new-session-actions.test.ts",
+              "-t",
+              "opens Home directly"
             ],
             "outcome": "passed",
-            "summary": "92 项画廊、演示入口与侧栏聚焦测试通过。",
-            "verifiedCommit": "57bf5c07e8153e88d2eea63c7e7c6113a322cd27",
-            "completedAt": "2026-11-17T14:20:43.860Z",
+            "summary": "单击主页竞态回归通过。",
+            "verifiedCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
+            "completedAt": "2026-11-17T14:29:08.468Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/workspace-surface-host.test.ts",
+              "test/image-factory-native.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "36 项工作区导航及图像聚焦测试通过。",
+            "verifiedCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
+            "completedAt": "2026-11-17T14:29:08.468Z",
             "timeoutMs": 120000
           }
         ],
@@ -94,17 +84,10 @@
           "summary": "聚焦测试完成，等待签名客户端复核。"
         },
         "acceptanceCriteria": [
-          "人物专访封面保留两位研究人员与资料，底部使用通栏信息区。",
-          "PPT 制作和研报制作演示在对话首页收起右侧会话，其他演示约定保持。"
+          "从图像、浏览器和知识库点击全局主页，一次显示对话首页。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-17T14:20:43.860Z"
-      },
-      "merged": {
-        "mergeCommit": "34cb32de235a61fde6871e8a24a996336c03b01f",
-        "verificationCommit": "34cb32de235a61fde6871e8a24a996336c03b01f",
-        "checks": [],
-        "recordedAt": "2026-11-17T14:20:50.365Z"
+        "generatedAt": "2026-11-17T14:29:08.468Z"
       }
     }
   ],
