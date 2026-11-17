@@ -60,8 +60,8 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   function reconcile(scope, reopen, entry) {
     const closedTab = closed.find(tab => tab.scope === scope)
     const skipClosed = closedTab && !reopen
-    // Home clears the SDK selection before hiding Images. Keep the open tab
-    // here, and only select its session when Images is explicitly entered.
+    // Keep image tabs when the SDK has no selection. Restore a tab's session
+    // only when Images is explicitly entered.
     const home = scope === null && active !== null && sessions.list.getSnapshot().current === undefined
     if (skipClosed || home) {
       const available = tabs.filter(tab => canOpen(tab) && (tab.scope !== null || skipClosed))

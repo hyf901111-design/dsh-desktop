@@ -121,8 +121,9 @@ export function patchSidebarNewNoteShell(input){
     [props,props.replace('startSession,','openHome, startSession,')],
     [inject,inject+`
                 openHome: () => {
-                    ctx.sessions.clear();
+                    // Hide workspace apps before notifying their session-selection listeners.
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
+                    ctx.sessions.clear();
                 },`],
     [root,'\t\t\tconst newSessionControls = '+group+';\n'+`
     react.useEffect(()=>{
