@@ -724,7 +724,7 @@ it('uses the browser title collapse and drag regions in Image Factory', async ()
   }
 })
 
-it('lets Image Factory gallery cards reach both edges with arrows below the viewport', async () => {
+it('lets Image Factory gallery cards reach both edges behind vertically centered arrows', async () => {
   const page = await browser.newPage({ viewport: { width: 1680, height: 960 } })
   try {
     await page.setContent(`
@@ -744,10 +744,16 @@ it('lets Image Factory gallery cards reach both edges with arrows below the view
       const gallery = await page.locator('.if-gallery').boundingBox()
       const left = await page.getByRole('button', { name: '←' }).boundingBox()
       const right = await page.getByRole('button', { name: '→' }).boundingBox()
-      expect(viewport).toMatchObject({ x: gallery.x, width: gallery.width })
-      expect(left.y).toBeGreaterThanOrEqual(viewport.y + viewport.height)
+      expect(viewport).toEqual(gallery)
+      expect(left.y + left.height / 2).toBeCloseTo(gallery.y + gallery.height / 2)
       expect(right.y).toEqual(left.y)
       expect(left.x - gallery.x).toBeCloseTo(gallery.x + gallery.width - right.x - right.width, 0)
+      const hitTargets = await page.evaluate(({ left, right }) => [
+        document.elementFromPoint(left.x + left.width / 2, left.y + left.height / 2)?.getAttribute('data-direction'),
+        document.elementFromPoint(right.x + right.width / 2, right.y + right.height / 2)?.getAttribute('data-direction'),
+        !!document.elementFromPoint((left.x + right.x) / 2, left.y + left.height / 2)?.closest('.if-gallery-viewport'),
+      ], { left, right })
+      expect(hitTargets).toEqual(['left', 'right', true])
     }
   } finally {
     await page.close()

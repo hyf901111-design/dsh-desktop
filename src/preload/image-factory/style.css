@@ -112,12 +112,15 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
   --if-gallery-gap:clamp(12px,1.5cqw,20px);
   --if-gallery-card-width:clamp(178px,22.5cqw,288px);
   position:absolute;inset:0;display:grid;min-height:0;background:var(--if-main);container-type:size;
-  grid-template-rows:minmax(0,1fr) auto;
+  grid-template-rows:minmax(0,1fr);
 }
 .if-gallery-viewport {min-width:0;overflow:auto;scrollbar-width:none;overscroll-behavior-inline:contain}
-.if-gallery-controls {display:flex;justify-content:space-between;padding:0 12px 10px}
+.if-gallery-controls {
+  position:absolute;z-index:1;inset-inline:12px;top:50%;transform:translateY(-50%);
+  display:flex;justify-content:space-between;pointer-events:none;
+}
 .image-factory .if-gallery-page {
-  display:grid;place-items:center;
+  display:grid;place-items:center;pointer-events:auto;
   width:36px;height:36px;padding:0;border:1px solid var(--if-line);border-radius:50%;
   color:var(--if-ink);background:color-mix(in srgb,var(--if-panel) 84%,transparent);
   backdrop-filter:var(--odyssey-menu-blur,blur(36px) saturate(1.2));box-shadow:0 2px 11px #0004;

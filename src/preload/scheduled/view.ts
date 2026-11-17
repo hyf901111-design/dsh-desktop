@@ -995,9 +995,9 @@ export class ScheduledTaskView {
     if (anchor === this.more) this.more.setAttribute('aria-expanded', 'true')
     menu.querySelectorAll<HTMLButtonElement>('button').forEach(
       (b, i) =>
-        (b.onclick = () => {
+        (b.onclick = event => {
           this.closeMenu()
-          items[i]!.run()
+          if (!event.defaultPrevented) items[i]!.run()
         }),
     )
     const present = () => {

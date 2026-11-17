@@ -28,7 +28,7 @@ it('uses the displayed asset dimensions for both the readout and the Make someth
   }
 })
 
-it('pages several cards in either direction, wraps the loop, and pauses while concealed', async () => {
+it('pages several cards in either direction and pauses only over content or while concealed', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const win = document.defaultView!
   let nextFrame = 1
@@ -63,6 +63,27 @@ it('pages several cards in either direction, wraps the loop, and pauses while co
     const cycleWidth = galleryExamples.length * stride
     setCycleWidth!(cycleWidth)
     const viewport = mount.querySelector<HTMLElement>('.if-gallery-viewport')!
+    const track = viewport.querySelector('.if-gallery-track')!
+    const cycle = track.querySelector('.if-gallery-cycle')!
+    const card = cycle.querySelector('article')!
+    const image = card.querySelector('img')!
+    const caption = card.querySelector('.if-gallery-caption')!
+    const pointer = (target: Element, type: 'pointerover' | 'pointerout', relatedTarget?: Element) => {
+      target.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: 'mouse', relatedTarget }))
+    }
+    cancel.mockClear()
+    for (const blank of [viewport, track, cycle, card]) pointer(blank, 'pointerover')
+    expect(cancel).not.toHaveBeenCalled()
+    pointer(image, 'pointerover', card)
+    expect(cancel).toHaveBeenLastCalledWith(request.mock.results[1]?.value)
+    cancel.mockClear()
+    pointer(image, 'pointerout', caption)
+    pointer(caption, 'pointerover', image)
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(cancel).not.toHaveBeenCalled()
+    pointer(caption, 'pointerout', card)
+    expect(request).toHaveBeenCalledTimes(3)
+
     Object.defineProperty(viewport, 'clientWidth', { value: 680 })
     const flip = async (label: string, start: number) => {
       await act(() => mount.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!.click())

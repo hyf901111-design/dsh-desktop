@@ -437,6 +437,45 @@ it('opens workspace tabs only from the toggle and holds them anywhere in the bro
  }finally{await page.close()}
 })
 
+it('drags the window from blank browser chrome and yields to interactive controls and open menus', async () => {
+ const {page,errors}=await fixture(1440,900,true)
+ try{
+  const bar=page.locator('.eb-tabs'),add=page.getByRole('button',{name:'新标签页',exact:true})
+  const region=el=>getComputedStyle(el).getPropertyValue('-webkit-app-region')
+  const blank=await bar.evaluate(bar=>{
+   const strip=bar.getBoundingClientRect(),add=bar.querySelector('[data-action=new]').getBoundingClientRect()
+   return {x:(add.right+strip.right)/2,y:strip.y+strip.height/2}
+  })
+  expect(await page.evaluate(({x,y})=>document.elementFromPoint(x,y)?.classList.contains('eb-tabs'),blank)).toBe(true)
+  expect(await bar.evaluate(region)).toBe('drag')
+  for(const control of [add,page.locator('.eb-tab').first(),page.locator('.eb-tab-close').first(),page.locator('.eb-workspace-toggle'),page.locator('.eb-tab-switcher')]){
+   expect(await control.evaluate(region)).toBe('no-drag')
+  }
+  await add.click()
+  expect(await page.getByRole('tab').count()).toBe(2)
+  await page.getByRole('button',{name:'已打开的页签'}).click()
+  const tabMenu=page.getByRole('menu',{name:'浏览器菜单'})
+  await tabMenu.waitFor()
+  expect(await bar.evaluate(region)).toBe('no-drag')
+  await page.mouse.click(blank.x,blank.y)
+  expect(await tabMenu.count()).toBe(0)
+  expect(await bar.evaluate(region)).toBe('drag')
+
+  await page.evaluate(()=>{
+   const menu=document.createElement('div')
+   menu.setAttribute('role','menu')
+   menu.innerHTML='<input class="odyssey-workspace-search">'
+   document.body.append(menu)
+   document.addEventListener('pointerdown',()=>menu.remove(),{once:true})
+  })
+  expect(await bar.evaluate(region)).toBe('no-drag')
+  await page.mouse.click(blank.x,blank.y)
+  expect(await page.locator('.odyssey-workspace-search').count()).toBe(0)
+  expect(await bar.evaluate(region)).toBe('drag')
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
 it('places the shared workspace back button before the browser title and leaves the web tabs intact',async()=>{
  const {page,errors}=await fixture(1440,900,true);try{
   await liveWebsite(page)

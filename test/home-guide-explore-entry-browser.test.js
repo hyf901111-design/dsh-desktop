@@ -12,15 +12,15 @@ beforeAll(async()=>{
   document.body.innerHTML='<nav data-dsh-sidebar-root><button aria-label="新建对话">新建对话</button><button aria-label="新建研究">新建研究</button><button data-sidebar-new-note aria-label="新建笔记">新建笔记</button>'+moreButton+'</nav><main class="pI_x6G_centerCol"><div class="wSkVaW_root"><div data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="research">研究</button><button data-conversation-view-id="notes">笔记</button><button data-conversation-view-id="spreadsheet">表格</button></div><textarea></textarea><article>原有正文</article></div></main><button id="other-session">用户切换会话</button><dialog data-explore-menu><button data-explore-close>关闭探索</button><p>当前探索用例菜单</p></dialog>';
   const root=document.querySelector('.wSkVaW_root'),sidebar=document.querySelector('nav'),input=document.querySelector('textarea'),dialog=document.querySelector('dialog'),close=document.querySelector('[data-explore-close]'),controller=new AbortController(),actions=[];let owner='source',activated=false;
   delete document.body.dataset.workspaceSurface;root.dataset.odysseyPage=page.startsWith('home')?'home':page==='notes'?'conversation':page;input.value=page.startsWith('home')&&page!=='home-draft'?'':'用户原有草稿';root.querySelector('article').hidden=page.startsWith('home');if(page==='notes'){document.body.dataset.workspaceSurface='notes';root.style.display='none'}
-  if(page==='collapsed-home')sidebar.innerHTML='<button data-sidebar-home aria-label="主页">主页</button>';
-  if(page==='knowledge-collapsed')sidebar.innerHTML='<button data-sidebar-home aria-label="主页">主页</button>'+moreButton;
+  if(page==='collapsed-browser-over-image'||page==='knowledge-collapsed')sidebar.innerHTML='<button data-sidebar-home aria-label="主页">主页</button>'+moreButton;
   if(page==='collapsed-note')sidebar.querySelector('[data-sidebar-new-note]').hidden=true;
   for(const tab of root.querySelectorAll('[data-conversation-view-id]')){tab.setAttribute('aria-selected',String(tab.dataset.conversationViewId===(page==='home-research'?'research':page==='home-notes'?'notes':page.startsWith('home')?'chat':page==='notes'?'notes':page==='research'?'research':'chat')));tab.onclick=()=>{actions.push('tab:'+tab.dataset.conversationViewId)}}
   const nativeClicks=[];for(const node of sidebar.querySelectorAll('button'))node.addEventListener('click',()=>nativeClicks.push(node.getAttribute('aria-label')));
   const more=sidebar.querySelector('.st-more');if(more)more.onclick=()=>{
    actions.push('more');const menu=document.createElement('div');menu.className='st-menu';menu.dataset.sidebarMore='true';
    menu.setAttribute('popover','manual');menu.setAttribute('role','menu');
-   menu.innerHTML='<button role="menuitem">新笔记</button><button role="menuitem">新建表格</button>';
+   const collapsed=sidebar.querySelector('[data-sidebar-home]');
+   menu.innerHTML=(collapsed?'<button role="menuitem">新建对话</button><button role="menuitem">新建研究</button>':'')+'<button role="menuitem">新笔记</button><button role="menuitem">新建表格</button>';
    document.body.append(menu);menu.showPopover();more.setAttribute('aria-expanded','true');
    for(const button of menu.querySelectorAll('button'))button.onclick=()=>{nativeClicks.push(button.textContent);menu.remove();more.setAttribute('aria-expanded','false')};
   };
@@ -30,7 +30,7 @@ beforeAll(async()=>{
   const context={signal:controller.signal,revealComposer:async()=>{throw Error('programmatic reveal forbidden')},demoEntry:{closeTarget:close,closeOwned:async()=>close.click()}};
   window.entryProbe={controller,actions,nativeClicks,pointer,frames,preparing:false,snapshot:()=>({owner,draft:input.value,body:root.querySelector('article').textContent,activated}),start:()=>playExploreHomeGuideEntry(document,kind,{homeEmpty:window.entryHomeEmpty,context,signal:controller.signal,pointer:drawn,assert:()=>{if(owner!=='source')throw new DOMException('owner changed','AbortError')},nativeClick:node=>node.click(),activate:async(node,action,beforeCommit)=>{window.entryProbe.preparing=true;await window.entryPrepareGate;await beforeCommit();actions.push('activate:'+action);node.click();if(node===input)node.focus();activated=true}}).finally(()=>pointer.dispose())};
   if(page==='surface'||page.startsWith('knowledge-')){document.body.dataset.workspaceSurface=page==='surface'?'plugin':'knowledge';root.style.display='none';const back=document.createElement('button');const label=page==='surface'?'返回应用':'返回工作区';back.className='workspace-back-button';back.setAttribute('aria-label',label);back.textContent=label;back.onclick=()=>{actions.push('back');delete document.body.dataset.workspaceSurface;root.style.display=''};document.body.append(back)}
-  if(page==='browser-over-image'||page==='settings-over-browser'){
+  if(page.endsWith('browser-over-image')||page==='settings-over-browser'){
    const host=new WorkspaceSurfaceHost(document)
    for(const surface of ['image-factory','browser']){
     const layer=document.createElement('section');layer.style.cssText='position:absolute;left:200px;top:30px;width:800px;height:650px'
@@ -56,13 +56,13 @@ async function fixture(start,kind,reduced=true){const context=await browser.newC
 it.each(['board','note','ppt','report','workbench'].flatMap(kind=>['home','chat','research','notes'].map(start=>[kind,start])))('navigates %s from visible %s through one Explore close and native route without changing source content',async(kind,start)=>{
  const{context,page}=await fixture(start,kind);try{const before=await page.evaluate(()=>window.entryProbe.snapshot());await page.evaluate(()=>window.entryProbe.start());const result=await page.evaluate(()=>({actions:window.entryProbe.actions,clicks:window.entryProbe.nativeClicks,state:window.entryProbe.snapshot()}));expect(result.actions.filter(x=>x==='close')).toHaveLength(1);expect(result.actions[0]).toBe('close');expect(result.actions.filter(x=>x.startsWith('activate:'))).toEqual(['activate:'+(start==='home'?(kind==='note'?'home-notes':kind==='board'||kind==='workbench'?'home-research':'home-input'):kind==='note'?'new-note':kind==='board'||kind==='workbench'?'new-research':'new-chat')]);expect(result.state).toMatchObject({...before,activated:true});expect(result.clicks.length).toBe(start==='home'?0:1)}finally{await context.close()}
 })
-it.each(['board','note','ppt','report','workbench'])('uses the only visible Home entry for collapsed %s playback',async kind=>{
- const {context,page}=await fixture('collapsed-home',kind);try{
+it.each([['board','新建研究','new-research'],['note','新笔记','new-note'],['ppt','新建对话','new-chat'],['report','新建对话','new-chat'],['workbench','新建研究','new-research']])('uses the named More menu entry for collapsed %s playback',async(kind,label,action)=>{
+ const {context,page}=await fixture('collapsed-browser-over-image',kind);try{
   const before=await page.evaluate(()=>window.entryProbe.snapshot())
   await page.evaluate(()=>window.entryProbe.start())
   const result=await page.evaluate(()=>({actions:window.entryProbe.actions,clicks:window.entryProbe.nativeClicks,state:window.entryProbe.snapshot()}))
-  expect(result.actions).toEqual(['close','activate:sidebar-home'])
-  expect(result.clicks).toEqual(['主页'])
+  expect(result.actions).toEqual(['close','more','activate:'+action])
+  expect(result.clicks).toEqual(['更多',label])
   expect(result.state).toMatchObject({...before,activated:true})
  }finally{await context.close()}
 })
