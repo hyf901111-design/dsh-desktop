@@ -670,9 +670,9 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
             disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, workspaceEnglishLabels[view])}</button>)}
         </nav>
       </div>
-      {!!tasks?.tabs.length && <ImageTaskTabs doc={doc} header={header} state={tasks} current={scope}
-        title={scene?.title} t={t} action={taskAction}/>}
-      <span className="if-top-title" title={tasks?.tabs.length ? undefined : current?.title}>{tasks?.tabs.length ? null : current?.title}</span>
+      {tasks?.tabs.length ? <ImageTaskTabs doc={doc} header={header} state={tasks} current={scope}
+        title={scene?.title} t={t} action={taskAction}/>
+        : <span className="if-top-title" title={current?.title}>{current?.title}</span>}
       <CanvasActionsMenu doc={doc} t={t} canExport={!!current?.layers.length && !busy} exporting={exportImage}
         galleryAction={scene && !busy ? galleryOpen ? { label: t('返回画布', 'Return to canvas'), run: () => setGalleryOpen(false) }
           : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: () => { releaseText(); clearSelection(); setGalleryOpen(true) } } : undefined}/>
