@@ -1,7 +1,7 @@
 import { it, expect, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { readFileSync } from 'node:fs'
-import { installKnowledgeReferences, installKnowledgeSourceNavigation, knowledgeFilterReceiptAnchors, knowledgeReferenceCodec, knowledgeMessageParts, knowledgeMessagePreview, patchKnowledgeConversation, sharedKnowledgeCitation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
+import { installKnowledgeReferences, installKnowledgeSidebar, installKnowledgeSourceNavigation, knowledgeFilterReceiptAnchors, knowledgeReferenceCodec, knowledgeMessageParts, knowledgeMessagePreview, patchKnowledgeConversation, sharedKnowledgeCitation, stripKnowledgeConversation } from '../scripts/lib/knowledge-client.mjs'
 import { patchMarkdownFileLinks } from '../scripts/lib/markdown-file-links.mjs'
 import { canvasHumanRequest } from '../packages/dsh-research-task-runtime/canvas-task-routing.js'
 import { patchSkillCommandLabels, patchSkillCommandPopup } from '../scripts/lib/skill-command-menu.mjs'
@@ -161,6 +161,37 @@ it('opens the original conversation only while it is still available', async () 
     expect(sessions.open).toHaveBeenCalledOnce()
     expect(notify.mock.calls.map(([event]) => event.detail)).toEqual([{ requestId: 'available', ok: true }, { requestId: 'removed', ok: false }])
   } finally { dispose(); await window.happyDOM.abort() }
+})
+
+it.each(['research', 'notes', 'spreadsheet'])('opens Knowledge %s with the destination chat selected and expanded', async view => {
+  const window = new Window(), { document } = window
+  const destination = { panelOpen: false, active: 'file-preview' }
+  let stateAtOpen
+  const service = {
+    registerTab: () => () => {},
+    getSnapshot: () => ({ sessionId: 'source' }),
+    openTab: vi.fn(),
+    activateTab: vi.fn((id, scope) => { if (scope.sessionId === 'target') destination.active = id }),
+    setPanelState: vi.fn(({ open }, scope) => { if (scope.sessionId === 'target') destination.panelOpen = open }),
+  }
+  const sessions = {
+    list: { getSnapshot: () => ({ byId: { target: { title: '目标资料' } } }) },
+    subagentAddress: () => undefined,
+    open: () => { stateAtOpen = { ...destination } },
+  }
+  const disposeSidebar = installKnowledgeSidebar({ service, document })
+  const disposeNavigation = installKnowledgeSourceNavigation({ document, sessions, selectView: vi.fn() })
+  try {
+    const result = vi.fn()
+    document.addEventListener('sherlock:knowledge-source-result', result)
+    document.dispatchEvent(new window.CustomEvent('sherlock:knowledge-source-open', {
+      detail: { id: 'target', view, requestId: view }, cancelable: true,
+    }))
+    expect(stateAtOpen).toEqual({ panelOpen: true, active: 'sherlock-research-conversation' })
+    expect(result.mock.calls[0][0].detail).toEqual({ requestId: view, ok: true })
+    expect(service.openTab).toHaveBeenCalledWith(expect.objectContaining({ id: 'sherlock-research-conversation' }), { sessionId: 'target' })
+    expect(service.setPanelState).toHaveBeenCalledExactlyOnceWith({ open: true }, { sessionId: 'target' })
+  } finally { disposeNavigation(); disposeSidebar(); await window.happyDOM.abort() }
 })
 
 it('opens a newly imported file session after refreshing a catalog with an empty conversation', async () => {

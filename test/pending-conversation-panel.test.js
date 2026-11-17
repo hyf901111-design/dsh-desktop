@@ -7,10 +7,24 @@ it('preserves native pane behavior, removes eager creation, and keeps compact fi
  const start=patched.indexOf('function Sidebar(props)'),end=patched.indexOf('\n\t\t//#endregion',start),body=patched.slice(start,end);expect(body).not.toContain('ctx.workspaces.startSession')
  expect(body).not.toContain('sRp_pendingFrame');expect(body).not.toContain('data-pending-conversation-host');expect(body).toContain('(Workbench, {')
  expect(patched).toContain('pendingState = makePendingPanelState()');expect(patched).toContain('adoptPending(sessionId)')
- const from=body.indexOf('const pendingCompactHandoff='),to=body.indexOf('const summaryCwd',from),fragment=body.slice(from,to);const ref={current:false},values=[];const react={useRef:()=>ref,useLayoutEffect:fn=>fn()};const document={documentElement:{dataset:{},hasAttribute:()=>false}};
- const render=new Function('react','document','current','sessionId','state','setCompactPanelOpen',fragment)
- render(react,document,undefined,undefined,{panelOpen:true},value=>values.push(value));render(react,document,'first','first',{panelOpen:true},value=>values.push(value));expect(values.at(-1)).toBe(true)
- render(react,document,'other','other',{panelOpen:true},value=>values.push(value));expect(values.at(-1)).toBe(false)
+ const from=body.indexOf('const pendingCompactHandoff='),to=body.indexOf('const summaryCwd',from),fragment=body.slice(from,to)
+ const refs=[{current:false},{current:undefined}],values=[]
+ let nextRef=0,sessionId,showChat
+ const react={useRef:()=>refs[nextRef++],useLayoutEffect:fn=>fn()}
+ const document={documentElement:{dataset:{},hasAttribute:()=>false},addEventListener:(_name,handler)=>{showChat=handler}}
+ const store={getSnapshot:()=>({sessionId})}
+ const render=new Function('react','document','store','current','sessionId','state','setCompactPanelOpen',fragment)
+ const select=(id)=>{
+  nextRef=0;sessionId=id
+  render(react,document,store,id,id,{panelOpen:true},value=>values.push(value))
+ }
+ select(undefined);select('first');expect(values.at(-1)).toBe(true)
+ select('other');expect(values.at(-1)).toBe(false)
+ showChat({detail:{sessionId:'from-knowledge'}})
+ select('from-knowledge');expect(values.at(-1)).toBe(true)
+ select('unrelated');expect(values.at(-1)).toBe(false)
+ select('from-knowledge');expect(values.at(-1)).toBe(false)
+ showChat({detail:{sessionId:'from-knowledge'}});expect(values.at(-1)).toBe(true)
 })
 it('uses the global sidebar store without persisting a fake session, then hands its tabs to the created session',()=>{
  const source=patchPendingConversationPanel(readFileSync('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),start=source.indexOf('function makePendingPanelState'),end=source.indexOf('\n\t\t//#endregion',start);

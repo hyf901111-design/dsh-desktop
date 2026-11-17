@@ -62,12 +62,24 @@ function Workbench(props) {`);
  if(clickStart<0||clickEnd<0)throw Error('Pending panel fallback click missing');
  part=part.slice(0,fallbackStart)+fallback.slice(0,clickStart)+"onClick: () => store.reduce(state=>({...state,panelOpen:true})),\n"+fallback.slice(clickEnd)+part.slice(fallbackEnd);
  part=exact(part,'(0, react.useEffect)(()=>setCompactPanelOpen(false),[sessionId]);',`const pendingCompactHandoff=react.useRef(false);
+ const knowledgeCompactHandoff=react.useRef();
+ react.useLayoutEffect(()=>{
+  const showChat=({detail})=>{
+   const id=detail?.sessionId;
+   if(typeof id!=='string'||!id)return;
+   if(store.getSnapshot().sessionId===id)setCompactPanelOpen(true);
+   else knowledgeCompactHandoff.current=id;
+  };
+  document.addEventListener('sherlock:knowledge-session-chat',showChat);
+  return()=>document.removeEventListener('sherlock:knowledge-session-chat',showChat);
+ },[store]);
  const pendingChatOpen=state?.panelOpen===true;
  if(current===undefined)pendingCompactHandoff.current=pendingChatOpen;
  react.useLayoutEffect(()=>{
   const root=document.documentElement;
   const demo=root.dataset.homeGuideTransitionSession===sessionId&&root.hasAttribute('data-home-guide-transition-sidebar');
-  setCompactPanelOpen(sessionId!==undefined&&(pendingCompactHandoff.current||demo));
+  setCompactPanelOpen(sessionId!==undefined&&(pendingCompactHandoff.current||knowledgeCompactHandoff.current===sessionId||demo));
+  knowledgeCompactHandoff.current=undefined;
   if(sessionId!==undefined)pendingCompactHandoff.current=false;
  },[sessionId]);`);
  replace(before,part);
