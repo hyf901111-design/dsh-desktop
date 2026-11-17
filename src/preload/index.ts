@@ -95,6 +95,9 @@ const locale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 let openFileInEditor = async (_source: FileEditorSource, _mode: FileEditorMode): Promise<void> => {
   throw Error('文件导入入口尚未就绪。')
 }
+let openKnowledgeImageCanvas = async (_kind: 'source' | 'copy', _id: string): Promise<void> => {
+  throw Error('「图像」应用尚未就绪。')
+}
 
 function requestKnowledgePreview(method: 'file-preview' | 'file-preview-status' | 'download' | 'save-markdown', args: object) {
   return ipcRenderer.invoke('knowledge:request', method, args).catch((error: unknown) => {
@@ -310,19 +313,26 @@ function initializeUi(): void {
     (id, updatedAt) => ipcRenderer.invoke('knowledge:request', 'shared-session-status', { id, updatedAt }),
     (id, updatedAt, fromSession) => ipcRenderer.invoke('knowledge:request', 'copy-shared-session', { id, updatedAt, fromSession }))
   window.addEventListener('unload', disposeSharedKnowledgeSessions, { once: true })
+  const openImageFactorySource = (id: string) => imageFactory.openSessionCanvas(id, () => openKnowledgeSession(document, id, 'chat'))
+  const openImageFactoryCopy = async (id: string) => {
+    const origin = workspaceSurfaceHost.current()
+    try {
+      const copy = await ipcRenderer.invoke('knowledge:request', 'copy-image-factory-file', { id }) as { id: string }
+      if (workspaceSurfaceHost.current() !== origin) return
+      await imageFactory.openSessionCanvas(copy.id, () => openKnowledgeSession(document, copy.id, 'chat', 'imported'))
+    } catch (error) { throw Error(knowledgeRequestError(error)) }
+  }
+  openKnowledgeImageCanvas = async (kind, id) => {
+    if (kind === 'source') return openImageFactorySource(id)
+    if (kind === 'copy') return openImageFactoryCopy(id)
+    throw Error('无效的图像操作。')
+  }
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
     memory: knowledgeMemory,
     workspacePointerInBar,
     openFileInEditor,
-    openImageFactorySource: id => imageFactory.openSessionCanvas(id, () => openKnowledgeSession(document, id, 'chat')),
-    async openImageFactoryCopy(id) {
-      const origin = workspaceSurfaceHost.current()
-      try {
-        const copy = await ipcRenderer.invoke('knowledge:request', 'copy-image-factory-file', { id }) as { id: string }
-        if (workspaceSurfaceHost.current() !== origin) return
-        await imageFactory.openSessionCanvas(copy.id, () => openKnowledgeSession(document, copy.id, 'chat', 'imported'))
-      } catch (error) { throw Error(knowledgeRequestError(error)) }
-    },
+    openImageFactorySource,
+    openImageFactoryCopy,
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
     subscribeImportProgress: listener => {
@@ -548,6 +558,7 @@ contextBridge.exposeInMainWorld(
     knowledgeFilePreview: (id: string, sessionId: string) => requestKnowledgePreview('file-preview', { id, sessionId }),
     knowledgeFilePreviewStatus: (id: string, updatedAt: number) => requestKnowledgePreview('file-preview-status', { id, updatedAt }),
     knowledgeFileDownload: (id: string) => requestKnowledgePreview('download', { id }),
+    knowledgeOpenImageCanvas: (kind: 'source' | 'copy', id: string) => openKnowledgeImageCanvas(kind, id),
     knowledgeFileSaveMarkdown: (id: string, revision: string, text: string) =>
       requestKnowledgePreview('save-markdown', { id, revision, text }),
     collectKnowledgeFile: (sessionId: string, path: string, saved: boolean, sessionTitle?: string): Promise<import('../shared/knowledge-library').KnowledgeDocument | undefined> =>
