@@ -11,77 +11,21 @@
         "schemaVersion": 1,
         "featureName": "看板文件工作区会话、协作标题和导航修复",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "9b2cb71573414329b8f2b44a64b4c48f22074c45",
-        "tipCommit": "51bf8381c24e2f3772128b9be509de155913a35f",
+        "baseCommit": "51bf8381c24e2f3772128b9be509de155913a35f",
+        "tipCommit": "c433ad07f6b2fbf9873a195290cf03053b9997b2",
         "commits": [
           {
-            "commit": "b65e86e648102caf31e4546d95cf7ce44ca58e5f",
+            "commit": "c433ad07f6b2fbf9873a195290cf03053b9997b2",
             "parents": [
-              "9b2cb71573414329b8f2b44a64b4c48f22074c45"
+              "51bf8381c24e2f3772128b9be509de155913a35f"
             ],
-            "subject": "修复：完成文字编辑后保留画布删除键焦点"
-          },
-          {
-            "commit": "42fbd49a138eb3888fd5f6fbf99a0ec442aa64c4",
-            "parents": [
-              "b65e86e648102caf31e4546d95cf7ce44ca58e5f"
-            ],
-            "subject": "修复：展开侧栏更多菜单可点击外部关闭"
-          },
-          {
-            "commit": "dddeda42020ca7ab218b538c75f0325291d3bd8a",
-            "parents": [
-              "42fbd49a138eb3888fd5f6fbf99a0ec442aa64c4"
-            ],
-            "subject": "修复：应用与看板区会话隔离并支持返回原看板"
-          },
-          {
-            "commit": "179c3b16855298d85a14919a5e8e989cee699f96",
-            "parents": [
-              "dddeda42020ca7ab218b538c75f0325291d3bd8a"
-            ],
-            "subject": "修复：协作看板标题与侧栏会话同步"
-          },
-          {
-            "commit": "51bf8381c24e2f3772128b9be509de155913a35f",
-            "parents": [
-              "179c3b16855298d85a14919a5e8e989cee699f96"
-            ],
-            "subject": "修复：从看板打开应用时沿用看板的文件工作区会话"
+            "subject": "修复：从空白看板打开应用时保留返回入口"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/board-directories.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-session-title.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-tasks.mjs"
-          },
-          {
-            "status": "M",
             "path": "src/main/research-boards-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
           },
           {
             "status": "M",
@@ -89,35 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-native.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-session-title.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-directories.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-session-actions.test.ts"
+            "path": "test/home-guide-workspace.test.ts"
           }
         ],
         "checks": [
@@ -126,17 +42,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/browser-app-native.test.js",
-              "test/research-board-directories.test.js",
-              "test/image-factory-native.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/browser-app-view.test.ts",
-              "test/figma-session-title.test.ts"
+              "test/home-guide-workspace.test.ts",
+              "-t",
+              "same app conversation"
             ],
             "outcome": "passed",
-            "summary": "56 项聚焦检查覆盖看板工作区、应用导航及协作标题",
-            "verifiedCommit": "51bf8381c24e2f3772128b9be509de155913a35f",
-            "completedAt": "2026-11-17T05:25:57.026Z",
+            "summary": "真实 Host SDK 验证在看板目录复用会话，同时保留空看板的返回入口",
+            "verifiedCommit": "c433ad07f6b2fbf9873a195290cf03053b9997b2",
+            "completedAt": "2026-11-17T05:31:05.484Z",
             "timeoutMs": 150000
           },
           {
@@ -147,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "51bf8381c24e2f3772128b9be509de155913a35f",
-            "completedAt": "2026-11-17T05:25:57.026Z",
+            "verifiedCommit": "c433ad07f6b2fbf9873a195290cf03053b9997b2",
+            "completedAt": "2026-11-17T05:31:05.484Z",
             "timeoutMs": 150000
           }
         ],
@@ -165,7 +78,7 @@
         "risks": [
           "需在签名预览中验证实际 Host 会话、原生标题和工作区模式切换。"
         ],
-        "generatedAt": "2026-11-17T05:25:57.026Z"
+        "generatedAt": "2026-11-17T05:31:05.484Z"
       }
     },
     {
