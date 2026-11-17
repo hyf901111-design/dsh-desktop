@@ -556,43 +556,79 @@ it('returns a fresh session to the gallery template without sending a prompt', a
   } finally { f.binding.dispose(); await f.win.close() }
 })
 
-it('keeps a selected layer inline and dispatches only the layer bound to the current canvas', async () => {
+it('previews the layer and inserts it at the clicked draft offset only after confirmation', async () => {
+  const f = fixture()
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    Object.assign(f.shell.snapshot, { draft: '标题改成新品发布', occurrences: [], draftRev: 1, phase: 'plain' })
+    f.shell.insertReference = vi.fn(() => true)
+    const panel = f.doc.body.appendChild(f.doc.createElement('div'))
+    panel.id = 'odyssey-right-workspace-panel'
+    const textarea = panel.appendChild(f.doc.createElement('textarea'))
+    const backdrop = panel.appendChild(f.doc.createElement('div'))
+    backdrop.dataset.inputBackdrop = ''
+    textarea.value = f.shell.snapshot.draft
+    const target = { scope: 'native-session', sceneId: f.win.crypto.randomUUID(), layerId: f.win.crypto.randomUUID(), label: '主标题' }
+    f.events('state', { current: true, busy: false })
+    f.events('reference-layer', target)
+    expect(backdrop.querySelector('[data-provisional]')?.textContent).toBe('主标题')
+    expect(f.shell.insertReference).not.toHaveBeenCalled()
+    textarea.focus()
+    textarea.setSelectionRange(2, 2)
+    const click = new f.win.MouseEvent('click', { bubbles: true })
+    Object.defineProperty(click, 'isTrusted', { value: true })
+    textarea.dispatchEvent(click)
+    await vi.waitFor(() => expect(f.shell.insertReference).toHaveBeenCalledOnce())
+    expect(f.shell.insertReference).toHaveBeenCalledWith(expect.objectContaining({ source: 'image-factory-layer', label: '主标题' }),
+      { start: 2, end: 2, draftRev: 1 })
+    expect(backdrop.querySelector('[data-provisional]')).toBeNull()
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+it('preserves interleaved layer positions and delivers separate receipts together after the turn', async () => {
   const f = fixture()
   const { imageLayerReferenceCodec } = await import('../scripts/lib/image-factory-layer-references.mjs')
   const sceneId = f.win.crypto.randomUUID(), layerId = f.win.crypto.randomUUID()
-  const target = { scope: 'native-session', sceneId, layerId, label: '主标题' }
+  const first = { scope: 'native-session', sceneId, layerId, label: '主标题' }
+  const second = { ...first, layerId: f.win.crypto.randomUUID(), label: '副标题' }
   const prepared = vi.fn(({ detail }) => f.events('prepared', {
-    id: detail.id, operation: 'layer', size: '1024x1536', width: 200, height: 280, title: '企业模板',
-    targetLayer: { kind: 'text', label: '主标题', description: '原始标题' },
+    id: detail.id, operation: 'layer', size: '1024x1536', width: 200, height: 280, title: '易方达模板',
+    targetLayers: detail.layers.map(({ key, label }) => ({ key, label, kind: 'text', description: '现有文字' })),
   }))
   try {
     f.doc.body.dataset.workspaceSurface = 'image-factory'
-    Object.assign(f.shell.snapshot, { draft: '请修改', occurrences: [], draftRev: 1, phase: 'plain' })
-    f.shell.insertReference = vi.fn(() => true)
-    f.events('state', { current: true, busy: false })
-    f.events('reference-layer', target)
-    expect(f.shell.insertReference).toHaveBeenCalledWith(expect.objectContaining({ source: 'image-factory-layer', label: '主标题' }),
-      { start: 3, end: 3, draftRev: 1 })
-    const ref = f.shell.insertReference.mock.calls[0][0].ref
-    Object.assign(f.shell.snapshot, { draft: '\uFFFC请修改', occurrences: [{ source: 'image-factory-layer', offset: 0, ref }] })
-    f.events('reference-layer', { ...target, layerId: f.win.crypto.randomUUID(), label: '副标题' })
-    expect(f.shell.insertReference).toHaveBeenLastCalledWith(expect.objectContaining({ label: '副标题' }), { start: 0, end: 1, draftRev: 1 })
     f.doc.addEventListener('sherlock:image-factory-prepare', prepared)
-    const chip = await imageLayerReferenceCodec().codec.serialize(ref)
-    await f.binding.prompt(f.session, [{ type: 'text', text: chip + '改为新品发布' }], 'queue')
-    expect(prepared.mock.calls[0][0].detail.layer).toEqual(target)
-    const message = readImageFactoryContext(f.session.prompt.mock.calls[0][0][0].text)
-    expect(message).toMatchObject({ text: '改为新品发布', operation: 'layer', internalReference: false, targetLayer: { kind: 'text' } })
+    const encode = data => imageLayerReferenceCodec().codec.serialize(JSON.stringify(data))
+    const [a, b] = await Promise.all([encode(first), encode(second)])
+    await f.binding.prompt(f.session, [{ type: 'text', text: a + '改为新品发布，' + b + '改为蓝色，' + a + '居中。' }], 'queue')
+    expect(prepared.mock.calls[0][0].detail.layers).toEqual([{ ...first, key: 1 }, { ...second, key: 2 }])
+    const content = f.session.prompt.mock.calls[0][0]
+    const message = readImageFactoryContext(content[0].text)
+    expect(message).toMatchObject({ text: '〔图层 1：主标题〕改为新品发布，〔图层 2：副标题〕改为蓝色，〔图层 1：主标题〕居中。',
+      operation: 'layer', internalReference: false, targetLayers: [{ key: 1, kind: 'text' }, { key: 2, kind: 'text' }] })
     const deliver = vi.fn()
-    f.doc.addEventListener('sherlock:image-factory-deliver-layer', deliver)
-    f.state.chat.order.push('result')
-    f.state.chat.nodes.set('result', { kind: 'tool-call', data: { root: { name: 'image_edit_layer', content: [
-      { type: 'text', text: JSON.stringify({ kind: 'odyssey-image-layer-edit', id: message.id, patch: { text: '新品发布' } }) },
+    f.doc.addEventListener('sherlock:image-factory-deliver-layers', deliver)
+    const publish = (key, node) => {
+      f.state.chat.order.push(key)
+      f.state.chat.nodes.set(key, node)
+      for (const notify of f.listeners) notify()
+    }
+    f.state.running = true
+    publish('user', { kind: 'user', data: { content } })
+    const tool = (target, patch) => ({ kind: 'tool-call', data: { root: { name: 'image_edit_layer', content: [
+      { type: 'text', text: JSON.stringify({ kind: 'odyssey-image-layer-edit', id: message.id, target, patch }) },
     ] } } })
-    for (const notify of f.listeners) notify()
-    await vi.waitFor(() => expect(deliver).toHaveBeenCalledOnce())
-    expect(deliver.mock.calls[0][0].detail).toMatchObject({ sessionId: 'native-session', patch: { text: '新品发布' } })
-    const stale = await imageLayerReferenceCodec().codec.serialize(JSON.stringify({ ...target, scope: 'other-board' }))
+    publish('subtitle', tool(2, { color: '#005098' }))
+    publish('title', tool(1, { text: '新品发布' }))
+    expect(deliver).not.toHaveBeenCalled()
+    f.state.running = false
+    publish('position', tool(1, { align: 'center' }))
+    await vi.waitFor(() => expect(deliver).toHaveBeenCalledOnce(), { timeout: 2000 })
+    expect(deliver.mock.calls[0][0].detail).toMatchObject({
+      sessionId: 'native-session',
+      edits: [{ key: 2, patch: { color: '#005098' } }, { key: 1, patch: { text: '新品发布', align: 'center' } }],
+    })
+    const stale = await encode({ ...first, scope: 'other-board' })
     await expect(f.binding.prompt(f.session, [{ type: 'text', text: stale + '改为别的' }], 'queue')).rejects.toThrow('另一个画板')
     expect(f.session.prompt).toHaveBeenCalledOnce()
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }

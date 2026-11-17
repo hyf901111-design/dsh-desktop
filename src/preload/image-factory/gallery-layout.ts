@@ -1,7 +1,6 @@
 import type { BrandArtworkId, BrandOverlay, TextLayer } from '../../shared/image-factory-canvas'
 import { brandArtwork, brandColors as c } from './brand-artwork'
 import type { GalleryExample } from './gallery-examples'
-import { enterpriseTemplateLayers } from './enterprise-layout'
 import { templateTextLayer } from './template-text'
 import type { Size } from './raster'
 
@@ -10,7 +9,6 @@ const ink = '#202f3a'
 
 /** The thumbnail and the new canvas use the same coordinates and layer order. */
 export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T, nextId: () => string): (BrandOverlay | TextLayer)[] {
-  if (example.enterprise) return enterpriseTemplateLayers(example, example.enterprise, size, t, nextId)
   const layers: (BrandOverlay | TextLayer)[] = []
   const artHeight = (asset: BrandArtworkId, width: number) =>
     width * size.width / size.height * brandArtwork[asset].size.height / brandArtwork[asset].size.width

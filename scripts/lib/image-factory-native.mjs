@@ -1,4 +1,4 @@
-import { imageLayerReferenceCodec, imageLayerReferenceParts, readImageLayerReference, readImageLayerReceipt } from './image-factory-layer-references.mjs'
+import { imageLayerReferenceCodec, imageLayerReferenceParts, bindImageLayerReferences, readImageLayerReference, readImageLayerReceipts } from './image-factory-layer-references.mjs'
 import { imageGenerationCalls } from './image-generation-client.mjs'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../../packages/dsh-research-task-runtime/image-factory-context.js'
 import { createImageFactoryTasks } from './image-factory-tasks.mjs'
@@ -40,6 +40,7 @@ export function installImageFactoryContext({
   const stateChange = event => {
     canvasState = { current: event.detail?.current === true, busy: event.detail?.busy === true }
     publishState()
+    renderLayerPreview()
   }
   const focus = () => win.requestAnimationFrame(() => doc.querySelector('#odyssey-right-workspace-panel textarea:not([disabled])')?.focus({ preventScroll: true }))
   const finish = (id, updateScope = true) => {
@@ -64,28 +65,72 @@ export function installImageFactoryContext({
     return true
   }
   const usePrompt = event => { if (!state.current && fill(event.detail?.prompt, true)) event.preventDefault() }
+  let pendingLayer
+  const composer = () => doc.querySelector('#odyssey-right-workspace-panel textarea')
+  function clearLayerPreview() {
+    const previous = pendingLayer
+    pendingLayer = undefined
+    previous?.node?.remove()
+    previous?.observer?.disconnect()
+  }
+  function renderLayerPreview() {
+    if (!pendingLayer) return
+    const { reference, shell } = pendingLayer
+    if (!isActive() || !state.current || state.busy || canvasScope() !== reference.scope || nativeInput() !== shell || shell.disposed) {
+      clearLayerPreview()
+      return
+    }
+    const backdrop = composer()?.parentElement?.querySelector('[data-input-backdrop]')
+    if (!backdrop) return
+    const node = pendingLayer.node ?? doc.createElement('span')
+    if (!pendingLayer.node) {
+      node.dataset.imageLayerPreview = ''
+      node.dataset.referenceSource = 'image-factory-layer'
+      node.dataset.provisional = 'true'
+      node.style.color = 'var(--dsw-alias-label-primary, currentColor)'
+      node.textContent = reference.label
+      node.setAttribute('aria-label', reference.label + (doc.documentElement.dataset.odysseyLocale === 'en' ? ' — click the input to insert' : '，点击输入框插入'))
+      pendingLayer.node = node
+    }
+    node.toggleAttribute('data-after-draft', !!shell.snapshot.draft)
+    if (node.parentElement !== backdrop) backdrop.append(node)
+  }
   const referenceLayer = event => {
     if (!isActive() || !state.current || state.busy || event.detail?.scope !== canvasScope()) return
     const shell = nativeInput(), before = shell?.snapshot
     if (!before || shell.disposed || before.phase !== 'plain' || before.researchContextPreparing) return
     const reference = readImageLayerReference(JSON.stringify(event.detail))
-    const ref = JSON.stringify(reference)
-    const previous = before.occurrences.find(item => item.source === 'image-factory-layer' && before.draft[item.offset] === '\uFFFC')
-    if (previous?.ref === ref) return
-    const input = doc.querySelector('#odyssey-right-workspace-panel textarea:not([disabled])')
-    const offset = previous?.offset ?? (input?.value.length === before.draft.length ? input.selectionEnd : before.draft.length)
-    const inserted = shell.insertReference({ source: 'image-factory-layer', ref, label: reference.label, clipboardText: reference.label },
-      { start: offset, end: previous ? offset + 1 : offset, draftRev: before.draftRev })
-    if (inserted && input) {
+    clearLayerPreview()
+    const observer = new win.MutationObserver(renderLayerPreview)
+    pendingLayer = { reference, shell, observer }
+    observer.observe(doc.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-workspace-surface'] })
+    renderLayerPreview()
+  }
+  const confirmLayer = event => {
+    const pending = pendingLayer, input = composer()
+    if (!pending || !input || !event.isTrusted || input.disabled || input.readOnly ||
+        (event.target !== input && !input.parentElement?.querySelector('[data-input-backdrop]')?.contains(event.target))) return
+    win.queueMicrotask(() => {
+      if (pendingLayer !== pending || doc.activeElement !== input || nativeInput() !== pending.shell) return
+      const { reference, shell } = pending
+      if (!isActive() || !state.current || state.busy || canvasScope() !== reference.scope) return clearLayerPreview()
+      const before = shell.snapshot
+      if (shell.disposed || before.phase !== 'plain' || before.researchContextPreparing) return
+      const offset = input.value.length === before.draft.length ? input.selectionEnd : before.draft.length
+      const inserted = shell.insertReference({ source: 'image-factory-layer', ref: JSON.stringify(reference),
+        label: reference.label, clipboardText: reference.label }, { start: offset, end: offset, draftRev: before.draftRev })
+      if (!inserted) return
+      clearLayerPreview()
       const revision = shell.snapshot.draftRev
+      const caret = offset + shell.snapshot.draft.length - before.draft.length
       win.requestAnimationFrame(() => {
         if (!input.isConnected || shell.snapshot.draftRev !== revision || input.value.length !== shell.snapshot.draft.length) return
-        input.setSelectionRange(offset + 1, offset + 1)
+        input.setSelectionRange(caret, caret)
       })
-    }
+    })
   }
-
-  function request(id, sessionId, scope, prompt, uploaded, operation, layer) {
+  const cancelPreview = event => { if (event.key === 'Escape') clearLayerPreview() }
+  function request(id, sessionId, scope, prompt, uploaded, operation, layers) {
     return new Promise((resolve, reject) => {
       const cleanup = () => { win.clearTimeout(timer); doc.removeEventListener('sherlock:image-factory-prepared', reply) }
       const reply = event => {
@@ -97,40 +142,41 @@ export function installImageFactoryContext({
       }
       const timer = win.setTimeout(() => { cleanup(); finish(id); reject(Error('图像画布尚未就绪，请重试。')) }, 12000)
       doc.addEventListener('sherlock:image-factory-prepared', reply)
-      signal('prepare', { id, sessionId, scope, prompt, uploaded, region: operation === 'region', cutout: operation === 'cutout', layer })
+      signal('prepare', { id, sessionId, scope, prompt, uploaded, region: operation === 'region', cutout: operation === 'cutout', layers })
     })
   }
   async function prepare(sessionId, content, action) {
-    const markers = content.flatMap(part => part.type === 'text' ? imageLayerReferenceParts(part.text) : [])
-    if (markers.length > 1) throw Error('每条消息可修改一个图层，请保留一个图层标签。')
-    const layer = markers.length ? readImageLayerReference(decodeURIComponent(markers[0][1])) : undefined
+    const { parts, layers, hasInstructions } = bindImageLayerReferences(content)
+    const targeted = layers.length > 0
     if (isActive() && tasks.isCreating()) throw Error('正在创建图片任务，输入已保留。')
     if (!isActive() || currentId() !== sessionId || isBoardOnly(sessionId)) {
-      if (action || layer) throw Error('当前会话或画布已切换。')
+      if (action || targeted) throw Error('当前会话或画布已切换。')
       return { content }
     }
-    if (layer) content = content.map(part => part.type === 'text' ? { ...part, text: part.text.replace(markers[0][0], '') } : part)
+    if (targeted && !hasInstructions) throw Error('请输入要如何修改引用的图层。')
+    content = parts
     const text = content.filter(part => part.type === 'text').map(part => part.text).join('\n')
-    if (layer && !text.trim()) throw Error('请在图层标签后输入修改要求。')
     if (!text.trim()) return { content }
-    if (!action && !layer && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
+    if (!action && !targeted && /^\/[a-z][a-z0-9_-]*(?:\s|$)/i.test(text.trim())) return { content }
     const id = action?.id ?? win.crypto.randomUUID()
     const scope = canvasScope()
-    if (layer && layer.scope !== scope) throw Error('图层属于另一个画板，请重新选择图层。')
+    if (layers.some(layer => layer.scope !== scope)) throw Error('图层属于另一个画板，请重新选择图层。')
     try {
       const imageCount = content.filter(part => part.type === 'image').length
-      const response = await request(id, sessionId, scope, text, imageCount > 0, action?.operation, layer)
+      const response = await request(id, sessionId, scope, text, imageCount > 0, action?.operation, targeted ? layers : undefined)
       if (!isActive() || currentId() !== sessionId || canvasScope() !== scope) throw Error('当前会话或画布已切换，草稿已保留。')
       if (action && response.operation !== action.operation) throw Error('当前画布已变化，请重试。')
-      const { operation, size, width, height, title, reference, editBounds, targetLayer } = response
+      const { operation, size, width, height, title, reference, editBounds, targetLayers } = response
+      if (targeted && (operation !== 'layer' || targetLayers?.length !== layers.length ||
+          targetLayers.some((target, index) => target.key !== layers[index].key))) throw Error('引用的图层已变化，请重新选择。')
       if (reference && imageCount > 3) throw Error('编辑当前画布时，最多可再附加三张参考图。')
       const next = [...content]
       const index = next.findLastIndex(part => part.type === 'text')
       const receiptTitle = title.replace(/[\p{Cc}]/gu, ' ').trim().slice(0, 100) || '画布'
       next[index] = { type: 'text', text: encodePrompt(next[index].text, { id, operation, size, width, height,
-        title: receiptTitle, internalReference: !!reference, editBounds, targetLayer }) }
-      if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: layer?.label ?? '当前画布' })
-      jobs.set(id, { id, sessionId, draft: scope === null, timer: win.setTimeout(() => finish(id), 615000) })
+        title: receiptTitle, internalReference: !!reference, editBounds, targetLayers }) }
+      if (reference) next.push({ type: 'image', data: reference.data, mediaType: reference.mediaType, name: targetLayers?.find(layer => layer.kind === 'image')?.label ?? '当前画布' })
+      jobs.set(id, { id, sessionId, targetLayers, draft: scope === null, timer: win.setTimeout(() => finish(id), 615000) })
       return { content: next, id }
     } catch (error) { finish(id); throw error }
   }
@@ -150,17 +196,54 @@ export function installImageFactoryContext({
       const { chat, running, queue } = session.getSnapshot()
       if (!chat) return
       const nodes = chat.order.slice(-150).map(key => chat.nodes.get(key)).filter(Boolean)
-      const patch = readImageLayerReceipt(nodes, job.id)
-      if (patch) {
-        job.delivering = true
-        void Promise.resolve(promoteDraft(job)).then(() => {
-          if (jobs.get(job.id) !== job) return
-          signal('deliver-layer', { id: job.id, sessionId: job.sessionId, patch })
-          finish(job.id)
-        }).catch(() => finish(job.id))
+      const queued = queue?.some(row => owns(row.content))
+      job.wasQueued ||= queued
+      job.admitted ||= nodes.some(row => (row.kind === 'user' || row.kind === 'steering') && owns(row.data?.content))
+      if (job.admitted) void promoteDraft(job)
+      const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
+      if (job.targetLayers) {
+        job.edits ??= new Map()
+        for (const [key, patch] of readImageLayerReceipts(nodes, job.id))
+          job.edits.set(key, { ...job.edits.get(key), ...patch })
+        job.image ??= delivered
+        // Each tool may finish at a different time. Apply the turn's results together
+        // once its native admission and model execution have settled.
+        if (!queued && (job.admitted ? !running : job.wasQueued)) {
+          job.idle ??= win.setTimeout(() => {
+            job.idle = undefined
+            if (job.delivering || jobs.get(job.id) !== job) return
+            const settled = session.getSnapshot()
+            if ((job.admitted && settled.running) || settled.queue?.some(row => owns(row.content))) return
+            const edits = [...job.edits].map(([key, patch]) => ({ key, patch }))
+            const image = job.image
+            if (!edits.length && !image) return finish(job.id)
+            job.delivering = true
+            void (async () => {
+              let url
+              let imageError = false
+              try {
+                await promoteDraft(job)
+                if (image) {
+                  try {
+                    const result = await session.readAttachment(image.image.attachmentId)
+                    if (!result.ok) throw Error(result.error.message)
+                    url = URL.createObjectURL(new Blob([Uint8Array.from(result.value.data)], { type: result.value.attachment.mediaType }))
+                  } catch { imageError = true }
+                }
+                if (jobs.get(job.id) !== job) {
+                  if (url) URL.revokeObjectURL(url)
+                  return
+                }
+                signal('deliver-layers', { id: job.id, sessionId: job.sessionId, edits, url, imageKey: image?.factory?.layerTarget, imageError })
+              } finally { if (jobs.get(job.id) === job) finish(job.id) }
+            })().catch(() => {})
+          }, 750)
+        } else {
+          win.clearTimeout(job.idle)
+          job.idle = undefined
+        }
         return
       }
-      const delivered = imageGenerationCalls(nodes, running).find(call => call.state === 'completed' && call.factory?.id === job.id)
       if (delivered) {
         job.delivering = true
         void Promise.all([session.readAttachment(delivered.image.attachmentId), promoteDraft(job)]).then(([result]) => {
@@ -174,10 +257,6 @@ export function installImageFactoryContext({
         }).catch(() => finish(job.id))
         return
       }
-      const queued = queue?.some(row => owns(row.content))
-      job.wasQueued ||= queued
-      job.admitted ||= nodes.some(row => (row.kind === 'user' || row.kind === 'steering') && owns(row.data?.content))
-      if (job.admitted) void promoteDraft(job)
       // The inbox may clear just before its durable turn appears. Allow that handoff,
       // but settle a removed request even while a different turn is still running.
       if (!queued && (job.admitted ? !running : job.wasQueued)) {
@@ -191,7 +270,13 @@ export function installImageFactoryContext({
     observe()
   }
   async function prompt(session, content, mode, action) {
-    const next = await prepare(session.sessionId, content, action)
+    let next
+    try { next = await prepare(session.sessionId, content, action) }
+    catch (error) {
+      if (content.some(part => part.type === 'text' && imageLayerReferenceParts(part.text).length))
+        getInput(session.sessionId)?.notify('error', error.message)
+      throw error
+    }
     try {
       if (next.id) watch(session, jobs.get(next.id))
       const result = await session.prompt(next.content, mode)
@@ -245,14 +330,15 @@ export function installImageFactoryContext({
     publishedScope = sessionId
     signal('session', { sessionId })
   }
-  const offSession = sessions.list.subscribe?.(() => syncSession())
+  const offSession = sessions.list.subscribe?.(() => { syncSession(); renderLayerPreview() })
   const reset = () => {
     for (const id of jobs.keys()) finish(id, false)
     galleryDrafts = new WeakMap()
+    clearLayerPreview()
     publishedScope = intendedCanvas = draftOwner = undefined
     tasks.reset()
   }
-  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt, 'reference-layer': referenceLayer,
+  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt, 'reference-layer': referenceLayer, 'reference-clear': clearLayerPreview,
     comment: event => { void submitCanvasAction(event, 'region') },
     cutout: event => { void submitCanvasAction(event, 'cutout') },
     'focus-chat': focus, reset,
@@ -267,6 +353,8 @@ export function installImageFactoryContext({
     }, 'task-title': event => tasks.setTitle(event.detail),
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
+  doc.addEventListener('click', confirmLayer, true)
+  doc.addEventListener('keydown', cancelPreview, true)
   win.addEventListener('sherlock:pending-conversation-created', pendingCreated)
   signal('request-state', {})
   syncSession()
@@ -275,6 +363,8 @@ export function installImageFactoryContext({
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
       offSession?.()
+      doc.removeEventListener('click', confirmLayer, true)
+      doc.removeEventListener('keydown', cancelPreview, true)
       win.removeEventListener('sherlock:pending-conversation-created', pendingCreated)
       reset()
       for (const [name, handler] of Object.entries(events)) doc.removeEventListener('sherlock:image-factory-' + name, handler)
@@ -351,7 +441,8 @@ ${createImageFactoryTasks.toString()}
 ${imageLayerReferenceCodec.toString()}
 ${imageLayerReferenceParts.toString()}
 ${readImageLayerReference.toString()}
-${readImageLayerReceipt.toString()}
+${bindImageLayerReferences.toString()}
+${readImageLayerReceipts.toString()}
 ${imageFactoryDisplayContent.toString()}
 ${imageFactoryContentContext.toString()}
 ${imageFactoryQueueRow.toString()}

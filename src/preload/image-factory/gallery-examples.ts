@@ -1,5 +1,3 @@
-import { enterpriseGalleryExamples, type EnterpriseTemplate } from './enterprise-gallery'
-
 type Localized = readonly [string, string]
 
 export type GalleryExample = {
@@ -10,10 +8,9 @@ export type GalleryExample = {
   scenes?: Localized
   prompt?: Localized
   subtitle: Localized
-  enterprise?: EnterpriseTemplate
 }
 
-const brandGalleryExamples: GalleryExample[] = [
+export const galleryExamples: GalleryExample[] = [
   {
     id: "steady-horizon", title: ["山海长跑", "The long view"], material: ["品牌海报", "Brand poster"], format: "3:4",
     scenes: ["品牌主视觉 · 年度主题", "Brand campaign · Annual theme"], subtitle: ["每一步，都算数", "Every step counts"],
@@ -111,5 +108,3 @@ const brandGalleryExamples: GalleryExample[] = [
     ],
   },
 ]
-
-export const galleryExamples = [...brandGalleryExamples, ...enterpriseGalleryExamples]

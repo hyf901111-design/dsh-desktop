@@ -287,3 +287,26 @@ it('validates targeted edits by layer type and emits a patch without rasterizing
  expect(f.request).not.toHaveBeenCalled()
  expect(f.concludeTurn).toHaveBeenCalledOnce()
 })
+
+it('routes mixed layer edits to their explicit numbers and keeps the turn open for the other layers', async () => {
+ const f=fixture({uploaded:true}),content=f.agent.session.events[1].data.content
+ const id='11898f5e-5fab-4913-b241-267ac863be0c'
+ const targetLayers=[{key:1,kind:'text',label:'主标题',description:'旧标题'},
+  {key:2,kind:'image',label:'图片',description:''},{key:3,kind:'shape',label:'版式色块',description:'#005098'}]
+ content[0].text=imageFactoryPrompt('把〔图层 1：主标题〕改为新品发布，〔图层 2：图片〕换成雪山，同时将〔图层 3：版式色块〕改为黑色。',{
+  id,title:'易方达模板',operation:'layer',size:'1024x1536',width:1080,height:1350,internalReference:true,targetLayers
+ })
+ const edit=f.tools.get('image_edit_layer'),exec={agent:f.agent,concludeTurn:f.concludeTurn}
+ await expect(edit.execute({text:'新品发布'},exec)).rejects.toThrow('编号')
+ await expect(edit.execute({target:2,text:'新品发布'},exec)).rejects.toThrow('编号')
+ await expect(f.call({layer_target:3})).rejects.toThrow('编号')
+ const raster=await f.call({layer_target:2,prompt:'换成雪山'})
+ expect(raster.factory).toMatchObject({id,layerTarget:2})
+ expect(await f.call({layer_target:2,prompt:'雪山日出'})).toEqual(raster)
+ expect(f.request).toHaveBeenCalledOnce()
+ expect(f.reads).toEqual([f.ref])
+ expect(await edit.execute({target:1,text:'新品发布'},exec)).toMatchObject({id,target:1,patch:{text:'新品发布'}})
+ expect(await edit.execute({target:3,color:'#000000'},exec)).toMatchObject({id,target:3,patch:{color:'#000000'}})
+ expect(f.prompts[0].text({agent:f.agent})).toContain('根据每个标签在句子中的位置和上下文')
+ expect(f.concludeTurn).not.toHaveBeenCalled()
+})
