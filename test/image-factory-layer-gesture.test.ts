@@ -467,3 +467,42 @@ it('zooms around the Command-wheel position and pans with Space without editing 
     vi.unstubAllGlobals()
   }
 })
+
+it('opens a resident Workspace view from Images without triggering return to the original board', async () => {
+  const center = document.createElement('div')
+  const chooseNotes = vi.fn()
+  center.className = 'pI_x6G_centerCol'
+  center.innerHTML = '<div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="board-file-session"><div data-srb-tabs><button data-conversation-view-id="notes"></button></div></header></div>'
+  center.querySelector('button')!.addEventListener('click', chooseNotes)
+  document.body.append(center)
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1 }), write: async () => {}, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  const returns: unknown[] = []
+  const surfaceChanged = (event: Event) => {
+    const detail = (event as CustomEvent).detail
+    if (!detail.active) returns.push(detail.back)
+  }
+  document.addEventListener('sherlock:workspace-surface-change', surfaceChanged)
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  try {
+    await act(async () => factory.open())
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="展开工作区页签"]')!.click())
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="切换到笔记"]')!.click())
+    expect(chooseNotes).toHaveBeenCalledOnce()
+    expect(host.current()).toBeUndefined()
+    expect(returns).toEqual([undefined])
+
+    await act(async () => factory.open())
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="返回工作区"]')!.click())
+    expect(returns).toEqual([undefined, true])
+  } finally {
+    document.removeEventListener('sherlock:workspace-surface-change', surfaceChanged)
+    await act(async () => factory.dispose())
+    host.dispose()
+    center.remove()
+    vi.unstubAllGlobals()
+  }
+})
