@@ -123,6 +123,12 @@
           "新图层使用内置素材 ID 保存，仅支持包含品牌资产功能的客户端继续编辑。"
         ],
         "generatedAt": "2026-11-17T08:58:54.682Z"
+      },
+      "merged": {
+        "mergeCommit": "6e1e78dfcfaa83879fd39020e1b3b9cd5e372934",
+        "verificationCommit": "6e1e78dfcfaa83879fd39020e1b3b9cd5e372934",
+        "checks": [],
+        "recordedAt": "2026-11-17T08:59:22.006Z"
       }
     }
   ],
