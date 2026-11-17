@@ -2,9 +2,11 @@ import sharp from 'sharp'
 import { ImageGenerationError } from './image-generation-provider.js'
 
 export const cutoutMaskPrompt =
-  '为参考图制作精准的前景分割遮罩。保持参考图的完整取景、画幅比例、位置和像素对齐。' +
-  '只返回灰度遮罩图：需要保留的主要主体（包括多个明确主体）为纯白，背景、四周黑色留边、地面投影均为纯黑。' +
-  '发丝、毛发和半透明边缘用灰阶表达。请勿移动、缩放、重绘主体或添加其他图案。'
+  '为参考图制作精准的前景分割遮罩，保持整幅图的比例、取景和像素位置。只保留画面的主要实体主体，包括多个明确的主体。' +
+  '输出仅为灰度遮罩。主体的不透明部分全部填纯白，包含主体本身的深色区域和表面高光。' +
+  '发丝、毛发及主体实际透光的部分可用灰阶表示。主体轮廓之外、主体孔洞和四周黑色留边填纯黑。' +
+  '台面、支撑物、地面倒影和投影、环境光带、布景装饰都属于背景，即使接触主体也填纯黑。' +
+  '保持主体原位置与形状，不改变取景，不添加图案或文字。'
 
 const maxPixels = 16_000_000
 const invalidMask = () => new ImageGenerationError('图像模型没有返回可用的前景遮罩，请重试。')
@@ -47,7 +49,10 @@ export async function prepareImageCutout(source, size) {
       const originalAlpha = data[alphaIndex]
       const alpha = Math.round(originalAlpha * Math.max(0, Math.min(1, level)))
       data[alphaIndex] = alpha
-      if (alpha === 0) removed++
+      if (alpha === 0) {
+        data.fill(0, alphaIndex - 3, alphaIndex)
+        removed++
+      }
       if (alpha >= 128) retained++
     }
     if (!removed || !retained || colored > width * height * .03) throw invalidMask()

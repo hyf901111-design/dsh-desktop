@@ -110,7 +110,7 @@ it('uses the hosted image model mask to deliver an aligned transparent PNG with 
  const output=await sharp(f.saved[0].data).raw().toBuffer({resolveWithObject:true})
  expect(output.info).toMatchObject({width,height,channels:4})
  const pixel=(x,y)=>Array.from(output.data.subarray((y*width+x)*4,(y*width+x+1)*4))
- expect(pixel(1,3)[3]).toBe(0)
+ expect(pixel(1,3)).toEqual([0,0,0,0])
  expect(pixel(7,3)).toEqual([170,70,35,150])
  expect(pixel(10,3)).toEqual([170,70,35,255])
 })
