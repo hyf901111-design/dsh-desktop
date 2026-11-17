@@ -102,10 +102,19 @@ it('uses the hosted image model mask to deliver an aligned transparent PNG with 
   id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'商品照片',operation:'cutout',
   size:'1536x1024',width,height,internalReference:true
  })
- const result=await f.call({prompt:'把背景换成红色',background:'transparent',reference_image_ids:[]})
+ const result=await f.call({
+  prompt:'把背景换成红色',background:'transparent',reference_image_ids:[],
+  foreground_subjects:['画面右半部的银色泵头瓶，瓶身上有紫色透明环']
+ })
  expect(generate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
   prompt:expect.stringContaining('前景分割遮罩'),background:'opaque',size:'1536x1024'
  }),expect.anything())
+ const maskPrompt=generate.mock.calls[0][0].prompt
+ expect(maskPrompt).toContain('画面右半部的银色泵头瓶，瓶身上有紫色透明环')
+ expect(maskPrompt).not.toContain('把背景换成红色')
+ expect(f.prompts[0].text({agent:f.agent})).toContain('foreground_subjects')
+ expect(await f.call({foreground_subjects:['右侧瓶子']})).toEqual(result)
+ expect(generate).toHaveBeenCalledTimes(1)
  expect(result).toMatchObject({factory:{operation:'cutout'},guidance:expect.stringContaining('透明通道')})
  const output=await sharp(f.saved[0].data).raw().toBuffer({resolveWithObject:true})
  expect(output.info).toMatchObject({width,height,channels:4})
