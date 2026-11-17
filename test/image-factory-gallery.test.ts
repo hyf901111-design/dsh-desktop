@@ -207,3 +207,20 @@ it('keeps the revised headings clear of the photography and uses short rules sel
   expect(etfSubtitle?.kind).toBe('text')
   if (etfSubtitle?.kind === 'text') expect(etfSubtitle.y + etfSubtitle.fontSize * 1.2 / 1792).toBeLessThan(.21)
 })
+
+it('frames both interview subjects above a single editable full-width caption block', () => {
+  const example = galleryExamples.find(item => item.id === 'research-desk')!
+  const photo = galleryPhotoPlacement(example.id)
+  expect(photo).toMatchObject({ x: 0, width: 1, height: 1 })
+  expect(photo!.y).toBeLessThan(-.10)
+  const layers = galleryTemplateLayers(example, { width: 900, height: 1200 }, zh => zh, () => crypto.randomUUID())
+  const blocks = layers.filter(layer => layer.kind === 'shape')
+  expect(blocks).toHaveLength(1)
+  const caption = blocks[0]!
+  expect(caption).toMatchObject({ x: 0, width: 1 })
+  expect(caption.y - photo!.y).toBeGreaterThan(.87)
+  expect(caption.y).toBeLessThan(photo!.y + photo!.height)
+  const copy = layers.filter(layer => layer.kind === 'text')
+  expect(copy).toHaveLength(3)
+  expect(copy.every(layer => layer.y > caption.y && layer.x === copy[0]!.x)).toBe(true)
+})

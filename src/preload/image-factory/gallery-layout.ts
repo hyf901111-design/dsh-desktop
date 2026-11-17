@@ -12,6 +12,7 @@ const ink = '#202f3a'
 export function galleryPhotoPlacement(id: string) {
   if (id === 'efund-fund-learning') return { x: .49, y: .06, width: .44, height: .44, fill: '#f4f8fd' }
   if (id === 'efund-industry-pinwheel') return { x: 0, y: -.08, width: 1, height: 1, fill: '#083375' }
+  if (id === 'research-desk') return { x: 0, y: -.15, width: 1, height: 1, fill: '#ffffff' }
 }
 
 /** The thumbnail and the new canvas use the same coordinates and layer order. */
@@ -58,13 +59,12 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
       copy(subtitle, .055, .703, .45, .024, c.white)
       break
     case 'research-desk':
-      block(c.white, 0, .755, 1, .245)
-      block(c.medium, 0, .755, .012, .245)
+      block(c.white, 0, .767, 1, .233)
       logo(.256)
       top(.22)
-      copy(t('人物专访', 'INTERVIEW'), .064, .775, .8, .024, c.medium, 700)
-      copy(title, .064, .824, .87, .067, c.blue, 700)
-      copy(subtitle, .064, .917, .87, .034, ink)
+      copy(t('人物专访', 'INTERVIEW'), .075, .798, .85, .024, c.medium, 700)
+      copy(title, .075, .839, .85, .067, c.blue, 700)
+      copy(subtitle, .075, .919, .85, .034, ink)
       break
     case 'product-prism':
       block(c.gray, 0, .819, 1, .181)
