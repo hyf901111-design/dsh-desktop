@@ -1,7 +1,7 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
-export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, setView, storage }) {
+export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, setView, storage, isBoardOnly = () => false }) {
   let tabs = [], closed = [], active, draftSession, openToken, loading, epoch, emitted
-  const validScope = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value)
+  const validScope = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
   const publish = (force = false) => {
     const busy = !!openToken || !!loading
     if (!force && emitted?.tabs === tabs && emitted.active === active && emitted.busy === busy) return
@@ -63,6 +63,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   }
   function select(scope) {
     const sessionId = scope === null ? draftSession : scope
+    if (sessionId && isBoardOnly(sessionId)) throw Error('看板会话不能作为图片任务打开。')
     if (sessionId && sessions.binding(sessionId)) {
       setView?.(sessionId)
       sessions.open(sessionId)

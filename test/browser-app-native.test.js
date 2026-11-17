@@ -6,7 +6,40 @@ import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-head
 import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
 import {imageFactoryPrompt,readImageFactoryContext,stripImageFactoryContext} from '../packages/dsh-research-task-runtime/image-factory-context.js'
 const stripNewer = source => stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(source)))
-import {installBrowserNative,browserSourceCodec,patchBrowserAppNative,stripBrowserAppNative,browserUserTextSegments} from '../scripts/lib/browser-app-native.mjs'
+import {installBrowserNative,installWorkspaceAppSessions,browserSourceCodec,patchBrowserAppNative,stripBrowserAppNative,browserUserTextSegments} from '../scripts/lib/browser-app-native.mjs'
+import {WorkspaceSurfaceHost} from '../src/preload/workspace-surface-host'
+
+it.each(['browser','image-factory','knowledge'])('uses an independent conversation and returns to the pinned board from %s', async app => {
+ const win=new Window(), doc=win.document, host=new WorkspaceSurfaceHost(doc);
+ let current='pinned-board';
+ const sessions={list:{getSnapshot:()=>({current})},binding:()=>({state:'open'}),
+  clear:vi.fn(()=>{current=undefined}),open:vi.fn(id=>{current=id})};
+ const dispose=installWorkspaceAppSessions({sessions,doc,isBoardOnly:id=>id==='pinned-board'||id==='notification-board'});
+ try {
+  for (const surface of ['browser','image-factory','knowledge']) host.register(surface,doc.createElement('div'));
+  host.open(app);
+  expect(current).toBeUndefined();
+  expect(sessions.clear).toHaveBeenCalledOnce();
+  current='app-conversation';
+  host.open(app==='knowledge'?'browser':'knowledge');
+  expect(current).toBe('app-conversation');
+  host.back();
+  expect(current).toBe('pinned-board');
+  expect(sessions.open).toHaveBeenCalledOnce();
+
+  host.open(app);
+  current='notification-board';
+  host.revealConversation();
+  expect(current).toBe('notification-board');
+  expect(sessions.open).toHaveBeenCalledOnce();
+
+  current='ordinary-research';
+  host.open(app);
+  expect(current).toBe('ordinary-research');
+  host.back();
+  expect(current).toBe('ordinary-research');
+ } finally { dispose(); host.dispose(); await win.happyDOM.abort(); }
+});
 it('patches the canvas action before its translated ternary is split into per-label calls',()=>{
  const raw=stripBrowserAppNative(stripNewer(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
  const before=raw.replace('"aria-label": (notes?workbenchText("添加到笔记"):workbenchText("添加到画布")),','"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),')

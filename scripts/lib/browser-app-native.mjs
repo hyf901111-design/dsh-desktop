@@ -1,11 +1,35 @@
 import {installImageFactoryContext,imageFactoryNativeSource} from './image-factory-native.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
 import {createPendingConversation,EWorkPendingInputBar,browserPromptReference} from './pending-conversation.mjs'
+/** Keep the pinned board as the return destination when an app needs a conversation. */
+export function installWorkspaceAppSessions({sessions,isBoardOnly,doc=document}) {
+ let boardToReturn
+ const apps=new Set(['browser','image-factory','knowledge'])
+ const surfaceChanged=({detail})=>{
+  if(apps.has(detail?.surface)){
+   const current=sessions.list.getSnapshot().current
+   if(current&&isBoardOnly(current)){
+    boardToReturn??=current
+    sessions.clear()
+   }
+  }else if(detail?.active===false){
+   const board=boardToReturn
+   boardToReturn=undefined
+   const current=sessions.list.getSnapshot().current
+   if(detail.back&&board&&current!==board&&!(current&&isBoardOnly(current))){
+    const binding=sessions.binding(board)
+    if(binding&&binding.state!=='removed')sessions.open(board)
+   }
+  }
+ }
+ doc.addEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
+ return()=>doc.removeEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
+}
 /** Browser is an application; conversation context is optional and never created by entry. */
-export function installBrowserNative({sessions,getInput}) {
+export function installBrowserNative({sessions,getInput,isBoardOnly=()=>false}) {
  let live=true
  const reply=(name,requestId,value)=>window.dispatchEvent(new CustomEvent(name,{detail:{requestId,...value}}))
- const context=()=>{const id=sessions.list.getSnapshot().current;return id&&!sessions.subagentAddress(id)?id:undefined}
+ const context=()=>{const id=sessions.list.getSnapshot().current;return id&&!isBoardOnly(id)&&!sessions.subagentAddress(id)?id:undefined}
  const open=event=>{
   const d=event.detail??{}
   try{
@@ -156,7 +180,7 @@ export function patchBrowserAppNative(input){
  replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n
 ctx.effect(()=>{
  const factory=(${installImageFactoryContext.toString()})({
-   sessions,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,
+   sessions,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
    getTaskWorkspace:()=>{const state=workspaces.list.getSnapshot(), current=sessions.list.getSnapshot().current;
      return state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??eworkPendingConversation?.getSnapshot().workspaceId??state.recentWorkspaceId},
    setTaskView:id=>chatStore.create(id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
@@ -180,7 +204,8 @@ ctx.effect(()=>{
  replace('content: canvasQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)',
    'content: imageFactoryQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)')
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
- replace(anchor,anchor+`\nctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Browser application navigation');
+ replace(anchor,anchor+`\nctx.effect(()=>(${installWorkspaceAppSessions.toString()})({sessions,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true}),'Workspace application session boundaries');
+ctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true}),'Browser application navigation');
 ctx.effect(()=>{const bridge=(${installBrowserQuestionNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],getConversation:()=>ctx.get('conversation')});return bridge.dispose},'Browser region shared composer');
 ctx.effect(()=>{
  const preferences=(${createPendingComposerPreferences.toString()})({
