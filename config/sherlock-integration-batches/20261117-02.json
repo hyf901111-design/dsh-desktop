@@ -11,168 +11,29 @@
         "schemaVersion": 1,
         "featureName": "图像图层引用与易方达营销模板",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "577e2cfd2e90879d98589ad932d949df28782050",
-        "tipCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
+        "baseCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
+        "tipCommit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
         "commits": [
           {
-            "commit": "8cc17df14c962e88b57d1389464d7d4f60048993",
+            "commit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
             "parents": [
-              "577e2cfd2e90879d98589ad932d949df28782050"
+              "128dcf00754512e0aa7a18ec25c501e3a9bdab41"
             ],
-            "subject": "图像图层引用复用研究看板的行内待插入标签"
-          },
-          {
-            "commit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
-            "parents": [
-              "8cc17df14c962e88b57d1389464d7d4f60048993"
-            ],
-            "subject": "扩充易方达分层营销模板和提示词画廊"
+            "subject": "保证分层海报可保存重开并交错陈列预览"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-layer-references.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-active-prism.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-blue-bay.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-bond-pavilion.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-elements-amber.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-elements-grid.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-etf-feature-cards.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-fund-learning.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-glass-transition.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-harvest.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-index-bridge.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-industrial-star.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-industry-pinwheel.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-innovation-archive.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-marathon-aerial.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-marathon-city.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-mountain-ridge.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-mountain-sunrise.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-research-window.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-run-shoes.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-run-start.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-type-horizon.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-type-momentum.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/efund-type-precision.jpg"
-          },
           {
             "status": "M",
             "path": "src/preload/image-factory/gallery-examples.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-layout.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery.tsx"
-          },
-          {
-            "status": "A",
             "path": "src/preload/image-factory/marketing-layout.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/image-factory/marketing-prompts.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/marketing-templates.ts"
-          },
-          {
             "status": "M",
-            "path": "src/preload/image-factory/style.css"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-gallery.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "path": "test/image-factory-canvases.test.ts"
           }
         ],
         "checks": [
@@ -184,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
-            "completedAt": "2026-11-17T11:59:38.022Z",
+            "verifiedCommit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
+            "completedAt": "2026-11-17T12:06:14.806Z",
             "timeoutMs": 120000
           },
           {
@@ -195,12 +56,13 @@
               "run",
               "test/image-factory-native.test.js",
               "test/image-factory-gallery.test.ts",
-              "test/image-factory.test.js"
+              "test/image-factory.test.js",
+              "test/image-factory-canvases.test.ts"
             ],
             "outcome": "passed",
-            "summary": "45 项图像应用聚焦测试通过。",
-            "verifiedCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
-            "completedAt": "2026-11-17T11:59:38.022Z",
+            "summary": "52 项图像聚焦测试通过，覆盖 12 套新增模板的保存重开。",
+            "verifiedCommit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
+            "completedAt": "2026-11-17T12:06:14.806Z",
             "timeoutMs": 120000
           }
         ],
@@ -216,13 +78,7 @@
         "risks": [
           "模拟资料字段须在正式投放前替换为已审核的产品内容。"
         ],
-        "generatedAt": "2026-11-17T11:59:38.022Z"
-      },
-      "merged": {
-        "mergeCommit": "4663ee26aecae987c205564f2d2996032f96b555",
-        "verificationCommit": "4663ee26aecae987c205564f2d2996032f96b555",
-        "checks": [],
-        "recordedAt": "2026-11-17T11:59:54.330Z"
+        "generatedAt": "2026-11-17T12:06:14.806Z"
       }
     }
   ],
