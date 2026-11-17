@@ -1,6 +1,7 @@
 import { Window, type HTMLButtonElement } from 'happy-dom'
 import { afterEach, expect, it, vi } from 'vitest'
 import { mountResearchBoardNotifications } from '../src/preload/research-board-notifications-ui'
+import { WorkspaceSurfaceHost } from '../src/preload/workspace-surface-host'
 import type { ResearchBoardsBridge, ResearchBoardsState, Notification } from '../src/shared/research-boards'
 
 const cleanups: Array<() => void> = []
@@ -18,15 +19,38 @@ function fixture(notes: Notification[] = [], load = async (state: ResearchBoards
     return { ok: true as const, value: state.notifications }
   })
   const bridge: ResearchBoardsBridge = { isSharedSession: () => false, getSnapshot: () => load(state), subscribe: () => () => {}, invoke }
-  const dispose = mountResearchBoardNotifications(w.document as unknown as Document, bridge)
-  cleanups.push(() => { dispose(); w.happyDOM.abort() })
+  const document = w.document as unknown as Document
+  const host = new WorkspaceSurfaceHost(document)
+  const dispose = mountResearchBoardNotifications(document, bridge, () => host.revealConversation())
+  cleanups.push(() => { dispose(); host.dispose(); w.happyDOM.abort() })
   const button = (label: string) => w.document.querySelector<HTMLButtonElement>(`.srb-notifications button[aria-label="${label}"]`)!
   const bell = () => w.document.querySelector<HTMLButtonElement>('.srb-bell')!
-  return { w, state, invoke, button, bell }
+  return { w, state, invoke, button, bell, host }
 }
 function note(id: string, readAt: number | null, status: 'pending' | 'accepted'): Notification {
   return { notificationId: id, eventVersion: 1, type: status === 'pending' ? 'invitation' : 'invitationResult', boardId: 'board', boardTitle: id, createdAt: 1, readAt, invitation: { invitationId: id, version: 1, status } }
 }
+it.each(['image-factory', 'browser', 'knowledge'] as const)('reveals a notification destination over %s after it opens', async surface => {
+  const f = fixture([note('协作看板', 2, 'accepted')])
+  const app = f.w.document.createElement('div')
+  f.host.register(surface, app as unknown as HTMLElement)
+  f.host.open(surface)
+  let requestId = ''
+  f.w.addEventListener('sherlock:boards:request', event => {
+    const detail = (event as import('happy-dom').CustomEvent).detail
+    expect(detail).toMatchObject({ action: 'open', boardId: 'board' })
+    requestId = detail.requestId
+  })
+  await tick(); f.bell().click()
+  f.w.document.querySelector<import('happy-dom').HTMLElement>('.srb-notifications .srb-notification-subtitle')?.click()
+  expect(requestId).not.toBe('')
+  expect(app.hidden).toBe(false)
+  f.w.dispatchEvent(new f.w.CustomEvent('sherlock:boards:reply', { detail: { requestId, ok: true } }))
+  await tick()
+  expect(app.hidden).toBe(true)
+  expect(f.host.current()).toBeUndefined()
+  expect(f.w.document.querySelector('.srb-notifications')).toBeNull()
+})
 it('filters by read state independently of invitation status and marks read only on explicit action', async () => {
   const f = fixture([note('read-pending', 1, 'pending'), note('unread-accepted', null, 'accepted')])
   await tick(); f.bell().click(); await tick()

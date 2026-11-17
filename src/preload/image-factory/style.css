@@ -59,7 +59,7 @@
 .if-stage-scroll[data-panning=true],.if-stage-scroll[data-panning=true] * {cursor:grabbing!important}
 .if-raster {position:relative;flex:none;box-shadow:0 12px 32px #0004;user-select:none;background:repeating-conic-gradient(#8b8c8f29 0% 25%,transparent 0% 50%) 0 0/16px 16px,var(--if-canvas)}
 .if-raster-artwork {position:absolute;inset:0;pointer-events:none}
-.if-watermark {position:absolute;z-index:1;overflow:hidden;white-space:nowrap;font-weight:500;color:#fff;pointer-events:none}
+.if-watermark {position:absolute;z-index:1;overflow:hidden;white-space:nowrap;font-weight:500;pointer-events:none}
 .if-raster img {position:absolute;inset:0;display:block;width:100%;height:100%;user-select:none;pointer-events:none}
 .if-raster[data-selecting=true] {touch-action:none;cursor:crosshair}
 .if-raster[data-placing-text=true] {touch-action:none;cursor:text}

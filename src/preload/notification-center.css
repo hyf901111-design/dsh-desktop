@@ -103,7 +103,7 @@ html.dark .srb-notifications,
 .srb-notifications nav button {
   position: relative; z-index: 1; padding: 0 0 4px; border-radius: 0; font-size: 14px;
 }
-.srb-notifications nav button:hover:not(:disabled) { background: transparent; }
+.srb-notifications nav [role=tab] { background: transparent !important; }
 .srb-notifications nav [aria-selected=true] { color: var(--center-text); font-weight: 500; }
 .srb-notifications nav [aria-selected=true]:focus-visible { outline: none; }
 .srb-notifications nav [aria-selected=true]::after {
@@ -132,7 +132,7 @@ html.dark .srb-notifications,
 .srb-notification-list .srb-notification:not(:last-child)::after {
   position: absolute; right: 20px; bottom: 0; left: 36px; height: 1px; background: var(--center-line); content: "";
 }
-.srb-notifications .srb-notification[data-open-board] { cursor: pointer; }
+.srb-notifications .srb-notification:is([data-open-board], [data-update-notification]) { cursor: pointer; }
 .srb-notifications .srb-notification::before {
   position: absolute; z-index: -1; inset: 6px 12px; border-radius: 8px; pointer-events: none; content: "";
 }
