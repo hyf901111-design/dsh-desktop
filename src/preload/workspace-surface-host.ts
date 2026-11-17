@@ -107,7 +107,10 @@ export class WorkspaceSurfaceHost {
             delete this.document.body.dataset.workspaceRightExpanded;
         }
         this.position();
-        this.dispatch('sherlock:workspace-surface-change', { ...current, active: !!current, ...(back && { back }) });
+        this.dispatch('sherlock:workspace-surface-change', {
+            ...current, active: !!current, appInHistory: this.history.some(({ surface }) => switchableApps.has(surface)),
+            ...(back && { back })
+        });
     }
     private settingsOpen() { return !!this.document.querySelector('.VOzbGW_overlay'); }
     private onDomChanged = () => {
