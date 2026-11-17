@@ -57,6 +57,12 @@
           "未合入正式分支。"
         ],
         "generatedAt": "2026-11-17T10:42:52.493Z"
+      },
+      "merged": {
+        "mergeCommit": "a45c7fa3ced26f6c8e694d99fbca69a338276aa8",
+        "verificationCommit": "a45c7fa3ced26f6c8e694d99fbca69a338276aa8",
+        "checks": [],
+        "recordedAt": "2026-11-17T10:42:57.364Z"
       }
     }
   ],
