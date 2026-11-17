@@ -255,6 +255,40 @@ it('recovers a distant text layer from Layers without altering its formatting', 
   }
 })
 
+it.each(['Backspace', 'Delete'])('deletes the selected text layer with %s after leaving text editing', async key => {
+  const text: TextLayer = { id: randomUUID(), kind: 'text', text: '标题', x: .15, y: .2, width: .4,
+    fontSize: 36, family: 'system-ui', weight: 600, color: '#fff', align: 'left' }
+  const remaining = { ...text, id: randomUUID(), text: '保留' }
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '删除文字', width: 800, height: 1000, layers: [text, remaining] }
+  const write = vi.fn(async (_value: CanvasWrite) => {})
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  try {
+    await act(async () => factory.open())
+    const keydown = (node: Element) => node.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+    const textLabel = () => document.querySelector<HTMLElement>(`[data-canvas-text-id="${text.id}"]`)!
+    await act(async () => textLabel().dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
+    const input = document.querySelector<HTMLTextAreaElement>('textarea[data-canvas-text-id]')!
+    await act(async () => expect(keydown(input)).toBe(true))
+    expect(write).not.toHaveBeenCalled()
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true })))
+    const font = document.querySelector<HTMLInputElement>('input[aria-label="字号"]')!
+    await act(async () => expect(keydown(font)).toBe(true))
+    expect(write).not.toHaveBeenCalled()
+    await act(async () => expect(keydown(textLabel())).toBe(false))
+    expect(write.mock.calls.at(-1)?.[0].canvas.layers).toEqual([remaining])
+    expect(textLabel()).toBeNull()
+  } finally {
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.unstubAllGlobals()
+  }
+})
+
 it.each([
   ['生成一张全新的 1:1 插画，标题为「柚子气泡水」。', '柚子气泡水', 1024, 1024],
   ['Please create a brand-new poster titled “Summer Market”.', 'Summer Market', 1080, 1350],

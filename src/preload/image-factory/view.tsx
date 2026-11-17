@@ -11,7 +11,7 @@ import { ImageFactoryGallery } from './gallery'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
 import { iconSource } from './icons'
 import { useImageViewport } from './viewport'
-import { aiWatermarkBackground, aiWatermarkFamily, aiWatermarkLayout, aiWatermarkText, drawAiWatermark } from './watermark'
+import { aiWatermarkColor, aiWatermarkFamily, aiWatermarkLayout, aiWatermarkText, drawAiWatermark } from './watermark'
 import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, preservesRegionTransparency, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
 import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
@@ -712,6 +712,15 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
   const tabsLabel = workspaceExpanded ? t('收起工作区页签', 'Collapse workspace tabs') : t('展开工作区页签', 'Expand workspace tabs')
   const watermark = current?.aiWatermark ? aiWatermarkLayout(current, displayScale) : undefined
   return <section className="if-work" aria-label={t('图像画布', 'Images canvas')} onKeyDown={event => {
+    if ((event.key === 'Delete' || event.key === 'Backspace') && resizableText &&
+        !event.defaultPrevented && !event.nativeEvent.isComposing &&
+        !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey &&
+        !(event.target as Element).closest('input,textarea,select,[contenteditable]:not([contenteditable=false])')) {
+      event.preventDefault()
+      event.stopPropagation()
+      deleteLayer(resizableText.id)
+      return
+    }
     if (event.key !== 'Escape' || commentPending || (!editing && !tool && !area)) return
     event.stopPropagation(); clearSelection(); releaseText()
   }}>
@@ -808,7 +817,7 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                 right: watermark.inset, bottom: watermark.inset,
                 maxWidth: `calc(100% - ${watermark.inset * 2}px)`,
                 fontFamily: aiWatermarkFamily, fontSize: watermark.fontSize, lineHeight: watermark.height + 'px',
-                borderRadius: watermark.radius, paddingInline: watermark.padding, background: aiWatermarkBackground,
+                color: aiWatermarkColor,
               }}>{aiWatermarkText}</span>}
               {rectangle && <div className="if-region" aria-hidden="true" data-dragging={!!rubberband} data-processing={commentPending} style={{
                 left: rectangle.x / current.width * 100 + '%', top: rectangle.y / current.height * 100 + '%',
