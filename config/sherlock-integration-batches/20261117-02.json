@@ -11,22 +11,22 @@
         "schemaVersion": 1,
         "featureName": "图像画板编辑与企业模板画廊",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "c9245d6982670f48e213c397cfb0a96cc7a79c13",
-        "tipCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
+        "baseCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
+        "tipCommit": "577e2cfd2e90879d98589ad932d949df28782050",
         "commits": [
           {
-            "commit": "01abe271134e70f1bd24b0ce925cf929c18169ca",
+            "commit": "a4d36f07cbaf3a07793e50e737a54cb541f5c4e2",
             "parents": [
-              "c9245d6982670f48e213c397cfb0a96cc7a79c13"
+              "0d1c6933d6379ee3f92a04e253d2e998217575e2"
             ],
-            "subject": "优化：提示词画廊悬停显示渐进模糊和做同款"
+            "subject": "优化：模板缩略图自然排布并简化画布工具栏"
           },
           {
-            "commit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
+            "commit": "577e2cfd2e90879d98589ad932d949df28782050",
             "parents": [
-              "01abe271134e70f1bd24b0ce925cf929c18169ca"
+              "a4d36f07cbaf3a07793e50e737a54cb541f5c4e2"
             ],
-            "subject": "功能：工具栏自动收纳工具并支持画布框选多选"
+            "subject": "优化：画廊模式悬浮底部并将关闭按钮置于右上角"
           }
         ],
         "files": [
@@ -68,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
-            "completedAt": "2026-11-17T10:56:24.141Z",
+            "verifiedCommit": "577e2cfd2e90879d98589ad932d949df28782050",
+            "completedAt": "2026-11-17T11:15:36.899Z",
             "timeoutMs": 120000
           },
           {
@@ -84,30 +84,25 @@
             ],
             "outcome": "passed",
             "summary": "46 项图像应用聚焦测试通过。",
-            "verifiedCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
-            "completedAt": "2026-11-17T10:56:24.141Z",
+            "verifiedCommit": "577e2cfd2e90879d98589ad932d949df28782050",
+            "completedAt": "2026-11-17T11:15:36.899Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "最新交互等待集成签名桌面预览复验。"
+          "summary": "聚焦检查完成，签名桌面版待复验。"
         },
         "acceptanceCriteria": [
-          "提示词图片悬停显示底部渐进模糊与做同款操作，点击复用提示词。",
-          "放不下的工具搬到已有更多菜单，区域变宽自动恢复，开关状态保留。",
-          "画布空白拖框与框选工具都能选中框内可编辑元素，Shift 可追加，并可一起移动或编组。"
+          "模板缩略图按实际宽高比排布，顶部留白并对齐。",
+          "两个模式的文字按钮悬浮在画廊底部中间，底部渐隐模糊可见，关闭画廊按钮居右上且为圆形模糊背景。",
+          "鼠标从空白处拖框，结束后键盘编组。工具栏不含框选元素或编组按钮。",
+          "编辑工具栏右侧在空间不足时出现独立的更多按钮，打开后仅显示被收纳的操作。"
         ],
         "risks": [
           "未合入正式分支。"
         ],
-        "generatedAt": "2026-11-17T10:56:24.141Z"
-      },
-      "merged": {
-        "mergeCommit": "9a25f0fa41d50bf88d54acc68f4182331d481e78",
-        "verificationCommit": "9a25f0fa41d50bf88d54acc68f4182331d481e78",
-        "checks": [],
-        "recordedAt": "2026-11-17T10:56:59.557Z"
+        "generatedAt": "2026-11-17T11:15:36.899Z"
       }
     }
   ],
