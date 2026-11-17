@@ -9,27 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "主页直达与图像导航",
+        "featureName": "对话首页默认收起右侧栏",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "57bf5c07e8153e88d2eea63c7e7c6113a322cd27",
-        "tipCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
+        "baseCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
+        "tipCommit": "df45f5ecfbe31716018996f5ab7756e1049452a0",
         "commits": [
           {
-            "commit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
+            "commit": "df45f5ecfbe31716018996f5ab7756e1049452a0",
             "parents": [
-              "57bf5c07e8153e88d2eea63c7e7c6113a322cd27"
+              "3a1868c26c3b2a415250856efda3bcc6cb502b38"
             ],
-            "subject": "修复图像应用抢占主页导航的会话竞态"
+            "subject": "进入主页和新对话时默认收起右侧栏"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/image-factory-tasks.mjs"
+            "path": "scripts/lib/pending-conversation-panel.mjs"
           },
           {
             "status": "M",
             "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-panel.test.js"
           },
           {
             "status": "M",
@@ -45,8 +49,23 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
-            "completedAt": "2026-11-17T14:29:08.468Z",
+            "verifiedCommit": "df45f5ecfbe31716018996f5ab7756e1049452a0",
+            "completedAt": "2026-11-17T19:49:59.612Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/pending-conversation-panel.test.js",
+              "test/workspace-surface-host.test.ts",
+              "test/home-guide-session.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "48 项侧栏、工作区与演示入口聚焦测试通过。",
+            "verifiedCommit": "df45f5ecfbe31716018996f5ab7756e1049452a0",
+            "completedAt": "2026-11-17T19:49:59.612Z",
             "timeoutMs": 120000
           },
           {
@@ -56,26 +75,12 @@
               "run",
               "test/sidebar-new-session-actions.test.ts",
               "-t",
-              "opens Home directly"
+              "opens Home directly|requests Chat view|renders distinct New Chat"
             ],
             "outcome": "passed",
-            "summary": "单击主页竞态回归通过。",
-            "verifiedCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
-            "completedAt": "2026-11-17T14:29:08.468Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/workspace-surface-host.test.ts",
-              "test/image-factory-native.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "36 项工作区导航及图像聚焦测试通过。",
-            "verifiedCommit": "3a1868c26c3b2a415250856efda3bcc6cb502b38",
-            "completedAt": "2026-11-17T14:29:08.468Z",
+            "summary": "3 项主页与新对话入口回归通过。",
+            "verifiedCommit": "df45f5ecfbe31716018996f5ab7756e1049452a0",
+            "completedAt": "2026-11-17T19:49:59.612Z",
             "timeoutMs": 120000
           }
         ],
@@ -84,16 +89,10 @@
           "summary": "聚焦测试完成，等待签名客户端复核。"
         },
         "acceptanceCriteria": [
-          "从图像、浏览器和知识库点击全局主页，一次显示对话首页。"
+          "点击主页或新建对话进入对话首页时默认收起右侧栏，支持再次手动展开。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-17T14:29:08.468Z"
-      },
-      "merged": {
-        "mergeCommit": "5ccd7281af1e20401127d210595ad46f5ffc5c2c",
-        "verificationCommit": "5ccd7281af1e20401127d210595ad46f5ffc5c2c",
-        "checks": [],
-        "recordedAt": "2026-11-17T14:29:15.167Z"
+        "generatedAt": "2026-11-17T19:49:59.612Z"
       }
     }
   ],
