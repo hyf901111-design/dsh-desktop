@@ -744,3 +744,55 @@ it('groups two selected layers, restores the group with redo, and returns from t
     vi.unstubAllGlobals()
   }
 })
+
+it('marquee-selects enclosed canvas elements and adds another element with Shift', async () => {
+  const block = (x: number, y: number, width = .15, height = .13) => ({
+    kind: 'shape' as const, id: randomUUID(), x, y, width, height, color: '#005096',
+  })
+  const background = block(0, 0, 1, 1)
+  const first = block(.12, .20), second = block(.40, .24), third = block(.70, .65)
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '框选画板', width: 1000, height: 1000,
+    layers: [background, first, second, third] }
+  const host = new WorkspaceSurfaceHost(document)
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  let factory!: ReturnType<typeof mountImageFactory>
+  try {
+    await act(() => {
+      factory = mountImageFactory(document, host, {
+        storage: { read: async () => ({ epoch: 1, canvas }), write: async () => {}, adopt: async () => false },
+        archive: async () => {}, save: async () => ({}),
+      })
+    })
+    await openCanvas(factory)
+    const viewport = document.querySelector<HTMLElement>('.if-stage-scroll')!
+    const node = (layer: typeof first) => document.querySelector<HTMLElement>('[data-brand-layer-id="' + layer.id + '"]')!
+    vi.spyOn(viewport, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 500, 500))
+    Object.defineProperty(viewport, 'setPointerCapture', { value: vi.fn() })
+    for (const layer of canvas.layers as typeof first[]) {
+      vi.spyOn(node(layer), 'getBoundingClientRect').mockReturnValue(new DOMRect(layer.x * 500, layer.y * 500, layer.width * 500, layer.height * 500))
+    }
+    const pointer = (type: string, target: Element, clientX: number, clientY: number, shiftKey = false) => target.dispatchEvent(new PointerEvent(type,
+      { pointerId: 1, pointerType: 'mouse', bubbles: true, cancelable: true, isPrimary: true, button: 0,
+        buttons: type === 'pointerup' ? 0 : 1, clientX, clientY, shiftKey }))
+    await act(() => { pointer('pointerdown', viewport, 45, 92); pointer('pointermove', viewport, 295, 225) })
+    expect(document.querySelector('.if-marquee')).not.toBeNull()
+    await act(() => pointer('pointerup', viewport, 295, 225))
+    const selected = (layer: typeof first) => node(layer).getAttribute('aria-pressed')
+    expect([selected(background), selected(first), selected(second), selected(third)]).toEqual(['false', 'true', 'true', 'false'])
+    expect(document.querySelector('.if-marquee')).toBeNull()
+    const tool = document.querySelector<HTMLButtonElement>('[data-tool="select"]')!
+    await act(() => tool.click())
+    await act(() => {
+      pointer('pointerdown', node(background), 330, 280, true)
+      pointer('pointermove', viewport, 450, 408, true)
+      pointer('pointerup', viewport, 450, 408, true)
+    })
+    expect([selected(background), selected(first), selected(second), selected(third)]).toEqual(['false', 'true', 'true', 'true'])
+    expect(tool.getAttribute('aria-pressed')).toBe('false')
+  } finally {
+    await act(() => factory.dispose())
+    host.dispose()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  }
+})

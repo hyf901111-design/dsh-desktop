@@ -23,8 +23,9 @@ it('shows only E Fund templates and offers a separate image-only prompt gallery 
     const prompts = [...mount.querySelectorAll<HTMLButtonElement>('.if-prompt-cycle[data-repeat="false"] button')]
     expect(prompts).toHaveLength(22)
     expect(mount.querySelectorAll('.if-prompt-lane').length).toBeGreaterThan(1)
-    expect(mount.querySelector('.if-prompt-gallery')?.textContent).toBe('')
-    expect(prompts.every(item => item.querySelector('img') && item.getAttribute('aria-label'))).toBe(true)
+    expect(mount.querySelector('.if-prompt-gallery')?.querySelector('h3, p, .if-gallery-details')).toBeNull()
+    expect(prompts.every(item => item.querySelector('img') && item.getAttribute('aria-label') &&
+      item.classList.contains('if-gallery-art') && item.querySelector('.if-gallery-use')?.textContent === '做同款')).toBe(true)
     expect(cards()).toHaveLength(0)
     await act(async () => prompts[0]!.click())
     expect(use).toHaveBeenCalledExactlyOnceWith(expect.stringMatching(/画面比例为 16:9。$/u))

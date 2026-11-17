@@ -2,14 +2,23 @@ import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 
 type Format = 'png' | 'jpg'
+export type CanvasToolAction = {
+  id: string
+  label: string
+  run(): void
+  disabled?: boolean
+  checked?: boolean
+  shortcut?: string
+}
 const menuWidth = 160, edgeInset = 8
 
-export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction }: {
+export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction, toolActions = [] }: {
   doc: Document
   t(zh: string, en: string): string
   canExport: boolean
   exporting(format: Format): void
   galleryAction?: { label: string; run(): void }
+  toolActions?: readonly CanvasToolAction[]
 }) {
   const trigger = useRef<HTMLButtonElement>(null), menu = useRef<HTMLDivElement>(null)
   const exportItem = useRef<HTMLButtonElement>(null), formats = useRef<HTMLDivElement>(null)
@@ -80,7 +89,7 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
   }
   return <>
     <button type="button" ref={trigger} className="en-header-export if-more" aria-label={label} title={label}
-      aria-haspopup="menu" aria-expanded={!!position} disabled={!galleryAction && !canExport}
+      aria-haspopup="menu" aria-expanded={!!position} disabled={!galleryAction && !canExport && !toolActions.length}
       onClick={() => position ? close() : open()} onKeyDown={event => {
         if (event.key === 'ArrowDown' && !position) { event.preventDefault(); open() }
       }}>
@@ -104,6 +113,12 @@ export function CanvasActionsMenu({ doc, t, canExport, exporting, galleryAction 
       </button>
       {galleryAction && <button type="button" role="menuitem" onPointerEnter={() => setBranch(false)}
         onClick={() => { close(true); galleryAction.run() }}>{galleryAction.label}</button>}
+      {toolActions.length > 0 && <hr className="if-actions-divider" role="separator"/>}
+      {toolActions.map(action => <button key={action.id} type="button" role={action.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+        aria-checked={action.checked} aria-keyshortcuts={action.shortcut} disabled={action.disabled}
+        onPointerEnter={() => setBranch(false)} onClick={() => { close(true); action.run() }}>
+        {action.label}{action.checked && <span aria-hidden="true">✓</span>}
+      </button>)}
       </div>
       {branch && <div className="en-export-menu if-actions-popup" role="menu" ref={formats}
         aria-label={t('图像导出格式', 'Image export formats')}

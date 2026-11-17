@@ -262,11 +262,12 @@ function PromptGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: 
       <div className="if-prompt-track">
         {[false, true].map(repeated => <div key={String(repeated)} className="if-prompt-cycle"
           data-repeat={repeated} aria-hidden={repeated || undefined}>
-          {examples.map(({ id, title, prompt, format }) => <button type="button" className="if-prompt-image" key={id}
+          {examples.map(({ id, title, prompt, format }) => <button type="button" className="if-gallery-art if-prompt-image" key={id}
             tabIndex={repeated ? -1 : undefined} disabled={busy}
             aria-label={t(...title) + ' · ' + t('用同款提示词', 'Use this prompt')}
             onClick={() => onUse(t(...prompt) + '\n' + t('画面比例为 ' + format + '。', 'Aspect ratio: ' + format + '.'))}>
             <img alt="" src={galleryArtwork(id)} draggable={false} decoding="async"/>
+            <span className="if-gallery-use" aria-hidden="true">{t('做同款', 'Make something like this')}</span>
           </button>)}
         </div>)}
       </div>
