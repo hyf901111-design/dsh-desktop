@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module'
 import { readFile } from 'node:fs/promises'
 import { patchFigmaAboutUpdates } from '../scripts/lib/figma-updates-client.mjs'
+import { updateReleaseNoteBlocks } from '../src/preload/update-view'
 import { runInNewContext } from 'node:vm'
 import { Window, type HTMLButtonElement as HappyButton } from 'happy-dom'
 import type { UpdateStatus } from '../src/shared/contracts'
@@ -152,7 +153,14 @@ describe('EWork Odyssey About settings', () => {
       { version: '0.9.5', date: '2026-09-10', title: '后续标题', items: ['另一分支修复'] }
     ]
     const compiled = transformSync(`${source}\nreleaseNotes.zh = ${JSON.stringify(fixture)};\nreleaseNotes.en = ${JSON.stringify(fixture)};`, { loader: 'ts', format: 'cjs' }).code
-    const context = { module: { exports: {} }, exports: {} }
+    const context = {
+      module: { exports: {} },
+      exports: {},
+      require(id: string) {
+        if (id === './update-view') return { updateReleaseNoteBlocks }
+        throw new Error(`Unexpected About dependency: ${id}`)
+      }
+    }
     runInNewContext(compiled, context)
     const about = context.module.exports as typeof import('../src/preload/about-info')
     for (const locale of ['zh', 'en'] as const) {
