@@ -41,7 +41,12 @@ var SidebarStore = class {
  part=exact(part,'(0, react.useEffect)(()=>setCompactPanelOpen(false),[sessionId]);',`const pendingCompactHandoff=react.useRef(false);
  const pendingChatOpen=state?.panelOpen===true;
  if(current===undefined)pendingCompactHandoff.current=pendingChatOpen;
- react.useLayoutEffect(()=>{setCompactPanelOpen(sessionId!==undefined&&pendingCompactHandoff.current);if(sessionId!==undefined)pendingCompactHandoff.current=false},[sessionId]);`);
+ react.useLayoutEffect(()=>{
+  const root=document.documentElement;
+  const demo=root.dataset.homeGuideTransitionSession===sessionId&&root.hasAttribute('data-home-guide-transition-sidebar');
+  setCompactPanelOpen(sessionId!==undefined&&(pendingCompactHandoff.current||demo));
+  if(sessionId!==undefined)pendingCompactHandoff.current=false;
+ },[sessionId]);`);
  replace(before,part);
  return source+START+JSON.stringify(pairs)+END
 }

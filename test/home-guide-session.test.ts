@@ -29,7 +29,12 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   ;(win as any).dshDesktop = { researchCanvasStorage: storage ?? { getItem: (key: string) => disk.get(key) ?? null, setItem: (key: string, value: string) => { disk.set(key, value); return true } } }
   globalThis.Event = win.Event as unknown as typeof Event
   globalThis.document = win.document as unknown as Document
-  const page = createResearchBoardsPage({ document: win.document as unknown as Document, sessions, workspaces, inputHub: { shells: new Map() }, researchWorkspaces: { for(id: string) { if (!canvases.has(id)) canvases.set(id, { getSnapshot: () => ({ files: [], artifacts: [] }), subscribe: () => () => {}, persist: () => true }); return canvases.get(id) } }, bridge: { isSharedSession: () => false, getSnapshot: async () => state, subscribe: (fn: (event: any) => void) => { emit = fn; return () => {} }, invoke: async (action: string, input: any) => { requests.push([action, input]); if (action === 'local.directory' && input.mode === 'reserve') return { ok: true, value: { directoryId: 'd-' + requests.length, path: '/workspace/examples/' + requests.length } }; if (action === 'favorite.add') { const item = { ...input.identity, favoriteId: 'f-' + requests.length, dedicated: true }; state.favorites.push(item); return { ok: true, value: item } } return { ok: true, value: null } } } } as any)
+  const panelEvents: unknown[] = []
+  const researchSidebar = { service: {
+    activateTab: (tabId: string, scope: {sessionId: string}) => panelEvents.push(['activate', tabId, scope.sessionId, list.getSnapshot().current]),
+    setPanelState: (state: {open: boolean}, scope: {sessionId: string}) => panelEvents.push(['state', state.open, scope.sessionId, list.getSnapshot().current])
+  }}
+  const page = createResearchBoardsPage({ document: win.document as unknown as Document, sessions, workspaces, researchSidebar, inputHub: { shells: new Map() }, researchWorkspaces: { for(id: string) { if (!canvases.has(id)) canvases.set(id, { getSnapshot: () => ({ files: [], artifacts: [] }), subscribe: () => () => {}, persist: () => true }); return canvases.get(id) } }, bridge: { isSharedSession: () => false, getSnapshot: async () => state, subscribe: (fn: (event: any) => void) => { emit = fn; return () => {} }, invoke: async (action: string, input: any) => { requests.push([action, input]); if (action === 'local.directory' && input.mode === 'reserve') return { ok: true, value: { directoryId: 'd-' + requests.length, path: '/workspace/examples/' + requests.length } }; if (action === 'favorite.add') { const item = { ...input.identity, favoriteId: 'f-' + requests.length, dedicated: true }; state.favorites.push(item); return { ok: true, value: item } } return { ok: true, value: null } } } } as any)
   const replies: any[] = []
   win.addEventListener('sherlock:home-guide-session-reply', (event: any) => replies.push(event.detail))
   let requestId = 0
@@ -37,8 +42,19 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   const reply = async (id: string) => { await expect.poll(() => replies.find(value => value.requestId === id), { timeout: 500 }).toBeTruthy(); return replies.find(value => value.requestId === id) }
   await Promise.resolve(); await Promise.resolve()
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
-  return { win, page, sessions, workspaces, state, requests, opened, archived, disk, replies, send, reply,nativeSessions, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
+  return { win, page, sessions, workspaces, state, requests, opened, archived, panelEvents, disk, replies, send, reply,nativeSessions, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
+it.each(['board','workbench','note','spreadsheet','ppt','report'])('initializes only the right conversation needed by the %s demo before navigation',async kind=>{
+ const f=await fixture(),entry=await f.reply(f.send(kind))
+ expect(entry.ok).toBe(true)
+ expect(f.panelEvents).toEqual([])
+ expect(await f.reply(f.send(kind,'open',{sessionId:entry.sessionId}))).toMatchObject({ok:true})
+ expect(f.panelEvents).toEqual(kind==='ppt'||kind==='report'?[]:[
+  ['activate','sherlock-research-conversation',entry.sessionId,'original'],
+  ['state',true,entry.sessionId,'original'],
+ ])
+ expect(f.opened).toEqual([entry.sessionId])
+})
 it('prepares a dedicated report session and gives its separate replay the same concise demo title', async () => {
   const f = await fixture(), first = await f.reply(f.send('report'))
   expect(first).toMatchObject({ ok: true, title: '研究报告示例（演示案例）', fresh: true })

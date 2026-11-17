@@ -150,7 +150,11 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   }catch{}
  }
  const selected=()=>[...document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol [data-srb-session-header][data-ework-notes-session]')].find(node=>!node.closest('[data-odyssey-subagent-panel]'))?.dataset.eworkNotesSession
- const releaseTransition=()=>{if(transition&&document.documentElement.dataset.homeGuideTransition===transition){delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession}transition=undefined}
+ const releaseTransition=()=>{if(transition&&document.documentElement.dataset.homeGuideTransition===transition){delete document.documentElement.dataset.homeGuideTransition;delete document.documentElement.dataset.homeGuideTransitionSession;delete document.documentElement.dataset.homeGuideTransitionSidebar}transition=undefined}
+ const bindTransitionSession=(sessionId:string,kind:HomeGuideKind)=>{
+  document.documentElement.dataset.homeGuideTransitionSession=sessionId
+  document.documentElement.toggleAttribute('data-home-guide-transition-sidebar',homeGuideMode(kind)!=='chat')
+ }
  const playback=(run:Run,playing:boolean,ending=false)=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:run.id,sessionId:run.sessionId,playing,...ending?{ending:true}:{}}}))
  const hideCue=()=>active?.pointer?.hide()
  const notices=new Set<HTMLElement>()
@@ -212,7 +216,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
       // The pointer is still demonstrating the source control until its click
       // finishes. Borrow only the target session, at the actual native open.
       // Borrowing the source here removes its canvas and relocates its composer.
-      transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;document.documentElement.dataset.homeGuideTransitionSession=prepared.sessionId
+      transition=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;bindTransitionSession(prepared.sessionId,kind)
       let opening:Promise<Session>;ownedNavigation++;try{opening=client.commit(target)}finally{ownedNavigation--}
       await opening;ensurePending();openedFromEntry=true
      }})
@@ -263,10 +267,10 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     }
    }
    session=prepared??await exchangeSession(document,{kind,command:'prepare',replay:input.replay===true},controller.signal);ensurePending();pending.target=session.sessionId
-   transition||=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;if(!input.entry)document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
+   transition||=win.crypto.randomUUID();document.documentElement.dataset.homeGuideTransition=transition;if(!input.entry)bindTransitionSession(session.sessionId,kind)
    if(!preflighted)await adapters.beforeOpen?.({...session,kind});ensurePending();adapters.revealConversation?.();ensurePending()
    let opening:Promise<Session>
-   document.documentElement.dataset.homeGuideTransitionSession=session.sessionId
+   bindTransitionSession(session.sessionId,kind)
    if(!openedFromEntry){ownedNavigation++;try{opening=exchangeSession(document,{kind,command:'open',sessionId:session.sessionId},controller.signal)}finally{ownedNavigation--};await opening}
    ensurePending()
    const deadline=Date.now()+6000

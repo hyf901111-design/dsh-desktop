@@ -75,6 +75,12 @@ export type PageDependencies = {
   inputHub: { shells: Map<string, any> }
   getInput?(sessionId:string):any
   chatStore?:{create(sessionId:string):{actions:{setView(view:string):void}}}
+  researchSidebar?: {
+    service?: {
+      activateTab(tabId: string, scope: {sessionId: string}): void
+      setPanelState(patch: {open: boolean}, scope: {sessionId: string}): void
+    } | null
+  }
   bridge: ResearchBoardsBridge
   slots?: any
   document?: Document
@@ -1122,6 +1128,13 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const entry = await flight; valid()
     return { ...entry, fresh: !previous }
   }
+  const showHomeGuideConversation = (kind: GuideKind, sessionId: string) => {
+    if (homeGuideMode(kind) === 'chat') return
+    const service = deps.researchSidebar?.service
+    const scope = { sessionId }
+    service?.activateTab('sherlock-research-conversation', scope)
+    service?.setPanelState({ open: true }, scope)
+  }
   const receiveHomeGuideSession = (event: Event) => {
     const request = (event as CustomEvent).detail
     if (disposed || !request || Array.isArray(request) || typeof request.requestId !== 'string' || !request.requestId || request.requestId.length > 200) return
@@ -1171,6 +1184,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       navigation++
       valid()
       if (kind === 'spreadsheet') deps.chatStore?.create(entry.sessionId).actions.setView('spreadsheet')
+      showHomeGuideConversation(kind, entry.sessionId)
+      valid()
       deps.sessions.open(entry.sessionId)
       if (kind === 'board' || kind === 'workbench') selectBoardSession(entry.sessionId)
       return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: false }
@@ -1192,6 +1207,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       check();const registered=getHomeGuideSession(entry.sessionId)
       if(!registered||registered.kind!==kind||registered.cwd!==entry.cwd||!deps.chatStore)throw Error('原生示例入口已变化。')
       deps.chatStore.create(entry.sessionId).actions.setView(homeGuideMode(kind));check()
+      showHomeGuideConversation(kind, entry.sessionId);check()
       navigation++;deps.sessions.open(entry.sessionId)
       if(kind==='board'||kind==='workbench')selectBoardSession(entry.sessionId)
     }

@@ -148,6 +148,8 @@ function homeGuideNativeResidentSession(sessionId, subagentPanel = false) {
 
 function homeGuideNativeSidebarSession(sessionId) {
   if (!homeGuideNativeResidentSession(sessionId)) return false
+  const root = document.documentElement
+  if (root.dataset.homeGuideTransitionSession === sessionId && root.hasAttribute('data-home-guide-transition-sidebar')) return true
   return [...document.querySelectorAll('.pI_x6G_centerCol')].some(center => {
     const root = center.querySelector('.wSkVaW_root'), run = center.dataset.homeGuideActive
     return root?.querySelector('[data-ework-notes-session]')?.dataset.eworkNotesSession === sessionId && [...center.querySelectorAll('[data-home-guide]')].some(guide => guide.dataset.homeGuide === run && ['board','note','workbench'].includes(guide.dataset.kind))
@@ -163,7 +165,7 @@ function useHomeGuideNativeResident(sessionId, subagentPanel = false, canvasRef 
   }, [sessionId, subagentPanel, canvasRef])
   const subscribe = react.useCallback(listener => {
     const observer = new window.MutationObserver(listener)
-    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-home-guide-active', 'data-home-guide-resident', 'data-home-guide-transition', 'data-home-guide-transition-session', 'data-ework-notes-session'] })
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-home-guide-active', 'data-home-guide-resident', 'data-home-guide-transition', 'data-home-guide-transition-session', 'data-home-guide-transition-sidebar', 'data-ework-notes-session'] })
     return () => observer.disconnect()
   }, [])
   return react.useSyncExternalStore(subscribe, snapshot, () => false)

@@ -65,7 +65,10 @@ export async function patchResearchBoardConversation(source) {
   const bundle = await pageModule()
   source = source.replace('void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});', 'const zoom=Number(root.style.getPropertyValue("zoom"))||1;void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:((e.clientX-r.left)/zoom+(root.scrollLeft||0)-s.viewport.x)/s.viewport.scale,y:((e.clientY-r.top)/zoom-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});')
   const legacyEntry='sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,slots,bridge:window.dshDesktop.researchBoards})'
-  if(source.includes(legacyEntry))source=replace(source,legacyEntry,'sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,chatStore,getInput:id=>typeof eworkActiveInput==="function"?eworkActiveInput(id,inputHub.shells.get(id)):inputHub.shells.get(id),slots,bridge:window.dshDesktop.researchBoards})')
+  const existingEntry='sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,chatStore,getInput:id=>typeof eworkActiveInput==="function"?eworkActiveInput(id,inputHub.shells.get(id)):inputHub.shells.get(id),slots,bridge:window.dshDesktop.researchBoards})'
+  const entry=existingEntry.replace('inputHub,chatStore,','inputHub,chatStore,researchSidebar,')
+  if(source.includes(legacyEntry))source=replace(source,legacyEntry,entry)
+  if(source.includes(existingEntry))source=replace(source,existingEntry,entry)
   if (source.includes(START)) {
     for (const sentinel of [
       'sharedSubmit: (mode) => {',
@@ -96,7 +99,7 @@ export async function patchResearchBoardConversation(source) {
   source = replace(
     source,
     'const composerBlocks = new ComposerBlockRegistry();',
-    'const composerBlocks = new ComposerBlockRegistry();\n            ctx.effect(() => { if (window.top !== window || !window.dshDesktop?.researchBoards) return; sherlockBoardsAdapter = sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,chatStore,getInput:id=>typeof eworkActiveInput==="function"?eworkActiveInput(id,inputHub.shells.get(id)):inputHub.shells.get(id),slots,bridge:window.dshDesktop.researchBoards}); return () => { sherlockBoardsAdapter?.dispose(); sherlockBoardsAdapter = null; }; }, "Sherlock research boards page adapter");'
+    'const composerBlocks = new ComposerBlockRegistry();\n            ctx.effect(() => { if (window.top !== window || !window.dshDesktop?.researchBoards) return; sherlockBoardsAdapter = '+entry+'; return () => { sherlockBoardsAdapter?.dispose(); sherlockBoardsAdapter = null; }; }, "Sherlock research boards page adapter");'
   )
   source = replace(
     source,
