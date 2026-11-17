@@ -760,6 +760,28 @@ it('lets Image Factory gallery cards reach both edges behind vertically centered
   }
 })
 
+it('hides the native add actions on Images and Browser while keeping the other reply controls', async () => {
+  const page = await browser.newPage()
+  try {
+    await page.setContent(`
+      <aside class="t8lSSG_panel">
+        <button data-browser-canvas-action>添加到画布</button>
+        <button data-browser-canvas-action>添加到笔记</button>
+        <button>复制</button>
+      </aside>`)
+    await page.addStyleTag({ content: await readFile('src/preload/figma-panels.css', 'utf8') })
+    for (const surface of ['browser', 'image-factory', 'notes']) {
+      await page.evaluate(surface => { document.body.dataset.workspaceSurface = surface }, surface)
+      for (const action of ['添加到画布', '添加到笔记']) {
+        expect(await page.getByText(action, { exact: true }).isVisible()).toBe(surface === 'notes')
+      }
+      expect(await page.getByRole('button', { name: '复制' }).isVisible()).toBe(true)
+    }
+  } finally {
+    await page.close()
+  }
+})
+
 it('centers Image Factory notices in the workspace', async () => {
   const page = await browser.newPage()
   try {

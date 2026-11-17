@@ -411,5 +411,5 @@ body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]) .wSkVaW_titleRow{-
 /* Inactive tabs retain their icon when the available title space runs out. */
 .t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose{display:none!important}
 
-body[data-workspace-surface=browser] [data-browser-canvas-action],
+body:is([data-workspace-surface=browser],[data-workspace-surface=image-factory]) [data-browser-canvas-action],
 body[data-workspace-surface=knowledge] .t8lSSG_panel [data-browser-canvas-action]{display:none!important}
