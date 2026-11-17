@@ -23,7 +23,8 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
   try {
     await act(async () => factory.open())
     const tools = document.querySelector('[aria-label="画布编辑工具"]')!
-    await act(async () => Array.from(tools.querySelectorAll('button')).find(button => button.textContent?.trim() === '图层')!.click())
+    const toggle = Array.from(tools.querySelectorAll('button')).find(button => button.textContent?.trim() === '图层')!
+    await act(async () => toggle.click())
     const handles = () => Array.from(document.querySelectorAll<HTMLButtonElement>('.if-layer-name'))
     expect(handles().map(button => button.textContent)).toEqual(['顶层', '底层'])
     const [source, destination] = handles()
@@ -42,7 +43,78 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
     expect(handles().map(button => button.textContent)).toEqual(['底层', '顶层'])
     expect(write).toHaveBeenCalledWith(expect.objectContaining({ canvas: { ...canvas, layers: [top, bottom] } }))
     await act(async () => document.querySelector<HTMLElement>('.if-raster')!.click())
+    expect(handles()).toHaveLength(2)
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="关闭图层"]')!.click())
+    expect(toggle.getAttribute('aria-pressed')).toBe('false')
+    await act(async () => toggle.click())
+    expect(handles()).toHaveLength(2)
+    await act(async () => toggle.click())
     expect(handles()).toHaveLength(0)
+  } finally {
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  }
+})
+
+it('arms the text tool and places a focused, editable layer at the clicked position', async () => {
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '测试画布', width: 800, height: 1000, layers: [] }
+  const write = vi.fn(async (_value: CanvasWrite) => {})
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    disconnect() {}
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  try {
+    await act(async () => factory.open())
+    const frame = document.querySelector<HTMLElement>('.if-raster')!
+    const tools = document.querySelector('[aria-label="画布编辑工具"]')!
+    const buttons = Array.from(tools.querySelectorAll('button'))
+    const add = buttons.find(button => button.textContent?.trim() === '添加文本')!
+    const mark = buttons.find(button => button.textContent?.trim() === '框选修改')!
+    const editor = () => frame.querySelector<HTMLTextAreaElement>('textarea[data-canvas-text-id]')
+    const press = (target: Element, clientX: number, clientY: number) => target.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true, isPrimary: true, pointerId: 1, button: 0, buttons: 1, clientX, clientY
+    }))
+    vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue(new DOMRect(-60, 120, 400, 500))
+    await act(async () => add.click())
+    expect(add.getAttribute('aria-pressed')).toBe('true')
+    expect(editor()).toBeNull()
+    expect(write).not.toHaveBeenCalled()
+    await act(async () => press(frame.parentElement!, 150, 70))
+    expect(editor()).toBeNull()
+    expect(add.getAttribute('aria-pressed')).toBe('true')
+    await act(async () => press(frame, 80, 270))
+    const input = editor()!
+    expect(document.activeElement).toBe(input)
+    expect(input.style.left).toBe('35%')
+    expect(input.style.top).toBe('30%')
+    expect(input.style.textAlign).toBe('left')
+    expect(add.getAttribute('aria-pressed')).toBe('false')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, '春日海报')
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter', metaKey: true }))
+    })
+    expect(write.mock.calls.at(-1)?.[0].canvas.layers).toEqual([
+      expect.objectContaining({ kind: 'text', text: '春日海报', x: .35, y: .3, align: 'left' })
+    ])
+    const persisted = frame.querySelector('[data-canvas-text-id]')!
+    await act(async () => persisted.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
+    expect(editor()?.value).toBe('春日海报')
+    await act(async () => add.click())
+    await act(async () => frame.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' })))
+    expect(add.getAttribute('aria-pressed')).toBe('false')
+    expect(editor()).toBeNull()
+    await act(async () => add.click())
+    expect(mark.getAttribute('aria-pressed')).toBe('false')
   } finally {
     await act(async () => factory.dispose())
     host.dispose()
