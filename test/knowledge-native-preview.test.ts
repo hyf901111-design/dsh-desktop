@@ -72,13 +72,15 @@ it('opens generated-image canvases from the native preview without duplicating p
   expect(start).toBeGreaterThan(-1)
   const open = vi.fn(async (_kind: string, _id: string) => {})
   const feedback = vi.fn()
+  const imageIcon = () => null
   const element = (type: unknown, props: object) => ({ type, props })
   const render = (row: object) => runInNewContext(script.slice(start, end) +
     '\nKnowledgeImageCanvasActions({ row, ToolbarAction: "button", onError })', {
     react: { useRef: () => ({ current: false }), useState: () => [false, () => {}] },
     react_jsx_runtime: { jsx: element, jsxs: element, Fragment: 'fragment' },
     sidebar_module_css_default: { iconButton: 'icon-button' },
-    _deepseek_ai_dsh_client_ui_primitives: { IconImageOutline16: 'image', IconCopyOutline16: 'copy' },
+    IconImageOutline16: imageIcon,
+    _deepseek_ai_dsh_client_ui_primitives: { IconCopyOutline16: 'copy' },
     window: { dshDesktop: { knowledgeOpenImageCanvas: open } },
     document: { documentElement: { dataset: { odysseyLocale: 'zh' } } },
     row, onError: feedback,
@@ -88,6 +90,7 @@ it('opens generated-image canvases from the native preview without duplicating p
   expect(render({ ...row, received: { owner: '共享者' } })).toBeNull()
   const [source, copy] = render(row).props.children
   expect(source.props.label).toBe('打开来源画布')
+  expect(source.props.children.type).toBe(imageIcon)
   expect(copy.props.label).toBe('在「图像」中编辑副本')
   await source.props.onClick()
   expect(open).toHaveBeenCalledWith('source', 'origin-session')
