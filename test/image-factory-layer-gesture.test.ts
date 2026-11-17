@@ -6,6 +6,16 @@ import { mountImageFactory } from '../src/preload/image-factory/view'
 import { WorkspaceSurfaceHost } from '../src/preload/workspace-surface-host'
 import type { CanvasWrite, StoredCanvas, TextLayer } from '../src/shared/image-factory-canvas'
 
+async function openCanvas(factory: ReturnType<typeof mountImageFactory>) {
+  await act(async () => factory.open())
+  await act(async () => {
+    document.dispatchEvent(new CustomEvent('sherlock:image-factory-session', { detail: { sessionId: null } }))
+    document.dispatchEvent(new CustomEvent('sherlock:image-factory-task-state', {
+      detail: { tabs: [{ scope: null }], active: null, busy: false },
+    }))
+  })
+}
+
 it('saves the layer order when capture is lost before pointerup reaches a sibling row', async () => {
   const layer = (text: string): TextLayer => ({
     id: randomUUID(), kind: 'text', text, x: .1, y: .1, width: .8,
@@ -21,7 +31,7 @@ it('saves the layer order when capture is lost before pointerup reaches a siblin
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const tools = document.querySelector('[aria-label="画布编辑工具"]')!
     const toggle = Array.from(tools.querySelectorAll('button')).find(button => button.textContent?.trim() === '图层')!
     await act(async () => toggle.click())
@@ -74,7 +84,7 @@ it('arms the text tool and places a focused, editable layer at the clicked posit
     archive: async () => {}, save: async () => ({})
   })
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const frame = document.querySelector<HTMLElement>('.if-raster')!
     const tools = document.querySelector('[aria-label="画布编辑工具"]')!
     const buttons = Array.from(tools.querySelectorAll('button'))
@@ -144,7 +154,7 @@ it.each([false, true])('moves and resizes the selected text box (lost capture: %
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const label = document.querySelector<HTMLElement>('[data-canvas-text-id]')!
     const frame = label.closest<HTMLElement>('.if-raster')!
     expect(frame.querySelector('[data-text-resize-handle]')).toBeNull()
@@ -233,7 +243,7 @@ it('recovers a distant text layer from Layers without altering its formatting', 
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const tools = document.querySelector('[aria-label="画布编辑工具"]')!
     const toggle = Array.from(tools.querySelectorAll('button')).find(button => button.textContent?.trim() === '图层')!
     await act(async () => toggle.click())
@@ -269,7 +279,7 @@ it.each(['Backspace', 'Delete'])('deletes the selected text layer with %s after 
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const keydown = (node: Element) => node.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
     const textLabel = () => document.querySelector<HTMLElement>(`[data-canvas-text-id="${text.id}"]`)!
     await act(async () => textLabel().dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
@@ -304,7 +314,7 @@ it.each([
   })
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const sessionId = 'image-session'
     const id = randomUUID()
     await act(async () => {
@@ -347,7 +357,7 @@ it('opens an editable region comment when the pointer is released outside the im
   const submitted = vi.fn((event: Event) => event.preventDefault())
   document.addEventListener('sherlock:image-factory-comment', submitted)
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const frame = document.querySelector<HTMLElement>('.if-raster')!
     const scroller = frame.closest<HTMLElement>('.if-stage-scroll')!
     Object.defineProperty(frame, 'setPointerCapture', { value: vi.fn() })
@@ -425,7 +435,7 @@ it('zooms around the Command-wheel position and pans with Space without editing 
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const input = document.body.appendChild(document.createElement('textarea'))
   try {
-    await act(async () => factory.open())
+    await openCanvas(factory)
     const frame = document.querySelector<HTMLElement>('.if-raster')!
     const scroll = frame.closest<HTMLElement>('.if-stage-scroll')!
     Object.defineProperty(scroll, 'setPointerCapture', { value: vi.fn() })
