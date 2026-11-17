@@ -193,6 +193,57 @@
           "本次渲染验证使用 Chromium，当前桌面测试版还未重打包。"
         ],
         "generatedAt": "2026-11-17T06:43:16.588Z"
+      },
+      "merged": {
+        "mergeCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+        "verificationCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+            "completedAt": "2026-11-17T06:57:32.028Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory.test.js",
+              "test/image-actions.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/image-generation-tool.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
+            "verifiedCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+            "completedAt": "2026-11-17T06:57:32.028Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-surface-host.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/knowledge-session-content.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node node_modules/vitest/vitest.mjs run test/workspace-surface-host.test.ts test/browser-sidebar-entry.test.ts test/knowledge-session-content.test.ts",
+            "verifiedCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+            "completedAt": "2026-11-17T06:57:32.028Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-17T06:57:32.028Z"
       }
     },
     {
@@ -260,6 +311,57 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-16T13:11:18.544Z"
+      },
+      "merged": {
+        "mergeCommit": "5470bd412a3349056cac024eecf1f17e06635a11",
+        "verificationCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+            "completedAt": "2026-11-17T06:57:32.028Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory.test.js",
+              "test/image-actions.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/workspace-surface-host.test.ts",
+              "test/image-generation-tool.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node node_modules/vitest/vitest.mjs run test/image-factory.test.js test/image-actions.test.ts test/browser-sidebar-entry.test.ts test/workspace-surface-host.test.ts test/image-generation-tool.test.js",
+            "verifiedCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+            "completedAt": "2026-11-17T06:57:32.028Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-surface-host.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/knowledge-session-content.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node node_modules/vitest/vitest.mjs run test/workspace-surface-host.test.ts test/browser-sidebar-entry.test.ts test/knowledge-session-content.test.ts",
+            "verifiedCommit": "bd45cbcfa1e0f57a9c5e3397b24f93132d3a4cb4",
+            "completedAt": "2026-11-17T06:57:32.028Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-17T06:57:32.028Z"
       }
     }
   ],
