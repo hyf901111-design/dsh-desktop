@@ -31,6 +31,19 @@ it('opens Image Factory from expanded More and dismisses the menu', async () => 
   expect(w.document.querySelector('[data-sidebar-more]')).toBeNull()
  } finally { await w.happyDOM.abort(); vi.unstubAllGlobals() }
 })
+it('dismisses expanded More even when the canvas stops pointer bubbling', async () => {
+ const {w}=fixture(true)
+ const more=w.document.querySelector<TestButton>('.st-more')!
+ const canvas=w.document.querySelector('main')!
+ canvas.addEventListener('pointerdown',event=>event.stopPropagation())
+ try {
+  more.click()
+  expect(more.getAttribute('aria-expanded')).toBe('true')
+  canvas.dispatchEvent(new w.PointerEvent('pointerdown',{bubbles:true}))
+  expect(more.getAttribute('aria-expanded')).toBe('false')
+  expect(w.document.querySelector('[data-sidebar-more]')).toBeNull()
+ } finally { await w.happyDOM.abort(); vi.unstubAllGlobals() }
+})
 it('provides a persistent collapsed browser button and keeps collapsed More focused on other actions',async()=>{
  const {w,view}=fixture(false),open=vi.fn(),openKnowledge=vi.fn();w.addEventListener('sherlock:browser-request',open);w.addEventListener('sherlock:knowledge-open',openKnowledge)
  try{const button=w.document.querySelector<TestButton>('[data-sidebar-browser]');expect(button).not.toBeNull();expect(button!.getAttribute('aria-label')).toBe('浏览器');const group=w.document.querySelector('.hHd-Xa_newSessionGroup')!;expect(group.querySelector('[data-sidebar-app-separator]')).toBeNull();expect(button!.previousElementSibling).toBe(group.querySelector('[data-sidebar-home]'));const knowledge=group.querySelector<TestButton>('[data-sidebar-knowledge]')!;const factory=group.querySelector<TestButton>('[data-sidebar-image-factory]')!;expect(button!.nextElementSibling).toBe(factory);expect(factory.nextElementSibling).toBe(knowledge);const openFactory=vi.fn();w.addEventListener('sherlock:image-factory-open',openFactory);factory.click();expect(openFactory).toHaveBeenCalledOnce();expect(knowledge.nextElementSibling).toBe(group.querySelector('.st-more-zone'));button!.click();expect(open).toHaveBeenCalledOnce();w.document.body.dataset.workspaceSurface='browser';w.document.dispatchEvent(new w.CustomEvent('sherlock:workspace-surface-change'));expect(button!.getAttribute('aria-pressed')).toBe('true');button!.dispatchEvent(new w.MouseEvent('mouseleave'));button!.click();expect(open).toHaveBeenCalledTimes(2);expect(button!.getAttribute('aria-pressed')).toBe('true');knowledge.click();expect(openKnowledge).toHaveBeenCalledOnce();w.document.body.dataset.workspaceSurface='knowledge';w.document.dispatchEvent(new w.CustomEvent('sherlock:workspace-surface-change'));expect(knowledge.getAttribute('aria-pressed')).toBe('true');expect(button!.getAttribute('aria-pressed')).toBe('false');(w.document.querySelector('.st-more')as any).click();expect([...w.document.querySelectorAll('[role=menuitem]')].map(x=>x.textContent)).toEqual(['新建工作区','新建对话','新建研究','新建笔记','新建表格','插件','定时任务']);w.document.querySelector('aside')!.setAttribute('data-dsh-sidebar-wide','true');(view as any).mountMore();expect(w.document.querySelector('[data-sidebar-browser]')).toBeNull();expect(w.document.querySelector('[data-sidebar-app-separator]')).toBeNull()}finally{await w.happyDOM.abort();vi.unstubAllGlobals()}
