@@ -11,79 +11,21 @@
         "schemaVersion": 1,
         "featureName": "探索演示右侧对话、探索图标与图像消息动作",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "cf5411001a35512d192226225f99c41537cd57c7",
-        "tipCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+        "baseCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+        "tipCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
         "commits": [
           {
-            "commit": "1300a3d885b644fa5cc246c2692985c1898b4b7e",
+            "commit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
             "parents": [
-              "cf5411001a35512d192226225f99c41537cd57c7"
+              "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5"
             ],
-            "subject": "修复：恢复探索按钮的渐变流动动画"
-          },
-          {
-            "commit": "12cffdd6ef63d43a15a2918a1f4358ecae006556",
-            "parents": [
-              "1300a3d885b644fa5cc246c2692985c1898b4b7e"
-            ],
-            "subject": "修复：演示切换模式时保留右侧对话"
-          },
-          {
-            "commit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
-            "parents": [
-              "12cffdd6ef63d43a15a2918a1f4358ecae006556"
-            ],
-            "subject": "修复：图像工作区隐藏回复的画布和笔记操作"
+            "subject": "修复：本地包更新窄窗口的演示右栏"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/calendar-tool-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/home-guide-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/pending-conversation-panel.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/explore-menu.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-guides.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/explore-menu-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-entry-native.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-session.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
           }
         ],
         "checks": [
@@ -101,7 +43,7 @@
             ],
             "outcome": "passed",
             "summary": "在切换到目标研究、笔记、表格会话前打开共享右侧对话。",
-            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
             "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           },
@@ -118,7 +60,7 @@
             ],
             "outcome": "passed",
             "summary": "验证探索按钮展开、收起时持续渐变以及系统减少动态效果。",
-            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
             "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           },
@@ -136,7 +78,7 @@
             ],
             "outcome": "passed",
             "summary": "在图像与浏览器隐藏画布和笔记插入操作并保留其它按钮。",
-            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
             "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           },
@@ -153,7 +95,7 @@
             ],
             "outcome": "passed",
             "summary": "验证共用对话的原生操作标识及运行时安装。",
-            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
             "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           },
@@ -165,14 +107,14 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "d0d63fa2871e94d5b5cda0c92d5566397d3b9aa5",
+            "verifiedCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
             "completedAt": "2026-11-17T03:00:40.584Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原生会话测试验证右侧对话打开时机，真实 Chromium 验证图像操作可见性与探索动画。"
+          "summary": "原生会话测试验证右侧对话打开时机，真实 Chromium 验证图像操作可见性与探索动画。 已验证本地包的侧栏模块可升级到窄窗口演示规则。"
         },
         "acceptanceCriteria": [
           "研究、笔记和表格演示打开目标会话右侧对话。",
@@ -182,7 +124,7 @@
         "risks": [
           "最终客户端需检查右侧对话就绪并实测播放跨过输入步骤。"
         ],
-        "generatedAt": "2026-11-17T03:00:40.584Z"
+        "generatedAt": "2026-11-17T03:05:42.957Z"
       }
     },
     {
