@@ -268,7 +268,17 @@ it('opens Home directly and keeps New Chat and New Research as separate actions'
   const root = createRoot(w.document.body as unknown as Element)
   const startSession = vi.fn()
   const startResearchSession = vi.fn()
-  const openHome = vi.fn()
+  const source = patchSidebarNewNoteShell(await readFile('node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js', 'utf8'))
+  const handler = source.match(/openHome: (\(\) => \{[\s\S]*?\n\s*\}),/u)?.[1]
+  expect(handler).toBeDefined()
+  let imageActive = true
+  let selected: string | undefined = 'image-task'
+  w.document.addEventListener('sherlock:sidebar-home-opened', () => { imageActive = false })
+  const openHome = vi.fn(runInNewContext('(' + handler + ')', {
+    document: w.document,
+    CustomEvent: w.CustomEvent,
+    ctx: { sessions: { clear() { selected = imageActive ? 'image-task' : undefined } } },
+  }))
   try {
     await act(async () => root.render(createElement(client.__testSidebarRoot, {
       collapsed: true, width: 240, t: (key: string) => key, toggleSidebar: vi.fn(),
@@ -280,6 +290,7 @@ it('opens Home directly and keeps New Chat and New Research as separate actions'
     expect(home?.getAttribute('aria-label')).toBe('sidebar.home.label')
     home?.dispatchEvent(new w.MouseEvent('click', { bubbles: true }))
     expect(openHome).toHaveBeenCalledOnce()
+    expect(selected).toBeUndefined()
     expect(startSession).not.toHaveBeenCalled()
     home?.dispatchEvent(new w.CustomEvent('sherlock:sidebar-new-chat', { bubbles: true }))
     expect(startSession).toHaveBeenCalledOnce()
