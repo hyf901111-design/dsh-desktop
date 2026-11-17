@@ -99,6 +99,12 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-17T14:20:43.860Z"
+      },
+      "merged": {
+        "mergeCommit": "34cb32de235a61fde6871e8a24a996336c03b01f",
+        "verificationCommit": "34cb32de235a61fde6871e8a24a996336c03b01f",
+        "checks": [],
+        "recordedAt": "2026-11-17T14:20:50.365Z"
       }
     }
   ],
