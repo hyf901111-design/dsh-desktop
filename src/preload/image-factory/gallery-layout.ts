@@ -8,6 +8,12 @@ import type { Size } from './raster'
 type T = (zh: string, en: string) => string
 const ink = '#202f3a'
 
+/** Position the photograph before laying out editable text and brand elements. */
+export function galleryPhotoPlacement(id: string) {
+  if (id === 'efund-fund-learning') return { x: .49, y: .06, width: .44, height: .44, fill: '#f4f8fd' }
+  if (id === 'efund-industry-pinwheel') return { x: 0, y: -.08, width: 1, height: 1, fill: '#083375' }
+}
+
 /** The thumbnail and the new canvas use the same coordinates and layer order. */
 export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T, nextId: () => string): (BrandOverlay | TextLayer)[] {
   const layers: (BrandOverlay | TextLayer)[] = []
@@ -37,7 +43,6 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
       break
     case 'blueprint-city':
       block(c.blue, 0, 0, .45, 1)
-      block(c.bright, .05, .316, .065, .012)
       logo(.202, .105, 'logo-white', .05)
       top(.19, 'graphic-top-bright')
       copy(title, .05, .383, .37, .049, c.white, 700)
@@ -75,7 +80,6 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
       break
     case 'new-year-light':
       block(c.white, 0, .719, 1, .281)
-      block(c.gold, .065, .756, .065, .007)
       logo(.242, .062, 'container-left-white')
       bottom(.184)
       copy(title, .065, .789, .69, .071, c.blue, 700)
@@ -97,7 +101,6 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
       break
     case 'forward':
       block(c.white, .555, 0, .445, 1)
-      block(c.bright, .597, .177, .063, .012)
       block(c.blue, .597, .624, .226, .109)
       logo(.193, .085)
       bottom(.174)
@@ -125,7 +128,6 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
       break
     case 'first-light':
       block(c.blue, .045, .516, .91, .199)
-      block(c.bright, .045, .516, .12, .007)
       logo(.315)
       top(.267)
       copy(t('品牌短片', 'BRAND FILM'), .083, .544, .81, .025, c.white, 700)
@@ -134,7 +136,6 @@ export function galleryTemplateLayers(example: GalleryExample, size: Size, t: T,
       break
     case 'craft':
       block(c.white, 0, .51, 1, .49)
-      block(c.blue, .063, .55, .085, .008)
       logo(.252, .06)
       bottom(.193)
       copy(title, .063, .586, .87, .071, c.blue, 700)

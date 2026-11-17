@@ -12,7 +12,7 @@ import { BrandAssetLibrary } from './brand-library'
 import { imageFactoryFontFaces } from './fonts'
 import { galleryArtwork, ImageFactoryGallery } from './gallery'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
-import { galleryTemplateLayers } from './gallery-layout'
+import { galleryPhotoPlacement, galleryTemplateLayers } from './gallery-layout'
 import { groupLayers, isEditableLayer, layerUnitId, removeLayerUnits, translateLayers, ungroupLayers,
   type EditableLayer } from './layer-groups'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
@@ -67,9 +67,13 @@ function Button({ icon, label, children, onClick, active, disabled, primary, typ
     {icon && <Icon name={icon}/>} {children}
   </button>
 }
-function layerBounds(frame: HTMLElement, layer: EditableLayer) {
+function layerElement(frame: HTMLElement, layer: EditableLayer) {
   const attribute = layer.kind === 'text' ? 'data-canvas-text-id' : 'data-brand-layer-id'
-  return frame.querySelector('[' + attribute + '="' + layer.id + '"]')?.getBoundingClientRect()
+  return frame.querySelector('[' + attribute + '="' + layer.id + '"]')
+}
+
+function layerBounds(frame: HTMLElement, layer: EditableLayer) {
+  return layerElement(frame, layer)?.getBoundingClientRect()
 }
 
 function patchTargetLayer(layer: EditableLayer, patch: Record<string, unknown>): EditableLayer {
@@ -284,20 +288,37 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const resizableText = !tool && !area && !busy && !editing ? selectedText : undefined
   const resizableOverlay = !tool && !area && !busy && !editing ? current?.layers.find(
     (layer): layer is BrandOverlay => (layer.kind === 'brand' || layer.kind === 'shape') && layer.id === selectedId) : undefined
-  const [selectionBox, setSelectionBox] = useState<Region>()
+  const showSelectionBounds = selection.length > 1 && !tool && !area && !busy
+  const [selectionBounds, setSelectionBounds] = useState<Array<Region & { id: string }>>([])
   useLayoutEffect(() => {
     const frame = imageFrame.current
-    if (!frame || !current || selection.length < 2) return
-    const base = frame.getBoundingClientRect()
-    const boxes = selection.map(layer => layerBounds(frame, layer)).filter((box): box is DOMRect => !!box)
-    if (!boxes.length) return
-    const left = Math.min(...boxes.map(box => box.left)) - base.left
-    const top = Math.min(...boxes.map(box => box.top)) - base.top
-    const width = Math.max(...boxes.map(box => box.right)) - base.left - left
-    const height = Math.max(...boxes.map(box => box.bottom)) - base.top - top
-    setSelectionBox(previous => previous?.x === left && previous.y === top && previous.width === width && previous.height === height
-      ? previous : { x: left, y: top, width, height })
-  })
+    if (!frame || !current || !showSelectionBounds) return
+    const measure = () => {
+      const base = frame.getBoundingClientRect()
+      const bounds = selection.flatMap(layer => {
+        const box = layerBounds(frame, layer)
+        return box ? [{ id: layer.id, x: box.left - base.left, y: box.top - base.top, width: box.width, height: box.height }] : []
+      })
+      setSelectionBounds(previous => previous.length === bounds.length && previous.every((box, index) => {
+        const next = bounds[index]!
+        return box.id === next.id && box.x === next.x && box.y === next.y && box.width === next.width && box.height === next.height
+      }) ? previous : bounds)
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    for (const layer of selection) {
+      const element = layerElement(frame, layer)
+      if (element) observer.observe(element)
+    }
+    return () => observer.disconnect()
+  }, [current, displayScale, showSelectionBounds, selectedIds])
+  const selectionBox = showSelectionBounds && selectionBounds.length ? {
+    left: Math.min(...selectionBounds.map(box => box.x)),
+    top: Math.min(...selectionBounds.map(box => box.y)),
+    right: Math.max(...selectionBounds.map(box => box.x + box.width)),
+    bottom: Math.max(...selectionBounds.map(box => box.y + box.height)),
+  } : undefined
+
   const textBoxHeight = resizableText && textBox?.id === resizableText.id ? textBox.height : 0
   const inside = current && resizableText && textBoxHeight > 0 ? {
     x: Math.max(0, Math.min(1 - resizableText.width, resizableText.x)),
@@ -1174,7 +1195,21 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       const id = crypto.randomUUID()
       const result = await fetch(source)
       if (!result.ok) throw Error(t('模板底图无法读取。', 'The template background could not be loaded.'))
-      background = await createImageLayer(doc, await result.blob(), id, crypto.randomUUID(), 'image/jpeg')
+      const photo = await result.blob()
+      let image = photo
+      const placement = galleryPhotoPlacement(example.id)
+      if (placement) {
+        const raster = await loadRaster(doc, photo)
+        try {
+          const { canvas, context } = canvasFor(doc, raster)
+          context.fillStyle = placement.fill
+          context.fillRect(0, 0, canvas.width, canvas.height)
+          context.drawImage(raster.image, placement.x * raster.width, placement.y * raster.height,
+            placement.width * raster.width, placement.height * raster.height)
+          image = await encode(canvas)
+        } finally { URL.revokeObjectURL(raster.url) }
+      }
+      background = await createImageLayer(doc, image, id, crypto.randomUUID(), image === photo ? 'image/jpeg' : 'image/png')
       if (!inImages() || workspace.getSnapshot().scope !== scope) return
       const target = await requestGalleryTask(doc)
       if (!target) throw Error(t('未能打开新的图片任务。', 'Could not open a new image task.'))
@@ -1478,8 +1513,12 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
                 width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',
               }}>{!commentPending && <><i/><i/><i/><i/></>}</div>}
             </div>
-            {selection.length > 1 && !tool && !area && !busy && selectionBox && <div className="if-group-bounds"
-              aria-hidden="true" style={{ left: selectionBox.x, top: selectionBox.y, width: selectionBox.width, height: selectionBox.height }}/>}
+            {selectionBox && <>
+              <div className="if-group-bounds" aria-hidden="true" style={{ left: selectionBox.left, top: selectionBox.top,
+                width: selectionBox.right - selectionBox.left, height: selectionBox.bottom - selectionBox.top }}/>
+              {selectionBounds.map(box => <div key={box.id} className="if-selected-layer-bounds" data-selected-layer-outline={box.id}
+                aria-hidden="true" style={{ left: box.x, top: box.y, width: box.width, height: box.height }}/>)}
+            </>}
             {resizableOverlay && <div className="if-text-bounds" role="group" aria-label={t('调整品牌图层大小', 'Resize brand layer')}
               style={{ left: resizableOverlay.x * 100 + '%', top: resizableOverlay.y * 100 + '%',
                 width: resizableOverlay.width * 100 + '%', height: resizableOverlay.height * 100 + '%' }}>

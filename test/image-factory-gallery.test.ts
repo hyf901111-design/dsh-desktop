@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { expect, it, vi } from 'vitest'
 import { ImageFactoryGallery, galleryArtwork } from '../src/preload/image-factory/gallery'
 import { galleryExamples } from '../src/preload/image-factory/gallery-examples'
-import { galleryTemplateLayers } from '../src/preload/image-factory/gallery-layout'
+import { galleryPhotoPlacement, galleryTemplateLayers } from '../src/preload/image-factory/gallery-layout'
 import { marketingExamples } from '../src/preload/image-factory/marketing-templates'
 import { marketingPrompts } from '../src/preload/image-factory/marketing-prompts'
 
@@ -186,4 +186,24 @@ it('reserves separate rows for headlines, summaries and campaign callouts in eac
       }
     }
   }
+})
+
+it('keeps the revised headings clear of the photography and uses short rules selectively', () => {
+  const example = (id: string) => galleryExamples.find(item => item.id === id)!
+  const layersFor = (id: string, width: number, height: number) =>
+    galleryTemplateLayers(example(id), { width, height }, zh => zh, () => crypto.randomUUID())
+  const shortRule = (id: string) => layersFor(id, 900, 1600).some(layer =>
+    layer.kind === 'shape' && layer.width <= .20 && layer.height <= .02 && layer.y < .4)
+  for (const id of ['efund-fund-learning', 'efund-etf-feature-cards', 'efund-industry-pinwheel']) expect(shortRule(id), id).toBe(false)
+  expect(shortRule('efund-active-prism')).toBe(true)
+  expect(galleryExamples.filter(item => shortRule(item.id)).length).toBeLessThan(galleryExamples.length / 2)
+
+  const placement = galleryPhotoPlacement('efund-fund-learning')!
+  const masthead = layersFor('efund-fund-learning', 960, 960).filter(layer => layer.kind === 'text' && layer.y < .5)
+  expect(masthead).toHaveLength(3)
+  expect(masthead.every(layer => layer.x + layer.width < placement.x)).toBe(true)
+  const etfSubtitle = layersFor('efund-etf-feature-cards', 1008, 1792).find(layer =>
+    layer.kind === 'text' && layer.text === example('efund-etf-feature-cards').subtitle[0])
+  expect(etfSubtitle?.kind).toBe('text')
+  if (etfSubtitle?.kind === 'text') expect(etfSubtitle.y + etfSubtitle.fontSize * 1.2 / 1792).toBeLessThan(.21)
 })

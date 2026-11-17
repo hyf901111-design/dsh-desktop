@@ -244,7 +244,9 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-layers .if-float-header:empty {display:none}
 .image-factory .if-layer-disclosure {flex:none;display:grid;place-items:center;width:22px;height:26px;padding:0;color:var(--if-muted)}
 .if-layer-disclosure[aria-expanded=false] .if-symbol {transform:rotate(-90deg)}
-.if-group-bounds {position:absolute;z-index:3;outline:1px solid var(--if-mark);pointer-events:none}
+.if-group-bounds,.if-selected-layer-bounds {position:absolute;z-index:3;pointer-events:none}
+.if-group-bounds {outline:1px dashed var(--if-mark);outline-offset:3px;opacity:.72}
+.if-selected-layer-bounds {outline:1px solid var(--if-mark)}
 .if-layers .if-float-header {min-height:28px;padding-left:5px;margin-bottom:4px;gap:4px}
 .if-layers .if-return-text {margin-inline-start:auto;padding-inline:5px;font-size:12px;white-space:nowrap;color:var(--if-muted)}
 .if-layers p {padding:0 6px;color:var(--if-muted);font-size:12px}
