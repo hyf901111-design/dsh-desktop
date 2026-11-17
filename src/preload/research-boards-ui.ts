@@ -1759,6 +1759,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     activationError: (id: string) => activationErrors.get(id),
     openBoard,
     appWorkspaceSession(id: string) {
+      // Opening an app is still work in this board's directory. Keep an
+      // empty draft available for Back when the workspace session is shown.
+      temporaryBoards.keep(id)
       const pending = appWorkspaceSessions.get(id)
       if (pending) return pending
       const generation = state.account.generation

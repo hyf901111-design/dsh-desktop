@@ -120,6 +120,25 @@ async function fixture(legacyKind?: string, options: {legacyTitle?:string;curren
   return { root, ctx, registry, api, page, workspaces, sessions, disk, state, calls, opened, send, reply, unwrap, closeHost, legacy, win, emitState(){ state.eventSeq++; emit({type:"state",state:{...state},eventSeq:state.eventSeq,accountGeneration:state.account.generation}) }, failRename(value:boolean){failRename=value}, failStorage(count:number){failStorage=count}, headers: () => sessionStore.list().map(session => session.header), async coldSession(id: string) { await sessionStore.flush(ctx.agents.get(SessionId(id))!.session); await handles.get(id)!.dispose() }, gateWorkspace(gate: Promise<void>) { workspaceGate = gate }, fail(create = false, attach = false) { failCreate = create; failAttach = attach }, setOwner(userId: string) { state.account = { status: 'ready', generation: state.account.generation + 1, user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
 
+it('opens the same app conversation in the board directory without discarding a blank board', async () => {
+  const f = await fixture()
+  const board = await f.page.createPrivateBoard()
+  const boardCwd = f.ctx.agents.get(SessionId(board))!.session.header.cwd
+  if (!boardCwd) throw Error('Missing board working directory')
+  const [app, same] = await Promise.all([f.page.appWorkspaceSession(board), f.page.appWorkspaceSession(board)])
+  expect(app).toBe(same)
+  expect(app).not.toBe(board)
+  expect(f.ctx.agents.get(SessionId(app))!.session.header.cwd).toBe(boardCwd)
+  expect((await f.registry.resolveByPath(boardCwd))!.sessionIds).toEqual([app])
+  expect(f.page.isBoardOnly(app)).toBe(false)
+  f.sessions.open(app)
+  f.sessions.open(board)
+  expect(f.page.isBoardOnly(board)).toBe(true)
+  expect(await f.page.appWorkspaceSession(board)).toBe(app)
+  expect(f.calls.filter(([action, input]) => action === 'session.create' && input.sessionId === app)).toHaveLength(1)
+  expect(f.calls.some(([action]) => action === 'favorite.remove')).toBe(false)
+})
+
 const oldGuideTitles={board:'自选行情示例看板',note:'AI 护航研究笔记示例',ppt:'公司风格演示示例',report:'研究报告示例'} as const
 it('persists a successful native title projection before the delayed list frame arrives',async()=>{
  const title=oldGuideTitles.note,f=await fixture('note',{legacyTitle:title,deferTitleList:true}),id=f.legacy!.sessionId,key='sherlock.home-guide.sessions.v1:account%3Aowner'
