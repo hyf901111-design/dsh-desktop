@@ -32,4 +32,17 @@
 
 ## 发布验证
 
-按用户要求跳过 Apple 公证，保留 Developer ID 签名与旧签名兼容更新通道。发布验证结果将在完成后记录。
+- 构建提交 `3f2b44e34dbeb0095a6c8f85b618c4d5389dd8f3`。246 项聚焦检查、类型检查及生产构建通过。签名客户端已显示真实对话首页，右侧栏默认收起。隔离客户端启动、默认目录迁移及与 DSH Desktop 共存检查通过。
+- 标准 App 和 DMG 使用 Developer ID 签名。兼容桥外层为 `io.dsh.desktop`，保留旧签名及 Squirrel、ShipIt、Mantle、ReactiveObjC，内嵌 App 为 `com.evanarts.sherlock`。签名、ZIP 和 DMG 完整性检查通过。按要求跳过 Apple 公证。
+- Cloudflare 两条更新源均为 1.6.5，均包含中英文更新日志。公开资源的大小、缓存策略、稳定下载文件名及单段 Range/206 已核验。两份公开 blockmap 与本地发布文件一致。
+- 使用 1.6.4 ZIP 分别从两条通道重建 1.6.5，合成结果的 SHA-512 与签名发布包一致。
+
+| 通道 | 完整包（字节） | 传输（字节） | 复用（字节） | Range 请求 |
+| --- | ---: | ---: | ---: | ---: |
+| 标准 | 934,054,683 | 110,617,038 | 823,437,645 | 142 |
+| 旧签名兼容 | 1,011,502,025 | 147,961,073 | 863,540,952 | 267 |
+
+- Homebrew Cask 已同步至 1.6.5，Tap 提交 `dc854affcc50e6fff15c6a66be9d2d6b793919fd`。公开 Cask 与 Homebrew 解析结果一致，DMG SHA-256 为 `ce401843bc6f5e5bea575174c5fe42e4b3fa8881545e9cdac12b486b4331836f`。
+- 滚动清理移除了 1.5.6 的五个版本资源，1.6.4 的两份 blockmap 和 1.6.5 安装包仍可访问。
+
+[下载 EWork Odyssey 1.6.5（macOS Apple Silicon）](https://updates.evanarts.com/releases/v1.6.5/sherlock-mac-arm64.dmg)
