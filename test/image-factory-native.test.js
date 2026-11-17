@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest'
 import { installImageFactoryContext } from '../scripts/lib/image-factory-native.mjs'
 import { readImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
 
-function fixture(taskStorage) {
+function fixture(taskStorage, removeProvisionalReference) {
   const win = new Window(), doc = win.document
   if (vi.isFakeTimers()) {
     win.setTimeout = (fn, ms) => setTimeout(fn, ms)
@@ -47,7 +47,7 @@ function fixture(taskStorage) {
     sessions: sessionCatalog,
     getInput: id => shells.get(id),
     getPending: () => ({ shell, submitExternal: async submit => { handoff(); await submit(session.sessionId) } }),
-    send: (...args) => binding.prompt(...args), doc, win, taskStorage,
+    send: (...args) => binding.prompt(...args), doc, win, taskStorage, removeProvisionalReference,
     getTaskWorkspace: () => 'test-workspace', setTaskView: setView,
   })
   const respond = (error) => doc.addEventListener('sherlock:image-factory-prepare', ({ detail }) => {
@@ -556,32 +556,62 @@ it('returns a fresh session to the gallery template without sending a prompt', a
   } finally { f.binding.dispose(); await f.win.close() }
 })
 
-it('previews the layer and inserts it at the clicked draft offset only after confirmation', async () => {
-  const f = fixture()
+it('uses the native inline draft for unconfirmed layer references and confirms in place', async () => {
+  const f = fixture(undefined, (shell, occurrenceId, trailingSpace) => {
+    const { snapshot } = shell
+    const occurrence = snapshot.occurrences.find(entry => entry.occurrenceId === occurrenceId)
+    if (!occurrence) return null
+    const removedLength = trailingSpace ? 2 : 1
+    const { offset } = occurrence
+    snapshot.draft = snapshot.draft.slice(0, offset) + snapshot.draft.slice(offset + removedLength)
+    snapshot.occurrences = snapshot.occurrences.filter(entry => entry !== occurrence)
+    snapshot.draftRev++
+    return { caret: offset, removedLength }
+  })
+  const { imageLayerReferenceCodec } = await import('../scripts/lib/image-factory-layer-references.mjs')
+  const codec = imageLayerReferenceCodec().codec
+  const { snapshot } = f.shell
   try {
     f.doc.body.dataset.workspaceSurface = 'image-factory'
-    Object.assign(f.shell.snapshot, { draft: '标题改成新品发布', occurrences: [], draftRev: 1, phase: 'plain' })
-    f.shell.insertReference = vi.fn(() => true)
+    Object.assign(snapshot, { draft: '标题改成新品发布', occurrences: [], draftRev: 1, phase: 'plain' })
     const panel = f.doc.body.appendChild(f.doc.createElement('div'))
     panel.id = 'odyssey-right-workspace-panel'
-    const textarea = panel.appendChild(f.doc.createElement('textarea'))
-    const backdrop = panel.appendChild(f.doc.createElement('div'))
-    backdrop.dataset.inputBackdrop = ''
-    textarea.value = f.shell.snapshot.draft
+    const input = panel.appendChild(f.doc.createElement('textarea'))
+    input.value = snapshot.draft
+    input.setSelectionRange(2, 2)
+    let count = 0
+    f.shell.insertReference = vi.fn((reference, { start }) => {
+      snapshot.draft = snapshot.draft.slice(0, start) + '\ufffc ' + snapshot.draft.slice(start)
+      snapshot.occurrences.push({ ...reference, offset: start, occurrenceId: String(++count) })
+      snapshot.draftRev++
+      return true
+    })
+    f.shell.updateReferenceOccurrence = vi.fn((id, reference) => {
+      const index = snapshot.occurrences.findIndex(entry => entry.occurrenceId === id)
+      snapshot.occurrences[index] = { ...snapshot.occurrences[index], ...reference }
+      return true
+    })
     const target = { scope: 'native-session', sceneId: f.win.crypto.randomUUID(), layerId: f.win.crypto.randomUUID(), label: '主标题' }
     f.events('state', { current: true, busy: false })
     f.events('reference-layer', target)
-    expect(backdrop.querySelector('[data-provisional]')?.textContent).toBe('主标题')
-    expect(f.shell.insertReference).not.toHaveBeenCalled()
-    textarea.focus()
-    textarea.setSelectionRange(2, 2)
-    const click = new f.win.MouseEvent('click', { bubbles: true })
-    Object.defineProperty(click, 'isTrusted', { value: true })
-    textarea.dispatchEvent(click)
-    await vi.waitFor(() => expect(f.shell.insertReference).toHaveBeenCalledOnce())
-    expect(f.shell.insertReference).toHaveBeenCalledWith(expect.objectContaining({ source: 'image-factory-layer', label: '主标题' }),
+    expect(f.shell.insertReference).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ source: 'image-factory-layer', label: '主标题' }),
       { start: 2, end: 2, draftRev: 1 })
-    expect(backdrop.querySelector('[data-provisional]')).toBeNull()
+    expect(snapshot.draft).toBe('标题\ufffc 改成新品发布')
+    const first = snapshot.occurrences[0]
+    expect(JSON.parse(first.ref)).toMatchObject({ ...target, provisional: true })
+    expect(await codec.serialize(first.ref)).toBe('')
+    expect(codec.clipboardText(first.ref)).toBe('')
+    f.binding.confirmLayerPreview(f.shell)
+    expect(f.shell.updateReferenceOccurrence).toHaveBeenCalledExactlyOnceWith(first.occurrenceId, expect.objectContaining({
+      ref: JSON.stringify(target), clipboardText: target.label,
+    }))
+    expect(snapshot.occurrences[0]).toMatchObject({ occurrenceId: first.occurrenceId, offset: 2 })
+    expect(await codec.serialize(snapshot.occurrences[0].ref)).toContain('〔odyssey-layer:')
+    f.events('reference-layer', { ...target, label: '副标题', layerId: f.win.crypto.randomUUID() })
+    expect(snapshot.occurrences).toHaveLength(2)
+    expect(f.binding.clearLayerPreview()).toMatchObject({ removedLength: 2 })
+    expect(snapshot.occurrences).toHaveLength(1)
+    expect(snapshot.draft).toBe('标题\ufffc 改成新品发布')
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 

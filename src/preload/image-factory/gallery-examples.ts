@@ -1,3 +1,5 @@
+import { marketingExamples } from './marketing-templates'
+
 type Localized = readonly [string, string]
 
 export type GalleryExample = {
@@ -19,6 +21,7 @@ export const galleryExamples: GalleryExample[] = [
       "An elevated view of an empty coastal road curving past blue-grey hills, with one small runner in the lower half. Pale morning air and open sky in the upper quarter; deep blue, slate and restrained warm light. No lettering or logos.",
     ],
   },
+  ...marketingExamples,
   {
     id: "blueprint-city", title: ["城际视野", "City perspectives"], material: ["会议背景", "Meeting backdrop"], format: "16:9",
     scenes: ["城市专题 · 市场观察", "City feature · Market insights"], subtitle: ["以广阔视野观察市场", "A wider view of markets"],
