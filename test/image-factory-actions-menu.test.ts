@@ -80,19 +80,22 @@ it('keeps both menus open for internal clicks and dismisses both after an outsid
   }
 })
 
-it('offers overflow tools in the existing menu and preserves the watermark toggle state', async () => {
+it('offers overflow tools in the separate toolbar menu and preserves the watermark toggle state', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const mount = document.body.appendChild(document.createElement('div'))
   const root = createRoot(mount)
   const toggle = vi.fn()
   try {
     await act(() => root.render(createElement(CanvasActionsMenu, {
-      doc: document, t: zh => zh, canExport: false, exporting: vi.fn(),
+      doc: document, t: zh => zh,
       toolActions: [{ id: 'cutout', label: '去背景', disabled: true, run: vi.fn() },
         { id: 'watermark', label: 'AI 水印', checked: true, run: toggle }],
     })))
     const trigger = mount.querySelector('button')!
+    expect(trigger.getAttribute('aria-label')).toBe('更多工具')
     await act(() => trigger.click())
+    const menu = document.querySelector('[role="menu"][aria-label="更多工具"]')!
+    expect(menu.textContent).not.toContain('导出')
     const watermark = document.querySelector<HTMLButtonElement>('[role="menuitemcheckbox"]')!
     expect(watermark.getAttribute('aria-checked')).toBe('true')
     expect(document.activeElement).toBe(watermark)

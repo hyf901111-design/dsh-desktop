@@ -707,7 +707,8 @@ it('groups two selected layers, restores the group with redo, and returns from t
       row(first.id).click()
       row(second.id).dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }))
     })
-    await act(async () => tool('编组').click())
+    expect(tool('编组')).toBeUndefined()
+    await act(async () => key('g'))
     const groupId = (layers()?.[0] as typeof first & { groupId?: string })?.groupId
     expect(groupId).toBeTruthy()
     expect(layers()).toEqual([{ ...first, groupId }, { ...second, groupId }])
@@ -727,14 +728,14 @@ it('groups two selected layers, restores the group with redo, and returns from t
     expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
     await act(async () => document.querySelector<HTMLButtonElement>('.if-brand-templates')!.click())
     expect(frame()).toBeNull()
-    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="关闭模板页"]')!.click())
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="关闭画廊"]')!.click())
     expect(frame()).toBeTruthy()
     expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
     await act(async () => {
       document.querySelector<HTMLButtonElement>('.if-brand-templates')!.click()
     })
     await act(async () => {
-      document.querySelector('[aria-label="关闭模板页"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      document.querySelector('[aria-label="关闭画廊"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     })
     expect(frame()).toBeTruthy()
     expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
@@ -780,15 +781,18 @@ it('marquee-selects enclosed canvas elements and adds another element with Shift
     const selected = (layer: typeof first) => node(layer).getAttribute('aria-pressed')
     expect([selected(background), selected(first), selected(second), selected(third)]).toEqual(['false', 'true', 'true', 'false'])
     expect(document.querySelector('.if-marquee')).toBeNull()
-    const tool = document.querySelector<HTMLButtonElement>('[data-tool="select"]')!
-    await act(() => tool.click())
+    expect(document.querySelector('[data-tool="select"]')).toBeNull()
     await act(() => {
-      pointer('pointerdown', node(background), 330, 280, true)
+      pointer('pointerdown', viewport, 330, 280, true)
       pointer('pointermove', viewport, 450, 408, true)
       pointer('pointerup', viewport, 450, 408, true)
     })
     expect([selected(background), selected(first), selected(second), selected(third)]).toEqual(['false', 'true', 'true', 'true'])
-    expect(tool.getAttribute('aria-pressed')).toBe('false')
+    const frame = document.querySelector('.if-raster')!
+    expect(document.activeElement).toBe(frame)
+    const gesture = new KeyboardEvent('keydown', { key: 'g', metaKey: true, bubbles: true, cancelable: true })
+    await act(() => frame.dispatchEvent(gesture))
+    expect(gesture.defaultPrevented).toBe(true)
   } finally {
     await act(() => factory.dispose())
     host.dispose()

@@ -37,7 +37,7 @@ type T = (zh: string, en: string) => string
 type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region; preserveTransparency: boolean };
   targets?: { key: number; layer: CanvasLayer }[]; cutout?: boolean; size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
-type CanvasTool = 'text' | 'region' | 'select'
+type CanvasTool = 'text' | 'region'
 type DrawerTab = 'layers' | 'brand'
 type ToolbarCommand = CanvasToolAction & { icon?: string; title?: string; iconOnly?: boolean; controls?: string; switch?: boolean }
 type ToolbarGroup = { id: string; label?: string; commands: ToolbarCommand[] }
@@ -236,26 +236,39 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     const bar = toolbar.current
     if (!bar) return
     const groups = [...bar.querySelectorAll<HTMLElement>(':scope > .if-toolbar-entry')]
+    const overflow = bar.querySelector<HTMLElement>(':scope > .if-toolbar-overflow')
+    if (!overflow) return
     const measure = () => {
       const win = bar.ownerDocument.defaultView
       if (!win || !bar.clientWidth) return
       const style = win.getComputedStyle(bar)
       const horizontalPadding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0)
       const gap = parseFloat(style.columnGap) || 0
-      let width = bar.clientWidth - horizontalPadding
-      let count = 0
-      for (const group of groups) {
-        width -= group.getBoundingClientRect().width + (count ? gap : 0)
-        if (width < 0) break
-        count++
+      const available = bar.clientWidth - horizontalPadding
+      const widths = groups.map(group => group.getBoundingClientRect().width + gap)
+      const total = widths.reduce((sum, width) => sum + width, 0) - gap
+      let count = groups.length
+      if (total > available) {
+        let remaining = available - overflow.getBoundingClientRect().width
+        count = 0
+        for (const width of widths) {
+          remaining -= width
+          if (remaining < 0) break
+          count++
+        }
       }
-      if (groups.slice(count).some(group => group.contains(doc.activeElement)))
-        header.current?.querySelector<HTMLButtonElement>('.if-more')?.focus({ preventScroll: true })
+      const focused = doc.activeElement
       setVisibleToolbarGroups(count)
+      if (groups.slice(count).some(group => group.contains(focused))) {
+        win.requestAnimationFrame(() => overflow.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true }))
+      } else if (count === groups.length && overflow.contains(focused)) {
+        win.requestAnimationFrame(() => groups.at(-1)?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true }))
+      }
     }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(bar)
+    observer.observe(overflow)
     groups.forEach(group => observer.observe(group))
     return () => observer.disconnect()
   }, [Boolean(current), doc])
@@ -459,7 +472,6 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       }
       suppressMarqueeClick.current = true
       cancelMarquee()
-      if (tool === 'select') setTool(undefined)
       if (box.width < 2 || box.height < 2) return
       const ids = new Set(drag.additive ? drag.selection : [])
       for (const layer of current.layers) {
@@ -472,6 +484,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
             rect.right <= box.x + box.width + 1 && rect.bottom <= box.y + box.height + 1) ids.add(layerUnitId(layer))
       }
       setSelectedIds([...ids])
+      frame.focus({ preventScroll: true })
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-reference-clear'))
     }
     const move = (event: globalThis.PointerEvent) => update(event, false)
@@ -482,7 +495,6 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       event.preventDefault()
       event.stopPropagation()
       cancelMarquee()
-      if (tool === 'select') setTool(undefined)
     }
     const surfaceChanged = () => { if (doc.body.dataset.workspaceSurface !== 'image-factory') cancelMarquee() }
     doc.addEventListener('pointermove', move, true)
@@ -499,7 +511,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       doc.removeEventListener('sherlock:workspace-surface-change', surfaceChanged)
       doc.defaultView?.removeEventListener('blur', cancelMarquee)
     }
-  }, [doc, current, busy, tool])
+  }, [doc, current, busy])
 
   function cancelMarquee() {
     if (!marqueeDrag.current) return
@@ -509,14 +521,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   function startMarquee(event: PointerEvent<HTMLDivElement>) {
     if (!event.isPrimary || event.button !== 0) return
     suppressMarqueeClick.current = false
-    if (!current || busy || area || editing || tool && tool !== 'select') return
-    const target = event.target as HTMLElement
-    const explicit = tool === 'select'
-    if (!explicit && (event.pointerType === 'touch' || (target !== event.currentTarget &&
-        target !== imageFrame.current && !target.classList.contains('if-image-layer')))) return
+    if (!current || busy || area || editing || tool || event.pointerType === 'touch') return
+    const target = event.target as Element
+    if (target !== event.currentTarget && target !== imageFrame.current && !target.classList.contains('if-image-layer')) return
     marqueeDrag.current = { pointer: event.pointerId, start: { x: event.clientX, y: event.clientY },
       additive: event.shiftKey, selection: selectedIds.filter(id => id !== raster?.id), moved: false }
-    if (explicit) { event.preventDefault(); event.stopPropagation() }
   }
 
   function setSelectionDraft(id: string, draft?: SelectionDraft) {
@@ -550,7 +559,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   function focusDrawerToggle(tab?: DrawerTab) {
     if (!tab) return
     const visibleToggle = toolbar.current?.querySelector<HTMLButtonElement>('.if-toolbar-entry:not([data-overflow]) [data-drawer-tab="' + tab + '"]')
-    const trigger = visibleToggle ?? header.current?.querySelector<HTMLButtonElement>('.if-more')
+    const trigger = visibleToggle ?? toolbar.current?.querySelector<HTMLButtonElement>('.if-toolbar-more:not(:disabled)') ??
+      header.current?.querySelector<HTMLButtonElement>('.if-more')
     trigger?.focus({ preventScroll: true })
   }
   function closeDrawer() {
@@ -656,7 +666,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   }
   function activateTool(next: CanvasTool) {
     releaseText()
-    if (next !== 'select') setSelectedId(undefined)
+    setSelectedId(undefined)
     clearSelection()
     if (tool === next || next === 'region' && area) return
     setTool(next)
@@ -1259,14 +1269,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     { id: 'if-drawer-tabs', label: t('画板侧栏', 'Canvas sidebar'),
       commands: ([['layers', '图层', 'Layers'], ['brand', '品牌资产', 'Brand assets']] as const).map(([id, zh, en]) =>
         ({ id, icon: id, label: t(zh, en), controls: 'image-factory-drawer', checked: drawer === id, run: () => chooseDrawer(id) })) },
-    { id: 'selection', commands: [{ id: 'select', icon: 'square', label: t('框选元素', 'Select elements'),
-      checked: tool === 'select', disabled: busy, run: () => activateTool('select') }] },
     { id: 'text', commands: [{ id: 'text', icon: 'type', label: t('添加文本', 'Add text'),
       checked: placingText, disabled: busy, run: () => activateTool('text') }] },
-    { id: 'group', commands: [{ id: 'group', icon: 'group', label: canUngroup && !canGroup ? t('取消编组', 'Ungroup') : t('编组', 'Group'),
-      disabled: busy || !canGroup && !canUngroup, shortcut: canGroup ? 'Meta+G Control+G' : 'Meta+Shift+G Control+Shift+G',
-      title: canGroup ? t('编组 · ⌘G / Ctrl+G', 'Group · ⌘G / Ctrl+G') : canUngroup ? t('取消编组 · ⇧⌘G', 'Ungroup · ⇧⌘G') :
-        t('按住 Shift 选择两个或更多图层', 'Hold Shift to select two or more layers'), run: () => changeGroup(!canGroup) }] },
     { id: 'region', commands: [{ id: 'region', icon: 'mark', label: t('框选修改', 'Edit selected area'),
       checked: marking || !!area, disabled: busy || !raster, run: () => activateTool('region') }] },
     { id: 'cutout', commands: [{ id: 'cutout', icon: 'spark', disabled: busy || !raster, run: removeBackground,
@@ -1325,7 +1329,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       {tasks?.tabs.length ? <ImageTaskTabs doc={doc} header={header} state={tasks} current={scope}
         title={scene?.title} t={t} action={taskAction}/>
         : <span className="if-top-title" title={current?.title}>{current?.title}</span>}
-      <CanvasActionsMenu doc={doc} t={t} canExport={!!current?.layers.length && !busy} exporting={exportImage} toolActions={overflowActions}
+      <CanvasActionsMenu doc={doc} t={t} canExport={!!current?.layers.length && !busy} exporting={exportImage}
         galleryAction={scene && !busy ? galleryOpen ? { label: t('返回画布', 'Return to canvas'), run: closeGallery }
           : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: showGallery } : undefined}/>
     </header>
@@ -1350,6 +1354,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           </button>)}
         </div>
       })}
+      <div className="if-toolbar-overflow" data-empty={!overflowActions.length || undefined}>
+        <CanvasActionsMenu doc={doc} t={t} toolActions={overflowActions}/>
+      </div>
     </nav>}
     <div id="image-factory-task-workspace" className="if-stage" data-drawer-open={!!drawer && !!current} data-brand-dragging={brandDragging} ref={stage}>
       {showOpening ? <div className="if-canvas-message" role="status">{t('正在打开画布…', 'Opening canvas…')}</div>
@@ -1358,8 +1365,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           <Button onClick={() => workspace.select(scope)}>{t('重新打开', 'Try again')}</Button>
         </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt} onTemplate={openGalleryTemplate}
           onClose={galleryOpen && !!scene ? closeGallery : undefined} closeRef={galleryClose}/> : <>
-        <div className="if-stage-scroll" data-pan-ready={spaceHeld} data-panning={panning}
-          data-selecting-elements={tool === 'select'} ref={scroll}
+        <div className="if-stage-scroll" data-pan-ready={spaceHeld} data-panning={panning} ref={scroll}
           onPointerDownCapture={event => {
             panPointer(event, 'start')
             if (!event.isPropagationStopped()) startMarquee(event)
