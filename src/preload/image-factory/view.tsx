@@ -961,17 +961,17 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
     if (now !== english) { english = now; render() }
   })
   language.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
-  const open = () => {
+  const open = (reopen?: string) => {
     host.open('image-factory')
     if (activeHere()) {
-      doc.dispatchEvent(new Event('sherlock:image-factory-request-session'))
+      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen } }))
       workspace.select(session)
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     }
   }
   render()
   return {
-    open,
+    open: () => open(),
     async openSessionCanvas(id: string, activateSession: () => Promise<boolean>) {
       if (!validCanvasScope(id)) throw Error('来源会话已不可用。')
       const origin = host.current()
@@ -982,13 +982,18 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
         const scene = await owner.ready(id)
         if (!stillCurrent()) return
         if (!scene) throw Error('来源会话没有已保存的画布，图片仍可在知识库预览。')
+        const intent = new CustomEvent('sherlock:image-factory-canvas-intent', { detail: id })
+        doc.dispatchEvent(intent)
         if (!await activateSession()) throw Error('来源会话已不可用。')
         if (!stillCurrent()) return
-        doc.dispatchEvent(new Event('sherlock:image-factory-request-session'))
+        doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen: id } }))
         if (session !== id) throw Error('来源会话已切换，请重试。')
         doc.dispatchEvent(new Event('sherlock:image-factory-show-canvas'))
-        open()
-      } finally { release() }
+        open(id)
+      } finally {
+        doc.dispatchEvent(new CustomEvent('sherlock:image-factory-canvas-intent-ended', { detail: id }))
+        release()
+      }
     },
     reset() {
       identity++; host.close('image-factory'); workspace.dispose()

@@ -182,13 +182,12 @@ export function installImageFactoryContext({
       signal('adopt', { sessionId })
     })
   }
-  let publishedScope
-  function syncSession(force = false) {
+  let publishedScope, intendedCanvas
+  function syncSession(force = false, reopen) {
     const scope = canvasScope()
     // The list can stop reporting a blank conversation before its admitted user turn is visible.
     const awaitingAdmission = scope !== null && [...jobs.values()].some(job => job.sessionId === scope && job.draft && !job.promotion)
-    const sessionId = awaitingAdmission ? null : scope
-    tasks.sync(sessionId)
+    const sessionId = tasks.sync(awaitingAdmission ? null : scope, scope !== null && (scope === reopen || scope === intendedCanvas))
     if (!force && sessionId === publishedScope) return
     publishedScope = sessionId
     signal('session', { sessionId })
@@ -197,13 +196,15 @@ export function installImageFactoryContext({
   const reset = () => {
     for (const id of jobs.keys()) finish(id, false)
     galleryDrafts = new WeakMap()
-    publishedScope = undefined
+    publishedScope = intendedCanvas = undefined
     tasks.reset()
   }
-  const events = { state: stateChange, 'request-session': () => syncSession(true), 'use-prompt': usePrompt,
+  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen), 'use-prompt': usePrompt,
     comment: event => { void submitCanvasAction(event, 'region') },
     cutout: event => { void submitCanvasAction(event, 'cutout') },
     'focus-chat': focus, reset,
+    'canvas-intent': event => { intendedCanvas = event.detail },
+    'canvas-intent-ended': event => { if (event.detail === intendedCanvas) intendedCanvas = undefined },
     'task-action': event => { void tasks.action(event.detail) }, 'task-title': event => tasks.setTitle(event.detail),
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)

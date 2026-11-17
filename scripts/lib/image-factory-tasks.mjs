@@ -1,6 +1,6 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
 export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, setView, storage, isBoardOnly = () => false }) {
-  let tabs = [], closed = [], active, draftSession, openToken, loading, epoch, emitted
+  let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted
   const validScope = value => typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
   const publish = (force = false) => {
     const busy = !!openToken || !!loading
@@ -21,28 +21,57 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     void storage.read().then(value => {
       if (loading !== token) return
       epoch = value.epoch
-      const restored = Array.isArray(value.tabs) ? value.tabs.filter(tab => validScope(tab?.scope)) : []
+      closed = Array.isArray(value.closed) ? value.closed.filter(tab => validScope(tab?.scope)) : []
+      const closedScopes = new Set(closed.map(tab => tab.scope))
+      const restored = Array.isArray(value.tabs) ? value.tabs.filter(tab => validScope(tab?.scope) && !closedScopes.has(tab.scope)) : []
       const current = new Map(tabs.map(tab => [tab.scope, tab]))
       tabs = [...restored.map(tab => ({ ...tab, ...current.get(tab.scope) })),
-        ...tabs.filter(tab => !restored.some(saved => saved.scope === tab.scope))].slice(-32)
-      closed = Array.isArray(value.closed) ? value.closed.filter(tab => validScope(tab?.scope)) : []
+        ...tabs.filter(tab => !closedScopes.has(tab.scope) && !restored.some(saved => saved.scope === tab.scope))].slice(-32)
     }).catch(() => {}).finally(() => {
       if (loading !== token) return
       loading = undefined
+      const requested = pendingSync
+      pendingSync = undefined
+      if (isActive()) {
+        if (epoch !== undefined) syncSession(true, requested?.reopen ? requested.scope : undefined)
+        else if (requested) reconcile(requested.scope, requested.reopen)
+      }
       save()
       publish()
     })
   }
-  function sync(scope) {
-    if (!isActive()) return
+  function sync(scope, reopen = false) {
+    if (!isActive()) return scope
+    load()
+    if (!loading) return reconcile(scope, reopen)
+    pendingSync = { scope, reopen: reopen || (pendingSync?.scope === scope && pendingSync.reopen) }
+    publish()
+    return scope
+  }
+  function reconcile(scope, reopen) {
+    const closedTab = scope === null ? undefined : closed.find(tab => tab.scope === scope)
+    if (closedTab && !reopen) {
+      const available = tabs.filter(tab => tab.scope !== null && sessions.binding(tab.scope))
+      const next = available.find(tab => tab.scope === active) ?? available.at(-1)
+      if (next) select(next.scope, false)
+      else {
+        draftSession = undefined
+        sessions.clear()
+      }
+      return next?.scope ?? null
+    }
     active = scope
     if (scope === null) draftSession = sessions.list.getSnapshot().current
-    if (!tabs.some(tab => tab.scope === scope)) {
+    if (closedTab) {
+      closed = closed.filter(tab => tab !== closedTab)
+      tabs = [...tabs.slice(-31), closedTab].sort(pinnedFirst)
+      save()
+    } else if (!tabs.some(tab => tab.scope === scope)) {
       tabs = [...tabs.slice(-31), { scope }]
       save()
     }
-    load()
     publish()
+    return scope
   }
   function bindDraft(sessionId) {
     if (draftSession !== sessionId && draftSession !== undefined) return
@@ -61,7 +90,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     save()
     publish()
   }
-  function select(scope) {
+  function select(scope, sync = true) {
     const sessionId = scope === null ? draftSession : scope
     if (sessionId && isBoardOnly(sessionId)) throw Error('看板会话不能作为图片任务打开。')
     if (sessionId && sessions.binding(sessionId)) {
@@ -69,7 +98,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       sessions.open(sessionId)
     } else if (scope === null) sessions.clear()
     else throw Error('该图片任务的会话已不可用。')
-    syncSession(true)
+    if (sync) syncSession(true)
   }
   async function create(replacing) {
     if (replacing === undefined && tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
@@ -98,7 +127,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   }
   const pinnedFirst = (left, right) => Number(!!right.pinned) - Number(!!left.pinned)
   async function action({ kind, scope, before } = {}) {
-    if (!isActive() || openToken || loading) return
+    if ((!isActive() && kind !== 'close') || openToken || loading) return
     try {
       if (kind === 'new') { await create(); return }
       if (kind === 'restore') {
@@ -106,9 +135,9 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
           (item.scope === null || sessions.binding(item.scope)))
         if (!tab) return
         if (tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
+        closed = closed.filter(item => item !== tab)
         tabs = [...tabs, tab].sort(pinnedFirst)
         select(tab.scope)
-        closed = closed.filter(item => item !== tab)
         save()
         publish()
         return
@@ -138,7 +167,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
         publish()
       } else if (kind === 'close') {
         const tab = tabs[index]
-        if (scope === active) {
+        if (isActive() && scope === active) {
           const neighbor = tabs[index + 1] ?? tabs[index - 1]
           if (neighbor) select(neighbor.scope)
           else if (!await create(scope)) return
@@ -155,7 +184,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   function reset() {
     tabs = []
     closed = []
-    active = draftSession = openToken = loading = epoch = undefined
+    active = draftSession = openToken = loading = pendingSync = epoch = undefined
     publish()
   }
   return { sync, action, setTitle, bindDraft, publish, reset }
