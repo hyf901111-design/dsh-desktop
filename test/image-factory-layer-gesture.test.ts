@@ -782,12 +782,17 @@ it('marquee-selects enclosed canvas elements and adds another element with Shift
     expect([selected(background), selected(first), selected(second), selected(third)]).toEqual(['false', 'true', 'true', 'false'])
     expect(document.querySelector('.if-marquee')).toBeNull()
     expect(document.querySelector('[data-tool="select"]')).toBeNull()
+    const outlines = () => [...document.querySelectorAll<HTMLElement>('[data-selected-layer-outline]')]
+    expect(outlines().map(element => element.dataset.selectedLayerOutline)).toEqual([first.id, second.id])
+    expect(outlines()[0]?.style.width).toBe('75px')
+    expect(document.querySelector('.if-group-bounds')).not.toBeNull()
     await act(() => {
       pointer('pointerdown', viewport, 330, 280, true)
       pointer('pointermove', viewport, 450, 408, true)
       pointer('pointerup', viewport, 450, 408, true)
     })
     expect([selected(background), selected(first), selected(second), selected(third)]).toEqual(['false', 'true', 'true', 'true'])
+    expect(outlines().map(element => element.dataset.selectedLayerOutline)).toEqual([first.id, second.id, third.id])
     const frame = document.querySelector('.if-raster')!
     expect(document.activeElement).toBe(frame)
     const gesture = new KeyboardEvent('keydown', { key: 'g', metaKey: true, bubbles: true, cancelable: true })

@@ -1,6 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
-import { galleryTemplateLayers } from './gallery-layout'
+import { galleryPhotoPlacement, galleryTemplateLayers } from './gallery-layout'
 import { promptExamples, type PromptExample } from './prompt-gallery'
 import { marketingPrompts } from './marketing-prompts'
 import { textLayerStyle } from './layers'
@@ -45,10 +45,12 @@ const TemplatePreview = memo(function TemplatePreview({ example, size, photo, t 
 }) {
   let index = 0
   const layers = galleryTemplateLayers(example, size, t, () => String(index++))
+  const placement = galleryPhotoPlacement(example.id)
   return <svg className="if-gallery-layout" viewBox={`0 0 ${size.width} ${size.height}`} aria-hidden="true">
     {photo && <>
-      <rect width={size.width} height={size.height} fill="#ffffff"/>
-      <image href={photo} width={size.width} height={size.height} preserveAspectRatio="xMidYMid slice"/>
+      <rect width={size.width} height={size.height} fill={placement?.fill ?? '#ffffff'}/>
+      <image href={photo} x={(placement?.x ?? 0) * size.width} y={(placement?.y ?? 0) * size.height}
+        width={(placement?.width ?? 1) * size.width} height={(placement?.height ?? 1) * size.height} preserveAspectRatio="xMidYMid slice"/>
     </>}
     {layers.map(layer => {
       const x = layer.x * size.width, y = layer.y * size.height, width = layer.width * size.width
