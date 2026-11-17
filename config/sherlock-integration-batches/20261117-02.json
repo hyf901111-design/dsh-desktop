@@ -9,98 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像画板 editing 与企业模板画廊",
+        "featureName": "图像画板编辑与企业模板画廊",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "dbee80e686113918d97d35bcf7bc04c4a8f4139f",
-        "tipCommit": "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd",
+        "baseCommit": "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd",
+        "tipCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
         "commits": [
           {
-            "commit": "88ced4bdddbfb83c6c83f96bcea5347e0286777f",
+            "commit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
             "parents": [
-              "dbee80e686113918d97d35bcf7bc04c4a8f4139f"
+              "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd"
             ],
-            "subject": "功能：增加画板撤销重做、图形编组和统一左侧栏"
-          },
-          {
-            "commit": "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd",
-            "parents": [
-              "88ced4bdddbfb83c6c83f96bcea5347e0286777f"
-            ],
-            "subject": "功能：扩充企业模板并拆分画廊的模板和提示词入口"
+            "subject": "优化：按企业模板的图片区裁切底图"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/state/image-factory-canvases.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/assets/group.svg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/brand-library.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/canvas-workspace.ts"
-          },
-          {
-            "status": "A",
             "path": "src/preload/image-factory/enterprise-gallery.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/image-factory/enterprise-layout.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/city-lighttrails.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/conference-light.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/forest-grid.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/glass-boardroom.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/industrial-lab.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/paper-cobalt.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/podcast-booth.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/portrait-pro.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/welcome-hall.jpg"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/gallery-art/workshop-table.jpg"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery-examples.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery-layout.ts"
           },
           {
             "status": "M",
@@ -108,43 +37,11 @@
           },
           {
             "status": "A",
-            "path": "src/preload/image-factory/layer-groups.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/prompt-gallery.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/style.css"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/template-text.ts"
+            "path": "src/preload/image-factory/template-photo.ts"
           },
           {
             "status": "M",
             "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/image-factory-canvas.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-canvas-workspace.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-gallery.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
           }
         ],
         "checks": [
@@ -156,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd",
-            "completedAt": "2026-11-17T09:52:16.983Z",
+            "verifiedCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
+            "completedAt": "2026-11-17T09:57:35.911Z",
             "timeoutMs": 120000
           },
           {
@@ -165,18 +62,14 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvases.test.ts",
               "test/image-factory-gallery.test.ts",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js"
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory.test.js"
             ],
             "outcome": "passed",
-            "summary": "73 项图像应用聚焦测试通过。",
-            "verifiedCommit": "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd",
-            "completedAt": "2026-11-17T09:52:16.983Z",
+            "summary": "42 项画廊、模板布局与画板交互聚焦用例通过。",
+            "verifiedCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
+            "completedAt": "2026-11-17T09:57:35.911Z",
             "timeoutMs": 120000
           }
         ],
@@ -192,13 +85,7 @@
         "risks": [
           "未合入正式分支。"
         ],
-        "generatedAt": "2026-11-17T09:52:16.983Z"
-      },
-      "merged": {
-        "mergeCommit": "933a16b9e327bd41bf9202e321da5c6e4285cb12",
-        "verificationCommit": "933a16b9e327bd41bf9202e321da5c6e4285cb12",
-        "checks": [],
-        "recordedAt": "2026-11-17T09:52:21.826Z"
+        "generatedAt": "2026-11-17T09:57:35.911Z"
       }
     }
   ],
