@@ -26,9 +26,17 @@ export type TextLayer = {
   fontSize: number; family: typeof canvasFonts[number]['family']; weight: number
   align: 'left' | 'center' | 'right'; color: string
 }
+export const brandArtworkIds = ['logo-blue', 'logo-white', 'container-left', 'container-right',
+  'container-left-white', 'container-right-white', 'graphic-top', 'graphic-bottom'] as const
+export type BrandArtworkId = typeof brandArtworkIds[number]
+type OverlayBounds = { id: string; x: number; y: number; width: number; height: number }
+export type BrandArtworkLayer = OverlayBounds & { kind: 'brand'; asset: BrandArtworkId }
+export type ShapeLayer = OverlayBounds & { kind: 'shape'; color: string }
+export type BrandOverlay = BrandArtworkLayer | ShapeLayer
+
 export type StoredImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType }
 export type StoredCanvas = {
-  version: 1; id: string; title: string; width: number; height: number; layers: (StoredImageLayer | TextLayer)[]
+  version: 1; id: string; title: string; width: number; height: number; layers: (StoredImageLayer | TextLayer | BrandOverlay)[]
   aiWatermark?: true
 }
 export type CanvasImage = { data: Uint8Array; mediaType: CanvasImageType }

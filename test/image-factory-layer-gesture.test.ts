@@ -578,3 +578,53 @@ it('keeps the rendered gallery mounted while a fresh task waits for its session 
     vi.unstubAllGlobals()
   }
 })
+
+it('drops a colorful poster preset into the zoomed frame as editable layers', async () => {
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '品牌海报', width: 800, height: 1000, layers: [] }
+  const write = vi.fn(async (_value: CanvasWrite) => {})
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const host = new WorkspaceSurfaceHost(document)
+  let factory!: ReturnType<typeof mountImageFactory>
+  await act(async () => {
+    factory = mountImageFactory(document, host, {
+      storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
+      archive: async () => {}, save: async () => ({})
+    })
+  })
+  try {
+    await openCanvas(factory)
+    const tools = document.querySelector('[aria-label="画布编辑工具"]')!
+    const button = [...tools.querySelectorAll('button')].find(item => item.textContent?.trim() === '品牌资产')
+    expect(button).toBeDefined()
+    await act(async () => button!.click())
+    const preset = document.querySelector<HTMLButtonElement>('[data-brand-asset="product-poster"]')!
+    expect(preset).toBeTruthy()
+    const frame = document.querySelector<HTMLElement>('.if-raster')!
+    vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue(new DOMRect(-60, 120, 400, 500))
+    const dataTransfer = new DataTransfer()
+    await act(async () => {
+      const drag = (type: string) => Object.defineProperty(
+        new MouseEvent(type, { bubbles: true, cancelable: true, clientX: 110, clientY: 380 }), 'dataTransfer', { value: dataTransfer })
+      preset.dispatchEvent(drag('dragstart'))
+      frame.dispatchEvent(drag('drop'))
+    })
+    expect(write).toHaveBeenCalledTimes(1)
+    const layers = write.mock.calls[0]![0].canvas.layers
+    expect(layers.map(layer => layer.kind)).toEqual(['shape', 'shape', 'shape', 'shape', 'brand', 'brand', 'text', 'text', 'text', 'text'])
+    const graphic = layers.find(layer => layer.kind === 'brand' && layer.asset === 'graphic-top')
+    expect(graphic).toMatchObject({ x: expect.closeTo(.425, 3), y: expect.closeTo(.11, 3) })
+    const title = Array.from(frame.querySelectorAll('[data-canvas-text-id]')).find(node => node.textContent === '产品主标题')!
+    await act(async () => title.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })))
+    const editor = frame.querySelector<HTMLTextAreaElement>('textarea[data-canvas-text-id]')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(editor, '活动海报标题')
+      editor.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(write.mock.calls.at(-1)![0].canvas.layers).toContainEqual(expect.objectContaining({ kind: 'text', text: '活动海报标题' }))
+  } finally {
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  }
+})
