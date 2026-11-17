@@ -728,14 +728,14 @@ it('groups two selected layers, restores the group with redo, and returns from t
     expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
     await act(async () => document.querySelector<HTMLButtonElement>('.if-brand-templates')!.click())
     expect(frame()).toBeNull()
-    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="关闭模板页"]')!.click())
+    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="关闭画廊"]')!.click())
     expect(frame()).toBeTruthy()
     expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()
     await act(async () => {
       document.querySelector<HTMLButtonElement>('.if-brand-templates')!.click()
     })
     await act(async () => {
-      document.querySelector('[aria-label="关闭模板页"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+      document.querySelector('[aria-label="关闭画廊"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     })
     expect(frame()).toBeTruthy()
     expect(document.querySelector('.if-drawer .if-brand-library')).toBeTruthy()

@@ -180,19 +180,16 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
   }, [mode])
 
   return <div className="if-gallery" role="region" aria-label={t('灵感画廊', 'Inspiration gallery')}>
-    <div className="if-gallery-heading">
-      <div className="if-gallery-mode" role="group" aria-label={t('画廊模式', 'Gallery mode')}>
-        <button type="button" className="if-button" data-current={mode === 'templates'} aria-pressed={mode === 'templates'}
-          onClick={() => setMode('templates')}>{t('基于模板修改', 'Edit a template')}</button>
-        <button type="button" className="if-button" data-current={mode === 'prompts'} aria-pressed={mode === 'prompts'}
-          onClick={() => setMode('prompts')}>{t('基于提示词生成', 'Generate from a prompt')}</button>
-      </div>
-      {onClose && <button ref={closeRef} type="button" className="if-button if-gallery-close" aria-label={t('关闭模板页', 'Close gallery')}
-        title={t('返回画板 · Esc', 'Return to canvas · Esc')} onClick={onClose}>
-        <i className="if-symbol" style={{ '--if-icon': 'url("' + iconSource('close') + '")' } as CSSProperties} aria-hidden="true"/>
-        {t('关闭', 'Close')}
-      </button>}
+    <div className="if-gallery-mode" role="group" aria-label={t('画廊模式', 'Gallery mode')}>
+      <button type="button" className="if-button" data-current={mode === 'templates'} aria-pressed={mode === 'templates'}
+        onClick={() => setMode('templates')}>{t('基于模板修改', 'Edit a template')}</button>
+      <button type="button" className="if-button" data-current={mode === 'prompts'} aria-pressed={mode === 'prompts'}
+        onClick={() => setMode('prompts')}>{t('基于提示词生成', 'Generate from a prompt')}</button>
     </div>
+    {onClose && <button ref={closeRef} type="button" className="if-button if-gallery-close" aria-label={t('关闭画廊', 'Close gallery')}
+      title={t('返回画板 · Esc', 'Return to canvas · Esc')} onClick={onClose}>
+      <i className="if-symbol" style={{ '--if-icon': 'url("' + iconSource('close') + '")' } as CSSProperties} aria-hidden="true"/>
+    </button>}
     {mode === 'prompts' ? <PromptGallery t={t} busy={busy} onUse={onUse}/> : <>
     <div className="if-gallery-viewport" ref={viewport}>
       <div className="if-gallery-track">
