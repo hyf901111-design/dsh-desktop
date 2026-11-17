@@ -173,6 +173,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     editors = new Map<string, EditState>(),
     activeResearch = new Set<string>(),
     opening = new Map<string, Promise<string>>(),
+    appWorkspaceSessions = new Map<string, Promise<string>>(),
     copies = new Map<string, string>(),
     copyFlights = new Map<string, Promise<void>>()
   const previewStates = new Map<
@@ -795,6 +796,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       clearEditors()
       activeSession = null
       activations.clear()
+      appWorkspaceSessions.clear()
       activationErrors.clear()
       navigation++
     }
@@ -1756,6 +1758,34 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     isLoading: (id: string) => activations.has(id),
     activationError: (id: string) => activationErrors.get(id),
     openBoard,
+    appWorkspaceSession(id: string) {
+      const pending = appWorkspaceSessions.get(id)
+      if (pending) return pending
+      const generation = state.account.generation
+      const check = () => {
+        if (disposed || generation !== state.account.generation || !boardOnlySession(state, id))
+          throw new DOMException('看板已切换，请重新打开。', 'AbortError')
+      }
+      const resolve = async () => {
+        check()
+        const { workspaceId, appSessionId } = await call<{ workspaceId: string; appSessionId: string }>('local.directory', {
+          mode: 'app-workspace', sessionId: id
+        })
+        check()
+        await deps.workspaces.refresh?.()
+        check()
+        if (deps.sessions.list.getSnapshot().byId[appSessionId]) return appSessionId
+        const created = await deps.sessions.create({ sessionId: appSessionId, workspaceId })
+        check()
+        if (created !== appSessionId) throw Error('看板工作区会话未能打开。')
+        return created
+      }
+      const operation = resolve().finally(() => {
+        if (appWorkspaceSessions.get(id) === operation) appWorkspaceSessions.delete(id)
+      })
+      appWorkspaceSessions.set(id, operation)
+      return operation
+    },
     getHomeGuideSession,
     homeGuideSessionsReady: () => !disposed && state.account.status !== 'loading',
     whenHomeGuideSessionsReady,

@@ -49,6 +49,27 @@ describe('research board directories', () => {
       expect(f.workspaces.get(row.path).sessionIds).toEqual(['scoped-board'])
     } finally { f.close() }
   })
+  it('resolves one reusable app session per board in its own file workspace',async()=>{
+    const f=fixture()
+    try {
+      const board=f.directories.reserve(f.root,'协作看板')
+      f.ctx.sessions.create('board',{meta:{cwd:board.path}})
+      await f.directories.run({mode:'bind',directoryId:board.directoryId,sessionId:'board'})
+      const input={mode:'app-workspace',sessionId:'board'}
+      const result=await f.directories.run(input)
+      expect(result).toMatchObject({path:board.path,workspaceId:'workspace-0',appSessionId:expect.stringMatching(/^board-app-/)})
+      expect(f.workspaces.get(board.path).sessionIds).toEqual([])
+      expect(await f.directories.run(input)).toEqual(result)
+      expect(f.sessions.has(result.appSessionId)).toBe(false)
+
+      const another=f.directories.reserve(f.root,'个人看板')
+      f.ctx.sessions.create('another',{meta:{cwd:another.path}})
+      await f.directories.run({mode:'bind',directoryId:another.directoryId,sessionId:'another'})
+      const second=await f.directories.run({...input,sessionId:'another'})
+      expect(second.path).toBe(another.path)
+      expect(second.appSessionId).not.toBe(result.appSessionId)
+    } finally {f.close()}
+  })
   it('keeps blank boards virtual across restart and materializes only their own path for file tools', async () => {
     const f = fixture()
     try {

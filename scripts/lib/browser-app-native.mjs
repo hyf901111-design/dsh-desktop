@@ -1,29 +1,42 @@
 import {installImageFactoryContext,imageFactoryNativeSource} from './image-factory-native.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
 import {createPendingConversation,EWorkPendingInputBar,browserPromptReference} from './pending-conversation.mjs'
-/** Keep the pinned board as the return destination when an app needs a conversation. */
-export function installWorkspaceAppSessions({sessions,isBoardOnly,doc=document}) {
- let boardToReturn
+/** Open apps in the board's file workspace and retain the board as the back destination. */
+export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSession,showError,doc=document}) {
  const apps=new Set(['browser','image-factory','knowledge'])
+ let boardToReturn, revision=0
+ const current=()=>sessions.list.getSnapshot().current
  const surfaceChanged=({detail})=>{
+  const turn=++revision
   if(apps.has(detail?.surface)){
-   const current=sessions.list.getSnapshot().current
-   if(current&&isBoardOnly(current)){
-    boardToReturn??=current
-    sessions.clear()
+   const selected=current()
+   if(!selected||!isBoardOnly(selected)){
+    delete doc.body.dataset.boardWorkspacePending
+    return
    }
-  }else if(detail?.active===false){
+   boardToReturn=selected
+   doc.body.dataset.boardWorkspacePending='true'
+   void workspaceSession(selected).then(id=>{
+    if(turn!==revision || current()!==selected)return
+    sessions.open(id)
+    delete doc.body.dataset.boardWorkspacePending
+   }).catch(error=>{
+    if(turn===revision && current()===selected && error?.name!=='AbortError')showError(error)
+   })
+  }else{
+   delete doc.body.dataset.boardWorkspacePending
+   if(detail?.active!==false)return
    const board=boardToReturn
    boardToReturn=undefined
-   const current=sessions.list.getSnapshot().current
-   if(detail.back&&board&&current!==board&&!(current&&isBoardOnly(current))){
-    const binding=sessions.binding(board)
-    if(binding&&binding.state!=='removed')sessions.open(board)
-   }
+   if(detail.back&&board&&current()!==board&&isBoardOnly(board))sessions.open(board)
   }
  }
  doc.addEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
- return()=>doc.removeEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
+ return()=>{
+  revision++
+  delete doc.body.dataset.boardWorkspacePending
+  doc.removeEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
+ }
 }
 /** Browser is an application; conversation context is optional and never created by entry. */
 export function installBrowserNative({sessions,getInput,isBoardOnly=()=>false}) {
@@ -63,7 +76,7 @@ export function installBrowserNative({sessions,getInput,isBoardOnly=()=>false}) 
 /** One mirror of the existing composer, never an independent draft or send path. */
 export function installBrowserQuestionNative({sessions,getInput,getPending,getConversation,window:win=window,document:doc=document}){
  let live=true,binding;const bindings=new Map(),key=Symbol.for('sherlock:browser-question');
- const current=()=>{const id=sessions.list.getSnapshot().current;if(id&&sessions.subagentAddress(id))throw Error('当前输入不支持网页询问。');return id??null};
+ const current=()=>{if(doc.body.dataset.boardWorkspacePending==='true')throw Error('看板工作区会话尚在打开。');const id=sessions.list.getSnapshot().current;if(id&&sessions.subagentAddress(id))throw Error('当前输入不支持网页询问。');return id??null};
  const pending=()=>getPending?.()??win[Symbol.for('sherlock:pending-conversation')];
  const shellFor=owner=>owner===null?pending()?.shell:getInput(owner);
  const locked=b=>b.shell.disposed||['adjudicating','submitting'].includes(b.shell.snapshot.phase)||b.shell.snapshot.researchContextPreparing===true||b.pending?.getSnapshot().busy===true;
@@ -204,7 +217,11 @@ ctx.effect(()=>{
  replace('content: canvasQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)',
    'content: imageFactoryQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)')
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
- replace(anchor,anchor+`\nctx.effect(()=>(${installWorkspaceAppSessions.toString()})({sessions,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true}),'Workspace application session boundaries');
+ replace(anchor,anchor+`\nctx.effect(()=>(${installWorkspaceAppSessions.toString()})({
+  sessions,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
+  workspaceSession:id=>sherlockBoardsAdapter.appWorkspaceSession(id),
+  showError:error=>sherlockBoardsAdapter?.showError(error)
+}),'Workspace application sessions');
 ctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true}),'Browser application navigation');
 ctx.effect(()=>{const bridge=(${installBrowserQuestionNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],getConversation:()=>ctx.get('conversation')});return bridge.dispose},'Browser region shared composer');
 ctx.effect(()=>{
@@ -228,6 +245,11 @@ ctx.effect(()=>{
  return()=>{offSettings();if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}
 },'Pending first-message conversation');
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));`)
+ const sharedSubmit='if (this.deps.sharedSubmit?.(mode)) return;'
+ replace(sharedSubmit,`if(document.body.dataset.boardWorkspacePending==='true'){
+   this.notify('error','看板工作区会话尚在打开，输入已保留。');return;
+ }
+                `+sharedSubmit)
  const committing='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
  replace(committing,`window[Symbol.for('sherlock:browser-question')]?.admitting(shell,attempt.draftState,attempt.imageIds);\n\t\t\t\t`+committing)
  const admitted='const admittedSend = await this.conversation().sendSession(attempt.session, prompt, attempt.imageIds, attempt.mode);'
