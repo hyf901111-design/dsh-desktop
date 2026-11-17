@@ -1,9 +1,9 @@
 .odyssey-explore-orb{position:relative;display:block;width:40px;height:40px;flex:none;border-radius:50%;overflow:hidden;font-style:normal;isolation:isolate}
 .odyssey-explore-orb img{position:absolute;inset:0;display:block;width:40px;height:40px;max-width:none;pointer-events:none}
 .odyssey-explore-orb img:not(:first-child){opacity:0}
-.sherlock-account-button:is(:hover,:focus-visible,[aria-expanded=true]) .odyssey-explore-orb img{animation:odyssey-explore-flow 4.8s cubic-bezier(.45,0,.55,1) infinite}
-.sherlock-account-button:is(:hover,:focus-visible,[aria-expanded=true]) .odyssey-explore-orb img:nth-child(2){animation-delay:-3.2s}
-.sherlock-account-button:is(:hover,:focus-visible,[aria-expanded=true]) .odyssey-explore-orb img:nth-child(3){animation-delay:-1.6s}
+[data-explore-trigger] .odyssey-explore-orb img{animation:odyssey-explore-flow 4.8s cubic-bezier(.45,0,.55,1) infinite}
+[data-explore-trigger] .odyssey-explore-orb img:nth-child(2){animation-delay:-3.2s}
+[data-explore-trigger] .odyssey-explore-orb img:nth-child(3){animation-delay:-1.6s}
 @keyframes odyssey-explore-flow{0%,100%{opacity:1;transform:rotate(0deg) scale(1)}33.333%{opacity:0;transform:rotate(18deg) scale(1.045)}66.666%{opacity:0;transform:rotate(-14deg) scale(1.02)}}
 .sherlock-account-button[data-explore-trigger]{box-sizing:border-box;padding:8px;gap:10px;min-height:56px;height:56px;margin:2px 0;border-radius:12px}
 .sherlock-account-button[data-explore-trigger] span{font-size:14px;font-weight:500}
