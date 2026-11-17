@@ -663,3 +663,40 @@ it('preserves interleaved layer positions and delivers separate receipts togethe
     expect(f.session.prompt).toHaveBeenCalledOnce()
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
+
+it('delivers successful edits with a failure flag for a referenced image in the same turn', async () => {
+  const f = fixture()
+  const { imageLayerReferenceCodec } = await import('../scripts/lib/image-factory-layer-references.mjs')
+  const encode = (label, sceneId) => imageLayerReferenceCodec().codec.serialize(JSON.stringify({
+    label, sceneId, scope: f.session.sessionId, layerId: f.win.crypto.randomUUID(),
+  }))
+  const sceneId = f.win.crypto.randomUUID()
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.doc.addEventListener('sherlock:image-factory-prepare', ({ detail }) => f.events('prepared', {
+      id: detail.id, operation: 'layer', size: '1024x1536', width: 200, height: 280, title: '海报',
+      reference: { data: 'AAAA', mediaType: 'image/png' },
+      targetLayers: detail.layers.map(({ key, label }) => ({ key, label, kind: key === 1 ? 'text' : 'image', description: '' })),
+    }))
+    await f.binding.prompt(f.session, [{ type: 'text', text: await encode('标题', sceneId) + '替换标题，' +
+      await encode('图片', sceneId) + '换成海面。' }], 'queue')
+    const content = f.session.prompt.mock.calls[0][0]
+    const { id } = readImageFactoryContext(content[0].text)
+    const deliver = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-deliver-layers', deliver)
+    f.state.chat.order = ['current', 'failed-image', 'title', 'next']
+    f.state.chat.nodes = new Map([
+      ['current', { kind: 'user', data: { content } }],
+      ['failed-image', { kind: 'tool-call', data: { root: { name: 'image_generate', callId: 'failed-image', isError: true } } }],
+      ['title', { kind: 'tool-call', data: { root: { name: 'image_edit_layer', content: [
+        { type: 'text', text: JSON.stringify({ kind: 'odyssey-image-layer-edit', id, target: 1, patch: { text: '海面晨光' } }) },
+      ] } } }],
+      ['next', { kind: 'user', data: { content: [{ type: 'text', text: '另一条消息' }] } }],
+    ])
+    for (const notify of f.listeners) notify()
+    await vi.waitFor(() => expect(deliver).toHaveBeenCalledOnce(), { timeout: 2000 })
+    expect(deliver.mock.calls[0][0].detail).toMatchObject({
+      imageError: true, url: undefined, edits: [{ key: 1, patch: { text: '海面晨光' } }],
+    })
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})

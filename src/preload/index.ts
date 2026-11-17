@@ -322,6 +322,25 @@ function initializeUi(): void {
       await imageFactory.openSessionCanvas(copy.id, () => openKnowledgeSession(document, copy.id, 'chat', 'imported'))
     } catch (error) { throw Error(knowledgeRequestError(error)) }
   }
+  const openImageProject = async (id: string) => {
+    const origin = workspaceSurfaceHost.current()
+    type Project = { id: string; canvasId: string; restored: boolean }
+    const resolve = (restore = false): Promise<Project> =>
+      ipcRenderer.invoke('knowledge:request', 'open-image-project', { id, restore })
+    const open = async (project: Project) => {
+      if (workspaceSurfaceHost.current() !== origin) return
+      return imageFactory.openSessionCanvas(project.id, () =>
+        openKnowledgeSession(document, project.id, 'chat', project.restored ? 'imported' : undefined), project.canvasId)
+    }
+    try {
+      const project = await resolve()
+      try { await open(project) }
+      catch (error) {
+        if (project.restored || workspaceSurfaceHost.current() !== origin) throw error
+        await open(await resolve(true))
+      }
+    } catch (error) { throw Error(knowledgeRequestError(error)) }
+  }
   openKnowledgeImageCanvas = async (kind, id) => {
     if (kind === 'source') return openImageFactorySource(id)
     if (kind === 'copy') return openImageFactoryCopy(id)
@@ -333,6 +352,7 @@ function initializeUi(): void {
     openFileInEditor,
     openImageFactorySource,
     openImageFactoryCopy,
+    openImageProject,
     request: (method, args) => ipcRenderer.invoke('knowledge:request', method, args),
     path: file => safePathForFile(file, webUtils.getPathForFile),
     subscribeImportProgress: listener => {
@@ -448,7 +468,7 @@ function initializeUi(): void {
       write: value => ipcRenderer.invoke('image-factory:canvas-write', value),
       adopt: (sessionId, epoch) => ipcRenderer.invoke('image-factory:canvas-adopt', sessionId, epoch),
     },
-    archive: value => ipcRenderer.invoke('image-factory:archive', value),
+    saveProject: value => ipcRenderer.invoke('image-factory:save-to-library', value),
     save: value => ipcRenderer.invoke('conversation:image-action', value),
   })
   const openImageFactory = () => { void flushBeforeCreate().then(imageFactory.open).catch(() => {}) }

@@ -166,3 +166,24 @@ it('builds campaign previews and projects from the same editable artwork, copy a
     }
   }
 })
+
+it('reserves separate rows for headlines, summaries and campaign callouts in each locale', () => {
+  const cases = [
+    ['efund-active-prism', { width: 1008, height: 1792 }, [[1, 2], [3, 4], [5, 6], [7, 8]]],
+    ['efund-marathon-city', { width: 900, height: 1200 }, [[0, 1], [1, 2], [7, 8]]],
+    ['efund-fund-learning', { width: 960, height: 960 }, [[0, 1], [1, 2], [3, 4], [5, 6], [7, 8]]],
+    ['first-light', { width: 720, height: 1280 }, [[0, 1], [1, 2]]],
+  ] as const
+  for (const [id, size, pairs] of cases) {
+    const example = galleryExamples.find(item => item.id === id)!
+    for (const locale of [0, 1] as const) {
+      const layers = galleryTemplateLayers(example, size, (...text) => text[locale], () => crypto.randomUUID())
+        .filter(layer => layer.kind === 'text')
+      for (const [first, second] of pairs) {
+        const top = layers[first]!, bottom = layers[second]!
+        const height = top.text.split('\n').length * top.fontSize * 1.2 / size.height
+        expect(bottom.y - top.y - height, top.text + ' / ' + bottom.text).toBeGreaterThan(.008)
+      }
+    }
+  }
+})

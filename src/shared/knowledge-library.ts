@@ -2,6 +2,7 @@ import type { KnowledgeSessionShare } from './knowledge-sessions'
 
 export const knowledgeCategories = {
   all: '所有文件',
+  images: '我的图像',
   saved: '手动收藏',
   starred: '重点文件',
   shared: '我的共享',
@@ -57,6 +58,7 @@ export interface KnowledgeDocument {
   sessionId?: string
   sessionTitle?: string
   generatedBy?: 'image-factory'
+  imageProject?: { canvasId: string; scope: import('./image-factory-canvas').CanvasScope }
   saved: boolean
   starred: boolean
   share?: { id: string; category: string }
@@ -115,6 +117,7 @@ export function listKnowledgeDocuments<T extends KnowledgeDocument>(
   return snapshot.documents.filter(row => {
     if (Boolean(row.received) !== (category === 'received')) return false
     if (category === 'saved' && !row.saved || category === 'starred' && !row.starred || category === 'shared' && !row.share) return false
+    if (category === 'images' && !row.imageProject) return false
     if (filter.folderId && row.folderId !== filter.folderId) return false
     if (filter.sharedCategory && row.received?.category !== filter.sharedCategory) return false
     if (filter.sources?.length && !filter.sources.includes(row.source)) return false

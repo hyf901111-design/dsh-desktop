@@ -121,10 +121,14 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery {
   --if-gallery-gap:clamp(12px,1.5cqw,20px);
   --if-gallery-card-width:clamp(208px,min(37cqw,48cqh),440px);
-  position:absolute;inset:0;display:grid;min-height:0;background:var(--if-main);container-type:size;
+  --if-gallery-top:clamp(38px,11.5cqh,128px);
+  --if-gallery-media-height:max(64px,calc(100cqh - var(--if-gallery-top) - 150px));
+  position:absolute;inset:0;display:grid;min-height:0;container-type:size;
+  background:radial-gradient(circle,var(--odyssey-dot,var(--if-dot)) .675px,transparent .85px)
+    6px 1px/13.71px 13.71px,var(--odyssey-canvas,var(--if-main));
   grid-template-rows:minmax(0,1fr);
 }
-.if-gallery-viewport {min-width:0;overflow:auto;scrollbar-width:none;overscroll-behavior-inline:contain}
+.if-gallery-viewport {min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior:contain;touch-action:pan-x pinch-zoom}
 .if-gallery-controls {
   position:absolute;z-index:1;inset-inline:12px;top:50%;transform:translateY(-50%);
   display:flex;justify-content:space-between;pointer-events:none;
@@ -139,10 +143,11 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-page[data-direction=left] .if-symbol {transform:translateX(-.25px) rotate(90deg)}
 .if-gallery-track {
   display:flex;align-items:flex-start;width:max-content;min-height:100%;
-  padding-block:clamp(52px,13cqh,128px) 76px;padding-inline-start:12px
+  padding-block:var(--if-gallery-top) 54px;padding-inline-start:12px
 }
 .if-gallery-cycle {display:flex;align-items:flex-start;gap:var(--if-gallery-gap);padding-inline-end:var(--if-gallery-gap)}
-.if-gallery-card {width:var(--if-gallery-card-width);position:relative}
+.if-gallery-column {display:flex;flex:none;flex-direction:column;align-items:flex-start;gap:16px}
+.if-gallery-card {width:min(var(--if-gallery-card-width),calc(var(--if-gallery-media-height) * var(--if-card-ratio)));position:relative}
 .image-factory .if-gallery-art {
   position:relative;display:block;width:100%;overflow:hidden;padding:0;border-radius:7px;background:var(--if-field);
 }
@@ -150,23 +155,15 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-art img {display:block;width:100%;height:100%;object-fit:contain;user-select:none}
 .if-gallery-mode {
   position:absolute;z-index:3;inset-inline-start:50%;inset-block-end:clamp(14px,3cqh,26px);
-  transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px;
-}
-.if-gallery-mode::before {
-  content:"";position:absolute;inset:-15px -22px;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse at center,#0b101bba 12%,#0b101b72 46%,transparent 76%);
-  backdrop-filter:blur(12px) saturate(.95);
-  mask-image:radial-gradient(ellipse at center,#000 20%,#0009 50%,transparent 76%);
+  transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100% - 24px);
 }
 .image-factory .if-gallery-mode .if-button {
-  position:relative;z-index:1;height:35px;padding-inline:11px;border-radius:4px;font-size:13px;font-weight:500;
-  color:#ffffffe0;background:transparent;text-shadow:0 1px 6px #000b;
+  position:relative;min-height:38px;height:auto;padding:8px 15px;border:0;border-radius:999px;
+  font-size:13px;line-height:18px;font-weight:500;color:#eff2f7;
+  background:rgba(20,24,31,.60);backdrop-filter:blur(18px) saturate(1.16);
 }
-.image-factory .if-gallery-mode .if-button:not(:disabled):hover {background:transparent;color:#fff}
-.image-factory .if-gallery-mode .if-button[aria-pressed=true] {color:#fff;background:transparent;font-weight:650}
-.if-gallery-mode .if-button[aria-pressed=true]::after {
-  content:"";position:absolute;left:50%;bottom:1px;width:16px;height:2px;transform:translateX(-50%);border-radius:2px;background:#fff;
-}
+.image-factory .if-gallery-mode .if-button[aria-pressed=true] {color:white;background:rgba(63,72,89,.82);font-weight:650}
+.image-factory .if-gallery-mode .if-button:not(:disabled):hover {color:white;background:rgba(67,77,96,.88)}
 .image-factory .if-gallery-close {
   position:absolute;z-index:3;inset-inline-end:14px;inset-block-start:14px;width:36px;height:36px;padding:0;border-radius:50%;
   background:color-mix(in srgb,var(--if-main) 65%,transparent);backdrop-filter:blur(16px) saturate(1.2);color:var(--if-ink);
@@ -176,9 +173,10 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-card > .if-gallery-tag {font-size:11px;color:var(--if-muted)}
 .if-gallery-art::before,.if-gallery-use {position:absolute;inset:auto 0 0;opacity:0;transition:opacity .2s ease;pointer-events:none}
 .if-gallery-art::before {
-  content:"";height:42%;backdrop-filter:blur(16px) saturate(1.2);
-  border-end-start-radius:inherit;border-end-end-radius:inherit;
-  mask-image:linear-gradient(transparent,#000 92%);background:linear-gradient(transparent,#090c13a3);
+  content:"";inset:auto -2px -2px;height:calc(42% + 2px);
+  backdrop-filter:blur(16px) saturate(1.2);
+  mask-image:linear-gradient(transparent,#000 80%);
+  background:linear-gradient(transparent 10%,#111722b3 82%,#111722e8);
 }
 .if-gallery-use {
   display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;color:#fff;

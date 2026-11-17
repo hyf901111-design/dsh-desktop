@@ -85,23 +85,36 @@ it('collects a generated deliverable once, excludes process scripts, and honors 
   expect((await store.collectGenerated(report, { ...origin, saved: true }))?.saved).toBe(true)
 })
 
-it('assigns distinct default file names to concurrent factory results and preserves a renamed result', async () => {
+it('lists only explicitly saved image projects and keeps layers through resave, reopen and removal', async () => {
   const { file, open } = await fixture()
   const store = open()
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=', 'base64')
-  const source = { sessionId: 'factory-session', sessionTitle: '海报编辑', name: '活动海报' }
-  const ids = [randomUUID(), randomUUID(), randomUUID()]
-  const uploaded = await store.importFile(await file('活动海报（2）.PNG'))
-  const results = await Promise.all(ids.map(id => store.collectFactoryImage(png, { ...source, id })))
-  expect(results.map(row => row?.name)).toEqual(['活动海报.png', '活动海报（3）.png', '活动海报（4）.png'])
-  expect(new Set(results.map(row => row?.id)).size).toBe(3)
-  await store.edit({ type: 'rename', id: results[1]!.id, name: '已挑选.png' })
+  const groupId = randomUUID()
+  const canvas = { version: 1 as const, id: randomUUID(), title: '活动海报', width: 1, height: 1, layers: [
+    { id: randomUUID(), assetId: randomUUID(), kind: 'image' as const, mediaType: 'image/png' as const },
+    { id: randomUUID(), kind: 'shape' as const, x: 0, y: 0, width: .2, height: .2, color: '#112233', groupId },
+    { id: randomUUID(), kind: 'text' as const, x: .2, y: .3, width: .6, text: '独立文字', color: '#ffffff',
+      fontSize: 12, weight: 600, family: 'system-ui' as const, align: 'left' as const, groupId },
+  ] }
+  const image = { data: png, mediaType: 'image/png' as const }
+  const upload = await store.importFile(await file('活动海报.PNG'))
+  const first = await store.saveImageProject(png, { canvas, image }, null, () => {})
+  expect(first).toMatchObject({ name: '活动海报（2）.png', imageProject: { canvasId: canvas.id, scope: null } })
+  await store.edit({ type: 'rename', id: first.id, name: '已挑选.png' })
   const reopened = open()
-  const updated = await reopened.collectFactoryImage(png, { ...source, id: ids[1]!, processed: true })
-  expect(updated).toMatchObject({ id: results[1]!.id, name: '已挑选.png', sessionTitle: '海报编辑' })
-  const listed = (await reopened.snapshot()).documents
-  expect(listed).toHaveLength(4)
-  expect(listed.find(row => row.id === uploaded.id)?.name).toBe('活动海报（2）.PNG')
+  expect((await reopened.imageProject(first.id)).canvas).toEqual(canvas)
+  expect((await reopened.imageProject(first.id)).image?.data).toEqual(png)
+  const updatedCanvas = { ...canvas, layers: canvas.layers.map(layer => layer.kind === 'text' ? { ...layer, text: '已改标题' } : layer) }
+  await reopened.saveImageProject(png, { canvas: updatedCanvas, image }, 'test-session', () => {})
+  const snapshot = await reopened.snapshot()
+  expect(snapshot.documents).toHaveLength(2)
+  expect(listKnowledgeDocuments(snapshot, { category: 'images' })).toEqual([
+    expect.objectContaining({ id: first.id, name: '已挑选.png', imageProject: { canvasId: canvas.id, scope: 'test-session' } })
+  ])
+  expect((await reopened.imageProject(first.id)).canvas).toEqual(updatedCanvas)
+  await reopened.edit({ type: 'remove', id: first.id })
+  expect((await reopened.snapshot()).documents).toEqual([upload])
+  await expect(reopened.imageProject(first.id)).rejects.toThrow('图像工程已不存在')
 })
 
 it.each([false, true])('refreshes a regenerated file in place for preview and Agent references (legacy=%s)', async legacy => {

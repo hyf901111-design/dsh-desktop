@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { createKnowledgeSessionCopier, retainExistingKnowledgeCopies } from '../src/main/knowledge/session-copy'
 import { NotesStore } from '../src/main/notes/store'
 import { SpreadsheetStore } from '../src/main/spreadsheet/store'
@@ -172,4 +172,29 @@ test('recovers a saved copy in its original project without creating a new sessi
     ['session.create', { sessionId: saved, workspaceId: 'original-project' }],
     [saved, title, true]
   ])
+})
+
+test('restores an archived editable project with its original layer identities and grouping', async () => {
+  await fixture(async stores => {
+    const canvas = {
+      version: 1 as const, id: '232b75d7-42e1-4708-a293-a45c55ce4703', width: 960, height: 720, title: '已保存的海报',
+      layers: [{
+        kind: 'brand' as const, asset: 'container-left' as const, id: 'a6f25973-989d-41e3-a16b-1004964a2c87',
+        x: 0, y: 0, width: .3, height: .15, groupId: 'bd57fc8e-f851-4557-9432-75ed5b5b04cd',
+      }, {
+        kind: 'text' as const, id: '8179159d-a110-4acd-a852-e963df69b622', text: '保留分层',
+        color: '#005098', x: .2, y: .3, width: .6, fontSize: 44, family: 'system-ui' as const, weight: 600,
+        align: 'left' as const, groupId: 'bd57fc8e-f851-4557-9432-75ed5b5b04cd',
+      }],
+    }
+    const rpc: Rpc = async <T>(method: string, args: unknown) => {
+      if (method === 'workspace.list') return { items: [{ workspaceId: 'current', sessionIds: [] }] } as T
+      return args as T
+    }
+    const retain = vi.fn(async () => {})
+    const result = await createKnowledgeSessionCopier({ ...stores, rpc, retain })('recipient',
+      { mode: 'image-factory', title: canvas.title, canvas, epoch: 5 }, undefined, () => {}, true)
+    expect((await stores.canvases.read(result.id)).canvas).toEqual(canvas)
+    expect(retain).toHaveBeenCalledExactlyOnceWith(result.id, canvas.title, undefined, true)
+  })
 })
