@@ -128,6 +128,13 @@ it('keeps a closed canvas tab closed when Home leaves an older native scope to b
 
     f.sessionCatalog.clear()
     delete f.doc.body.dataset.workspaceSurface
+    show()
+    f.events('request-session', { entry: true })
+    // A stored standalone draft has a different scope, even when it has
+    // exactly the same title and pixels as the task the user closed.
+    expect(latest().tabs.map(tab => tab.scope)).toEqual(['native-session'])
+    expect(f.sessionsState.current).toBe('native-session')
+    delete f.doc.body.dataset.workspaceSurface
     // The native session can be reselected by the surrounding workspace.
     f.sessionCatalog.open(closed)
     show()
@@ -165,6 +172,20 @@ it('keeps a closed canvas tab closed when Home leaves an older native scope to b
     f.sessionCatalog.open(closed)
     f.events('canvas-intent-ended', closed)
     expect(latest().active).toBe(closed)
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+it('opens a blank board workspace session in its own canvas scope', async () => {
+  const f = fixture()
+  try {
+    const sessionId = 'board-app-board-file-session'
+    f.sessionsState.byId[sessionId] = { blank: true }
+    f.sessionCatalog.open(sessionId)
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const select = vi.fn()
+    f.doc.addEventListener('sherlock:image-factory-session', select)
+    f.events('request-session', { entry: true })
+    expect(select).toHaveBeenLastCalledWith(expect.objectContaining({ detail: { sessionId } }))
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 

@@ -14,8 +14,9 @@ export function installImageFactoryContext({
   const currentId = () => sessions.list.getSnapshot().current
   const canvasScope = () => {
     const { current, byId } = sessions.list.getSnapshot()
-    // The native sidebar only shows the currently selected empty session.
-    return current && !isBoardOnly(current) && (current.startsWith('image-task-') || byId?.[current]?.blank !== true) ? current : null
+    // Explicit task and board workspace sessions own their scope even before the first message.
+    return current && !isBoardOnly(current) &&
+      (current.startsWith('image-task-') || current.startsWith('board-app-') || byId?.[current]?.blank !== true) ? current : null
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
@@ -183,11 +184,11 @@ export function installImageFactoryContext({
     })
   }
   let publishedScope, intendedCanvas
-  function syncSession(force = false, reopen) {
+  function syncSession(force = false, reopen, entry = false) {
     const scope = canvasScope()
     // The list can stop reporting a blank conversation before its admitted user turn is visible.
     const awaitingAdmission = scope !== null && [...jobs.values()].some(job => job.sessionId === scope && job.draft && !job.promotion)
-    const sessionId = tasks.sync(awaitingAdmission ? null : scope, scope !== null && (scope === reopen || scope === intendedCanvas))
+    const sessionId = tasks.sync(awaitingAdmission ? null : scope, scope !== null && (scope === reopen || scope === intendedCanvas), entry)
     if (!force && sessionId === publishedScope) return
     publishedScope = sessionId
     signal('session', { sessionId })
@@ -199,7 +200,7 @@ export function installImageFactoryContext({
     publishedScope = intendedCanvas = undefined
     tasks.reset()
   }
-  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen), 'use-prompt': usePrompt,
+  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt,
     comment: event => { void submitCanvasAction(event, 'region') },
     cutout: event => { void submitCanvasAction(event, 'cutout') },
     'focus-chat': focus, reset,

@@ -33,32 +33,40 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       const requested = pendingSync
       pendingSync = undefined
       if (isActive()) {
-        if (epoch !== undefined) syncSession(true, requested?.reopen ? requested.scope : undefined)
-        else if (requested) reconcile(requested.scope, requested.reopen)
+        if (epoch !== undefined) syncSession(true, requested?.reopen ? requested.scope : undefined, requested?.entry)
+        else if (requested) reconcile(requested.scope, requested.reopen, requested.entry)
       }
       save()
       publish()
     })
   }
-  function sync(scope, reopen = false) {
+  function sync(scope, reopen = false, entry = false) {
     if (!isActive()) return scope
     load()
-    if (!loading) return reconcile(scope, reopen)
-    pendingSync = { scope, reopen: reopen || (pendingSync?.scope === scope && pendingSync.reopen) }
+    if (!loading) return reconcile(scope, reopen, entry)
+    pendingSync = { scope, reopen: reopen || (pendingSync?.scope === scope && pendingSync.reopen),
+      entry: entry || pendingSync?.entry }
     publish()
     return scope
   }
-  function reconcile(scope, reopen) {
+  function reconcile(scope, reopen, entry) {
     const closedTab = scope === null ? undefined : closed.find(tab => tab.scope === scope)
-    if (closedTab && !reopen) {
+    const skipClosed = closedTab && !reopen
+    // Home clears the SDK selection before hiding Images. Keep the open tab
+    // here, and only select its session when Images is explicitly entered.
+    const home = scope === null && active !== null && sessions.list.getSnapshot().current === undefined
+    if (skipClosed || home) {
       const available = tabs.filter(tab => tab.scope !== null && sessions.binding(tab.scope))
       const next = available.find(tab => tab.scope === active) ?? available.at(-1)
-      if (next) select(next.scope, false)
-      else {
+      if (next) {
+        if (skipClosed || entry) select(next.scope, false)
+        return next.scope
+      }
+      if (skipClosed) {
         draftSession = undefined
         sessions.clear()
+        return null
       }
-      return next?.scope ?? null
     }
     active = scope
     if (scope === null) draftSession = sessions.list.getSnapshot().current
@@ -93,6 +101,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   function select(scope, sync = true) {
     const sessionId = scope === null ? draftSession : scope
     if (sessionId && isBoardOnly(sessionId)) throw Error('看板会话不能作为图片任务打开。')
+    if (scope === null) active = null
     if (sessionId && sessions.binding(sessionId)) {
       setView?.(sessionId)
       sessions.open(sessionId)
@@ -167,11 +176,10 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
         publish()
       } else if (kind === 'close') {
         const tab = tabs[index]
-        if (isActive() && scope === active) {
-          const neighbor = tabs[index + 1] ?? tabs[index - 1]
-          if (neighbor) select(neighbor.scope)
-          else if (!await create(scope)) return
-        }
+        const neighbor = tabs[index + 1] ?? tabs[index - 1]
+        if (!neighbor) {
+          if (!await create(scope)) return
+        } else if (isActive() && scope === active) select(neighbor.scope)
         tabs = tabs.filter(tab => tab.scope !== scope)
         rememberClosed([tab])
         save()
