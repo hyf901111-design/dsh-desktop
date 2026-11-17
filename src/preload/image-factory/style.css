@@ -150,23 +150,15 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-art img {display:block;width:100%;height:100%;object-fit:contain;user-select:none}
 .if-gallery-mode {
   position:absolute;z-index:3;inset-inline-start:50%;inset-block-end:clamp(14px,3cqh,26px);
-  transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px;
-}
-.if-gallery-mode::before {
-  content:"";position:absolute;inset:-15px -22px;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse at center,#0b101bba 12%,#0b101b72 46%,transparent 76%);
-  backdrop-filter:blur(12px) saturate(.95);
-  mask-image:radial-gradient(ellipse at center,#000 20%,#0009 50%,transparent 76%);
+  transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100% - 24px);
 }
 .image-factory .if-gallery-mode .if-button {
-  position:relative;z-index:1;height:35px;padding-inline:11px;border-radius:4px;font-size:13px;font-weight:500;
-  color:#ffffffe0;background:transparent;text-shadow:0 1px 6px #000b;
+  position:relative;min-height:38px;height:auto;padding:8px 15px;border:0;border-radius:999px;
+  font-size:13px;line-height:18px;font-weight:500;color:#eff2f7;
+  background:rgba(20,24,31,.60);backdrop-filter:blur(18px) saturate(1.16);
 }
-.image-factory .if-gallery-mode .if-button:not(:disabled):hover {background:transparent;color:#fff}
-.image-factory .if-gallery-mode .if-button[aria-pressed=true] {color:#fff;background:transparent;font-weight:650}
-.if-gallery-mode .if-button[aria-pressed=true]::after {
-  content:"";position:absolute;left:50%;bottom:1px;width:16px;height:2px;transform:translateX(-50%);border-radius:2px;background:#fff;
-}
+.image-factory .if-gallery-mode .if-button[aria-pressed=true] {color:white;background:rgba(63,72,89,.82);font-weight:650}
+.image-factory .if-gallery-mode .if-button:not(:disabled):hover {color:white;background:rgba(67,77,96,.88)}
 .image-factory .if-gallery-close {
   position:absolute;z-index:3;inset-inline-end:14px;inset-block-start:14px;width:36px;height:36px;padding:0;border-radius:50%;
   background:color-mix(in srgb,var(--if-main) 65%,transparent);backdrop-filter:blur(16px) saturate(1.2);color:var(--if-ink);
