@@ -9,59 +9,48 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像画布、画廊和知识库预览修复",
+        "featureName": "图像 AI 水印、共享菜单、应用导航和底部面板",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "d940356a83e41fac66fa0e2785d329cdc3372b7a",
-        "tipCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+        "baseCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
+        "tipCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
         "commits": [
           {
-            "commit": "96238297736cca2a950cbfbf5255eb2ff03418f5",
+            "commit": "289dd5ade782a640f0db83a03fc803b92e77c329",
             "parents": [
-              "d940356a83e41fac66fa0e2785d329cdc3372b7a"
+              "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4"
             ],
-            "subject": "优化：去背景使用明确的主体描述"
+            "subject": "功能：图像工具栏增加可选 AI 水印"
           },
           {
-            "commit": "a1b45e56bd12535a58dc9a5e2dde8bb895b3edce",
+            "commit": "3eae1b9de50e1b541ad0e90917b9ba2b08b2735e",
             "parents": [
-              "96238297736cca2a950cbfbf5255eb2ff03418f5"
+              "289dd5ade782a640f0db83a03fc803b92e77c329"
             ],
-            "subject": "修复：支持文字图层移出画框并从图层列表找回"
+            "subject": "修复：他人共享子菜单正确模糊后方画布"
           },
           {
-            "commit": "7d53d93831e3c0e1d3cce5269c5e10eaa0713117",
+            "commit": "6800ae3deb31528792d925ee15e5793a46c86801",
             "parents": [
-              "a1b45e56bd12535a58dc9a5e2dde8bb895b3edce"
+              "3eae1b9de50e1b541ad0e90917b9ba2b08b2735e"
             ],
-            "subject": "修复：透明棋盘格遮住画板点阵"
+            "subject": "修复：应用就地切换并直达对话首页"
           },
           {
-            "commit": "cdc7fd2f7d06a884810cd62e61dc0d6b92ac6b00",
+            "commit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
             "parents": [
-              "7d53d93831e3c0e1d3cce5269c5e10eaa0713117"
+              "6800ae3deb31528792d925ee15e5793a46c86801"
             ],
-            "subject": "优化：校准画廊箭头并添加图像信息标签"
-          },
-          {
-            "commit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
-            "parents": [
-              "cdc7fd2f7d06a884810cd62e61dc0d6b92ac6b00"
-            ],
-            "subject": "修复：知识库可以预览图像应用生成的图片"
+            "subject": "修复：图像画布为底部面板实时留出空间"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-cutout.js"
+            "path": "scripts/lib/sidebar-new-note.mjs"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/sidebar-knowledge-preview.mjs"
+            "path": "scripts/lib/slash-command-flyout.mjs"
           },
           {
             "status": "M",
@@ -69,7 +58,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery.tsx"
+            "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/canvas-workspace.ts"
           },
           {
             "status": "M",
@@ -84,8 +77,32 @@
             "path": "src/preload/image-factory/view.tsx"
           },
           {
+            "status": "A",
+            "path": "src/preload/image-factory/watermark.ts"
+          },
+          {
             "status": "M",
-            "path": "src/preload/image-factory/viewport.ts"
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/image-factory-canvas.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-sidebar-entry.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/command-popup-position-browser.test.js"
           },
           {
             "status": "M",
@@ -93,19 +110,15 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory-gallery.test.ts"
+            "path": "test/sidebar-new-session-actions.test.ts"
           },
           {
             "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
+            "path": "test/workspace-bottom-panel-layout.test.js"
           },
           {
             "status": "M",
-            "path": "test/image-generation-tool.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-native-preview.test.ts"
+            "path": "test/workspace-surface-host.test.ts"
           }
         ],
         "checks": [
@@ -114,50 +127,77 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/knowledge-native-preview.test.ts",
-              "test/image-factory-native.test.js",
-              "test/image-generation-tool.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已有生成图片的知识库预览、来源图标、图像模型去背景",
-            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
-            "completedAt": "2026-11-17T03:36:08.234Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/image-factory-layer-gesture.test.ts",
               "test/image-factory-canvases.test.ts",
-              "test/image-factory.test.js",
-              "test/image-factory-canvas-workspace.test.ts"
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-actions-menu.test.ts",
+              "test/image-factory-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "画框外文字、图层重新选中、移动和保存",
-            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
-            "completedAt": "2026-11-17T03:36:08.234Z",
-            "timeoutMs": 120000
+            "summary": "图像画布保存和导出工具",
+            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+            "completedAt": "2026-11-17T04:07:22.166Z",
+            "timeoutMs": 150000
           },
           {
             "argv": [
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-gallery.test.ts",
-              "test/knowledge-workspace-rendered.test.js",
-              "test/image-factory-fonts-rendered.test.js",
-              "-t",
-              "displayed asset|pages several|Image Factory|poster typefaces",
-              "--hookTimeout",
-              "25000"
+              "test/command-popup-position-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "画廊实际尺寸、标签、滚动与光标交互",
-            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
-            "completedAt": "2026-11-17T03:36:08.234Z",
-            "timeoutMs": 120000
+            "summary": "斜杠菜单背景像素、鼠标点击、键盘与窄窗口",
+            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+            "completedAt": "2026-11-17T04:07:22.166Z",
+            "timeoutMs": 150000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-surface-host.test.ts",
+              "test/workspace-bottom-panel-layout.test.js",
+              "test/browser-app-view.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/browser-app-native.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "应用切换、底栏开关、拖动、窗口缩放",
+            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+            "completedAt": "2026-11-17T04:07:22.166Z",
+            "timeoutMs": 150000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "-t",
+              "opens Home directly|renders distinct New Chat"
+            ],
+            "outcome": "passed",
+            "summary": "主页、新对话和新研究走各自原生入口",
+            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+            "completedAt": "2026-11-17T04:07:22.166Z",
+            "timeoutMs": 150000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sidebar-new-note-install.test.js",
+              "-t",
+              "installs Shell twice"
+            ],
+            "outcome": "passed",
+            "summary": "侧栏生产补丁重复安装和移除",
+            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+            "completedAt": "2026-11-17T04:07:22.166Z",
+            "timeoutMs": 150000
           },
           {
             "argv": [
@@ -167,37 +207,26 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
-            "completedAt": "2026-11-17T03:36:08.234Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "git",
-              "diff",
-              "--check"
-            ],
-            "outcome": "passed",
-            "summary": "差异检查",
-            "verifiedCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
-            "completedAt": "2026-11-17T03:36:08.234Z",
-            "timeoutMs": 120000
+            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+            "completedAt": "2026-11-17T04:07:22.166Z",
+            "timeoutMs": 150000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 已检查画廊悬浮滚动区、箭头光学中心和两种主题的棋盘格像素。原生旧包已复现知识库报错。"
+          "summary": "真实 Chromium 验证水印位置、开关与 PNG/JPG 导出，斜杠菜单像素采样和原生底栏面板交互。"
         },
         "acceptanceCriteria": [
-          "画框外文字可在图层列表选中，并拖回画框。",
-          "画板点阵停留在画框外。",
-          "画廊按钮居中，使用场景和图像参数有标签底色。",
-          "最近入库的生成图能在右侧预览。"
+          "水印按画布保存并应用到显式导出。",
+          "他人共享菜单拥有真实模糊背景。",
+          "在应用间切换一次返回原工作区，侧栏主页直接进入对话首页。",
+          "图像画布随底部面板实时收缩。"
         ],
         "risks": [
-          "须在本地新包里用现有归档图片实测右栏预览。"
+          "本地新包仍需在真实客户端确认直达首页与面板撑开。",
+          "独立会话和补丁重入测试存在基线已有的其他分支失败。"
         ],
-        "generatedAt": "2026-11-17T03:36:08.234Z"
+        "generatedAt": "2026-11-17T04:07:22.166Z"
       }
     },
     {
