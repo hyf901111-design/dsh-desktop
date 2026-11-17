@@ -12,7 +12,7 @@ export type GalleryExample = {
   subtitle: Localized
 }
 
-export const galleryExamples: GalleryExample[] = [
+const originalExamples: GalleryExample[] = [
   {
     id: "steady-horizon", title: ["山海长跑", "The long view"], material: ["品牌海报", "Brand poster"], format: "3:4",
     scenes: ["品牌主视觉 · 年度主题", "Brand campaign · Annual theme"], subtitle: ["每一步，都算数", "Every step counts"],
@@ -21,7 +21,6 @@ export const galleryExamples: GalleryExample[] = [
       "An elevated view of an empty coastal road curving past blue-grey hills, with one small runner in the lower half. Pale morning air and open sky in the upper quarter; deep blue, slate and restrained warm light. No lettering or logos.",
     ],
   },
-  ...marketingExamples,
   {
     id: "blueprint-city", title: ["城际视野", "City perspectives"], material: ["会议背景", "Meeting backdrop"], format: "16:9",
     scenes: ["城市专题 · 市场观察", "City feature · Market insights"], subtitle: ["以广阔视野观察市场", "A wider view of markets"],
@@ -111,3 +110,14 @@ export const galleryExamples: GalleryExample[] = [
     ],
   },
 ]
+
+const templateOrder = [
+  'steady-horizon', 'efund-active-prism', 'blueprint-city', 'efund-etf-feature-cards',
+  'research-desk', 'efund-index-bridge', 'beacon', 'efund-harvest', 'efund-fund-learning',
+  'efund-industry-pinwheel', 'forward', 'efund-innovation-archive', 'new-year-light',
+  'efund-industrial-star', 'efund-glass-transition', 'efund-bond-pavilion', 'efund-marathon-city',
+  'momentum', 'efund-mountain-ridge', 'product-prism', 'architecture', 'craft', 'open-water', 'first-light',
+]
+const templatePosition = new Map(templateOrder.map((id, index) => [id, index]))
+export const galleryExamples: GalleryExample[] = [...originalExamples, ...marketingExamples]
+  .sort((a, b) => (templatePosition.get(a.id) ?? templateOrder.length) - (templatePosition.get(b.id) ?? templateOrder.length))

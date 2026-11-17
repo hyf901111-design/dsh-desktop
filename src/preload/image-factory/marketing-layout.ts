@@ -33,13 +33,13 @@ export function drawMarketingLayout(example: GalleryExample, t: Localize, copy: 
   rule(headerX, headerY - .012, wide ? .031 : .088, header.accent)
   copy(t(...campaign.kicker), headerX, headerY, headerWidth, wide ? .014 : .025, header.accent, 700)
   copy(t(...example.title), headerX, headerY + (wide ? .058 : .031), headerWidth, wide ? .055 : .081, header.ink,
-    header.serif ? 400 : 800, 'left', header.serif ? 'ZCOOL XiaoWei' : 'Source Han Sans CN')
+    header.serif ? 400 : 700, 'left', header.serif ? 'ZCOOL XiaoWei' : 'Source Han Sans CN')
   copy(t(...example.subtitle), headerX, headerY + (wide ? .177 : square ? .125 : .093),
     square ? .46 : headerWidth, wide ? .019 : .034, header.ink, 500)
 
   const feature = (index: number, x: number, y: number, width: number, tone = ink, supporting = muted, scale = 1) => {
     const [title, detail] = features[index]!
-    copy(t(...title), x, y, width, .027 * scale, tone, 800)
+    copy(t(...title), x, y, width, .027 * scale, tone, 700)
     copy(t(...detail), x, y + (wide ? .046 : .022), width, .022 * scale, supporting)
   }
 
@@ -139,7 +139,7 @@ export function drawMarketingLayout(example: GalleryExample, t: Localize, copy: 
   const bodyWidth = wide ? .40 : .867
   const detailY = wide ? .445 : square ? .578 : compact ? .769 : distribution === 'cards' ? .813 : .778
   const bodyY = wide ? .665 : square ? .793 : compact ? .819 : distribution === 'cards' ? .847 : .817
-  copy(t(...campaign.product), .066, detailY, bodyWidth, wide ? .025 : square ? .047 : .052, ink, 800)
+  copy(t(...campaign.product), .066, detailY, bodyWidth, wide ? .025 : square ? .047 : .052, ink, 700)
   copy(t(...campaign.description), .066, bodyY, bodyWidth, wide ? .016 : distribution === 'cards' ? .021 : .026, ink)
 
   if (fields === 'event') {
@@ -158,11 +158,11 @@ export function drawMarketingLayout(example: GalleryExample, t: Localize, copy: 
     const label = t(dual ? '份额代码' : '产品代码', dual ? 'SHARE CLASS' : 'FUND CODE')
     block(ink, .066, .865, dual ? .588 : .48, .038)
     copy(label, .081, .874, .139, .018, panel, 700)
-    copy(dual ? 'A 〔代码〕' : '〔代码〕', .229, .871, .185, .028, panel, 800)
-    if (dual) copy('C 〔代码〕', .445, .871, .176, .028, panel, 800)
+    copy(dual ? 'A 〔代码〕' : '〔代码〕', .229, .871, .185, .028, panel, 700)
+    if (dual) copy('C 〔代码〕', .445, .871, .176, .028, panel, 700)
     copy(t('〔填写发布安排〕', '[launch details]'), dual ? .675 : .574, .873, dual ? .258 : .359, .026, ink, 700)
     rule(.066, .926, bodyWidth)
-    copy(t('风险提示及资料来源', 'RISK DISCLOSURES AND SOURCES'), .066, .936, bodyWidth, .020, ink, 800)
+    copy(t('风险提示及资料来源', 'RISK DISCLOSURES AND SOURCES'), .066, .936, bodyWidth, .020, ink, 700)
     copy(t('基金有风险，投资需谨慎。请补充经审核的产品风险提示。\n注：此处填写正式公告、数据来源及适用日期。',
       'Funds involve investment risk. Add approved fund-specific disclosures.\nNote: Add the relevant announcement, source and date.'),
       .066, .955, bodyWidth, .018, muted)
