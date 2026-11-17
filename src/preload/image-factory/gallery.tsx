@@ -4,13 +4,13 @@ import type { GalleryCategory } from './enterprise-gallery'
 import { galleryTemplateLayers } from './gallery-layout'
 import { promptExamples, type PromptExample } from './prompt-gallery'
 import { textLayerStyle } from './layers'
+import { templatePhoto, templatePhotoFrame } from './template-photo'
 import { brandArtwork } from './brand-artwork'
 import { iconSource } from './icons'
 import type { Size } from './raster'
 
 const art = import.meta.glob('./gallery-art/*.jpg', { eager: true, query: '?inline', import: 'default' }) as Record<string, string>
 export const galleryArtwork = (id: string) => art['./gallery-art/' + id + '.jpg']
-export const templatePhoto = (example: GalleryExample) => example.enterprise ? example.enterprise.photo : example.id
 const categories = [
   ['all', '全部', 'All'], ['efund', '易方达品牌', 'E Fund'], ['enterprise', '企业通用', 'Enterprise'],
   ['events', '会议活动', 'Events'], ['brand', '品牌传播', 'Brand'], ['social', '社交媒体', 'Social'],
@@ -30,8 +30,12 @@ const TemplatePreview = memo(function TemplatePreview({ example, size, photo, t 
 }) {
   let index = 0
   const layers = galleryTemplateLayers(example, size, t, () => String(index++))
+  const frame = templatePhotoFrame(example, size)
   return <svg className="if-gallery-layout" viewBox={`0 0 ${size.width} ${size.height}`} aria-hidden="true">
-    {photo && <image href={photo} width={size.width} height={size.height} preserveAspectRatio="xMidYMid slice"/>}
+    {photo && <>
+      <rect width={size.width} height={size.height} fill="#ffffff"/>
+      <image href={photo} x={frame.x} y={frame.y} width={frame.width} height={frame.height} preserveAspectRatio="xMidYMid slice"/>
+    </>}
     {layers.map(layer => {
       const x = layer.x * size.width, y = layer.y * size.height, width = layer.width * size.width
       if (layer.kind === 'brand') return <image key={layer.id} href={brandArtwork[layer.asset].src}
