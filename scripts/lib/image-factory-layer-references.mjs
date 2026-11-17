@@ -4,15 +4,29 @@ export function readImageLayerReference(raw) {
   if (!value || (value.scope !== null && (typeof value.scope !== 'string' || !/^[A-Za-z0-9_-]{1,256}$/u.test(value.scope))) ||
       !uuid.test(value.sceneId) || !uuid.test(value.layerId) || typeof value.label !== 'string' ||
       !value.label.trim() || value.label.length > 64 || /[\p{Cc}]/u.test(value.label)) throw Error('图层引用无效。')
-  return { scope: value.scope, sceneId: value.sceneId, layerId: value.layerId, label: value.label }
+  return { scope: value.scope, sceneId: value.sceneId, layerId: value.layerId, label: value.label,
+    ...(value.provisional === true && { provisional: true }) }
+}
+
+export function isImageLayerPreview(occurrence) {
+  if (occurrence?.source !== 'image-factory-layer') return false
+  try { return readImageLayerReference(occurrence.ref).provisional === true } catch { return false }
 }
 
 export function imageLayerReferenceCodec() {
   return {
     trigger: '@', name: 'image-factory-layer', order: 10007, candidates: async () => [], onPick: () => undefined,
     codec: {
-      clipboardText: raw => { try { return readImageLayerReference(raw).label } catch { return '' } },
-      serialize: async raw => '〔odyssey-layer:' + encodeURIComponent(JSON.stringify(readImageLayerReference(raw))) + '〕',
+      clipboardText: raw => {
+        try {
+          const reference = readImageLayerReference(raw)
+          return reference.provisional ? '' : reference.label
+        } catch { return '' }
+      },
+      serialize: async raw => {
+        const reference = readImageLayerReference(raw)
+        return reference.provisional ? '' : '〔odyssey-layer:' + encodeURIComponent(JSON.stringify(reference)) + '〕'
+      },
     },
   }
 }

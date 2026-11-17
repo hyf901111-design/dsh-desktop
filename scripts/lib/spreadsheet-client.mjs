@@ -206,7 +206,10 @@ ${welcomeAnchor}`,'right pane welcome component')
  const remove='(researchReference !== null || chip.source === "pptx-annotation") && selectedResearchOccurrenceId'
  change(remove,remove.replace('|| chip.source', '|| chip.source === "spreadsheet-range" || chip.source === "knowledge-reference" || chip.source === "image-factory-layer" || chip.source'),'range chip removal')
  const nativeDrag='draggable: researchReference !== null && !provisionalResearchReferences.has(chip.occurrenceId) && !locked && !machineBusy,'
- change(nativeDrag,nativeDrag.replace('researchReference !== null', '(researchReference !== null || chip.source === "image-factory-layer")'),'layer chip dragging')
+ change(nativeDrag,nativeDrag.replace('researchReference !== null', '(researchReference !== null || chip.source === "image-factory-layer")')
+  .replace('&& !locked', '&& !isImageLayerPreview(chip) && !locked'),'layer chip dragging')
+ const provisionalMark='"data-provisional": provisionalResearchReferences.has(chip.occurrenceId) || void 0,'
+ change(provisionalMark,provisionalMark.replace('|| void 0', '|| isImageLayerPreview(chip) || void 0'),'layer chip provisional state')
  for(const kind of ['onDragStart','onDragEnd']){
   const disabled=kind+': researchReference === null ? void 0 :'
   change(disabled,disabled.replace('researchReference === null','researchReference === null && chip.source !== "image-factory-layer"'),'layer chip '+kind)

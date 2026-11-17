@@ -214,7 +214,7 @@ export function patchBrowserAppNative(input){
  replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n
 ctx.effect(()=>{
  const factory=(${installImageFactoryContext.toString()})({
-   sessions,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
+   sessions,removeProvisionalReference:deleteProvisionalResearchReferenceOccurrence,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
    getTaskWorkspace:()=>{const state=workspaces.list.getSnapshot(), current=sessions.list.getSnapshot().current;
      return state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??eworkPendingConversation?.getSnapshot().workspaceId??state.recentWorkspaceId},
    setTaskView:id=>slots.resolveStore(chatStore,id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
@@ -226,6 +226,14 @@ ctx.effect(()=>{
 `)
  replace('const result = await session.prompt(content, mode);',
   "const result = await (eworkImageFactory ? eworkImageFactory.prompt(session,content,mode) : session.prompt(content,mode));")
+ const provisionalDeletion='function deleteProvisionalResearchReferenceOccurrence(keyboard, occurrenceId, trailingSpace) {\n\t\t\tconst snapshot = keyboard.snapshot;\n\t\t\tconst occurrence = snapshot.occurrences.find((candidate) => candidate.occurrenceId === occurrenceId && (candidate.source === RESEARCH_FILE_REFERENCE_SOURCE || candidate.source === RESEARCH_ARTIFACT_REFERENCE_SOURCE));';
+ replace(provisionalDeletion,provisionalDeletion.replace('candidate.source === RESEARCH_ARTIFACT_REFERENCE_SOURCE','candidate.source === RESEARCH_ARTIFACT_REFERENCE_SOURCE || isImageLayerPreview(candidate)'));
+ const click='if (locked || machineBusy || event.detail !== 1 || backdropEl === null) return;';
+ replace(click,click+'\n                eworkImageFactory?.confirmLayerPreview(keyboard);');
+ const deleteSelected='const provisional = provisionalResearchReferencesRef.current.get(occurrenceId);';
+ replace(deleteSelected,'const imagePreviewRemoved = eworkImageFactory?.clearLayerPreview(keyboard, occurrenceId);\n                    '+deleteSelected)
+ const caret='const caret = provisional === void 0 ? deleteInlineReferenceOccurrence(keyboard, occurrenceId) : provisionalDeletion?.caret ?? null;';
+ replace(caret,'const caret = imagePreviewRemoved?.caret ?? (provisional === void 0 ? deleteInlineReferenceOccurrence(keyboard, occurrenceId) : provisionalDeletion?.caret ?? null);');
  const bubbleStart=source.indexOf('function UserStyleBubble(')
  const bubbleEnd=source.indexOf('function PendingSteeringBubble(',bubbleStart)
  const bubble=source.slice(bubbleStart,bubbleEnd)
