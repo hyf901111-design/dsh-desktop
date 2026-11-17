@@ -9,116 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像 AI 水印、共享菜单、应用导航和底部面板",
+        "featureName": "应用退出后恢复中央对话首页",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4",
-        "tipCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+        "baseCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
+        "tipCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
         "commits": [
           {
-            "commit": "289dd5ade782a640f0db83a03fc803b92e77c329",
+            "commit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
             "parents": [
-              "4a2e754ec5da0ef64974d9b63c5b11c32181a2a4"
+              "752ccfc8a4b0fdf10e0f3fd61248bd3111903585"
             ],
-            "subject": "功能：图像工具栏增加可选 AI 水印"
-          },
-          {
-            "commit": "3eae1b9de50e1b541ad0e90917b9ba2b08b2735e",
-            "parents": [
-              "289dd5ade782a640f0db83a03fc803b92e77c329"
-            ],
-            "subject": "修复：他人共享子菜单正确模糊后方画布"
-          },
-          {
-            "commit": "6800ae3deb31528792d925ee15e5793a46c86801",
-            "parents": [
-              "3eae1b9de50e1b541ad0e90917b9ba2b08b2735e"
-            ],
-            "subject": "修复：应用就地切换并直达对话首页"
-          },
-          {
-            "commit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-            "parents": [
-              "6800ae3deb31528792d925ee15e5793a46c86801"
-            ],
-            "subject": "修复：图像画布为底部面板实时留出空间"
+            "subject": "修复：应用退出后恢复中央对话首页"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
+            "path": "scripts/lib/browser-app-native.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/slash-command-flyout.mjs"
+            "path": "scripts/lib/pending-conversation.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/state/image-factory-canvases.ts"
+            "path": "test/fixtures/pending-conversation-browser.tsx"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/canvas-workspace.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/image-factory/watermark.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/image-factory-canvas.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-view.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/command-popup-position-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-canvases.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-session-actions.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/workspace-bottom-panel-layout.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workspace-surface-host.test.ts"
+            "path": "test/pending-conversation-rendered.test.js"
           }
         ],
         "checks": [
@@ -127,76 +46,16 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-factory-native.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "图像画布保存和导出工具",
-            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-            "completedAt": "2026-11-17T04:07:22.166Z",
-            "timeoutMs": 150000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/command-popup-position-browser.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "斜杠菜单背景像素、鼠标点击、键盘与窄窗口",
-            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-            "completedAt": "2026-11-17T04:07:22.166Z",
-            "timeoutMs": 150000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
+              "test/pending-conversation-rendered.test.js",
+              "test/pending-conversation.test.js",
+              "test/browser-region-native.test.js",
               "test/workspace-surface-host.test.ts",
-              "test/workspace-bottom-panel-layout.test.js",
-              "test/browser-app-view.test.ts",
-              "test/browser-sidebar-entry.test.ts",
               "test/browser-app-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "应用切换、底栏开关、拖动、窗口缩放",
-            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-            "completedAt": "2026-11-17T04:07:22.166Z",
-            "timeoutMs": 150000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens Home directly|renders distinct New Chat"
-            ],
-            "outcome": "passed",
-            "summary": "主页、新对话和新研究走各自原生入口",
-            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-            "completedAt": "2026-11-17T04:07:22.166Z",
-            "timeoutMs": 150000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-note-install.test.js",
-              "-t",
-              "installs Shell twice"
-            ],
-            "outcome": "passed",
-            "summary": "侧栏生产补丁重复安装和移除",
-            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-            "completedAt": "2026-11-17T04:07:22.166Z",
+            "summary": "首页回归、草稿发送、浏览器会话交接及应用切换",
+            "verifiedCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
+            "completedAt": "2026-11-17T04:34:08.174Z",
             "timeoutMs": 150000
           },
           {
@@ -207,26 +66,24 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "752ccfc8a4b0fdf10e0f3fd61248bd3111903585",
-            "completedAt": "2026-11-17T04:07:22.166Z",
+            "verifiedCommit": "6a3c7b367b956dc6c713fd5c8d0041e83a02200a",
+            "completedAt": "2026-11-17T04:34:08.174Z",
             "timeoutMs": 150000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Chromium 验证水印位置、开关与 PNG/JPG 导出，斜杠菜单像素采样和原生底栏面板交互。"
+          "summary": "Chromium 使用真实会话组件及 WorkspaceSurfaceHost 验证右侧屏开启时的返回和主页，保留原草稿及项目并从首页发送。"
         },
         "acceptanceCriteria": [
-          "水印按画布保存并应用到显式导出。",
-          "他人共享菜单拥有真实模糊背景。",
-          "在应用间切换一次返回原工作区，侧栏主页直接进入对话首页。",
-          "图像画布随底部面板实时收缩。"
+          "从独立应用退出，按当前会话进入中央首页或原会话。",
+          "右侧屏展开时，中央首页仍可见并复用待发草稿。",
+          "连续切换多个应用后，返回仅执行一次。"
         ],
         "risks": [
-          "本地新包仍需在真实客户端确认直达首页与面板撑开。",
-          "独立会话和补丁重入测试存在基线已有的其他分支失败。"
+          "集成包装后需复验真实桌面窗口。"
         ],
-        "generatedAt": "2026-11-17T04:07:22.166Z"
+        "generatedAt": "2026-11-17T04:34:08.174Z"
       }
     },
     {
