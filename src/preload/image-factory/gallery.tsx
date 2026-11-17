@@ -31,6 +31,8 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
     let previousTime: number | undefined
     let position = node.scrollLeft
     let paging: { from: number; to: number; start?: number } | undefined
+    let overContent = false
+    let keyboardFocus = false
 
     const move = (now: number) => {
       if (paging) {
@@ -59,7 +61,7 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
 
     const updateMotion = () => {
       if (cycleWidth && paging) return
-      if (!cycleWidth || reducedMotion.matches || node.matches(':hover, :focus-within')) {
+      if (!cycleWidth || reducedMotion.matches || overContent || keyboardFocus) {
         win.cancelAnimationFrame(frame)
         frame = 0
         paging = undefined
@@ -95,20 +97,41 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
       node.scrollLeft += event.deltaY * scale
     }
 
+    const trackPointer = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') return
+      const target = event.type === 'pointerout' ? event.relatedTarget : event.target
+      const content = target instanceof win.Element ? target.closest('.if-gallery-hover') : null
+      const isOverContent = content !== null && node.contains(content)
+      if (overContent === isOverContent) return
+      overContent = isOverContent
+      updateMotion()
+    }
+
+    const trackFocus = (event: FocusEvent) => {
+      keyboardFocus = event.type === 'focusin' &&
+        event.target instanceof win.Element && event.target.matches(':focus-visible')
+      updateMotion()
+    }
+
     const observer = new ResizeObserver(([entry]) => {
       if (entry) cycleWidth = entry.target.getBoundingClientRect().width
       updateMotion()
     })
     observer.observe(cycle)
-    const motionEvents = ['pointerenter', 'pointerleave', 'focusin', 'focusout']
-    for (const event of motionEvents) node.addEventListener(event, updateMotion)
+    node.addEventListener('pointerover', trackPointer)
+    node.addEventListener('pointerout', trackPointer)
+    node.addEventListener('focusin', trackFocus)
+    node.addEventListener('focusout', trackFocus)
     reducedMotion.addEventListener('change', updateMotion)
     node.addEventListener('wheel', wheel, { passive: false })
     return () => {
       page.current = undefined
       win.cancelAnimationFrame(frame)
       observer.disconnect()
-      for (const event of motionEvents) node.removeEventListener(event, updateMotion)
+      node.removeEventListener('pointerover', trackPointer)
+      node.removeEventListener('pointerout', trackPointer)
+      node.removeEventListener('focusin', trackFocus)
+      node.removeEventListener('focusout', trackFocus)
       reducedMotion.removeEventListener('change', updateMotion)
       node.removeEventListener('wheel', wheel)
     }
@@ -126,7 +149,7 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
             const ratio = size && imageRatio(size)
             const useLabel = t('做同款', 'Make something like this')
             return <article className="if-gallery-card" key={example.id}>
-              <button type="button" className="if-gallery-art" disabled={busy} tabIndex={repeated ? -1 : undefined}
+              <button type="button" className="if-gallery-art if-gallery-hover" disabled={busy} tabIndex={repeated ? -1 : undefined}
                 aria-label={title + ' · ' + useLabel}
                 onClick={() => onUse(ratio ? prompt + '\n' + t('画面比例为 ' + ratio + '。', 'Aspect ratio: ' + ratio + '.') : prompt)}>
                 <img alt="" src={art['./gallery-art/' + example.id + '.jpg']} draggable={false}
@@ -137,12 +160,16 @@ export function ImageFactoryGallery({ t, busy, onUse }: { t: T; busy: boolean; o
                 <span className="if-gallery-use">{useLabel}<i className="if-symbol"
                   style={{ maskImage: `url("${iconSource('arrow-up')}")` }} aria-hidden="true"/></span>
               </button>
-              <h3>{title}</h3>
-              <span className="if-gallery-caption">{t('提示词', 'Prompt')}</span>
-              <p>{prompt}</p>
+              <h3><span className="if-gallery-hover">{title}</span></h3>
+              <span className="if-gallery-caption if-gallery-hover">{t('提示词', 'Prompt')}</span>
+              <p><span className="if-gallery-hover">{prompt}</span></p>
               <dl>
-                <dt>{t('使用场景', 'Use cases')}</dt><dd>{t(...example.scenes)}</dd>
-                {size && <><dt>{t('图像参数', 'Image settings')}</dt><dd>{ratio} · {size.width} × {size.height} px</dd></>}
+                <dt><span className="if-gallery-hover">{t('使用场景', 'Use cases')}</span></dt>
+                <dd><span className="if-gallery-hover">{t(...example.scenes)}</span></dd>
+                {size && <>
+                  <dt><span className="if-gallery-hover">{t('图像参数', 'Image settings')}</span></dt>
+                  <dd><span className="if-gallery-hover">{ratio} · {size.width} × {size.height} px</span></dd>
+                </>}
               </dl>
             </article>
           })}
