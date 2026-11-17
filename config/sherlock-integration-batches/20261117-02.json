@@ -9,38 +9,75 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像编辑排版复测与分层工程入库",
+        "featureName": "易方达模板排版与画布框选外框",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "46e2edd378f69d8cc3f015242f6717bbbac2f1e7",
-        "tipCommit": "df19eccaa6a159d67f9c5d35891a2fb8cc21b2c2",
+        "baseCommit": "df19eccaa6a159d67f9c5d35891a2fb8cc21b2c2",
+        "tipCommit": "95ea1a791f8a77d01ce869b1e42aa6c9ab32b0fb",
         "commits": [
           {
-            "commit": "df19eccaa6a159d67f9c5d35891a2fb8cc21b2c2",
+            "commit": "95ea1a791f8a77d01ce869b1e42aa6c9ab32b0fb",
             "parents": [
-              "46e2edd378f69d8cc3f015242f6717bbbac2f1e7"
+              "df19eccaa6a159d67f9c5d35891a2fb8cc21b2c2"
             ],
-            "subject": "在合成边界裁切画廊悬停圆角"
+            "subject": "优化易方达模板排版并显示框选元素的独立外框"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "src/preload/image-factory/gallery-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/marketing-layout.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "95ea1a791f8a77d01ce869b1e42aa6c9ab32b0fb",
+            "completedAt": "2026-11-17T13:28:58.974Z",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "npx",
               "vitest",
               "run",
               "test/image-factory-gallery.test.ts",
-              "test/image-factory-actions-menu.test.ts"
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-layer-gesture.test.ts"
             ],
             "outcome": "passed",
-            "summary": "10 项画廊和菜单聚焦测试通过。",
-            "verifiedCommit": "df19eccaa6a159d67f9c5d35891a2fb8cc21b2c2",
-            "completedAt": "2026-11-17T12:46:57.555Z",
+            "summary": "31 项画廊、画布和图层交互聚焦测试通过。",
+            "verifiedCommit": "95ea1a791f8a77d01ce869b1e42aa6c9ab32b0fb",
+            "completedAt": "2026-11-17T13:28:58.974Z",
             "timeoutMs": 120000
           }
         ],
@@ -49,19 +86,11 @@
           "summary": "聚焦测试完成，等待签名客户端复核。"
         },
         "acceptanceCriteria": [
-          "模板海报排版整改，同列短模板可叠放且不会纵向移动。",
-          "模板画廊采用研究画板点阵，底部无描边模糊圆角按钮，悬停蒙层覆盖到底。",
-          "导出 PNG 和 JPG，主动保存进入我的图像并还原可编辑图层。",
-          "针对图层修改成功与生成失败的回执正确。"
+          "主动 ETF、投教知识卡、产业机会模板排版和配图有合理的留白，并减少重复的短装饰线。",
+          "框选多个可编辑元素时，逐个显示各元素外框并保留总选区。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-17T12:46:57.555Z"
-      },
-      "merged": {
-        "mergeCommit": "6adcdedccad77c58f8b59ae777ef3ef0fb97dea2",
-        "verificationCommit": "6adcdedccad77c58f8b59ae777ef3ef0fb97dea2",
-        "checks": [],
-        "recordedAt": "2026-11-17T12:47:03.426Z"
+        "generatedAt": "2026-11-17T13:28:58.974Z"
       }
     }
   ],
