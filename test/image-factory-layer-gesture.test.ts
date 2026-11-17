@@ -276,10 +276,11 @@ it.each(['Backspace', 'Delete'])('deletes the selected text layer with %s after 
     await act(async () => expect(keydown(input)).toBe(true))
     expect(write).not.toHaveBeenCalled()
     await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true })))
+    expect(document.activeElement).toBe(document.querySelector('.if-raster'))
     const font = document.querySelector<HTMLInputElement>('input[aria-label="字号"]')!
     await act(async () => expect(keydown(font)).toBe(true))
     expect(write).not.toHaveBeenCalled()
-    await act(async () => expect(keydown(textLabel())).toBe(false))
+    await act(async () => expect(keydown(document.activeElement!)).toBe(false))
     expect(write.mock.calls.at(-1)?.[0].canvas.layers).toEqual([remaining])
     expect(textLabel()).toBeNull()
   } finally {

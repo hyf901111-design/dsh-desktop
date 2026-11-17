@@ -722,7 +722,10 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
       return
     }
     if (event.key !== 'Escape' || commentPending || (!editing && !tool && !area)) return
-    event.stopPropagation(); clearSelection(); releaseText()
+    event.stopPropagation()
+    clearSelection()
+    if (editing) imageFrame.current?.focus({ preventScroll: true })
+    releaseText()
   }}>
     <header className="if-top eb-tabs workspace-app-topbar" data-crowded={!!tasks && tasks.tabs.length > 6} ref={header} onKeyDown={event => {
       if (event.key !== 'Escape' || !workspaceExpanded) return
@@ -804,7 +807,12 @@ function Editor({ doc, bridge, workspace, close, t }: { doc: Document; bridge: B
                 }} className="if-text-layer" data-canvas-text-id={layer.id} data-selected="true" aria-label={t('编辑画布文本', 'Edit canvas text')}
                   autoFocus rows={1} spellCheck={false} value={layer.text} maxLength={500}
                   style={style} placeholder={t('输入文本', 'Enter text')} onChange={e => patchLayer(layer.id, { text: e.target.value })}
-                  onKeyDown={event => { if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); releaseText(layer.id) } }}
+                  onKeyDown={event => {
+                    if (!(event.metaKey || event.ctrlKey) || event.key !== 'Enter' || event.nativeEvent.isComposing) return
+                    event.preventDefault()
+                    imageFrame.current?.focus({ preventScroll: true })
+                    releaseText(layer.id)
+                  }}
                   onBlur={event => { if (!event.relatedTarget?.closest('.if-text-format')) releaseText(layer.id) }}/>
                   : <div key={layer.id} className="if-text-layer" data-canvas-text-id={layer.id} data-selected={selectedId === layer.id} style={style}
                     tabIndex={tool || busy ? -1 : 0} role="button" aria-label={layer.text}
