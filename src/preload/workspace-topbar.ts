@@ -72,6 +72,11 @@ const styles = `
 .eb-tab{transition:background-color 120ms ease}
 .eb-tab:not([aria-selected=true]):hover{background:color-mix(in srgb,var(--eb-field) 50%,transparent)}
 .workspace-app-topbar.eb-tabs{padding-right:var(--eb-tabs-right,12px)}
+.eb-root>.workspace-app-topbar.eb-tabs{-webkit-app-region:var(--eb-titlebar-region,drag);user-select:none}
+.eb-root>.eb-tabs :is(.eb-app-label,.eb-app-label *){-webkit-app-region:var(--eb-titlebar-region,drag)}
+/* Let the top bar receive outside clicks while a menu is open. */
+.eb-root:has(>.eb-overlay-layer>*),
+body:has(.odyssey-workspace-search,.st-menu[data-sidebar-more],[data-browser-page-context-menu],dialog[data-explore-menu][open]) .eb-root{--eb-titlebar-region:no-drag}
 .workspace-app-topbar.eb-tabs .eb-tab-scroll,.workspace-app-topbar.eb-tabs button,.workspace-app-topbar.eb-tabs .eb-tab{-webkit-app-region:no-drag}
 .workspace-app-topbar .eb-icon{display:inline-block;width:17px;height:17px;flex:none;background:currentColor;mask:var(--eb-icon) center/contain no-repeat;vertical-align:middle}
 .workspace-app-topbar.eb-tabs>.eb-icon-button{display:grid;place-items:center;width:32px;height:32px;padding:0;flex:none;color:var(--eb-muted)!important}
