@@ -280,11 +280,14 @@ function EWorkImageFactoryWelcome() {
     : (en ? 'Create a Weekend Coffee Market poster for November 21–22. Use a warm brown palette and cream typography.'
       : '做一张「周末咖啡市集」海报，活动为 11 月 21–22 日。用暖棕色和奶油白标题，右下放一杯咖啡。')
   const h = react.createElement
+  const icon = name => h('i', { className: 'if-symbol', 'data-if-welcome-icon': name, 'aria-hidden': true })
   return h('div', { className: 'ew-sheet-welcome', 'data-mode-welcome': 'image-factory' },
     h('div', { className: 'ew-sheet-welcome-content' }, h('h2', null, labels[0]), h('p', null, labels[1]),
       h('div', { className: 'ew-sheet-welcome-actions' },
-        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.fill(prompt) }, labels[2]),
-        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.action('import') }, labels[3]))))
+        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.fill(prompt) },
+          icon(state.current ? 'adjust' : 'spark'), h('span', null, labels[2])),
+        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.action('import') },
+          icon(state.current ? 'image' : 'upload'), h('span', null, labels[3])))))
 }
 
 export const imageFactoryNativeSource = `

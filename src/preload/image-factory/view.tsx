@@ -934,7 +934,11 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   const root = doc.createElement('div')
   root.className = 'image-factory'
   const style = doc.createElement('style')
-  style.textContent = imageFactoryFontFaces + '\n' + styles
+  const welcomeIcons = ['adjust', 'spark', 'image', 'upload'].map(name => {
+    const src = iconSource(name)
+    return src ? `[data-mode-welcome="image-factory"] [data-if-welcome-icon="${name}"]{--if-icon:url("${src.replaceAll('"', '%22')}");--if-icon-size:16px}` : ''
+  })
+  style.textContent = [imageFactoryFontFaces, styles, ...welcomeIcons].join('\n')
   doc.head.append(style)
   host.register('image-factory', root)
   const react = createRoot(root)
