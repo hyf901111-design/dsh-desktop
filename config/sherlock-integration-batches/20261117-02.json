@@ -11,58 +11,97 @@
         "schemaVersion": 1,
         "featureName": "图像画板编辑与企业模板画廊",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "df1cc29f384220aae529a68bf47cc7d540fe607e",
-        "tipCommit": "c9245d6982670f48e213c397cfb0a96cc7a79c13",
+        "baseCommit": "c9245d6982670f48e213c397cfb0a96cc7a79c13",
+        "tipCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
         "commits": [
           {
-            "commit": "c9245d6982670f48e213c397cfb0a96cc7a79c13",
+            "commit": "01abe271134e70f1bd24b0ce925cf929c18169ca",
             "parents": [
-              "df1cc29f384220aae529a68bf47cc7d540fe607e"
+              "c9245d6982670f48e213c397cfb0a96cc7a79c13"
             ],
-            "subject": "修复：提示词画廊正确遵循减少动态效果"
+            "subject": "优化：提示词画廊悬停显示渐进模糊和做同款"
+          },
+          {
+            "commit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
+            "parents": [
+              "01abe271134e70f1bd24b0ce925cf929c18169ca"
+            ],
+            "subject": "功能：工具栏自动收纳工具并支持画布框选多选"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "src/preload/image-factory/actions-menu.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
+          },
+          {
+            "status": "M",
             "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-actions-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
           }
         ],
         "checks": [
           {
             "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "类型检查通过。",
+            "verifiedCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
+            "completedAt": "2026-11-17T10:56:24.141Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
               "npx",
               "vitest",
               "run",
-              "test/image-factory-gallery.test.ts"
+              "test/image-factory-actions-menu.test.ts",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-gallery.test.ts",
+              "test/image-factory.test.js"
             ],
             "outcome": "passed",
-            "summary": "三项画廊聚焦测试通过。",
-            "verifiedCommit": "c9245d6982670f48e213c397cfb0a96cc7a79c13",
-            "completedAt": "2026-11-17T10:42:52.493Z",
+            "summary": "46 项图像应用聚焦测试通过。",
+            "verifiedCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
+            "completedAt": "2026-11-17T10:56:24.141Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "签名桌面版已验证易方达画廊、待插入与多图层联合修改；本次 CSS 兼容修复将在签名客户端复验。"
+          "summary": "最新交互等待集成签名桌面预览复验。"
         },
         "acceptanceCriteria": [
-          "工具栏保留图层与品牌资产切换，侧栏只显示标题和关闭。",
-          "图层选中显示待插入标签，点击输入框按光标位置插入。输入框可混排多个标签。",
-          "同一条指令分别修改多个已引用图层，一次撤销恢复本次修改。",
-          "画廊仅包含十二套易方达可编辑模板。提示词画廊仅显示错落循环图片，点击复用提示词，无二级分类。"
+          "提示词图片悬停显示底部渐进模糊与做同款操作，点击复用提示词。",
+          "放不下的工具搬到已有更多菜单，区域变宽自动恢复，开关状态保留。",
+          "画布空白拖框与框选工具都能选中框内可编辑元素，Shift 可追加，并可一起移动或编组。"
         ],
         "risks": [
           "未合入正式分支。"
         ],
-        "generatedAt": "2026-11-17T10:42:52.493Z"
-      },
-      "merged": {
-        "mergeCommit": "a45c7fa3ced26f6c8e694d99fbca69a338276aa8",
-        "verificationCommit": "a45c7fa3ced26f6c8e694d99fbca69a338276aa8",
-        "checks": [],
-        "recordedAt": "2026-11-17T10:42:57.364Z"
+        "generatedAt": "2026-11-17T10:56:24.141Z"
       }
     }
   ],
