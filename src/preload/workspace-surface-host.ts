@@ -147,10 +147,13 @@ export class WorkspaceSurfaceHost {
                     const box = center.getBoundingClientRect();
                     const view = this.document.defaultView;
                     const reserved = name !== 'knowledge' ? 0 : Math.max(0, parseFloat(view?.getComputedStyle(html).getPropertyValue('--dsh-sidebar-height') || '') || 0);
-                    const height = Math.max(0, Math.min(box.bottom, view?.innerHeight ?? box.bottom) - box.top - reserved);
-                    const bounds = { left: box.left, top: box.top, width: box.width, height };
-                    for (const [property, pixels] of Object.entries(bounds)) {
-                        const next = String(pixels) + 'px';
+                    const paneHeight = Math.max(0, Math.min(box.bottom, view?.innerHeight ?? box.bottom) - box.top);
+                    // The native splitter updates this CSS variable throughout dragging.
+                    const height = name === 'image-factory'
+                        ? `max(0px, calc(${paneHeight}px - var(--dsh-sidebar-height, 0px)))`
+                        : `${Math.max(0, paneHeight - reserved)}px`;
+                    const bounds = { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height };
+                    for (const [property, next] of Object.entries(bounds)) {
                         if (element.style.getPropertyValue(property) !== next) element.style.setProperty(property, next);
                     }
                     this.resizeObserver?.observe(center);

@@ -10,11 +10,12 @@ const {patchBetterSidebarClient}=createRequire(import.meta.url)('../scripts/lib/
 let browser,script,css
 beforeAll(async()=>{
  const relative='build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js'
- const sidebar=patchBetterSidebarClient(await readFile(relative,'utf8').catch(async()=>readFile(resolve(await realpath('node_modules'),'..',relative),'utf8')))
+ const source=await readFile(relative,'utf8').catch(async()=>readFile(resolve(await realpath('node_modules'),'..',relative),'utf8'))
+ const sidebar=source.includes('id: "odyssey-bottom-workspace-panel"')?source:patchBetterSidebarClient(source)
  const executable=sidebar.replace('exports.apply = apply;','exports.__LayoutSidebar=Sidebar;exports.__LayoutStore=SidebarStore;exports.apply = apply;')
  const literals=[...sidebar.matchAll(/const css\$?\d* = ("[^\n]+);/g)].map(match=>JSON.parse(match[1]))
  css=literals.filter(value=>value.includes('t8lSSG_toggleCluster')||value.includes('#root')&&value.includes('--dsh-sidebar-height')).join('\n')
- for(const path of ['src/preload/figma-final-shell.css','src/preload/figma-panels.css','src/preload/figma-motion.css','src/preload/notes/style.css','scripts/lib/research-grid-workbench.css'])css+='\n'+await readFile(path,'utf8')
+ for(const path of ['src/preload/figma-final-shell.css','src/preload/figma-panels.css','src/preload/figma-motion.css','src/preload/notes/style.css','src/preload/image-factory/style.css','scripts/lib/research-grid-workbench.css'])css+='\n'+await readFile(path,'utf8')
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import * as react from 'react';import * as react_jsx_runtime from 'react/jsx-runtime';import * as react_dom from 'react-dom';import {createRoot} from 'react-dom/client';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {BrowserAppView} from './src/preload/browser/view';import {integrationStyles} from './src/preload/integrations/style';
  const surfaceStyle=document.createElement('style');surfaceStyle.textContent=integrationStyles;document.head.append(surfaceStyle);
@@ -31,6 +32,8 @@ beforeAll(async()=>{
  window.startLayout=async mode=>{document.querySelector('.wSkVaW_root').dataset.odysseyPage=mode==='research'?'research':'conversation';if(mode==='notes'){const host=new WorkspaceSurfaceHost(document),surface=document.createElement('section');surface.className='en-root';surface.innerHTML='<div style="padding:24px">笔记文件正文</div>';host.register('notes',surface);host.open('notes');window.layoutHost=host}else if(mode==='browser'){
   const state={tabs:[{id:'page',url:'https://example.com/',title:'实际网页布局',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'page',closed:[],history:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}};window.browserCalls=[];
   const bridge={subscribe:()=>()=>{},source:async()=>{},request:async(method,input)=>{window.browserCalls.push([method,input]);return method==='layout'?undefined:structuredClone(state)}};window.layoutHost=new WorkspaceSurfaceHost(document);window.browserView=new BrowserAppView(document,bridge,window.layoutHost);await window.browserView.open('layout-session');
+ }else if(mode==='image-factory'){
+  const host=new WorkspaceSurfaceHost(document),surface=document.createElement('section');surface.className='image-factory';surface.innerHTML='<section class="if-work"><header class="if-top">图像</header><div class="if-stage">图像画布</div></section>';host.register('image-factory',surface);host.open('image-factory');window.layoutHost=host;
  }else createRoot(document.querySelector('#canvas')).render(react.createElement(Canvas))};
  `},bundle:true,platform:'browser',format:'iife',write:false,plugins:[{name:'inline',setup(b){b.onResolve({filter:/\?(inline|raw)$/},async args=>{const r=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:r.path,namespace:'inline'}});b.onLoad({filter:/.*/,namespace:'inline'},async args=>({contents:JSON.stringify(args.path.endsWith('.svg')?'data:image/svg+xml,'+encodeURIComponent((await readFile(args.path,'utf8')).replaceAll(String.fromCharCode(34),String.fromCharCode(39))):await readFile(args.path,'utf8')),loader:'json'}))}}]})
  script=output.outputFiles[0].text
@@ -39,18 +42,24 @@ beforeAll(async()=>{
 },30000)
 afterAll(async()=>browser?.close())
 
-for(const mode of ['notes','research','browser'])for(const dark of [false,true])it(`${mode} stays above the native bottom panel through toggles, live resize and viewport resize (${dark?'dark':'light'})`,async()=>{
+for(const mode of ['notes','research','browser','image-factory'])for(const dark of [false,true])it(`${mode} stays above the native bottom panel through toggles, live resize and viewport resize (${dark?'dark':'light'})`,async()=>{
  const context=await browser.newContext({viewport:{width:1380,height:900}}),page=await context.newPage(),errors=[];page.setDefaultTimeout(3500);page.on('pageerror',error=>{errors.push(error.message);console.error('bottom-panel-browser-error:',error.message)})
  try{
   await page.route('http://127.0.0.1/bottom-panel-layout',route=>route.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('http://127.0.0.1/bottom-panel-layout')
   await page.setContent(`<body ${dark?'data-ds-dark-theme':''}><div id="root"><div class="pI_x6G_frame" data-dsh-frame><aside data-dsh-sidebar-root></aside><main class="pI_x6G_centerCol" data-pane="conversation"><div class="wSkVaW_root" data-slot="conversation" data-odyssey-page="conversation"><header class="wSkVaW_header" data-ework-notes-session="layout-session">工作区标题</header><div id="canvas" style="display:contents"></div></div></main></div></div><div id="sidebar"></div></body>`)
   await page.addStyleTag({content:css+'\nhtml,body,#root{margin:0;height:100%;overflow:hidden} [data-dsh-frame]{display:grid;grid-template-columns:80px 1fr;height:100%} [data-dsh-sidebar-root]{grid-column:1} [data-pane="conversation"]{grid-column:2;min-width:0;min-height:0} .wSkVaW_root{display:flex;flex-direction:column} #canvas>[data-research-canvas]{background:#ddd} [data-research-global-toolbar]{z-index:50} .t8lSSG_bottomPanel{transition:none!important} .wSkVaW_header{height:56px;min-height:56px;flex:none}'})
   await page.addScriptTag({content:script});await page.locator('[data-odyssey-panel-entry="bottom"]').waitFor();await page.evaluate(mode=>window.startLayout(mode),mode)
-  const target=page.locator(mode==='notes'?'.en-root':mode==='browser'?'.eb-root':'[data-research-global-toolbar]'),toggle=page.locator('[data-odyssey-panel-entry="bottom"]'),panel=page.locator('#odyssey-bottom-workspace-panel')
+  const target=page.locator(mode==='notes'?'.en-root':mode==='browser'?'.eb-root':mode==='image-factory'?'.image-factory':'[data-research-global-toolbar]'),toggle=page.locator('[data-odyssey-panel-entry="bottom"]'),panel=page.locator('#odyssey-bottom-workspace-panel')
   await target.waitFor();const initial=await target.boundingBox()
   const above=async()=>{const content=await target.boundingBox(),bottom=await panel.boundingBox(),native=mode==='browser'?await page.evaluate(()=>window.browserCalls.filter(([method])=>method==='layout').at(-1)?.[1]?.bounds):undefined;return Math.min(bottom.y-(content.y+content.height),native?bottom.y-native.y-native.height:Infinity)}
   const gap=mode==='research'?8:2
   await toggle.click();await expect.poll(()=>toggle.getAttribute('aria-expanded')).toBe('true');await panel.waitFor({state:'visible'});await expect.poll(()=>above()).toBeGreaterThanOrEqual(gap)
+  if(mode==='image-factory'){
+   const input=page.getByRole('textbox',{name:'底栏草稿'})
+   await input.click()
+   await input.fill('图像画布下的底栏输入')
+   expect(await input.inputValue()).toBe('图像画布下的底栏输入')
+  }
   if(mode==='browser'){
    expect(await page.locator('.pI_x6G_centerCol').evaluate(el=>getComputedStyle(el).visibility)).toBe('hidden');expect(await panel.evaluate(el=>getComputedStyle(el).visibility)).toBe('visible')
    await page.getByRole('textbox',{name:'底栏草稿'}).fill('浏览器中保留的底栏内容')
