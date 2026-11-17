@@ -892,7 +892,6 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
               patchLayer(resizableText.id, inside)
               resetViewport()
             }}>{t('移回画框', 'Move inside')}</button>}
-            <Button icon="close" label={t('关闭图层', 'Close layers')} onClick={() => setLayersOpen(false)}/>
           </div>
           {!current.layers.length && <p>{t('画布上还没有图层。', 'The canvas has no layers.')}</p>}
           {[...current.layers].reverse().map(layer => {
