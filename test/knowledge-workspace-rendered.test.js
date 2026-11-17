@@ -724,6 +724,32 @@ it('uses the browser title collapse and drag regions in Image Factory', async ()
   }
 })
 
+it('keeps Image Factory gallery arrows outside the scrolling cards at wide and narrow widths', async () => {
+  const page = await browser.newPage({ viewport: { width: 1680, height: 960 } })
+  try {
+    await page.setContent(`
+      <div class="image-factory" style="left:88px;width:1200px">
+        <section class="if-work"><div class="if-stage"><div class="if-gallery">
+          <div class="if-gallery-viewport"><div style="width:1800px;height:500px"></div></div>
+          <button type="button" class="if-gallery-page" data-direction="left">←</button>
+          <button type="button" class="if-gallery-page" data-direction="right">→</button>
+        </div></div></section>
+      </div>`)
+    await page.addStyleTag({ content: await readFile('src/preload/image-factory/style.css', 'utf8') })
+    for (const width of [1200, 480]) {
+      await page.locator('.image-factory').evaluate((node, width) => { node.style.width = width + 'px' }, width)
+      const viewport = await page.locator('.if-gallery-viewport').boundingBox()
+      const left = await page.getByRole('button', { name: '←' }).boundingBox()
+      const right = await page.getByRole('button', { name: '→' }).boundingBox()
+      expect(left.x + left.width).toBeLessThan(viewport.x)
+      expect(right.x).toBeGreaterThan(viewport.x + viewport.width)
+      expect(viewport.x - left.x - left.width).toBeCloseTo(right.x - viewport.x - viewport.width, 0)
+    }
+  } finally {
+    await page.close()
+  }
+})
+
 it('centers Image Factory notices in the workspace', async () => {
   const page = await browser.newPage()
   try {
