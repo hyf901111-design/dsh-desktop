@@ -24,8 +24,8 @@
 .if-top {height:var(--odyssey-workspace-header-height,44px);padding:0 14px;border-bottom:1px solid var(--if-line)}
 .if-top {-webkit-app-region:drag;user-select:none}
 .if-top button,.if-top .eb-workspace-controls {-webkit-app-region:no-drag}
-.if-work:has(.if-more[aria-expanded=true],.if-layers) .if-top,
-.if-work:has(.if-more[aria-expanded=true],.if-layers) .if-top :is(.workspace-app-title,.workspace-app-title *,.if-top-title) {-webkit-app-region:no-drag}
+.if-work:has(.if-more[aria-expanded=true]) .if-top,
+.if-work:has(.if-more[aria-expanded=true]) .if-top :is(.workspace-app-title,.workspace-app-title *,.if-top-title) {-webkit-app-region:no-drag}
 .if-top .eb-workspace-toggle {color:var(--if-muted)}
 .if-top .eb-workspace-tabs {transition:flex-basis 200ms cubic-bezier(.2,.8,.2,1),opacity 200ms ease}
 .if-top-title {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;-webkit-app-region:drag}
@@ -61,6 +61,7 @@
 .if-raster-artwork {position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .if-raster img {position:absolute;inset:0;display:block;width:100%;height:100%;user-select:none;pointer-events:none}
 .if-raster[data-selecting=true] {touch-action:none;cursor:crosshair}
+.if-raster[data-placing-text=true] {touch-action:none;cursor:text}
 .if-region {position:absolute;pointer-events:none;z-index:2;border:1.5px solid #5594ff;border-radius:3px;background:#3b82f619}
 .if-region[data-dragging=true] {border-style:dashed}
 .if-region i {position:absolute;width:6px;height:6px;background:var(--if-mark);border-radius:1px}
@@ -142,7 +143,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-text-handle[data-text-resize-handle^="s"] {top:100%}
 .if-text-handle:is([data-text-resize-handle="nw"],[data-text-resize-handle="se"]) {cursor:nwse-resize}
 .if-text-handle:is([data-text-resize-handle="ne"],[data-text-resize-handle="sw"]) {cursor:nesw-resize}
-.if-raster[data-selecting=true] .if-text-layer{pointer-events:none}
+.if-raster:is([data-selecting=true],[data-placing-text=true]) .if-text-layer{pointer-events:none}
 .if-mark-hint {position:absolute;z-index:4;top:14px;left:50%;transform:translateX(-50%);font-size:12px;max-width:calc(100% - 20px);padding:8px 12px;border:1px solid #ffffff18;border-radius:8px;color:#fff;background:#1d2639e8;pointer-events:none}
 .if-comment,.if-layers,.if-text-format {position:absolute;z-index:4;padding:10px 12px;border:1px solid var(--if-line);border-radius:11px;background:var(--if-panel);box-shadow:0 7px 26px #0004}
 .if-comment {width:min(320px,calc(100% - 20px));max-height:calc(100% - 50px);overflow:auto;z-index:6}
