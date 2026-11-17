@@ -144,6 +144,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-art::before,.if-gallery-use {position:absolute;inset:auto 0 0;opacity:0;transition:opacity .2s ease;pointer-events:none}
 .if-gallery-art::before {
   content:"";height:42%;backdrop-filter:blur(16px) saturate(1.2);
+  border-end-start-radius:inherit;border-end-end-radius:inherit;
   mask-image:linear-gradient(transparent,#000 92%);background:linear-gradient(transparent,#090c13a3);
 }
 .if-gallery-use {
