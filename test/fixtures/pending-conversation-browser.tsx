@@ -22,7 +22,7 @@ const useWorkspaces=(select:any)=>select(projects)
 const renderSlot=(name:string,props:any)=>name==='conversation.composer.bar'?<NativePendingBar {...hooks} {...props} renderSlot={()=>null}/>:name==='conversation.hero.workspace'?<workspace.__testWorkspacePicker {...props} useWorkspaces={useWorkspaces} useDirectoryFlow={(select:any)=>select({status:'idle'})} createWorkspace={async()=>{throw Error('not used')}} renderSlot={()=>null} t={t}/>:null
 mountDesktopShellStyles(document)
 const coordinator=new native.ResearchSidebarCoordinator(),registry=new native.ResearchWorkspaceRegistry(),sidebarStore=new panel.__testSidebarStore();sidebarStore.reduce((s:any)=>({...s,panelOpen:true}));
-function NativeRight(){const snapshot=React.useSyncExternalStore((fn:any)=>sidebarStore.subscribe(fn),()=>sidebarStore.getSnapshot()),state=snapshot.state;return <panel.__testWorkbench state={state} newTabOptions={[]} actions={{activateTab:(_pane:string,id:string)=>sidebarStore.reduce((s:any)=>({...s,splits:{...s.splits,active:id}})),closeTab:()=>{},focusPane:()=>{},moveTabToEdge:()=>{},moveTabBefore:()=>{},resizeSplit:()=>{}}} onNewTab={()=>{}} renderTab={(tab:any,active:boolean)=>tab.type==='sherlock-research-conversation'?<native.__testResearchSidebarConversationTab scope={{sessionId:undefined}} visible={active} coordinator={coordinator}/>:<div>项目文件</div>} getTabIcon={()=>null} getTabBadge={()=>null}/>}
+function NativeRight(){const snapshot=React.useSyncExternalStore((fn:any)=>sidebarStore.subscribe(fn),()=>sidebarStore.getSnapshot()),state=snapshot.state;return <panel.__testWorkbench state={state} pendingSession={snapshot.sessionId===undefined} newTabOptions={[]} actions={{activateTab:(_pane:string,id:string)=>sidebarStore.reduce((s:any)=>({...s,splits:{...s.splits,active:id}})),closeTab:()=>{},focusPane:()=>{},moveTabToEdge:()=>{},moveTabBefore:()=>{},resizeSplit:()=>{}}} onNewTab={()=>{}} renderTab={(tab:any,active:boolean)=>tab.type==='sherlock-research-conversation'?<native.__testResearchSidebarConversationTab scope={{sessionId:undefined}} visible={active} coordinator={coordinator}/>:<div>项目文件</div>} getTabIcon={()=>null} getTabBadge={()=>null}/>}
 const emptySessions={current:undefined,byId:{},subagentsByParent:{}},view={view:'chat',selection:null,inspect:null},actions={setResearchRightTab(){},setResearchConversationUnread(){},select(){}};
 document.body.dataset.odysseyGlobalRightOpen='true';
 coordinator.service={getSnapshot:()=>sidebarStore.getSnapshot(),subscribeState:(fn:any)=>sidebarStore.subscribe(fn)};coordinator.sessions={list:{subscribe:()=>()=>{},getSnapshot:()=>emptySessions}};coordinator.sourceWorkspaces={list:{subscribe:()=>()=>{},getSnapshot:()=>projects}};
@@ -36,4 +36,8 @@ for (const name of ['browser','image-factory','knowledge'] as const) {
  surface.firstElementChild!.addEventListener('click',()=>surfaces.back())
  surfaces.register(name,surface)
 }
-window.pendingFixture={openSurface:(name:'browser'|'image-factory'|'knowledge')=>surfaces.open(name),events,record,real,current,failOnce:()=>{failCreate=true}};document.documentElement.dataset.ready='true'
+window.pendingFixture={openSurface:(name:'browser'|'image-factory'|'knowledge')=>surfaces.open(name),events,record,real,current,failOnce:()=>{failCreate=true},setPaneOpen(open:boolean){
+ sidebarStore.reduce((s:any)=>({...s,panelOpen:open}))
+ document.getElementById('right')!.hidden=!open
+ document.body.dataset.odysseyGlobalRightOpen=String(open)
+}};document.documentElement.dataset.ready='true'
