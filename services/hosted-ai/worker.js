@@ -158,7 +158,7 @@ function imageInput(input) {
   return { wire: JSON.stringify({ model: input.model, prompt: input.prompt + ({'1024x1024':'\n画面比例：1:1。','1024x1536':'\n画面比例：2:3。','1536x1024':'\n画面比例：3:2。'}[input.size] ?? ''),
     size: '1K', output_format: 'png', response_format: 'url',
     // Seedream 5.0 Pro and Flash generate a single image by default.
-    stream: false, watermark: true,
+    stream: false, watermark: false,
     ...(refs.length ? { image: refs.length === 1 ? refs[0] : refs } : {})
   }), amountUnits: units + refUnits }
 }

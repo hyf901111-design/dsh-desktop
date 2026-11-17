@@ -64,6 +64,7 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
       if (input.model === 'doubao-seedream-5-0-pro') assert.equal(input.image.length, 2)
       else assert.equal(input.model, 'doubao-seedream-5.0-flash')
       assert.equal(input.response_format, 'url')
+      assert.equal(input.watermark, false)
       assert.equal(Object.hasOwn(input, 'sequential_image_generation'), false)
       const url = input.prompt === '不可信下载地址' ? 'https://untrusted.invalid/generated.png'
         : input.prompt === '下载地址重定向' ? redirectUrl

@@ -220,6 +220,41 @@ it.each([false, true])('moves and resizes the selected text box (lost capture: %
   }
 })
 
+it('recovers a distant text layer from Layers without altering its formatting', async () => {
+  const text: TextLayer = { id: randomUUID(), kind: 'text', text: '画框外的文字', x: 2, y: -1, width: .4,
+    fontSize: 36, family: 'system-ui', weight: 400, color: '#ffffff', align: 'center' }
+  const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '恢复位置', width: 800, height: 1000, layers: [text] }
+  const write = vi.fn(async (_value: CanvasWrite) => {})
+  const host = new WorkspaceSurfaceHost(document)
+  const factory = mountImageFactory(document, host, {
+    storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
+    archive: async () => {}, save: async () => ({})
+  })
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  try {
+    await act(async () => factory.open())
+    const tools = document.querySelector('[aria-label="画布编辑工具"]')!
+    const toggle = Array.from(tools.querySelectorAll('button')).find(button => button.textContent?.trim() === '图层')!
+    await act(async () => toggle.click())
+    const row = document.querySelector<HTMLButtonElement>('.if-layer-name')!
+    const restore = () => Array.from(document.querySelectorAll<HTMLButtonElement>('.if-layers button'))
+      .find(button => button.textContent?.trim() === '移回画框')
+    expect(restore()).toBeUndefined()
+    await act(async () => row.click())
+    expect(restore()).toBeDefined()
+    expect(write).not.toHaveBeenCalled()
+    await act(async () => restore()!.click())
+    expect(write.mock.calls.at(-1)?.[0].canvas.layers).toEqual([{ ...text, x: .6, y: 0 }])
+    expect(restore()).toBeUndefined()
+    expect(row.getAttribute('aria-pressed')).toBe('true')
+    expect(document.activeElement).toBe(row)
+  } finally {
+    await act(async () => factory.dispose())
+    host.dispose()
+    vi.unstubAllGlobals()
+  }
+})
+
 it.each([
   ['生成一张全新的 1:1 插画，标题为「柚子气泡水」。', '柚子气泡水', 1024, 1024],
   ['Please create a brand-new poster titled “Summer Market”.', 'Summer Market', 1080, 1350],

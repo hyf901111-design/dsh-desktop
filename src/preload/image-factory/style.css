@@ -212,7 +212,8 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-text-format input[type=color] {width:27px;padding:3px}
 .if-layers {left:12px;top:12px;width:min(200px,calc(100% - 24px));max-height:calc(100% - 62px);padding:8px;overflow:auto;z-index:5;
   background:var(--odyssey-menu,color-mix(in srgb,var(--if-panel) 72%,transparent));border-color:var(--odyssey-menu-border,var(--if-line))}
-.if-layers .if-float-header {padding-left:5px;margin-bottom:4px}
+.if-layers .if-float-header {padding-left:5px;margin-bottom:4px;gap:4px}
+.if-layers .if-return-text {margin-inline-start:auto;padding-inline:5px;font-size:12px;white-space:nowrap;color:var(--if-muted)}
 .if-layers p {padding:0 6px;color:var(--if-muted);font-size:12px}
 .if-layer-row {position:relative;display:flex;align-items:center;gap:3px;border-radius:7px;min-height:34px;user-select:none;touch-action:none}
 .if-layer-row[data-current=true] {background:var(--if-picked)}
