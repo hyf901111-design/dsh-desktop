@@ -11,37 +11,65 @@
         "schemaVersion": 1,
         "featureName": "图像画板编辑与企业模板画廊",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd",
-        "tipCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
+        "baseCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
+        "tipCommit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
         "commits": [
           {
-            "commit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
+            "commit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
             "parents": [
-              "6fb11b34bbadb9088ab09e71bb8c4f0d0e40cedd"
+              "e4f996b1d53ce1138d50c8d383ee70609c9ceca0"
             ],
-            "subject": "优化：按企业模板的图片区裁切底图"
+            "subject": "功能：支持对话引用并修改单个图层，完善画板动效"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/enterprise-gallery.ts"
+            "path": "packages/dsh-research-task-runtime/image-factory-context.js"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/enterprise-layout.ts"
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/image-factory-layer-references.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
             "status": "M",
             "path": "src/preload/image-factory/gallery.tsx"
           },
           {
-            "status": "A",
-            "path": "src/preload/image-factory/template-photo.ts"
+            "status": "M",
+            "path": "src/preload/image-factory/style.css"
           },
           {
             "status": "M",
             "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
           }
         ],
         "checks": [
@@ -53,45 +81,43 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
-            "completedAt": "2026-11-17T09:57:35.911Z",
+            "verifiedCommit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
+            "completedAt": "2026-11-17T10:09:00.412Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
+              "npx",
+              "vitest",
               "run",
+              "test/image-factory-native.test.js",
+              "test/image-generation-tool.test.js",
               "test/image-factory-gallery.test.ts",
               "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory.test.js"
+              "test/image-generation-flow.test.js"
             ],
             "outcome": "passed",
-            "summary": "42 项画廊、模板布局与画板交互聚焦用例通过。",
-            "verifiedCommit": "e4f996b1d53ce1138d50c8d383ee70609c9ceca0",
-            "completedAt": "2026-11-17T09:57:35.911Z",
+            "summary": "64 项聚焦测试通过，覆盖图层行内引用、图层范围校验、编辑工具、模板与图层操作。",
+            "verifiedCommit": "bffefe9bd2957c74417306bf844e4a8f8c424dd2",
+            "completedAt": "2026-11-17T10:09:00.413Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "渲染器可从同一侧栏切换图层与品牌资产，关闭模板页回到原画板。快捷键、历史、编组和两种画廊入口通过聚焦验证。"
+          "outcome": "not-applicable",
+          "summary": "原生客户端已验证企业模板、提示词画廊、左侧栏和编组；图层引用、定向生成和动效等待新版客户端复验。"
         },
         "acceptanceCriteria": [
           "图像工具栏和快捷键撤销与重做，Shift 多选图层后编组、移动、取消编组。",
           "图层与品牌资产从同一左栏切换，关闭模板页回到原画板。",
-          "保留 12 套易方达模板并新增 30 套通用企业模板，提示词模式提供 22 个可复用案例。"
+          "保留 12 套易方达模板并新增 30 套通用企业模板，提示词模式提供 22 个可复用案例。",
+          "点击图层在共用对话输入框加行内引用，发送后仅编辑图片、文字、色块或品牌标识目标图层。",
+          "画廊分类、左侧栏和资产落点提供动效，遵循减少动态效果设置。"
         ],
         "risks": [
           "未合入正式分支。"
         ],
-        "generatedAt": "2026-11-17T09:57:35.911Z"
-      },
-      "merged": {
-        "mergeCommit": "31750c757461f4d81dde8fd3eec375109fb53e94",
-        "verificationCommit": "31750c757461f4d81dde8fd3eec375109fb53e94",
-        "checks": [],
-        "recordedAt": "2026-11-17T09:57:40.012Z"
+        "generatedAt": "2026-11-17T10:09:00.413Z"
       }
     }
   ],
