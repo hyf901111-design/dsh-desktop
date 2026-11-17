@@ -1,12 +1,13 @@
 import type { Raster, Size } from './raster'
 import { imageFactoryExportFonts } from './fonts'
+import { brandArtwork } from './brand-artwork'
 
-import { canvasFonts as imageFonts, type CanvasImageType, type TextLayer } from '../../shared/image-factory-canvas'
+import { canvasFonts as imageFonts, type BrandOverlay, type CanvasImageType, type TextLayer } from '../../shared/image-factory-canvas'
 
 export { imageFonts, type TextLayer }
 
 export type ImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType; data: Uint8Array; raster: Raster }
-export type CanvasLayer = ImageLayer | TextLayer
+export type CanvasLayer = ImageLayer | TextLayer | BrandOverlay
 export type ImageScene = Size & { id: string; title: string; layers: CanvasLayer[]; aiWatermark?: true }
 export const textResizeHandles = ['nw', 'ne', 'w', 'e', 'sw', 'se'] as const
 export type TextResizeHandle = typeof textResizeHandles[number]
@@ -101,7 +102,25 @@ export async function drawLayers(context: CanvasRenderingContext2D, scene: Image
     } else {
       if (text.length) await drawTextLayers(context, scene, text)
       text.length = 0
-      context.drawImage(layer.raster.image, 0, 0, scene.width, scene.height)
+      if (layer.kind === 'image') context.drawImage(layer.raster.image, 0, 0, scene.width, scene.height)
+      else {
+        const x = layer.x * scene.width, y = layer.y * scene.height
+        const width = layer.width * scene.width, height = layer.height * scene.height
+        if (layer.kind === 'shape') {
+          context.save()
+          context.fillStyle = layer.color
+          context.fillRect(x, y, width, height)
+          context.restore()
+        } else {
+          const art = brandArtwork[layer.asset]
+          const image = context.canvas.ownerDocument.createElement('img')
+          image.src = art.src
+          await image.decode()
+          const scale = Math.min(width / art.size.width, height / art.size.height)
+          const w = art.size.width * scale, h = art.size.height * scale
+          context.drawImage(image, x + (width - w) / 2, y + (height - h) / 2, w, h)
+        }
+      }
     }
   }
   if (text.length) await drawTextLayers(context, scene, text)

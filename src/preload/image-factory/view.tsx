@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type PointerEvent, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
 import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
-import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
+import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, type BrandOverlay, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu } from './actions-menu'
+import { brandArtwork } from './brand-artwork'
+import { brandDragType, findBrandAsset, moveBrandOverlay, placeBrandAsset, resizeBrandOverlay, type BrandAsset } from './brand-assets'
+import { BrandAssetLibrary } from './brand-library'
 import { imageFactoryFontFaces } from './fonts'
 import { ImageFactoryGallery } from './gallery'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
@@ -30,12 +33,18 @@ type T = (zh: string, en: string) => string
 type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region; preserveTransparency: boolean };
   cutout?: boolean; size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
+const overlayHandles = ['nw', 'ne', 'sw', 'se'] as const
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 const textResizeLabels: Record<TextResizeHandle, [string, string]> = {
   nw: ['左上角缩放文字', 'Scale text from top left'], ne: ['右上角缩放文字', 'Scale text from top right'],
   w: ['调整文字框左边', 'Resize left text edge'], e: ['调整文字框右边', 'Resize right text edge'],
   sw: ['左下角缩放文字', 'Scale text from bottom left'], se: ['右下角缩放文字', 'Scale text from bottom right'],
 }
+
+const overlayResizeLabels = {
+  nw: ['从左上角调整大小', 'Resize from top left'], ne: ['从右上角调整大小', 'Resize from top right'],
+  sw: ['从左下角调整大小', 'Resize from bottom left'], se: ['从右下角调整大小', 'Resize from bottom right'],
+} as const
 
 function Icon({ name, size }: { name: string; size?: number }) {
   const src = iconSource(name)
@@ -119,6 +128,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const [rubberband, setRubberband] = useState<Region>()
   const [commentPos, setCommentPos] = useState<Point>()
   const [layersOpen, setLayersOpen] = useState(false)
+  const [brandScope, setBrandScope] = useState<CanvasScope>()
+  const [brandDragging, setBrandDragging] = useState(false)
+  const brandOpen = brandScope === scope
+  const brandToggle = useRef<HTMLButtonElement>(null)
   const [selectedId, setSelectedId] = useState<string>()
   const [textBox, setTextBox] = useState<{ id: string; height: number }>()
   const [editing, setEditing] = useState<string>()
@@ -134,7 +147,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
   const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
-  const textDrag = useRef<{ layer: TextLayer; pointer: number; start: Point; moved: boolean; height: number; handle?: TextResizeHandle }>()
+  const canvasLayerDrag = useRef<{ layer: TextLayer | BrandOverlay; pointer: number; start: Point; moved: boolean; height: number; handle?: TextResizeHandle }>()
   const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef(new Map<string, CanvasJob>())
   const selectionDrafts = useRef(new Map<string, SelectionDraft>())
@@ -161,6 +174,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
   const displayScale = fit * zoom
   const resizableText = !tool && !area && !busy && !editing ? selectedText : undefined
+  const resizableOverlay = !tool && !area && !busy && !editing ? current?.layers.find(
+    (layer): layer is BrandOverlay => (layer.kind === 'brand' || layer.kind === 'shape') && layer.id === selectedId) : undefined
   const textBoxHeight = resizableText && textBox?.id === resizableText.id ? textBox.height : 0
   const inside = current && resizableText && textBoxHeight > 0 ? {
     x: Math.max(0, Math.min(1 - resizableText.width, resizableText.x)),
@@ -205,6 +220,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     const previous = previousCanvas.current
     previousCanvas.current = { scope, sceneId: scene?.id }
     if (scope === previous.scope) return
+    setBrandScope(undefined)
+    setBrandDragging(false)
     if (previous.scope === null && scene?.id && scene.id === previous.sceneId) {
       setGalleryScope(value => value === null ? scope : value)
       return
@@ -212,7 +229,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     setGalleryScope(undefined)
     setSelectedId(undefined); setEditing(undefined); resetViewport()
     resetSelectionGesture()
-    textDrag.current = undefined; layerDrag.current = undefined; setDropTarget(undefined)
+    canvasLayerDrag.current = undefined; layerDrag.current = undefined; setDropTarget(undefined)
   }, [scope, scene?.id, resetViewport])
   useLayoutEffect(() => {
     if (!scroll.current) return
@@ -323,6 +340,45 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       ...old, layers: old.layers.map(layer => layer.id === id && layer.kind === 'text' ? { ...layer, ...patch } : layer),
     }, persist)
   }
+  function patchOverlay(id: string, patch: Partial<Pick<BrandOverlay, 'x' | 'y' | 'width' | 'height'>> & { color?: string }, persist = true) {
+    setScene(old => old && {
+      ...old, layers: old.layers.map(layer => layer.id === id && (layer.kind === 'shape' || layer.kind === 'brand') ? { ...layer, ...patch } : layer),
+    }, persist)
+  }
+  function overlayName(layer: BrandOverlay) {
+    return layer.kind === 'brand' ? t(...brandArtwork[layer.asset].label) : t('版式色块', 'Layout block')
+  }
+  function closeBrandLibrary() {
+    setBrandScope(undefined)
+    setBrandDragging(false)
+    brandToggle.current?.focus({ preventScroll: true })
+  }
+  function insertBrandAsset(asset: BrandAsset, point?: Point) {
+    if (!current || busy) return
+    if (current.layers.length + asset.parts.length > maximumCanvasLayers) {
+      setToast(t('画布图层已达到上限。', 'The canvas has reached the layer limit.'))
+      return
+    }
+    releaseText()
+    clearSelection()
+    const layers = placeBrandAsset(asset, current, point ?? { x: current.width / 2, y: current.height / 2 }, label => t(...label))
+    if (setScene(old => old && { ...old, layers: [...old.layers, ...layers] })) {
+      setSelectedId(layers.find(layer => layer.kind === 'text')?.id ?? layers.at(-1)?.id)
+    }
+  }
+  function brandDrop(event: DragEvent<HTMLDivElement>, dropped: boolean) {
+    if (!event.dataTransfer.types.includes(brandDragType)) return
+    event.stopPropagation()
+    event.preventDefault()
+    if (!dropped) {
+      event.dataTransfer.dropEffect = brandOpen && !busy ? 'copy' : 'none'
+      return
+    }
+    setBrandDragging(false)
+    if (!brandOpen || !current || busy) return
+    const asset = findBrandAsset(event.dataTransfer.getData(brandDragType))
+    if (asset) insertBrandAsset(asset, canvasPoint(event.clientX, event.clientY, event.currentTarget.getBoundingClientRect(), current))
+  }
   function releaseText(id = editing) {
     if (!id) return
     setEditing(undefined)
@@ -356,8 +412,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     releaseText()
     clearSelection()
     setSelectedId(layer.id)
-    if (layer.kind !== 'text') return
-    const box = imageFrame.current?.querySelector('[data-canvas-text-id="' + layer.id + '"]')?.getBoundingClientRect()
+    if (layer.kind === 'image') return
+    const selector = layer.kind === 'text' ? 'data-canvas-text-id' : 'data-brand-layer-id'
+    const box = imageFrame.current?.querySelector('[' + selector + '="' + layer.id + '"]')?.getBoundingClientRect()
     const viewport = scroll.current?.getBoundingClientRect()
     if (!box || !viewport?.width || !viewport.height) return
 
@@ -414,30 +471,37 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     if (selectedId === id) setSelectedId(undefined)
     setScene(old => old && { ...old, layers: old.layers.filter(layer => layer.id !== id) })
   }
-  function textPointer(event: PointerEvent<HTMLElement>, phase: 'start' | 'move' | 'end' | 'cancel', layer?: TextLayer, handle?: TextResizeHandle) {
+  function canvasLayerPointer(event: PointerEvent<HTMLElement>, phase: 'start' | 'move' | 'end' | 'cancel', layer?: TextLayer | BrandOverlay, handle?: TextResizeHandle) {
     if (!current) return
     if (phase === 'start') {
       if (!layer || !event.isPrimary || event.button !== 0 || tool || area || editing || busy) return
       setSelectedId(layer.id)
       event.currentTarget.setPointerCapture(event.pointerId)
-      const pixels = handle ? textBoxHeight : event.currentTarget.getBoundingClientRect().height
+      const pixels = layer.kind !== 'text' ? layer.height * current.height * displayScale :
+        handle ? textBoxHeight : event.currentTarget.getBoundingClientRect().height
       const height = Math.max(1, Math.ceil(pixels / displayScale))
-      textDrag.current = { layer, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, height, handle }
+      canvasLayerDrag.current = { layer, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, height, handle }
       return
     }
-    const drag = textDrag.current
+    const drag = canvasLayerDrag.current
     if (!drag || drag.pointer !== event.pointerId) return
     if (phase === 'cancel') {
-      textDrag.current = undefined
+      canvasLayerDrag.current = undefined
       if (drag.moved) workspace.commit(scope)
       return
     }
     const released = phase === 'end'
-    if (released) textDrag.current = undefined
+    if (released) canvasLayerDrag.current = undefined
     else if (!(event.buttons & 1)) return
     const dx = event.clientX - drag.start.x, dy = event.clientY - drag.start.y
     if (!drag.moved && Math.hypot(dx, dy) < 3) return
     drag.moved = true
+    if (drag.layer.kind !== 'text') {
+      const patch = drag.handle ? resizeBrandOverlay(drag.layer, current, drag.handle, dx / displayScale, dy / displayScale) :
+        moveBrandOverlay(drag.layer, current, dx / displayScale, dy / displayScale)
+      patchOverlay(drag.layer.id, patch, released)
+      return
+    }
     const patch = drag.handle ? resizeTextLayer(drag.layer, current, drag.height, drag.handle, dx / displayScale, dy / displayScale) : {
       x: drag.layer.x + dx / (current.width * displayScale),
       y: drag.layer.y + dy / (current.height * displayScale),
@@ -648,7 +712,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         }
         try {
           let data = layer.data
-          if (layers.some(item => item.kind === 'text' && item.text.trim())) {
+          if (layers.some(item => item.kind !== 'image' && (item.kind !== 'text' || item.text.trim()))) {
             const flattened = canvasFor(doc, nextScene)
             await drawLayers(flattened.context, nextScene)
             data = new Uint8Array(await (await encode(flattened.canvas)).arrayBuffer())
@@ -718,13 +782,19 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const tabsLabel = workspaceExpanded ? t('收起工作区页签', 'Collapse workspace tabs') : t('展开工作区页签', 'Expand workspace tabs')
   const watermark = current?.aiWatermark ? aiWatermarkLayout(current, displayScale) : undefined
   return <section className="if-work" aria-label={t('图像画布', 'Images canvas')} onKeyDown={event => {
-    if ((event.key === 'Delete' || event.key === 'Backspace') && resizableText &&
+    if ((event.key === 'Delete' || event.key === 'Backspace') && (resizableText || resizableOverlay) &&
         !event.defaultPrevented && !event.nativeEvent.isComposing &&
         !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey &&
         !(event.target as Element).closest('input,textarea,select,[contenteditable]:not([contenteditable=false])')) {
       event.preventDefault()
       event.stopPropagation()
-      deleteLayer(resizableText.id)
+      deleteLayer((resizableText ?? resizableOverlay)!.id)
+      return
+    }
+    if (event.key === 'Escape' && brandOpen && (!editing && !tool && !area || (event.target as Element).closest('.if-brand-library'))) {
+      event.preventDefault()
+      event.stopPropagation()
+      closeBrandLibrary()
       return
     }
     if (event.key !== 'Escape' || commentPending || (!editing && !tool && !area)) return
@@ -762,6 +832,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     {current && <nav className="if-toolbar" aria-label={t('画布编辑工具', 'Canvas tools')}>
       <Button icon="layers" active={layersOpen} onClick={() => setLayersOpen(value => !value)}>{t('图层', 'Layers')}</Button>
       <Button icon="type" active={placingText} disabled={busy} onClick={() => activateTool('text')}>{t('添加文本', 'Add text')}</Button>
+      <button ref={brandToggle} type="button" className="if-button" aria-expanded={brandOpen} aria-controls="image-factory-brand-library"
+        data-current={brandOpen} onClick={() => brandOpen ? closeBrandLibrary() : setBrandScope(scope)}>
+        <Icon name="brand"/> {t('品牌资产', 'Brand assets')}
+      </button>
       <Button icon="mark" active={marking || !!area} disabled={busy || !raster} onClick={() => activateTool('region')}>{t('框选修改', 'Edit selected area')}</Button>
       <Button icon="spark" disabled={busy || !raster} onClick={removeBackground}>
         {cutoutPending ? <span role="status">{t('正在去背景…', 'Removing background…')}</span> : t('去背景', 'Remove background')}
@@ -771,7 +845,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         <i aria-hidden="true"/>{t('AI 水印', 'AI watermark')}
       </button>
     </nav>}
-    <div id="image-factory-task-workspace" className="if-stage" data-layers-open={layersOpen} ref={stage}>
+    <div id="image-factory-task-workspace" className="if-stage" data-layers-open={layersOpen} data-brand-open={brandOpen && !!current} data-brand-dragging={brandDragging} ref={stage}>
       {showOpening ? <div className="if-canvas-message" role="status">{t('正在打开画布…', 'Opening canvas…')}</div>
         : !creating && status === 'error' ? <div className="if-canvas-message" role="alert">
           <span>{t('画布暂时无法读取。', 'The canvas could not be opened.')}</span>
@@ -782,9 +856,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           onPointerMoveCapture={event => panPointer(event, 'move')}
           onPointerUpCapture={event => panPointer(event, 'end')}
           onPointerCancelCapture={event => panPointer(event, 'cancel')}
-          onPointerMove={event => textPointer(event, 'move')}
-          onPointerUp={event => textPointer(event, 'end')}
-          onPointerCancel={event => textPointer(event, 'cancel')}
+          onPointerMove={event => canvasLayerPointer(event, 'move')}
+          onPointerUp={event => canvasLayerPointer(event, 'end')}
+          onPointerCancel={event => canvasLayerPointer(event, 'cancel')}
           onLostPointerCapture={event => panPointer(event, 'cancel')} onPointerDown={event => {
           if (event.target === event.currentTarget && placingText && event.button === 0) event.preventDefault()
           if (event.target === event.currentTarget || event.target === imageFrame.current && !tool) {
@@ -794,8 +868,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           <div ref={imageFrame} className="if-raster" data-selecting={marking} data-placing-text={placingText && !busy} tabIndex={-1}
             style={{ width: Math.max(1, current.width * displayScale), height: Math.max(1, current.height * displayScale),
               transform: 'translate(' + pan.x + 'px, ' + pan.y + 'px)' }}
-            onPointerDownCapture={event => { if (event.isPrimary) textPointer(event, 'cancel') }}
+            onPointerDownCapture={event => { if (event.isPrimary) canvasLayerPointer(event, 'cancel') }}
             onPointerDown={startCanvasTool}
+            onDragOver={event => brandDrop(event, false)} onDrop={event => brandDrop(event, true)}
             onKeyDown={event => {
               if (placingText && event.target === event.currentTarget && event.key === 'Enter') {
                 event.preventDefault()
@@ -805,6 +880,26 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
             <div className="if-raster-artwork">
               {current.layers.map(layer => {
                 if (layer.kind === 'image') return <img key={layer.id} draggable={false} src={layer.raster.url} alt={current.title}/>
+                if (layer.kind !== 'text') return <div key={layer.id} className="if-brand-layer" data-brand-layer-id={layer.id}
+                  data-selected={selectedId === layer.id} tabIndex={tool || area || busy ? -1 : 0} role="button"
+                  aria-label={overlayName(layer)} aria-pressed={selectedId === layer.id}
+                  onClick={() => { if (!tool && !area && !busy) setSelectedId(layer.id) }}
+                  onPointerDown={event => canvasLayerPointer(event, 'start', layer)}
+                  onKeyDown={event => {
+                    if (tool || area || busy) return
+                    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedId(layer.id); return }
+                    const dx = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
+                    const dy = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+                    if (!dx && !dy) return
+                    event.preventDefault()
+                    setSelectedId(layer.id)
+                    const step = event.shiftKey ? 24 : 4
+                    patchOverlay(layer.id, moveBrandOverlay(layer, current, dx * step, dy * step))
+                  }}
+                  style={{ left: layer.x * 100 + '%', top: layer.y * 100 + '%', width: layer.width * 100 + '%',
+                    height: layer.height * 100 + '%', backgroundColor: layer.kind === 'shape' ? layer.color : undefined }}>
+                  {layer.kind === 'brand' && <img draggable={false} alt="" src={brandArtwork[layer.asset].src}/>}
+                </div>
                 const style = { ...textLayerStyle(layer, current), transform: 'scale(' + displayScale + ')',
                   transformOrigin: 'top left', outlineWidth: 1 / displayScale }
                 return editing === layer.id ? <textarea key={layer.id} ref={element => {
@@ -825,7 +920,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
                     onClick={() => { if (!tool && !area) setSelectedId(layer.id) }}
                     onDoubleClick={() => { if (!tool && !area && !busy) { setSelectedId(layer.id); setEditing(layer.id) } }}
                     onKeyDown={event => { if (!busy && (event.key === 'Enter' || event.key === 'F2')) { setSelectedId(layer.id); setEditing(layer.id) } }}
-                    onPointerDown={event => textPointer(event, 'start', layer)}>{layer.text}</div>
+                    onPointerDown={event => canvasLayerPointer(event, 'start', layer)}>{layer.text}</div>
               })}
               {watermark && <span className="if-watermark" style={{
                 right: watermark.inset, bottom: watermark.inset,
@@ -838,10 +933,24 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
                 width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',
               }}>{!commentPending && <><i/><i/><i/><i/></>}</div>}
             </div>
+            {resizableOverlay && <div className="if-text-bounds" role="group" aria-label={t('调整品牌图层大小', 'Resize brand layer')}
+              style={{ left: resizableOverlay.x * 100 + '%', top: resizableOverlay.y * 100 + '%',
+                width: resizableOverlay.width * 100 + '%', height: resizableOverlay.height * 100 + '%' }}>
+              {overlayHandles.map(handle => <button key={handle} type="button" className="if-text-handle" data-text-resize-handle={handle}
+                aria-label={t(overlayResizeLabels[handle][0], overlayResizeLabels[handle][1])} onPointerDown={event => canvasLayerPointer(event, 'start', resizableOverlay, handle)}
+                onKeyDown={event => {
+                  const dx = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
+                  const dy = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+                  if (!dx && !dy) return
+                  event.preventDefault()
+                  const step = event.shiftKey ? 24 : 4
+                  patchOverlay(resizableOverlay.id, resizeBrandOverlay(resizableOverlay, current, handle, dx * step, dy * step))
+                }}/>)}
+            </div>}
             {resizableText && textBoxHeight > 0 && <div className="if-text-bounds" role="group" aria-label={t('调整文字图层大小', 'Resize text layer')}
               style={{ left: resizableText.x * 100 + '%', top: resizableText.y * 100 + '%', width: resizableText.width * 100 + '%', height: textBoxHeight }}>
               {textResizeHandles.map(handle => <button key={handle} type="button" className="if-text-handle" data-text-resize-handle={handle}
-                aria-label={t(...textResizeLabels[handle])} onPointerDown={event => textPointer(event, 'start', resizableText, handle)}
+                aria-label={t(...textResizeLabels[handle])} onPointerDown={event => canvasLayerPointer(event, 'start', resizableText, handle)}
                 onKeyDown={event => {
                   const dx = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
                   const dy = handle.length === 1 ? 0 : event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
@@ -874,6 +983,12 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
             </div>
           </form>
         </div>}
+        {brandOpen && <BrandAssetLibrary t={t} disabled={busy} insert={insertBrandAsset} dragging={setBrandDragging}
+          close={closeBrandLibrary} closeIcon={<Icon name="close"/>}/>}
+        {resizableOverlay?.kind === 'shape' && <div className="if-text-format" role="group" aria-label={t('色块样式', 'Block style')}>
+          <label><span>{t('填充色', 'Fill')}</span><input type="color" aria-label={t('色块填充色', 'Block fill color')}
+            value={resizableOverlay.color} onChange={event => patchOverlay(resizableOverlay.id, { color: event.target.value })}/></label>
+        </div>}
         {selectedText && !tool && !area && !busy && <TextControls key={selectedText.id} layer={selectedText} change={patch => patchLayer(selectedText.id, patch)} t={t}/>}
         {layersOpen && <aside ref={layersPanel} className="if-layers" aria-label={t('图层', 'Layers')}
           onPointerDown={event => layerPointer(event, 'start')}
@@ -896,7 +1011,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           </div>
           {!current.layers.length && <p>{t('画布上还没有图层。', 'The canvas has no layers.')}</p>}
           {[...current.layers].reverse().map(layer => {
-            const name = layer.kind === 'image' ? t('图片', 'Image') : layer.text.trim() || t('文本', 'Text')
+            const name = layer.kind === 'image' ? t('图片', 'Image') :
+              layer.kind === 'text' ? layer.text.trim() || t('文本', 'Text') : overlayName(layer)
             return <div key={layer.id} className="if-layer-row" data-layer-id={layer.id}
               data-current={selectedId === layer.id} data-drop={dropTarget?.id === layer.id ? dropTarget.above ? 'above' : 'below' : undefined}>
               <button type="button" className="if-layer-name" aria-pressed={selectedId === layer.id} title={name}
@@ -908,7 +1024,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
                   const target = current.layers[index + (above ? 1 : -1)]
                   if (target) { event.preventDefault(); layerMove(layer.id, target.id, above) }
                 }}>
-                <Icon name="grip" size={13}/><Icon name={layer.kind === 'text' ? 'type' : 'image'} size={15}/><span>{name}</span>
+                <Icon name="grip" size={13}/><Icon name={layer.kind === 'text' ? 'type' : layer.kind === 'shape' ? 'square' : layer.kind === 'brand' ? 'brand' : 'image'} size={15}/><span>{name}</span>
               </button>
               <Button icon="trash" label={t('删除图层 ', 'Delete layer ') + name} disabled={busy} onClick={() => deleteLayer(layer.id)}/>
             </div>

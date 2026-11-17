@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { lstat, mkdir, readFile, readdir, rename, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import {
-  canvasFonts, canvasImageTypes, canvasUuid, maximumCanvasImageBytes, maximumCanvasLayers, validCanvasScope, validCanvasSize,
+  brandArtworkIds, canvasFonts, canvasImageTypes, canvasUuid, maximumCanvasImageBytes, maximumCanvasLayers, validCanvasScope, validCanvasSize,
   type CanvasScope, type CanvasImageType, type CanvasRead, type CanvasWrite, type StoredCanvas, type StoredImageLayer,
   type ImageFactoryTaskTab,
 } from '../../shared/image-factory-canvas'
@@ -43,6 +43,16 @@ function readMetadata(value: unknown): StoredCanvas {
     ids.add(layer.id)
     if (layer.kind === 'image' && ++images === 1 && validId(layer.assetId) && canvasImageTypes.includes(layer.mediaType))
       return { kind: layer.kind, id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType }
+    if (layer.kind === 'brand' || layer.kind === 'shape') {
+      const { id, x, y, width, height } = layer
+      if (unit(x) && unit(y) && unit(width) && unit(height) && width > 0 && height > 0 &&
+          x + width <= 1 + 1e-9 && y + height <= 1 + 1e-9) {
+        const bounds = { id, x, y, width, height }
+        if (layer.kind === 'brand' && brandArtworkIds.includes(layer.asset)) return { ...bounds, kind: layer.kind, asset: layer.asset }
+        if (layer.kind === 'shape' && typeof layer.color === 'string' && /^#[a-fA-F0-9]{6}$/u.test(layer.color)) return { ...bounds, kind: layer.kind, color: layer.color }
+      }
+      throw Error('画布图层无效。')
+    }
     if (layer.kind !== 'text' || typeof layer.text !== 'string' || layer.text.length > 500 ||
         !Number.isFinite(layer.x) || !Number.isFinite(layer.y) || !unit(layer.width) || layer.width <= 0 ||
         !Number.isFinite(layer.fontSize) || layer.fontSize < 8 || layer.fontSize > 600 ||

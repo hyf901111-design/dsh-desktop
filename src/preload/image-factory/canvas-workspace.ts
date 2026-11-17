@@ -182,7 +182,7 @@ export class CanvasWorkspace {
     const canvas: StoredCanvas = {
       version: 1, id: scene.id, title: scene.title, width: scene.width, height: scene.height,
       ...(scene.aiWatermark && { aiWatermark: scene.aiWatermark }),
-      layers: scene.layers.filter(layer => layer.kind === 'image' || layer.text.trim()).map(layer => layer.kind === 'image' ? { kind: 'image', id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType } : layer),
+      layers: scene.layers.filter(layer => layer.kind !== 'text' || layer.text.trim()).map(layer => layer.kind === 'image' ? { kind: 'image', id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType } : layer),
     }
     entry.assetId = asset?.assetId
     entry.dirty = false

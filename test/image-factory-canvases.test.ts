@@ -119,3 +119,20 @@ it('recovers an untracked legacy draft only from closed history and preserves it
     expect((await reopened.read(null)).canvas).toEqual(saved)
   } finally { await rm(root, { force: true, recursive: true }) }
 })
+
+it('round-trips editable brand overlays alongside the original raster and rejects unknown artwork', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'odyssey-brand-assets-'))
+  try {
+    const storage = new ImageFactoryCanvases(root, () => ({ owner: 'brand-test', generation: 3 }))
+    const original = canvas()
+    const shape = { id: randomUUID(), kind: 'shape' as const, x: .12, y: .48, width: .76, height: .42, color: '#005096' }
+    const brand = { id: randomUUID(), kind: 'brand' as const, x: .73, y: .04, width: .2, height: .12, asset: 'graphic-top' as const }
+    const revised: StoredCanvas = { ...original, layers: [original.layers[0]!, shape, brand, original.layers[1]!] }
+    await storage.write({ scope: 'poster', epoch: 3, canvas: revised, image: png })
+    expect((await storage.read('poster')).canvas).toEqual(revised)
+
+    const invalid = { ...brand, asset: 'https://example.org/art.svg' } as unknown as typeof brand
+    await expect(storage.write({ scope: 'poster', epoch: 3, canvas: { ...revised, layers: [invalid] } })).rejects.toThrow('画布图层无效')
+    expect((await storage.read('poster')).canvas).toEqual(revised)
+  } finally { await rm(root, { force: true, recursive: true }) }
+})
