@@ -30,21 +30,23 @@ it('releases a synchronous submission failure without clearing or replacing its 
  expect(continueUnfinishedTask({inputActions,input,todos,running:false})).toBe(false)
  expect(draft).toContain('核验并交付')
 })
-it('migrates the installed v3 dock to one measured card without changing continuation policy',()=>{
+it('migrates both previous task layouts to a single header resume icon',()=>{
  const current=patchTaskProgressClient(source),legacy=legacyTaskResumeClient(current)
  expect(legacy).not.toContain('sherlock:task-continue-footer:v1')
  expect(patchTaskProgressClient(legacy)).toBe(current)
  expect(patchTaskProgressClient(current)).toBe(current)
  expect(current).toContain('return react_jsx_runtime.jsx(TodoPanel,{todos,running,objective,t,continuation:canContinue&&')
+ expect(current).toContain('IconPlayOutline16')
+ expect(current).not.toContain('"data-task-continuation":""')
  expect(current).toContain('if(clicked.current||blocked)return')
  expect(current).toContain('input.draftRev!==clicked.current.revision')
 })
-it('fails closed on a partial or drifted footer, including an old dock with damaged panel anchors',()=>{
+it('rejects partial or drifted task continuation patches',()=>{
  const current=patchTaskProgressClient(source),legacy=legacyTaskResumeClient(current)
- expect(()=>patchTaskProgressClient(current.replace('/* sherlock:task-continue-footer:v1 */',''))).toThrow('incomplete')
+ expect(()=>patchTaskProgressClient(current.replace('/* sherlock:task-continue-header:v2 */',''))).toThrow('incomplete')
  expect(()=>patchTaskProgressClient(current+'\n/* sherlock:task-continue-footer:v1 */')).toThrow('drifted')
- expect(()=>patchTaskProgressClient(current.replace("margin:0,maxWidth:'100%'","margin:0,maxWidth:'50%'"))).toThrow('drifted')
+ expect(()=>patchTaskProgressClient(current.replace('IconPlayOutline16,{\'aria-hidden\':true}','IconCopyOutline16,{\'aria-hidden\':true}'))).toThrow('drifted')
  expect(()=>patchTaskProgressClient(current.replace('if(clicked.current||blocked)return','if(blocked)return'))).toThrow('drifted')
  expect(()=>patchTaskProgressClient(legacy.replace('if(clicked.current||blocked)return','if(blocked)return'))).toThrow('anchor drifted')
- expect(()=>patchTaskProgressClient(legacy.replace('children:taskList})]','children:taskList}) /* damaged */ ]'))).toThrow('anchor drifted')
+ expect(()=>patchTaskProgressClient(legacy.replace('}), react_jsx_runtime.jsx(\'div\',{className:\'odyssey-task-reveal\'','}) /* damaged */, react_jsx_runtime.jsx(\'div\',{className:\'odyssey-task-reveal\''))).toThrow('anchor drifted')
 })

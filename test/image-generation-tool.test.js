@@ -61,7 +61,7 @@ it('routes the factory crop and concludes a standalone edit through the native t
  expect(await f.call(args)).toEqual(result)
  expect(f.request).toHaveBeenCalledOnce()
  expect(f.concludeTurn).toHaveBeenCalledOnce()
- expect(result.guidance).toContain('已交付图像工厂')
+ expect(result.guidance).toContain('已放入当前图像画布')
  expect(f.prompts[0].text({agent:f.agent})).toContain('180 × 300')
 })
 it('sends the current canvas first and appended mood references next for whole-image edits', async () => {

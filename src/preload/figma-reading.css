@@ -75,11 +75,22 @@ body .odyssey-hosted-quota-notice button {
 body .odyssey-hosted-quota-notice button:hover { background:var(--odyssey-menu-row); }
 body .odyssey-conversation-failure { margin:0; color:var(--odyssey-text); font:400 15px/26px var(--odyssey-font-ui); }
 body .lXshSW_body { padding:0; gap:0; }
-body .lXshSW_root:has([data-task-continuation]) { max-height:252px; }
-body [data-task-continuation] { box-sizing:border-box; display:flex; justify-content:flex-end; min-width:0; padding:0 12px 8px; }
+body [data-odyssey-task-header-row] { position:relative; min-width:0; }
+body [data-odyssey-task-header-row] > .lXshSW_header { width:100%; }
+body .odyssey-task-continue-space { flex:0 0 24px; margin-inline-start:auto; }
+body .odyssey-task-continue-space + .lXshSW_chevron { margin-inline-start:0; }
+body [data-task-continue] {
+  position:absolute; z-index:1; inset-inline-end:32px; top:50%; transform:translateY(-50%);
+  display:grid; place-items:center; width:24px; height:24px; padding:0; border:0; border-radius:6px;
+  background:transparent; color:var(--odyssey-task-muted); cursor:pointer;
+}
+body [data-task-continue] svg { width:14px; height:14px; pointer-events:none; }
+body [data-task-continue]:not(:disabled):hover { background:var(--odyssey-task-active); color:var(--odyssey-task-text); }
+body [data-task-continue]:focus-visible { outline:2px solid currentColor; outline-offset:-2px; }
+body [data-task-continue]:disabled { opacity:.45; cursor:default; }
 body .lXshSW_header { box-sizing:border-box; height:40px; min-height:40px; flex:0 0 40px; padding:0 12px; gap:8px; }
 body .lXshSW_title { color:var(--odyssey-task-text); font:400 14px/22px var(--odyssey-font-ui); }
-body .lXshSW_progress { flex:0 0 auto; color:var(--odyssey-task-muted); font:400 12px/22px var(--odyssey-font-ui); }
+body .lXshSW_progress { flex:0 1 auto; color:var(--odyssey-task-muted); font:400 12px/22px var(--odyssey-font-ui); }
 body .odyssey-task-objective { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--odyssey-task-muted); font:400 13px/22px var(--odyssey-font-ui); text-align:left; }
 body .lXshSW_list { max-height:168px; overflow-y:auto; overscroll-behavior:contain; gap:0; padding:0; margin:0; }
 body .lXshSW_item { box-sizing:border-box; height:28px; min-height:28px; flex:none; padding:0 24px 0 12px; gap:8px; font:400 13px/22px var(--odyssey-font-ui); }

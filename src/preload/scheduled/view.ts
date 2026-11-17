@@ -244,7 +244,7 @@ export class ScheduledTaskView {
             }]:[]),
             ...(wide&&this.surfaceHost?[{label:english?'Browser':'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
             ...(wide&&this.surfaceHost?[{label:english?'Knowledge Base':'知识库',icon:'knowledge' as const,run:()=>this.openKnowledge()}]:[]),
-            ...(wide&&this.surfaceHost?[{label:english?'Image Factory':'图像工厂',icon:'factory' as const,run:()=>this.openImageFactory()}]:[]),
+            ...(wide&&this.surfaceHost?[{label:english?'Images':'图像',icon:'factory' as const,run:()=>this.openImageFactory()}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
             } }] : []),
@@ -285,7 +285,7 @@ export class ScheduledTaskView {
     const english = this.document.documentElement.dataset.odysseyLocale === 'en'
     const entries = [
       { key: 'browser', label: english ? 'Browser' : '浏览器', open: () => this.openBrowser() },
-      { key: 'image-factory', label: english ? 'Image Factory' : '图像工厂', open: () => this.openImageFactory() },
+      { key: 'image-factory', label: english ? 'Images' : '图像', open: () => this.openImageFactory() },
       { key: 'knowledge', label: english ? 'Knowledge Base' : '知识库', open: () => this.openKnowledge() }
     ]
     const buttons = entries.map(({ key, label, open }) => {

@@ -5,7 +5,7 @@ import {build} from 'esbuild'
 import {pathToFileURL} from 'node:url'
 import {patchTaskProgressClient} from '../scripts/lib/task-progress-client.mjs'
 
-const evidence=process.env.SHERLOCK_TASK_RESUME_LAYOUT_EVIDENCE||'/tmp/sherlock-task-resume-card-footer-20261102/layout'
+const evidence=process.env.SHERLOCK_TASK_RESUME_LAYOUT_EVIDENCE||'/tmp/sherlock-task-resume-card-header/layout'
 let browser,entry,css
 beforeAll(async()=>{
  const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),source=patchTaskProgressClient(raw)
@@ -14,7 +14,7 @@ beforeAll(async()=>{
  expect(declarations).toHaveLength(names.size+1)
  css=[await readFile('node_modules/@deepseek-ai/dsh-client-ui-theme/lib/styles/design-platform.css','utf8'),...[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match=>JSON.parse(match[1])),...sidebarCss,...await Promise.all(['figma-final-shell','figma-panels','figma-refinements','figma-reading'].map(name=>readFile('src/preload/'+name+'.css','utf8')))].join('\n')
  entry=(await build({stdin:{resolveDir:process.cwd(),contents:`import * as react from 'react';import * as react_jsx_runtime from 'react/jsx-runtime';import * as react_dom from 'react-dom';import{createRoot}from'react-dom/client';
- const _deepseek_ai_dsh_client_ui_primitives={IconChevronDownOutline14:()=>react_jsx_runtime.jsx('svg',{'aria-hidden':true})};
+ const _deepseek_ai_dsh_client_ui_primitives={IconChevronDownOutline14:()=>react_jsx_runtime.jsx('svg',{'aria-hidden':true}),IconPlayOutline16:()=>react_jsx_runtime.jsx('svg',{'aria-hidden':true})};
  ${declarations.join('\n')}
  let running=false,allComplete=false,version=0;const listeners=new Set(),calls=[];
  const input={phase:'plain',draft:'',draftRev:0,imageIds:[],occurrences:[]},state={hasMore:true,running};
@@ -29,7 +29,7 @@ beforeAll(async()=>{
 },20000)
 afterAll(()=>browser?.close())
 const scenarios=[{surface:'chat',width:1500,height:1000,dark:false},{surface:'chat',width:1500,height:1000,dark:true},{surface:'chat',width:800,height:550,dark:false},{surface:'sidebar',width:1380,height:900,dark:false},{surface:'sidebar',width:1380,height:900,dark:true},{surface:'sidebar',width:800,height:550,dark:true},{surface:'sidebar',width:800,height:550,dark:false,locale:'en'},{surface:'chat',width:1500,height:1000,dark:true,locale:'en'}]
-it.each(scenarios)('keeps the real continuation footer inside the card and beside its composer: $surface $width×$height dark=$dark locale=$locale',async scenario=>{
+it.each(scenarios)('puts the play icon beside the real task disclosure control: $surface $width×$height dark=$dark locale=$locale',async scenario=>{
  const {surface,width,height,dark,locale='zh'}=scenario,page=await browser.newPage({viewport:{width,height},reducedMotion:'reduce'}),errors=[];page.on('pageerror',error=>errors.push(error.message))
  try{
   const sidebar=surface==='sidebar',reading=sidebar?'sRp_messages':'wSkVaW_scrollBody',root=sidebar?'sRp_root':'wSkVaW_root',host=sidebar?'class="sRp_composer"':'data-center-composer-host',size=sidebar?'width:340px;right:12px':'left:12px;right:12px'
@@ -39,13 +39,13 @@ it.each(scenarios)('keeps the real continuation footer inside the card and besid
   await page.evaluate(locale=>{document.documentElement.dataset.odysseyLocale=locale;document.documentElement.lang=locale},locale);await page.addScriptTag({content:entry});const button=page.getByRole('button',{name:locale==='en'?'Continue unfinished task':'继续未完成任务',exact:true}),card=page.getByTestId('todo-panel');await button.waitFor()
   const snapshots=[]
   const measure=async label=>{
-   const geometry=await page.evaluate(()=>{const card=document.querySelector('[data-testid=todo-panel]'),button=card.querySelector('[data-task-continue]'),footer=card.querySelector('[data-task-continuation]'),composer=document.querySelector('[data-layout-composer]'),reader=document.querySelector('.wSkVaW_scrollBody,.sRp_messages'),rect=node=>node.getBoundingClientRect().toJSON();return{card:rect(card),button:rect(button),footer:rect(footer),composer:rect(composer),reader:rect(reader),folded:card.dataset.odysseyTaskCollapsed,inside:footer.contains(button)&&card.contains(footer),zoom:getComputedStyle(document.documentElement).zoom,stackChildren:document.querySelector('.wSkVaW_composerStack').children.length,hit:document.elementFromPoint(button.getBoundingClientRect().left+button.clientWidth/2,button.getBoundingClientRect().top+button.clientHeight/2)===button}})
-   expect(geometry.inside).toBe(true);expect(Number(geometry.zoom)).toBe(1);expect(geometry.button.height).toBeLessThanOrEqual(28);expect(geometry.stackChildren).toBe(2);expect(geometry.button.left).toBeGreaterThanOrEqual(geometry.card.left);expect(geometry.button.right).toBeLessThanOrEqual(geometry.card.right);expect(geometry.button.bottom).toBeLessThanOrEqual(geometry.card.bottom);expect(geometry.hit).toBe(true)
+   const geometry=await page.evaluate(()=>{const card=document.querySelector('[data-testid=todo-panel]'),button=card.querySelector('[data-task-continue]'),header=card.querySelector('[data-odyssey-task-header-row]'),chevron=card.querySelector('.lXshSW_chevron'),composer=document.querySelector('[data-layout-composer]'),reader=document.querySelector('.wSkVaW_scrollBody,.sRp_messages'),rect=node=>node?.getBoundingClientRect().toJSON();return{card:rect(card),button:rect(button),header:rect(header),chevron:rect(chevron),composer:rect(composer),reader:rect(reader),folded:card.dataset.odysseyTaskCollapsed,inside:header?.contains(button)&&!chevron.closest('button').contains(button),iconOnly:!!button.querySelector('svg')&&!button.textContent.trim(),footer:!!card.querySelector('[data-task-continuation]'),zoom:getComputedStyle(document.documentElement).zoom,stackChildren:document.querySelector('.wSkVaW_composerStack').children.length,hit:document.elementFromPoint(button.getBoundingClientRect().left+button.clientWidth/2,button.getBoundingClientRect().top+button.clientHeight/2)?.closest('[data-task-continue]')===button}})
+   expect(geometry.inside).toBe(true);expect(geometry.iconOnly).toBe(true);expect(geometry.footer).toBe(false);expect(geometry.chevron.left-geometry.button.right).toBeGreaterThanOrEqual(4);expect(geometry.chevron.left-geometry.button.right).toBeLessThanOrEqual(12);expect(geometry.button.top+geometry.button.height/2).toBeCloseTo(geometry.chevron.top+geometry.chevron.height/2,0);expect(Number(geometry.zoom)).toBe(1);expect(geometry.button.height).toBeLessThanOrEqual(28);expect(geometry.stackChildren).toBe(2);expect(geometry.button.left).toBeGreaterThanOrEqual(geometry.card.left);expect(geometry.button.right).toBeLessThanOrEqual(geometry.card.right);expect(geometry.button.bottom).toBeLessThanOrEqual(geometry.card.bottom);expect(geometry.hit).toBe(true)
    expect(geometry.composer.top-geometry.card.bottom).toBeGreaterThanOrEqual(0);expect(geometry.composer.top-geometry.card.bottom).toBeLessThanOrEqual(16);expect(geometry.card.height).toBeLessThanOrEqual(252);expect(geometry.reader.height).toBeGreaterThanOrEqual(240)
    snapshots.push({label,...geometry});return geometry
   }
   const first=await measure('initial')
-  const header=card.locator('> div > button').first();await header.click()
+  const header=card.locator('button[aria-expanded]').first();await header.click()
   if(first.folded==='true'){
    const sheet=page.locator('dialog.odyssey-task-sheet');await sheet.waitFor();await sheet.getByRole('button',{name:'关闭',exact:true}).click();await measure('compact-sheet-closed')
   }else{

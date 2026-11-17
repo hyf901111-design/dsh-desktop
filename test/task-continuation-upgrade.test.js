@@ -59,18 +59,20 @@ it('upgrades an older continuation marker and dock once without duplicating the 
 it('preserves the compact owner and continuation budget when the real reading patch re-enters',async()=>{
  const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),current=patchTaskProgressClient(raw)
  const marker='/* odyssey:task-reading-budget:20260913 */',start=current.indexOf(marker),end=current.indexOf('function OdysseyTaskSheet(',start),hook=current.slice(start,end)
- expect(start).toBeGreaterThan(0);expect(hook).toContain('root.querySelector("[data-task-continuation]")')
+ expect(start).toBeGreaterThan(0)
+ expect(hook).toContain('const expanded=40+Math.min(168,list.scrollHeight)+8;')
+ expect(hook).not.toContain('root.querySelector("[data-task-continuation]")')
  const reading=patchFigmaReadingConversation(current)
  expect(reading.split(marker)).toHaveLength(2);expect(reading.includes(hook)).toBe(true)
  expect(patchTaskProgressClient(reading)===reading).toBe(true)
  expect(patchTaskProgressClient(patchFigmaReadingConversation(reading))===reading).toBe(true)
- // A damaged footer budget is still rejected, never normalized by reading.
- expect(()=>patchTaskProgressClient(patchFigmaReadingConversation(current.replace('+8+(root.querySelector("[data-task-continuation]")?.getBoundingClientRect().height||0);','+8;')))).toThrow('footer installation drifted')
+ expect(()=>patchTaskProgressClient(patchFigmaReadingConversation(current.replace('const expanded=40+','const expanded=41+')))).toThrow('header installation drifted')
  expect(()=>patchFigmaReadingConversation(current+'\n'+marker)).toThrow('compact owner boundary drifted')
  expect(()=>patchFigmaReadingConversation(marker+'\n'+current.replace(marker,''))).toThrow('compact owner boundary drifted')
- // A current footer with only its compact-owner marker removed is damaged;
- // reading must not silently rebuild it into an accepted current install.
- expect(()=>patchTaskProgressClient(patchFigmaReadingConversation(current.replace(marker,'')))).toThrow('footer installation drifted')
+ // The compact hook can be reinstated independently of the header controls.
+ const repaired=patchTaskProgressClient(patchFigmaReadingConversation(current.replace(marker,'')))
+ expect(repaired.split(marker)).toHaveLength(2)
+ expect(repaired.includes(hook)).toBe(true)
  // Restore the exact frozen pre-footer declarations before removing their old
  // reading marker. Deleting just a marker from an already current SDK is not
  // a legacy installation and must not be used as a successful upgrade fixture.

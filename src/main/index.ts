@@ -1374,7 +1374,7 @@ async function bootstrap(): Promise<void> {
   })
   const factoryCanvases = new ImageFactoryCanvases(join(app.getPath('userData'), 'image-factory-canvases'), () => {
     const owner = integrationOwner()
-    if (!owner) throw Error('账号正在读取，请重新打开图像工厂。')
+    if (!owner) throw Error('账号正在读取，请重新打开「图像」应用。')
     return { owner, generation: accountService!.generation }
   })
   flushImageFactoryCanvases = () => factoryCanvases.drain()

@@ -86,7 +86,7 @@ export class ImageFactoryCanvases {
     const current = () => {
       const actual = this.identity()
       if (actual.owner !== session.owner || actual.generation !== session.generation ||
-          (epoch !== undefined && epoch !== session.generation)) throw Error('账号已切换，请重新打开图像工厂。')
+          (epoch !== undefined && epoch !== session.generation)) throw Error('账号已切换，请重新打开「图像」应用。')
     }
     const pending = (this.queues.get(session.owner) ?? Promise.resolve()).catch(() => {}).then(async () => {
       current()

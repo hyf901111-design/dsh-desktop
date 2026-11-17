@@ -17,6 +17,31 @@ afterAll(async()=>browser?.close())
 async function fixture({dark=false,width=800,height=600}={}){const page=await browser.newPage({viewport:{width,height}}),errors=[];page.setDefaultTimeout(1800);page.on('pageerror',error=>errors.push(error.message));await page.route('http://127.0.0.1:59560/',route=>route.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto('http://127.0.0.1:59560/');await page.setContent(`<html><head><style>${boardBase}body{margin:0;--odyssey-font-ui:Inter,'Noto Sans SC',system-ui;--odyssey-text:${dark?'#eee':'#292b2f'}}.pI_x6G_centerCol{position:fixed;left:10px;right:10px;top:10px;bottom:10px}</style></head><body ${dark?'data-ds-dark-theme':''}><main class="pI_x6G_centerCol" style="position:fixed;left:10px;right:10px;top:10px;bottom:10px;margin:0;width:auto;height:auto"></main><button id="outside" style="position:fixed;left:0;top:0;z-index:4000" onclick="window.outsideClicks=(window.outsideClicks||0)+1">外部按钮</button></body></html>`);await page.addScriptTag({content:code});await page.locator('.eb-root:not([hidden])').waitFor();return{page,errors}}
 const menu=page=>page.locator('[data-browser-page-context-menu]')
 const commands=page=>page.evaluate(()=>window.calls.filter(([method])=>method==='context-command'))
+it('dismisses a shell workspace menu from the active native webpage only',async()=>{
+ const {page}=await fixture({width:1200})
+ try{
+  await page.evaluate(()=>{
+   document.querySelector('.pI_x6G_centerCol').style.right='260px'
+   window.startProjection()
+   const chooser=document.createElement('div')
+   chooser.setAttribute('role','menu')
+   chooser.id='right-workspace-menu'
+   chooser.style.cssText='position:fixed;inset:40px 10px auto auto;width:200px;height:120px;z-index:4000'
+   chooser.innerHTML='<input aria-label="搜索工作区">'
+   document.body.append(chooser)
+   document.addEventListener('pointerdown',event=>{
+    if(!chooser.contains(event.target))chooser.remove()
+   })
+  })
+  await page.locator('.eb-root[data-native-page=true][data-tab-id=A]').waitFor()
+  const chooser=page.locator('#right-workspace-menu')
+  await chooser.getByRole('textbox',{name:'搜索工作区'}).click()
+  await page.evaluate(()=>window.projection.pagePointerDown('B'))
+  expect(await chooser.isVisible()).toBe(true)
+  await page.evaluate(()=>window.projection.pagePointerDown('A'))
+  expect(await chooser.count()).toBe(0)
+ }finally{await page.close()}
+})
 it('renders projected context-row hover feedback over the frozen base paint',async()=>{
  const{page}=await fixture({dark:true}),projectedPage=await browser.newPage({viewport:{width:320,height:280}})
  try{await page.evaluate(()=>{window.startProjection();window.openPageMenu()});await expect.poll(()=>page.evaluate(()=>window.calls.filter(([method])=>method==='menu').length)).toBeGreaterThan(0)

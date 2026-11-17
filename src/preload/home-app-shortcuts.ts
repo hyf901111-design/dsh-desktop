@@ -6,8 +6,8 @@ import styles from './home-app-shortcuts.css?raw'
 export type HomeAppShortcut = 'browser' | 'knowledge' | 'image-factory' | 'plugin' | 'scheduled' | 'research' | 'note' | 'spreadsheet'
 const apps: readonly HomeAppShortcut[] = ['browser', 'knowledge', 'image-factory', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet']
 const labels = {
-  zh: ['浏览器', '知识库', '图像工厂', '插件', '定时任务', '研究看板', '笔记', '表格'],
-  en: ['Browser', 'Knowledge Base', 'Image Factory', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet']
+  zh: ['浏览器', '知识库', '图像', '插件', '定时任务', '研究看板', '笔记', '表格'],
+  en: ['Browser', 'Knowledge Base', 'Images', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet']
 }
 const mounted = new WeakMap<Document, () => void>()
 

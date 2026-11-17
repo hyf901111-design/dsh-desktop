@@ -65,6 +65,41 @@ it('reloads an already open Markdown preview when knowledge changes its saved bo
   } finally { for (const dispose of cleanup) dispose() }
 })
 
+it('opens generated-image canvases from the native preview without duplicating pending copy requests', async () => {
+  const script = readFileSync('scripts/lib/sidebar-knowledge-preview.mjs', 'utf8')
+  const start = script.indexOf('function KnowledgeImageCanvasActions')
+  const end = script.indexOf('\nconst marker', start)
+  expect(start).toBeGreaterThan(-1)
+  const open = vi.fn(async (_kind: string, _id: string) => {})
+  const feedback = vi.fn()
+  const element = (type: unknown, props: object) => ({ type, props })
+  const render = (row: object) => runInNewContext(script.slice(start, end) +
+    '\nKnowledgeImageCanvasActions({ row, ToolbarAction: "button", onError })', {
+    react: { useRef: () => ({ current: false }), useState: () => [false, () => {}] },
+    react_jsx_runtime: { jsx: element, jsxs: element, Fragment: 'fragment' },
+    sidebar_module_css_default: { iconButton: 'icon-button' },
+    _deepseek_ai_dsh_client_ui_primitives: { IconImageOutline16: 'image', IconCopyOutline16: 'copy' },
+    window: { dshDesktop: { knowledgeOpenImageCanvas: open } },
+    document: { documentElement: { dataset: { odysseyLocale: 'zh' } } },
+    row, onError: feedback,
+  })
+  const row = { id: 'archive-id', sessionId: 'origin-session', generatedBy: 'image-factory' }
+  expect(render({ ...row, generatedBy: undefined })).toBeNull()
+  expect(render({ ...row, received: { owner: '共享者' } })).toBeNull()
+  const [source, copy] = render(row).props.children
+  expect(source.props.label).toBe('打开来源画布')
+  expect(copy.props.label).toBe('在「图像」中编辑副本')
+  await source.props.onClick()
+  expect(open).toHaveBeenCalledWith('source', 'origin-session')
+  const copying = copy.props.onClick()
+  await copy.props.onClick()
+  await copying
+  expect(open.mock.calls.filter(call => call[0] === 'copy')).toEqual([['copy', 'archive-id']])
+  open.mockRejectedValueOnce(Error('来源画布不可用。'))
+  await source.props.onClick()
+  expect(feedback).toHaveBeenLastCalledWith('来源画布不可用。')
+})
+
 it('uses exact-file preview for supported formats and denies a previous account', async () => {
   const { preview, identity, add } = await setup()
   const rows = await Promise.all([

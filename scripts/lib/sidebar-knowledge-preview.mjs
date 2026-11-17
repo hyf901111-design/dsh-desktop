@@ -139,6 +139,33 @@ function KnowledgePassiveMedia({ mediaUrl, customData }) {
   })
 }
 
+function KnowledgeImageCanvasActions({ row, ToolbarAction, onError }) {
+  const pending = react.useRef(false)
+  const [busy, setBusy] = react.useState(false)
+  const open = window.dshDesktop?.knowledgeOpenImageCanvas
+  if (!open || row?.generatedBy !== 'image-factory' || row.received) return null
+  const english = document.documentElement.dataset.odysseyLocale === 'en'
+  const button = (kind, id, label, icon) => react_jsx_runtime.jsx(ToolbarAction, {
+    hint: true, label, type: 'button', className: sidebar_module_css_default.iconButton, disabled: busy,
+    onClick: async () => {
+      if (pending.current) return
+      pending.current = true
+      setBusy(true)
+      onError('')
+      try { await open(kind, id) }
+      catch (error) { onError(error?.message || (english ? 'Could not open Images.' : '无法打开「图像」。')) }
+      finally { pending.current = false; setBusy(false) }
+    },
+    children: react_jsx_runtime.jsx(icon, { size: 14 })
+  })
+  return react_jsx_runtime.jsxs(react_jsx_runtime.Fragment, { children: [
+    row.sessionId && button('source', row.sessionId, english ? 'Open source canvas' : '打开来源画布',
+      _deepseek_ai_dsh_client_ui_primitives.IconImageOutline16),
+    button('copy', row.id, english ? 'Edit a copy in Images' : '在「图像」中编辑副本',
+      _deepseek_ai_dsh_client_ui_primitives.IconCopyOutline16)
+  ] })
+}
+
 const marker = '/* sherlock:native-knowledge-editor:v1 */'
 const revisionMarker = '/* sherlock:knowledge-preview-revisions:v1 */'
 const scopedReplace = (source, from, to) => {
@@ -146,8 +173,18 @@ const scopedReplace = (source, from, to) => {
   return source.replace(from, to)
 }
 
+function patchImageCanvasActions(source) {
+  const marker = '/* sherlock:knowledge-preview-image-actions:v1 */'
+  if (source.includes(marker)) return source
+  const patched = scopedReplace(source, 'function EditorHost(props) {',
+    marker + '\n' + KnowledgeImageCanvasActions.toString() + '\nfunction EditorHost(props) {')
+  const download = 'managedId && managedSource && (0, react_jsx_runtime.jsx)(PptxToolbarAction,{hint:true,label:pptToolbarLabel("download"),type:"button",'
+  const actions = 'managedId && managedSource && react_jsx_runtime.jsx(KnowledgeImageCanvasActions,{row:managedSource.document,ToolbarAction:PptxToolbarAction,onError:setManagedDownloadError},managedId),'
+  return scopedReplace(patched, download, actions + '\n                        ' + download)
+}
+
 export function patchSidebarKnowledgePreview(source) {
-  if (source.includes(revisionMarker)) return source
+  if (source.includes(revisionMarker)) return patchImageCanvasActions(source)
   if (source.includes(marker)) {
     const start = source.indexOf('function useKnowledgeEditorSource(')
     const end = source.indexOf('function nativeKnowledgeViewer(', start)
@@ -158,7 +195,7 @@ export function patchSidebarKnowledgePreview(source) {
     rest = scopedReplace(rest,
       '!isPptx && (!managedId || managedWritable) && toolbar?.modes === true',
       '!isPptx && (!managedId || managedWritable || toolbar?.dirty === true) && toolbar?.modes === true')
-    return source.slice(0, start) + revisionMarker + '\n' + useKnowledgeEditorSource.toString() + '\n' + rest
+    return patchImageCanvasActions(source.slice(0, start) + revisionMarker + '\n' + useKnowledgeEditorSource.toString() + '\n' + rest)
   }
   const start = source.indexOf('function EditorHost(props) {')
   const end = source.indexOf('function EditorPathInput(props) {', start)
@@ -203,5 +240,5 @@ export function patchSidebarKnowledgePreview(source) {
   let pdf = next.slice(pdfStart, pdfEnd)
   pdf = scopedReplace(pdf, 'fetch(mediaUrl(scope, path),', 'fetch(props.managedFile ? props.mediaUrl : mediaUrl(scope, path),')
   pdf = scopedReplace(pdf, 'scope.cwd,\n\t\t\t\tpath\n\t\t\t]);\n\t\t\t(0, react.useEffect)(() => {\n\t\t\t\tconst block', 'scope.cwd,\n\t\t\t\tpath, props.mediaUrl\n\t\t\t]);\n\t\t\t(0, react.useEffect)(() => {\n\t\t\t\tconst block')
-  return next.slice(0, pdfStart) + pdf + next.slice(pdfEnd)
+  return patchImageCanvasActions(next.slice(0, pdfStart) + pdf + next.slice(pdfEnd))
 }
