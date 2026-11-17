@@ -9,34 +9,158 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像画板编辑与企业模板画廊",
+        "featureName": "图像图层引用与易方达营销模板",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "0d1c6933d6379ee3f92a04e253d2e998217575e2",
-        "tipCommit": "577e2cfd2e90879d98589ad932d949df28782050",
+        "baseCommit": "577e2cfd2e90879d98589ad932d949df28782050",
+        "tipCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
         "commits": [
           {
-            "commit": "a4d36f07cbaf3a07793e50e737a54cb541f5c4e2",
+            "commit": "8cc17df14c962e88b57d1389464d7d4f60048993",
             "parents": [
-              "0d1c6933d6379ee3f92a04e253d2e998217575e2"
+              "577e2cfd2e90879d98589ad932d949df28782050"
             ],
-            "subject": "优化：模板缩略图自然排布并简化画布工具栏"
+            "subject": "图像图层引用复用研究看板的行内待插入标签"
           },
           {
-            "commit": "577e2cfd2e90879d98589ad932d949df28782050",
+            "commit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
             "parents": [
-              "a4d36f07cbaf3a07793e50e737a54cb541f5c4e2"
+              "8cc17df14c962e88b57d1389464d7d4f60048993"
             ],
-            "subject": "优化：画廊模式悬浮底部并将关闭按钮置于右上角"
+            "subject": "扩充易方达分层营销模板和提示词画廊"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/actions-menu.tsx"
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-layer-references.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/spreadsheet-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-active-prism.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-blue-bay.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-bond-pavilion.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-elements-amber.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-elements-grid.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-etf-feature-cards.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-fund-learning.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-glass-transition.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-harvest.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-index-bridge.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-industrial-star.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-industry-pinwheel.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-innovation-archive.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-marathon-aerial.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-marathon-city.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-mountain-ridge.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-mountain-sunrise.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-research-window.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-run-shoes.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-run-start.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-type-horizon.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-type-momentum.jpg"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/gallery-art/efund-type-precision.jpg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-examples.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-layout.ts"
           },
           {
             "status": "M",
             "path": "src/preload/image-factory/gallery.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/marketing-layout.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/marketing-prompts.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/marketing-templates.ts"
           },
           {
             "status": "M",
@@ -44,19 +168,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-actions-menu.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/image-factory-gallery.test.ts"
           },
           {
             "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
+            "path": "test/image-factory-native.test.js"
           }
         ],
         "checks": [
@@ -68,8 +184,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "577e2cfd2e90879d98589ad932d949df28782050",
-            "completedAt": "2026-11-17T11:15:36.899Z",
+            "verifiedCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
+            "completedAt": "2026-11-17T11:59:38.022Z",
             "timeoutMs": 120000
           },
           {
@@ -77,15 +193,14 @@
               "npx",
               "vitest",
               "run",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-native.test.js",
               "test/image-factory-gallery.test.ts",
               "test/image-factory.test.js"
             ],
             "outcome": "passed",
-            "summary": "46 项图像应用聚焦测试通过。",
-            "verifiedCommit": "577e2cfd2e90879d98589ad932d949df28782050",
-            "completedAt": "2026-11-17T11:15:36.899Z",
+            "summary": "45 项图像应用聚焦测试通过。",
+            "verifiedCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
+            "completedAt": "2026-11-17T11:59:38.022Z",
             "timeoutMs": 120000
           }
         ],
@@ -94,21 +209,14 @@
           "summary": "聚焦检查完成，签名桌面版待复验。"
         },
         "acceptanceCriteria": [
-          "模板缩略图按实际宽高比排布，顶部留白并对齐。",
-          "两个模式的文字按钮悬浮在画廊底部中间，底部渐隐模糊可见，关闭画廊按钮居右上且为圆形模糊背景。",
-          "鼠标从空白处拖框，结束后键盘编组。工具栏不含框选元素或编组按钮。",
-          "编辑工具栏右侧在空间不足时出现独立的更多按钮，打开后仅显示被收纳的操作。"
+          "图层标签在原生输入框内待插入，与研究看板使用相同的样式，点击输入框确认，多个标签可与文字混排。",
+          "图像模板预览放大并下移，保持比例和顶部对齐，模式切换只用文字和短下划线。",
+          "新增 12 套易方达分层模板和 23 张提示词图库样例，标题、说明与资料字段可编辑。"
         ],
         "risks": [
-          "未合入正式分支。"
+          "模拟资料字段须在正式投放前替换为已审核的产品内容。"
         ],
-        "generatedAt": "2026-11-17T11:15:36.899Z"
-      },
-      "merged": {
-        "mergeCommit": "5faf20e5a59fb5bb63841f45b9b29a2e8910c8b4",
-        "verificationCommit": "5faf20e5a59fb5bb63841f45b9b29a2e8910c8b4",
-        "checks": [],
-        "recordedAt": "2026-11-17T11:15:42.481Z"
+        "generatedAt": "2026-11-17T11:59:38.022Z"
       }
     }
   ],
