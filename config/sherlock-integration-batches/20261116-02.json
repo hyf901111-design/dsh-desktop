@@ -9,23 +9,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像工厂：固定图层、就地添加文本及框选透明度",
+        "featureName": "图像工厂：浏览器式顶栏与画廊手动翻页",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
-        "tipCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
+        "baseCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
+        "tipCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
         "commits": [
           {
-            "commit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
+            "commit": "55f9959d7a12b07eebb3ac385f922d2e6daa1bf1",
             "parents": [
-              "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f"
+              "548fae75cff65bf3a71bff6acfe1180acdfcd62d"
             ],
-            "subject": "调整：固定图层面板并支持点击图像放置文本"
+            "subject": "调整：图像工厂顶栏对齐浏览器页签交互"
+          },
+          {
+            "commit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
+            "parents": [
+              "55f9959d7a12b07eebb3ac385f922d2e6daa1bf1"
+            ],
+            "subject": "功能：图像工厂画廊支持左右手动翻页"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/image-factory-canvases.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
+          },
+          {
+            "status": "M",
             "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/task-tabs.tsx"
           },
           {
             "status": "M",
@@ -33,7 +64,27 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/image-factory-canvas.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-canvases.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -45,8 +96,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
-            "completedAt": "2026-11-17T00:02:18.452Z",
+            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
+            "completedAt": "2026-11-17T00:33:02.116Z",
             "timeoutMs": 120000
           },
           {
@@ -54,30 +105,62 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory.test.js",
+              "test/image-factory-native.test.js",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-gallery.test.ts",
               "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-factory-native.test.js"
+              "test/image-factory.test.js",
+              "test/browser-app-native.test.js",
+              "test/browser-app-model.test.ts"
             ],
             "outcome": "passed",
-            "summary": "47 项图像工厂聚焦测试通过，覆盖图层固定、点击位置添加文本、选区透明度、文档持久化和共用对话。",
-            "verifiedCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
-            "completedAt": "2026-11-17T00:02:18.452Z",
+            "summary": "61 项图像与浏览器聚焦检查通过。",
+            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
+            "completedAt": "2026-11-17T00:33:02.116Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-rendered.test.js",
+              "-t",
+              "square tab switcher|native right-pane entry|many tabs compressed|crowded active tab|crowded narrow strip|animates closing tabs|drags tabs"
+            ],
+            "outcome": "passed",
+            "summary": "浏览器 7 项实际 Chromium 页签与右侧屏位置回归通过。",
+            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
+            "completedAt": "2026-11-17T00:33:02.116Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "Image Factory"
+            ],
+            "outcome": "passed",
+            "summary": "图像工厂 4 项实际 Chromium 悬浮与拖动布局检查通过。",
+            "verifiedCommit": "71b4efee531f9354f0cfb31794201c528d6a8b01",
+            "completedAt": "2026-11-17T00:33:02.116Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "针对固定图层及文本工具的聚焦交互验证通过；签名预览构建后复测。"
+          "summary": "独立 Chromium 通过页签列表、拖拽、固定、恢复和左右翻页，签名预览构建后实窗复测。"
         },
         "acceptanceCriteria": [
-          "激活图层面板后，点画布或工具和切换任务不关闭面板；点击图层或关闭按钮才关闭。",
-          "添加文本先激活文本工具；点击图像位置创建并聚焦文字图层；可以再次编辑。",
-          "框选修改明确保留透明度时，写回画布和知识库使用原像素透明度。"
+          "图像工厂顶栏复用浏览器的返回、标签页列表、溢出裁切和右侧屏留白。",
+          "任务可切换、拖拽排序、固定及重新打开；加号创建新任务并显示画廊。",
+          "画廊两侧箭头按当前宽度快速滑过数张图片，自动循环从新位置继续。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-17T00:02:18.452Z"
+        "generatedAt": "2026-11-17T00:33:02.116Z"
       }
     },
     {
