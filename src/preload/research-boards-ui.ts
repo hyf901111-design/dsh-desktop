@@ -1727,6 +1727,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     version: () => revision,
     getState: () => state,
     getView: view,
+    collaborativeBoard: (id: string) => state.boards.find(board => board.localSessionId === id),
     workspaceFor: (id: string) => deps.researchWorkspaces.for(id),
     identity,
     subscribeActivity(id: string, listener: () => void) {
@@ -1844,6 +1845,16 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     async deletePersonal(entry: Favorite) {
       await deps.workspaces.archiveSession(entry.sessionId)
       await call('favorite.remove', { favoriteId: entry.favoriteId })
+    },
+    async renameSession(id: string, title: string) {
+      const board = api.collaborativeBoard(id)
+      if (board) {
+        if (board.role !== 'owner') throw Error('只有看板所有者可以重命名。')
+        await call('board.rename', { boardId: board.boardId, title })
+        return
+      }
+      if (isShared(id)) throw Error('协作看板尚未就绪。')
+      await api.renamePersonal(id, title)
     },
     async renamePersonal(id: string, title: string) {
       const binding = deps.sessions.binding(id)

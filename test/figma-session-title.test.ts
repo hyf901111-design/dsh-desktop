@@ -22,3 +22,24 @@ it('preserves explicit empty-session titles in sidebar projection',async()=>{
  const f=runInNewContext(extract('sessionTitle')+'\n'+extract('displayTitle')+'\n({sessionTitle,displayTitle})',{researchSessionState:()=>({engaged:false})});
  expect(f.sessionTitle({blank:true,title:'自定义标题'})).toBe('自定义标题');expect(f.displayTitle({blank:true,explicitTitle:'自定义标题'},()=> '新会话')).toBe('自定义标题');expect(f.displayTitle({blank:true},()=> '新会话')).toBe('新会话');
 })
+
+it('projects the shared board name over a stale local breadcrumb and restricts renaming to its owner',async()=>{
+ const {readFile}=await import('node:fs/promises')
+ const {patchFigmaSessionTitle}=await import('../scripts/lib/figma-session-title.mjs')
+ const raw=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const patched=patchFigmaSessionTitle(raw)
+ expect(patchFigmaSessionTitle(patched)).toBe(patched)
+ const project=patched.split('\n').find(line=>line.includes('if(last && collaborativeBoard) summary ='))
+ const action=patched.split('\n').find(line=>line.includes('rename: collaborativeBoard &&'))
+ expect(project).toBeDefined();expect(action).toBeDefined()
+ const crumb=new Function('summary','last','collaborativeBoard','rename',project+'\nreturn {summary,'+action+'};')
+ const local={id:'s',displayTitle:'旧会话名'}, rename=vi.fn()
+ for(const title of ['开黑测试','更新后的看板']){
+  const owner=crumb(local,true,{title,role:'owner'},rename)
+  expect(owner.summary.displayTitle).toBe(title)
+  owner.rename(title)
+  expect(rename).toHaveBeenLastCalledWith('s',title)
+  expect(crumb(local,true,{title,role:'editor'},rename).rename).toBeUndefined()
+ }
+ expect(crumb(local,true,undefined,rename).summary).toBe(local)
+})
