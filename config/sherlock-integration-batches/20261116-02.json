@@ -9,23 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像工厂：框选改图保留透明度",
+        "featureName": "图像工厂：固定图层、就地添加文本及框选透明度",
         "branch": "codex/feat/image-factory-20261116",
-        "baseCommit": "8a6faf039cc9483c40c83dd9e50d2890c1e2c151",
-        "tipCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
+        "baseCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
+        "tipCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
         "commits": [
           {
-            "commit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
+            "commit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
             "parents": [
-              "8a6faf039cc9483c40c83dd9e50d2890c1e2c151"
+              "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f"
             ],
-            "subject": "修复：框选改图保留用户指定的透明度"
+            "subject": "调整：固定图层面板并支持点击图像放置文本"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
+            "path": "src/preload/image-factory/style.css"
           },
           {
             "status": "M",
@@ -33,7 +33,7 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory.test.js"
+            "path": "test/image-factory-layer-gesture.test.ts"
           }
         ],
         "checks": [
@@ -45,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过。",
-            "verifiedCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
-            "completedAt": "2026-11-16T23:57:17.336Z",
+            "verifiedCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
+            "completedAt": "2026-11-17T00:02:18.452Z",
             "timeoutMs": 120000
           },
           {
@@ -55,26 +55,29 @@
               "node_modules/vitest/vitest.mjs",
               "run",
               "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts"
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-actions-menu.test.ts",
+              "test/image-factory-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "40 项图像工厂聚焦测试通过，覆盖选区透明像素、半透明像素、边缘过渡和共用对话提交。",
-            "verifiedCommit": "6f1c9fc21c9a772ce02b0b362ae8b83fd91d8d8f",
-            "completedAt": "2026-11-16T23:57:17.336Z",
+            "summary": "47 项图像工厂聚焦测试通过，覆盖图层固定、点击位置添加文本、选区透明度、文档持久化和共用对话。",
+            "verifiedCommit": "548fae75cff65bf3a71bff6acfe1180acdfcd62d",
+            "completedAt": "2026-11-17T00:02:18.452Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "旧签名版复现透明区域变白；签名预览构建后复测。"
+          "summary": "针对固定图层及文本工具的聚焦交互验证通过；签名预览构建后复测。"
         },
         "acceptanceCriteria": [
-          "明确要求保留原透明度时，框选回写和知识库收录使用原像素透明度。",
-          "普通框选编辑仍可改变透明区域。"
+          "激活图层面板后，点画布或工具和切换任务不关闭面板；点击图层或关闭按钮才关闭。",
+          "添加文本先激活文本工具；点击图像位置创建并聚焦文字图层；可以再次编辑。",
+          "框选修改明确保留透明度时，写回画布和知识库使用原像素透明度。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-16T23:57:17.336Z"
+        "generatedAt": "2026-11-17T00:02:18.452Z"
       }
     },
     {
