@@ -237,15 +237,26 @@ export function installKnowledgeSidebar({service,document:doc=document}) {
   event.preventDefault()
  }
  const activate=()=>service.activateTab?.('sherlock-research-conversation',scope())
+ const openSessionChat=({detail})=>{
+  if(typeof detail?.sessionId!=='string'||!detail.sessionId)return
+  const target={sessionId:detail.sessionId}
+  const id='sherlock-research-conversation'
+  const title=service.getTab?.(id)?.title
+  service.openTab({id,type:id,title:typeof title==='function'?title():title??'对话',
+   path:'sherlock://research/conversation',meta:{sherlockPanel:'right',sherlockPinned:true,sherlockClosable:false}},target)
+  service.activateTab?.(id,target)
+  service.setPanelState?.({open:true},target)
+ }
  const openFactoryChat=()=>{
   if(doc.body.dataset.workspaceSurface!=='image-factory')return
   service.activateTab?.('sherlock-research-conversation',scope())
   service.setPanelState?.({open:true},scope())
  }
  doc.addEventListener('sherlock:image-factory-show-chat',openFactoryChat)
+ doc.addEventListener('sherlock:knowledge-session-chat',openSessionChat)
  doc.addEventListener('sherlock:knowledge-preview-file',preview)
  doc.addEventListener('sherlock:knowledge-activate-chat',activate)
- return()=>{off();offFile();doc.removeEventListener('sherlock:image-factory-show-chat',openFactoryChat);doc.removeEventListener('sherlock:knowledge-preview-file',preview);doc.removeEventListener('sherlock:knowledge-activate-chat',activate)}
+ return()=>{off();offFile();doc.removeEventListener('sherlock:image-factory-show-chat',openFactoryChat);doc.removeEventListener('sherlock:knowledge-session-chat',openSessionChat);doc.removeEventListener('sherlock:knowledge-preview-file',preview);doc.removeEventListener('sherlock:knowledge-activate-chat',activate)}
 }
 
 export function installKnowledgeSourceNavigation({ sessions, workspaces, selectView, boards, document: doc = document }) {
@@ -289,6 +300,7 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, selectV
     const adapter = view === 'research' ? boards?.() : undefined
     const shared = adapter?.getState?.().boards.find(board => board.localSessionId === id && board.pinned)
     selectView(id, view)
+    if (view !== 'chat') dispatch('sherlock:knowledge-session-chat', { sessionId: id })
     if (shared) {
      void adapter.openBoard(shared.boardId).then(opened => reply(opened === id), () => reply(false))
      return
