@@ -9,23 +9,84 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像图层引用与易方达营销模板",
+        "featureName": "图像编辑排版复测与分层工程入库",
         "branch": "codex/feat/image-brand-assets-20261117",
-        "baseCommit": "128dcf00754512e0aa7a18ec25c501e3a9bdab41",
-        "tipCommit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
+        "baseCommit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
+        "tipCommit": "46e2edd378f69d8cc3f015242f6717bbbac2f1e7",
         "commits": [
           {
-            "commit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
+            "commit": "048db7422862a0f68a61433e7f54cb340493019a",
             "parents": [
-              "128dcf00754512e0aa7a18ec25c501e3a9bdab41"
+              "5b351c85f1d86ad2dc961bf4fb48238956b1ab79"
             ],
-            "subject": "保证分层海报可保存重开并交错陈列预览"
+            "subject": "调整易方达海报排版与画廊圆角切换按钮"
+          },
+          {
+            "commit": "6808fbbed495554c0e11c98e334c4d03e843dc30",
+            "parents": [
+              "048db7422862a0f68a61433e7f54cb340493019a"
+            ],
+            "subject": "保留失败的图片图层并反馈部分修改结果"
+          },
+          {
+            "commit": "f7ed81aaa97df9b692f7a950a2110c51a696fe8b",
+            "parents": [
+              "6808fbbed495554c0e11c98e334c4d03e843dc30"
+            ],
+            "subject": "固定模板画廊纵向位置并优化叠放网格与悬停边缘"
+          },
+          {
+            "commit": "46e2edd378f69d8cc3f015242f6717bbbac2f1e7",
+            "parents": [
+              "f7ed81aaa97df9b692f7a950a2110c51a696fe8b"
+            ],
+            "subject": "增加图像导出按钮与知识库分层工程保存"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/image-factory/gallery-examples.ts"
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/history-backfill.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/session-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/actions-menu.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/image-factory/assets/bookmark.svg"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/canvas-workspace.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery-layout.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/gallery.tsx"
           },
           {
             "status": "M",
@@ -33,7 +94,63 @@
           },
           {
             "status": "M",
-            "path": "test/image-factory-canvases.test.ts"
+            "path": "src/preload/image-factory/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-directory-icons.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-directory-icons.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-library.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-actions-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-gallery.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-history-backfill.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-library.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-session-copy.test.ts"
           }
         ],
         "checks": [
@@ -45,8 +162,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过。",
-            "verifiedCommit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
-            "completedAt": "2026-11-17T12:06:14.806Z",
+            "verifiedCommit": "46e2edd378f69d8cc3f015242f6717bbbac2f1e7",
+            "completedAt": "2026-11-17T12:38:04.234Z",
             "timeoutMs": 120000
           },
           {
@@ -54,37 +171,35 @@
               "npx",
               "vitest",
               "run",
-              "test/image-factory-native.test.js",
               "test/image-factory-gallery.test.ts",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-native.test.js",
               "test/image-factory.test.js",
-              "test/image-factory-canvases.test.ts"
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-actions-menu.test.ts",
+              "test/knowledge-library.test.ts",
+              "test/knowledge-history-backfill.test.ts",
+              "test/knowledge-session-copy.test.ts"
             ],
             "outcome": "passed",
-            "summary": "52 项图像聚焦测试通过，覆盖 12 套新增模板的保存重开。",
-            "verifiedCommit": "5b351c85f1d86ad2dc961bf4fb48238956b1ab79",
-            "completedAt": "2026-11-17T12:06:14.806Z",
+            "summary": "图像与知识库聚焦测试通过。",
+            "verifiedCommit": "46e2edd378f69d8cc3f015242f6717bbbac2f1e7",
+            "completedAt": "2026-11-17T12:38:04.234Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "聚焦检查完成，签名桌面版待复验。"
+          "summary": "聚焦测试完成，等待签名客户端复核。"
         },
         "acceptanceCriteria": [
-          "图层标签在原生输入框内待插入，与研究看板使用相同的样式，点击输入框确认，多个标签可与文字混排。",
-          "图像模板预览放大并下移，保持比例和顶部对齐，模式切换只用文字和短下划线。",
-          "新增 12 套易方达分层模板和 23 张提示词图库样例，标题、说明与资料字段可编辑。"
+          "模板海报排版整改，同列短模板可叠放且不会纵向移动。",
+          "模板画廊采用研究画板点阵，底部无描边模糊圆角按钮，悬停蒙层覆盖到底。",
+          "导出 PNG 和 JPG，主动保存进入我的图像并还原可编辑图层。",
+          "针对图层修改成功与生成失败的回执正确。"
         ],
-        "risks": [
-          "模拟资料字段须在正式投放前替换为已审核的产品内容。"
-        ],
-        "generatedAt": "2026-11-17T12:06:14.806Z"
-      },
-      "merged": {
-        "mergeCommit": "1765814311ffa63ea55393fb033420ebc65f764e",
-        "verificationCommit": "1765814311ffa63ea55393fb033420ebc65f764e",
-        "checks": [],
-        "recordedAt": "2026-11-17T12:06:20.249Z"
+        "risks": [],
+        "generatedAt": "2026-11-17T12:38:04.234Z"
       }
     }
   ],
