@@ -55,8 +55,18 @@ it('replaces the bottom account entry with an always-flowing orb and opens a cen
   expect(after).not.toEqual(before);expect(after.some((row:any,index:number)=>row.transform!==before[index].transform)).toBe(true)
   await open(f.page);await uiExpect(f.page.getByRole('tab',{name:'快速开始',exact:true})).toBeVisible();expect(await f.page.locator('[data-odyssey-home-operations-toggle]').count()).toBe(0)
   const geometry=await f.page.locator('.odyssey-explore-content').evaluate((node:HTMLElement)=>{const r=node.getBoundingClientRect();return{x:r.x,width:r.width,height:r.height,center:r.x+r.width/2,centerY:r.y+r.height/2,stage:node.querySelector('.odyssey-explore-viewport')!.getBoundingClientRect().height,backdrop:getComputedStyle(node.closest('dialog')!,'::backdrop').backdropFilter}})
-  expect(geometry.width).toBeCloseTo(864,0);expect(geometry.center).toBeCloseTo(800,0);expect(geometry.stage).toBe(376);expect(geometry.centerY).toBeCloseTo(484,0);expect(geometry.backdrop).toBe('blur(12px)')
+  expect(geometry.width).toBeCloseTo(864,0);expect(geometry.center).toBeCloseTo(800,0);expect(geometry.stage).toBe(376);expect(geometry.centerY).toBeCloseTo(484,0);expect(geometry.backdrop).toBe('blur(18px)')
   await f.page.screenshot({path:evidence+'/dark-quick.png'});await f.page.getByRole('button',{name:'关闭探索',exact:true}).click();await uiExpect(f.page.getByRole('dialog',{name:'探索',exact:true})).not.toBeVisible();expect(await input.inputValue()).toBe('原草稿必须保留');expect(f.errors).toEqual([])
+ }finally{await f.close()}
+},15000)
+it('keeps the Explore orb moving in the collapsed rail and respects reduced motion',async()=>{
+ const f=await fixture({collapsed:true,reduced:false,width:1100,height:760})
+ try{
+  const layers=f.page.locator('[data-explore-trigger] .odyssey-explore-orb img')
+  const motion=()=>layers.evaluateAll((nodes:Element[])=>nodes.map(node=>getComputedStyle(node).animationName))
+  expect(await motion()).toEqual(Array(3).fill('odyssey-explore-flow'))
+  await f.page.emulateMedia({reducedMotion:'reduce'})
+  expect(await motion()).toEqual(Array(3).fill('none'))
  }finally{await f.close()}
 },15000)
 it('closes from the surrounding background and Escape, and restores the sidebar trigger in collapsed layout',async()=>{
