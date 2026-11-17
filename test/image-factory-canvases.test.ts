@@ -86,6 +86,10 @@ it('restores the same open task tabs for the account without sharing them across
     await studio.writeTabs({ epoch: 1, tabs })
     const reopened = new ImageFactoryCanvases(root, () => owner)
     expect(await reopened.readTabs()).toEqual({ epoch: 1, tabs })
+    const pinned = [{ ...tabs[0], pinned: true }]
+    const closed = tabs.slice(1)
+    await reopened.writeTabs({ epoch: 1, tabs: pinned, closed })
+    expect(await studio.readTabs()).toEqual({ epoch: 1, tabs: pinned, closed })
     owner = { owner: 'account-b', generation: 2 }
     expect(await reopened.readTabs()).toEqual({ epoch: 2, tabs: [] })
     await expect(reopened.writeTabs({ epoch: 1, tabs })).rejects.toThrow('账号已切换')

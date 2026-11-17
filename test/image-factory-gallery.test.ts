@@ -3,8 +3,9 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { expect, it, vi } from 'vitest'
 import { ImageFactoryGallery } from '../src/preload/image-factory/gallery'
+import { galleryExamples } from '../src/preload/image-factory/gallery-examples'
 
-it('stops gallery animation while a different workspace conceals it and resumes when shown', async () => {
+it('pages several cards in either direction, wraps the loop, and pauses while concealed', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   const win = document.defaultView!
   let nextFrame = 1
@@ -34,6 +35,25 @@ it('stops gallery animation while a different workspace conceals it and resumes 
     expect(cancel).toHaveBeenLastCalledWith(visibleFrame)
     setCycleWidth!(3000)
     expect(request).toHaveBeenCalledTimes(2)
+
+    const stride = 220
+    const cycleWidth = galleryExamples.length * stride
+    setCycleWidth!(cycleWidth)
+    const viewport = mount.querySelector<HTMLElement>('.if-gallery-viewport')!
+    Object.defineProperty(viewport, 'clientWidth', { value: 680 })
+    const flip = async (label: string, start: number) => {
+      await act(() => mount.querySelector<HTMLButtonElement>(`[aria-label="${label}"]`)!.click())
+      request.mock.lastCall![0](start)
+      request.mock.lastCall![0](start + 260)
+    }
+    await flip('向右翻页', 1000)
+    expect(viewport.scrollLeft).toBe(3 * stride)
+    await flip('向左翻页', 2000)
+    expect(viewport.scrollLeft).toBe(0)
+    await flip('向左翻页', 3000)
+    expect(viewport.scrollLeft).toBe(cycleWidth - 3 * stride)
+    await flip('向右翻页', 4000)
+    expect(viewport.scrollLeft).toBe(0)
   } finally {
     await act(() => root.unmount())
     mount.remove()

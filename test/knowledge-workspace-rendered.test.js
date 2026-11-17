@@ -685,13 +685,13 @@ it('opens the selected archived image separately from its source canvas', async 
   }
 })
 
-it('keeps the Image Factory title visible and draggable at typical three-pane widths', async () => {
+it('uses the browser title collapse and drag regions in Image Factory', async () => {
   const page = await browser.newPage()
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
     await page.setContent(`
-      <div class="image-factory" style="left:10px;width:620px">
+      <div class="image-factory" style="left:10px;width:760px">
         <section class="if-work">
           <header class="if-top workspace-app-topbar">
             <button type="button">返回对话</button>
@@ -717,7 +717,7 @@ it('keeps the Image Factory title visible and draggable at typical three-pane wi
     expect(await header.evaluate(region)).toBe('no-drag')
     await header.getByRole('button', { name: '更多' }).evaluate(button => button.setAttribute('aria-expanded', 'false'))
     expect(await title.evaluate(region)).toBe('drag')
-    await page.locator('.image-factory').evaluate(el => { el.style.width = '440px' })
+    await page.locator('.image-factory').evaluate(el => { el.style.width = '620px' })
     expect(await title.isVisible()).toBe(false)
   } finally {
     await page.close()
