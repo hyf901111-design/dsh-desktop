@@ -9,27 +9,35 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "应用返回原工作区及图像独立草稿隔离",
+        "featureName": "工作区应用返回、图像草稿隔离及知识库右侧对话展开",
         "branch": "codex/feat/workspace-app-back-20261117",
-        "baseCommit": "13ee4610152058af41f50281e14b5a14f0e43e35",
-        "tipCommit": "61c7e0ab38349db4f3613e5d1c917ea86126194e",
+        "baseCommit": "61c7e0ab38349db4f3613e5d1c917ea86126194e",
+        "tipCommit": "7a0d9c4e52c8c0b8b0fe0a0bea43fc5836bd9a2d",
         "commits": [
           {
-            "commit": "61c7e0ab38349db4f3613e5d1c917ea86126194e",
+            "commit": "7a0d9c4e52c8c0b8b0fe0a0bea43fc5836bd9a2d",
             "parents": [
-              "13ee4610152058af41f50281e14b5a14f0e43e35"
+              "61c7e0ab38349db4f3613e5d1c917ea86126194e"
             ],
-            "subject": "修复：空白工作区会话不再载入独立图像草稿"
+            "subject": "修复：从知识库打开工作区时展开右侧对话屏"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "path": "scripts/lib/pending-conversation-panel.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-composer.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-panel.test.js"
           }
         ],
         "checks": [
@@ -41,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "61c7e0ab38349db4f3613e5d1c917ea86126194e",
-            "completedAt": "2026-11-17T07:30:22.126Z",
+            "verifiedCommit": "7a0d9c4e52c8c0b8b0fe0a0bea43fc5836bd9a2d",
+            "completedAt": "2026-11-17T08:00:03.573Z",
             "timeoutMs": 120000
           },
           {
@@ -50,68 +58,33 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/browser-app-native.test.js",
-              "test/workspace-surface-host.test.ts",
+              "test/knowledge-composer.test.js",
+              "test/pending-conversation-panel.test.js",
+              "test/figma-panel-tab-overflow.test.ts",
               "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/knowledge-session-content.test.ts"
+              "test/browser-app-native.test.js"
             ],
             "outcome": "passed",
-            "summary": "59 项聚焦测试通过，覆盖表格返回和空白工作区隔离",
-            "verifiedCommit": "61c7e0ab38349db4f3613e5d1c917ea86126194e",
-            "completedAt": "2026-11-17T07:30:22.126Z",
+            "summary": "41 项聚焦测试通过，覆盖知识库三个入口、对话页签与窄窗口",
+            "verifiedCommit": "7a0d9c4e52c8c0b8b0fe0a0bea43fc5836bd9a2d",
+            "completedAt": "2026-11-17T08:00:03.573Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "已在签名桌面客户端验证图像切换 NIGHT SHIFT 后返回原表格；补充回归验证空白工作区会话不打开独立图像草稿。"
+          "summary": "已在签名包实测图像返回表格及独立草稿隔离；知识库三个入口在目标折叠且文件预览被选中的回归场景通过。"
         },
         "acceptanceCriteria": [
           "从知识库打开工作区表格，进入图像并切换任务，点击返回恢复该会话的表格模式。",
           "应用中直接选择工作区视图时沿用当前会话；从看板出发时可返回看板。",
-          "从无对话记录的工作区会话打开图像时使用该会话的画布，已关闭图像任务的独立草稿不显示。"
+          "从无对话记录的工作区会话打开图像时使用该会话的画布，已关闭图像任务的独立草稿不显示。",
+          "从知识库打开研究、笔记或表格时展开目标会话的右侧对话；之后可手动收起。"
         ],
         "risks": [
           "独立图像草稿继续保存在原来的本地位置。"
         ],
-        "generatedAt": "2026-11-17T07:30:22.126Z"
-      },
-      "merged": {
-        "mergeCommit": "e0f4325692c7c069c724cee8ce7d85412fb1e760",
-        "verificationCommit": "e0f4325692c7c069c724cee8ce7d85412fb1e760",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e0f4325692c7c069c724cee8ce7d85412fb1e760",
-            "completedAt": "2026-11-17T07:30:43.864Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/browser-app-native.test.js",
-              "test/workspace-surface-host.test.ts",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/knowledge-session-content.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/browser-app-native.test.js test/workspace-surface-host.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/knowledge-session-content.test.ts",
-            "verifiedCommit": "e0f4325692c7c069c724cee8ce7d85412fb1e760",
-            "completedAt": "2026-11-17T07:30:43.864Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-17T07:30:43.864Z"
+        "generatedAt": "2026-11-17T08:00:03.573Z"
       }
     }
   ],
