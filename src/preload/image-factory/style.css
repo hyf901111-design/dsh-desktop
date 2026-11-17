@@ -144,6 +144,7 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-gallery-art::before,.if-gallery-use {position:absolute;inset:auto 0 0;opacity:0;transition:opacity .2s ease;pointer-events:none}
 .if-gallery-art::before {
   content:"";height:42%;backdrop-filter:blur(16px) saturate(1.2);
+  border-end-start-radius:inherit;border-end-end-radius:inherit;
   mask-image:linear-gradient(transparent,#000 92%);background:linear-gradient(transparent,#090c13a3);
 }
 .if-gallery-use {
@@ -212,17 +213,20 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-text-format input[type=color] {width:27px;padding:3px}
 .if-layers {left:12px;top:12px;width:min(200px,calc(100% - 24px));max-height:calc(100% - 62px);padding:8px;overflow:auto;z-index:5;
   background:var(--odyssey-menu,color-mix(in srgb,var(--if-panel) 72%,transparent));border-color:var(--odyssey-menu-border,var(--if-line))}
-.if-layers .if-float-header {padding-left:5px;margin-bottom:4px;gap:4px}
+.if-layers .if-float-header {min-height:28px;padding-left:5px;margin-bottom:4px;gap:4px}
 .if-layers .if-return-text {margin-inline-start:auto;padding-inline:5px;font-size:12px;white-space:nowrap;color:var(--if-muted)}
 .if-layers p {padding:0 6px;color:var(--if-muted);font-size:12px}
 .if-layer-row {position:relative;display:flex;align-items:center;gap:3px;border-radius:7px;min-height:34px;user-select:none;touch-action:none}
+.if-layer-row[data-current=false]:hover {background:var(--if-hover)}
 .if-layer-row[data-current=true] {background:var(--if-picked)}
+.image-factory .if-layer-row > button:not(:disabled):hover {background:transparent}
 .if-layer-row[data-drop]::after {content:'';position:absolute;inset-inline:3px;height:2px;border-radius:2px;background:#5594ff;pointer-events:none}
 .if-layer-row[data-drop=above]::after{top:0}.if-layer-row[data-drop=below]::after{bottom:0}
 .if-layer-name {display:flex;flex:1;align-items:center;gap:6px;padding:6px 5px;min-width:0;text-align:left;font-size:12px!important;cursor:grab!important}
 .if-layer-name span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .if-layer-name .if-symbol:first-child {color:var(--if-muted)}
 .if-layer-row > .if-button {width:27px;min-width:27px;height:26px;padding:0;color:var(--if-muted)}
+.if-layer-row > .if-button:not(:disabled):hover {color:var(--if-ink)}
 .if-layer-row > .if-button .if-symbol {--if-icon-size:14px}
 @container (max-width:560px) {
  .if-layers{max-width:150px}

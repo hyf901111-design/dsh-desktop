@@ -249,6 +249,9 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace(sharedSubmit,`if(document.body.dataset.boardWorkspacePending==='true'){
    this.notify('error','看板工作区会话尚在打开，输入已保留。');return;
  }
+ if(document.body.dataset.workspaceSurface==='image-factory' && eworkImageFactory?.getSnapshot().creating){
+   this.notify('error','正在创建图片任务，输入已保留。');return;
+ }
                 `+sharedSubmit)
  const committing='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
  replace(committing,`window[Symbol.for('sherlock:browser-question')]?.admitting(shell,attempt.draftState,attempt.imageIds);\n\t\t\t\t`+committing)
@@ -269,6 +272,11 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  {const signature=source.match(/function HomeGuideNativeOriginalConversationRoot\([^\n]+\) \{/)?.[0];if(!signature)throw Error('Native conversation root signature drift');replace(signature,signature+`
  const composerApp=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);return()=>document.removeEventListener('sherlock:workspace-surface-change',callback)},()=>subagentPanel?undefined:document.body.dataset.workspaceSurface,()=>undefined);
  const imageFactoryActive=composerApp==='image-factory';
+ const imageTaskCreating=react.useSyncExternalStore(
+  imageFactoryActive&&eworkImageFactory?.subscribe || (()=>()=>{}),
+  ()=>imageFactoryActive && eworkImageFactory?.getSnapshot().creating===true,
+  ()=>false
+ );
  const browserAppActive=['browser','knowledge','image-factory'].includes(composerApp);
  const pendingConversation=sessionId===undefined&&!subagentPanel&&!!eworkPendingConversation;
  const pendingRight=pendingConversation&&browserAppActive;`)}
@@ -284,7 +292,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && !browserAppActive && (activeView == null || activeView === "chat")')
  replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || browserAppActive && conversationVacant || research && sessionId !== void 0 && conversationVacant;')
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)
- replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = sessionId === undefined ? !pendingConversation || pendingWorkspace === undefined : hero && chipTitle === undefined;')
+ replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = imageTaskCreating || (sessionId === undefined ? !pendingConversation || pendingWorkspace === undefined : hero && chipTitle === undefined);')
  replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation,eworkImageFactory:imageFactoryActive,')
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
@@ -308,7 +316,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  }
  `+browserSendAnchor)
  replace('const researchActive = this.researchActiveSessions.has(session.sessionId);',"const researchActive = this.researchActiveSessions.has(session.sessionId) && !['browser','image-factory'].includes(document.body.dataset.workspaceSurface);")
- replace('const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(', 'const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(imageFactoryActive ? (pendingRight || conversationVacant ? react.createElement(EWorkImageFactoryWelcome) : researchConversationView) : ')
+ replace('const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(', 'const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(imageFactoryActive ? (imageTaskCreating || pendingRight || conversationVacant ? react.createElement(EWorkImageFactoryWelcome) : researchConversationView) : ')
  replace("activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation", "pendingRight ? researchConversationView : activeView === 'notes' && document.body.dataset.workspaceSurface!=='browser' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation")
  const project='function projectUserText(text, openFile) {'
  replace(project,project+`\nconst browserParts=(${browserUserTextSegments.toString()})(text);if(browserParts)return react_jsx_runtime.jsx(react.Fragment,{children:browserParts.map((part,index)=>part.url?react_jsx_runtime.jsx('a',{href:part.url,title:part.url,className:MessageItem_module_css_default.refChip,'data-ref-chip':'browser-source',children:part.title||new URL(part.url).hostname},index):react_jsx_runtime.jsx(react.Fragment,{children:projectUserText(part.text,openFile)},index))});`)

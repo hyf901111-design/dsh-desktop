@@ -25,11 +25,34 @@ var SidebarStore = class {
  store=store.replace('this.schedulePersist(sessionId, next);','if(sessionId!==undefined)this.schedulePersist(sessionId, next);');
  replace(original,store);
  replace('if (targetSessionId === void 0) return;','if (targetSessionId === void 0 && store.getSnapshot().state === void 0) return;');
+ const workbenchStart=source.indexOf('function Workbench(props) {'),workbenchEnd=source.indexOf('\n\t\t//#endregion',workbenchStart);
+ const workbench=source.slice(workbenchStart,workbenchEnd);
+ let rendered=exact(workbench,'function Workbench(props) {',`function subscribePendingPanelSurface(callback) {
+ document.addEventListener('sherlock:workspace-surface-change',callback);
+ return () => document.removeEventListener('sherlock:workspace-surface-change',callback);
+}
+function Workbench(props) {`);
+ rendered=exact(rendered,'const { state, tree, newTabOptions, actions, onNewTab, renderTab, getTabIcon, getTabBadge } = props;',`const { state, tree, newTabOptions, actions, onNewTab, renderTab, getTabIcon, getTabBadge, pendingSession } = props;
+ const pendingHome=react.useSyncExternalStore(subscribePendingPanelSurface,
+  ()=>pendingSession===true && !document.body.dataset.workspaceSurface,()=>false);
+ let visibleTree=tree ?? state.splits;
+ if(pendingHome && !tree){
+  const chatId='sherlock-research-conversation';
+  const pane=allLeaves(visibleTree).find(leaf=>leaf.tabs.some(tab=>tab.id===chatId));
+  if(pane)visibleTree=mapLeaf(visibleTree,pane.id,leaf=>{
+   leaf.tabs=leaf.tabs.filter(tab=>tab.id!==chatId);
+   if(leaf.active===chatId)leaf.active=leaf.tabs.at(-1)?.id ?? null;
+  });
+ }`);
+ replace(workbench,exact(rendered,'node: tree ?? state.splits,','node: visibleTree,'));
  const start=source.indexOf('function Sidebar(props) {'),end=source.indexOf('\n\t\t//#endregion',start);if(start<0||end<0)throw Error('Pending panel Sidebar missing');const before=source.slice(start,end);let part=before;
  part=exact(part,'const current = sessionList.current;',`const current = sessionList.current;
  const pendingChat=current===undefined;
  react.useEffect(()=>{const created=event=>store.adoptPending(event.detail?.sessionId);window.addEventListener('sherlock:pending-conversation-created',created);return()=>window.removeEventListener('sherlock:pending-conversation-created',created)},[store]);`);
  part=exact(part,'if (state === void 0 || (!scheduledPanel.active && !workspacePanel.active && sessionId === void 0))','if (state === void 0)');
+ const rightWorkbench='(Workbench, {\n\t\t\t\t\t\t\t\t\tstate,\n\t\t\t\t\t\t\t\t\tnewTabOptions:';
+ part=exact(part,rightWorkbench,rightWorkbench.replace('newTabOptions:',`pendingSession: pendingChat && !scheduledPanel.active && !workspacePanel.active,
+                  newTabOptions:`));
  part=exact(part,'const collapsed = state === void 0 || !state.panelOpen;',`const collapsed = state === void 0 || !state.panelOpen;
  react.useLayoutEffect(()=>{const publish=()=>window.dispatchEvent(new Event('sherlock:global-right-panel-state'));document.body.dataset.odysseyGlobalRightOpen=String(!collapsed);publish();return()=>{delete document.body.dataset.odysseyGlobalRightOpen;publish()}},[collapsed]);`);
 

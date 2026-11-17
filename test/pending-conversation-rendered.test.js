@@ -37,6 +37,7 @@ it('keeps the native draft editable and retryable after first-session creation f
 
 it.each(['back', 'home'])('restores the conversation homepage with the right pane still open on %s', async action => {
  const page=await browser.newPage({viewport:{width:1100,height:800}}), errors=[];
+ page.setDefaultTimeout(4500);
  page.on('pageerror',error=>errors.push(error.message));
  try {
   await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh;width:740px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');
@@ -45,7 +46,16 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   const home=page.locator('#app [data-odyssey-page=home]');
   const center=home.locator('textarea');
   await center.waitFor({state:'visible'});
+  const chatTab=page.getByRole('tab',{name:'对话',exact:true});
+  const filesTab=page.locator('#right [role=tab]').filter({hasText:'文件'});
+  await page.evaluate(()=>window.pendingFixture.setPaneOpen(false));
+  await page.evaluate(()=>window.pendingFixture.setPaneOpen(true));
+  await filesTab.waitFor({state:'visible'});
+  expect(await filesTab.getAttribute('aria-selected')).toBe('true');
+  expect(await chatTab.count()).toBe(0);
+  expect(await center.isVisible()).toBe(true);
   await page.evaluate(()=>window.pendingFixture.openSurface('browser'));
+  await chatTab.waitFor({state:'visible'});
   const right=page.locator('#right textarea');
   await right.waitFor({state:'visible'});
   await page.locator('#right .wSkVaW_heroWorkspaceRow button').first().click();
@@ -64,6 +74,8 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   expect(await center.isEditable()).toBe(true);
   expect(await home.getByText('研究项目 B',{exact:true}).count()).toBe(1);
   expect(await right.count()).toBe(0);
+  expect(await chatTab.count()).toBe(0);
+  expect(await filesTab.isVisible()).toBe(true);
   expect(await page.evaluate(()=>document.body.dataset.odysseyGlobalRightOpen)).toBe('true');
   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([]);
   await home.getByRole('button',{name:'发送消息',exact:true}).click();

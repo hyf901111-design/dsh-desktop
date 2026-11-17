@@ -8,7 +8,7 @@ export function installImageFactoryContext({
   getTaskWorkspace, setTaskView, taskStorage, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
-  let state = { current: false, busy: false }
+  let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false }
   let galleryDrafts = new WeakMap()
   const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
   const currentId = () => sessions.list.getSnapshot().current
@@ -20,11 +20,23 @@ export function installImageFactoryContext({
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
-  const tasks = createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace: getTaskWorkspace,
-    setView: setTaskView, storage: taskStorage, isBoardOnly })
-  const stateChange = event => {
-    state = { current: event.detail?.current === true, busy: event.detail?.busy === true }
+  const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace,
+    setView: setTaskView, storage: taskStorage, isBoardOnly,
+    signal(name, detail) {
+      if (name === 'task-state') publishState()
+      signal(name, detail)
+    } })
+  function publishState() {
+    const creating = tasks.isCreating()
+    const current = !creating && canvasState.current
+    const busy = creating || canvasState.busy
+    if (state.current === current && state.busy === busy && state.creating === creating) return
+    state = { current, busy, creating }
     for (const listener of listeners) listener()
+  }
+  const stateChange = event => {
+    canvasState = { current: event.detail?.current === true, busy: event.detail?.busy === true }
+    publishState()
   }
   const focus = () => win.requestAnimationFrame(() => doc.querySelector('#odyssey-right-workspace-panel textarea:not([disabled])')?.focus({ preventScroll: true }))
   const finish = (id, updateScope = true) => {
@@ -65,6 +77,7 @@ export function installImageFactoryContext({
     })
   }
   async function prepare(sessionId, content, action) {
+    if (isActive() && tasks.isCreating()) throw Error('正在创建图片任务，输入已保留。')
     if (!isActive() || currentId() !== sessionId || isBoardOnly(sessionId)) {
       if (action) throw Error('当前会话或画布已切换。')
       return { content }
@@ -212,7 +225,7 @@ export function installImageFactoryContext({
   signal('request-state', {})
   syncSession()
   return {
-    prompt, fill, focus, action: kind => signal('action', { kind }),
+    prompt, fill, focus, action: kind => { if (!tasks.isCreating()) signal('action', { kind }) },
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
       offSession?.()
@@ -267,15 +280,18 @@ function EWorkImageFactoryWelcome() {
     : (en ? 'Create a Weekend Coffee Market poster for November 21–22. Use a warm brown palette and cream typography.'
       : '做一张「周末咖啡市集」海报，活动为 11 月 21–22 日。用暖棕色和奶油白标题，右下放一杯咖啡。')
   const h = react.createElement
+  const icon = name => h('i', { className: 'if-symbol', 'data-if-welcome-icon': name, 'aria-hidden': true })
   return h('div', { className: 'ew-sheet-welcome', 'data-mode-welcome': 'image-factory' },
     h('div', { className: 'ew-sheet-welcome-content' }, h('h2', null, labels[0]), h('p', null, labels[1]),
       h('div', { className: 'ew-sheet-welcome-actions' },
-        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.fill(prompt) }, labels[2]),
-        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.action('import') }, labels[3]))))
+        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.fill(prompt) },
+          icon(state.current ? 'adjust' : 'spark'), h('span', null, labels[2])),
+        h('button', { type: 'button', disabled: state.busy, onClick: () => app?.action('import') },
+          icon(state.current ? 'image' : 'upload'), h('span', null, labels[3])))))
 }
 
 export const imageFactoryNativeSource = `
-const imageFactoryEmpty={current:false,busy:false};
+const imageFactoryEmpty={current:false,busy:false,creating:false};
 let eworkImageFactory;
 ${readImageFactoryContext.toString()}
 ${stripImageFactoryContext.toString()}

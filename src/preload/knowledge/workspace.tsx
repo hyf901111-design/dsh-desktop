@@ -893,7 +893,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           </button>
           {category === 'all' && <div className="knowledge-session-sections" role="group" aria-label="所有文件子分类">
             <button type="button" aria-current={!sessionMode && !filter.folderId && selection === 'all' ? 'page' : undefined}
-              onClick={() => selectCategory('all')}>{buttonIcon('all', '文件资料')}<small><span>{fileCount}</span></small></button>
+              onClick={() => selectCategory('all')}>{buttonIcon('document', '文件资料')}<small><span>{fileCount}</span></small></button>
             {sessionSections.map(([mode, icon]) => <button key={mode} type="button" aria-current={sessionMode === mode ? 'page' : undefined}
               onClick={() => {
                 setSessionMode(mode)
