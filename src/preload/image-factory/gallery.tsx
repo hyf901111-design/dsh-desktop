@@ -22,8 +22,7 @@ const templateRatio = (example: GalleryExample) => {
   return w! / h!
 }
 
-function templateColumns({ width, height }: Size) {
-  const top = Math.min(128, Math.max(38, height * .115))
+function templateColumns({ width, height }: Size, top: number) {
   const widthLimit = Math.min(440, Math.max(208, Math.min(width * .37, height * .48)))
   const available = height - top - 80
   const rowGap = 16
@@ -71,7 +70,8 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
   const [sizes, setSizes] = useState<Record<string, Size>>({})
   const [mode, setMode] = useState<'templates' | 'prompts'>('templates')
   const [viewportSize, setViewportSize] = useState<Size>({ width: 0, height: 0 })
-  const columns = templateColumns(viewportSize)
+  const top = Math.min(52, Math.max(28, viewportSize.height * .045))
+  const columns = templateColumns(viewportSize, top)
   const cardCount = columns.length
   const viewport = useRef<HTMLDivElement>(null)
   const firstCycle = useRef<HTMLDivElement>(null)
@@ -215,7 +215,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
     return () => { motion.removeEventListener('change', reduce); animation.cancel() }
   }, [mode])
 
-  return <div className="if-gallery" role="region" aria-label={t('灵感画廊', 'Inspiration gallery')}>
+  return <div className="if-gallery" style={{ '--if-gallery-top': top + 'px' } as CSSProperties} role="region" aria-label={t('灵感画廊', 'Inspiration gallery')}>
     <div className="if-gallery-mode" role="group" aria-label={t('画廊模式', 'Gallery mode')}>
       <button type="button" className="if-button" data-current={mode === 'templates'} aria-pressed={mode === 'templates'}
         onClick={() => setMode('templates')}>{t('基于模板修改', 'Edit a template')}</button>

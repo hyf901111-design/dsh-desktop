@@ -4,7 +4,8 @@ type MenuBridge={request(method:string,input?:Record<string,unknown>):Promise<an
 type Projected={element:HTMLElement;aria:string|null;inert:boolean}
 const hoverCardSelector='[data-odyssey-hover-card]'
 const notificationCenterSelector='.srb-notifications'
-const selector='[data-browser-panel],.eb-suggestions,.eb-find,.st-menu,.JObwrW_panel[popover]:popover-open,[role=menu],[role=listbox],[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert],.odyssey-subagent-composer-popover,'+hoverCardSelector+','+notificationCenterSelector
+const composerMenuSelector='._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],[data-ework-command-surface]'
+const selector='[data-browser-panel],.eb-suggestions,.eb-find,.st-menu,.JObwrW_panel[popover]:popover-open,[role=menu],[role=listbox],[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert],.odyssey-subagent-composer-popover,'+hoverCardSelector+','+notificationCenterSelector+','+composerMenuSelector
 const passiveSurface=(element:HTMLElement)=>element.matches('[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert]')&&!element.querySelector('button,input,select,textarea,a,[tabindex]')
 const actionable='button,a,input,textarea,select,label,[role=menuitem],[role=menuitemradio],[role=option],[data-action],[tabindex]'
 const styleProperties=('display position box-sizing width height min-width min-height max-width max-height margin-top margin-right margin-bottom margin-left padding-top padding-right padding-bottom padding-left border-top border-right border-bottom border-left border-radius background-color background-image background-size background-position background-repeat background-clip box-shadow color opacity visibility font-family font-size font-weight font-style font-variation-settings font-feature-settings font-optical-sizing font-kerning font-synthesis text-rendering -webkit-font-smoothing color-scheme line-height letter-spacing text-align text-transform text-decoration white-space word-break overflow-wrap text-overflow overflow-x overflow-y overscroll-behavior scrollbar-width flex-grow flex-shrink flex-basis flex-direction flex-wrap align-items align-self justify-items justify-self justify-content gap row-gap column-gap grid-template-columns grid-template-rows grid-auto-flow grid-column order vertical-align mask-image mask-size mask-repeat mask-position z-index top right bottom left transform transform-origin translate cursor outline outline-offset object-fit object-position list-style appearance accent-color resize writing-mode fill stroke stroke-width stroke-linecap stroke-linejoin').split(' ')
@@ -65,7 +66,7 @@ export class NativeBrowserMenuProjection{
  private clone(element:Element,root:Element):Element|null{
   if(['SCRIPT','STYLE','LINK','IFRAME','OBJECT','EMBED'].includes(element.tagName))return null
   const copy=element.cloneNode(false) as HTMLElement,id=this.controlId(element,root)
-  for(const attribute of [...copy.attributes])if(/^on/i.test(attribute.name)||['inert','autofocus','data-browser-projected'].includes(attribute.name))copy.removeAttribute(attribute.name)
+  for(const attribute of [...copy.attributes])if(/^on/i.test(attribute.name)||['inert','autofocus','popover','data-browser-projected'].includes(attribute.name))copy.removeAttribute(attribute.name)
   copy.setAttribute('data-native-control',id);if(element.matches(actionable))copy.setAttribute('data-native-clickable','')
   if(copy.hasAttribute('href'))copy.setAttribute('href','#')
   if(element instanceof this.document.defaultView!.HTMLImageElement)copy.setAttribute('src',element.currentSrc||element.src)
@@ -115,9 +116,18 @@ export class NativeBrowserMenuProjection{
   for(const previous of this.roots)if(!roots.includes(previous.element))this.restore(previous)
   const previous=new Map(this.roots.map(root=>[root.element,root]));this.roots=roots.map(element=>previous.get(element)||{element,aria:element.getAttribute('aria-hidden'),inert:element.inert})
   this.controls.clear();this.scrollStyles=[];const boxes=roots.map(root=>root.getBoundingClientRect()),extent=candidates.filter(element=>roots.some(root=>root.contains(element))).map(element=>element.getBoundingClientRect()),win=this.document.defaultView!,material=!passive&&roots.every(root=>root.matches('.st-menu,.rScV5Q_contextMenu[data-browser-page-context-menu]'))&&/Mac/.test(win.navigator.platform)?'menu':undefined,inset=material?0:20,left=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.left))-(hoverCard?8:inset))),top=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.top))-inset)),right=Math.min(win.innerWidth,Math.ceil(Math.max(...extent.map(r=>r.right))+inset)),bottom=Math.min(win.innerHeight,Math.ceil(Math.max(...extent.map(r=>r.bottom))+inset))
-  const copies=roots.map((root,index)=>{const copy=this.clone(root,root) as HTMLElement;copy.style.left=boxes[index]!.left-left+'px';copy.style.top=boxes[index]!.top-top+'px';copy.style.width=boxes[index]!.width+'px';copy.style.height=boxes[index]!.height+'px';return copy.outerHTML})
+  const dark=browser.dataset.dark==='true'
+  const copies=roots.map((root,index)=>{
+   const copy=this.clone(root,root) as HTMLElement
+   const bounds=boxes[index]!
+   Object.assign(copy.style,{left:bounds.left-left+'px',top:bounds.top-top+'px',width:bounds.width+'px',height:bounds.height+'px'})
+   // A native sibling cannot blur the live webpage underneath. Paint the
+   // entire composer flyout, including its search field and scrollport.
+   if(root.matches(composerMenuSelector))copy.style.backgroundColor=dark?'#262626':'#f6f6f6'
+   return copy.outerHTML
+  })
   const notificationCss=roots.some(root=>root.matches(notificationCenterSelector))?notificationCenterStyles:''
-  const dark=browser.dataset.dark==='true',pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
+  const pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
   const state={id:this.id,revision:this.revision,owner:browser.dataset.sessionId||'',tabId:browser.dataset.tabId,url:browser.dataset.url,bounds:{x:left,y:top,width:right-left,height:bottom-top},html:copies.join(''),css,focusId:passive?undefined:this.focusId||undefined,selection:this.selection,passive,material,hoverCard,focusOwner:hoverCard||roots.some(root=>root.classList.contains('eb-suggestions')),reducedMotion:win.matchMedia('(prefers-reduced-motion: reduce)').matches}
   for(const root of this.roots){root.element.dataset.browserProjected='true';root.element.setAttribute('aria-hidden','true');root.element.inert=true;this.resize?.observe(root.element)}
   const signature=JSON.stringify(state);if(signature===this.signature)return;this.signature=signature;const request=++this.request

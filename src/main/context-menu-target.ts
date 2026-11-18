@@ -15,7 +15,7 @@ export function contextMenuTargetScript(x: number, y: number): string {
       const origin = captured && performance.now() - captured.time < 2000 && captured.element?.isConnected
         ? captured.element : document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
       if (!(origin instanceof Element)) return { values: [] };
-      if (origin.closest('[data-knowledge-file-context-menu]')) return { values: [], suppressMenu: true };
+      if (origin.closest('[data-knowledge-file-context-menu], [data-image-factory-layer-menu]')) return { values: [], suppressMenu: true };
       // The atmospheric background is a sibling of the home page and ignores
       // pointer events, so blank clicks can land on either the page or its column.
       const page = origin.closest('[data-odyssey-page]');

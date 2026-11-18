@@ -754,13 +754,22 @@ it('marquee-selects enclosed canvas elements and adds another element with Shift
   const first = block(.12, .20), second = block(.40, .24), third = block(.70, .65)
   const canvas: StoredCanvas = { version: 1, id: randomUUID(), title: '框选画板', width: 1000, height: 1000,
     layers: [background, first, second, third] }
+  const write = vi.fn(async (_request: CanvasWrite) => {})
   const host = new WorkspaceSurfaceHost(document)
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private readonly callback: ResizeObserverCallback) {}
+    observe(target: Element) {
+      if (target.classList.contains('if-stage-scroll'))
+        this.callback([{ target, contentRect: new DOMRect(0, 0, 500, 500) } as ResizeObserverEntry], this as unknown as ResizeObserver)
+    }
+    disconnect() {}
+  })
   let factory!: ReturnType<typeof mountImageFactory>
   try {
     await act(() => {
       factory = mountImageFactory(document, host, {
-        storage: { read: async () => ({ epoch: 1, canvas }), write: async () => {}, adopt: async () => false },
+        storage: { read: async () => ({ epoch: 1, canvas }), write, adopt: async () => false },
         saveProject: async () => {}, save: async () => ({}),
       })
     })
@@ -795,9 +804,58 @@ it('marquee-selects enclosed canvas elements and adds another element with Shift
     expect(outlines().map(element => element.dataset.selectedLayerOutline)).toEqual([first.id, second.id, third.id])
     const frame = document.querySelector('.if-raster')!
     expect(document.activeElement).toBe(frame)
-    const gesture = new KeyboardEvent('keydown', { key: 'g', metaKey: true, bubbles: true, cancelable: true })
-    await act(() => frame.dispatchEvent(gesture))
-    expect(gesture.defaultPrevented).toBe(true)
+    const actions = () => [...document.querySelectorAll<HTMLButtonElement>('[aria-label="图层操作"] > button')]
+    const choose = async (label: string) => {
+      const action = actions().find(button => button.textContent === label)
+      expect(action).toBeDefined()
+      await act(() => action!.click())
+    }
+    const context = async (target: Element) => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 104, clientY: 134 })
+      await act(() => target.dispatchEvent(event))
+      expect(event.defaultPrevented).toBe(true)
+    }
+    const layers = () => write.mock.calls.at(-1)?.[0].canvas.layers ?? []
+    await context(node(first))
+    expect(actions().map(button => button.textContent)).toEqual(['编组', '删除', '复制', '下载'])
+    await choose('编组')
+    const handle = document.querySelector<HTMLButtonElement>('.if-group-bounds [data-text-resize-handle="se"]')!
+    expect(document.querySelectorAll('.if-group-bounds button')).toHaveLength(4)
+    Object.defineProperty(handle, 'setPointerCapture', { value: vi.fn() })
+    await act(() => {
+      pointer('pointerdown', handle, 425, 390)
+      pointer('pointermove', handle, 498, 448)
+      pointer('pointerup', handle, 498, 448)
+    })
+    const [resizedFirst, resizedSecond, resizedThird] = layers().slice(1) as typeof first[]
+    const scale = resizedFirst!.width / first.width
+    expect(scale).toBeGreaterThan(1)
+    expect(resizedFirst!.x).toBeCloseTo(first.x)
+    expect(resizedSecond!.x - resizedFirst!.x).toBeCloseTo((second.x - first.x) * scale)
+    expect(resizedThird!.height).toBeCloseTo(third.height * scale)
+    await context(node(first))
+    expect(actions().map(button => button.textContent)).toEqual(['取消编组', '删除', '复制', '下载'])
+    await choose('复制')
+    await act(() => frame.dispatchEvent(new KeyboardEvent('keydown', { key: 'v', metaKey: true, bubbles: true, cancelable: true })))
+    expect(layers()).toHaveLength(7)
+    const groupIds = layers().slice(1).map(layer => 'groupId' in layer ? layer.groupId : undefined)
+    expect(new Set(groupIds.slice(0, 3)).size).toBe(1)
+    expect(new Set(groupIds.slice(3)).size).toBe(1)
+    expect(groupIds[0]).not.toBe(groupIds[3])
+    const pasted = layers().at(-1) as typeof first
+    await context(node(pasted))
+    await choose('删除')
+    expect(layers()).toHaveLength(4)
+    await context(node(first))
+    await choose('取消编组')
+    expect(document.querySelector('.if-group-bounds button')).toBeNull()
+    expect(layers().every(layer => !('groupId' in layer))).toBe(true)
+
+    await act(() => document.querySelector<HTMLButtonElement>('[aria-label="画布比例"]')!.click())
+    const ratios = [...document.querySelectorAll<HTMLButtonElement>('[role="menu"][aria-label="画布比例"] button')]
+    expect(ratios.every(button => button.querySelector('.if-ratio-icon'))).toBe(true)
+    await act(() => ratios.find(button => button.textContent?.trim() === '16:9')!.click())
+    expect(document.querySelector('.if-canvas-readout')?.textContent).toContain('1600 × 900 px')
   } finally {
     await act(() => factory.dispose())
     host.dispose()

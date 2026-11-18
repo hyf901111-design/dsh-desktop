@@ -100,26 +100,20 @@ export function placeBrandAsset(asset: BrandAsset, canvas: Size, point: Point, l
   })
 }
 
-export function moveBrandOverlay(layer: BrandOverlay, size: Size, dx: number, dy: number) {
-  return { x: clamp(layer.x + dx / size.width, 1 - layer.width), y: clamp(layer.y + dy / size.height, 1 - layer.height) }
-}
-
 export function resizeBrandOverlay(layer: BrandOverlay, canvas: Size, handle: string, dx: number, dy: number) {
   const west = handle.endsWith('w'), north = handle.startsWith('n')
   const width = layer.width * canvas.width, height = layer.height * canvas.height
-  const maxWidth = (west ? layer.x + layer.width : 1 - layer.x) * canvas.width
-  const maxHeight = (north ? layer.y + layer.height : 1 - layer.y) * canvas.height
   const horizontal = west ? -dx : dx, vertical = north ? -dy : dy
   let nextWidth, nextHeight
   if (layer.kind === 'brand') {
     const requested = 1 + (width * horizontal + height * vertical) / (width ** 2 + height ** 2)
-    const scale = Math.min(maxWidth / width, maxHeight / height, Math.max(Math.min(1, 8 / Math.max(width, height)), requested))
+    const scale = Math.max(Math.min(1, 8 / Math.max(width, height)), requested)
     nextWidth = width * scale; nextHeight = height * scale
   } else {
-    nextWidth = Math.min(maxWidth, Math.max(Math.min(8, width), width + horizontal))
-    nextHeight = Math.min(maxHeight, Math.max(Math.min(8, height), height + vertical))
+    nextWidth = Math.max(Math.min(8, width), width + horizontal)
+    nextHeight = Math.max(Math.min(8, height), height + vertical)
   }
-  const w = Math.min(1, nextWidth / canvas.width), h = Math.min(1, nextHeight / canvas.height)
-  return { width: w, height: h, x: clamp(west ? layer.x + layer.width - w : layer.x, 1 - w),
-    y: clamp(north ? layer.y + layer.height - h : layer.y, 1 - h) }
+  const w = nextWidth / canvas.width, h = nextHeight / canvas.height
+  return { width: w, height: h, x: west ? layer.x + layer.width - w : layer.x,
+    y: north ? layer.y + layer.height - h : layer.y }
 }

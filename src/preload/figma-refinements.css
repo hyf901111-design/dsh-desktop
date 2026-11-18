@@ -690,6 +690,12 @@ body :is([role=menu],.h8S2Va_menu,._3e4SsG_menu,.mufS8W_card,[data-ework-expande
 }
 /* Manual secondary-command popovers share the existing single glass card. */
 body [data-ework-command-surface]::backdrop { background:transparent; pointer-events:none; }
+body[data-workspace-surface=browser] .mufS8W_card[data-ework-cascade-side] > .mufS8W_viewport {
+  max-height:min(420px,calc(100vh - 96px))!important;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+}
+
 body :is(.sherlock-account-menu,.st-menu,.ig-menu) button:is(:hover,:focus-visible):not(:disabled) { background:var(--odyssey-menu-row)!important; }
 body .sherlock-account-menu-profile:after { background:var(--odyssey-menu-border); }
 body .srb-avatar-info>svg { fill:var(--odyssey-menu)!important; stroke:var(--odyssey-menu-border)!important; }
