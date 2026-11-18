@@ -1,6 +1,6 @@
 import {installImageFactoryContext,imageFactoryNativeSource} from './image-factory-native.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
-import {createPendingConversation,EWorkPendingInputBar,browserPromptReference} from './pending-conversation.mjs'
+import {createPendingConversation,EWorkPendingInputBar,EWorkPendingHomeHeader,browserPromptReference} from './pending-conversation.mjs'
 /** Keep the native session and view underneath a sequence of workspace apps. */
 export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSession,viewFor,showError,doc=document}) {
  const apps=new Set(['browser','image-factory','knowledge'])
@@ -209,7 +209,7 @@ export function patchBrowserAppNative(input){
  const canvasAction=source.includes(splitCanvasAction)?splitCanvasAction:'"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),';
  replace(canvasAction,'"data-browser-canvas-action": "",\n'+canvasAction);
  const root='function HomeGuideNativeOriginalConversationRoot('
- replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${imageFactoryNativeSource}\n`+root)
+ replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkPendingHomeHeader.toString()}\n${imageFactoryNativeSource}\n`+root)
  const controller='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
  replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n
 ctx.effect(()=>{
@@ -264,6 +264,16 @@ ctx.effect(()=>{
  const pending=(${createPendingConversation.toString()})({
   makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),
   sessions,workspaces,getInput:id=>inputHub.shell(id),
+  currentSurface:()=>document.body.dataset.workspaceSurface,
+  setView:(id,view)=>chatStore.create(id).actions.setView(view),
+  openCommands:(id,shell,selection,typed)=>{
+   const triggers=inputHub.inputTriggers(id);
+   if(!triggers)throw Error('命令目录暂未就绪，请重试。');
+   if(typed){shell.track(shell.snapshot.draft,selection.start,'insertText');return}
+   shell.dismissPopup();
+   const snapshot=shell.snapshot;
+   triggers.toggleSource('command',{trigger:'/',query:'',position:snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',span:{...selection,draftRev:snapshot.draftRev}});
+  },
   onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},
   prepareSession:async id=>{await window[Symbol.for('sherlock:pending-preset-flush')]?.(id);await preferences.apply(id);if(document.body.dataset.workspaceSurface==='knowledge')await window.dshDesktop?.clientCapabilities?.bind({sessionId:id,mode:'knowledge',active:true})},
   prepareContext:async()=>{await permissionPreferences.ready();return document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined},
@@ -271,7 +281,7 @@ ctx.effect(()=>{
  });
  const refresh=()=>preferences.model.load().catch(()=>{});
  const offSettings=ctx.get('remote').$on('settings/document-updated',ns=>{if(ns==='permission')void refresh()});
- void refresh();pending.preferences=preferences;eworkPendingConversation=pending;window[Symbol.for('sherlock:pending-conversation')]=pending;
+ void refresh();pending.preferences=preferences;pending.views=views;eworkPendingConversation=pending;window[Symbol.for('sherlock:pending-conversation')]=pending;
  return()=>{offSettings();if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}
 },'Pending first-message conversation');
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));
@@ -320,6 +330,8 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('if (sessionId === void 0) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {','if (subagentPanel) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {')
  replace('if (sessionId !== void 0) researchSidebar.publish(sessionId, null);','researchSidebar.publish(sessionId, null);')
  replace('const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);','const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === (pendingConversation?pendingChatState?.workspaceId:pendingWorkspaceId));')
+ replace('renderSlot("conversation.session.header", {})','pendingConversation && !composerApp && pendingWorkspace ? react.createElement(EWorkPendingHomeHeader,{pending:eworkPendingConversation,busy:pendingChatState.busy||pendingChatState.activating}) : renderSlot("conversation.session.header", {})')
+ replace('pendingWorkspaceId ?? sessionWorkspace?.workspaceId,','(pendingConversation ? pendingWorkspace?.workspaceId : pendingWorkspaceId) ?? sessionWorkspace?.workspaceId,')
  replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && !browserAppActive && (activeView == null || activeView === "chat")')
  replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || browserAppActive && conversationVacant || research && sessionId !== void 0 && conversationVacant;')
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)

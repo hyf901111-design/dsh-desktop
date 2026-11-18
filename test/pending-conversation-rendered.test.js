@@ -22,6 +22,39 @@ beforeAll(async()=>{
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>browser?.close())
+it.each(['slash button','typed slash','research tab'])('opens the selected home project for %s without submitting the draft',async action=>{
+ const page=await browser.newPage({viewport:{width:1200,height:760}});
+ try{
+  await page.setContent('<style>'+css+'</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right"><div id="right-body"></div></aside>');
+  await page.evaluate(data=>window.pendingInput={...data,recentWorkspaceId:'B'},input);
+  await page.addScriptTag({content:script});
+  const home=page.locator('#app [data-odyssey-page=home]');
+  await home.getByText('研究项目 B',{exact:true}).waitFor();
+  expect(await home.getByRole('tab').allTextContents()).toEqual(['对话','研究','笔记','表格']);
+  expect(await home.getByRole('button',{name:'命令',exact:true}).isEnabled()).toBe(true);
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([]);
+  const field=home.locator('textarea');
+  let expected;
+  if(action==='typed slash'){
+   await field.pressSequentially('/');
+   expected={type:'commands',id:'new-session',draft:'/',caret:1,typed:true};
+  }else{
+   await field.fill('保留草稿');
+   if(action==='research tab'){
+    await home.getByRole('tab',{name:'研究',exact:true}).click();
+    expected={type:'view',id:'new-session',view:'research'};
+   }else{
+    await field.evaluate(el=>el.setSelectionRange(2,2));
+    await home.getByRole('button',{name:'命令',exact:true}).click();
+    expected={type:'commands',id:'new-session',draft:'保留草稿',caret:2,typed:false};
+   }
+  }
+  const open={type:'open',id:'new-session'};
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   {type:'create',workspaceId:'B'},...action==='research tab'?[expected,open]:[open,expected],
+  ]);
+ }finally{await page.close()}
+},15000)
 it('renders native welcome/project picker/input and creates the selected project session only on send',async()=>{
  const page=await browser.newPage({viewport:{width:600,height:800}}),errors=[];page.on('pageerror',error=>errors.push(error.stack));try{
   await page.setContent('<html><head><style>'+css+'body{margin:0;background:#eee}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.evaluate(()=>window.pendingFixture.openSurface('browser'));await page.getByText('探索更远，洞见更深',{exact:true}).waitFor({timeout:5000}).catch(error=>{console.log('pending errors',errors);throw error})
@@ -46,7 +79,7 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   const home=page.locator('#app [data-odyssey-page=home]');
   const center=home.locator('textarea');
   await center.waitFor({state:'visible'});
-  const chatTab=page.getByRole('tab',{name:'对话',exact:true});
+  const chatTab=page.locator('#right').getByRole('tab',{name:'对话',exact:true});
   const filesTab=page.locator('#right [role=tab]').filter({hasText:'文件'});
   await page.evaluate(()=>window.pendingFixture.setPaneOpen(false));
   await page.evaluate(()=>window.pendingFixture.setPaneOpen(true));
