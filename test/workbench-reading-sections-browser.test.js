@@ -70,10 +70,11 @@ async function open(spec, width=970) {
   return {page, card, panel:card.getByRole('tabpanel'), tabs:card.getByRole('tab'), errors}
 }
 
-it('opens numbered inline research headings as tabs and retains each explanation', async () => {
+it.each(['numbered','field label'])('opens %s inline research headings as tabs and retains each explanation', async style => {
   const titles=['宏观与产业基本面','价格结构与信号','资金与行为','风险与执行']
   const spec=markdown('研究框架',['系统性研究一个期货品种时，按四层展开：',
-    ...titles.map((title,i)=>'**'+(i+1)+'. '+title+'** — '+('按'+title+'核对指标的定义、对应的合约及交易日期。').repeat(3))].join('\n\n'))
+    ...titles.map((title,i)=>(style==='numbered'?'**'+(i+1)+'. '+title+'** — ':'**'+title+'**：')+
+      ('按'+title+'核对指标的定义、对应的合约及交易日期。').repeat(3))].join('\n\n'))
   const {page,panel,tabs}=await open(spec)
   try {
     await tabs.first().waitFor()
