@@ -682,7 +682,18 @@ export function measureWorkbenchContents(root,nodes,availableHeight=0) {
     if(node.kind==='planning-card'||node.kind==='generated-container'&&!node.containerSpec){measured.set(node.id,{width:656,height:node.kind==='planning-card'?220:320});continue}
     const value=cache?.get(node.id)
     const preferred=researchOptimalDimensions({...node,width:0,height:0})
-    // Fixed presets keep their approved reading area even when offscreen or paused.
+    // The settlement curve has a natural height at its arranged width. Keep
+    // its controls, wrapped readout and provenance outside the plot budget.
+    if(node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='futures'){
+      const card=root?.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]')
+      const content=card?.querySelector('.ew-futures-curve-content')
+      if(content?.offsetHeight>0&&content.parentElement.clientHeight>0){
+        const chrome=card.offsetHeight-content.parentElement.clientHeight
+        measured.set(node.id,{width:preferred.width,height:Math.max(preferred.height,chrome+content.offsetHeight)})
+      }else measured.set(node.id,preferred)
+      continue
+    }
+    // Other presets keep their reading area, including when offscreen or paused.
     if(['financial-widget','calendar-tool'].includes(node.containerSpec?.type)||researchCandleTemplate(node)){measured.set(node.id,preferred);continue}
     // Header and provenance occupy 34 + 24px outside the sandbox. The sandbox
     // reports natural content bounds, never its current frame height.
@@ -712,7 +723,24 @@ export function measureWorkbenchContents(root,nodes,availableHeight=0) {
       const details=body?.querySelector('.odyssey-native-chart-data[open]>div')
       const detailHeight=details?Math.min(180,Math.max(0,details.getBoundingClientRect().height/workbenchCanvasZoom(root))):0
       const plotHeight=availableHeight>0?Math.min(preferred.height,Math.max(280,Math.round(availableHeight*.72))):preferred.height
-      measured.set(node.id,{width:preferred.width,height:plotHeight+detailHeight});continue
+      let height=plotHeight+detailHeight
+      const chart=body?.querySelector('.odyssey-native-chart')
+      if(chart?.clientHeight>0){
+        const style=element=>root.ownerDocument.defaultView.getComputedStyle(element)
+        const px=value=>parseFloat(value)||0
+        const chartStyle=style(chart),children=Array.from(chart.children).filter(el=>el.getClientRects().length)
+        // The plot can flex, but wrapped legends, point values and source or
+        // data disclosures need their actual height plus the inter-row gaps.
+        const controls=children.filter(el=>el.tagName.toLowerCase()!=='svg')
+        const fixed=controls.reduce((total,el)=>{
+          const controlStyle=style(el)
+          return total+el.offsetHeight+px(controlStyle.marginTop)+px(controlStyle.marginBottom)
+        },0)
+        const chrome=card.offsetHeight-chart.clientHeight+px(chartStyle.paddingTop)+px(chartStyle.paddingBottom)
+        const minimumPlot=availableHeight>0?Math.max(120,Math.min(160,Math.round(availableHeight*.4))):160
+        height=Math.max(height,Math.ceil(chrome+fixed+Math.max(0,children.length-1)*px(chartStyle.rowGap)+minimumPlot))
+      }
+      measured.set(node.id,{width:preferred.width,height});continue
     }
     // Both iframe engines show a viewport rather than the page's intrinsic
     // content. Native snapshots are images of that viewport, so they must not

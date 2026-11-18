@@ -186,10 +186,10 @@ ${nativeCard} .rScV5Q_containerTableScroll th{color:var(--research-completed-act
 ${nativeCard} .rScV5Q_containerTableScroll tbody tr:hover{background:var(--research-completed-inset)}
 ${nativeCard} .rScV5Q_containerTableScroll tbody td:first-child{color:var(--sherlock-chart-1)}
 ${nativeCard} .odyssey-native-table-grid{max-height:calc(100cqh - 86px);overflow:auto}
-${nativeCard} .odyssey-native-chart{display:flex;flex-direction:column;height:100%}
+${nativeCard} .odyssey-native-chart{display:flex;flex-direction:column;gap:8px;height:100%}
 ${nativeCard} .odyssey-native-chart svg{flex:1;width:100%;height:clamp(160px,calc(100cqh - 122px),360px)}
 ${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend{order:-2;padding:0 0 4px;border-bottom:1px solid var(--research-completed-divider)}
-${nativeCard} .odyssey-native-chart-readout{order:-1;padding:4px 0;color:var(--research-completed-action)}
+${nativeCard} .odyssey-native-chart-readout{order:-1;margin-bottom:4px;padding:4px 0;color:var(--research-completed-action)}
 ${nativeCard} .odyssey-native-chart-data{margin-top:4px;border-top:1px solid var(--research-completed-divider)}
 ${nativeCard} .odyssey-native-chart-data summary{min-height:24px;padding:3px 0}
 ${nativeCard} .rScV5Q_containerKpis{grid-template-columns:repeat(3,minmax(0,1fr))}

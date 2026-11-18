@@ -5,6 +5,7 @@ export function FinancialFuturesPanel({ report, initialProduct }) {
   const [chosen, setChosen] = react.useState(''), [tab, setTab] = react.useState(tabs[0]);
   const [showAll, setShowAll] = react.useState(false), [selectedContract, setSelectedContract] = react.useState('');
   const tabsId = react.useId(), selectedRow = react.useRef(null), panel = react.useRef(null), focusCurve = react.useRef(false);
+  const chartContent = react.useRef(null);
   const requested = (chosen || initialProduct || '').trim().toLowerCase();
   const product = requested ? report.products.find(item => item.code === requested || item.name === requested) : report.products[0];
   const contracts = product?.contracts ?? [], unit = product?.unit ?? '';
@@ -14,6 +15,22 @@ export function FinancialFuturesPanel({ report, initialProduct }) {
   const selectProduct = code => { setChosen(code); setSelectedContract(''); };
   const leadContract = rows => rows.reduce((best, row) =>
     Number.isFinite(row.openInterest) && row.openInterest > 0 && (!best || row.openInterest > best.openInterest) ? row : best, null);
+
+  // A delayed report or a wrapped readout can outgrow a previously arranged
+  // card. Observe the flowing chart content, not the grid-sized viewport.
+  const hasProduct = Boolean(product);
+  react.useLayoutEffect(() => {
+    const content = chartContent.current, canvas = content?.closest('[data-ework-grid]');
+    const Observer = content?.ownerDocument.defaultView?.ResizeObserver;
+    if (!canvas || !Observer) return;
+    const observer = new Observer(() => {
+      if (!content.isConnected || content.offsetHeight <= content.parentElement.clientHeight + 1) return;
+      if (canvas.__eworkContentFit) canvas.__eworkContentFit.refit(true);
+      else canvas.__eworkRequestResponsiveArrange?.();
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [tab, hasProduct]);
 
   react.useEffect(() => {
     if (tab === '期限结构' && focusCurve.current) {
@@ -109,7 +126,7 @@ export function FinancialFuturesPanel({ report, initialProduct }) {
     const spread = contracts.length > 1 && Number.isFinite(first.settlement) && Number.isFinite(last.settlement) ? last.settlement - first.settlement : null;
     const metric = (label, value) => jsxs('div', { children: [jsx('small', { children: label }), jsx('strong', { children: value })] });
     const index = contracts.findIndex(row => row.code === (selectedContract || lead?.code)), initial = index < 0 ? 0 : index;
-    return jsxs(react.Fragment, { children: [
+    return jsxs('div', { ref: chartContent, className: 'ew-futures-curve-content', children: [
       jsxs('div', { className: 'ew-futures-metrics', children: [
         metric('近月结算' + (first ? ' · ' + first.code : ''), format(first?.settlement)),
         metric('远月减近月' + (unit ? '（' + unit + '）' : ''), spread === null ? '—' : signed(spread))

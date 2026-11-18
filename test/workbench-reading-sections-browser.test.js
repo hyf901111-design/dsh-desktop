@@ -197,24 +197,28 @@ it('uses authored bold headings under a document title, retains footnotes and so
   } finally { await page.close() }
 }, 22000)
 
-async function openFuturesCard(directory, width) {
+async function openFuturesCard(directory, width, delayed = false) {
   const result = await open(markdown('研究工作台', '研究概览'), width)
-  const id=await result.page.evaluate(directory => {
+  const id=await result.page.evaluate(({directory, delayed}) => {
     const products = [['rb','螺纹钢'],['cu','铜']].map(([code,name]) => ({
       code, name, unit:'元/吨', contracts:['2612','2701'].map((month,index) => ({
         code:code.toUpperCase()+month, month, settlement:3000+index, previousSettlement:3000, openInterest:10+index
       }))
     }))
-    window.dshDesktop.financialWidget = {request:async () => ({
-      source:'交易所日报', receivedAt:'2026-11-18T08:00:00Z',
-      futuresReport:{date:'2026-11-18',url:'https://example.org/settlement',products}
-    })}
+    const ready = delayed ? new Promise(resolve => { window.releaseFuturesReport = resolve }) : Promise.resolve()
+    window.dshDesktop.financialWidget = {request:async () => {
+      await ready
+      return {
+        source:'交易所日报', receivedAt:'2026-11-18T08:00:00Z',
+        futuresReport:{date:'2026-11-18',url:'https://example.org/settlement',products}
+      }
+    }}
     const node=reader.workspace.createFinancialWidget('futures')
     reader.workspace.setArtifacts([{...node,containerSpec:{...node.containerSpec,...(directory ? {directory:true} : {})}}])
     reader.workspace.applyWorkbenchCells([{id:node.id,x:0,y:0,w:48,h:28}],true)
     reader.workspace.updateSelection([], 'replace')
     return node.id
-  }, directory)
+  }, {directory, delayed})
   const card=result.page.locator('[data-research-node-id="'+id+'"]')
   return {...result,card,tabs:card.getByRole('tab'),panel:card.getByRole('tabpanel')}
 }
@@ -272,5 +276,40 @@ it.each([320,470,980])('separates the directory search, count and source at view
     expect(await card.getByLabel('选择期货品种').inputValue()).toBe('cu')
     await card.getByRole('button',{name:/品种目录/}).click()
     expect(await search.inputValue()).toBe('cu')
+  } finally { await page.close() }
+}, 22000)
+
+it.each([360, 1120])('keeps the entire chart readout and source visible after automatic arrangement at %i px', async width => {
+  const {page, card} = await openFuturesCard(false, width, true)
+  try {
+    await page.evaluate(() => {
+      reader.workspace.setWorkbenchResponsiveArrange(true)
+      document.querySelector('[data-ework-grid]').__eworkRequestResponsiveArrange()
+    })
+    // Settle the initial layout with no report, then deliver data as a real request would.
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-ework-grid]').__eworkContentFit))
+    await page.waitForFunction(() => !document.querySelector('[data-ework-grid]').__eworkContentFit)
+    await page.evaluate(() => window.releaseFuturesReport())
+    const readout = card.getByRole('status').filter({hasText:'结算价'})
+    await readout.waitFor()
+    const geometry = () => card.evaluate(el => {
+      const box = selector => el.querySelector(selector).getBoundingClientRect()
+      const plot = box('.ew-futures-curve'), readout = box('.ew-futures-readout')
+      const foot = box('.ew-financial-footer'), panel = box('.ew-futures-view')
+      return {
+        gapAfterPlot: readout.top - plot.bottom, gapBeforeSource: foot.top - readout.bottom,
+        readoutFits: readout.bottom <= panel.bottom + 1,
+        sourceFits: foot.bottom <= el.getBoundingClientRect().bottom + 1
+      }
+    })
+    await expect.poll(geometry).toMatchObject({readoutFits:true, sourceFits:true})
+    const fit = await geometry()
+    expect(fit.gapAfterPlot).toBeGreaterThanOrEqual(12)
+    expect(fit.gapBeforeSource).toBeGreaterThanOrEqual(12)
+    const firstHeight = (await card.boundingBox()).height
+    await page.evaluate(() => document.querySelector('[data-ework-grid]').__eworkRequestResponsiveArrange())
+    await page.waitForFunction(() => Boolean(document.querySelector('[data-ework-grid]').__eworkContentFit))
+    await page.waitForFunction(() => !document.querySelector('[data-ework-grid]').__eworkContentFit)
+    expect((await card.boundingBox()).height).toBeCloseTo(firstHeight, 0)
   } finally { await page.close() }
 }, 22000)
