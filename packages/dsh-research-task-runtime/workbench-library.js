@@ -8,6 +8,7 @@ export const WORKBENCH_LIBRARY_IDS=Object.freeze(componentLibraryBuiltins().map(
 export const WORKBENCH_LIBRARY_GUIDANCE=[
  '【组件库基础能力】实时行情、K线及可搜索的实时新闻先评估组件库覆盖，再规划其余取数与呈现。原生组件直接用 panel.library:{id,options?}，无需预取数据，不混用 artifact、publicData、requests 或 profile。金融组件 type:"financial-widget"，个人日历 type:"calendar-tool"。',
  'builtin-quote 是交互行情面板，支持标的搜索、周期、MA/VOL/MACD 和来源配置；证券可选支持的复权。Kraken（kraken）和 Bitfinex（bitfinex）支持 BTC/USD、ETH/USD、SOL/USD 现货和 1m、1h、1d、1w，每对独立一张。示例 library:{id:"builtin-quote",options:{symbols:[{code:"BTC/USD",market:"CRYPTO",name:"比特币"}],dataSource:"kraken",period:"1m",adjustment:"none"}}。A股等证券保留已确认的代码和市场；A股可按来源能力使用 tushare 或 datapro。无标的可用 symbols:[] 保留搜索。',
+ 'builtin-futures 是可直接挂载的上期所交易日报组件（含能源中心）。商品期货研究、合约比较和期限结构优先用一张 library:{id:"builtin-futures",options:{query:"rb"}}，query 可省略或填覆盖品种名/品种代码。用户可切换铜、铝、黄金、螺纹钢、原油等在市品种，再切换结算曲线、持仓分布、合约明细；每小时检查新的日结算数据，展示真实交易日。这些字段无需先搜索接口、逐个合约取数或制作重复静态卡。股指期货、外盘、期权、指定历史日、盘中报价或限定其他来源时，另按要求用成功的 Tushare、火山专业数据或其他授权来源。现行合约取来源列示的到期月，不能把已到期合约当作当前合约。选定主力须有本交易日成交或持仓依据。',
  'builtin-news 是支持搜索与来源选择的实时新闻列表。独立列表使用 options.query 保留主题；加密货币、国际或其他专题搜索优先选择已配置的 dataSource:"doubao"，全市场财经新闻可用默认来源。按用户指定的可用来源填 doubao（豆包）、eastmoney（东方财富）或 sina（新浪财经）。区间内逐条整理公告或新闻使用 market.table；实时证券公告可用 builtin-announcements。',
  'builtin-watchlist 用于自选的搜索、增删、排序和选股，builtin-indices 用于市场指数总览，builtin-calendar 用于个人日历和手动日程。options 仅填配置，如 symbols:[{code,market,name}]、query、period、adjustment、indicators、visibleBars、refreshMinutes、refreshEnabled、dataSource。quote/announcements 最多一个标的，自选和指数可多个。多个大盘指数的盘中报价使用 builtin-indices，60 秒自动刷新填写 refreshMinutes:1 与 refreshEnabled:true。证券代码与交易所拆为 code:"600519"、market:"SH"，不把 .SH/.SZ 写入 code。选中标的用 selectedSymbol:"SH:688981"。',
  '联动用根级 links:[{sourcePanel:0,targetPanel:1}]，panels 从零计数。允许自选→行情/新闻/公告、行情→新闻/公告，每个目标至多一个来源，联动新闻随上游标的变化。按实体或主题分页用根级 tabs。',
@@ -40,6 +41,12 @@ export function resolveWorkbenchLibraryPanel(panel, originalRequest=''){
  }
  const requested=componentLibraryBuiltins().find(item=>item.id===library.id).widget
  const content=(panel.title??'')+' '+(panel.prompt??'')
+ if(requested==='futures'){
+  const clauses=String(originalRequest).split(/[。；;，,\n]/u)
+  const forbidden=clauses.some(clause=>/禁止联网|不(?:要)?联网|只用附件|仅(?:用|基于)附件|离线生成/u.test(clause)||
+   !/新闻|公告|资讯/u.test(clause)&&/(?:只能?|仅能?|必须|指定|限定).{0,18}(?:tushare|火山|通联|datapro|腾讯|新浪|豆包)/iu.test(clause)&&!/上期所|上海期货交易所/u.test(clause))
+  if(forbidden||options.dataSource!==undefined&&options.dataSource!=='shfe')throw Error('此原生期货组件从上期所读取最新结算日报。请用用户指定的来源或附件交付所需视图。')
+ }
  const quotesOnly=requested==='quote'||requested==='watchlist'&&
   /(?:盘中|实时).{0,8}报价|指数行情/u.test(content)&&
   !/自选|增删|联动/u.test(originalRequest);

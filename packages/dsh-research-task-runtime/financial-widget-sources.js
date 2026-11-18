@@ -1,6 +1,7 @@
 // Source profiles are fixed host adapters, never renderer-authored URLs.
 // Keep these functions self-contained: the trusted React bundle serializes them.
 export function financialWidgetSources(spec){
+ if(spec.widget==='futures')return [{id:'shfe',name:'上海期货交易所 · 交易日报'}]
  if(spec.widget==='news')return [{id:'doubao',name:'豆包搜索'},{id:'eastmoney',name:'东方财富'},{id:'sina',name:'新浪财经'}]
  if(spec.widget==='announcements')return [{id:'default',name:'东方财富'},{id:'backup',name:'巨潮资讯'}]
  if(spec.widget==='quote'&&spec.symbols?.[0]?.market==='CRYPTO')

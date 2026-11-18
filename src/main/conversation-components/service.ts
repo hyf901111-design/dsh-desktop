@@ -38,10 +38,13 @@ function checkedQuery(spec: NonNullable<ReturnType<typeof financialWidgetSpec>>,
             throw Error('金融组件选择请求无效。');
         return { ...value, source: expectedSource };
     }
-    const allowed = spec.widget === 'quote' ? ['quotes', 'history'] : spec.widget === 'news' ? ['news'] : spec.widget === 'announcements' ? ['announcements'] : ['quotes'];
+    const allowed = spec.widget === 'quote' ? ['quotes', 'history'] : ['news','announcements','futures'].includes(spec.widget) ? [spec.widget] : ['quotes'];
     if (!allowed.includes(action))
         throw Error('金融组件不允许该数据操作。');
-    if (action === 'news') {
+    if (action === 'futures') {
+        keys(value, ['action'], ['source','refresh']);
+    }
+    else if (action === 'news') {
         if (value.query !== spec.query || Object.keys(value).some(k => !['action', 'query', 'source', 'refresh'].includes(k)))
             throw Error('金融新闻请求与当前配置不一致。');
     }
@@ -185,9 +188,9 @@ export function createConversationComponentService(options: Options): Conversati
             let detail = options.store.details(l.owner, t), gaps: string[] = [];
             const spec = financialWidgetSpec(detail.node.containerSpec);
             if (spec) {
-                const expected = spec.widget === 'quote' ? ['quotes', 'history'] : spec.widget === 'news' ? ['news'] : spec.widget === 'announcements' ? ['announcements'] : ['quotes'], missing = expected.filter(action => !detail.observations[action] || detail.observations[action]!.specRevision !== detail.revision);
+                const expected = spec.widget === 'quote' ? ['quotes', 'history'] : ['news','announcements','futures'].includes(spec.widget) ? [spec.widget] : ['quotes'], missing = expected.filter(action => !detail.observations[action] || detail.observations[action]!.specRevision !== detail.revision);
                 await Promise.all(missing.map(async (action) => {
-                    const query: JsonObject = { action, source: spec.dataSource ?? 'default', ...(action === 'news' ? { query: spec.query } : { symbols: structuredClone(spec.symbols) }), ...(action === 'history' ? { period: spec.period, adjustment: spec.adjustment } : {}), ...(spec.widget === 'indices' ? { asset: 'index' } : {}) };
+                    const query: JsonObject = { action, source: spec.dataSource ?? 'default', ...(action === 'futures' ? {} : action === 'news' ? { query: spec.query } : { symbols: structuredClone(spec.symbols) }), ...(action === 'history' ? { period: spec.period, adjustment: spec.adjustment } : {}), ...(spec.widget === 'indices' ? { asset: 'index' } : {}) };
                     try {
                         await service.queryNative({ ...t, expectedRevision: detail.revision, query });
                     }
