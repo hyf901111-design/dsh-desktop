@@ -26,6 +26,22 @@ async function setup(node=card){
 }
 const apply=async value=>{let result;await f.act(async()=>{result=f.workspace.applyGenerationInspection(card.id,value)});return result}
 describe('生成进度的瞬态更新与持久结果',()=>{
+ it('persists missing chart data, collapses the original explanation and keeps a targeted retry',async()=>{
+  await setupPartial()
+  const panel={nodeId:card.id,taskId:'task-1',title:'原油走势',prompt:card.containerPrompt,x:0,y:0,width:600,height:600}
+  await f.act(async()=>f.workspace.applyWorkbench({id:'futures-plan',createdAt:Date.now(),panels:[panel]}))
+  const finalOutput=JSON.stringify({version:1,type:'markdown',title:'原油走势（数据缺失）',content:'数据源暂未返回记录。'})
+  const fields={deliveryStatus:'partial',recoveryMode:'data-missing',unmetRequirements:['缺少日线收盘价']}
+  expect(await apply(receipt({state:'completed',finalOutput,...fields}))).toBe(true)
+  const saved=JSON.parse(f.win.localStorage.getItem(canvasKey))[0]
+  expect(saved).toMatchObject(fields)
+  expect(saved.lastSuccessfulAt).toBeUndefined()
+  const note=f.host.querySelector('[data-research-fallback-content="data-missing"]')
+  expect(note?.open).toBe(false)
+  expect(note?.textContent).toContain('数据源暂未返回记录')
+  expect(f.host.querySelector('[data-research-partial-delivery="data-missing"] button')?.textContent).toBe('重试')
+ })
+
  it('treats only preview progress as transient and fails closed for any other field',()=>{
   expect(generationProgressOnly(card,{...card,generationLastSeq:2,generationEvents:[{type:'assistant-delta',text:'进度'}],generationPartialText:'进度'})).toBe(true)
   for(const patch of [{width:721},{height:401},{x:401},{y:301},{generationSources:[{id:'source'}]},{title:'新标题'},{containerPrompt:'新需求'},{generationError:'刚失败'},{config:{source:'new'}},{generationTaskId:'new-task'},{generationStatus:'completed'},{unknownFutureField:true}])expect(generationProgressOnly(card,{...card,...patch})).toBe(false)

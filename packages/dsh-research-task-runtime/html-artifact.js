@@ -826,7 +826,9 @@ export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInt
   const pathOf=el=>{const p=[];while(el&&el!==document.body){const parent=el.parentElement;if(!parent)return null;p.unshift([...parent.children].indexOf(el));el=parent;}return p;};
   const resolve=p=>p.reduce((el,n)=>el?.children[n],document.body);
   const defaultDisclosure=el=>{
-    const summary=el.closest('summary'),details=summary?.parentElement;
+    const toggle=el.closest('.component-reading-toggle[aria-controls]');
+    const summary=el.closest('summary'),details=summary?.parentElement??(toggle&&
+      document.getElementById(toggle.getAttribute('aria-controls'))?.closest('details'));
     return details?.tagName==='DETAILS' && ['price-volume-v1','component-details-v1'].includes(details.getAttribute('data-workbench-default-open')) ? details : null;
   };
   const post=(type,extra={})=>parent.postMessage({type,...extra},'*');
@@ -834,9 +836,9 @@ export const RESEARCH_HTML_INTERACTION_RUNTIME = String.raw`function researchInt
     const el=resolve(e.targetRoute); if(!el || el.tagName.toUpperCase()!==e.tag) return;
     const disclosure=defaultDisclosure(el);
     if(disclosure && (e.type==='click'||e.type==='keydown')){
-      // Older journals toggled the former closed default. Do not invert the
-      // new open default; later choices carry an absolute boolean in the
-      // existing bounded checked field, including clicks on summary children.
+      // Defaults can change between releases. Later choices carry an
+      // absolute boolean in the existing bounded checked field, including
+      // clicks on summary children and the chart details toggle.
       if(e.type==='click'&&typeof e.checked==='boolean')disclosure.open=e.checked;
       return;
     }

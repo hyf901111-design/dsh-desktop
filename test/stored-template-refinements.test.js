@@ -21,13 +21,13 @@ function savedTrend(){
  return spec.html.replace(' data-chart-domain="observed-v1"','').replace(/<script>\(function cartesianChartRuntime[^]*?<\/script>/,'<script>(function cartesianChartRuntime(spec, geometry){throw Error("Legacy runtime must not execute")})({},()=>{});</script>');
 }
 function savedRanking(){
- const data={version:1,type:'chart',variant:'horizontal',title:'原排名',unit:'亿元',axisDecimals:2,labels:['甲','乙'],series:[{name:'流入',values:[321.13,234]}]};
+ const data={version:1,type:'chart',variant:'horizontal',title:'原排名',unit:'亿元',axisDecimals:3,labels:['甲','乙'],series:[{name:'流入',values:[0.0096,0.0079]}]};
  return JSON.parse(acceptArtifactOutput(JSON.stringify(data))).html.replace(/<script>\(function cartesianChartRuntime[^]*?<\/script>/,'<script>(function cartesianChartRuntime(spec, geometry){throw Error("Legacy runtime must not execute")})({},()=>{});</script>');
 }
 it('upgrades saved ranking layouts without losing explicit tick precision or records',()=>{
  const old=savedRanking(),next=compactHostDashboardHtml(old),w=new Window({settings:{enableJavaScriptEvaluation:true}});w.document.write(next);
  expect(w.document.querySelector('.template-chart text')?.textContent).toBe('0');
- expect([...w.document.querySelectorAll('.template-chart text')].slice(0,5).map(el=>el.textContent)).toContain('80.28');
+ expect([...w.document.querySelectorAll('.template-chart text')].slice(0,5).map(el=>el.textContent)).toContain('0.003');
  expect(readTemplateModel({type:'html',html:next})).toEqual(readTemplateModel({type:'html',html:old}));
  expect(researchInteractionVersion(next)).toBe(researchInteractionVersion(old));expect(compactHostDashboardHtml(next)).toBe(next);w.close();
 });

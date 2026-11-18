@@ -53,7 +53,30 @@ function historySession(id:string,duration:number,loaded=false){
  projection.set({...previous,running:false,hasMore:!loaded,loadingOlder:false,chat:{order:[node.key],nodes:new Map([[node.key,node]]),timeline:{turns:new Map([[1,{turn:1,status:'closed',...(loaded?{start:{time:history.end-history.duration}}:{}),end:{time:history.end}}]])}}})
  root.render(h(App))
 }
+let submittedWorkbench:(frames:any[])=>void=()=>{}
+const submittedWorkbenchText='请创建一个行情工作台，展示行情与公告'
 w.responseFixture={
+ workbenchSubmit(phase:string){
+  if(phase!=='accepted'){
+   const shell={},list=state({current:'demo'})
+   native.__watchSubmissions({api:{subscribeEnvelopes(listener:(frames:any[])=>void){submittedWorkbench=listener;return()=>{}}},sessions:{list,binding:()=>({session:projection})},inputHub:{shells:new Map([['demo',shell]])}})
+   const current=projection.getSnapshot(),running=phase==='queued'
+   projection.set({...current,running,chat:{order:[],nodes:new Map(),timeline:{turns:new Map()}},queue:[]})
+   submittedWorkbench([{type:'client-request',method:'session.prompt',rpcId:running?'workbench-queued':'workbench-request',payload:{sessionId:'demo',mode:'queue',content:[{type:'text',text:submittedWorkbenchText}]}}])
+  }
+  if(phase!=='request')submittedWorkbench([{type:'server-response',rpcId:phase==='queued'?'workbench-queued':'workbench-request',result:{ok:true,value:{accepted:true}}}])
+ },
+ workbenchPhase(phase:string){
+  const current=projection.getSnapshot(),time=Date.now(),open=!['done','final'].includes(phase),position={kind:'step',turn:{turn:8,status:open?'open':'closed'}}
+  const user={key:'workbench-user',kind:'user',location:position,data:{source:{kind:'user',rpcId:'workbench-request'},content:[{type:'text',text:submittedWorkbenchText}]}}
+  const read=(key:string,path:string,failure:boolean)=>({key,kind:'tool-call',location:position,data:{root:{kind:'tool-result',isError:failure,call:{name:'web_fetch',argsRaw:JSON.stringify({url:'https://example.com/'+path})},content:[{type:'text',text:failure?'Error: The browser could not load readable webpage content. Open the URL in a research link component to inspect it.':'Fetched https://example.com/'+path+' (HTTP 200)\n\n行情资料'}]}}})
+  const nodes:any[]=[user,{key:'workbench-reasoning',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private workbench reasoning'}]}}]
+  if(phase==='reading')nodes.push({key:'workbench-reading',kind:'tool-call',location:position,data:{root:{name:'web_fetch'}}})
+  if(['sources','submitted','done','final'].includes(phase))nodes.push(read('workbench-success','success',false),read('workbench-failure1','fail-1',true),read('workbench-failure2','fail-2',true))
+  if(['submitted','done','final'].includes(phase))nodes.push({key:'workbench-plan',kind:'tool-call',location:position,data:{root:{kind:'tool-result',call:{name:'research_workbench_create'},content:[{type:'text',text:'{"status":"accepted","planId":"fixture-workbench","panels":["行情","公告"]}'}]}}})
+  if(phase==='final')nodes.push({key:'workbench-tail',kind:'turn-tail',location:position,data:{closing:{finalNode:{seq:100},blocks:[{kind:'text',text:'已提交工作台组件。'}]}}})
+  projection.set({...current,running:open,chat:{order:nodes.map(node=>node.key),nodes:new Map(nodes.map(node=>[node.key,node])),timeline:{turns:new Map([[8,{turn:8,status:open?'open':'closed',start:{time:time-2000},end:open?null:{time}}]])}}})
+ },
  historyReports(running=false){
   const position={kind:'step',turn:{turn:5,status:running?'open':'closed'}},now=Date.now()
   const reply=(key:string,text:string,seq:number)=>({key,kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private hidden'},{kind:'text',text}],finalNode:{seq}}})

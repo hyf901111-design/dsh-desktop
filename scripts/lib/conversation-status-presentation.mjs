@@ -9,21 +9,56 @@ export function conversationPublicReplies(order, nodeStore, closingSeqByTurn, pr
  }
  return result
 }
+
+export function conversationToolFailureLabel(root,english=false) {
+ if(root?.call?.name!=='web_fetch')return null
+ const status=root.meta?.statusCode, failed=root.isError===true||root.error!=null
+ if(!failed&&!(Number.isInteger(status)&&(status<200||status>=300)))return null
+ const say=(zh,en)=>english?en:zh
+ if(root.error?.code==='interrupted')return say('网页读取已中断','Page reading interrupted')
+ const unreadable=(Array.isArray(root.content)?root.content:[]).some(block=>block?.type==='text'&&typeof block.text==='string'&&/^(?:Error:\s*)?The browser could not load readable webpage content\./u.test(block.text))
+ if(unreadable)return say('网页读取失败，浏览器未取得可读内容','Page reading failed. The browser could not retrieve readable content.')
+ if(Number.isInteger(status)&&status>=300&&status<=599)return say('网页读取失败（HTTP '+status+'）','Page reading failed (HTTP '+status+')')
+ return say('网页读取失败','Page reading failed')
+}
+
+export function conversationActivityRecords(nodes) {
+ const groups=[]
+ for(const node of nodes){
+  const previous=groups.at(-1)
+  if(previous&&conversationToolFailureLabel(node.data?.root)&&conversationToolFailureLabel(previous[0].data?.root))previous.push(node)
+  else groups.push([node])
+ }
+ return groups
+}
+
 export function ConversationActivityDetails({activityNodes,detailGroups,seatProps,t,running}) {
  const allowed=new Set(detailGroups.flatMap(group=>group.nodeKeys))
  const english=document.documentElement.dataset.odysseyLocale==='en'||document.documentElement.lang?.startsWith('en')
+ const record=node=>{
+  const root=node.data?.root,settled=!!root&&'kind' in root,webFailure=conversationToolFailureLabel(root,english)
+  const failed=!!webFailure||executionToolFailed(root)||root?.error!=null
+  let label=executionActivityLabel(node,t)
+  if(webFailure)label=webFailure
+  else if(node.kind==='tool-call'&&settled){
+   const action=label.replace(/^正在/u,'').replace(/[.…]+$/u,'')
+   label=failed?(english?'Failed: ':'未完成：')+action:english?'Completed: '+label:label.replace(/^正在/u,'已').replace(/[.…]+$/u,'')
+  }else if(!running)label=(english?'Ended: ':'已结束：')+label.replace(/^正在/u,'')
+  return react.createElement('details',{key:node.key,'data-activity-record':node.key,'data-error':failed?'':undefined},
+   react.createElement('summary',{title:label},
+    react.createElement(ExecutionDetailGroupIcon,{id:executionDetailCategory(node)}),
+    react.createElement('span',null,label)),
+   react.createElement(ChatNodeSeat,{nodeKey:node.key,...seatProps}))
+ }
  return react.createElement('div',{className:ChatView_module_css_default.executionDetails,'data-conversation-activity-details':'',role:'group','aria-label':t('execution.details.title')},
-  ...activityNodes.filter(node=>allowed.has(node.key)).map(node=>{
-   const root=node.data?.root,settled=!!root&&'kind' in root,failed=executionToolFailed(root)
-   let label=executionActivityLabel(node,t)
-   if(node.kind==='tool-call'&&settled){
-    label=failed?(english?'Failed: ':'未完成：')+label:english?'Completed: '+label:label.replace(/^正在/u,'已').replace(/[.…]+$/u,'')
-   }else if(!running)label=(english?'Ended: ':'已结束：')+label.replace(/^正在/u,'')
-   return react.createElement('details',{key:node.key,'data-activity-record':node.key,'data-error':failed?'':undefined},
+  ...conversationActivityRecords(activityNodes.filter(node=>allowed.has(node.key))).map(group=>{
+   if(group.length===1)return record(group[0])
+   const label=english?`${group.length} page reads failed`:`${group.length} 次网页读取未成功`
+   return react.createElement('details',{key:'web-reads:'+group[0].key,'data-activity-read-failures':'','data-error':''},
     react.createElement('summary',{title:label},
-     react.createElement(ExecutionDetailGroupIcon,{id:executionDetailCategory(node)}),
+     react.createElement(ExecutionDetailGroupIcon,{id:'read-search'}),
      react.createElement('span',null,label)),
-    react.createElement(ChatNodeSeat,{nodeKey:node.key,...seatProps}))
+    ...group.map(record))
   }))
 }
 export const statusPresentationCss=`
@@ -37,12 +72,14 @@ body [data-response-progress]>.Md3f7G_executionTrigger:is(:hover,:focus-visible)
 body [data-response-progress][data-expanded=true]>.Md3f7G_executionTrigger>.Md3f7G_executionLeading{opacity:1}
 body [data-response-progress]>.Md3f7G_executionTrigger:disabled>.Md3f7G_executionLeading{display:none}
 body [data-conversation-activity-details]{display:flex;flex-direction:column;gap:4px;border:0;margin:4px 0 0;padding:0}
-[data-activity-record]>summary{display:flex;align-items:center;gap:7px;list-style:none;cursor:pointer;min-width:0;color:var(--dsw-alias-label-tertiary,#80858e);font-size:13px;line-height:22px}
-[data-activity-record]>summary::-webkit-details-marker{display:none}
-[data-activity-record]>summary>svg{flex:0 0 14px;width:14px;height:14px}
-[data-activity-record]>summary>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
-[data-activity-record][data-error]>summary{color:var(--dsw-alias-state-error-primary)}
-[data-activity-record][open]>summary{margin-bottom:6px}
+:is([data-activity-record],[data-activity-read-failures])>summary{display:flex;align-items:center;gap:7px;list-style:none;cursor:pointer;min-width:0;color:var(--dsw-alias-label-tertiary,#80858e);font-size:13px;line-height:22px}
+:is([data-activity-record],[data-activity-read-failures])>summary::-webkit-details-marker{display:none}
+:is([data-activity-record],[data-activity-read-failures])>summary>svg{flex:0 0 14px;width:14px;height:14px}
+:is([data-activity-record],[data-activity-read-failures])>summary>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
+:is([data-activity-record],[data-activity-read-failures])[data-error]>summary{color:var(--dsw-alias-state-error-primary)}
+:is([data-activity-record],[data-activity-read-failures])[open]>summary{margin-bottom:6px}
+[data-activity-read-failures]>[data-activity-record]{margin-inline-start:21px}
+[data-workbench-conversation-progress]{margin:0;color:var(--dsw-alias-label-primary);font-size:var(--dsw-alias-body-font-size,14px);line-height:1.65;overflow-wrap:anywhere}
 [data-conversation-live-activity]{min-height:24px;padding:4px 0 12px;color:var(--dsw-alias-label-tertiary,#80858e);font-size:13px;line-height:20px}
 [data-conversation-live-activity]:not([data-conversation-live-activity=waiting])>span,
 [data-response-progress][data-state=running]:not([data-activity-kind=waiting])>.Md3f7G_executionTrigger>.Md3f7G_executionText{background-image:linear-gradient(100deg,var(--dsw-alias-label-tertiary,#80858e) 25%,var(--dsw-alias-label-primary,#eee) 48%,var(--dsw-alias-label-tertiary,#80858e) 70%);background-size:250% 100%;background-clip:text;-webkit-background-clip:text;color:transparent;animation:ework-status-shimmer 2.4s linear infinite}
@@ -103,6 +140,22 @@ export function transformStatusPresentation(source,inverse=false){
  for(const [before,after]of inverse?[...changes].reverse():changes){
   const from=inverse?after:before,to=inverse?before:after
   if(source.split(from).length!==2)throw Error('Conversation status presentation anchor drifted: '+from.slice(0,80))
+  source=source.replace(from,to)
+ }
+ return source
+}
+
+const workbenchChanges=[
+ ['if (name === "web_fetch") return t("execution.status.researching");','if (name === "web_fetch") return t("execution.status.webReading");'],
+ ['"execution.status.researching": "正在使用互联网搜索…",','"execution.status.researching": "正在使用互联网搜索…",\n"execution.status.webReading": "正在读取网页…",'],
+ ['"execution.status.researching": "Searching the internet…",','"execution.status.researching": "Searching the internet…",\n"execution.status.webReading": "Reading a webpage…",'],
+ ['nativeSubmittedFlow.flatMap((entry) => {','workbenchConversationFlow(nativeSubmittedFlow,{running,runningTurn:runningTurn?.turn,openState,order,nodeStore,timeline,enabled:!subagent}).flatMap((entry) => {if(entry.kind==="workbench-conversation-progress")return react.createElement(WorkbenchConversationUpdate,{key:entry.key,update:entry.update});']
+]
+
+export function transformWorkbenchConversationPresentation(source,inverse=false){
+ for(const [before,after] of inverse?[...workbenchChanges].reverse():workbenchChanges){
+  const from=inverse?after:before,to=inverse?before:after
+  if(source.split(from).length!==2)throw Error('Workbench conversation status anchor drifted: '+from.slice(0,80))
   source=source.replace(from,to)
  }
  return source

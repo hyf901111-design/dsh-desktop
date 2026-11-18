@@ -5,8 +5,9 @@ import {componentAcquisitionBudget} from './component-acquisition-budget.js'
 import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
 import { SOURCE_SELECTION_GUIDANCE } from './data-source-policy.js'
+import { workbenchStructuredSourceGuidance } from './workbench-source-progress.js'
 import {registerImageGenerationTool} from './image-generation-tool.js'
-import {registerHostedAi} from './hosted-ai.js'
+import {registerHostedAi, isInterruptedModelStream} from './hosted-ai.js'
 import { registerHomePresentationRuntime } from './home-presentation-runtime.js'
 import { registerHomeReportRuntime } from './home-report-runtime.js'
 import { registerHomeNotesRuntime } from './home-notes-runtime.js'
@@ -95,7 +96,7 @@ import { TIMELINE_DATA_GUIDANCE } from './timeline-template-contract.js'
 import { applyBundledSkillPreferences, bundledSkillEnabled } from './bundled-skill-preferences.js'
 import {SharedExecutionRuntime,fileExecutionStorage,registerBoardRuntime,assertPrivateResearchSession} from './board-runtime.js'
 import {createFrozenResearchFileLoader} from './context-runtime.js'
-import { registerWorkbench, captureSharedWorkbenchPlan, listWorkbenchObservedSources } from './workbench.js'
+import { registerWorkbench, captureSharedWorkbenchPlan } from './workbench.js'
 import { acceptArtifactOutput, restoreHostTemplateArtifact, retainedTableData, artifactReadableFallback, extractArtifactObjects, restoreArtifactStringQuotes, restoreDeclaredArtifactType, restoreDeclaredChartVariant, workbenchMarketVariantIssue, workbenchMarketRecencyIssue } from './artifact-output.js'
 import { parseResearchContainerSpec } from './artifact-validator.js'
 import { INTERACTIVE_ARTIFACT_PROMPT } from './interactive-artifact.js'
@@ -972,7 +973,13 @@ function workbenchSourceEvidenceIssue(policy, records, sharedRecords = []) {
   if (policy.pluginRequired && !componentBindingEvidence(pluginRecords)) return '该组件指定专业数据来源，必须实际取得业务响应；不能用其他网站的静态记录或接口目录代替。'
 }
 
-const PARTIAL_DELIVERY_MODES = new Set(['source-snapshot', 'readable-content', 'incomplete-scope'])
+const PARTIAL_DELIVERY_MODES = new Set(['source-snapshot', 'readable-content', 'incomplete-scope', 'data-missing'])
+
+function workbenchChartTextFallback(artifact) {
+  if (artifact?.type !== 'markdown') return undefined
+  return /[（(](?:数据缺失|暂无数据|no data|data unavailable)[）)]$/iu.test(artifact.title?.trim() ?? '')
+    ? 'data-missing' : 'readable-content'
+}
 
 function taskDelivery(task){
   if(task.deliveryStatus===undefined&&task.recoveryMode===undefined&&task.unmetRequirements===undefined)return {}
@@ -1631,7 +1638,10 @@ export class ResearchTaskRuntime {
     if (failure === 'RATE_LIMIT') this.parentQueue(task.parentSessionId).rateLimitedUntil = this.now() + RATE_LIMIT_COOLDOWN_MS
     if (sessionEvent?.type === 'turn/start') { delete task.modelFailureMessage; delete task.modelFailureCode }
     if (sessionEvent?.type === 'turn/end' && sessionEvent.data?.reason?.kind === 'error') {
-      const code = sessionEvent.data.reason.error?.code
+      const error = sessionEvent.data.reason.error
+      const code = error?.code === 'STREAM_CLOSED' ||
+        [undefined, 'UNKNOWN', 'PI_AI_ERROR'].includes(error?.code) && isInterruptedModelStream(error?.message)
+        ? 'TRANSPORT' : error?.code
       task.modelFailureCode = code
       task.modelFailureMessage = Object.hasOwn(MODEL_FAILURE_MESSAGES, code) ? MODEL_FAILURE_MESSAGES[code] : undefined
     }
@@ -1732,7 +1742,8 @@ export class ResearchTaskRuntime {
       if (['container', 'create'].includes(task.kind) && result?.stopReason !== 'aborted' &&
           (result?.stopReason === 'timeout' && !result.localDeadlineExceeded || result?.stopReason === 'error' && ['RATE_LIMIT', 'TRANSPORT', 'TIMEOUT', 'EMPTY_RESPONSE', 'SERVER'].includes(task.modelFailureCode))) {
         const evidence = typeof result.researchEvidence === 'string' ? truncateUtf8(result.researchEvidence, MAX_CONTAINER_EVIDENCE_BYTES) : ''
-        this.appendEvent(task, { type: 'assistant-delta', text: '模型暂时繁忙，正在保留资料并稍后重试…' })
+        this.appendEvent(task, { type: 'assistant-delta', text: task.modelFailureCode === 'TRANSPORT'
+          ? '模型连接中断，正在保留已取得的资料并重试…' : '模型暂时繁忙，正在保留资料并稍后重试…' })
         await handle?.dispose(); handle = undefined
         await new Promise(resolve => {
           const signal = task.controller.signal
@@ -2025,6 +2036,12 @@ export class ResearchTaskRuntime {
           }
           if (task.kind === 'container' && output) {
             const artifact = mapped?.capacitySnapshot ? mapped.data : JSON.parse(output)
+            if (attempt === 0 && task.hostContext?.workbenchRequest && plannedFormat === 'chart' &&
+                workbenchChartTextFallback(artifact) === 'readable-content') {
+              bindingRepairEvidence = componentBindingEvidence(sourceRecords)
+              if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT',
+                '趋势卡仍是文字。复用本轮可核验的日期与数值，按原需求交付真正的图表；保留有效记录、单位与来源，不重新取数。')
+            }
             deliveryScopeIssue = task.hostContext?.workbenchRequest
               ? panelDeliveryScope(artifact, task.prompt, task.hostContext, result.documentEvidence)
               : componentDeliveryScopeIssue(artifact, cohortRequest)
@@ -2343,6 +2360,13 @@ export class ResearchTaskRuntime {
           throw new ResearchTaskError('GENERATION_FAILED', unmetScope)
         }
         output=acceptArtifactOutput(retainObservedComponentProvenance(output,result.documentEvidence,sourceRecords))??output
+        const chartFallback = task.hostContext?.workbenchRequest && plannedFormat === 'chart'
+          ? workbenchChartTextFallback(deliveredData[0]) : undefined
+        if (chartFallback === 'data-missing') {
+          delivery = partialDelivery(chartFallback, '缺少绘制图表所需的可核验数据。')
+        } else if (chartFallback && !delivery) {
+          delivery = partialDelivery(chartFallback, '已保留可读资料，原定图表尚未生成。')
+        }
         await this.finish(task, 'completed', { finalOutput: output, ...(delivery ?? (readableSnapshot?.recoveryMode === 'source-snapshot' ? taskDelivery(readableSnapshot) : {})) })
       } else {
         const message = result?.stopReason === 'completed'
@@ -2678,7 +2702,10 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const preferredSources = (kind === 'container' || kind === 'board') && permitsTools ? preferredComponentSourceTools(scopedSchemas, sourceRequest, sourcePolicy) : []
       const preferredSourceNames = preferredSources.map(tool => tool.name)
       const financialSubject = /(?:\b\d{6}(?:\.(?:SH|SZ))?\b|贵州茅台|沪深300|净值|指数行情|不复权|分钟[线K])/iu.test(sourceRequest ?? '')
-      const needsWebData = !prototypeTargets && kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(sourceRequest ?? '') && (surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_search'))
+      const hasWorkbenchSourceRoute = kind === 'container' && hostContext?.workbenchRequest?.dataMode === 'source' &&
+        (hostContext.sharedObservedRecords?.length || scopedSchemas?.some(tool => tool.name === 'web_search' || tool.name === 'financial_query' ||
+          tool.name.startsWith('ework__') && /\bTushare\b|火山方舟专业数据集/iu.test(tool.description ?? '')))
+      const needsWebData = !hasWorkbenchSourceRoute && !prototypeTargets && kind !== 'qa' && kind !== 'board' && permitsTools && preferredSources.length === 0 && !scopedSchemas?.some(tool => tool.name === 'public_data_query') && !financialSubject && containerNeedsWebData(sourceRequest ?? '') && (surface !== 'note' || scopedSchemas.some(tool => tool.name === 'web_search'))
       if (signal.aborted) throw signal.reason
       const boundTemplate = !prototypeTargets && kind === 'container' && permitsTools && workbenchPanelFormat(query ?? '') && workbenchPanelFormat(query ?? '') !== 'html' && scopedSchemas?.some(tool => tool.name?.startsWith('ework__') || tool.name === 'public_data_query')
       const pluginRequired = boundTemplate && (sourcePolicy?.pluginRequired ?? componentPluginSourceRequired(sourceRequest ?? ''))
@@ -2764,7 +2791,11 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       if(prototypeTargets&&kind==='container'&&workbenchPanelFormat(query??'')==='table')effectivePrompt+="\n本卡普通平面表格可直接交付静态引用，不逐行重抄。示意协议：{\"version\":1,\"type\":\"data-bound\",\"requests\":[{\"key\":\"snapshot\",\"tool\":\"read_prototype\",\"args\":{\"file_path\":\"本次实际文件\",\"section\":\"实际数据段\",\"limit\":500}}],\"mapping\":{\"version\":1,\"type\":\"table\",\"title\":\"本卡标题\",\"columns\":[\"所需字段的显示名\"],\"rows\":{\"$from\":\"snapshot\",\"$each\":\"rows\",\"$map\":[{\"$path\":\"实际字段名\",\"$as\":\"string\"}]}}}。requests.args必须逐字复用成功读取的参数（省略过的字段也保持省略），列名与$map一一对应，字段路径来自真实记录，不能填猜测值。超过100条也保留完整映射，宿主会转为完整可搜索、排序的阅读表格，不受模型直接写rows的模板行数限制；不用读渲染函数或再生成HTML。"
       if (permitsTools&&!prototypeTargets) effectivePrompt += preferredSources.length
         ? `\n${componentSourceInstruction(preferredSources, sourceRequest)} 需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。`
-        : '\n'+SOURCE_SELECTION_GUIDANCE+(ownsPolicySourceGuidance ? '' : POLICY_SOURCE_GUIDANCE)+'使用匹配来源返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文；financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
+        : '\n'+SOURCE_SELECTION_GUIDANCE+(ownsPolicySourceGuidance ? '' : POLICY_SOURCE_GUIDANCE)+'使用匹配来源返回的真实数值、单位、日期和质量状态。不要以网页摘要代替可读取的来源正文。'+(hasWorkbenchSourceRoute ? '' : 'financial_query 未覆盖的标的可先 web_search 找到来源，再 web_fetch 读取具体数值、单位和日期。')+'最新行情若有分页或截断，核对排序与总量，取齐末端记录或缩短日期窗口后比较最大交易日期；只看到第一页时不得称其末条为“最近可得”。需要登录时明确提示登录；数据缺失、过期或接口失败时如实注明，不能编造或写成没有变化。分钟线不支持时明确说明，不能用日线代替。只有交付 data-bound 并成功保存宿主刷新绑定才代表持续自动取数；未绑定或 HTML 则为带时点快照，不代表持续实时更新。'
+      if (hasWorkbenchSourceRoute && permitsTools && !prototypeTargets && !pluginRequired && !sourcePolicy?.publicSourceRequests) {
+        const enabled = (scopedSchemas ?? []).filter(tool => !pluginProhibited || !tool.name.startsWith('ework__'))
+        effectivePrompt += '\n' + workbenchStructuredSourceGuidance(enabled, sourceRequest ?? '')
+      }
       if (needsWebData) {
         // Host lookup is an optional head start, never a gate that prevents a child from existing.
         const lookup = new AbortController()
@@ -3638,7 +3669,7 @@ export async function apply(ctx) {
   ctx.effect(() => {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
-    const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence, listObservedSources:listWorkbenchObservedSources })
+    const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence })
     const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readSpreadsheetReference})
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)

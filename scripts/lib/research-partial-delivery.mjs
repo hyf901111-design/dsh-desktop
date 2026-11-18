@@ -1,6 +1,6 @@
 function researchPartialDeliveryFields(receipt) {
   const requirements = receipt?.unmetRequirements;
-  if (receipt?.deliveryStatus !== 'partial' || !['source-snapshot', 'readable-content', 'incomplete-scope'].includes(receipt.recoveryMode) ||
+  if (receipt?.deliveryStatus !== 'partial' || !['source-snapshot', 'readable-content', 'incomplete-scope', 'data-missing'].includes(receipt.recoveryMode) ||
       !Array.isArray(requirements) || requirements.length < 1 || requirements.length > 16 ||
       requirements.some(text => typeof text !== 'string' || !text.trim() || text.length > 256)) return {};
   return { deliveryStatus: 'partial', recoveryMode: receipt.recoveryMode, unmetRequirements: [...requirements] };
@@ -21,7 +21,8 @@ function ResearchPartialDeliveryNotice({ node, onRetry }) {
   const labels = {
     'source-snapshot': ['已保留来源明细，原功能未完成', 'Source snapshot retained · original features incomplete'],
     'readable-content': ['已保留可读内容，原功能未完成', 'Readable content retained · original features incomplete'],
-    'incomplete-scope': ['已生成部分内容，覆盖不完整', 'Partial content generated · coverage incomplete']
+    'incomplete-scope': ['已生成部分内容，覆盖不完整', 'Partial content generated · coverage incomplete'],
+    'data-missing': ['数据缺失，图表尚不可用', 'Data unavailable · chart incomplete']
   };
   const label = labels[mode][english ? 1 : 0];
   const { unmetRequirements = [] } = researchPartialDeliveryFields(node);
@@ -33,7 +34,7 @@ function ResearchPartialDeliveryNotice({ node, onRetry }) {
     onPointerDown: event => event.stopPropagation(),
     onKeyDown: event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation(); },
     children: [
-    unmetRequirements.length ? jsxs('details', { children: [
+    unmetRequirements.length && mode !== 'data-missing' ? jsxs('details', { children: [
       jsx('summary', { style: { cursor: 'pointer' }, children: label }),
       jsx('ul', { style: { maxHeight: 96, overflow: 'auto', margin: '4px 0 0', paddingInlineStart: 18 },
         children: unmetRequirements.map((text, index) => jsx('li', { children: text }, index)) })
@@ -46,15 +47,36 @@ function ResearchPartialDeliveryNotice({ node, onRetry }) {
   });
 }
 
+function ResearchDataFallbackContent({ node, children }) {
+  const mode = researchWorkbenchRecoveryMode(node);
+  if (!node.workbenchId || node.containerSpec.type !== 'markdown' || !['data-missing', 'readable-content'].includes(mode)) return children;
+  const jsx = react_jsx_runtime.jsx, jsxs = react_jsx_runtime.jsxs;
+  return jsxs('details', {
+    'data-research-fallback-content': mode,
+    style: { minHeight: 0, flex: 1, overflow: 'auto', paddingInline: 10, fontSize: 12 },
+    onPointerDown: event => event.stopPropagation(),
+    onKeyDown: event => { if (event.key === 'Enter' || event.key === ' ') event.stopPropagation(); },
+    children: [jsx('summary', { style: { cursor: 'pointer' }, children: workbenchText(mode === 'data-missing' ? '查看缺数说明' : '查看保留的资料') }), children]
+  });
+}
+
 export function patchResearchPartialDelivery(source) {
-  const marker = '/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V1 */';
+  const marker = '/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V2 */';
   if (source.includes(marker)) return source;
   const replace = (before, after) => {
     if (source.split(before).length !== 2) throw Error('部分交付回执无法定位原生入口：' + before.slice(0, 90));
     source = source.replace(before, after);
   };
   const canonical = 'function canonicalResearchCanvasArtifactNode(value) {';
-  const definitions = [researchPartialDeliveryFields, researchContainerDeliveryFields, ResearchPartialDeliveryNotice].map(fn => fn.toString()).join('\n');
+  const definitions = [researchPartialDeliveryFields, researchContainerDeliveryFields, ResearchPartialDeliveryNotice, ResearchDataFallbackContent].map(fn => fn.toString()).join('\n');
+  const preview = '(0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, officePreview, onHtmlSize, onUpgradeSize })';
+  replace(preview, '(0, react_jsx_runtime.jsx)(ResearchDataFallbackContent, { node, children: ' + preview + ' })');
+  const old = source.indexOf('/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V1 */');
+  if (old >= 0) {
+    const end = source.indexOf(canonical, old);
+    if (end < 0) throw Error('部分交付回执升级入口缺失');
+    return source.slice(0, old) + marker + '\n' + definitions + '\n' + source.slice(end);
+  }
   replace(canonical, marker + '\n' + definitions + '\n' + canonical);
   replace('...(containerSpec === null ? {} : { containerSpec }),',
     '...(containerSpec === null ? {} : { containerSpec, ...researchPartialDeliveryFields(value) }),');

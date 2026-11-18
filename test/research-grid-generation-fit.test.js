@@ -5,6 +5,21 @@ import {createResearchGrid} from '../packages/dsh-research-task-runtime/research
 import {createWorkbenchGridState} from '../scripts/lib/research-grid-state.mjs'
 import {researchOptimalDimensions} from '../packages/dsh-research-task-runtime/bento-layout.js'
 const {measureWorkbenchContents}=createRequire(import.meta.url)('../scripts/lib/research-grid-ui.mjs')
+it('shows completed results before tall failed workbench cards without changing saved frames',()=>{
+ const state=createWorkbenchGridState(null,'workbench-result-order');state.enable(1120)
+ const panel=(id,status,options={})=>({id,kind:'generated-container',workbenchId:'workbench',workbenchIndex:0,width:1080,height:600,generationStatus:status,...options})
+ const chart=panel('chart','completed',{workbenchIndex:1,containerSpec:{type:'chart',title:'趋势图'}})
+ const fail=panel('main','running')
+ let original={files:[],artifacts:[fail,chart],viewport:{y:0}}
+ const first=state.reconcile(original), before=state.document(first)
+ const ended=state.reconcile({...first,artifacts:first.artifacts.map(n=>n.id===fail.id?{...n,generationStatus:'failed'}:n)})
+ const [failure,result]=ended.artifacts
+ expect(result.y).toBeLessThan(failure.y)
+ expect(failure.height).toBeLessThanOrEqual(185)
+ expect(state.document(ended).artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height})))
+  .toEqual(before.artifacts.map(({id,x,y,width,height})=>({id,x,y,width,height})))
+})
+
 it('never measures a generation placeholder as content while arranging repeatedly',()=>{
  const measure=runInNewContext('('+measureWorkbenchContents.toString()+')',{researchOptimalDimensions,researchCandleTemplate:()=>false,CSS:{escape:id=>id}})
  const root={querySelector(){throw Error('placeholder DOM must not participate in content measurement')}}

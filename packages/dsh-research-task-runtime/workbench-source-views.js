@@ -4,7 +4,7 @@ import Ajv from 'ajv'
 import { compileComponentContent } from './component-content.js'
 
 export const OBSERVED_SOURCES_TOOL = 'research_workbench_source_catalog'
-export const OBSERVED_SOURCE_GUIDANCE = '【本轮完整结构化数据】工作台普通明细和折线、柱状、横条、面积图优先用 sourceView。编号必须逐字采用下列实际来源，未列出时先调 research_workbench_source_catalog。每卡只填 title、prompt、type、sourceView，可选 size 和 layout。明细 type=table 用 sourceView:{sourceRef}；图表 type=chart 用 sourceView:{sourceRef,chart_spec:{chartType,encodings:{x:{field},y:{field}},unit?}}。同一编号可供多卡引用，省略 view、sharedDatasets、content 和 artifact。'
+export const OBSERVED_SOURCE_GUIDANCE = '【复用本轮数据】普通明细及折线、柱状、横条、面积图优先复用已列出的 sourceRef。同一编号可供多卡引用。已收到业务记录却缺编号时才调用 research_workbench_source_catalog；目录只读已有数据。明细用 type=table 与 sourceView:{sourceRef}；图表用 type=chart 与 sourceView:{sourceRef,chart_spec:{chartType,encodings:{x:{field},y:{field}},unit?}}。同卡省略 view、sharedDatasets、content 和 artifact。'
 
 const variants = {
   'Line Chart': 'line',

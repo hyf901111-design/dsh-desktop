@@ -83,6 +83,27 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
     } catch (error) { setRequestError(error.message || '过程打开失败，请重试。') }
   }
   const glyph = moving ? 'running' : state === 'waiting' ? 'waiting' : state === 'error' ? 'error' : 'stopped'
+  const actions = (0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-generation-actions', 'aria-label': '生成操作', children: [
+    node.generationChildSessionId ? (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { name: 'process', label: '查看过程', icon: glyphs.process, invoke: openProcess }) : null,
+    action ? (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { ...action, icon: glyphs[action.name] }) : null
+  ] })
+  if (node.workbenchId && ['error', 'stopped'].includes(state)) {
+    const jsx = react_jsx_runtime.jsx, jsxs = react_jsx_runtime.jsxs
+    return jsxs('div', {
+      className: 'rScV5Q_generationProcess odyssey-generation-surface',
+      'data-research-generation-process': '', 'data-workbench-drag-handle': node.id,
+      'data-generation-ui-state': state, 'data-generation-compact-terminal': '',
+      'data-research-generation-failure': '', children: [
+        jsx('strong', { children: researchPublicProgress(node.title || '当前组件') }),
+        jsx('span', { role: 'status', children: workbenchText(phase) }),
+        jsxs('details', { onPointerDown: event => event.stopPropagation(), children: [
+          jsx('summary', { children: workbenchText(state === 'error' ? '查看失败原因' : '查看说明') }),
+          jsx('p', { role: requestError ? 'alert' : undefined, children: detail })
+        ] }),
+        actions
+      ]
+    })
+  }
   return (0, react_jsx_runtime.jsxs)('div', {
     className: 'rScV5Q_generationProcess odyssey-generation-surface', 'data-research-generation-process': '', 'data-workbench-drag-handle': node.id,
     'data-research-generation-stage': presentation.stage, 'data-generation-ui-state': state,
@@ -98,10 +119,7 @@ function ResearchGenerationProcess({ node, sessionId, onProcess, onCancel, onExp
         (0, react_jsx_runtime.jsx)('div', { 'data-research-generation-description': '', role: requestError ? 'alert' : undefined, children: (0, react_jsx_runtime.jsx)('span', { 'data-progress-detail': '', children: detail }, node.generationTaskId + ':' + detail) }),
         derived ? (0, react_jsx_runtime.jsx)('span', { 'data-research-generation-sources': '', children: node.kind === 'generated-summary' ? '基于所选 ' + sourceCount + ' 个组件' : '来源：' + sourceCount + ' 个组件' }) : null
       ] }),
-      (0, react_jsx_runtime.jsxs)('div', { className: 'odyssey-generation-actions', 'aria-label': '生成操作', children: [
-        node.generationChildSessionId ? (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { name: 'process', label: '查看过程', icon: glyphs.process, invoke: openProcess }) : null,
-        action ? (0, react_jsx_runtime.jsx)(ResearchGenerationAction, { ...action, icon: glyphs[action.name] }) : null
-      ] })
+      actions
     ]
   })
 }
@@ -328,6 +346,12 @@ body [data-research-compact-chrome][data-research-artifact-card] .odyssey-genera
 .odyssey-generation-surface>[data-research-generation-elapsed]{position:absolute;top:16px;left:20px;font:500 12px/18px DINPro,sans-serif;font-variant-numeric:tabular-nums;color:var(--generation-time)}
 .odyssey-generation-actions{position:absolute;top:12px;right:16px;z-index:4;padding:0;display:flex;gap:8px;opacity:0;pointer-events:none;transition:opacity .12s}
 .odyssey-generation-surface:hover .odyssey-generation-actions,.odyssey-generation-surface:focus-within .odyssey-generation-actions{opacity:1;pointer-events:auto}
+[data-research-compact-chrome] .odyssey-generation-surface[data-generation-compact-terminal]{display:flex;flex-direction:column;gap:5px;overflow:auto;padding:12px 14px!important;font-size:12px;line-height:18px}
+[data-generation-compact-terminal]>strong{font-size:14px;overflow-wrap:anywhere}
+[data-generation-compact-terminal]>span,[data-generation-compact-terminal]>details{color:var(--generation-detail)}
+[data-generation-compact-terminal] summary{cursor:pointer}
+[data-generation-compact-terminal] p{margin:4px 0;overflow-wrap:anywhere}
+[data-generation-compact-terminal]>.odyssey-generation-actions{position:static;opacity:1;pointer-events:auto;padding-top:3px}
 .odyssey-generation-action{position:relative;display:flex;flex:none}
 .odyssey-generation-action>button{box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:auto;height:28px;min-width:56px;min-height:28px;padding:0 10px;font:400 11px/18px "Noto Sans SC",sans-serif;border:1px solid var(--generation-border);border-radius:3px;background:var(--generation-button);color:var(--generation-action-icon);cursor:pointer}
 .odyssey-generation-action>button:hover,.odyssey-generation-action>button:focus-visible{background:var(--generation-button);color:var(--generation-action-icon)}

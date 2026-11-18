@@ -16,15 +16,16 @@ import {trendRuntime} from './market-trend-runtime.js';
 import {refineTrendPresentation} from './market-trend-presentation.js';
 import {marketSeriesViewport,observeMarketSeries} from './market-series-viewport.js';
 import {FEED_CONTEXT_CSS as FEED_CONTEXT_STYLE} from './feed-context.js';
-import {cartesianChartRuntime,cartesianChartSvg,cartesianChartAxisPrecision} from './cartesian-chart-artifact.js';
+import {cartesianChartReadingRuntime,cartesianChartSvg,cartesianChartAxisPrecision,cartesianChartPresentation} from './cartesian-chart-artifact.js';
 import {OPERATIONS_HEADER_CSS,GANTT_READING_CSS as GANTT_READING_STYLE} from './workbench-reading-layout.js';
 import {GANTT_SELECTION_RUNTIME as GANTT_SELECTION_SOURCE} from './gantt-artifact.js';
 export const GANTT_READING_CSS=GANTT_READING_STYLE;
 export const GANTT_SELECTION_RUNTIME=GANTT_SELECTION_SOURCE;
 export const FEED_CONTEXT_CSS=FEED_CONTEXT_STYLE;
-export const CARTESIAN_RUNTIME=cartesianChartRuntime.toString();
+export const CARTESIAN_RUNTIME=cartesianChartReadingRuntime.toString();
 export const CARTESIAN_GEOMETRY=cartesianChartSvg.toString();
 export const CARTESIAN_AXIS_PRECISION=cartesianChartAxisPrecision.toString();
+export const CARTESIAN_PRESENTATION=cartesianChartPresentation.toString();
 
 export const MARKET_SERIES_RUNTIME={'price-volume':priceVolumeRuntime.toString(),trend:trendRuntime.toString(),'valuation-band':valuationBandRuntime.toString(),'equity-drawdown':equityDrawdownRuntime.toString()};
 export const MARKET_SERIES_VIEWPORT_RUNTIME=marketSeriesViewport.toString();
@@ -70,15 +71,15 @@ export function refineStoredTemplateHtml(html){
   }
   return html;
  }
- const cartesianBody=html.match(/<body data-research-kind="chart" data-chart-template="(line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area)"[^>]*>/);
+ const cartesianBody=html.match(/<body data-research-kind="chart" data-chart-template="(line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area|combo|groupedBar)"[^>]*>/);
  if(cartesianBody&&model.version==='22a-20260930'&&model.templateId==='chart.'+cartesianBody[1]&&model.data.type==='chart'&&model.data.version===1&&model.data.variant===cartesianBody[1]){
   const {labels,series}=model.data;
   if(!Array.isArray(labels)||!labels.length||labels.length>366||labels.some(v=>typeof v!=='string'||!v.trim()||v.length>128)||!Array.isArray(series)||!series.length||series.length>12||labels.length*series.length>600||series.some(s=>typeof s?.name!=='string'||!s.name.trim()||s.name.length>128||!Array.isArray(s.values)||s.values.length!==labels.length||s.values.some(v=>typeof v!=='number'||!Number.isFinite(v)||Math.abs(v)>1e12)))return html;
-  const script=/<script>\(function cartesianChartRuntime\(spec, geometry\)[^]*?<\/script>/;
+  const script=/<script>\(function cartesianChart(?:Reading)?Runtime\(spec, geometry(?:, presentation)?\)[^]*?<\/script>/;
   if(!script.test(html)||!html.includes('class="template-chart"'))return html;
   const data=JSON.stringify(model.data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
   const geometry=model.data.axisDecimals!==undefined?'('+CARTESIAN_AXIS_PRECISION+')('+CARTESIAN_GEOMETRY+')':CARTESIAN_GEOMETRY;
-  return html.replace(script,()=>`<script>(${CARTESIAN_RUNTIME})(${data},${geometry});</script>`).replace(cartesianBody[0],cartesianBody[0].replace(/ data-chart-domain="[^"]*"/,'').slice(0,-1)+' data-chart-domain="observed-v1">');
+  return html.replace(script,()=>`<script>(${CARTESIAN_RUNTIME})(${data},${geometry},${CARTESIAN_PRESENTATION});</script>`).replace(cartesianBody[0],cartesianBody[0].replace(/ data-chart-domain="[^"]*"/,'').slice(0,-1)+' data-chart-domain="observed-v1">');
  }
  const seriesVariant=model.data.variant;
  if(['price-volume','trend','valuation-band','equity-drawdown'].includes(seriesVariant)&&model.templateId==='market.'+seriesVariant&&model.data.type==='market'&&html.includes('data-sherlock-market="'+seriesVariant+'"')&&html.includes('data-sherlock-design=')){

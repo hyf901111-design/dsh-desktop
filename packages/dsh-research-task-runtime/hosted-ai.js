@@ -46,6 +46,11 @@ function fitHostedChatPayload(payload) {
   return payload
 }
 
+export function isInterruptedModelStream(message) {
+  return typeof message === 'string' && (message.includes('Stream ended without finish_reason') ||
+    message.includes('HOSTED_AI_STREAM_INTERRUPTED') || message === '方舟输出中断，未自动重试。')
+}
+
 class HostedPiAiAdapter extends PiAiAdapter {
   async *stream(options) {
     for await (const event of super.stream(options)) {
@@ -62,9 +67,7 @@ class HostedPiAiAdapter extends PiAiAdapter {
       } else if (failure.message.includes('HOSTED_AI_PAYLOAD_TOO_LARGE') || failure.message.includes('本次消息和图片过大') ||
                  failure.message.includes('本次发送的图片太多')) {
         visibleFailure = { ...failure, code: 'HOSTED_AI_PAYLOAD_TOO_LARGE', message: '本次消息和图片过大，请压缩图片或缩短消息后重试。' }
-      } else if (failure.message.includes('Stream ended without finish_reason') ||
-                 failure.message.includes('HOSTED_AI_STREAM_INTERRUPTED') ||
-                 failure.message === '方舟输出中断，未自动重试。') {
+      } else if (isInterruptedModelStream(failure.message)) {
         visibleFailure = { ...failure, code: 'TRANSPORT', message: '模型输出中断，请重新发起请求。' }
       }
       yield { ...event, reason: { ...event.reason, failure: visibleFailure } }

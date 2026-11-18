@@ -290,3 +290,39 @@ it.each(['blocked','replaced','partial'])('does not establish complete web evide
  await f.ctx.tools.execute({name:'web_fetch',arguments:{url},callId:'web-'+mode,agent:f.child,signal:new AbortController().signal})
  expect(collector.records).toEqual([])
 })
+
+it('hands off a nested professional data response through the SDK spill pipeline without reading the spill path', async () => {
+ const {ctx,child,saveText,stop:stopChild}=await fixture()
+ stopChild()
+ const human={id:'futures',role:'user',source:{kind:'user'},content:[{type:'text',text:'用真实商品期货数据创建工作台。'}]}
+ child.session.append('user/message',human,{surfaceOp:'append'})
+ const name='ework__professional_data',args={query:'螺纹钢日线行情'},callId='professional',turn=1
+ const response={code:0,dataset_type:'stock_finance',items:[{证券代码:'RB00.SHF',行情:{records:Array.from({length:100},(_,i)=>({
+  日期:'2026-11-18',收盘价:3500+i,说明:'保留来源记录。'.repeat(200)
+ }))}}]}
+ const body={content:[{type:'text',text:JSON.stringify(response)}],internal:'excluded from source handoff'}
+ ctx.tools.register({name,description:'专业金融数据读取',parameters:{type:'object'},output:{schema:{},render:(_args,value)=>value.content},execute:async()=>body})
+ let requestContext
+ const stop=registerWorkbenchExecutionPolicy({
+  tools:ctx.tools,systemPrompt:ctx.systemPrompt,on(event,handler) {
+   if(event==='agent/request-context')requestContext=handler
+   return ctx.on(event,handler)
+  }
+ })
+ cleanups.push(stop)
+ const signal=new AbortController().signal,schemas=[{name},{name:'research_workbench_create'}]
+ await requestContext({agent:child,turn,signal},async()=>({system:'base',tools:schemas,messages:[human]}))
+ child.session.append('tool/call',{name,callId,turn,arguments:args})
+ const result=await ctx.tools.execute({agent:child,signal,name,callId,arguments:args})
+ expect(result.isError).toBe(false)
+ expect(saveText).toHaveBeenCalledOnce()
+ expect(result.content[0].text).toContain('Full formatted result stored at: fixture:spill')
+ expect(result.content[0].text).not.toContain(body.internal)
+ child.session.append('tool/result',{message:{source:{kind:'tool',callId},content:[{
+  type:'tool-result',toolCallId:callId,content:result.content,isError:false
+ }]}},{surfaceOp:'append'})
+ const warnings=[]
+ const observed=captureWorkbenchObservedSources({session:child.session,messageId:human.id,schemas,onRejected:warning=>warnings.push(warning)})
+ expect(observed).toEqual([{tool:name,args,response}])
+ expect(warnings).toEqual([])
+})
