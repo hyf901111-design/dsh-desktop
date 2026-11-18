@@ -320,7 +320,7 @@ body .ew-financial-footer .ew-financial-source-details{flex:none;white-space:now
 .ew-futures-heading{justify-content:space-between}
 .ew-futures-heading select{max-width:65%;font:inherit;font-weight:600;color:inherit;background:var(--fw-card);border:1px solid var(--fw-grid);border-radius:5px;padding:4px 6px}
 .ew-futures-heading a,.ew-futures-metrics small,.ew-futures-curve text{color:var(--fw-muted);font-size:11px}
-.ew-futures-tabs{gap:2px;border-bottom:1px solid var(--fw-grid)}
+.ew-futures-tabs{gap:2px;border-bottom:1px solid var(--fw-grid);overflow-x:auto;white-space:nowrap;flex-shrink:0}
 .ew-futures-tabs button{font:inherit;font-size:12px;color:var(--fw-muted);background:transparent;border:0;border-bottom:2px solid transparent;padding:5px 8px;cursor:pointer}
 .ew-futures-tabs button[aria-selected=true]{color:var(--fw-text);border-color:var(--fw-ma-1)}
 .ew-futures-view,.ew-futures-scroll{min-height:0;overflow:auto}
@@ -337,3 +337,12 @@ body .ew-financial-footer .ew-financial-source-details{flex:none;white-space:now
 .ew-futures-positions li{display:grid;grid-template-columns:7ch 1fr auto;align-items:center;gap:10px;padding:4px 0;font-size:12px;font-variant-numeric:tabular-nums}
 .ew-futures-bar-track{display:flex;min-width:0}
 .ew-futures-bar-track i{height:7px;border-radius:2px;background:var(--fw-ma-1)}
+.ew-futures-rank-basis,.ew-futures-rank small{font-size:11px;color:var(--fw-muted)}
+.ew-futures-rank{margin:4px 0;padding:0;list-style:none}
+.ew-futures-rank button{display:grid;width:100%;grid-template-columns:minmax(7em,1fr) 2fr 7ch;align-items:center;gap:10px;padding:5px 3px;border:0;border-bottom:1px solid var(--fw-grid);color:inherit;background:none;text-align:start;font:inherit;font-size:12px;cursor:pointer}
+.ew-futures-rank button:is(:hover,:focus-visible){background:var(--fw-row)}
+.ew-futures-rank button>span:last-child{text-align:end;font-variant-numeric:tabular-nums}
+.ew-futures-rank small{display:block}
+.ew-futures-rank-track{position:relative;height:12px;background:linear-gradient(to right,transparent calc(50% - .5px),var(--fw-muted) 50%,transparent calc(50% + .5px))}
+.ew-futures-rank-track i{position:absolute;left:50%;top:3px;height:6px;background:var(--fw-positive);border-radius:2px}
+.ew-futures-rank-track i[data-negative]{left:auto;right:50%;background:var(--fw-negative)}

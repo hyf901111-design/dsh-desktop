@@ -3,12 +3,23 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {validateWorkbench,layoutWorkbench,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js'
-import {bindWorkbenchLibraryLinks} from '../packages/dsh-research-task-runtime/workbench-library.js'
+import {bindWorkbenchLibraryLinks,includeFuturesInformationSources} from '../packages/dsh-research-task-runtime/workbench-library.js'
 import {synchronizeFinancialLinks,changeWatchlist} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {componentLibraryBuiltins} from '../packages/dsh-research-task-runtime/component-library-catalog.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench.js'
 const a={market:'SH',code:'688981',name:'中芯国际'},b={market:'SZ',code:'002371',name:'北方华创'}
+it('开放式期货工作台保留可查询的信息入口、原有页签索引和历史计划',()=>{
+ const basic={panels:[{title:'风险提示',type:'markdown'}]}, request='生成一个期货衍生品研究工作台'
+ const next=includeFuturesInformationSources(basic,request,8)
+ expect(next.panels.map(p=>p.library?.id)).toEqual(['builtin-futures','builtin-news',undefined])
+ expect(includeFuturesInformationSources(next,request,8)).toBe(next)
+ const tabbed={...basic,tabs:[{name:'研究',panelIndexes:[0]}]}
+ expect(includeFuturesInformationSources(tabbed,request,8).tabs[0].panelIndexes).toEqual([0,1,2])
+ expect(includeFuturesInformationSources(basic,request,8,basic)).toBe(basic)
+ expect(includeFuturesInformationSources(basic,request,8,next)).toEqual(next)
+ for(const text of ['创建只用附件的期货研究工作台','做一个中金所股指期货研究工作台','生成一个期货衍生品研究工作台，只看历史持仓','创建一个销售工作台'])expect(includeFuturesInformationSources(basic,text,8)).toBe(basic)
+})
 const native=(widget,options={})=>({title:widget,prompt:'显示该组件的真实内容',type:widget==='calendar'?'calendar-tool':'financial-widget',library:{id:'builtin-'+widget,options}})
 const mixed={requestId:'library-links',title:'芯片研究',dataMode:'source',panels:[native('news'),native('quote'),native('watchlist',{symbols:[a,b]}),native('announcements'),{title:'经营与估值',prompt:'比较营收、研发、毛利率和估值，保留实际来源，缺失如实标注',type:'table'}],links:[{sourcePanel:1,targetPanel:0},{sourcePanel:2,targetPanel:1},{sourcePanel:2,targetPanel:3}],tabs:[{name:'监控',panelIndexes:[0,1,2,3]},{name:'基本面',panelIndexes:[4]}]}
 it('keeps twelve complementary panels across three pages without dropping financial dimensions',()=>{

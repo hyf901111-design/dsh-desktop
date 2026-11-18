@@ -624,7 +624,7 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
                 ? {...content,title:planned.title} : content);
             // Capacity snapshots retain the same full model. Acceptance uses
             // the trusted host reader; model HTML is never a bypass token.
-            p={...planned,title:compiled.data.title,type:compiled.data.type,artifact:compiled.data};
+            p={...planned,prompt:planned.prompt===undefined?compiled.data.title:planned.prompt,title:compiled.data.title,type:compiled.data.type,artifact:compiled.data};
         }
         if (p?.size === 'wide') p = {...p,size:'large',layout:p.layout ?? 'wide'};
         if (p?.type === 'table' && p.artifact) p = {...p,artifact:normalizeKeyedTableProjection(p.artifact).data};

@@ -1,13 +1,32 @@
 // Serialized into the trusted research client with the other native widgets.
 export function FinancialFuturesPanel({report,initialProduct}){
  const {jsx,jsxs}=react_jsx_runtime
- const tabs=['期限结构','持仓分布','合约明细']
+ const tabs=['期限结构','持仓分布','合约明细','品种排行']
  const [chosen,setChosen]=react.useState(''),[tab,setTab]=react.useState(tabs[0])
  const tabsId=react.useId(),requested=(chosen||initialProduct||'').trim().toLowerCase()
  const product=requested?report.products.find(item=>item.code===requested||item.name===requested):report.products[0]
  const format=value=>Number.isFinite(value)?value.toLocaleString('zh-CN',{maximumFractionDigits:3}):'—'
  const contracts=product?.contracts??[],settled=contracts.filter(row=>Number.isFinite(row.settlement))
  const unit=product?.unit??'',heading=(label,value)=>jsxs('div',{children:[jsx('small',{children:label}),jsx('strong',{children:value})]})
+ const ranking=()=>{
+  const rows=[]
+  for(const item of report.products){
+   // One contract per product, selected before inspecting its price change.
+   const lead=item.contracts.reduce((best,row)=>row.openInterest>0&&(!best||row.openInterest>best.openInterest)?row:best,null)
+   if(lead&&Number.isFinite(lead.settlement)&&lead.previousSettlement>0)rows.push({item,lead,change:(lead.settlement/lead.previousSettlement-1)*100})
+  }
+  if(!rows.length)return jsx('p',{role:'status',children:'缺少可比较的持仓或昨结算价。'})
+  rows.sort((a,b)=>b.change-a.change)
+  const max=Math.max(...rows.map(row=>Math.abs(row.change)))||1
+  return jsxs(react.Fragment,{children:[
+   jsx('small',{className:'ew-futures-rank-basis',children:'各品种取持仓量最大的合约，按结算价较昨结算涨跌幅排序。'}),
+   jsx('ol',{className:'ew-futures-rank',children:rows.map(({item,lead,change})=>jsx('li',{children:jsxs('button',{type:'button',onClick:()=>{setChosen(item.code);setTab('期限结构')},'aria-label':item.name+' '+lead.code+' '+change.toFixed(2)+'%，查看期限结构',children:[
+    jsxs('span',{children:[item.name,jsx('small',{children:lead.code})]}),
+    jsx('span',{className:'ew-futures-rank-track','aria-hidden':true,children:jsx('i',{'data-negative':change<0?'':undefined,style:{width:Math.abs(change)/max*50+'%'}})}),
+    jsx('span',{children:(change>0?'+':'')+change.toFixed(2)+'%'})
+   ]})},item.code))})
+  ]})
+ }
  const table=()=>jsx('div',{className:'ew-futures-scroll',children:jsxs('table',{children:[
   jsx('thead',{children:jsx('tr',{children:['合约','结算价','收盘价','成交量（手）','持仓量（手）'].map(label=>jsx('th',{scope:'col',children:label},label))})}),
   jsx('tbody',{children:contracts.map(row=>jsxs('tr',{children:[jsx('th',{scope:'row',children:row.code}),...['settlement','close','volume','openInterest'].map(key=>jsx('td',{children:format(row[key])},key))]},row.code))})
@@ -46,12 +65,12 @@ export function FinancialFuturesPanel({report,initialProduct}){
  const first=settled[0],last=settled.at(-1)
  return jsxs('div',{className:'ew-futures-panel',children:[
   jsxs('div',{className:'ew-futures-heading',children:[
-   jsx('select',{'aria-label':'选择期货品种',value:product?.code??'',onChange:event=>setChosen(event.target.value),children:[
-    ...(!product?[jsx('option',{value:'',children:'选择日报覆盖的品种'},'empty')]:[]),
+   jsx('select',{'aria-label':'选择期货品种',value:tab==='品种排行'?'':product?.code??'',onChange:event=>{setChosen(event.target.value);if(tab==='品种排行')setTab('期限结构')},children:[
+    ...(!product||tab==='品种排行'?[jsx('option',{value:'',children:tab==='品种排行'?'全部品种':'选择日报覆盖的品种'},'empty')]:[]),
     ...report.products.map(item=>jsx('option',{value:item.code,children:item.name+' · '+item.code.toUpperCase()},item.code))]}),
    jsx('a',{href:report.url,onClick:financialOpenArticle,target:'_blank',rel:'noopener noreferrer',title:'打开该交易日的交易所原始报告',children:'交易日报 ↗'})]}),
   jsx('div',{role:'tablist','aria-label':'期货行情栏目',className:'ew-futures-tabs',children:tabs.map((name,i)=>jsx('button',{role:'tab',type:'button',id:tabsId+'-tab-'+i,'aria-controls':tabsId+'-panel','aria-selected':tab===name,tabIndex:tab===name?0:-1,onClick:()=>setTab(name),onKeyDown:event=>changeTab(event,i),children:name},name))}),
-  jsx('div',{id:tabsId+'-panel',role:'tabpanel','aria-labelledby':tabsId+'-tab-'+tabs.indexOf(tab),className:'ew-futures-view',children:!product?jsx('p',{role:'status',children:'该交易日报没有所选品种，可切换查看其他在市合约。'}):tab==='合约明细'?table():tab==='持仓分布'?positions():jsxs(react.Fragment,{children:[
+  jsx('div',{id:tabsId+'-panel',role:'tabpanel','aria-labelledby':tabsId+'-tab-'+tabs.indexOf(tab),className:'ew-futures-view',children:tab==='品种排行'?ranking():!product?jsx('p',{role:'status',children:'该交易日报没有所选品种，可切换查看其他在市合约。'}):tab==='合约明细'?table():tab==='持仓分布'?positions():jsxs(react.Fragment,{children:[
    jsxs('div',{className:'ew-futures-metrics',children:[heading('近月结算'+(first?' · '+first.code:''),format(first?.settlement)),heading('远月减近月'+(unit?'（'+unit+'）':''),first&&last!==first?format(last.settlement-first.settlement):'—')]}),curve()]})})
  ]})
 }

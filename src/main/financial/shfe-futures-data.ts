@@ -1,4 +1,4 @@
-type Contract = {code:string; month:string; settlement:number|null; close:number|null; volume:number|null; openInterest:number|null}
+type Contract = {code:string; month:string; settlement:number|null; previousSettlement:number|null; close:number|null; volume:number|null; openInterest:number|null}
 type Product = {code:string; name:string; unit:string; contracts:Contract[]}
 const origin = 'https://www.shfe.com.cn'
 const units:Record<string,string> = {au:'元/克',ag:'元/千克',sc:'元/桶',ec:'点'}
@@ -21,7 +21,7 @@ export function parseShfeSettlements(report:any,day:string){
   if(!/^[a-z]{1,4}$/.test(code)||row.PRODUCTID!==code+'_f'||!/^\d{2}(?:0[1-9]|1[0-2])$/.test(month)||typeof row.PRODUCTNAME!=='string')continue
   const product:Product=products.get(code)??{code,name:row.PRODUCTNAME.trim(),unit:units[code]??(perTonne.has(code)?'元/吨':''),contracts:[]}
   if(product.contracts.some(contract=>contract.month===month))continue
-  product.contracts.push({code:code.toUpperCase()+month,month,settlement:numeric(row.SETTLEMENTPRICE),close:numeric(row.CLOSEPRICE),volume:numeric(row.VOLUME),openInterest:numeric(row.OPENINTEREST)})
+  product.contracts.push({code:code.toUpperCase()+month,month,settlement:numeric(row.SETTLEMENTPRICE),previousSettlement:numeric(row.PRESETTLEMENTPRICE),close:numeric(row.CLOSEPRICE),volume:numeric(row.VOLUME),openInterest:numeric(row.OPENINTEREST)})
   products.set(code,product)
  }
  const list=Array.from(products.values())
