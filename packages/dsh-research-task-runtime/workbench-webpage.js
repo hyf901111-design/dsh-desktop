@@ -88,7 +88,9 @@ export function prepareWorkbenchWebpages(args, sessionId, request) {
     const relativePath = name.replace(/\.html?$/iu, '') + '-' + digest + '.workbench.html'
     const item = {id:'page', name, relativePath, mimeType:'text/html', sizeBytes:Buffer.byteLength(html)}
     pages.push({relativePath, html})
-    return {size:'large',layout:'wide',...rest,prompt:rest.prompt ?? rest.title,artifact:{version:1,type:'files',presentation:'webpage',title:rest.title,items:[item]}}
+    const artifact = {version:1,type:'files',presentation:'webpage',title:rest.title,items:[item]}
+    if (costComparison) artifact.comparisonPlanNames = costComparison.plans.map(plan => plan.name.trim())
+    return {size:'large',layout:'wide',...rest,prompt:rest.prompt ?? rest.title,artifact}
   })
   return {args:pages.length ? {...args,panels} : args, pages}
 }

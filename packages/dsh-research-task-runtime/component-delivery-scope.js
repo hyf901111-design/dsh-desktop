@@ -117,13 +117,23 @@ export function verifiedOutlineCoverage(artifact,datasets) {
  return null
 }
 
+// The portable cost renderer derives these names from the same plans it puts
+// into the editable page. Its single attachment is a different counting unit.
+export function comparisonNamesForScope(data, unit, entity) {
+ if(data?.type!=='files' || data.presentation!=='webpage' || !Array.isArray(data.comparisonPlanNames) ||
+    !data.comparisonPlanNames.every(name=>typeof name==='string' && name.trim()))return
+ const planScope=/^(?:方案|选项|报价方案|预算方案|费用方案)/u.test(entity)
+ const businessScope=unit==='家' && (!entity || /^(?:店|门店|商店|饭店|餐馆|饭馆|餐厅|聚餐地点|酒店|商家|供应商|服务商|厂商|公司)/u.test(entity))
+ if(planScope || businessScope)return [...new Set(data.comparisonPlanNames.map(name=>name.normalize('NFKC').trim()))]
+}
+
 export function componentDeliveryScopeIssue(candidate,request='') {
  const data=normalizeKeyedTableProjection(componentDeliveryModel(candidate)).data
  if(data?.type==='mind-map'&&/完整|全部|原表|原文件|附件|真实/u.test(request)&&/待填入[^\n]{0,30}(?:原表|数据)|无法列出具体[^\n]{0,60}节点|取得[^\n]{0,25}(?:数据|原表)[^\n]{0,15}后[^\n]{0,15}填充/u.test(data.content??''))return '层级图仍是占位骨架，尚未呈现来源中的实际实体和关系。保留并使用已读取的原始记录生成真实节点，不能把待填字段画成导图后标记完成。'
  const quantitativeRequest=request.split('原始对象选择、类别、区间及字段要求：')[0]
  const minimums=[...quantitativeRequest.matchAll(/(?:不少于|至少|最少|不低于)\s*(?:比较|对比|选取)?\s*(\d+|[一二两三四五六七八九十]+)\s*(只|家|个|项|条|篇|款|组|位)\s*([\p{L}\p{N}_-]{0,16})/gu)]
   .filter(m=>!isDecimalPrecisionScope(m[2],m[3])&&!isActionScope(m[2],m[3]))
-  .map(m=>({minimum:number(m[1]),dated:isDatedRecordScope(m[2],m[3])}))
+  .map(m=>({minimum:number(m[1]),unit:m[2],entity:m[3],dated:isDatedRecordScope(m[2],m[3])}))
   .filter(({minimum})=>Number.isSafeInteger(minimum)&&minimum>1&&minimum<=2000)
  if(!minimums.length)return
  let identities,datedIdentities
@@ -146,8 +156,8 @@ export function componentDeliveryScopeIssue(candidate,request='') {
   identities=dated?data.series?.filter(series=>series.values?.some(value=>typeof value==='number'&&Number.isFinite(value))).map(series=>series.name):data.labels.filter((_,i)=>data.series?.some(series=>typeof series.values?.[i]==='number'&&Number.isFinite(series.values[i])))
   datedIdentities=datedRecordIdentities(data)
  }
- for(const {minimum,dated} of minimums.sort((a,b)=>b.minimum-a.minimum)){
-  const observed=dated?datedIdentities??identities:identities
+ for(const {minimum,dated,unit,entity} of minimums.sort((a,b)=>b.minimum-a.minimum)){
+  const observed=comparisonNamesForScope(data,unit,entity) ?? (dated?datedIdentities??identities:identities)
   if(!Array.isArray(observed))return `交付范围无法核验：本面板要求至少${minimum}个实际条目或对象。切换呈现方式不能取消范围要求；保留真实记录集合，原生模型直接提供 rows/items/series，自定义 HTML 用唯一的 script[type="application/json"][data-component-delivery-records] 保留同一 table/chart/timeline 数据模型并据此绘制，不能用摘要指标个数或自称完成代替对象数。`
   const actual=new Set(observed.filter(v=>v!==undefined&&v!==null&&String(v).trim())).size
   if(actual<minimum)return `交付范围未满足：当前面板要求至少${minimum}个实际条目或对象，实际交付${actual}。保留已取得数据并继续补齐目标集合；仅有代码、候选名称或全部缺失的量化指标不算实际交付，缺失说明不代表比较任务已完成，不能用单条样本替代完整范围。`

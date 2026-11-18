@@ -5,6 +5,8 @@ import {afterEach, expect, it} from 'vitest'
 import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench.js'
 import {prepareWorkbenchWebpages} from '../packages/dsh-research-task-runtime/workbench-webpage.js'
 import {parseAttachmentSpec} from '../packages/dsh-research-task-runtime/attachment-template-contract.js'
+import {workbenchScopeDeficits} from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 
 const html='<!doctype html><html lang="zh"><body><button>增加人数</button><output>1</output><script>document.querySelector("button").onclick=()=>document.querySelector("output").value++</script></body></html>'
 const spec={requestId:'trip-page',title:'旅行预算',panels:[{type:'files',title:'方案对比',htmlFile:{name:'旅行预算.html',html}}]}
@@ -97,4 +99,24 @@ it('saves a portable comparison from costs alone, preserving missing amounts, la
   expect(()=>prepareWorkbenchWebpages(input({costComparison:costs,html}),'trip','')).toThrow('只提交其中一项')
   for(const invalid of [{plans:[]},{...costs,quantity:0},{...costs,plans:[costs.plans[0],{name:'B',costs:[{label:'包间',basis:'fixed',amount:-1}]}]}])
     expect(()=>prepareWorkbenchWebpages(input({costComparison:invalid}),'trip','')).toThrow('费用比较')
+})
+
+it('counts the options in a portable budget when its workbench receipt checks the number of businesses',async()=>{
+  const makePage=names=>prepareWorkbenchWebpages({panels:[{type:'files',title:'预算对比',htmlFile:{name:'预算.html',
+    costComparison:{plans:names.map(name=>({name,costs:[{label:'包间费',basis:'fixed'}]}))}}}]},'trip','聚餐预算').args.panels[0].artifact
+  const artifact=makePage(['门店A','门店B']), originalRequest='做个聚餐预算看板，两家店比比，改人数就能算人均，还能把网页带走。'
+  const prompt='比较至少两家餐厅聚餐预算，改人数后重算。'
+  const plan=(page,request)=>({originalRequest,panels:[{type:'files',title:'预算对比',prompt:request,artifact:page}]})
+  expect(parseAttachmentSpec(artifact)).toEqual(artifact)
+  expect(workbenchScopeDeficits(plan(artifact,prompt))).toEqual([])
+  expect(workbenchScopeDeficits(plan(makePage(['门店A','门店A']),prompt))[0]).toMatchObject({actual:1,expected:2})
+  expect(workbenchScopeDeficits(plan(artifact,'交付两个文件。'))[0]).toMatchObject({actual:1,expected:2})
+  const runtime=new ResearchTaskRuntime({adapter:{start:async()=>{throw Error('prepared budget should not call a model')}},storage:{save:async()=>{}}})
+  try {
+    const [receipt]=await runtime.startPreparedBatch({parentSessionId:'parent',panels:[{canvasNodeId:'budget',prompt,artifact,
+      hostContext:{workbenchRequest:{originalRequest,dataMode:'source'},sourceRequirement:prompt,
+        sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:prompt}}}]})
+    expect(receipt.state).toBe('completed')
+    expect(receipt.deliveryStatus).not.toBe('partial')
+  }finally{await runtime.dispose()}
 })

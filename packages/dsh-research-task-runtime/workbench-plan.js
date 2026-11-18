@@ -38,7 +38,7 @@ import {marketPanelSchema} from './market-artifact.js';
 import {verifiedAggregateRecordCount,verifiedChartRecordCount,verifiedKpiRecordCount} from './dataset-aggregate.js';
 import {resolvePastedWorkbenchPlan} from './workbench-pasted-tables.js';
 import {matchesDatasetViewScope} from './dataset-view-runtime.js';
-import {componentCohortRequest,componentDeliveryModel,componentDeliveryScopeIssue,datedRecordIdentities,isActionScope,isDatedRecordScope,isDecimalPrecisionScope,verifiesFundManagerGroups,verifiedOutlineCoverage} from './component-delivery-scope.js';
+import {comparisonNamesForScope,componentCohortRequest,componentDeliveryModel,componentDeliveryScopeIssue,datedRecordIdentities,isActionScope,isDatedRecordScope,isDecimalPrecisionScope,verifiesFundManagerGroups,verifiedOutlineCoverage} from './component-delivery-scope.js';
 import {wordOutlineCoverage} from './workbench-word-grid.js';
 import {prepareAuthoredLocalForm} from './workbench-authored-form.js';
 import {verifiedFundComparisonOverview} from './workbench-fund-comparison.js';
@@ -164,7 +164,7 @@ export function workbenchScopeDeficits(plan) {
             const kpiItems=scope.unit==='项'&&!scope.entity&&data?.type==='kpi'&&
                 [...panel.prompt.matchAll(/(?:指标(?:卡)?|kpi(?:\s*卡)?)\s*(?:共|含|展示|显示|列出)?\s*(\d+|[一二两三四五六七八九十]+)\s*项/giu)]
                     .some(match=>scopeNumber(match[1])===scope.expected)?data.items.filter(item=>item.value!==null).length:undefined;
-            const actual=kpiItems??(aggregateSourceScope(scope)?aggregateCount:
+            const actual=comparisonNamesForScope(data,scope.unit,scope.entity)?.length??kpiItems??(aggregateSourceScope(scope)?aggregateCount:
                 outlineCount??wordCoverage?.(scope)??prototypeReportCount(panel,scope,plan.sharedDatasets)??workbenchReadingScopeCount(data,scope.entity)??
                 countWorkbenchRecords(panel,{visible:scope.visible,dated:isDatedRecordScope(scope.unit,scope.entity)}));
             if(actual!==null&&actual>=scope.expected)continue;
@@ -174,7 +174,7 @@ export function workbenchScopeDeficits(plan) {
         // Preserve the existing numeric-data and placeholder checks as well.
         // Quantity-only task records need no fabricated metric to count.
         if(plan.dataMode!=='simulated'&&!(aggregate&&local.length&&local.every(scope=>scope.sourceOnly))){
-            const itemKeys=Array.isArray(data?.items)&&!['news','reports','timeline','kpi','dashboard'].includes(data.type)&&candidates.length?[...new Set(data.items.flatMap(Object.keys))]:undefined;
+            const itemKeys=Array.isArray(data?.items)&&!data.comparisonPlanNames&&!['news','reports','timeline','kpi','dashboard'].includes(data.type)&&candidates.length?[...new Set(data.items.flatMap(Object.keys))]:undefined;
             const itemIdentities=itemKeys&&scopeIdentities(data);
             const sourceData=itemKeys?{version:1,type:'table',title:panel.title,columns:['编号',...itemKeys],rows:data.items.map((item,index)=>[itemIdentities[index],...itemKeys.map(key=>item[key])])}:data;
             const issue=componentDeliveryScopeIssue(sourceData,coveredFunds?panel.prompt:componentCohortRequest(panel.prompt,plan.originalRequest));
