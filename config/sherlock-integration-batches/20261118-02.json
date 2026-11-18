@@ -11,55 +11,46 @@
         "schemaVersion": 1,
         "featureName": "按真实口语需求规划原生组件或交互网页并直接放上研究看板",
         "branch": "codex/feat/workbench-delivery-20261118",
-        "baseCommit": "c942501ab600a11ca315537272e11f2fb746929d",
-        "tipCommit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
+        "baseCommit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
+        "tipCommit": "e1bed38cef9c9228cb2443372472aa0855370535",
         "commits": [
           {
-            "commit": "ace4796731b927c63cf655bbe9a890801135ba13",
+            "commit": "e5663185730321e419b40540fd8fd5de7b3d1304",
             "parents": [
-              "c942501ab600a11ca315537272e11f2fb746929d"
+              "5adc99dc2d599bccfbc78227311a90d379b5d9b1"
             ],
-            "subject": "识别口语看板需求并按单一用途组织汇率、新闻和待办组件"
+            "subject": "过滤专题新闻的搜索页、栏目首页和重复报道"
           },
           {
-            "commit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
+            "commit": "c6bb068fafa5bb5df8f4303bebba4420a1820276",
             "parents": [
-              "ace4796731b927c63cf655bbe9a890801135ba13"
+              "e5663185730321e419b40540fd8fd5de7b3d1304"
             ],
-            "subject": "按交互需求生成便携网页并在研究看板内直接使用"
+            "subject": "为美元兑人民币看板直接生成可按日更新的汇率曲线和明细"
           },
           {
-            "commit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
+            "commit": "6c08d723c945840977268d6ae0dd78a891e75073",
             "parents": [
-              "17c1abe76c67a53899d8d96cee8266d7a4575856"
+              "c6bb068fafa5bb5df8f4303bebba4420a1820276"
             ],
-            "subject": "兼容已有客户端的研究看板进度提示层升级"
+            "subject": "保留行情表格必需字段并按财经要闻的实际范围取数"
+          },
+          {
+            "commit": "e1bed38cef9c9228cb2443372472aa0855370535",
+            "parents": [
+              "6c08d723c945840977268d6ae0dd78a891e75073"
+            ],
+            "subject": "在网页看板首条回执说明可编辑输入与下载方式"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/attachment-template-contract.js"
+            "path": "packages/dsh-research-task-runtime/news-source-scope.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-library.js"
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
           },
           {
             "status": "M",
@@ -67,11 +58,11 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-source-progress.js"
+            "path": "packages/dsh-research-task-runtime/workbench-public-data.js"
           },
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-webpage.js"
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-source-progress.js"
           },
           {
             "status": "M",
@@ -79,35 +70,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/attachment-client.mjs"
-          },
-          {
-            "status": "M",
             "path": "scripts/lib/conversation-live-activity.mjs"
           },
           {
             "status": "M",
-            "path": "skills/ework-workbench-components/SKILL.md"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/_meta.json"
-          },
-          {
-            "status": "M",
-            "path": "skills/ework-workbench-components/references/generation-core.md"
-          },
-          {
-            "status": "M",
             "path": "src/main/financial/account-widget-data.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-file-preview.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/attachment-template.test.js"
           },
           {
             "status": "M",
@@ -119,19 +86,11 @@
           },
           {
             "status": "M",
-            "path": "test/operations-template.test.js"
+            "path": "test/workbench-observed-refresh.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-file-preview.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-resultative-request.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-webpage-file.test.js"
+            "path": "test/workbench-source-capability.test.js"
           }
         ],
         "checks": [
@@ -143,8 +102,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
-            "completedAt": "2026-11-18T10:53:18.255Z",
+            "verifiedCommit": "e1bed38cef9c9228cb2443372472aa0855370535",
+            "completedAt": "2026-11-18T11:29:05.004Z",
             "timeoutMs": 420000
           },
           {
@@ -161,18 +120,24 @@
               "test/workbench-webpage-file.test.js",
               "test/attachment-template.test.js",
               "test/research-file-preview.test.ts",
-              "test/bundled-component-skill.test.js"
+              "test/bundled-component-skill.test.js",
+              "test/workbench-observed-refresh.test.js",
+              "test/workbench-public-data.test.js",
+              "test/workbench-source-capability.test.js",
+              "test/news-source-scope.test.js",
+              "test/crypto-public-data.test.js",
+              "test/public-data-capacity.test.js"
             ],
             "outcome": "passed",
             "summary": "口语建板、阶段回执、专题新闻、待办、网页落盘及原文件预览",
-            "verifiedCommit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
-            "completedAt": "2026-11-18T10:53:36.493Z",
+            "verifiedCommit": "e1bed38cef9c9228cb2443372472aa0855370535",
+            "completedAt": "2026-11-18T11:29:21.353Z",
             "timeoutMs": 420000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "集成前在签名客户端实测三种口语看板与一个动词对照，记录耗时、重复资讯和未挂载文件。修改后的生产预览组件在隔离 Chromium 中挂载网页、点击计算并下载原文件。集成后继续签名客户端实测。"
+          "summary": "已在签名客户端完成四个场景：待办添加勾选，AI资讯按分钟刷新；出游网页调人数改变两套预算与图表，保存的HTML与项目原件哈希一致；汇率初轮重复手工算数，后续为其绑定双来源日度原生卡并修正资讯筛选。旧版渲染层 v6 至 v7 已按已安装文件验证可逆升级。"
         },
         "acceptanceCriteria": [
           "弄个和做个看板均能触发规划与即时回执",
@@ -182,81 +147,7 @@
         "risks": [
           "真实取数与模型响应时长受提供方影响，网页模式适用于本地项目与离线交互"
         ],
-        "generatedAt": "2026-11-18T10:53:37.392Z"
-      },
-      "merged": {
-        "mergeCommit": "43c3ca50a15621af2274885351df455d31b4dcdf",
-        "verificationCommit": "43c3ca50a15621af2274885351df455d31b4dcdf",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "43c3ca50a15621af2274885351df455d31b4dcdf",
-            "completedAt": "2026-11-18T10:54:14.277Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "43c3ca50a15621af2274885351df455d31b4dcdf",
-            "completedAt": "2026-11-18T10:54:14.277Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--testTimeout=20000",
-              "test/research-task-runtime.test.js",
-              "test/hosted-ark-runtime.test.js",
-              "test/research-grid-generation-fit.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/generation-progress-persistence.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/research-workbench-feedback-actions.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-reading.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/chart-detail-projection.test.js",
-              "test/component-reading-footer.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/conversation-response-history.test.js",
-              "test/conversation-response-history-browser.test.js",
-              "test/component-source-projection.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-fund-comparison.test.js",
-              "test/workbench-observed-sources.test.js",
-              "test/workbench-source-views.test.js",
-              "test/workbench-source-snapshot.test.js",
-              "test/workbench-source-exclusive-execution.test.js",
-              "test/workbench-source-policy.test.js",
-              "test/bundled-tushare-mcp.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --testTimeout=20000 test/research-task-runtime.test.js test/hosted-ark-runtime.test.js test/research-grid-generation-fit.test.js test/research-generation-controls.test.ts test/generation-progress-persistence.test.js test/research-workbench-feedback.test.js test/research-workbench-feedback-actions.test.js test/workbench-feedback-upgrade-preservation.test.js test/research-planning-feedback.test.js test/cartesian-chart-details.test.js test/cartesian-chart-reading.test.js test/cartesian-chart-axis-precision.test.js test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/chart-detail-projection.test.js test/component-reading-footer.test.js test/component-reading-footer-browser.test.js test/stored-template-refinements.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-history.test.js test/conversation-response-history-browser.test.js test/component-source-projection.test.js test/workbench-execution-policy.test.js test/workbench-fund-comparison.test.js test/workbench-observed-sources.test.js test/workbench-source-views.test.js test/workbench-source-snapshot.test.js test/workbench-source-exclusive-execution.test.js test/workbench-source-policy.test.js test/bundled-tushare-mcp.test.ts",
-            "verifiedCommit": "43c3ca50a15621af2274885351df455d31b4dcdf",
-            "completedAt": "2026-11-18T10:54:14.277Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-18T10:54:14.277Z"
+        "generatedAt": "2026-11-18T11:29:22.220Z"
       }
     }
   ],
