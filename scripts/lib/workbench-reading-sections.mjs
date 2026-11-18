@@ -4,7 +4,7 @@ export function workbenchReadingCandidate(node) {
   const spec = node.containerSpec
   if (node.kind !== 'generated-container' || !node.workbenchId || spec?.type !== 'markdown' ||
       typeof spec.content !== 'string' || spec.content.trim().length < 240 ||
-      node.deliveryStatus === 'partial' || researchWorkbenchRecoveryMode(node) ||
+      researchWorkbenchRecoveryMode(node) ||
       ['failed', 'interrupted', 'cancelled'].includes(node.generationStatus)) return false
   // A legacy failure can predate saved delivery metadata. Only a status in
   // the title is decisive; an ordinary report can discuss missing data.
@@ -47,7 +47,8 @@ export function workbenchReadingOutline(markdown) {
       if (block.tagName !== 'P' || strong?.nodeName !== 'STRONG') return []
       const title = clean(strong.textContent), after = strong.nextSibling
       if (!title || title.length > 120 || !/\p{L}/u.test(title) || /[。！？.!?]$/u.test(title)) return []
-      if (after && after.nodeName !== 'BR' && !(after.nodeType === 3 && /^\s*\n/u.test(after.textContent))) return []
+      const inlineSection = ordinal.test(title) && after?.nodeType === 3 && /^\s*[—–:：-]\s*\S/u.test(after.textContent)
+      if (after && after.nodeName !== 'BR' && !inlineSection && !(after.nodeType === 3 && /^\s*\n/u.test(after.textContent))) return []
       return [heading(title, i)]
     })
     const numbered = bold.filter(section => ordinal.test(section.title))
@@ -56,7 +57,8 @@ export function workbenchReadingOutline(markdown) {
     else return []
   }
   const intro = blocks.slice(0, sections[0].start)
-  if (intro.some(block => !/^H[1-6]$/u.test(block.tagName) && block.textContent.trim()))
+  const lead = intro.filter(block => !/^H[1-6]$/u.test(block.tagName) && block.textContent.trim())
+  if (lead.length && !(lead.length === 1 && lead[0].textContent.length <= 64 && /[：:]\s*$/u.test(lead[0].textContent)))
     sections.unshift({start:0, kind:'overview'})
   else sections[0].start = 0
 

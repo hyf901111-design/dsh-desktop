@@ -31,6 +31,7 @@ import {generalNewsScope,newsScopeInstruction,newsRecordTableGuidance,retrospect
 import {TABLE_INPUT_GUIDANCE} from './template-data-contract.js';
 import {authoredPrototypeEvidence} from './workbench-prototype-evidence.js';
 import {compileComponentContent} from './component-content.js';
+import {workbenchReadingScopeCount} from './workbench-panel-delivery.js';
 import {normalizeKeyedTableProjection} from './table-projection.js';
 import {applyAuthoredFinanceLedger,authoredFinanceLedger, completeInlineFinancePlan,expandMappedWorkbenchChart,labelRequestedReportSeries,normalizeSharedChart,normalizeSharedKpi,normalizeSpecializedMarketData,preserveRequestedNativePresentation} from './workbench-native-presentation.js';
 import {marketPanelSchema} from './market-artifact.js';
@@ -164,7 +165,7 @@ export function workbenchScopeDeficits(plan) {
                 [...panel.prompt.matchAll(/(?:指标(?:卡)?|kpi(?:\s*卡)?)\s*(?:共|含|展示|显示|列出)?\s*(\d+|[一二两三四五六七八九十]+)\s*项/giu)]
                     .some(match=>scopeNumber(match[1])===scope.expected)?data.items.filter(item=>item.value!==null).length:undefined;
             const actual=kpiItems??(aggregateSourceScope(scope)?aggregateCount:
-                outlineCount??wordCoverage?.(scope)??prototypeReportCount(panel,scope,plan.sharedDatasets)??
+                outlineCount??wordCoverage?.(scope)??prototypeReportCount(panel,scope,plan.sharedDatasets)??workbenchReadingScopeCount(data,scope.entity)??
                 countWorkbenchRecords(panel,{visible:scope.visible,dated:isDatedRecordScope(scope.unit,scope.entity)}));
             if(actual!==null&&actual>=scope.expected)continue;
             if(deficits.some(issue=>issue.panel===panel.title&&issue.expected>=scope.expected&&issue.actual===actual))continue;
@@ -607,7 +608,7 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     const ledger = !deferred && !parallel ? authoredFinanceLedger(value.originalRequest) : undefined;
     const compilePanel = candidate => {
         if(candidate?.content!==undefined&&candidate.library!==undefined)throw Error('已取得的content不能与组件库取数配置混用。');
-        let p=expandMappedWorkbenchChart(applyAuthoredFinanceLedger(resolveWorkbenchLibraryPanel(candidate,value.originalRequest),ledger,value.originalRequest));
+        let p=expandMappedWorkbenchChart(applyAuthoredFinanceLedger(resolveWorkbenchLibraryPanel(candidate,value.originalRequest,!isSimulated),ledger,value.originalRequest));
         if(!deferred&&!parallel){
             p=prepareAuthoredLocalForm(p,value.originalRequest);
             p=prepareWorkbenchPomodoro(p,value.originalRequest);
@@ -621,7 +622,8 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
                 throw Error('已取得的content不能与另一份artifact、view或取数配置混用；保留同一份完整内容。');
             const {content,...planned}=p;
             const compiled=compileComponentContent(content && typeof content==='object'&&!Array.isArray(content)&&content.title===undefined
-                ? {...content,title:planned.title} : content);
+                ? {...content,title:planned.title} : content, {panelTitle:planned.title,panelRequest:planned.prompt,
+                    originalRequest:value.originalRequest,singlePanel:value.panels.length===1});
             // Capacity snapshots retain the same full model. Acceptance uses
             // the trusted host reader; model HTML is never a bypass token.
             p={...planned,prompt:planned.prompt===undefined?compiled.data.title:planned.prompt,title:compiled.data.title,type:compiled.data.type,artifact:compiled.data};

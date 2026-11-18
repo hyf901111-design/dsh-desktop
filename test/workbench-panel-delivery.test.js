@@ -43,6 +43,30 @@ function createRuntime(artifact) {
 function prepared(panel, artifact) {
   return {canvasNodeId:panel.title,prompt:workbenchPanelPrompt(plan,panel),hostContext:context(panel),artifact}
 }
+it('verifies explained research sections on creation and repairs the prior receipt on reopen', async () => {
+  const panel={title:'研究框架',type:'markdown',prompt:'从宏观、价格、资金、风险四个层次分析。'}
+  const parts=['宏观','价格','资金','风险'].map((title,i)=>'**'+(i+1)+'. '+title+'** — 该栏目从'+title+'的角度核对原始材料。')
+  const artifact={version:1,type:'markdown',title:panel.title,content:parts.join('\n\n')}
+  const legacy={deliveryStatus:'partial',recoveryMode:'incomplete-scope',unmetRequirements:['交付范围无法核验：需要 4个层次。请使用已取得的完整记录呈现。']}
+  const {runtime,storage}=createRuntime(artifact)
+  const [receipt]=await runtime.startPreparedBatch({parentSessionId:'parent',panels:[prepared(panel,artifact)]})
+  expect(receipt.deliveryStatus).toBeUndefined()
+  const saved=await storage.load()
+  Object.assign(saved.tasks[0],legacy)
+  const restored=new ResearchTaskRuntime({adapter:{start:vi.fn()},storage:{load:async()=>saved,save:async()=>{}}})
+  runtimes.push(restored)
+  await restored.restore()
+  expect(restored.inspect({parentSessionId:'parent',taskId:receipt.taskId}).deliveryStatus).toBeUndefined()
+  const node={id:'reference',workbenchId:plan.id,generationStatus:'completed',containerSpec:artifact,containerPrompt:panel.prompt,...legacy}
+  const classify=overrides=>publishResearchWorkbenchProgress({},'s',[{...node,...overrides}]).nodes[0].recoveryMode
+  expect(classify({})).toBeUndefined()
+  for(const content of [parts.slice(1).join('\n\n'),[...parts.slice(0,3),parts[0]].join('\n\n'),
+    parts.map(p=>p.split(' — ')[0]).join('\n\n'),'> '+parts.join('\n> '),'~~~\n'+parts.join('\n')+'\n~~~']) {
+    expect(classify({containerSpec:{...artifact,content}})).toBe('incomplete-scope')
+  }
+  expect(classify({unmetRequirements:[legacy.unmetRequirements[0],'尚缺持仓量。']})).toBe('incomplete-scope')
+  expect(classify({unmetRequirements:[legacy.unmetRequirements[0].replace('层次','合约')]})).toBe('incomplete-scope')
+})
 it.each([{panel:curve,artifact:missing,mode:'data-missing'},{panel:contracts,artifact:table,mode:'incomplete-scope'}])('retains the deferred and inline output with a durable $mode receipt',async ({panel,artifact,mode}) => {
   const {runtime,storage} = createRuntime(artifact)
   const request=prepared(panel,artifact)

@@ -14,7 +14,7 @@ export function requestedComponentRefreshInterval(text) {
   const hostInterval = /宿主刷新设置：每\d+分钟自动刷新（intervalMinutes=(\d+)）/u.exec(request)?.[1];
   if (hostInterval !== undefined) return Number(hostInterval);
   if (/(?:不要|不用|不需要)\s*(?:仅|只)\s*手动/u.test(request)) return undefined;
-  const manual = /(?:仅|只)\s*(?:允许|支持|使用|需要|能)?\s*手动(?:刷新|更新)?|(?:不要|不用|不需要|关闭|禁用)\s*自动(?:刷新|更新)|\b(?:manual[- ]only|manual refresh only|no automatic refresh)\b/iu.test(request);
+  const manual = /(?:仅|只)\s*(?:允许|支持|使用|需要|能)?\s*手动(?:刷新|更新)?|(?:不要|不用|不需要|关闭|禁用)\s*自动(?:刷新|更新)|(?:暂停|停用)\s*(?:自动|定时)?(?:刷新|更新)|\b(?:manual[- ]only|manual refresh only|no automatic refresh|pause(?:d)? (?:automatic )?(?:refresh|updates?))\b/iu.test(request);
   const matches = [...request.matchAll(/(?<![\d.])(?:(?:每|间隔)\s*)?(\d{1,6})\s*(秒|分钟|分|小时|天)\s*(?:自动)?(?:刷新|更新)|每\s*(分钟|小时|天)\s*(?:自动)?(?:刷新|更新)/gu)]
     .filter(match => !/(?:不要|不用|不需要|不必|无需|禁止|避免|取消)\s*$/u.test(request.slice(Math.max(0,match.index-12),match.index)));
   if (manual) {

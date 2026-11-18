@@ -39,6 +39,8 @@ it('shows the plot and selected value before opening complete exchange-rate data
   expect(chart.height).toBeGreaterThanOrEqual(160);
   expect(chart.y+chart.height).toBeLessThan(tab.y);
   expect(tab.y+tab.height).toBeLessThanOrEqual(330);
+  expect(await frame.locator('.chart-readout strong').allTextContents()).toContain(String(values.at(-1)));
+  await frame.locator('svg').press('Home');
   expect(await frame.locator('.chart-readout strong').allTextContents()).toContain('7.1048');
   await frame.locator('svg').press('End');
   expect(await frame.locator('.chart-readout').textContent()).toContain(labels.at(-1));

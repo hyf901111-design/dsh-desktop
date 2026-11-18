@@ -6,6 +6,46 @@ export function workbenchDeliveryIntent(request = '') {
     .replace(/“[^”]*”|「[^」]*」|^\s*>[^\n]*/gmu, '')
 }
 
+// A named, explained section can substantiate an editorial scope. It cannot
+// substantiate a quantity of securities, observations or other business rows.
+export function workbenchReadingScopeCount(artifact, entity) {
+  if (!/^(?:(?:研究|分析)的?)?(?:层次|维度|方面|章节|栏目)(?:分析|展开|呈现|解读)?$/u.test(entity) ||
+      !['markdown', 'summary'].includes(artifact?.type) || typeof artifact.content !== 'string') return
+  const sections = new Set()
+  let current, explained = false, fence
+  const finish = () => { if (current && explained) sections.add(current) }
+  for (const line of artifact.content.split(/\r?\n/u)) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/u.exec(line)?.[1]
+    if (marker) {
+      if (!fence) fence = marker
+      else if (marker[0] === fence[0] && marker.length >= fence.length) fence = undefined
+      continue
+    }
+    if (fence || /^(?:\s*>| {4}|\t)/u.test(line)) continue
+    const heading = /^(?:#{1,6}\s+|\*\*|__)([（(]?(?:\d{1,2}|[一二三四五六七八九十]+)[.．、)）]\s*)([^*_\n]{1,120}?)(?:(?:\*\*|__)(.*)|\s*$)/u.exec(line)
+    if (heading) {
+      finish()
+      current = heading[2].trim()
+      explained = false
+    } else if (/^(?:#{1,6}\s|\*\*|__|[-*_]{3,}\s*$)/u.test(line)) {
+      finish()
+      current = undefined
+    }
+    const description = (heading ? heading[3] ?? '' : line).trim().replace(/^[—–:：-]+\s*/u, '')
+    if (current && /\p{L}/u.test(description) && !/^(?:待(?:补充|填[写入]|核验)|暂无(?:资料|内容)|TBD|TODO|N\/A)[。.!！\s]*$/iu.test(description)) explained = true
+  }
+  finish()
+  return sections.size || undefined
+}
+
+export function workbenchReadingScopeRestored(artifact, receipt) {
+  return receipt?.recoveryMode === 'incomplete-scope' && Array.isArray(receipt.unmetRequirements) &&
+    receipt.unmetRequirements.length > 0 && receipt.unmetRequirements.every(reason => {
+      const scope = /^交付范围无法核验：需要 (\d+)(?:个|项)([^。]+)。请使用已取得的完整记录呈现。$/u.exec(reason)
+      return scope && workbenchReadingScopeCount(artifact, scope[2]) >= Number(scope[1])
+    })
+}
+
 export function workbenchChartTextFallback(artifact, request = '', plannedType) {
   if (artifact?.type !== 'markdown') return
   const intent = workbenchDeliveryIntent(request)

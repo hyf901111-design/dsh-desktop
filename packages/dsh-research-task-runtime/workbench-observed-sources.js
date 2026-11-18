@@ -3,6 +3,7 @@ import {decodeDataResponse} from './component-data-refresh.js'
 import {expandBusinessEvidence} from './component-source-projection.js'
 import {workbenchPlanningSession} from './workbench-prototype-evidence.js'
 import {isDeepStrictEqual} from 'node:util'
+import {includesRequestCredentials} from './component-request-credentials.js'
 
 export const WORKBENCH_OBSERVED_SOURCE_LIMITS=Object.freeze({records:128,bytes:8_000_000,depth:32})
 const sourceTool=name=>typeof name==='string'&&/^(?:ework__[\w.-]{1,160}|public_data_query|web_fetch|financial_query)$/u.test(name)
@@ -57,7 +58,7 @@ export function restoreWorkbenchObservedSources(value){
 // The spill preview is for display. Keep policy-approved content before that
 // transformation, then check the corresponding durable result before reuse.
 export function retainWorkbenchPreSpillSource(session,messageId,callId,tool,args,content,schemas){
- if(!sourceTool(tool)||typeof callId!=='string'||!callId||!object(args)||
+ if(!sourceTool(tool)||typeof callId!=='string'||!callId||!object(args)||includesRequestCredentials(args)||
     componentDiscoveryToolNames(schemas).has(tool)||
     tool==='public_data_query'&&args.operation!=='query'||
     tool==='financial_query'&&['resolve','search','catalog'].includes(args.intent)||
@@ -121,7 +122,7 @@ export function captureWorkbenchObservedSources({session,messageId,schemas=[],on
   if(!durableResult||durableResult.isError||durableResult.error||discovery.has(tool)&&tool!==tushareDirectory?.catalog)continue
   let args
   try{args=typeof rawArgs==='string'?JSON.parse(rawArgs):rawArgs}catch{continue}
-  if(!object(args)||tool==='public_data_query'&&args.operation!=='query'||tool==='financial_query'&&['resolve','search','catalog'].includes(args.intent))continue
+  if(!object(args)||includesRequestCredentials(args)||tool==='public_data_query'&&args.operation!=='query'||tool==='financial_query'&&['resolve','search','catalog'].includes(args.intent))continue
   if(tool===tushareDirectory?.catalog){
    try{tushareDirectory.observe(args,decodeDataResponse(durableResult))}catch{}
    continue
@@ -147,7 +148,7 @@ export function captureWorkbenchObservedSources({session,messageId,schemas=[],on
     continue
    }
   }
-  if(!record||record.response?.kind==='catalog'||emptyDataProFinanceResult(record.response)||!object(record.response)&&!Array.isArray(record.response)&&!record.snapshotRows?.length)continue
+  if(!record||record.response?.kind==='catalog'||includesRequestCredentials(record.response)||emptyDataProFinanceResult(record.response)||!object(record.response)&&!Array.isArray(record.response)&&!record.snapshotRows?.length)continue
   try{record=restoreObservedRecord(record)}catch{reject('invalid');continue}
   const previous=records.findIndex(prior=>prior.tool===tool&&isDeepStrictEqual(prior.args,args))
   if(previous>=0&&tool==='web_fetch'&&!record.response&&records[previous].response)continue

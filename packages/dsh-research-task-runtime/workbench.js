@@ -5,6 +5,7 @@ import {workbenchSourcePolicy,workbenchObservedSourcesForPolicy} from './workben
 import {captureWorkbenchObservedSources} from './workbench-observed-sources.js';
 import {workbenchTushareDirectory} from './workbench-source-progress.js';
 import {compileObservedSourceView, observedSourceViews, OBSERVED_SOURCE_GUIDANCE, OBSERVED_SOURCE_VIEW_SCHEMA, OBSERVED_SOURCES_TOOL} from './workbench-source-views.js';
+import {prepareObservedWorkbenchRefresh,resolveObservedWorkbenchDatasets,workbenchReplayTools} from './workbench-observed-refresh.js';
 import {assertPrivateResearchSession} from './board-runtime.js'
 import { createHash, randomUUID } from 'node:crypto';
 import { canvasHumanRequest } from './canvas-task-routing.js';
@@ -240,6 +241,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             session:exec.agent.session,messageId:originalHumanRequest.messageId,schemas:sourceSchemas,tushareDirectory,
             onRejected:reason=>sourceCaptureWarnings.add(reason)
         }):undefined;
+        const sourceViewReferences=new Map();
+        const replayTools=workbenchReplayTools(ctx.get?.('eworkIntegrations')?.snapshot?.tools,sourceSchemas);
         if (args.panels?.some(panel => panel?.sourceView !== undefined)) {
             args = {...args, panels:args.panels.map((panel, index) => {
                 if (panel?.sourceView === undefined) return panel;
@@ -253,12 +256,20 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     throw Error(scope + ' 图表需使用 type=chart 和 chart_spec，完整明细使用 type=table。');
                 const sourcePolicy = workbenchSourcePolicy(originalRequest, rest);
                 try {
+                    sourceViewReferences.set(rest.title?.trim(),sourceView);
                     return {...rest, type:sourceView?.chart_spec?'chart':'table', artifact:compileObservedSourceView(rest.title, sourceView,
                         workbenchObservedSourcesForPolicy(observedSources,sourcePolicy),{originalRequest,panelRequest:rest.prompt})};
                 } catch (error) {
                     throw Error(scope + error.message + '。沿用同一份来源和其他面板，只修正这个字段。');
                 }
             })};
+        }
+        const observedDatasetInput=resolveObservedWorkbenchDatasets(args,sharedPlans.has(exec.agent?.session?.id)?undefined:observedSources);
+        args=observedDatasetInput.plan;
+        for(const panel of args.panels??[]){
+            const ref=observedDatasetInput.references.get(panel?.view?.dataset)?.sourceRef;
+            if(ref&&!observedSourceViews(workbenchObservedSourcesForPolicy(observedSources,workbenchSourcePolicy(originalRequest,panel))).some(source=>source.sourceRef===ref))
+                throw Error('此共同数据来源不符合该面板的用户指定来源。');
         }
         if (documentExclusive && Array.isArray(args.panels)) {
             // Existing document content is deliverable after checking against
@@ -397,7 +408,17 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             }) : []);
             let sharedEvidence;
             const panelContext = panel => ({...(input.sharedDatasets?{sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt},sourceRequirement:panel.prompt,sharedDatasets:input.sharedDatasets}:{}),...contexts.get(JSON.stringify([panel.title,panel.type,panel.prompt])), ...(sharedEvidence ? {sharedEvidence} : {})});
-            const preparedPanel=panel=>{const hostContext=panelContext(panel);return {canvasNodeId:panel.nodeId,prompt:workbenchPanelPrompt(input,panel,comparisonReferenceTime),preparedRequirement:panel.prompt,artifact:panel.artifact,
+            const preparedPanel=panel=>{
+                const hostContext=panelContext(panel);
+                let replay;
+                if(!scopeDeficits.some(issue=>issue.panel===panel.title)&&!workbenchOfflineRequest(originalRequest)){
+                    try{replay=prepareObservedWorkbenchRefresh(panel,{originalRequest,observed:hostContext.sharedObservedRecords,datasets:hostContext.sharedDatasets,
+                        authoredContent:args.panels?.find(p=>p?.title?.trim()===panel.title || p?.content?.title?.trim()===panel.title)?.content,
+                        sourceView:sourceViewReferences.get(panel.title),datasetReference:observedDatasetInput.references.get(panel.view?.dataset),tools:replayTools});}
+                    catch{/* A source that cannot reproduce a complete card still provides its verified initial snapshot. */}
+                }
+                return {canvasNodeId:panel.nodeId,prompt:workbenchPanelPrompt(input,panel,comparisonReferenceTime),preparedRequirement:panel.prompt,artifact:replay?.data??panel.artifact,
+                ...(replay?{observedRefreshRecipe:replay.recipe}:{}),
                 view:panel.view,documentEvidence:panel.artifact.type==='mind-map'?preparedWordEvidence:undefined,
                 ...(hostContext.workbenchRequest?{hostContext}:{}),...(scopeDeficits.some(item=>item.panel===panel.title)?{scopeDeficits:scopeDeficits.filter(item=>item.panel===panel.title)}:{})};};
             const preparedReceipt=(panel,receipt)=>{panel.taskId=receipt.taskId;panel.prepared=true;Object.assign(panel,partialDelivery(receipt));delete panel.error;};

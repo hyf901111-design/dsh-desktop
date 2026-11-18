@@ -546,7 +546,7 @@ it('submits content through its own validation and successful receipt boundary',
   expect(records).toHaveLength(1)
   return JSON.stringify(snapshot.data)
  }
- const f=await fixture(undefined,{validateContent}),content={title:'比较',rows:[{name:'甲',value:0},{name:'乙',value:2}]}
+ const f=await fixture(undefined,{validateContent,options:{panelRequest:'完整资料只要表格。'}}),content={title:'比较',rows:[{name:'甲',value:0},{name:'乙',value:2}]}
  let done=false;f.submission.result.then(()=>{done=true})
  expect((await f.invoke({content},f.parent)).isError).toBe(true)
  expect((await f.invoke({content,artifact:{}})).isError).toBe(true)
@@ -580,7 +580,10 @@ it('retains the real missing-cohort issue across title and empty retries until i
  f.submission.accept(receipt('data-submit',true));f.submission.accept({type:'step/end'});expect(f.submission.acquisitionIssue()).toBe(issue)
  expect((await f.invoke({content:content(8)})).isError).toBe(false)
  f.submission.accept(receipt());expect(f.submission.acquisitionIssue()).toBe(issue)
- f.submission.accept({type:'step/end'});expect(JSON.parse((await f.submission.result).output[0].text).rows).toHaveLength(8)
+ f.submission.accept({type:'step/end'})
+ const delivered=JSON.parse((await f.submission.result).output[0].text)
+ expect(delivered.variant).toBe('horizontal')
+ expect(delivered.detailRows).toHaveLength(8)
  expect(f.submission.acquisitionIssue()).toBeUndefined();expect(f.submission.lastIssue()).toBeUndefined()
 })
 it('keeps an observed missing-field issue local and does not clear it after cancellation',async()=>{

@@ -9,6 +9,25 @@ import {componentLibraryBuiltins} from '../packages/dsh-research-task-runtime/co
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
 import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench.js'
 const a={market:'SH',code:'688981',name:'中芯国际'},b={market:'SZ',code:'002371',name:'北方华创'}
+it('binds a current exchange directory to daily products and preserves the original classification reference',()=>{
+ const title='品种速查（上期所·能源中心）'
+ const item={title,type:'table',size:'medium',prompt:'上期所与能源中心在市品种的代码、板块与报价单位速查。',content:{
+  title,columns:[{key:'code',label:'品种代码'},{key:'name',label:'品种'},{key:'sector',label:'板块'}],
+  rows:[{code:'CU',name:'铜',sector:'工业金属'},{code:'rb',name:'螺纹钢',sector:'钢材'}],
+  note:'分类参考资料',sources:[{label:'上海期货交易所',url:'https://www.shfe.com.cn'}]}}
+ const compile=(panel,request='生成一个期货衍生品研究工作台')=>validateWorkbench({requestId:'live-directory',title:'期货研究',dataMode:'source',originalRequest:request,panels:[panel]}).panels[0].artifact
+ const live=compile(item)
+ expect(live).toMatchObject({type:'financial-widget',widget:'futures',dataSource:'shfe',refreshMinutes:60,directory:{
+  rows:[{code:'cu',name:'铜',sector:'工业金属'},{code:'rb',name:'螺纹钢',sector:'钢材'}],note:item.content.note,sources:item.content.sources}})
+ for(const request of ['只用附件中的品种目录生成工作台','生成截至2020年的期货衍生品研究工作台']){
+  expect(compile(item,request)).toMatchObject({type:'table'})
+ }
+ const extra={...item,content:{...item.content,body:'另有需要保留的比较说明'}}
+ expect(compile(extra)).toMatchObject({type:'table',body:extra.content.body})
+ for(const prompt of ['历史快照，只列以下品种。','只看铜和螺纹钢。','展示用户自选品种。','按固定清单展示，不自动刷新。']){
+  expect(compile({...item,prompt}).type).toBe('table')
+ }
+})
 it('开放式期货工作台保留可查询的信息入口、原有页签索引和历史计划',()=>{
  const basic={panels:[{title:'风险提示',type:'markdown'}]}, request='生成一个期货衍生品研究工作台'
  const next=includeFuturesInformationSources(basic,request,8)

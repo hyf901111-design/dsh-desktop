@@ -257,7 +257,7 @@ export function cartesianChartReadingRuntime(spec, geometry, presentation) {
   const svg=document.querySelector('.template-chart'),readout=document.querySelector('.chart-readout');
   const legend=[...document.querySelectorAll('[data-chart-series]')], visible=spec.series.map(()=>true);
   const {unit,seriesNames,seriesHeaders,detailColumns,duplicateDetails}=presentation(spec);
-  let selected=0, size=null, frame=0;
+  let selected=['line','step'].includes(spec.variant)?spec.labels.length-1:0, size=null, frame=0;
   const setLabel=(element,label)=>{
     if(!element)return;
     const text=[...element.childNodes].find(node=>node.nodeType===3);
@@ -309,6 +309,36 @@ export function cartesianChartReadingRuntime(spec, geometry, presentation) {
     for(const [key,value] of Object.entries(part.attributes))el.setAttribute(key,String(value));
     el.append(...part.children.map(mount));return el;
   };
+  // Append passive labels after the existing hit targets. Their routes and
+  // the source order stay stable for saved keyboard and pointer selections.
+  const labelComparison=()=>{
+    if(spec.variant!=='horizontal'||visible.filter(Boolean).length!==1)return;
+    const index=visible.indexOf(true),bars=[...svg.querySelectorAll('g[data-series="'+index+'"] rect[data-point]')];
+    if(!bars.length)return;
+    const hit=svg.querySelector('.hit'),left=Number(hit.getAttribute('x')),right=left+Number(hit.getAttribute('width'));
+    const overlay=document.createElementNS(svg.namespaceURI,'g');
+    overlay.setAttribute('pointer-events','none');overlay.setAttribute('aria-hidden','true');
+    const mark=(tag,attrs,text)=>{
+      const el=document.createElementNS(svg.namespaceURI,tag);
+      for(const [key,value] of Object.entries(attrs))el.setAttribute(key,String(value));
+      if(text!==undefined)el.textContent=text;
+      overlay.append(el);return el;
+    };
+    const top=size.categoryStart,bottom=top+spec.labels.length*size.categorySize;
+    for(const [i,bar] of bars.entries()){
+      const value=spec.series[index].values[i],bx=Number(bar.getAttribute('x')),bw=Number(bar.getAttribute('width'));
+      const end=value<0?bx:bx+bw;
+      if(i===0){
+        const zero=value<0?bx+bw:bx;
+        mark('line',{x1:zero,x2:zero,y1:top,y2:bottom,stroke:'var(--sherlock-muted)','stroke-width':1,'data-comparison-zero':''});
+      }
+      const text=value.toLocaleString('zh-CN',{maximumSignificantDigits:6}),length=text.length*6.5;
+      const after=value>=0?end+5+length<=right:end-5-length<left;
+      const label=mark('text',{'data-comparison-value':'',x:after?Math.min(right-length,end+5):Math.max(left+length,end-5),y:top+(i+.5)*size.categorySize+4,'text-anchor':after?'start':'end'},text);
+      label.style.cssText='font-weight:600;fill:var(--sherlock-text);paint-order:stroke;stroke:var(--sherlock-surface);stroke-width:3px;stroke-linejoin:round';
+    }
+    svg.append(overlay);
+  };
   let lastWidth=0,lastHeight=0;
   const draw=()=>{
     frame=0;lastWidth=svg.parentElement.clientWidth;lastHeight=window.innerHeight;describe();
@@ -328,7 +358,7 @@ export function cartesianChartReadingRuntime(spec, geometry, presentation) {
     // here instead of feeding the newly enlarged iframe back into the plot.
     // This also keeps the tabs in place when switching between detail panels.
     const expanded=document.body.dataset.componentReadingTabs==='expanded'||!tabBar&&document.querySelector('body>details[open]');
-    size=geometry(spec,lastWidth,visible,expanded?240:lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();
+    size=geometry(spec,lastWidth,visible,expanded?240:lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));labelComparison();describe();
   };
   const select=i=>{
     const next=Math.max(0,Math.min(spec.labels.length-1,i));

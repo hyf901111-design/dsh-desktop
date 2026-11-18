@@ -4,7 +4,7 @@ import Ajv from 'ajv'
 import { compileComponentContent } from './component-content.js'
 
 export const OBSERVED_SOURCES_TOOL = 'research_workbench_source_catalog'
-export const OBSERVED_SOURCE_GUIDANCE = '【复用本轮数据】普通明细及折线、柱状、横条、面积图优先复用已列出的 sourceRef。同一编号可供多卡引用。已收到业务记录却缺编号时才调用 research_workbench_source_catalog；目录只读已有数据。明细用 type=table 与 sourceView:{sourceRef}；图表用 type=chart 与 sourceView:{sourceRef,chart_spec:{chartType,encodings:{x:{field},y:{field}},unit?}}。同卡省略 view、sharedDatasets、content 和 artifact。'
+export const OBSERVED_SOURCE_GUIDANCE = '【复用本轮数据】普通明细及折线、柱状、横条、面积图优先复用已列出的 sourceRef。同一编号可供多卡引用。已收到业务记录却缺编号时才调用 research_workbench_source_catalog；目录只读已有数据。明细用 type=table 与 sourceView:{sourceRef}；图表用 type=chart 与 sourceView:{sourceRef,chart_spec:{chartType,encodings:{x:{field},y:{field}},unit?}}。同卡省略 view、sharedDatasets、content 和 artifact。多卡需要共用筛选与行详情时，可提交 sharedDatasets:[{id,label,sourceRef,identity,fields}]，identity 填来源中唯一稳定的文本键，fields 使用来源原键和显示名，再用各卡 view 引用。可重放的动态来源由宿主保留原查询和渲染方式；固定历史区间及报告使用快照。'
 
 const variants = {
   'Line Chart': 'line',
@@ -43,8 +43,8 @@ const requiredFields = {
 }
 const validate = new Ajv({ allErrors: true }).compile(requiredFields)
 
-function sourceEntries(observed) {
-  return (observed ?? []).flatMap(({tool, args, response}) => {
+export function observedWorkbenchSourceEntries(observed) {
+  return (observed ?? []).flatMap(({tool, args, response, purpose}) => {
     const rows = Array.isArray(response) ? response : response?.records
     const page = response?.pagination
     if (!Array.isArray(rows) || !rows.length || response?.status === 'partial' ||
@@ -54,12 +54,12 @@ function sourceEntries(observed) {
     const sourceRef = 'source-' + createHash('sha256').update(JSON.stringify([tool,args])).digest('hex').slice(0,16)
     const label = [response?.source, response?.api ?? response?.sourceId].filter(value => typeof value === 'string' && value.trim()).join(' · ')
     if (!label) return []
-    return [{ sourceRef, rows, fields, label, tool, args }]
+    return [{ sourceRef, rows, fields, label, tool, args, response, purpose }]
   })
 }
 
 export function observedSourceViews(observed) {
-  return sourceEntries(observed).map(({ sourceRef, rows, fields, label }) => ({
+  return observedWorkbenchSourceEntries(observed).map(({ sourceRef, rows, fields, label }) => ({
     sourceRef, label, rows: rows.length, fields,
     ...(typeof rows[0].ts_code === 'string' ? { code: rows[0].ts_code } : {}),
   }))
@@ -96,12 +96,12 @@ export function compileObservedSourceView(title, view, observed, scope={}) {
     const field = error.params.additionalProperty ?? error.params.missingProperty
     throw Error((error.instancePath + (field ? '/' + field : '') || '/') + ' 配置无效')
   }
-  const entries=sourceEntries(observed)
+  const entries=observedWorkbenchSourceEntries(observed)
   const source = entries.find(entry => entry.sourceRef === view.sourceRef)
   if (!source) throw Error('/sourceRef 没有对应的本轮完整数据，请重新查询来源目录')
   const rowsForTable=!view.chart_spec&&combinedFundNavRows(source,entries,scope)
   const content = { title, rows: rowsForTable||source.rows, sources: [{ label: source.label }] }
-  if (!view.chart_spec) return compileComponentContent(content).data
+  if (!view.chart_spec) return compileComponentContent(content,{tableOnly:true}).data
 
   const { chartType, encodings: { x, y }, unit } = view.chart_spec
   if (!source.fields.includes(x.field) || !source.rows.every(row => typeof row[x.field] === 'string' && row[x.field].trim()))

@@ -1,6 +1,7 @@
 // Shared with the trusted, serialized React canvas. No data-provider secrets or
 // synthetic prices are stored in this spec. Data is fetched for this configuration.
 import {financialIndexCatalog} from './financial-index-catalog.js'
+import {validFuturesDirectory} from './futures-directory.js'
 import {financialCryptoCodes,financialCryptoPeriods} from './financial-crypto-catalog.js'
 
 export const FINANCIAL_WIDGET_GUIDANCE=[
@@ -78,7 +79,8 @@ export function financialWidgetPlanSpec(value,request=''){
 }
 
 export function financialWidgetSpec(value){
- if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId','visibleBars','dataSource','refreshMinutes','refreshEnabled'].includes(k)))return null
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId','visibleBars','dataSource','refreshMinutes','refreshEnabled','directory'].includes(k)))return null
+ if(value.directory!==undefined&&(value.widget!=='futures'||!validFuturesDirectory(value.directory)))return null
  if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news','announcements','futures'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
  if(!Array.isArray(value.symbols)||value.symbols.length>(['quote','announcements'].includes(value.widget)?1:value.widget==='indices'?64:200))return null
  const ids=new Set()
