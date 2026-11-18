@@ -219,10 +219,15 @@ body[data-ds-dark-theme] .srb-notifications-toast, html[data-theme=dark] .srb-no
 }
 body[data-workspace-surface=browser] .srb-notifications-toast { top: 64px; }
 
-.srb-bell-unread-count {
-  position: absolute; top: 0; left: 23px; z-index: 1; display: grid; place-items: center;
-  min-width: 16px; height: 16px; box-sizing: border-box; padding: 0 3px;
-  border-radius: 10px; background: #b6b0ff; color: #252525;
-  font: 11px/16px "Noto Sans SC", sans-serif; pointer-events: none;
+.srb-bell[data-unread=true]::after {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--dsw-specific-sidebar-fill, #fff);
+  border-radius: 50%;
+  background: #df544f;
+  pointer-events: none;
+  content: "";
 }
-.srb-bell-unread-count[hidden] { display: none; }

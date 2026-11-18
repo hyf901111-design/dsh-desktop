@@ -736,16 +736,12 @@ export function mountResearchBoardNotifications(
       bell.className = 'srb-bell'
       bell.setAttribute('aria-haspopup', 'dialog')
       bell.setAttribute('aria-expanded', 'false')
-      bell.innerHTML = '<span class="srb-bell-icon" aria-hidden="true"></span><span class="srb-bell-unread-count" aria-hidden="true" hidden></span>'
+      bell.innerHTML = '<span class="srb-bell-icon" aria-hidden="true"></span>'
       host.append(bell)
     }
     const unread = (state?.account.user ? state.notifications.unreadCount : 0) + Number(updateUnread())
     bell.dataset.unread = String(unread > 0)
     bell.setAttribute('aria-description', unread ? `${unread} 条未读消息` : '')
-    const badge = bell.querySelector<HTMLElement>('.srb-bell-unread-count')!
-    badge.hidden = unread === 0
-    const count = unread > 99 ? '99+' : String(unread)
-    if (badge.textContent !== count) badge.textContent = count
     showNext()
     if (bubble) { anchor(bubble); resume() }
   }

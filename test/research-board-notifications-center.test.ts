@@ -251,10 +251,12 @@ it('shows invite progress, keeps a failed decision retryable, and collapses the 
 })
 
 
-it('shows the total on the bell and moves the keyboard between message rows', async () => {
+it('keeps the bell free of visible counts and moves the keyboard between message rows', async () => {
   const f = fixture([note('first', null, 'accepted'), note('second', null, 'accepted')])
   await tick()
-  expect(f.bell().querySelector('.srb-bell-unread-count')?.textContent).toBe('2')
+  expect(f.bell().textContent).toBe('')
+  expect(f.bell().dataset.unread).toBe('true')
+  expect(f.bell().getAttribute('aria-description')).toBe('2 条未读消息')
   f.bell().click()
   const pressDown = () => f.w.document.activeElement?.dispatchEvent(new f.w.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
   pressDown()

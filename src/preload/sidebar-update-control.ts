@@ -153,7 +153,7 @@ export class SidebarUpdateControl {
       style.textContent = `
 [data-sherlock-update-footer]:has(> #${BUTTON_ID}) { display:flex; align-items:center; gap:4px; }
 [data-sidebar-collapsed=true] [data-sherlock-update-footer]:has(> #${BUTTON_ID}) { flex-direction:column-reverse; }
-[data-sidebar-collapsed=true] .srb-account-controls > #${BUTTON_ID} { order:-2; }
+[data-sidebar-collapsed=true] .srb-account-controls > #${BUTTON_ID} { order:-2; margin-block-end:8px; }
 #${BUTTON_ID} {
   box-sizing:border-box; flex:none; appearance:none; display:grid; place-items:center;
   width:28px; height:28px; margin:0; padding:0; border:0; border-radius:6px;
