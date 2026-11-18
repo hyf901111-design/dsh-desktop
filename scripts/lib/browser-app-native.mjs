@@ -266,14 +266,6 @@ ctx.effect(()=>{
   sessions,workspaces,getInput:id=>inputHub.shell(id),
   currentSurface:()=>document.body.dataset.workspaceSurface,
   setView:(id,view)=>chatStore.create(id).actions.setView(view),
-  openCommands:(id,shell,selection,typed)=>{
-   const triggers=inputHub.inputTriggers(id);
-   if(!triggers)throw Error('命令目录暂未就绪，请重试。');
-   if(typed){shell.track(shell.snapshot.draft,selection.start,'insertText');return}
-   shell.dismissPopup();
-   const snapshot=shell.snapshot;
-   triggers.toggleSource('command',{trigger:'/',query:'',position:snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',span:{...selection,draftRev:snapshot.draftRev}});
-  },
   onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},
   prepareSession:async id=>{await window[Symbol.for('sherlock:pending-preset-flush')]?.(id);await preferences.apply(id);if(document.body.dataset.workspaceSurface==='knowledge')await window.dshDesktop?.clientCapabilities?.bind({sessionId:id,mode:'knowledge',active:true})},
   prepareContext:async()=>{await permissionPreferences.ready();return document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined},
