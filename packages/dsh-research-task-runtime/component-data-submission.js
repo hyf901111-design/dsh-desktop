@@ -12,6 +12,7 @@ import {COMPONENT_TEMPLATES} from './component-template-registry.js'
 import {DERIVED_GUIDANCE} from './derived-template-contract.js'
 import {COMPONENT_PAGE_MAPPING_GUIDANCE} from './component-data-refresh.js'
 import {PANEL_COLOR_INSTRUCTION} from './design-policy.js'
+import {compactWebpageGuidance, webpageControlGuidance} from './workbench-webpage-compact.js'
 import {SHARED_PANEL_INSTRUCTION} from './shared-component-contract.js'
 
 import {compileComponentContent,COMPONENT_CONTENT_GUIDANCE} from './component-content.js'
@@ -136,7 +137,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
    if(variant!==undefined&&!PRESENTATION_VARIANTS[type]?.includes(variant))throw Error('variant 不适用于当前类型；使用 component_presentation_schema({}) 返回的该类型变体，不改变业务内容。')
    const schema=type==='chart'?chartTemplateSchema(variant):type==='market'?marketPanelSchema(variant):type==='table'?TABLE_INPUT_SCHEMA:type==='timeline'?TIMELINE_DATA_GUIDANCE:type==='kpi'?'{"version":1,"type":"kpi","title":"标题","asOf":"数据时点","items":[{"label":"指标","value":"来源字段映射","unit":"单位"}]}':['mind-map','summary'].includes(type)?DERIVED_GUIDANCE:type==='markdown'?'{"version":1,"type":"markdown","title":"标题","content":"完整正文与原始出处链接"}':type==='html'?'{"version":1,"type":"html","title":"标题","html":"完整自包含离线HTML"}':COMPONENT_TEMPLATES.find(template=>template.type===type&&template.schema)?.schema
    if(!schema)throw Error('该呈现形式没有独立映射协议。可沿已提供的宿主组件协议提交 artifact；不为通过提交而改变业务内容。')
-   return{type,...(variant?{variant}:{}),schema,sources:sourceReferences(observeRecords()),...(args.mapping?{mapping:COMPONENT_SUBMISSION_MAPPING_GUIDANCE}:{}),...(type==='html'?{style:PANEL_COLOR_INSTRUCTION,interaction:SHARED_PANEL_INSTRUCTION}:{}),guidance:type==='kpi'?KPI_GUIDANCE:'常规内容用 content；结构化响应引用用 requests/mapping；自定义呈现用 artifact。呈现字段不规定业务内容。保留原始出处、日期、完整记录与必要交互。'}
+   return{type,...(variant?{variant}:{}),schema,sources:sourceReferences(observeRecords()),...(args.mapping?{mapping:COMPONENT_SUBMISSION_MAPPING_GUIDANCE}:{}),...(type==='html'?{style:[PANEL_COLOR_INSTRUCTION,webpageControlGuidance,compactWebpageGuidance].join('\n'),interaction:SHARED_PANEL_INSTRUCTION}:{}),guidance:type==='kpi'?KPI_GUIDANCE:'常规内容用 content；结构化响应引用用 requests/mapping；自定义呈现用 artifact。呈现字段不规定业务内容。保留原始出处、日期、完整记录与必要交互。'}
   }
  })
  const definition=defineTool({

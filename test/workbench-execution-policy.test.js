@@ -162,6 +162,17 @@ describe('workbench planning continuation', () => {
     return {s,agent,wire,abort,dispose,stop:() => hooks.get('agent/turn-stopping')(payload)}
   }
 
+  it('sends the portable page styling defaults to the planner that authors the HTML', async () => {
+    const run = await planningRun('做个出游预算看板，改人数就能比较两套方案，整页还能带走。')
+    try {
+      expect(run.wire.system).toContain('border-radius: 0')
+      expect(run.wire.system).toContain('省去摘要侧边色条、分区顶部色带和胶囊外框')
+      expect(run.wire.system).toContain('可见的键盘焦点')
+      expect(run.wire.system).toContain('htmlFile.stylePreset="compact-v1"')
+      expect(run.wire.system).toContain('浅色、深色和彭博模式共用布局')
+    } finally { run.dispose() }
+  })
+
   it.each([
     '我想给同事做一份组织架构速查看板，按附件保留出处和待核标记。',
     '给投研组做一组美股财报观察看板。',

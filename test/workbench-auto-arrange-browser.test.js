@@ -6,6 +6,8 @@ import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {canvasCss} from '../scripts/lib/figma-canvas-client.mjs'
+import {prepareWorkbenchWebpages} from '../packages/dsh-research-task-runtime/workbench-webpage.js'
+import {workbenchWebpagePreviewSuffix} from '../packages/dsh-research-task-runtime/workbench-webpage-preview.js'
 
 const require=createRequire(import.meta.url)
 let browser,script,tabsScript
@@ -49,6 +51,45 @@ it('uses automatic arrangement for a new research workspace and preserves an exp
  }finally{await page.close()}
 },20000)
 afterAll(async()=>browser?.close())
+
+it('preserves compact webpage layout and input across the offline file and the four board palettes',async()=>{
+ const page=await browser.newPage({viewport:{width:320,height:450}})
+ const html='<!doctype html><html><head><meta charset="utf-8"></head><body><div role="tablist"><button role="tab" aria-selected="true">预算</button></div><label>人数<input type="number" value="4"></label><dl class="metrics"><div><dt>人均</dt><dd>120</dd></div></dl><div class="table-scroll"><table style="min-width:400px"><thead><tr><th>方案</th><th class="numeric">人均（元）</th></tr></thead><tbody><tr><td>方案 A</td><td class="numeric">120</td></tr></tbody></table></div><figure><svg><rect width="20" height="10" fill="var(--sherlock-chart-2)"></rect></svg><figcaption>费用构成</figcaption></figure></body></html>'
+ const args={panels:[{type:'files',title:'预算',htmlFile:{name:'预算.html',html,stylePreset:'compact-v1'}}]}
+ const saved=prepareWorkbenchWebpages(args,'test','').pages[0].html
+ const styles=frame=>frame.evaluate(()=>{
+   const css=s=>getComputedStyle(document.querySelector(s))
+   const table=document.querySelector('.table-scroll')
+   return {accent:css('button').borderBottomColor,series:css('rect').fill,bg:css('body').backgroundColor,
+     corner:css('button').borderRadius,tabHeight:css('button').minHeight,valueSize:css('dd').fontSize,
+     readoutGap:css('figcaption').marginBlockStart,numeric:css('td.numeric').textAlign,
+     hasTableScroll:table.scrollWidth>table.clientWidth,pageFits:document.documentElement.scrollWidth<=innerWidth}
+ })
+ try {
+   await page.setContent(saved)
+   const geometry={corner:'0px',tabHeight:'30px',valueSize:'22px',readoutGap:'8px',numeric:'end',hasTableScroll:true,pageFits:true}
+   expect(await styles(page)).toMatchObject({...geometry,accent:'rgb(0, 80, 150)',series:'rgb(30, 185, 225)'})
+   await page.setContent('<style>body{margin:0}iframe{display:block;width:100%;border:0}</style><iframe title="预算预览" sandbox="allow-scripts"></iframe>')
+   const iframe=page.locator('iframe')
+   await iframe.evaluate((el,source)=>{el.srcdoc=source},saved+workbenchWebpagePreviewSuffix)
+   const frame=await (await iframe.elementHandle()).contentFrame()
+   await frame.getByLabel('人数').fill('6')
+   const palettes=[
+     ['enterprise','rgb(0, 80, 150)','rgb(30, 185, 225)','rgb(255, 255, 255)'],
+     ['light','rgb(22, 140, 240)','rgb(242, 167, 70)','rgb(255, 255, 255)'],
+     ['dark','rgb(22, 140, 240)','rgb(242, 167, 70)','rgb(21, 21, 24)'],
+     ['openterminal','rgb(255, 153, 0)','rgb(79, 195, 247)','rgb(10, 10, 10)']
+   ]
+   for(const [mode,accent,series,bg] of palettes){
+     await iframe.evaluate((el,mode)=>el.contentWindow.postMessage({type:'sherlock-workbench-style',mode,controlTheme:'dark'},'*'),mode)
+     await frame.waitForFunction(mode=>document.documentElement.dataset.workbenchStyle===mode,mode)
+     expect(await styles(frame)).toMatchObject({...geometry,accent,series,bg})
+     expect(await frame.getByLabel('人数').inputValue()).toBe('6')
+   }
+   await frame.getByLabel('人数').press('Shift+Tab')
+   expect(await frame.getByRole('tab').evaluate(tab=>tab.matches(':focus-visible')&&getComputedStyle(tab).outlineWidth==='2px')).toBe(true)
+ } finally {await page.close()}
+})
 
 it('production canvas waits for the batch, measures offscreen iframe content, then persists one standard arrangement without taking focus',async()=>{
  const page=await browser.newPage({viewport:{width:1240,height:760}}),errors=[]
@@ -322,7 +363,6 @@ it('warns above the toolbar only when auto arrange overrides a committed manual 
 },15000)
 
 it('fits a portable webpage at its current width and switches all board palettes without reloading its form',async()=>{
- const {workbenchWebpagePreviewSuffix}=require('../packages/dsh-research-task-runtime/workbench-webpage-preview.js')
  const {workbenchStylePalette}=require('../packages/dsh-research-task-runtime/workbench-style.js')
  const page=await browser.newPage({viewport:{width:1220,height:780}})
  const errors=[]

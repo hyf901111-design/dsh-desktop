@@ -62,3 +62,22 @@ it('writes no file on invalid plans or read-only projects',async()=>{
   await expect(create(spec)).rejects.toThrow('权限')
   expect(await readdir(root)).toEqual([])
 })
+
+it('embeds the compact stylesheet in the portable file, with stable metadata on retry',async()=>{
+  const {root,prepared,create}=await host()
+  const styled={...spec,panels:[{...spec.panels[0],htmlFile:{...spec.panels[0].htmlFile,stylePreset:'compact-v1'}}]}
+  const receipt=await create(styled)
+  const item=prepared[0].artifact.items[0]
+  const saved=await readFile(join(root,item.relativePath),'utf8')
+  expect(saved).toContain('@layer workbench-compact')
+  expect(saved).toContain('<button>增加人数</button>')
+  expect(item.sizeBytes).toBe(Buffer.byteLength(saved))
+  expect((await create(styled)).planId).toBe(receipt.planId)
+  const pageWith=html=>({...styled,panels:[{...styled.panels[0],htmlFile:{...styled.panels[0].htmlFile,html}}]})
+  expect(prepareWorkbenchWebpages(pageWith(saved),'trip','').pages[0].html).toBe(saved)
+  const explicitHead=html.replace('<body>', '<head><meta charset="utf-8"><title>预算</title></head><body>')
+  const withHead=prepareWorkbenchWebpages(pageWith(explicitHead),'trip','').pages[0].html
+  expect(withHead).toContain('<title>预算</title><style')
+  expect(withHead).toContain('</style></head><body>')
+  expect(()=>prepareWorkbenchWebpages(pageWith(html.replace('增加人数','a'.repeat(255000))),'trip','')).toThrow('256 KB')
+})

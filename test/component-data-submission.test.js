@@ -55,6 +55,7 @@ it('offers document and custom presentation schemas without pretending that ever
  const lookup=async type=>f.ctx.tools.execute({name:'component_presentation_schema',arguments:{type},callId:'schema-'+type,agent:f.child,signal:f.controller.signal})
  for(const type of ['mind-map','summary','markdown','html']){
   const result=await lookup(type);expect(result.isError).toBe(false);expect(JSON.stringify(result)).toContain(type)
+  if(type==='html')expect(JSON.parse(result.content[0].text).style).toContain('浅色、深色和彭博模式共用布局')
  }
  expect((await lookup('unsupported')).isError).toBe(true)
 })
