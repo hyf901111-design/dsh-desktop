@@ -53,7 +53,7 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
     }
     const matchingMeasurement=(c,w)=>{
       const node=nodesById.get(c.id),value=contentHeights.get(c.id)
-      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-(w*m.step-m.gap))<=2)return value
+      if(value&&(value.disclosureOpen||!contentOverrides.has(c.id))&&(value.fileAuthorizationId?value.fileAuthorizationId===node?.authorizationId:value.native?value.contentKey===JSON.stringify(node?.containerSpec):value.html===node?.containerSpec?.html)&&Math.abs(value.width-(w*m.step-m.gap))<=2)return value
     }
     const fitHeight=(c,min,value)=>value&&Math.min(300,value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)?Math.max(c.h,min)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep))
     // Keep row/column structure through asynchronous intrinsic measurements.
@@ -239,7 +239,7 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
     enable(nextWidth){if(width===nextWidth)return false;width=nextWidth;contentHeights.clear();if(!shared)contentOverrides.clear();forced=true;return true},
     contentHeight(id,value){
       const node=nodesById.get(id),kind=node?.containerSpec?.html?.match(/<body\b[^>]*data-sherlock-market="([a-z-]+)"/)?.[1],trustedTemplate=/<body\b[^>]*data-sherlock-template="(?:calendar|kpi|timeline)"|<body data-research-kind="chart" data-chart-template="(?:line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area)"/.test(node?.containerSpec?.html||'')
-      if(value.native?(!node?.containerSpec||node.containerSpec.type==='html'||value.contentKey!==JSON.stringify(node.containerSpec)):(node?.containerSpec?.type!=='html'||value.html!==node.containerSpec.html))return false
+      if(value.fileAuthorizationId?(node?.authorizationId!==value.fileAuthorizationId||!node?.name?.toLowerCase().endsWith('.workbench.html')):value.native?(!node?.containerSpec||node.containerSpec.type==='html'||value.contentKey!==JSON.stringify(node.containerSpec)):(node?.containerSpec?.type!=='html'||value.html!==node.containerSpec.html))return false
       const old=contentHeights.get(id)
       // A native disclosure adds flow to the already-fitted content baseline,
       // never to the obsolete generation frame. Closing restores that baseline.
@@ -254,7 +254,7 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
         if(!old?.disclosureOpen&&!old?.layoutFit)return false
         contentHeights.delete(id);forced=true;return true
       }
-      if(old?.html===value.html&&old?.contentKey===value.contentKey&&old.width===value.width&&old.height===value.height&&Boolean(old.disclosureOpen)===Boolean(value.disclosureOpen)&&Boolean(old.layoutFit)===Boolean(value.layoutFit))return false
+      if(old?.html===value.html&&old?.contentKey===value.contentKey&&old?.fileAuthorizationId===value.fileAuthorizationId&&old.width===value.width&&old.height===value.height&&Boolean(old.disclosureOpen)===Boolean(value.disclosureOpen)&&Boolean(old.layoutFit)===Boolean(value.layoutFit))return false
       contentHeights.set(id,value);forced=true;return true
     },
     clearContentOverrides(){contentOverrides.clear()},

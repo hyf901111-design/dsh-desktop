@@ -320,3 +320,70 @@ it('warns above the toolbar only when auto arrange overrides a committed manual 
   expect(await notice.count()).toBe(0)
  }finally{await page.close()}
 },15000)
+
+it('fits a portable webpage at its current width and switches all board palettes without reloading its form',async()=>{
+ const {workbenchWebpagePreviewSuffix}=require('../packages/dsh-research-task-runtime/workbench-webpage-preview.js')
+ const {workbenchStylePalette}=require('../packages/dsh-research-task-runtime/workbench-style.js')
+ const page=await browser.newPage({viewport:{width:1220,height:780}})
+ const errors=[]
+ page.on('pageerror',err=>errors.push(err.message))
+ const documentHtml='<!doctype html><meta charset=utf-8><style>:root{--card:#fff;--ink:#0f172a;--a:#2563eb}*{box-sizing:border-box}body{margin:0;padding:18px;color:var(--ink)}main{background:var(--card)}.piece{height:360px}button{background:#fff;color:#0f172a}@media(max-width:680px){.piece{height:500px}}</style><main><input value="4" aria-label="人数"><button onclick="more.hidden=!more.hidden">展开行程</button><div class="piece">费用</div><div id="more" class="piece" hidden>更多行程</div><svg height="22"><path id="series" stroke="#2563eb" d="M0 10h35"/></svg><footer>正文末尾</footer></main>'
+ try{
+  await page.route('https://auto-arrange.test/',route=>route.fulfill({contentType:'text/html',body:'<style>'+canvasCss+'\nhtml,body{margin:0}#host{width:1000px;height:700px}[data-research-canvas]{width:100%!important;height:100%!important}</style><div id="host"></div>'}))
+  await page.route('https://preview.test/**',route=>route.fulfill({contentType:'text/html',headers:{'Content-Security-Policy':"sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-ancestors https://auto-arrange.test"},body:documentHtml+(new URL(route.request().url()).search==='?workbench'?workbenchWebpagePreviewSuffix:'')}))
+  await page.goto('https://auto-arrange.test/');await page.addScriptTag({content:script})
+  await page.waitForSelector('[data-ework-grid]')
+  await page.evaluate(()=>{
+   const file={name:'行程.workbench.html',authorizationId:'page-file',capabilityToken:'preview',url:'https://preview.test/'}
+   window.dshDesktop.researchPreview={admitSidebarFile:async()=>file,restore:async()=>file,release:()=>{}}
+   window.dshDesktop.researchCanvasExport={save:async v=>{window.pageExport=v;return{status:'saved'}}}
+   const workspace=fixture.workspace
+   workspace.setWorkbenchResponsiveArrange(true)
+   const spec={version:1,type:'files',title:'费用计算器',presentation:'webpage',items:[{id:'page',name:'行程.html',relativePath:file.name}]}
+   const draft=workspace.createContainerDraft()
+   workspace.setArtifacts([{...draft,title:spec.title,generationStatus:'completed',containerSpec:spec}])
+  })
+  const card=page.locator('[data-research-node-id]').filter({has:page.locator('[data-research-attachment-preset="webpage"]')}),iframe=card.locator('iframe')
+  await iframe.waitFor()
+  const child=await (await iframe.elementHandle()).contentFrame()
+  const settled=async()=>{
+   await expect.poll(async()=>child.evaluate(()=>Math.abs(document.body.getBoundingClientRect().height-innerHeight)),{timeout:10000}).toBeLessThan(32)
+   await expect.poll(()=>page.evaluate(()=>!!document.querySelector('[data-ework-grid]').__eworkContentFit),{timeout:9000}).toBe(false)
+  }
+  await settled()
+  expect(await card.locator('.ew-grid-header').count()).toBe(1)
+  expect(await card.locator('.odyssey-data-stamp').count()).toBe(1)
+  expect(await card.locator('.ew-attachment-webpage > footer').count()).toBe(0)
+  await child.getByLabel('人数').fill('6')
+  for(const mode of ['light','dark','enterprise','openterminal']){
+   await page.evaluate(mode=>fixture.workspace.setWorkbenchStyle(mode,{scope:'board'}),mode)
+   await child.waitForFunction(mode=>document.documentElement.dataset.workbenchStyle===mode,mode)
+   const palette=workbenchStylePalette(mode)
+   const colors=await child.evaluate(()=>{
+    const color=el=>getComputedStyle(el)
+    return [color(document.body).backgroundColor,color(document.body).color,color(document.querySelector('#series')).stroke]
+   })
+   const rgb=hex=>'rgb('+hex.replace('#','').replace(/^([\da-f])([\da-f])([\da-f])$/i,'$1$1$2$2$3$3').match(/../g).map(pair=>parseInt(pair,16)).join(', ')+')'
+   expect(colors).toEqual([palette.bg,palette.text,palette['chart-1']].map(rgb))
+   expect(await child.getByLabel('人数').inputValue()).toBe('6')
+  }
+  const before=(await card.boundingBox()).height
+  await child.getByText('展开行程').click();await settled()
+  expect((await card.boundingBox()).height).toBeGreaterThan(before+320)
+  await child.getByText('展开行程').click();await settled()
+  expect(Math.abs((await card.boundingBox()).height-before)).toBeLessThan(32)
+  await page.evaluate(()=>document.querySelector('#host').style.width='515px');await settled()
+  await page.locator('[data-research-global-arrange]').click()
+  await settled()
+  const arrangedHeight=(await card.boundingBox()).height
+  await page.locator('[data-research-global-arrange]').click()
+  await settled()
+  expect((await card.boundingBox()).height).toBe(arrangedHeight)
+  expect(await child.evaluate(()=>document.querySelector('footer').getBoundingClientRect().bottom<=innerHeight+1)).toBe(true)
+  await card.locator('[data-workbench-more]').click()
+  await page.getByRole('menuitem',{name:'导出',exact:true}).click()
+  await page.getByRole('menuitem',{name:'HTML',exact:true}).click()
+  expect(await page.evaluate(()=>window.pageExport)).toMatchObject({kind:'original',suggestedName:'行程.html',authorizationId:'page-file'})
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},35000)

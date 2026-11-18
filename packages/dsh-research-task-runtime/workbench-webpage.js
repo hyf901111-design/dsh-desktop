@@ -4,7 +4,7 @@ import {link, open, realpath, unlink} from 'node:fs/promises'
 import {isAbsolute, join} from 'node:path'
 import {parse} from 'parse5'
 
-export const WEBPAGE_GUIDANCE = '先从用户要完成的操作选择交付形式。浏览新闻、跟踪行情、单表搜索、待办和独立刷新用合适的原生组件；原生页签、筛选、公共数据和联动足够时直接使用。用户要可带走的网页，或一个操作流程要让多步输入、情景比较、联动图解和结果共用状态且原生组件难以表达时，可以交付一份网页文件。卡片数量、信息多、提到网页来源本身都不是理由。混合需求可以把互动工具做成网页，把需定时更新的信息绑定原生数据源。网页在研究看板内直接打开，同时保留项目文件；用同一次 research_workbench_create 提交 type:"files"、title、prompt（说明用户操作）和 htmlFile:{name,html}，html 是完整的独立 HTML 文档，脚本和样式内嵌，使用事件监听。在页面内实现操作；按卡宽自适应并留出边距。只用用户输入或已核对的资料，不承诺联网刷新、跨次保存或把同一内容再铺成多张卡。仅要原生组件就尊重选择。'
+export const WEBPAGE_GUIDANCE = '先从用户要完成的操作选择交付形式。浏览新闻、跟踪行情、单表搜索、待办和独立刷新用合适的原生组件；原生页签、筛选、公共数据和联动足够时直接使用。用户要可带走的网页，或一个操作流程要让多步输入、情景比较、联动图解和结果共用状态且原生组件难以表达时，可以交付一份网页文件。卡片数量、信息多、提到网页来源本身都不是理由。混合需求可以把互动工具做成网页，把需定时更新的信息绑定原生数据源。网页在研究看板内直接打开，同时保留项目文件；用同一次 research_workbench_create 提交 type:"files"、title、prompt（说明用户操作）和 htmlFile:{name,html}，html 是完整的独立 HTML 文档，脚本和样式内嵌，使用事件监听。在页面内实现操作。让正文按卡宽自然换行排布，使用文档流撑开高度。背景、正文、控件、图表分别使用 --sherlock-bg、--sherlock-text、--sherlock-control-bg、--sherlock-chart-1 等看板配色变量，并为离线打开提供 CSS 回退色。脚本绘制的图表也跟随配色，Canvas 在 sherlock-presentation-change 时重绘。绑定读数及图表时核对实际元素，覆盖初始展示和参数改变后的重绘。宿主提供组件顶栏、来源底栏和 HTML 导出入口。只用用户输入或已核对的资料，不承诺联网刷新、跨次保存或把同一内容再铺成多张卡。仅要原生组件就尊重选择。'
 
 export const WEBPAGE_SCHEMA = {
   type:'object', additionalProperties:false, description:'一份直接嵌入研究看板且可下载的交互网页。适用于用户指定网页或原生控件无法表达的共享状态流程。与其他组件数据字段互斥。',
