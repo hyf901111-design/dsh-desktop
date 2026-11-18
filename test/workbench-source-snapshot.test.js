@@ -2,10 +2,10 @@ import {afterEach,expect,it} from 'vitest'
 import {Context} from '@deepseek-ai/cordis'
 import {createScope} from '@deepseek-ai/dsh-scope'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
+import ToolRuntime,{defineTool} from '@deepseek-ai/dsh-tools'
 import {createWorkbenchSourceSnapshot,WORKBENCH_SOURCE_TOOL} from '../packages/dsh-research-task-runtime/workbench-source-snapshot.js'
 import {restoreWorkbenchHostContext,workbenchPublicSourceCallIssue,workbenchPublicSourceEvidenceIssue} from '../packages/dsh-research-task-runtime/workbench-source-policy.js'
-import {componentSourceCollector,resolveComponentSnapshot} from '../packages/dsh-research-task-runtime/component-source-binding.js'
+import {componentSourceCollector,resolveComponentSnapshot,resolveBoundComponent} from '../packages/dsh-research-task-runtime/component-source-binding.js'
 import {createComponentDataSubmission} from '../packages/dsh-research-task-runtime/component-data-submission.js'
 import {componentDeliveryScopeIssue} from '../packages/dsh-research-task-runtime/component-delivery-scope.js'
 import {createSubagentAdapter} from '../packages/dsh-research-task-runtime/index.js'
@@ -59,6 +59,33 @@ it('restores a detached deeply frozen host snapshot without inferring missing so
  for(const key of ['asOf','note']){const broken=context();delete broken.sharedDatasets[0][key];expect(()=>restoreWorkbenchHostContext(broken)).toThrow()}
  const orphan=context();delete orphan.workbenchRequest;expect(()=>restoreWorkbenchHostContext(orphan)).toThrow()
  const incomplete=context();delete incomplete.sharedDatasets[0].records[0].unknown;expect(()=>restoreWorkbenchHostContext(incomplete)).toThrow(/缺少/)
+})
+
+it.each(['read','write'])('reuses a currently authorized parent query for an explicit child refresh only with a read effect: %s',async effect=>{
+ const tool='ework__t_ab12',args={station:'north'},response={source:'测站接口',asOf:'2026-11-17',records:[{station:'north',level:18.4}]}
+ const ctx=new Context();new SystemPrompt(ctx,{});new ToolRuntime(ctx);cleanup.push(()=>ctx.fiber.dispose())
+ const parent={id:'parent',session:{id:'parent',events:[]}},child={id:'child',session:{id:'child',events:[]}}
+ const scope=createScope(ctx,child);child.ctx=scope.ctx;cleanup.push(()=>scope.dispose())
+ let queries=0
+ ctx.tools.register(defineTool({name:tool,description:'读取测站水位',parameters:{station:{type:'string'}},output:{schema:{type:'object',additionalProperties:true}},execute:()=>{queries++;return response}}))
+ ctx.provide('agents',{get:id=>id===parent.id?parent:undefined})
+ ctx.provide('eworkIntegrations',{sync:async()=>{},snapshot:{tools:[{id:'t_ab12',effect}],skills:[]}})
+ ctx.provide('subagents',{async start(_mode,request){
+  child.ctx.tools.restrict(request.toolFilter);ctx.emit('agent/created',{agent:child})
+  return {id:child.id,localAgent:child,result:Promise.resolve({stopReason:'completed',output:[]}),dispose:async()=>{}}
+ }})
+ const original='生成测站水位监控工作台。',local='查看北站水位，每分钟自动刷新。'
+ const hostContext=restoreWorkbenchHostContext({sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:local},
+  sourceRequirement:local,workbenchRequest:{originalRequest:original,dataMode:'source'},sharedObservedRecords:[{tool,args,response}]})
+ const query='工作台：水位监控\n本面板：测站水位\n'+local+'\n仅生成本面板，优先使用 table 类型。'
+ const handle=await createSubagentAdapter(ctx).start({parentSessionId:parent.id,kind:'container',query,prompt:query,hostContext,signal:new AbortController().signal,onSessionEvent:()=>{}})
+ cleanup.push(()=>handle.dispose())
+ const result=await handle.result
+ const mapping={version:1,type:'table',title:'测站水位',columns:['测站','水位'],rows:{$from:'q',$each:'records',$map:[{$path:'station'},{$path:'level'}]}}
+ const resolve=()=>resolveBoundComponent(JSON.stringify({version:1,type:'data-bound',requests:[{key:'q',tool,args}],mapping}),result.sourceRecords)
+ if(effect==='read')expect(resolve().recipe.requests).toEqual([{key:'q',toolId:'t_ab12',args}])
+ else expect(resolve).toThrow(/未匹配/)
+ expect(queries).toBe(0)
 })
 
 it.each(['source','simulated'])('serves %s records offline in full-field pages while keeping one complete host source',async dataMode=>{

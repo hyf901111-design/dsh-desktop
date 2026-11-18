@@ -4,6 +4,36 @@ import * as financialClient from '../scripts/lib/financial-widget-client.mjs'
 const close=[];afterEach(async()=>{for(const fn of close.splice(0))await fn()})
 const s={code:'600519',name:'贵州茅台',market:'SH'},other={code:'000001',name:'平安银行',market:'SZ'}
 const bars=Array.from({length:80},(_,i)=>({date:new Date(Date.UTC(2026,0,1+i)).toISOString().slice(0,10),open:100+i,high:105+i,low:98+i,close:102+i,volume:i%2?0:1000}))
+it('refreshes the directory from the exchange, keeps classifications separate, and drills into current contracts',async()=>{
+ const product=(code,name,price)=>({code,name,unit:'元/吨',contracts:[{code:code.toUpperCase()+'2612',month:'2612',settlement:price,openInterest:25}]})
+ const cu=product('cu','铜',82000),ni=product('ni','镍',104000),sp=product('sp','纸浆',5400)
+ let products=[cu,ni],date='2026-11-17'
+ const request=vi.fn(async()=>({source:'上期所交易日报',receivedAt:date+'T09:00:00Z',
+  futuresReport:{date,products,url:'https://www.shfe.com.cn/'}}))
+ const f=await fixture({financialWidget:{request}})
+ await f.act(async()=>{
+  const n=f.workspace.createFinancialWidget('futures')
+  f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,directory:{rows:[{code:'cu',name:'铜',sector:'工业金属'}]}}}])
+ })
+ const card=f.host.querySelector('[data-financial-widget=futures]')
+ const names=()=>Array.from(card.querySelectorAll('.ew-directory-product'),b=>b.textContent)
+ await vi.waitFor(()=>expect(names()).toEqual(['铜','镍']))
+ expect(card.querySelector('.ew-futures-scroll tbody tr').textContent).toContain('工业金属')
+ await f.input(card.querySelector('input[type=search]'),'ni')
+ expect(names()).toEqual(['镍'])
+ await f.event('click',card.querySelector('.ew-directory-product'))
+ expect(card.querySelector('select[aria-label="选择期货品种"]').value).toBe('ni')
+ await f.event('click',card.querySelector('.ew-directory-back'))
+ await f.input(card.querySelector('input[type=search]'),'')
+ products=[cu,sp];date='2026-11-18'
+ await f.act(async()=>card.__eworkRefreshFinancial())
+ expect(names()).toEqual(['铜','纸浆'])
+ expect(card.querySelector('.ew-financial-source-time').textContent).toContain(date)
+ request.mockRejectedValueOnce(Error('交易所暂不可用'))
+ await f.act(async()=>card.__eworkRefreshFinancial())
+ expect(names()).toEqual(['铜','纸浆'])
+ expect(card.textContent).toContain('保留上次数据')
+})
 const service=()=>({request:vi.fn(async q=>q.action==='search'?{symbols:[s,other]}:q.action==='history'?{bars,volumeUnit:'股',source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'}:q.action==='news'?{news:[{id:'n',title:'本人原始新闻',source:'本人新闻来源',url:'https://example.org/news',time:'2026-10-09 10:00'}],source:'测试通联'}:{quotes:q.symbols.map(x=>({...x,price:100,changePercent:x.market==='SH'?0:-2,asOf:'2026-10-08'})),source:'测试通联',receivedAt:'2026-10-09T01:00:00Z'})})
 async function fixture(desktop={}){const f=await financialClientFixture({financialWidget:service(),...desktop},{refreshState:true});close.push(f.dispose);return f}
 it('备用行情在选择器中禁用不支持的复权选项，保留不复权和其他周期操作',async()=>{
@@ -376,6 +406,10 @@ it('期货卡在品种、曲线、持仓和明细间切换，沿用同一日报�
  const card=f.host.querySelector('[data-financial-widget=futures]'),tabs=card.querySelectorAll('[role=tab]')
  expect(request.mock.calls[0][0]).toMatchObject({action:'futures',source:'shfe'})
  expect(card.querySelector('.ew-futures-curve path').getAttribute('d').match(/M/g)).toHaveLength(2)
+ const curve=card.querySelector('.ew-futures-curve'),readout=()=>card.querySelector('.ew-futures-readout').textContent
+ await f.event('keydown',curve,{key:'Home'});expect(readout()).toContain('RB2612结算价 2,993 元/吨')
+ await f.event('keydown',curve,{key:'ArrowRight'});expect(readout()).toContain('RB2701结算价 —');expect(curve.querySelector('[data-chart-point="1"]')).toBeNull()
+ await f.event('keydown',curve,{key:'End'});expect(readout()).toContain('RB2702结算价 3,010 元/吨')
  await f.event('click',tabs[1]);expect(card.querySelector('ol li').textContent).toContain('RB2701')
  await f.event('keydown',tabs[1],{key:'ArrowRight'});expect(card.querySelectorAll('tbody tr')).toHaveLength(3)
  const select=card.querySelector('select');select.value='cu';await f.event('change',select)

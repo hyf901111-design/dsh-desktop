@@ -14,6 +14,8 @@ import {normalizeChartDetailMapping} from './chart-detail-projection.js'
 import {applyObservedPresentation,observedPresentationMetadata} from './component-provenance-display.js'
 import {calculateSourceValue,validateSourceReduction,reduceSourceValues} from './component-derived-values.js'
 import {normalizeObservedUnitMapping} from './component-unit-projection.js'
+import {materializeObservedWorkbenchRefresh} from './workbench-observed-refresh.js'
+import {includesRequestCredentials} from './component-request-credentials.js'
 const record=v=>v!==null&&typeof v==='object'&&!Array.isArray(v)
 const forbidden=new Set(['__proto__','constructor','prototype'])
 const mappingOperators=new Set(['$date','$from','$path','$each','$filter','$map','$sortBy','$order','$take','$single','$as','$scale','$digits','$prefix','$suffix','$optional','$default','$normalize','$calc','$reduce','$concat'])
@@ -22,7 +24,7 @@ const id=v=>typeof v==='string'&&v.length>0&&v.length<=256
 const interval=v=>Number.isInteger(v)&&v>=0&&v<=10080
 const sourceId=v=>typeof v==='string'&&/^[a-zA-Z0-9][\w.-]{0,63}$/.test(v)
 const sourceRecipe=(s,templateId)=>record(s)&&sourceId(s.id)&&typeof s.name==='string'&&s.name.trim().length>0&&s.name.length<=128&&!/[\u0000-\u001f]/.test(s.name)&&Array.isArray(s.requests)&&s.requests.length>0&&s.requests.length<=16&&record(s.mapping)&&templateFor(s.mapping)?.id===templateId
-export const COMPONENT_PAGE_MAPPING_GUIDANCE='已成功读取的多页记录可用 {$concat:[{$from:"page1",$path:"真实列表路径"},{$from:"page2",$path:"真实列表路径"}],$each:"",$sortBy:"真实日期字段",$order:"asc",$map:{$path:"真实数值字段"}} 合并后再筛选、排序、统计或归一化；分页参数仍逐字保留原请求，不能填入字面记录或省略已取得页。labels 使用相同合并与日期排序，$map 选日期；values 选数值，可加 $normalize:"base100" 或 $reduce。不同标的不能按位置拼接。该能力只证明实际合并的数据，不代表分页已取齐；继续读取来源明确的后续页并核验实体数、日期区间和字段覆盖。保留全部原始观测，超过原生图表容量时仍提交完整映射，由宿主切换完整图表加分页明细；不得缩短区间、删除标的或采样冒充完整交付。不支持字符串 $concat、$join 或 $format；名称直接选真实字段。'
+export {COMPONENT_PAGE_MAPPING_GUIDANCE} from './component-derived-values.js'
 const refreshNewsScopeIssue=(mapping,requests,scope,now)=>newsSourceScopeIssue(mapping,requests.map(request=>({...request,args:evaluateMapping(request.args,{},now)})),scope)
 function bounded(value,limit=256000){const text=JSON.stringify(value);if(!text||Buffer.byteLength(text)>limit)throw Error('数据超过组件容量');return JSON.parse(text)}
 function path(root,path){
@@ -469,6 +471,7 @@ export function materializeComponentProjection(mapping,responses,now=new Date(),
  return {data:normalizeAnnouncementFeed(data,sourceRecords),mapping}
 }
 export function materializeComponentMapping(mapping,responses,now=new Date(),sourceRecords=[]){
+ if(mapping?.observedWorkbench)return materializeObservedWorkbenchRefresh(mapping,responses)
  return materializeComponentProjection(mapping,responses,now,sourceRecords).data
 }
 function rejectCredentials(value){
@@ -546,6 +549,7 @@ export class ComponentDataRefresh {
  persist(){const snapshot=structuredClone(this.records);try{this.options.onChange?.(snapshot)}catch{};const pending=this.chain.then(()=>this.options.save(snapshot));this.chain=pending.catch(()=>{});return pending}
  async bind(input,initialSpec,{preserveSettings=false}={}){
   input=bounded(input);rejectCredentials(input)
+  if(includesRequestCredentials(input.requests)||input.sources?.some?.(source=>includesRequestCredentials(source.requests)))throw Error('凭据由插件管理，不能写入组件请求')
   input.intervalMinutes??=1
   if(![input.sessionId,input.nodeId,input.workspaceId].every(id)||!interval(input.intervalMinutes)||!Array.isArray(input.requests)||input.requests.length<1||input.requests.length>16||!record(input.mapping))throw Error('数据绑定参数无效')
   if(input.newsScope!==undefined&&(typeof input.newsScope!=='string'||!input.newsScope.trim()||input.newsScope.length>18000))throw Error('新闻主题约束无效')
@@ -656,12 +660,14 @@ export class ComponentDataRefresh {
    const baseline=hash(before.spec)
    const crypto=b.mapping?.type==='market'&&['metrics','table'].includes(b.mapping.variant)&&b.requests.every(isCryptoTickerRequest)
    const outcomes=await Promise.allSettled(b.requests.map(r=>this.request(b,r,signal)));signal.throwIfAborted()
+   if(b.mapping.observedWorkbench&&outcomes.some(outcome=>outcome.status==='rejected'))throw Error('来源查询失败，已保留上次数据')
    const results=outcomes.map((outcome,i)=>[b.requests[i].key,crypto?normalizeCryptoTickerResult(b.requests[i],outcome):outcome.status==='fulfilled'?outcome.value:(()=>{throw outcome.reason})()])
    const responses=Object.fromEntries(results)
    if(crypto&&!results.some(([,response])=>response.records?.length))throw Error('所有交易对本次均未取得行情；已保留上次内容')
    const observed=b.requests.map(request=>({tool:request.toolId,args:request.args,response:responses[request.key]}))
-   const data=filterScopedNewsArtifact(materializeComponentMapping(b.mapping,responses,new Date(startedAt),observed),observed,b.newsScope??'',{general:generalNewsScope(b.newsScope??model.data.title)})
-   data.title=model.data.title
+   const projected=materializeComponentMapping(b.mapping,responses,new Date(startedAt),observed)
+   const data={...filterScopedNewsArtifact(projected,observed,b.newsScope??'',{general:generalNewsScope(b.newsScope??model.data.title)}),title:model.data.title}
+   if(b.mapping.observedWorkbench?.kind==='ecb-cross-rate'&&data.asOf<model.data.asOf)throw Error('本次汇率早于上次公布日，已保留较新的数据')
    // A source recipe updates data; it cannot silently discard the chosen layout.
    if(model.data.layoutProfile!==undefined)data.layoutProfile=model.data.layoutProfile
    if(templateFor(data)?.id!==b.templateId)throw Error('新数据与当前组件类型不匹配')
@@ -687,7 +693,8 @@ export class ComponentDataRefresh {
     if(!unchanged)await this.options.apply(b,live.revision,spec,signal)
    })
    if(!current()||automatic&&!this.isVisible(b.sessionId))return
-   Object.assign(current(),{status:unchanged?'unchanged':'success',successSequence:(current().successSequence||0)+1,lastSuccess:this.now(),dataAsOf:typeof data.asOf==='string'?data.asOf:undefined,error:undefined,failures:0,nextRun:b.enabled?this.now()+b.intervalMinutes*60000:null})
+   const dataAsOf=data.asOf??(data.type==='view'?data.dataset?.asOf:undefined)
+   Object.assign(current(),{status:unchanged?'unchanged':'success',successSequence:(current().successSequence||0)+1,lastSuccess:this.now(),dataAsOf:typeof dataAsOf==='string'?dataAsOf:undefined,error:undefined,failures:0,nextRun:b.enabled?this.now()+b.intervalMinutes*60000:null})
   }catch(error){
    if(!current()||signal.aborted)return
    const failures=(current().failures??0)+1

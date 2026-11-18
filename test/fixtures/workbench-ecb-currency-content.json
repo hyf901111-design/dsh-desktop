@@ -1,0 +1,72 @@
+{
+  "title": "宏观联动：美元与人民币汇率",
+  "type": "table",
+  "size": "small",
+  "content": {
+    "title": "宏观联动：美元与人民币汇率（ECB 参考汇率）",
+    "columns": [
+      {
+        "key": "date",
+        "label": "日期"
+      },
+      {
+        "key": "eurusd",
+        "label": "EUR/USD（USD per EUR）"
+      },
+      {
+        "key": "eurcny",
+        "label": "EUR/CNY（CNY per EUR）"
+      },
+      {
+        "key": "usdcny",
+        "label": "USD/CNY（同日推算）"
+      }
+    ],
+    "rows": [
+      {
+        "id": "FX1",
+        "date": "2026-11-11",
+        "eurusd": 1.1127,
+        "eurcny": 7.4225,
+        "usdcny": 6.6707
+      },
+      {
+        "id": "FX2",
+        "date": "2026-11-12",
+        "eurusd": 1.1081,
+        "eurcny": 7.3891,
+        "usdcny": 6.6683
+      },
+      {
+        "id": "FX3",
+        "date": "2026-11-13",
+        "eurusd": 1.1052,
+        "eurcny": 7.3738,
+        "usdcny": 6.6719
+      },
+      {
+        "id": "FX4",
+        "date": "2026-11-16",
+        "eurusd": 1.1014,
+        "eurcny": 7.3425,
+        "usdcny": 6.6665
+      },
+      {
+        "id": "FX5",
+        "date": "2026-11-17",
+        "eurusd": 1.0989,
+        "eurcny": 7.3254,
+        "usdcny": 6.6661
+      }
+    ],
+    "asOf": "2026-11-17",
+    "body": "近一周美元兑欧元走强（EUR/USD 1.1127→1.0989），人民币兑美元小幅走强（USD/CNY 6.6707→6.6661）。美元走势是贵金属与工业金属的重要宏观驱动，可作为商品期货联动背景。",
+    "note": "数据来源：欧洲央行日参考汇率（ECB），工作日发布，非可交易实时报价；USD/CNY 由同日 EUR/CNY ÷ EUR/USD 推算，保留 4 位小数。",
+    "sources": [
+      {
+        "label": "欧洲央行日参考汇率（ECB）",
+        "url": "https://data.ecb.europa.eu/"
+      }
+    ]
+  }
+}

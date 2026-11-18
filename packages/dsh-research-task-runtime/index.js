@@ -1,7 +1,7 @@
 import {scalarEntityArgumentIssue} from './component-scalar-entity-arguments.js'
 import {extractDelimitedEvidence,delimitedTableIntegrityIssue} from './delimited-evidence.js'
 import {componentCohortRequest,componentDeliveryScopeIssue} from './component-delivery-scope.js'
-import {workbenchChartTextFallback, workbenchNamedTableCoverage} from './workbench-panel-delivery.js'
+import {workbenchChartTextFallback, workbenchNamedTableCoverage, workbenchReadingScopeRestored} from './workbench-panel-delivery.js'
 import {componentAcquisitionBudget} from './component-acquisition-budget.js'
 import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
@@ -35,12 +35,13 @@ import {operationsTemplateSchema,requestedOperationsType} from './operations-tem
 import { KPI_GUIDANCE } from './kpi-template-contract.js'
 import { templateDataIssue, templateSourceDataIssue, TABLE_GUIDANCE, TABLE_INPUT_SCHEMA } from './template-data-contract.js'
 import { isDeepStrictEqual } from 'node:util'
+import {replayableParentRecords,workbenchReplayTools} from './workbench-observed-refresh.js'
 import {TRUSTED_TYPES_COMPONENT_INSTRUCTION} from './html-trusted-types-validation.js'
 import {PROTOTYPE_GROUP_VIEW_PROMPT} from './prototype-record-view.js'
 import { MARKET_ARTIFACT_PROMPT, marketPanelSchema } from './market-artifact.js'
 import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
-import { registerWorkbenchExecutionPolicy } from './workbench-execution-policy.js'
+import { registerWorkbenchExecutionPolicy, workbenchOfflineRequest } from './workbench-execution-policy.js'
 import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists, documentUncertaintyIssue, documentTableEntityCoverageIssue, DOCUMENT_TABLE_GUIDANCE, documentTableOutput, documentTableOutputIssue } from './workbench-document-evidence.js'
 import { extractDocxEvidence } from './docx-evidence.js'
 import { completeWordReadingPanel } from './workbench-word-grid.js'
@@ -1243,7 +1244,16 @@ function restoredTask(raw, now) {
   }
   // Older completed tasks may only have the artifact. Reclassify retained
   // results against their own panel contract without rerunning the model.
-  let delivery
+  let delivery, recoveredScope = false
+  if (task.kind === 'container' && originalState === 'completed' && task.recoveryMode === 'incomplete-scope' && task.finalOutput) {
+    const artifact = JSON.parse(task.finalOutput)
+    if (workbenchReadingScopeRestored(artifact, task) && !panelDeliveryScope(artifact, task.prompt ?? '', task.hostContext)) {
+      delete task.deliveryStatus
+      delete task.recoveryMode
+      delete task.unmetRequirements
+      recoveredScope = true
+    }
+  }
   if (task.kind === 'container' && !task.deliveryStatus && task.finalOutput && originalState === 'completed' &&
       (task.hostContext?.workbenchRequest || workbenchPanelScope(task.prompt))) {
     const artifact = JSON.parse(task.finalOutput)
@@ -1251,7 +1261,7 @@ function restoredTask(raw, now) {
     delivery = panelDelivery(artifact, task.prompt, task.hostContext, named?.issue && partialDelivery('incomplete-scope', named.issue))
     if (delivery) Object.assign(task, delivery)
   }
-  return { task, changed: interrupted || Boolean(delivery) }
+  return { task, changed: interrupted || recoveredScope || Boolean(delivery) }
 }
 
 export class ResearchTaskRuntime {
@@ -1526,14 +1536,16 @@ export class ResearchTaskRuntime {
       const artifact = JSON.parse(output)
       const scopeIssue = panelDeliveryScope(artifact, request.prompt, hostContext, panel.documentEvidence, panel.view)
       const delivery = panelDelivery(artifact, request.prompt, hostContext, scopeIssue && partialDelivery('incomplete-scope', scopeIssue))
-      return { request, output, preparedRequirement, hostContext, delivery }
+      return { request, output, preparedRequirement, hostContext, delivery, recipe:panel.observedRefreshRecipe }
     })
     if (new Set(prepared.map(p => p.request.canvasNodeId)).size !== prepared.length) throw new ResearchTaskError('INVALID_REQUEST', '组件标识重复')
     const createdAt = this.now()
-    const tasks = prepared.map(({ request, output, preparedRequirement, hostContext, delivery }) => {
+    const tasks = prepared.map(({ request, output, preparedRequirement, hostContext, delivery, recipe }) => {
       const taskId = requiredString(this.createId(), MAX_ID_LENGTH, '任务标识无效')
       if (this.tasks.has(taskId)) throw new ResearchTaskError('TASK_EXISTS', '任务标识重复')
-      return { taskId, ...request, ...(hostContext ? {hostContext} : {}), ...delivery, ...(preparedRequirement===undefined?{}:{preparedRequirement}),state: 'completed', createdAt, startedAt: createdAt, completedAt: createdAt, finalOutput: output, lastSeq: 1, events: [], cancelRequested: false, controller: undefined, runPromise: undefined }
+      return { taskId, ...request, ...(hostContext ? {hostContext} : {}), ...(preparedRequirement===undefined?{}:{preparedRequirement}),createdAt, startedAt:createdAt,finalOutput:output,
+        ...(recipe?{state:'running',controller:new AbortController()}:{state:'completed',completedAt:createdAt,...delivery}),
+        lastSeq:1,events:[],cancelRequested:false,runPromise:undefined }
     })
     if (new Set(tasks.map(task => task.taskId)).size !== tasks.length) throw new ResearchTaskError('TASK_EXISTS', '任务标识重复')
     for (const task of tasks) this.tasks.set(task.taskId, task)
@@ -1542,6 +1554,24 @@ export class ResearchTaskRuntime {
       for (const task of tasks) this.tasks.delete(task.taskId)
       throw error
     }
+    await Promise.all(tasks.map((task,index)=>{
+      const {recipe,output,delivery}=prepared[index]
+      if(!recipe)return
+      task.runPromise=(async()=>{
+        let completedDelivery=delivery
+        try{
+          task.controller.signal.throwIfAborted()
+          if(typeof this.adapter.bindData!=='function')throw Error('组件刷新服务不可用')
+          await this.adapter.bindData(task,recipe,output,task.controller.signal)
+        }catch{
+          completedDelivery=partialDelivery(delivery?.recoveryMode??'incomplete-scope','已保留取得的数据，原查询的刷新设置未能保存。',...(delivery?.unmetRequirements??[]))
+        }
+        // Cancellation / restart retain the already materialized initial card.
+        // Partial-delivery metadata is only valid on a completed task.
+        if(!task.controller.signal.aborted)await this.finish(task,'completed',{finalOutput:output,...completedDelivery})
+      })()
+      return task.runPromise
+    }))
     return tasks.map(task => publicTask(task, 0))
   }
 
@@ -2658,7 +2688,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       return {response:decodeDataResponse(result),isError:Boolean(result?.isError||result?.error)}
     },
     async bindData(task,recipe,output,signal) {
-      if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL){if(task.publicData)throw Error('宿主自动刷新绑定不可用');return}
+      if(!process.env.SHERLOCK_RESEARCH_CONTEXT_URL){if(task.publicData||recipe.mapping?.observedWorkbench)throw Error('宿主自动刷新绑定不可用');return}
       return callCanvas(task.parentSessionId,'data',{action:'bind-generated',nodeId:task.canvasNodeId,recipe,initialSpec:JSON.parse(output)},signal)
     },
     async start({ parentSessionId, kind, query, prompt, hostContext, signal, onSessionEvent, onProgress, synthesisOnly = false, preservePrompt = false, policySourceGuidanceIncluded = false, bindingProtocolIncluded = false, onWorkbenchPlan, imageContent = [], executionContext = '', prototypeSubmission, retainedSourceRecords = [] }) {
@@ -2734,6 +2764,9 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       const pluginRequired = boundTemplate && (sourcePolicy?.pluginRequired ?? componentPluginSourceRequired(sourceRequest ?? ''))
       const pluginProhibited = sourcePolicy?.pluginProhibited ?? componentPluginSourceProhibited(sourceRequest ?? '')
       const bindingRequested = componentBindingRequested(sourceRequest)
+      const parentReplay=boundTemplate&&bindingRequested&&surface!=='note'&&!workbenchOfflineRequest(hostContext?.workbenchRequest?.originalRequest)
+        ?replayableParentRecords(hostContext?.sharedObservedRecords,workbenchReplayTools(ctx.get?.('eworkIntegrations')?.snapshot?.tools,scopedSchemas),
+          hostContext?.workbenchRequest?.originalRequest,hostContext?.sourceRequirement):[]
       const liveDataSubmission = !synthesisOnly && surface !== 'note' && ['container','create'].includes(kind) && !prototypeTargets && !deferredWorkbenchPanel(query??'') && typeof ctx.tools?.register==='function' && typeof ctx.tools?.guard==='function'
       const validateDataSubmission=(snapshot,records)=>{
           const text=JSON.stringify(snapshot.data),output=finalText([{type:'text',text:snapshot.capacitySnapshot?snapshot.output:text}],kind)
@@ -2782,7 +2815,7 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
       if (sourcePolicy) effectivePrompt += '\n宿主人类来源策略：'+(sourcePolicy.pluginRequired?'本卡必须使用指定插件。':sourcePolicy.pluginProhibited?'本卡禁止使用插件。':'本卡没有强制插件来源要求；可使用已授权且能证明本卡事实的真实来源。')+'规划面板中的取数路线仅是模型建议，不能覆盖本策略。保留原实体、字段、日期、单位与用户明确要求的交互。'
       if(sourcePolicy?.publicSourceRequests)effectivePrompt+='\n本卡仅允许已校验的腾讯报价来源，复用以下完整原请求，不改标的、不查其他来源；字段未提供就如实保留缺失：'+JSON.stringify(sourcePolicy.publicSourceRequests)+'。catalog仅为目录，必须实际query取得响应；静态请求不建立自动刷新。'
       if (pluginRequired) {
-        const sharedPlugin = !bindingRequested && hostContext?.sharedObservedRecords?.some(record => record.tool.startsWith('ework__'))
+        const sharedPlugin = (bindingRequested?parentReplay:hostContext?.sharedObservedRecords)?.some(record => record.tool.startsWith('ework__'))
         effectivePrompt += sharedPlugin
           ? '\n本卡已有指定插件的本地来源快照。先复用真实记录，缺项才用同一插件补取。交付来源和数据时点。'
           : '\n本面板已指定使用配置的插件：使用当前可见 ework__ 工具发现接口并取数，'+(bindingRequested?'交付可自动刷新映射。':'直接交付真实静态数据、来源和数据时点，不要求建立自动更新绑定。')+'通用 financial_query 不属于该插件绑定通道；不要把该工具的结果标为指定插件数据。插件不可用时如实保留错误和已有内容。'
@@ -2889,14 +2922,19 @@ export function createSubagentAdapter(ctx, { surface, noteSourceGuidance, noteBi
         (kind !== 'qa' || !qaExcludedTools.has(name))
       )
       const sharedSnapshot=surface!=='note'&&kind==='container'?createWorkbenchSourceSnapshot({hostContext,signal}):undefined
-      const sharedSourcePrompt = sharedSnapshot
+      let sharedSourcePrompt = sharedSnapshot
         ? `\n已有 ${sharedSnapshot.catalog.length} 份可复用来源。${sharedSnapshot.instruction}`
         : ''
       const retainedRecords=new Set(retainedSourceRecords)
-      const snapshotRecords=sharedSnapshot?.sourceRecords??[]
+      const authorizedReplay=parentReplay.filter(record=>childTools.includes(record.tool))
+      if(authorizedReplay.length)sharedSourcePrompt+='\n以下父会话查询已成功取得完整数据，且本卡仍获准使用其只读接口。data-bound.requests 直接沿用原工具与参数；仅缺项才另查。映射可使用已观察到的真实字段。\n'+componentBindingEvidence(authorizedReplay)
+      const snapshotRecords=(sharedSnapshot?.sourceRecords??[]).filter(record=>{
+        const origin=record.response?.origin
+        return !origin||!authorizedReplay.some(source=>source.tool===origin.tool&&isDeepStrictEqual(source.args,origin.args))
+      })
       const observedTools = childTools.filter(name=>name.startsWith('ework__')||['public_data_query','web_fetch','financial_query'].includes(name)||prototypeTargets&&name==='read_prototype')
       if (sharedSnapshot) observedTools.push(sharedSnapshot.toolName)
-      sourceCollector=componentSourceCollector(observedTools,scopedSchemas??[],[...retainedSourceRecords,...snapshotRecords])
+      sourceCollector=componentSourceCollector(observedTools,scopedSchemas??[],[...retainedSourceRecords,...snapshotRecords,...authorizedReplay])
       const run = await startComponentAgent(ctx, {
         label: surface === 'note' ? '智能组件' : '画布生成任务',
         ...(agentOptions ? { agentOptions } : {}),

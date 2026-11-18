@@ -30,6 +30,22 @@ it.each([
   expect(readTemplateModel(artifact).data).toEqual(spec);
  } finally {window.close();}
 });
+it('labels both directions against the zero baseline and initially reads the final trend point', () => {
+ const mount=spec=>new JSDOM(JSON.parse(acceptArtifactOutput(JSON.stringify(spec))).html, {runScripts:'dangerously',beforeParse(win){win.ResizeObserver=class{observe(){} disconnect(){}}}})
+ const ranked={...chart,series:[{name:'流入估算',values:[20,-10]}]}
+ const horizontal=mount(ranked),trend=mount({...ranked,variant:'line'})
+ try {
+  const doc=horizontal.window.document,zero=Number(doc.querySelector('[data-comparison-zero]').getAttribute('x1'))
+  expect([...doc.querySelectorAll('[data-comparison-value]')].map(label=>label.textContent)).toEqual(['20','-10'])
+  const [positive,negative]=[...doc.querySelectorAll('g[data-series] rect[data-point]')]
+  expect(Number(positive.getAttribute('x'))).toBeCloseTo(zero)
+  expect(Number(negative.getAttribute('x'))+Number(negative.getAttribute('width'))).toBeCloseTo(zero)
+  const line=trend.window.document
+  expect(line.querySelector('.chart-readout').textContent).toContain('乙 · 流入估算 -10 亿元')
+  line.querySelector('svg').dispatchEvent(new trend.window.KeyboardEvent('keydown',{key:'Home'}))
+  expect(line.querySelector('.chart-readout').textContent).toContain('甲 · 流入估算 20 亿元')
+ } finally {horizontal.window.close();trend.window.close()}
+})
 it('retains coincident values with other measure labels and a same-named column with different values',()=>{
  const spec = {...chart, detailColumns:['产品','流入估算（亿元）','净认购','流入估算','流入估算（万份）'],
   detailRows:[['甲',20,20,8,20],['乙',10,10,12,10]]};

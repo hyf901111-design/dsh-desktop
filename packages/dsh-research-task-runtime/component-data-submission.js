@@ -152,7 +152,7 @@ export function createComponentDataSubmission({observeRecords,signal,options={},
     if(Object.keys(args).length!==1)throw Error('content 独立提交；引用响应时使用 requests/mapping。')
     if(bindingRequested)throw Error('本卡要求自动刷新，请使用实际成功请求的 requests/mapping 保留刷新配方。')
     if(typeof validateContent!=='function')throw Error('内容交付边界不可用。')
-    const snapshot=compileComponentContent(structuredClone(args.content))
+    const snapshot=compileComponentContent(structuredClone(args.content),{panelRequest:options.panelRequest})
     const text=validateContent(snapshot,structuredClone(observeRecords()))
     if(typeof text!=='string'||!text.trim())throw Error('尚无可交付内容。')
     check(exec);pending={callId:exec.callId,text};return{accepted:true}

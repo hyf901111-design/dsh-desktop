@@ -1,5 +1,5 @@
 import * as panelDelivery from '../../packages/dsh-research-task-runtime/workbench-panel-delivery.js'
-const {workbenchDeliveryIntent, workbenchChartTextFallback, workbenchNamedTargets, workbenchNamedTableCoverage} = panelDelivery
+const {workbenchDeliveryIntent, workbenchChartTextFallback, workbenchNamedTargets, workbenchNamedTableCoverage, workbenchReadingScopeCount, workbenchReadingScopeRestored} = panelDelivery
 
 // The canvas already owns the accepted generation state for every card,
 // including off-screen cards. Publish only identity and state, never contents,
@@ -7,7 +7,7 @@ const {workbenchDeliveryIntent, workbenchChartTextFallback, workbenchNamedTarget
 export function researchWorkbenchRecoveryMode(node) {
  const spec=node?.containerSpec
  if(!spec)return null
- if(node.deliveryStatus==='partial'&&['source-snapshot','readable-content','incomplete-scope','data-missing'].includes(node.recoveryMode))return node.recoveryMode
+ if(node.deliveryStatus==='partial'&&['source-snapshot','readable-content','incomplete-scope','data-missing'].includes(node.recoveryMode)&&!workbenchReadingScopeRestored(spec,node))return node.recoveryMode
  const prompt=node.containerPrompt??''
  const fallback=workbenchChartTextFallback(spec,prompt)
  if(fallback)return fallback
@@ -233,7 +233,7 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  ]})
 }
 
-export function researchWorkbenchRecoveryDefinitions(){return [workbenchDeliveryIntent,workbenchChartTextFallback,workbenchNamedTargets,workbenchNamedTableCoverage,researchWorkbenchRecoveryMode].map(fn=>fn.toString()).join('\n')}
+export function researchWorkbenchRecoveryDefinitions(){return [workbenchDeliveryIntent,workbenchChartTextFallback,workbenchNamedTargets,workbenchNamedTableCoverage,workbenchReadingScopeCount,workbenchReadingScopeRestored,researchWorkbenchRecoveryMode].map(fn=>fn.toString()).join('\n')}
 export function researchWorkbenchFeedbackDefinitions(){return researchWorkbenchRecoveryDefinitions()+'\n'+[isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
  const marker='/* ework:workbench-feedback:v15 */',ending='/* ework:workbench-feedback:end */'

@@ -153,6 +153,10 @@ ${nativeCard} .odyssey-native-chart svg [role=button]:focus-visible{stroke:var(-
 ${nativeCard} .odyssey-native-chart svg [data-selected=true]{stroke:var(--research-completed-text);stroke-width:1.5px}
 ${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend{display:flex;flex-wrap:wrap;gap:4px 10px}
 ${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend button{display:inline-flex;align-items:center;gap:5px;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer}
+@layer ework-workbench{
+  body [data-ework-grid] [data-research-node-id] .odyssey-native-chart .rScV5Q_chartLegend button[aria-pressed]{background:transparent!important;border-color:transparent!important;color:var(--sherlock-text,var(--research-completed-text))!important}
+  body [data-ework-grid] [data-research-node-id] .odyssey-native-chart .rScV5Q_chartLegend button:focus-visible{outline:1px solid var(--sherlock-control-primary,var(--research-completed-action))!important;outline-offset:-1px}
+}
 ${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend button[aria-pressed=false]{opacity:.38}
 ${nativeCard} .odyssey-native-chart .rScV5Q_chartLegend i{display:inline-block;width:7px;height:7px;border-radius:50%}
 ${nativeCard} .odyssey-native-chart-readout{padding:2px 0;color:var(--research-completed-text);font:500 11px/16px "EWork DIN Pro","Noto Sans SC",sans-serif}

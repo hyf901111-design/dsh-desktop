@@ -10,7 +10,7 @@ import { patchResearchWorkbenchGrowth } from './research-workbench-growth.mjs'
 import { patchResearchPartialDelivery } from './research-partial-delivery.mjs'
 import { patchResearchCreationProgress } from './research-creation-progress.mjs'
 import { parseResearchMarketNativeTable, ResearchMarketNativeTable, researchMarketNativeTableCss } from './research-market-native-table.mjs'
-import { ResearchInteractiveTable, ResearchContainerChart } from './research-native-interactivity.mjs'
+import { ResearchInteractiveTable, installResearchContainerChart } from './research-native-interactivity.mjs'
 import { MARKET_REGULAR_FONT_CSS } from '../../packages/dsh-research-task-runtime/market-font.js'
 import { readFileSync } from 'node:fs'
 import { patchFigmaDerivedMenu, derivedMenuCss } from './figma-derived-menu-client.mjs'
@@ -328,8 +328,7 @@ function patchFigmaCanvasContent(source) {
   source=source.replace('children: "···"', "children:(0,react_jsx_runtime.jsx)('img',{src:"+JSON.stringify(iconData.more)+",width:13,height:13,alt:'',className:'odyssey-canvas-icon'})");
   source=source.replace(' || growths >= 3 || Date.now() - startedAt > 8000 || current.node?.sizeMode === "manual" || current.node?.containerSpec?.html !== spec.html', ' || current.node?.containerSpec?.html !== spec.html');
   source=source.replace("card?.toggleAttribute('data-research-content-overflow', dimensions.width>656 || dimensions.height>456);", "card?.toggleAttribute('data-research-content-overflow', dimensions.width>(current.node?.sizeMode==='manual'?current.node.width:656) || dimensions.height>(current.node?.sizeMode==='manual'?current.node.height:456));\n                    if(current.node?.sizeMode==='manual'||growths>=3||Date.now()-startedAt>8000)return;");
-  source=block(source,'function ResearchContainerChart({ spec }) {',
-    'function readResearchComponentTheme(',ResearchContainerChart.toString());
+  source=installResearchContainerChart(source);
   source=source.replace(/const RESEARCH_CANVAS_GRID_SIZE = [\d.]+;/, 'const RESEARCH_CANVAS_GRID_SIZE = 13.71;');
   source=source.replace('backgroundPosition: `${viewport.x - gridSize / 2 + 1}px ${viewport.y - gridSize / 2 + 1}px`', 'backgroundPosition: `${viewport.x + 12.5499 * viewport.scale}px ${viewport.y + 7.6871 * viewport.scale}px`');
   source=source.replace('"data-research-global-toolbar": "",\n', '"data-research-global-toolbar": "", style:{left:(snapshot.canvasSize.availableWidth ?? snapshot.canvasSize.width)/2},\n');

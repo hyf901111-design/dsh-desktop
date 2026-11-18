@@ -475,6 +475,8 @@ export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,prope
 }};
 export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'已取得的真实资料或用户允许的模拟场景，同一批对象只写一个主记录集，排程/对比/列表均引用它；每份数据必须有组件引用，同批对象跨表时显式声明相同recordScope，该范围内同id同名事实及单位不得矛盾。不同实体的编号独立；每条记录有稳定id并完整填写所有声明字段，缺失null。记录必须含id，id显示字段省略时由宿主补标签。完整数据按宿主存储配额校验，最多16组，每组10000条/24字段/2000000字节，总8000000字节；与显示或模型读取页大小无关。超限须保留完整范围并明确说明，不能截取记录、删除字段或猜共同值。',items:{type:'object',additionalProperties:false,properties:{
  id:{type:'string',required:true},recordScope:{type:'string',description:'可选。跨数据集确为同一批对象时提供相同范围如book；该范围内同id的同名事实/单位必须一致。省略时编号仅限本数据集，员工001与设备001不视为同一对象。'},label:{type:'string',required:true},asOf:{type:'string',description:'真实资料必填实际数据时点或明确的时点未提供说明。仅模拟模式可省略，由宿主标注模拟时点未指定，不猜日期。'},note:{type:'string',description:'真实资料必填实际出处及必要口径，不伪造来源。仅模拟模式可省略，由宿主标注用户请求的模拟数据。'},
+ sourceRef:{type:'string',description:'本轮 research_workbench_source_catalog 返回的完整业务来源编号。与 id、label、fields 和 identity 一起使用，宿主沿用真实来源、时间和原始记录。'},
+ identity:{type:'string',description:'sourceRef 原始记录中唯一稳定的文本编号字段，来源已有 id 时默认用 id。'},
  sourceTable:{type:'object',additionalProperties:false,description:'引用本轮已经解析的 CSV/TSV 附件。使用{id,label,sourceTable}，不重填records、fields、asOf或note。',properties:{
   document:{type:'string',required:true},block:{type:'string',required:true},identity:{type:'string',description:'实际唯一编号的原列名。作为视图字段id。'},numericFields:{type:'array',items:{type:'string'},description:'可无损转换成数值并参与汇总的原列名。'}
  }},
