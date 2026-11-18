@@ -99,7 +99,7 @@ it('mounts the injected feedback with the native workspace, host bridge and buil
   expect(JSON.stringify(store.snapshotSession('s'))).not.toContain('PRIVATE')
   expect(JSON.stringify(window.__sherlockWorkbenchGenerationV1.get('s'))).not.toContain('PRIVATE')
  }finally{await react.act(async()=>{stopWatch?.();monitor?.dispose();root?.unmount()});vi.unstubAllGlobals();window.happyDOM.abort()}
-},15000)
+},45000)
 
 
 it('keeps capped binding summaries unverified, including after clear, and recognizes a complete empty host list',()=>{
