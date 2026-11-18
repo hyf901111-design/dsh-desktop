@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261118-02",
+  "branch": "codex/integration/20261118-02",
+  "baseMainCommit": "4c09a5b67d714797ca83ae2dc7bc3f41edb6d1e7",
+  "expectedMainCommit": "4c09a5b67d714797ca83ae2dc7bc3f41edb6d1e7",
+  "createdAt": "2026-11-18T03:48:00.791Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究工作台生成、选源和图表交付优化",
+        "branch": "codex/feat/workbench-delivery-20261118",
+        "baseCommit": "4c09a5b67d714797ca83ae2dc7bc3f41edb6d1e7",
+        "tipCommit": "21eabecf6000c9e8236f5edb708cc63437a4044e",
+        "commits": [
+          {
+            "commit": "21eabecf6000c9e8236f5edb708cc63437a4044e",
+            "parents": [
+              "4c09a5b67d714797ca83ae2dc7bc3f41edb6d1e7"
+            ],
+            "subject": "优化研究工作台取数策略、阶段回报和图表交付"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/tool-proxy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/hosted-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-observed-sources.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-source-progress.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-source-views.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-response-history.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-status-presentation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-partial-delivery.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/cartesian-chart-details.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-reading-footer-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-projection.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-response-history-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/generation-progress-persistence.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-grid-generation-fit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-task-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback-actions.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/stored-template-refinements.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-feedback-upgrade-preservation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-fund-comparison.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "--testTimeout=20000",
+              "test/research-task-runtime.test.js",
+              "test/hosted-ark-runtime.test.js",
+              "test/research-grid-generation-fit.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/generation-progress-persistence.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/workbench-feedback-upgrade-preservation.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/cartesian-chart-details.test.js",
+              "test/cartesian-chart-reading.test.js",
+              "test/cartesian-chart-axis-precision.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/cartesian-chart-label-spacing.test.js",
+              "test/chart-detail-projection.test.js",
+              "test/component-reading-footer.test.js",
+              "test/component-reading-footer-browser.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "test/conversation-response-history.test.js",
+              "test/conversation-response-history-browser.test.js",
+              "test/component-source-projection.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/workbench-observed-sources.test.js",
+              "test/workbench-source-views.test.js",
+              "test/workbench-source-snapshot.test.js",
+              "test/workbench-source-exclusive-execution.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/bundled-tushare-mcp.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "31 个受影响的套件，757 项聚焦测试通过",
+            "verifiedCommit": "21eabecf6000c9e8236f5edb708cc63437a4044e",
+            "completedAt": "2026-11-18T03:47:21.112Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "21eabecf6000c9e8236f5edb708cc63437a4044e",
+            "completedAt": "2026-11-18T03:47:21.113Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 浏览器夹具验证正文回报、折叠失败详情、图表首屏和重复列，已安装 renderer 的更新及重跑验证通过；真实提供商任务留待客户端验收"
+        },
+        "acceptanceCriteria": [
+          "发送工作台请求后正文立即确认，并按真实取数和计划回执显示进展",
+          "专业来源按覆盖复用，缺项才补查，失败可展开且缺数不计作完整交付",
+          "图表首屏突出趋势，去除重复明细，缺数或失败卡紧凑展示并支持重试"
+        ],
+        "risks": [
+          "尚未用新版正式客户端重跑联网期货工作台，真实接口覆盖、总耗时和输出质量以复跑为准"
+        ],
+        "generatedAt": "2026-11-18T03:47:30.098Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npx",
+        "vitest",
+        "run",
+        "--testTimeout=20000",
+        "test/research-task-runtime.test.js",
+        "test/hosted-ark-runtime.test.js",
+        "test/research-grid-generation-fit.test.js",
+        "test/research-generation-controls.test.ts",
+        "test/generation-progress-persistence.test.js",
+        "test/research-workbench-feedback.test.js",
+        "test/research-workbench-feedback-actions.test.js",
+        "test/workbench-feedback-upgrade-preservation.test.js",
+        "test/research-planning-feedback.test.js",
+        "test/cartesian-chart-details.test.js",
+        "test/cartesian-chart-reading.test.js",
+        "test/cartesian-chart-axis-precision.test.js",
+        "test/cartesian-chart-template.test.js",
+        "test/cartesian-chart-label-spacing.test.js",
+        "test/chart-detail-projection.test.js",
+        "test/component-reading-footer.test.js",
+        "test/component-reading-footer-browser.test.js",
+        "test/stored-template-refinements.test.js",
+        "test/conversation-live-activity.test.js",
+        "test/conversation-live-activity-browser.test.js",
+        "test/conversation-response-history.test.js",
+        "test/conversation-response-history-browser.test.js",
+        "test/component-source-projection.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-fund-comparison.test.js",
+        "test/workbench-observed-sources.test.js",
+        "test/workbench-source-views.test.js",
+        "test/workbench-source-snapshot.test.js",
+        "test/workbench-source-exclusive-execution.test.js",
+        "test/workbench-source-policy.test.js",
+        "test/bundled-tushare-mcp.test.ts"
+      ],
+      "timeoutMs": 180000
+    }
+  ],
+  "mainSynchronizations": []
+}
