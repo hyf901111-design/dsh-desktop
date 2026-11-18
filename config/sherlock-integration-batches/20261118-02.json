@@ -12,7 +12,7 @@
         "featureName": "按真实口语需求规划原生组件或交互网页并直接放上研究看板",
         "branch": "codex/feat/workbench-delivery-20261118",
         "baseCommit": "c942501ab600a11ca315537272e11f2fb746929d",
-        "tipCommit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
+        "tipCommit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
         "commits": [
           {
             "commit": "ace4796731b927c63cf655bbe9a890801135ba13",
@@ -27,6 +27,13 @@
               "ace4796731b927c63cf655bbe9a890801135ba13"
             ],
             "subject": "按交互需求生成便携网页并在研究看板内直接使用"
+          },
+          {
+            "commit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
+            "parents": [
+              "17c1abe76c67a53899d8d96cee8266d7a4575856"
+            ],
+            "subject": "兼容已有客户端的研究看板进度提示层升级"
           }
         ],
         "files": [
@@ -73,6 +80,10 @@
           {
             "status": "M",
             "path": "scripts/lib/attachment-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
           },
           {
             "status": "M",
@@ -132,8 +143,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
-            "completedAt": "2026-11-18T10:50:45.398Z",
+            "verifiedCommit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
+            "completedAt": "2026-11-18T10:53:18.255Z",
             "timeoutMs": 420000
           },
           {
@@ -154,8 +165,8 @@
             ],
             "outcome": "passed",
             "summary": "口语建板、阶段回执、专题新闻、待办、网页落盘及原文件预览",
-            "verifiedCommit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
-            "completedAt": "2026-11-18T10:51:03.033Z",
+            "verifiedCommit": "5adc99dc2d599bccfbc78227311a90d379b5d9b1",
+            "completedAt": "2026-11-18T10:53:36.493Z",
             "timeoutMs": 420000
           }
         ],
@@ -171,7 +182,7 @@
         "risks": [
           "真实取数与模型响应时长受提供方影响，网页模式适用于本地项目与离线交互"
         ],
-        "generatedAt": "2026-11-18T10:51:03.886Z"
+        "generatedAt": "2026-11-18T10:53:37.392Z"
       }
     }
   ],
