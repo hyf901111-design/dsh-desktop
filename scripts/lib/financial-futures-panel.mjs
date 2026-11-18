@@ -145,11 +145,11 @@ export function FinancialFuturesPanel({ report, initialProduct }) {
         ...(!product || tab === '品种排行' ? [jsx('option', { value: '', children: tab === '品种排行' ? '全部品种' : '选择日报覆盖的品种' }, 'empty')] : []),
         ...report.products.map(item => jsx('option', { value: item.code, children: item.name + ' · ' + item.code.toUpperCase() }, item.code))
       ] }),
+      jsx('div', { role: 'tablist', 'aria-label': '期货行情栏目', className: 'ew-futures-tabs', children: tabs.map((name, i) =>
+        jsx('button', { role: 'tab', type: 'button', id: tabsId + '-tab-' + i, 'aria-controls': tabsId + '-panel', 'aria-selected': tab === name,
+          tabIndex: tab === name ? 0 : -1, onClick: () => setTab(name), onKeyDown: event => changeTab(event, i), children: name }, name)) }),
       jsx('a', { href: report.url, onClick: financialOpenArticle, target: '_blank', rel: 'noopener noreferrer', title: '打开该交易日的交易所原始报告', children: '交易日报 ↗' })
     ] }),
-    jsx('div', { role: 'tablist', 'aria-label': '期货行情栏目', className: 'ew-futures-tabs', children: tabs.map((name, i) =>
-      jsx('button', { role: 'tab', type: 'button', id: tabsId + '-tab-' + i, 'aria-controls': tabsId + '-panel', 'aria-selected': tab === name,
-        tabIndex: tab === name ? 0 : -1, onClick: () => setTab(name), onKeyDown: event => changeTab(event, i), children: name }, name)) }),
     jsx('div', { id: tabsId + '-panel', role: 'tabpanel', 'aria-labelledby': tabsId + '-tab-' + tabs.indexOf(tab), className: 'ew-futures-view',
       children: tab === '品种排行' ? ranking() : !product ? jsx('p', { role: 'status', children: '该交易日报没有所选品种，可切换查看其他在市合约。' }) :
         tab === '合约明细' ? table() : tab === '持仓分布' ? positions() : termStructure() })

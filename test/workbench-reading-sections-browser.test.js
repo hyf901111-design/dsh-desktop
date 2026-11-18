@@ -196,3 +196,81 @@ it('uses authored bold headings under a document title, retains footnotes and so
     expect(errors).toEqual([])
   } finally { await page.close() }
 }, 22000)
+
+async function openFuturesCard(directory, width) {
+  const result = await open(markdown('研究工作台', '研究概览'), width)
+  const id=await result.page.evaluate(directory => {
+    const products = [['rb','螺纹钢'],['cu','铜']].map(([code,name]) => ({
+      code, name, unit:'元/吨', contracts:['2612','2701'].map((month,index) => ({
+        code:code.toUpperCase()+month, month, settlement:3000+index, previousSettlement:3000, openInterest:10+index
+      }))
+    }))
+    window.dshDesktop.financialWidget = {request:async () => ({
+      source:'交易所日报', receivedAt:'2026-11-18T08:00:00Z',
+      futuresReport:{date:'2026-11-18',url:'https://example.org/settlement',products}
+    })}
+    const node=reader.workspace.createFinancialWidget('futures')
+    reader.workspace.setArtifacts([{...node,containerSpec:{...node.containerSpec,...(directory ? {directory:true} : {})}}])
+    reader.workspace.applyWorkbenchCells([{id:node.id,x:0,y:0,w:48,h:28}],true)
+    reader.workspace.updateSelection([], 'replace')
+    return node.id
+  }, directory)
+  const card=result.page.locator('[data-research-node-id="'+id+'"]')
+  return {...result,card,tabs:card.getByRole('tab'),panel:card.getByRole('tabpanel')}
+}
+
+it('routes the first pointer click to native reading controls while the canvas has a pending gesture modifier', async () => {
+  const {page,card,tabs,panel}=await openFuturesCard(false,980)
+  try {
+    const tab=card.getByRole('tab',{name:'持仓分布'})
+    await tab.waitFor()
+    // The Electron modifier notification and pointer events arrive independently.
+    const grid=page.locator('[data-ework-grid]')
+    await grid.evaluate(el=>el.setAttribute('data-command-pressed','true'))
+    const hit=await tab.evaluate(el=>{
+      const r=el.getBoundingClientRect()
+      return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===el
+    })
+    expect(hit).toBe(true)
+    await tab.click()
+    expect(await panel.innerText()).toContain('各合约持仓量')
+    await card.getByLabel('选择期货品种').selectOption('cu')
+    await tabs.nth(2).click()
+    expect(await panel.innerText()).toContain('CU2612')
+    await tabs.last().click()
+    expect(await panel.innerText()).toContain('主力合约结算涨跌幅')
+    await tabs.first().click()
+    expect(await panel.locator('svg').count()).toBeGreaterThan(0)
+  } finally { await page.close() }
+}, 22000)
+
+it.each([320,470,980])('separates the directory search, count and source at viewport width %i', async width => {
+  const {page,card}=await openFuturesCard(true,width)
+  try {
+    const search=card.getByRole('searchbox'),tools=card.locator('.ew-directory-tools')
+    await search.waitFor()
+    const geometry=await tools.evaluate(el=>{
+      const bounds=el.getBoundingClientRect()
+      const controls=[...el.children].map(node=>node.getBoundingClientRect())
+      const firstRow=controls[0].bottom>controls[1].top+1
+      return {overflow:el.scrollWidth-el.clientWidth,hitHeight:controls[0].height,
+        firstGap:firstRow?controls[1].left-controls[0].right:controls[1].top-controls[0].bottom,
+        sourceGap:controls[2].left-controls[1].right,
+        tableGap:el.nextElementSibling.getBoundingClientRect().top-bounds.bottom,
+        narrow:bounds.width<=390,firstRow}
+    })
+    expect(geometry.overflow).toBeLessThanOrEqual(1)
+    expect(geometry.hitHeight).toBeGreaterThanOrEqual(32)
+    expect(geometry.firstGap).toBeGreaterThanOrEqual(6)
+    expect(geometry.sourceGap).toBeGreaterThanOrEqual(8)
+    expect(geometry.tableGap).toBeGreaterThanOrEqual(6)
+    expect(geometry.firstRow).toBe(!geometry.narrow)
+    await search.click()
+    await search.fill('cu')
+    expect(await tools.getByRole('status').innerText()).toBe('1 / 2 个品种')
+    await card.getByRole('button',{name:'查看铜的期限结构'}).click()
+    expect(await card.getByLabel('选择期货品种').inputValue()).toBe('cu')
+    await card.getByRole('button',{name:/品种目录/}).click()
+    expect(await search.inputValue()).toBe('cu')
+  } finally { await page.close() }
+}, 22000)
