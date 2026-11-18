@@ -127,7 +127,7 @@ it('round-trips editable brand overlays alongside the original raster and reject
   try {
     const storage = new ImageFactoryCanvases(root, () => ({ owner: 'brand-test', generation: 3 }))
     const original = canvas()
-    const shape = { id: randomUUID(), kind: 'shape' as const, x: .12, y: .48, width: .76, height: .42, color: '#005096' }
+    const shape = { id: randomUUID(), kind: 'shape' as const, x: -.12, y: .78, width: 1.16, height: .42, color: '#005096' }
     const brand = { id: randomUUID(), kind: 'brand' as const, x: .73, y: .04, width: .2, height: .12, asset: 'graphic-top' as const }
     const revised: StoredCanvas = { ...original, layers: [original.layers[0]!, shape, brand, original.layers[1]!] }
     await storage.write({ scope: 'poster', epoch: 3, canvas: revised, image: png })

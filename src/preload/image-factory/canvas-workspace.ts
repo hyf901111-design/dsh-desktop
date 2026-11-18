@@ -249,8 +249,7 @@ export class CanvasWorkspace {
         restored = { ...storedImage, raster, data: bytes }
       }
       if (this.disposed || this.entries.get(scope) !== entry) return
-      if (storedImage && (!restored || restored.raster.width !== data.canvas?.width || restored.raster.height !== data.canvas.height))
-        throw Error('保存的图片与画布尺寸不一致。')
+      if (storedImage && !restored) throw Error('画布的原图无法读取。')
       if (data.canvas) {
         const layers = data.canvas.layers.map(layer => layer.kind === 'image' ? restored! : layer)
         const { version: _version, ...canvas } = data.canvas

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type PointerEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
@@ -7,19 +7,19 @@ import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, brandArtworkId
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu, type CanvasToolAction } from './actions-menu'
 import { brandArtwork } from './brand-artwork'
-import { brandDragType, findBrandAsset, moveBrandOverlay, placeBrandAsset, resizeBrandOverlay, type BrandAsset } from './brand-assets'
+import { brandDragType, findBrandAsset, placeBrandAsset, resizeBrandOverlay, type BrandAsset } from './brand-assets'
 import { BrandAssetLibrary } from './brand-library'
 import { imageFactoryFontFaces } from './fonts'
 import { galleryArtwork, ImageFactoryGallery } from './gallery'
 import { galleryExamples, type GalleryExample } from './gallery-examples'
 import { galleryPhotoPlacement, galleryTemplateLayers } from './gallery-layout'
-import { groupLayers, isEditableLayer, layerUnitId, removeLayerUnits, translateLayers, ungroupLayers,
+import { duplicateLayers, groupLayers, isEditableLayer, layerUnitId, removeLayerUnits, resizeCanvas, scaleGroup, transformLayers, translateLayers, ungroupLayers,
   type EditableLayer } from './layer-groups'
 import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
 import { iconSource } from './icons'
 import { useImageViewport } from './viewport'
 import { aiWatermarkColor, aiWatermarkFamily, aiWatermarkLayout, aiWatermarkText, drawAiWatermark } from './watermark'
-import { applyRegion, between, canvasFor, canvasPoint, drawFit, encode, loadRaster, preservesRegionTransparency, providerDimensions, providerSize, ratios,
+import { applyRegion, between, canvasFor, canvasPoint, canvasRatioPresets, drawContainedRaster, drawFit, encode, loadRaster, preservesRegionTransparency, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
 import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
   type CanvasLayer, type ImageScene, type TextLayer, type TextResizeHandle } from './layers'
@@ -34,7 +34,7 @@ type Bridge = {
   save(value: { action: 'download'; data: Uint8Array; name: string; format: 'png' | 'jpg' }): Promise<{ cancelled?: boolean }>
 }
 type T = (zh: string, en: string) => string
-type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region; preserveTransparency: boolean };
+type CanvasJob = { id: string; sessionId: string; scope: CanvasScope; scene?: ImageScene; edit?: { area: Region; frame: Region; preserveTransparency: boolean; original?: Raster };
   targets?: { key: number; layer: CanvasLayer }[]; cutout?: boolean; size: Size; title: string; delivering: boolean; release(): void }
 type SelectionDraft = { area: Region; text: string; requestId?: string; phase?: 'sending' | 'processing'; error?: string }
 type CanvasTool = 'text' | 'region'
@@ -42,6 +42,11 @@ type DrawerTab = 'layers' | 'brand'
 type ToolbarCommand = CanvasToolAction & { icon?: string; title?: string; iconOnly?: boolean; controls?: string; switch?: boolean }
 type ToolbarGroup = { id: string; label?: string; commands: ToolbarCommand[] }
 const overlayHandles = ['nw', 'ne', 'sw', 'se'] as const
+type CornerHandle = typeof overlayHandles[number]
+type LayerDrag = { pointer: number; start: Point; moved: boolean } & (
+  { kind: 'group'; layers: EditableLayer[]; bounds: Region; handle: CornerHandle } |
+  { kind: 'layer'; layer: EditableLayer; moving?: EditableLayer[]; height: number; handle?: TextResizeHandle }
+)
 const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 const textResizeLabels: Record<TextResizeHandle, [string, string]> = {
   nw: ['左上角缩放文字', 'Scale text from top left'], ne: ['右上角缩放文字', 'Scale text from top right'],
@@ -74,6 +79,14 @@ function layerElement(frame: HTMLElement, layer: EditableLayer) {
 
 function layerBounds(frame: HTMLElement, layer: EditableLayer) {
   return layerElement(frame, layer)?.getBoundingClientRect()
+}
+
+function encloseLayers(boxes: Region[]): Region | undefined {
+  if (!boxes.length) return
+  const x = Math.min(...boxes.map(box => box.x)), y = Math.min(...boxes.map(box => box.y))
+  const right = Math.max(...boxes.map(box => box.x + box.width))
+  const bottom = Math.max(...boxes.map(box => box.y + box.height))
+  return { x, y, width: right - x, height: bottom - y }
 }
 
 function patchTargetLayer(layer: EditableLayer, patch: Record<string, unknown>): EditableLayer {
@@ -195,6 +208,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     focusDrawerToggle(drawer ?? 'layers')
   }, [galleryOpen, drawer])
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [layerMenu, setLayerMenu] = useState<Point>()
+  const [copiedLayers, setCopiedLayers] = useState<{ layers: EditableLayer[]; size: Size }>()
   const selectedId = selectedIds.length === 1 ? selectedIds[0] : undefined
   const setSelectedId = (id?: string) => setSelectedIds(id ? [id] : [])
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
@@ -214,7 +229,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
   const marqueeDrag = useRef<{ pointer: number; start: Point; additive: boolean; selection: string[]; moved: boolean }>()
   const suppressMarqueeClick = useRef(false)
-  const canvasLayerDrag = useRef<{ layer: EditableLayer; moving?: EditableLayer[]; pointer: number; start: Point; moved: boolean; height: number; handle?: TextResizeHandle }>()
+  const canvasLayerDrag = useRef<LayerDrag>()
   const layerDrag = useRef<{ id: string; pointer: number; start: Point; dragging: boolean }>()
   const active = useRef(new Map<string, CanvasJob>())
   const selectionDrafts = useRef(new Map<string, SelectionDraft>())
@@ -278,9 +293,12 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   }, [Boolean(current), doc])
   const selection = current?.layers.filter(isEditableLayer).filter(
     layer => selectedIds.includes(layerUnitId(layer)) || selectedIds.includes(layer.id)) ?? []
-  const selectedGroups = selection.flatMap(layer => layer.groupId && selectedIds.includes(layer.groupId) ? [layer.groupId] : [])
+  const selectedGroups = selectedIds.filter(id => selection.some(layer => layer.groupId === id))
   const canGroup = new Set(selection.map(layerUnitId)).size >= 2
   const canUngroup = selectedGroups.length > 0
+  const groupSelected = selectedGroups.length === 1 && selectedIds.length === 1
+  const layerMenuAllowed = !!current && !tool && !area && !busy && !editing
+  useLayoutEffect(() => { setLayerMenu(undefined) }, [scope, current?.id, layerMenuAllowed])
   const raster = current?.layers.find((layer): layer is Extract<CanvasLayer, { kind: 'image' }> => layer.kind === 'image')
   const selectedText = current?.layers.find((layer): layer is TextLayer => layer.kind === 'text' && layer.id === selectedId)
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
@@ -288,7 +306,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const resizableText = !tool && !area && !busy && !editing ? selectedText : undefined
   const resizableOverlay = !tool && !area && !busy && !editing ? current?.layers.find(
     (layer): layer is BrandOverlay => (layer.kind === 'brand' || layer.kind === 'shape') && layer.id === selectedId) : undefined
-  const showSelectionBounds = selection.length > 1 && !tool && !area && !busy
+  const showSelectionBounds = selection.length > 1 && layerMenuAllowed
   const [selectionBounds, setSelectionBounds] = useState<Array<Region & { id: string }>>([])
   useLayoutEffect(() => {
     const frame = imageFrame.current
@@ -312,11 +330,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     }
     return () => observer.disconnect()
   }, [current, displayScale, showSelectionBounds, selectedIds])
-  const selectionBox = showSelectionBounds && selectionBounds.length ? {
-    left: Math.min(...selectionBounds.map(box => box.x)),
-    top: Math.min(...selectionBounds.map(box => box.y)),
-    right: Math.max(...selectionBounds.map(box => box.x + box.width)),
-    bottom: Math.max(...selectionBounds.map(box => box.y + box.height)),
+  const selectionBox = showSelectionBounds ? encloseLayers(selectionBounds) : undefined
+  const groupBox = groupSelected && selectionBox && selectionBox.width > 0 && selectionBox.height > 0 ? {
+    x: selectionBox.x / displayScale, y: selectionBox.y / displayScale,
+    width: selectionBox.width / displayScale, height: selectionBox.height / displayScale,
   } : undefined
 
   const textBoxHeight = resizableText && textBox?.id === resizableText.id ? textBox.height : 0
@@ -611,8 +628,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     releaseText()
     clearSelection()
     if (ungroup) {
-      const groups = [...new Set(selectedGroups)]
-      setScene(old => old && { ...old, layers: ungroupLayers(old.layers, groups) })
+      setScene(old => old && { ...old, layers: ungroupLayers(old.layers, selectedGroups) })
       setSelectedIds(selection.map(layer => layer.id))
       return
     }
@@ -620,6 +636,46 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     setScene(old => old && { ...old, layers: groupLayers(old.layers, selection.map(layerUnitId), id) })
     setSelectedId(id)
     setExpandedGroups(previous => [...previous, id])
+  }
+  function openLayerMenu(event: MouseEvent<HTMLDivElement>) {
+    if (!layerMenuAllowed) return
+    event.preventDefault()
+    event.stopPropagation()
+    const target = (event.target as Element).closest<HTMLElement>('[data-canvas-text-id], [data-brand-layer-id]')
+    const id = target?.dataset.canvasTextId ?? target?.dataset.brandLayerId
+    const layer = current?.layers.find(item => item.id === id)
+    if (layer && isEditableLayer(layer) && !selection.includes(layer)) setSelectedId(layerUnitId(layer))
+    else if (!selection.length && !copiedLayers) return
+    const bounds = target?.getBoundingClientRect() ?? imageFrame.current?.getBoundingClientRect()
+    setLayerMenu(event.clientX || event.clientY || !bounds ? { x: event.clientX, y: event.clientY }
+      : { x: bounds.left, y: bounds.top })
+  }
+  function copySelection() {
+    if (!current || !layerMenuAllowed || !selection.length) return
+    setCopiedLayers({ layers: selection, size: { width: current.width, height: current.height } })
+    setToast(t('已复制所选图层。', 'Selected layers copied.'))
+  }
+  function pasteLayers() {
+    if (!current || !layerMenuAllowed || !copiedLayers) return
+    if (current.layers.length + copiedLayers.layers.length > maximumCanvasLayers) {
+      setToast(t('画布图层已达到上限。', 'The canvas has reached the layer limit.'))
+      return
+    }
+    const { layers, size } = copiedLayers
+    const pasted = transformLayers(duplicateLayers(layers), size, current, 1, {
+      x: (current.width - size.width) / 2 + 16, y: (current.height - size.height) / 2 + 16,
+    })
+    if (setScene(old => old && { ...old, layers: [...old.layers, ...pasted] })) {
+      setSelectedIds([...new Set(pasted.map(layerUnitId))])
+      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-reference-clear'))
+    }
+  }
+  function changeRatio(size: Size) {
+    if (!current || busy || current.width * size.height === current.height * size.width) return
+    releaseText()
+    clearSelection()
+    setScene(old => old && resizeCanvas(old, size))
+    resetViewport()
   }
   function changeHistory(redo: boolean) {
     if (!current || busy) return
@@ -638,11 +694,15 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         target.closest?.('input,textarea,select,[contenteditable]:not([contenteditable=false])') ||
         doc.body.dataset.workspaceSurface !== 'image-factory') return
     const key = event.key.toLowerCase()
-    if (!['z', 'y', 'g'].includes(key)) return
+    if (!['z', 'y', 'g', 'c', 'v'].includes(key)) return
     if (key === 'g' && !(event.shiftKey ? canUngroup : canGroup)) return
+    if (key === 'c' && (!layerMenuAllowed || !selection.length || event.shiftKey)) return
+    if (key === 'v' && (!layerMenuAllowed || !copiedLayers || event.shiftKey)) return
     event.preventDefault()
     event.stopPropagation()
     if (key === 'g') changeGroup(event.shiftKey)
+    else if (key === 'c') copySelection()
+    else if (key === 'v') pasteLayers()
     else changeHistory(key === 'y' || event.shiftKey)
   }
   useEffect(() => {
@@ -784,6 +844,14 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     setSelectedIds(previous => previous.filter(id => !ids.includes(id)))
     setScene(old => old && { ...old, layers: removeLayerUnits(old.layers, ids) })
   }
+  function startGroupResize(event: PointerEvent<HTMLButtonElement>, handle: CornerHandle) {
+    if (!groupBox || !event.isPrimary || event.button !== 0) return
+    event.preventDefault()
+    event.currentTarget.focus({ preventScroll: true })
+    event.currentTarget.setPointerCapture(event.pointerId)
+    canvasLayerDrag.current = { kind: 'group', layers: selection, bounds: groupBox, handle,
+      pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false }
+  }
   function canvasLayerPointer(event: PointerEvent<HTMLElement>, phase: 'start' | 'move' | 'end' | 'cancel', layer?: TextLayer | BrandOverlay, handle?: TextResizeHandle) {
     if (!current) return
     if (phase === 'start') {
@@ -804,7 +872,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       const pixels = layer.kind !== 'text' ? layer.height * current.height * displayScale :
         handle ? textBoxHeight : event.currentTarget.getBoundingClientRect().height
       const height = Math.max(1, Math.ceil(pixels / displayScale))
-      canvasLayerDrag.current = { layer, moving, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, height, handle }
+      canvasLayerDrag.current = { kind: 'layer', layer, moving, pointer: event.pointerId, start: { x: event.clientX, y: event.clientY }, moved: false, height, handle }
       return
     }
     const drag = canvasLayerDrag.current
@@ -819,18 +887,21 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     else if (!(event.buttons & 1)) return
     const dx = event.clientX - drag.start.x, dy = event.clientY - drag.start.y
     if (!drag.moved && Math.hypot(dx, dy) < 3) {
-      if (released && !drag.handle) referenceLayer(drag.layer)
+      if (released && drag.kind === 'layer' && !drag.handle) referenceLayer(drag.layer)
       return
     }
     drag.moved = true
+    if (drag.kind === 'group') {
+      replaceLayers(scaleGroup(drag.layers, current, drag.bounds, drag.handle, dx / displayScale, dy / displayScale), released)
+      return
+    }
     if (drag.moving && drag.moving.length > 1) {
       moveSelection(drag.moving, dx / (current.width * displayScale), dy / (current.height * displayScale), released)
       return
     }
     if (drag.layer.kind !== 'text') {
-      const patch = drag.handle ? resizeBrandOverlay(drag.layer, current, drag.handle, dx / displayScale, dy / displayScale) :
-        moveBrandOverlay(drag.layer, current, dx / displayScale, dy / displayScale)
-      patchOverlay(drag.layer.id, patch, released)
+      if (drag.handle) patchOverlay(drag.layer.id, resizeBrandOverlay(drag.layer, current, drag.handle, dx / displayScale, dy / displayScale), released)
+      else moveSelection([drag.layer], dx / (current.width * displayScale), dy / (current.height * displayScale), released)
       return
     }
     const patch = drag.handle ? resizeTextLayer(drag.layer, current, drag.height, drag.handle, dx / displayScale, dy / displayScale) : {
@@ -840,8 +911,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     patchLayer(drag.layer.id, patch, released)
   }
   function moveSelection(layers: EditableLayer[], dx: number, dy: number, persist = true) {
-    const moved = new Map(translateLayers(layers, dx, dy).map(layer => [layer.id, layer]))
-    setScene(old => old && { ...old, layers: old.layers.map(layer => moved.get(layer.id) ?? layer) }, persist)
+    replaceLayers(translateLayers(layers, dx, dy), persist)
+  }
+  function replaceLayers(layers: EditableLayer[], persist = true) {
+    const replacements = new Map(layers.map(layer => [layer.id, layer]))
+    setScene(old => old && { ...old, layers: old.layers.map(layer => replacements.get(layer.id) ?? layer) }, persist)
   }
   function startCanvasTool(event: PointerEvent<HTMLDivElement>) {
     if ((!marking && !placingText) || !current || busy || !event.isPrimary || event.button !== 0) return
@@ -865,9 +939,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         throw Error(t('请选择 20 MB 以内的 PNG、JPG 或 WebP 图片。', 'Choose a PNG, JPG, or WebP image up to 20 MB.'))
       const id = crypto.randomUUID()
       const layer = await createImageLayer(doc, image, id, crypto.randomUUID(), image.type as CanvasImageType)
-      const stored = workspace.change(scope, old => ({ id, width: layer.raster.width, height: layer.raster.height,
-        title: image.name.replace(/\.[^.]+$/, '').trim().slice(0, 255) || t('导入图片', 'Imported image'), layers: [layer],
-        ...(old?.aiWatermark && { aiWatermark: old.aiWatermark }) }))
+      const stored = workspace.change(scope, () => ({ id, width: layer.raster.width, height: layer.raster.height,
+        title: image.name.replace(/\.[^.]+$/, '').trim().slice(0, 255) || t('导入图片', 'Imported image'), layers: [layer] }))
       if (!stored) URL.revokeObjectURL(layer.raster.url)
       if (stored && workspace.getSnapshot().scope === scope) {
         clearSelection(); setSelectedId(undefined); setEditing(undefined); setGalleryOpen(false); resetViewport()
@@ -883,15 +956,33 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     return new Uint8Array(await (await encode(canvas)).arrayBuffer())
   }
 
-  async function exportImage(format: 'png' | 'jpg') {
-    if (!current || busy || uiOperations.current.has(scope)) return
+  function exportSelection(format: 'png' | 'jpg') {
+    const frame = imageFrame.current
+    if (!current || !frame || !selection.length || !layerMenuAllowed) return
+    const origin = frame.getBoundingClientRect()
+    const bounds = encloseLayers(selection.flatMap(layer => {
+      const box = layerBounds(frame, layer)
+      return box && box.width > 0 && box.height > 0 ? [{ x: (box.left - origin.left) / displayScale,
+        y: (box.top - origin.top) / displayScale, width: box.width / displayScale, height: box.height / displayScale }] : []
+    }))
+    if (!bounds) return
+    const x = Math.floor(bounds.x), y = Math.floor(bounds.y)
+    const size = { width: Math.ceil(bounds.x + bounds.width) - x, height: Math.ceil(bounds.y + bounds.height) - y }
+    const layers = transformLayers(selection, current, size, 1, { x: -x, y: -y })
+    void exportImage(format, { ...current, ...size, layers, title: current.title + t(' - 所选图层', ' - Selected layers') })
+  }
+
+  async function exportImage(format: 'png' | 'jpg', scene = current) {
+    if (!scene || busy || uiOperations.current.has(scope)) return
+    const release = workspace.retain(scope)
     uiOperations.current.add(scope); refreshBusy()
     try {
-      const data = await renderImage(current, format === 'jpg')
-      const result = await bridge.save({ action: 'download', data, format, name: current.title })
+      const data = await renderImage(scene, format === 'jpg')
+      if (!mounted.current) return
+      const result = await bridge.save({ action: 'download', data, format, name: scene.title })
       if (!result.cancelled && mounted.current) setToast(t('图片已导出。', 'Image exported.'))
     } catch (error) { if (mounted.current) setToast(errorLabel(error, t('图片导出失败。', 'Image export failed.'))) }
-    finally { uiOperations.current.delete(scope); if (mounted.current) refreshBusy() }
+    finally { uiOperations.current.delete(scope); release(); if (mounted.current) refreshBusy() }
   }
 
   async function saveToKnowledge() {
@@ -951,6 +1042,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       uiOperations.current.add(requestedScope); refreshBusy()
       const hold = workspace.retain(requestedScope)
       let job: CanvasJob | undefined
+      let projected: Raster | undefined
+      const releaseSource = () => {
+        if (projected) URL.revokeObjectURL(projected.url)
+        hold()
+      }
       try {
         const ready = await workspace.ready(requestedScope)
         if (!mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' || workspace.getSnapshot().scope !== requestedScope)
@@ -973,11 +1069,18 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         const target = selection ?? size
         const output = providerSize(target)
         const outputSize = providerDimensions[output]
+        if (selection && image && base && (image.raster.width !== base.width || image.raster.height !== base.height)) {
+          const { canvas, context } = canvasFor(doc, base)
+          drawContainedRaster(context, image.raster, base)
+          projected = await loadRaster(doc, await encode(canvas))
+          if (!mounted.current || workspace.getSnapshot().scope !== requestedScope)
+            throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
+        }
         const edit = selection && image ? {
-          area: selection, frame: regionEditFrame(selection, outputSize, image.raster),
-          preserveTransparency: preservesRegionTransparency(prompt),
+          area: selection, frame: regionEditFrame(selection, outputSize, projected ?? image.raster),
+          preserveTransparency: preservesRegionTransparency(prompt), original: projected,
         } : undefined
-        job = { id, sessionId, scope: requestedScope, scene: base, edit, targets, cutout: cutout === true, size, title, delivering: false, release: hold }
+        job = { id, sessionId, scope: requestedScope, scene: base, edit, targets, cutout: cutout === true, size, title, delivering: false, release: releaseSource }
         active.current.set(id, job)
         let reference
         if (cutout && image) {
@@ -991,7 +1094,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           if (blob.size > byteLimit) throw Error(t('图片过大，请缩小后再去背景。', 'The image is too large. Resize it before removing its background.'))
           reference = { data: await blobData(doc, blob), mediaType: blob.type }
         } else reference = image
-          ? await referenceData(doc, image.raster, edit && { frame: edit.frame, size: outputSize })
+          ? await referenceData(doc, projected ?? image.raster, edit && { frame: edit.frame, size: outputSize })
           : undefined
         if (!active.current.has(id) || !mounted.current || doc.body.dataset.workspaceSurface !== 'image-factory' ||
             workspace.getSnapshot().scope !== requestedScope) throw Error(t('当前工作区已变化。', 'The active workspace changed.'))
@@ -1004,7 +1107,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         reply({ operation: targets ? 'layer' : cutout ? 'cutout' : edit ? 'region' : reference || uploaded ? 'edit' : 'generate', size: output,
           width: target.width, height: target.height, title, reference, targetLayers, editBounds: edit && regionEditBounds(edit.area, edit.frame) })
       } catch (error) {
-        if (job) release(job); else hold()
+        if (job) release(job); else releaseSource()
         reply({ error: errorLabel(error, t('无法读取画布。', 'Could not read the canvas.')) })
       } finally {
         uiOperations.current.delete(requestedScope)
@@ -1115,8 +1218,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         output = await loadRaster(doc, await response.blob())
         const { canvas, context } = canvasFor(doc, job.size)
         const previous = job.scene?.layers.find(layer => layer.kind === 'image')
-        if (job.edit && previous) applyRegion(context, previous.raster, output, job.edit.area, job.edit.frame, job.edit.preserveTransparency)
-        else if (job.cutout) context.drawImage(output.image, 0, 0, canvas.width, canvas.height)
+        if (job.edit && previous) applyRegion(context, job.edit.original ?? previous.raster, output, job.edit.area, job.edit.frame, job.edit.preserveTransparency)
+        else if (job.cutout) drawContainedRaster(context, output, job.size)
         else drawFit(context, output, job.size)
         const png = await encode(canvas)
         const layer = await createImageLayer(doc, png, job.id, previous?.id ?? crypto.randomUUID(), 'image/png')
@@ -1302,6 +1405,16 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       ]
     })
   }
+  const layerActions: CanvasToolAction[] = [
+    ...(canGroup ? [{ id: 'group', label: t('编组', 'Group'), shortcut: 'Meta+G Control+G', run: () => changeGroup(false) }] : []),
+    ...(canUngroup ? [{ id: 'ungroup', label: t('取消编组', 'Ungroup'), shortcut: 'Meta+Shift+G Control+Shift+G', run: () => changeGroup(true) }] : []),
+    ...(selection.length ? [
+      { id: 'delete', label: t('删除', 'Delete'), shortcut: 'Delete Backspace', run: () => deleteLayers(selectedIds) },
+      { id: 'copy', label: t('复制', 'Copy'), shortcut: 'Meta+C Control+C', run: copySelection },
+      { id: 'download', label: t('下载', 'Download'), exporting: exportSelection },
+    ] : []),
+    ...(copiedLayers ? [{ id: 'paste', label: t('粘贴', 'Paste'), shortcut: 'Meta+V Control+V', run: pasteLayers }] : []),
+  ]
   const toolbarGroups: ToolbarGroup[] = [
     { id: 'if-history-buttons', label: t('编辑历史', 'Edit history'), commands: [
       { id: 'undo', icon: 'undo', label: t('上一步', 'Undo'), title: t('上一步 · ⌘Z / Ctrl+Z', 'Undo · ⌘Z / Ctrl+Z'),
@@ -1314,6 +1427,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         ({ id, icon: id, label: t(zh, en), controls: 'image-factory-drawer', checked: drawer === id, run: () => chooseDrawer(id) })) },
     { id: 'text', commands: [{ id: 'text', icon: 'type', label: t('添加文本', 'Add text'),
       checked: placingText, disabled: busy, run: () => activateTool('text') }] },
+    { id: 'ratio', commands: [{ id: 'ratio', label: t('画布比例', 'Canvas ratio'), disabled: busy,
+      choices: Object.entries(canvasRatioPresets).map(([label, size]) => ({
+        id: label, label, ratio: size, checked: !!current && current.width * size.height === current.height * size.width,
+        run: () => changeRatio(size),
+      })) }] },
     { id: 'export', commands: [{ id: 'export', label: t('导出', 'Export'),
       disabled: busy || !current?.layers.length, exporting: exportImage }] },
     { id: 'save-project', commands: [{ id: 'save-project', icon: 'bookmark', label: t('保存至知识库', 'Save to Knowledge'),
@@ -1391,7 +1509,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           aria-hidden={overflow || undefined}>
           {group.commands.map(command => command.exporting
             ? <CanvasActionsMenu key={command.id} doc={doc} t={t} canExport={!command.disabled} exporting={command.exporting} exportOnly />
-            : <button key={command.id} type="button" data-tool={command.id}
+            : command.choices
+              ? <CanvasActionsMenu key={command.id} doc={doc} t={t} dropdown={command}/>
+              : <button key={command.id} type="button" data-tool={command.id}
             className={'if-button' + (command.switch ? ' if-watermark-switch' : '')}
             role={command.switch ? 'switch' : undefined} aria-checked={command.switch ? command.checked : undefined}
             aria-label={command.iconOnly ? command.label : undefined} aria-keyshortcuts={command.shortcut}
@@ -1415,6 +1535,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         </div> : !current ? <ImageFactoryGallery t={t} busy={busy} onUse={useGalleryPrompt} onTemplate={openGalleryTemplate}
           onClose={galleryOpen && !!scene ? closeGallery : undefined} closeRef={galleryClose}/> : <>
         <div className="if-stage-scroll" data-pan-ready={spaceHeld} data-panning={panning} ref={scroll}
+          data-image-factory-layer-menu={layerMenuAllowed || undefined} onContextMenu={openLayerMenu}
           onPointerDownCapture={event => {
             panPointer(event, 'start')
             if (!event.isPropagationStopped()) startMarquee(event)
@@ -1430,8 +1551,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           onPointerMove={event => canvasLayerPointer(event, 'move')}
           onPointerUp={event => canvasLayerPointer(event, 'end')}
           onPointerCancel={event => canvasLayerPointer(event, 'cancel')}
-          onLostPointerCapture={event => panPointer(event, 'cancel')} onPointerDown={event => {
-          if (marqueeDrag.current) return
+          onLostPointerCapture={event => {
+            panPointer(event, 'cancel')
+            if (!(event.buttons & 1)) canvasLayerPointer(event, 'cancel')
+          }} onPointerDown={event => {
+          if (event.button !== 0 || marqueeDrag.current) return
           if (event.target === event.currentTarget && placingText && event.button === 0) event.preventDefault()
           if (event.target === event.currentTarget || event.target === imageFrame.current && !tool) {
             releaseText(); setSelectedId(undefined); doc.dispatchEvent(new CustomEvent('sherlock:image-factory-reference-clear')); if (area && !commentPending) clearSelection()
@@ -1473,7 +1597,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
                         dx * step / current.width, dy * step / current.height)
                     } else {
                       setSelectedId(layer.id)
-                      patchOverlay(layer.id, moveBrandOverlay(layer, current, dx * step, dy * step))
+                      moveSelection([layer], dx * step / current.width, dy * step / current.height)
                     }
                   }}
                   style={{ left: layer.x * 100 + '%', top: layer.y * 100 + '%', width: layer.width * 100 + '%',
@@ -1514,8 +1638,22 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
               }}>{!commentPending && <><i/><i/><i/><i/></>}</div>}
             </div>
             {selectionBox && <>
-              <div className="if-group-bounds" aria-hidden="true" style={{ left: selectionBox.left, top: selectionBox.top,
-                width: selectionBox.right - selectionBox.left, height: selectionBox.bottom - selectionBox.top }}/>
+              <div className="if-group-bounds" role={groupBox ? 'group' : undefined}
+                aria-label={groupBox ? t('调整编组大小', 'Resize group') : undefined}
+                aria-hidden={groupBox ? undefined : true} data-resizable={!!groupBox} style={{
+                  left: selectionBox.x, top: selectionBox.y, width: selectionBox.width, height: selectionBox.height,
+                }}>
+                {groupBox && overlayHandles.map(handle => <button key={handle} type="button" className="if-text-handle"
+                  data-text-resize-handle={handle} aria-label={t(overlayResizeLabels[handle][0], overlayResizeLabels[handle][1])}
+                  onPointerDown={event => startGroupResize(event, handle)} onKeyDown={event => {
+                    const dx = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
+                    const dy = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0
+                    if (!dx && !dy) return
+                    event.preventDefault()
+                    const step = event.shiftKey ? 24 : 4
+                    replaceLayers(scaleGroup(selection, current, groupBox, handle, dx * step, dy * step))
+                  }}/>)}
+              </div>
               {selectionBounds.map(box => <div key={box.id} className="if-selected-layer-bounds" data-selected-layer-outline={box.id}
                 aria-hidden="true" style={{ left: box.x, top: box.y, width: box.width, height: box.height }}/>)}
             </>}
@@ -1551,6 +1689,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           {marquee && <div className="if-marquee" aria-hidden="true"
             style={{ left: marquee.x, top: marquee.y, width: marquee.width, height: marquee.height }}/>}
         </div>
+        {layerMenu && layerMenuAllowed && layerActions.length > 0 && <CanvasActionsMenu doc={doc} t={t} context={{
+          point: layerMenu, actions: layerActions, close: () => setLayerMenu(undefined),
+          focus: () => imageFrame.current?.focus({ preventScroll: true }),
+        }}/>}
         {placingText && !busy && <div className="if-mark-hint" role="status">{t('点击图像放置文本 · Esc 取消', 'Click the image to place text · Esc to cancel')}</div>}
         {selectionDraft && !commentPending && <div ref={commentBubble} className="if-comment"
           style={commentPos ? { left: commentPos.x, top: commentPos.y } : { visibility: 'hidden' }}>

@@ -11,7 +11,7 @@ import { atomicWrite } from '../integrations/store'
 const metadataLimit = 320 * 1024
 const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
 const validId = (value: unknown): value is string => typeof value === 'string' && canvasUuid.test(value)
-const unit = (value: number) => Number.isFinite(value) && value >= 0 && value <= 1
+const positive = (value: number) => Number.isFinite(value) && value > 0
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT'
 const metadataName = 'canvas.json'
 type Identity = { owner: string; generation: number }
@@ -48,8 +48,7 @@ function readMetadata(value: unknown): StoredCanvas {
     const group = groupId ? { groupId } : {}
     if (layer.kind === 'brand' || layer.kind === 'shape') {
       const { id, x, y, width, height } = layer
-      if (unit(x) && unit(y) && unit(width) && unit(height) && width > 0 && height > 0 &&
-          x + width <= 1 + 1e-9 && y + height <= 1 + 1e-9) {
+      if (Number.isFinite(x) && Number.isFinite(y) && positive(width) && positive(height)) {
         const bounds = { id, x, y, width, height, ...group }
         if (layer.kind === 'brand' && brandArtworkIds.includes(layer.asset)) return { ...bounds, kind: layer.kind, asset: layer.asset }
         if (layer.kind === 'shape' && typeof layer.color === 'string' && /^#[a-fA-F0-9]{6}$/u.test(layer.color)) return { ...bounds, kind: layer.kind, color: layer.color }
@@ -57,7 +56,7 @@ function readMetadata(value: unknown): StoredCanvas {
       throw Error('画布图层无效。')
     }
     if (layer.kind !== 'text' || typeof layer.text !== 'string' || layer.text.length > 500 ||
-        !Number.isFinite(layer.x) || !Number.isFinite(layer.y) || !unit(layer.width) || layer.width <= 0 ||
+        !Number.isFinite(layer.x) || !Number.isFinite(layer.y) || !positive(layer.width) ||
         !Number.isFinite(layer.fontSize) || layer.fontSize < 8 || layer.fontSize > 600 ||
         !canvasFonts.some(font => font.family === layer.family) || ![400, 500, 600, 700].includes(layer.weight) ||
         !['left', 'center', 'right'].includes(layer.align) || !/^#[a-fA-F0-9]{6}$/u.test(layer.color))

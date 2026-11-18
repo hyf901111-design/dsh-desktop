@@ -57,3 +57,12 @@ it('keeps the actual event target when coordinate hit testing drifts', () => {
   expect(target.values).not.toContain('/out/deck.pdf')
   expect(dom.window.__sherlockContextTarget).toBeUndefined()
 })
+
+it('lets the image canvas own right-clicks on editable layers and the pasteboard', () => {
+  const dom = new JSDOM('<div data-image-factory-layer-menu><button>品牌图层</button></div>')
+  const document = dom.window.document
+  Object.defineProperty(document, 'elementFromPoint', { value: () => document.querySelector('button') })
+  expect(runInNewContext(contextMenuTargetScript(5, 5), {
+    document, window: dom.window, performance: dom.window.performance, Element: dom.window.Element,
+  })).toEqual({ values: [], suppressMenu: true })
+})

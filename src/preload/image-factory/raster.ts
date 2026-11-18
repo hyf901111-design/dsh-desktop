@@ -5,6 +5,18 @@ export const ratios = {
   '4:5': { width: 1080, height: 1350 },
   '16:9': { width: 1600, height: 900 },
 } as const
+export const canvasRatioPresets = {
+  '1:1': ratios['1:1'],
+  '4:5': ratios['4:5'],
+  '5:4': { width: 1350, height: 1080 },
+  '3:4': { width: 1200, height: 1600 },
+  '4:3': { width: 1600, height: 1200 },
+  '2:3': { width: 1000, height: 1500 },
+  '3:2': { width: 1500, height: 1000 },
+  '9:16': { width: 900, height: 1600 },
+  '16:9': ratios['16:9'],
+} as const
+
 export const providerDimensions = {
   '1024x1024': { width: 1024, height: 1024 },
   '1024x1536': { width: 1024, height: 1536 },
@@ -124,6 +136,17 @@ export function preservesRegionTransparency(prompt: string) {
     return /保留|保持|维持|不(?:要|得)?\s*(?:修改|改变|更改|改动|破坏)|\b(?:preserve|keep|retain|maintain|(?:do not|don['’]t)\s+(?:change|alter|modify))\b/iu.test(before) ||
       /^\s*(?:保持不变|维持原样|保持原样|不变|(?:should\s+)?(?:stay|remain)\s+unchanged\b)/iu.test(after)
   })
+}
+
+export function containedRasterBounds(source: Size, target: Size): Region {
+  const scale = Math.min(target.width / source.width, target.height / source.height)
+  const width = source.width * scale, height = source.height * scale
+  return { x: (target.width - width) / 2, y: (target.height - height) / 2, width, height }
+}
+
+export function drawContainedRaster(context: CanvasRenderingContext2D, source: Raster, target: Size) {
+  const { x, y, width, height } = containedRasterBounds(source, target)
+  context.drawImage(source.image, x, y, width, height)
 }
 
 /** Preserve the full generated composition when the provider returns a different ratio. */

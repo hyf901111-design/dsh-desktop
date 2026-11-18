@@ -1,3 +1,4 @@
+import { resizeCanvas } from '../src/preload/image-factory/layer-groups'
 import { Window } from 'happy-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
@@ -176,10 +177,24 @@ describe('image factory', () => {
     expect(textTopInsideCanvas(.94, 1450, height)).toBe(0)
   })
 
+  it('changes canvas ratio without resampling the image or drifting off-frame layers', () => {
+    const image = { id: 'image', kind: 'image', raster: { width: 900, height: 1600 } }
+    const overlay = { id: 'logo', kind: 'brand', asset: 'logo-blue', x: -.1, y: .16, width: .23, height: .12 }
+    const original = { id: 'canvas', title: 'Poster', width: 900, height: 1600, layers: [image, overlay] }
+    const landscape = resizeCanvas(original, ratios['16:9'])
+    expect(landscape).toMatchObject(ratios['16:9'])
+    expect(landscape.layers[0]).toBe(image)
+    const logo = landscape.layers[1]
+    expect(logo.width * landscape.width / (logo.height * landscape.height)).toBeCloseTo(.23 * 900 / (.12 * 1600))
+    const restored = resizeCanvas(landscape, { width: original.width, height: original.height })
+    for (const key of ['x', 'y', 'width', 'height']) expect(restored.layers[1][key]).toBeCloseTo(overlay[key])
+    expect(restored.layers[0]).toBe(image)
+  })
+
   it('composites browser-laid text in the same order as the layer list', async () => {
     const text = { id: 'heading', kind: 'text', text: '海报（限定）\n栏目\t内容 👩‍🎨 <&', x: .1, y: .2, width: .5,
       fontSize: 30, family: 'Songti SC', weight: 700, align: 'right', color: '#ff0000' }
-    const image = { id: 'photo', kind: 'image', raster: { image: 'base' } }
+    const image = { id: 'photo', kind: 'image', raster: { image: 'base', width: 400, height: 300 } }
     const original = [image, text]
     const layers = moveLayer(original, 'heading', 'photo', false)
     expect(original.map(layer => layer.id)).toEqual(['photo', 'heading'])

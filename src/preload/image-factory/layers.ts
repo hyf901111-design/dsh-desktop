@@ -1,4 +1,4 @@
-import type { Raster, Size } from './raster'
+import { drawContainedRaster, type Raster, type Size } from './raster'
 import { imageFactoryExportFonts } from './fonts'
 import { brandArtwork } from './brand-artwork'
 
@@ -33,15 +33,15 @@ export function resizeTextLayer(layer: TextLayer, canvas: Size, height: number, 
   const xForWidth = (nextWidth: number) => west ? layer.x + (width - nextWidth) / canvas.width : layer.x
   if (handle.length === 1) {
     const minimumWidth = Math.max(1, Math.min(width, 24))
-    const nextWidth = Math.min(canvas.width, Math.max(minimumWidth, width + horizontalDelta))
+    const nextWidth = Math.min(Math.max(canvas.width, width), Math.max(minimumWidth, width + horizontalDelta))
     return { x: xForWidth(nextWidth), width: nextWidth / canvas.width }
   }
 
   const verticalDelta = north ? -dy : dy
   const requested = 1 + (width * horizontalDelta + height * verticalDelta) / (width ** 2 + height ** 2)
-  const maximumScale = Math.min(600 / layer.fontSize, canvas.width / width)
+  const maximumScale = Math.min(600 / layer.fontSize, Math.max(1, canvas.width / width))
   const scale = Math.min(maximumScale, Math.max(8 / layer.fontSize, requested))
-  const nextWidth = Math.min(canvas.width, width * scale)
+  const nextWidth = width * scale
   return {
     x: xForWidth(nextWidth),
     y: north ? layer.y + height * (1 - scale) / canvas.height : layer.y,
@@ -94,7 +94,7 @@ export async function drawLayers(context: CanvasRenderingContext2D, scene: Image
     } else {
       if (text.length) await drawTextLayers(context, scene, text)
       text.length = 0
-      if (layer.kind === 'image') context.drawImage(layer.raster.image, 0, 0, scene.width, scene.height)
+      if (layer.kind === 'image') drawContainedRaster(context, layer.raster, scene)
       else {
         const x = layer.x * scene.width, y = layer.y * scene.height
         const width = layer.width * scene.width, height = layer.height * scene.height
