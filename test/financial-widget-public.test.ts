@@ -185,14 +185,25 @@ it('maps Doubao news source and optional publication time independently of retri
   {url:'https://example.com/btc',title:'比特币市场消息',siteName:'市场通讯',publishedAt:'2026-11-12T09:00:00+08:00',snippet:'市场动态'},
   {url:'https://example.net/btc',title:'交易所资讯'},
   {url:'https://example.org/undated',title:'未标注日期的报道',publishedAt:'1970-01-01T08:00:00+08:00'},
+  {url:'https://example.net/zh/news',title:'今天的新闻头条'},
+  {url:'https://example.net/search/AI',title:'热门工具搜索'},
+  {url:'https://example.net/profile/123',title:'机构账号的微博'},
+  {url:'https://example.com/btc?utm_source=api',title:'转载自市场通讯'},
+  {url:'https://example.org/reprint',title:'比特币市场消息'},
+  {url:'https://example.net/zh/news?utm_source=feed',title:'新闻栏目首页'},
+  {url:'https://example.net/?q=今日市场',title:'搜索结果'},
+  {url:'https://example.org/story/326?q=finance',title:'市场收盘报道',publishedAt:'2026-11-13T17:30:00+08:00'},
   {url:'https://name:pass@example.net/private',title:'Invalid'}
  ]}))
  const service=createPublicFinancialWidgetData({identity:()=> 'one',accountSources:{doubao}})
  const result=await service.query({action:'news',query:'比特币',source:'doubao'})
- expect(doubao).toHaveBeenCalledWith('比特币 最新新闻',8,expect.any(AbortSignal))
+ expect(doubao).toHaveBeenCalledWith('比特币 近一周新闻报道',8,expect.any(AbortSignal))
  expect(result).toMatchObject({source:'豆包搜索',receivedAt:expect.any(String),news:[
+  {title:'市场收盘报道',source:'example.org',time:'2026-11-13T17:30:00+08:00'},
   {title:'比特币市场消息',source:'市场通讯',time:'2026-11-12T09:00:00+08:00'},
   {title:'交易所资讯',source:'example.net',time:null},
   {title:'未标注日期的报道',source:'example.org',time:null}
  ]})
+ await service.query({action:'news',query:'上周市场',source:'doubao'})
+ expect(doubao).toHaveBeenLastCalledWith('上周市场 新闻报道',8,expect.any(AbortSignal))
 })
