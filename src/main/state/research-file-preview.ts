@@ -1126,6 +1126,10 @@ export class ResearchFilePreviewRegistry {
       return errorResponse(403, 'Preview capability denied.')
     }
     const capabilityOrigin = `${RESEARCH_PREVIEW_SCHEME}://${resource.token}`
+    // Workbench pages carry their own code and assets. They also use this
+    // isolated document policy when the project file is dragged onto a board.
+    const standalonePage = authorization.name.toLowerCase().endsWith('.workbench.html')
+    if (standalonePage && resource.relativePath !== '') return errorResponse(403, 'Preview path denied.')
     if (capability.mediaContentType && resource.relativePath !== '') return errorResponse(403, 'Preview path denied.')
     if (
       requestOrigin !== null && requestOrigin !== allowedOrigin &&
@@ -1202,6 +1206,14 @@ export class ResearchFilePreviewRegistry {
         ? { token: resource.token, frameAncestor: allowedOrigin }
         : undefined
       const headers = securityHeaders(kind.contentType, corsOrigin, htmlCapability)
+      if (standalonePage && htmlCapability) {
+        headers.set('Content-Security-Policy', [
+          'sandbox allow-scripts', "default-src 'none'", "script-src 'unsafe-inline'",
+          "style-src 'unsafe-inline'", 'img-src data: blob:', 'font-src data:',
+          "connect-src 'none'", "base-uri 'none'", "form-action 'none'",
+          `frame-ancestors ${htmlCapability.frameAncestor}`
+        ].join('; '))
+      }
       headers.set('Accept-Ranges', 'bytes')
       const rangeHeader = request.headers.get('range')
       const range = rangeHeader === null ? null : parseRange(rangeHeader, file.size)

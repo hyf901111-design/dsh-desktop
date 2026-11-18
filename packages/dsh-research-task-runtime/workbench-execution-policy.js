@@ -16,6 +16,7 @@ import { workbenchSourceProgress, workbenchStructuredSourceGuidance } from './wo
 import {isWorkbenchPrototypeTableRead} from './prototype-source-authority.js'
 import {pastedWorkbenchBlocks} from './workbench-pasted-tables.js'
 import {newsRecordTableGuidance} from './news-source-scope.js'
+import {WEBPAGE_GUIDANCE} from './workbench-webpage.js'
 
 const builtinTushareRead=Symbol.for('ework.builtin-tushare.read')
 const builtinTushareCatalog=Symbol.for('ework.builtin-tushare.catalog')
@@ -427,7 +428,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     if (documentGuidance) return { ...request, system: [request.system, documentGuidance, newsRecordTableGuidance(human.text), PLANNING_PROGRESS_GUIDANCE].filter(Boolean).join('\n'), tools }
     if (!prototypeSource && !simulation && generalFuturesWorkbench(human.text)) return {...request,tools,system:[request.system,sharedSourceGuidance,sourceDirectory,state.sourceProgress.guidance(),WORKBENCH_LIBRARY_GUIDANCE,
       '本次是开放式期货衍生品研究，没有指定跨所全量、会员排行或盘中频率。可先提交现成的商品期货日报（builtin-futures）与按主题更新的要闻（builtin-news），给日报标注交易所覆盖。日报已支持持仓最大合约的品种涨跌排行，点击可进期限曲线、持仓和明细，无需为相同数据预查目录或重复制卡。结合研究问题决定是否补充交易机制关系图、可搜索的在市品种索引或其他有独立用途的入口。品种索引可绑定同一交易日报（options.directory:true）；其他需要长期跟踪的指标优先复用已成功取数的可刷新来源，并保留每期明细。现货替代指标仅在用户要求或有明确比较关系时使用。已被组件库覆盖的字段由组件在挂载及刷新时读取；需要其他真实数据的面板保留明确范围和来源交给单卡取数，或复用本轮已有记录。用同一次 research_workbench_create 提交组件组合，已有 content 不用另写 prompt，任何规格需修正时保留其他有效项。',PLANNING_PROGRESS_GUIDANCE].filter(Boolean).join('\n')}
-    return { ...request, system: [request.system, sourceDirectory, sharedSourceGuidance, sourceOnly&&SOURCE_MODE_GUIDANCE, WORKBENCH_LIBRARY_GUIDANCE, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : DATA_FIRST_GUIDANCE, !simulation&&!offline&&!prototypeSource?workbenchStructuredSourceGuidance(tools,human.text)+state.sourceProgress.guidance():'', prototypeEvidenceGuidance(state.evidenceTargets), PLANNING_PROGRESS_GUIDANCE, newsRecordTableGuidance(human.text,{planning:!offline&&!simulation}),
+    return { ...request, system: [request.system, sourceDirectory, sharedSourceGuidance, sourceOnly&&SOURCE_MODE_GUIDANCE, WORKBENCH_LIBRARY_GUIDANCE, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : DATA_FIRST_GUIDANCE, !prototypeSource && WEBPAGE_GUIDANCE, !simulation&&!offline&&!prototypeSource?workbenchStructuredSourceGuidance(tools,human.text)+state.sourceProgress.guidance():'', prototypeEvidenceGuidance(state.evidenceTargets), PLANNING_PROGRESS_GUIDANCE, newsRecordTableGuidance(human.text,{planning:!offline&&!simulation}),
       !offline && !availableSources.length && fundComparisonCount(human.text) && fundComparisonReader(ctx,agent) && '【中长期纯债基金共同取数】本题命中宿主的同批基金比较取数能力。直接提交完整面板规划，省略 preset、publicData 和未取得的 artifact。宿主取得可比基金样本、净值与管理人后交给各卡复用。',
       offline && !state.evidenceTargets.required.length && '【离线工作台】直接调用 research_workbench_create 交付整套卡。题中现成记录随同一调用提交，保留零、负数、原单位、台账来源与计算口径。交互工具从明确的字段和操作开始，不虚构提交记录。',
       offline && /模拟[^。；\n]{0,40}(?:账簿|台账)|模拟(?:账簿|台账)/u.test(human.text) &&

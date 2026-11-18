@@ -16,6 +16,10 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-r
 .ew-attachment-failure{padding:8px!important;color:var(--grid-muted)!important}.ew-attachment dialog{position:fixed!important;inset:0!important;max-width:90vw!important;width:960px!important;max-height:85vh!important;margin:auto!important;padding:16px!important;border:1px solid var(--grid-border)!important;border-radius:8px!important;background:var(--grid-card)!important;color:var(--grid-text)!important;overflow:auto!important}
 .ew-attachment dialog::backdrop{background:#0008!important}.ew-attachment-view{display:flex!important;flex-direction:column!important;gap:12px!important}.ew-attachment-full-image{display:block!important;max-width:100%!important;max-height:60vh!important;object-fit:contain!important;margin:auto!important}.ew-attachment-file-preview{position:relative!important;height:55vh!important;min-height:180px!important;overflow:auto!important}.ew-attachment-file-preview>*{height:100%!important;max-width:100%!important}
 .ew-attachment progress{width:100%!important;height:6px!important;accent-color:var(--grid-accent,#00a6e9)!important}.ew-attachment [role=alert]{color:var(--grid-text)!important}.ew-attachment-import{display:none!important}
+.ew-attachment-webpage{height:100%!important;min-height:240px;padding:0!important;gap:0!important}
+.ew-attachment-webpage .ew-attachment-file-preview{height:auto!important;flex:1 1 auto!important;min-height:180px!important}
+.ew-attachment-webpage iframe{display:block;width:100%;height:100%;border:0}
+.ew-attachment-webpage footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--grid-border)}
 }
 `
 export function ResearchAttachmentLocalPreview({item,nodeId,sessionId,visible,officePreview,noteDocument=false,readOnly=false,annotationSource,onNaturalSize,onPageStatus}){
@@ -86,6 +90,14 @@ export function ResearchAttachmentPreset({node,sessionId,visible=true,officePrev
  const meta=item=>[item.mimeType??item.name.split('.').pop().toUpperCase(),item.sizeBytes===null||item.sizeBytes===undefined?'大小未知':item.sizeBytes+' 字节',item.date??'日期未提供'].join(' · ')
  const fileIcon=jsx('svg',{className:'ew-attachment-icon',viewBox:'0 0 24 24','aria-hidden':true,children:jsx('path',{d:'M5 2h9l5 5v15H5zM14 2v6h5M8 12h8M8 16h8',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinejoin:'round'})})
  const sourceExists=item=>!!(item.url||item.relativePath||item.authorizationId)
+ if(spec.presentation==='webpage'){
+  const page=spec.items[0],file=resolved[page.id],error=failures[page.id]
+  return jsxs('section',{ref:root,className:'ew-attachment ew-attachment-webpage','data-research-attachment-preset':'webpage','data-research-preview-interactive':'',onPointerDown:e=>e.stopPropagation(),children:[
+   jsx('style',{children:RESEARCH_ATTACHMENT_CSS}),
+   jsx('div',{className:'ew-attachment-file-preview',children:file?jsx(ResearchAttachmentLocalPreview,{item:{...page,authorizationId:file.authorizationId},nodeId:identity(page).nodeId,sessionId,visible}):jsx('p',{role:error?'alert':'status',className:'ew-attachment-failure',children:error??'正在打开项目网页…'})}),
+   jsxs('footer',{children:[notice&&jsx('span',{role:'status',children:notice}),error&&jsx('button',{type:'button',onClick:()=>retryPreview(page),children:'重新打开'}),allowed(page,'download')&&jsx('button',{type:'button',disabled:busy||!file,onClick:()=>download(page),children:'下载网页文件'})]})
+  ]})
+ }
  const previewItem=spec.items.find(i=>i.id===selected),index=spec.items.findIndex(i=>i.id===selected),navigable=spec.items.filter(i=>allowed(i,'preview')&&sourceExists(i)),navigationIndex=navigable.findIndex(i=>i.id===selected),items=spec.items.filter(i=>[i.name,i.description,i.source].some(v=>v?.toLowerCase().includes(query.toLowerCase())))
  const actions=item=>jsxs('div',{className:'ew-attachment-actions',children:[jsx('button',{type:'button',disabled:!allowed(item,'preview')||!sourceExists(item),onClick:()=>choose(item.id),children:'预览'}),jsx('button',{type:'button',disabled:!allowed(item,'download')||!sourceExists(item)||busy,onClick:()=>download(item),children:'下载原文件'}),jsx('button',{type:'button',disabled:!allowed(item,'remove'),onClick:()=>remove(item),children:'移除'})]})
  return jsxs('section',{ref:root,className:'ew-attachment','data-research-attachment-preset':spec.type,'aria-busy':busy,'data-research-preview-interactive':'',onPointerDown:e=>e.stopPropagation(),children:[

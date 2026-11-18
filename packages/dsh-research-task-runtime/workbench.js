@@ -7,6 +7,7 @@ import {workbenchTushareDirectory} from './workbench-source-progress.js';
 import {compileObservedSourceView, observedSourceViews, OBSERVED_SOURCE_GUIDANCE, OBSERVED_SOURCE_VIEW_SCHEMA, OBSERVED_SOURCES_TOOL} from './workbench-source-views.js';
 import {prepareObservedWorkbenchRefresh,resolveObservedWorkbenchDatasets,workbenchReplayTools} from './workbench-observed-refresh.js';
 import {assertPrivateResearchSession} from './board-runtime.js'
+import {prepareWorkbenchWebpages, saveWorkbenchWebpages, WEBPAGE_SCHEMA} from './workbench-webpage.js'
 import { createHash, randomUUID } from 'node:crypto';
 import { canvasHumanRequest } from './canvas-task-routing.js';
 import { workbenchCreationRequest, planningDataIntent, workbenchOfflineRequest, workbenchNeedsInlineBinding } from './workbench-execution-policy.js';
@@ -317,6 +318,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         }
         const capture = sharedPlans.get(exec.agent?.session?.id);
         if (capture) {
+            if (args.panels?.some(panel => panel?.htmlFile || panel?.artifact?.presentation === 'webpage'))
+                throw Error('此网页保存在个人项目内。共享画板请使用可共同读取的原生组件。');
             exec.signal?.throwIfAborted();
             return resolveSourceTables(args).then(async resolved=>{
                 const plan = validateWorkbench(resolved);
@@ -335,7 +338,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 throw Error('研究会话不可用');
             exec.signal?.throwIfAborted();
             await assertPrivateResearchSession(parentSessionId);
-            const sources=await resolveSourceTables(args);
+            const webpages=prepareWorkbenchWebpages(args,parentSessionId,originalHumanRequest?.text);
+            const sources=await resolveSourceTables(webpages.args);
             const resolved=await resolveWorkbenchPrototypeTables(sources,ctx,exec,originalRequest);
             const fundScope = fundCount && !args.preset && args.dataMode !== 'simulated' && !resolved.sharedDatasets;
             const fundReader = fundScope && !observedSources?.length &&
@@ -454,6 +458,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         previous.originalRequest && input.originalRequest && previous.originalRequest !== input.originalRequest)
                         throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
                 }
+                await saveWorkbenchWebpages(ctx,exec,webpages.pages);
                 if (old.ready && old.panels.some(p=>!p.taskId) && (recoveredDraftHash||old.generationMode==='deferred'||old.panels.every(p=>p.artifact))) { await startDeferred(old); await persist(); }
                 return { ...refreshReceipt(), planId: old.id, tabs: old.tabs?.map(t=>t.name)??[], panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? incompleteWorkbench(old) ? 'incomplete' : (old.sharedComparisonPrepared || preparedWorkbench(old)) && old.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' : 'preparing', ...workbenchReceiptDetail(old) };
             }
@@ -464,6 +469,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 plans = plans.filter(p => !p.applied || p.createdAt > Date.now() - 30 * 86400000);
             if (plans.length >= 1000)
                 throw Error('工作台记录过多，暂时无法创建新的工作台。');
+            await saveWorkbenchWebpages(ctx,exec,webpages.pages);
             plans.push(plan);
             // Save identities before starting children. A partial failure remains visible and retryable.
             try {
@@ -577,6 +583,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         requests: { ...publicDataRequestsSchema, description: '兼容平铺写法，必须同时提供profile；优先写入publicData.requests。' },
                         library:{type:'object',additionalProperties:false,description:'实时行情、K线和可搜索实时新闻优先直接挂载组件库，省略artifact和publicData。options只填配置，不填数据。',properties:{id:{type:'string',enum:WORKBENCH_LIBRARY_IDS,required:true},options:{type:'object',additionalProperties:true,description:'symbols:[{code,market,name}], query, period, adjustment, indicators, dataSource, refreshMinutes, refreshEnabled。加密现货用 market:CRYPTO 与 BTC/USD、ETH/USD 或 SOL/USD；专题实时新闻用 query，按需要设置 dataSource:doubao；日历无需options。'}}},
                         content: {type:'object',additionalProperties:true,description:COMPONENT_CONTENT_GUIDANCE},
+                        htmlFile: WEBPAGE_SCHEMA,
                         sourceView: {...OBSERVED_SOURCE_VIEW_SCHEMA,description:OBSERVED_SOURCE_GUIDANCE},
                         artifact: { oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }], description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。deferred模式优先省略，null仅在该模式表示尚未提供数据；其他模式不接受null。真实来源/时点就近标注。' },
                         publicData: { type: 'object', additionalProperties: false, description: '嵌套于panel的已适配来源配置；必须显式填写publicData.profile，只在prompt写profile无效。例如 {"profile":"quotes-table","requests":[{"source":"tencent-quotes","parameters_json":"{\\"symbols\\":[\\"sh510300\\"]}"}],"intervalMinutes":1}。宿主并行取数、渲染模板并保存自动刷新；无需先query、抄写数据或逐卡模型。与artifact/模拟模式互斥。', properties: {

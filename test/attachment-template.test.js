@@ -1,3 +1,4 @@
+import {ATTACHMENT_GUIDANCE} from '../packages/dsh-research-task-runtime/attachment-template-contract.js'
 import {it,expect} from 'vitest'
 import {parseResearchContainerSpec} from '../packages/dsh-research-task-runtime/artifact-validator.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
@@ -43,6 +44,12 @@ it('文件与图库一次prepared完整原始清单，不启动逐卡生成',asy
  const ctx={agents:{get:()=>({})},tools:{register:t=>{tool=t;return()=>{}}},webServer:{register:()=>()=>{}}},runtime={startPreparedBatch:async({panels})=>{prepared=panels;return panels.map(p=>({taskId:p.canvasNodeId}))},start:async()=>{childCalls++;return{taskId:'unexpected'}}},dispose=await registerWorkbench(ctx,runtime,{filePath:join(dir,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async()=>({})})
  try{const result=await tool.execute({requestId:'own-attachment-prepared',title:'本人文件与图集',dataMode:'source',panels:[files,gallery].map(artifact=>({title:artifact.title,type:artifact.type,size:'medium',prompt:'只使用本人提供的原文件，不编造样例',artifact}))},{agent:{session:{id:'own-attachments'}}});expect(result.status).toBe('prepared');expect(result.templateIds).toEqual(['files','gallery']);expect(prepared.map(p=>p.artifact)).toEqual([files,gallery]);expect(childCalls).toBe(0)}finally{await dispose();await rm(dir,{recursive:true,force:true})}
 })
-it('附件内置技能完整模式与逐卡模式均使用当前预置契约',()=>{
- for(const profile of ['full','panel']){const content=loadBundledComponentSkill(undefined,{profile});expect(content).toContain('v1.33.0');for(const text of ['panel.type=files','panel.type=gallery','sizeBytes','不编造样例','不生成HTML或逐卡模型','权限独立','32MB'])expect(content).toContain(text)}
+it('完整与逐卡技能保留网页决策依据，原文件契约由模板提供',()=>{
+ for(const profile of ['full','panel']){
+  const content=loadBundledComponentSkill(undefined,{profile})
+  expect(content).toContain('htmlFile')
+  expect(content).toContain('参考网页按输入资料处理')
+ }
+ for(const text of ['panel.type=files','panel.type=gallery','sizeBytes','不编造样例','权限独立'])
+  expect(ATTACHMENT_GUIDANCE).toContain(text)
 })
