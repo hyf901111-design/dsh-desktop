@@ -34,7 +34,11 @@ export function generalNewsScope(requirement=''){
  // Bare default-widget titles carry no authored topic. New workbench recipes
  // still require explicit whole-market intent, or the parent's original scope.
  if(requirement.trim()===title&&genericTitle.test(title))return true
- if(!broadTitle.test(title))return false
+ // A legacy generic panel may spell out a headline list and its display
+ // columns. Preserve any other subject or constraint for targeted retrieval.
+ const description=requirement.split('\n')[1]?.trim() ?? ''
+ const marketHeadlines=title==='财经要闻' && /^(?:展示|查看)?(?:最新|今日)?(?:真实)?财经(?:新闻|要闻)(?:[，、 ]*(?:保留|显示|附上|来源|日期|时间|标题|链接|原文|摘要|和|与|及))*[。.]?$/u.test(description)
+ if(!broadTitle.test(title) && !marketHeadlines)return false
  const original=requirement.split('\n【原始工作台需求】\n')[1]
  const positive=original?.replace(/(?:不要|不需要|不得|禁止|不用|无需|不使用|\b(?:no|not|without)\b)[^。；;\n]*/giu,'')
  return !original||broadRequest.test(positive)
