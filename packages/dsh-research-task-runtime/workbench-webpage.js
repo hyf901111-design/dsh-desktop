@@ -4,14 +4,16 @@ import {link, open, realpath, unlink} from 'node:fs/promises'
 import {isAbsolute, join} from 'node:path'
 import {parse} from 'parse5'
 import {compactWebpageCss, compactWebpageGuidance, webpageControlGuidance} from './workbench-webpage-compact.js'
+import {costComparisonGuidance, costComparisonSchema, renderCostComparison} from './workbench-cost-page.js'
 
 const COMPACT_PAGE_GUIDANCE = '生成网页优先选 htmlFile.stylePreset="compact-v1"。宿主将易方达官网数据页的紧凑版样式内嵌到文件。按用户操作选用 .filters 筛选行、dl.metrics 指标组、role="tablist"/"tab" 页签、.table-scroll 表格容器和 .numeric 数值列。'
 
 export const WEBPAGE_GUIDANCE = [
   '先从用户要完成的操作选择交付形式。浏览新闻、跟踪行情、单表搜索、待办和独立刷新用合适的原生组件；原生页签、筛选、公共数据和联动足够时直接使用。用户要可带走的网页，或一个操作流程要让多步输入、情景比较、联动图解和结果共用状态且原生组件难以表达时，可以交付一份网页文件。卡片数量、信息多、提到网页来源本身都不是理由。混合需求可以把互动工具做成网页，把需定时更新的信息绑定原生数据源。',
-  '网页在研究看板内直接打开，同时保留项目文件；用同一次 research_workbench_create 提交 type:"files"、title、prompt（说明用户操作）和 htmlFile:{name,html,stylePreset:"compact-v1"}，html 是完整的独立 HTML 文档，脚本和样式内嵌，使用事件监听。在页面内实现操作。让正文按卡宽自然换行排布，使用文档流撑开高度。',
+  '网页在研究看板内直接打开，同时保留项目文件。用同一次 research_workbench_create 提交 type:"files"、title、prompt（说明用户操作）和 htmlFile。符合下述计价规则时提交 costComparison，其余自定义网页提交 htmlFile:{name,html,stylePreset:"compact-v1"}。html 是完整的独立 HTML 文档，脚本和样式内嵌，使用事件监听。在页面内实现操作。让正文按卡宽自然换行排布，使用文档流撑开高度。',
   webpageControlGuidance,
   COMPACT_PAGE_GUIDANCE,
+  costComparisonGuidance,
   compactWebpageGuidance,
   '用底色和字重标明选中项，保留可见的键盘焦点。图表用颜色区分数据系列，散点和环图保留表达数据所需的形状。省去装饰性渐变和阴影。',
   '背景、正文、控件、图表分别使用 --sherlock-bg、--sherlock-text、--sherlock-control-bg、--sherlock-chart-1 等看板配色变量，并为离线打开提供 CSS 回退色。脚本绘制的图表也跟随配色，Canvas 在 sherlock-presentation-change 时重绘。绑定读数及图表时核对实际元素，覆盖初始展示和参数改变后的重绘。宿主提供组件顶栏、来源底栏和 HTML 导出入口。只用用户输入或已核对的资料，不承诺联网刷新、跨次保存或把同一内容再铺成多张卡。仅要原生组件就尊重选择。'
@@ -22,7 +24,8 @@ export const WEBPAGE_SCHEMA = {
   properties:{
     name:{type:'string',required:true,description:'简短、可读的 .html 文件名，不含目录。'},
     stylePreset:{type:'string',enum:['compact-v1'],description:COMPACT_PAGE_GUIDANCE+'用户指定其他设计时可省略并自定义样式。'},
-    html:{type:'string',required:true,description:'完整自包含 HTML 文档，含正文和所需内嵌脚本、样式。无需另行写文件。'+webpageControlGuidance}
+    costComparison:costComparisonSchema,
+    html:{type:'string',description:'与 costComparison 二选一。完整自包含 HTML 文档，含正文和所需内嵌脚本、样式。无需另行写文件。'+webpageControlGuidance}
   }
 }
 
@@ -73,11 +76,14 @@ export function prepareWorkbenchWebpages(args, sessionId, request) {
     const {htmlFile, ...rest} = panel
     if (rest.type !== 'files' || ['content','artifact','publicData','library','view','sourceView','profile','requests','intervalMinutes','hierarchy'].some(key => rest[key] !== undefined))
       throw Error('网页文件用 type:"files" 和 htmlFile；需持续更新的信息放在绑定数据源的原生卡上。')
-    const {name, stylePreset} = htmlFile ?? {}
-    if (!htmlFile || Object.keys(htmlFile).some(key => !['name','html','stylePreset'].includes(key)) || typeof name !== 'string' ||
+    const {name, stylePreset, costComparison} = htmlFile ?? {}
+    if (!htmlFile || Object.keys(htmlFile).some(key => !['name','html','stylePreset','costComparison'].includes(key)) || typeof name !== 'string' ||
         name !== name.trim() || !/^[^./\\:\p{Cc}\p{Cf}][^/\\:\p{Cc}\p{Cf}]*\.html?$/iu.test(name) || Buffer.byteLength(name) > 150)
       throw Error('网页文件名须是当前项目中的一个 .html 文件名，不含目录。')
-    const html = preparePageHtml(htmlFile.html, stylePreset)
+    if (costComparison !== undefined && htmlFile.html !== undefined)
+      throw Error('费用比较用 costComparison，自定义网页用 html，请只提交其中一项。')
+    const html = costComparison === undefined ? preparePageHtml(htmlFile.html, stylePreset) :
+      preparePageHtml(renderCostComparison(costComparison, rest.title || name, request), stylePreset ?? 'compact-v1')
     const digest = createHash('sha256').update(sessionId).update('\0').update(args.requestId ?? '').update('\0').update(html).digest('hex').slice(0,16)
     const relativePath = name.replace(/\.html?$/iu, '') + '-' + digest + '.workbench.html'
     const item = {id:'page', name, relativePath, mimeType:'text/html', sizeBytes:Buffer.byteLength(html)}

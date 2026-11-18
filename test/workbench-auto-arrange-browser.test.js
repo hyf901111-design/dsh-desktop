@@ -91,6 +91,35 @@ it('preserves compact webpage layout and input across the offline file and the f
  } finally {await page.close()}
 })
 
+it('recalculates an editable portable cost comparison at narrow widths with missing, zero and fixed amounts',async()=>{
+ const page=await browser.newPage({viewport:{width:320,height:540}})
+ const plans=[{name:'店 A',costs:[{label:'包间',basis:'fixed',amount:100},{label:'菜金',basis:'perUnit'}]},
+   {name:'店 B',costs:[{label:'包间',basis:'fixed',amount:40},{label:'菜金',basis:'perUnit',amount:35}]}]
+ const args={panels:[{type:'files',title:'聚餐预算',htmlFile:{name:'聚餐.html',costComparison:{quantity:2,plans}}}]}
+ try{
+   await page.setContent(prepareWorkbenchWebpages(args,'test','聚餐预算').pages[0].html)
+   expect(await page.getByRole('tab',{name:'费用明细'}).getAttribute('aria-selected')).toBe('true')
+   expect(await page.locator('#values tr').first().locator('td').first().innerText()).toBe('—')
+   const amount=page.getByRole('spinbutton',{name:'金额 (元)'}).nth(1)
+   await amount.fill('0')
+   await page.getByRole('tab',{name:'方案对比'}).click()
+   expect(await page.locator('#values tr').first().locator('td').allTextContents()).toEqual(['50','100'])
+   await page.getByRole('tab',{name:'方案对比'}).press('ArrowRight')
+   await amount.fill('20')
+   await page.getByRole('tab',{name:'费用明细'}).press('Home')
+   expect(await page.locator('#values tr').first().locator('td').allTextContents()).toEqual(['70','140'])
+   await page.getByRole('button',{name:'增加数量'}).click()
+   await page.getByRole('button',{name:'增加数量'}).click()
+   expect(await page.locator('#bars strong').allTextContents()).toEqual(['45','45'])
+   await page.getByRole('tab',{name:'费用明细'}).click()
+   await page.getByRole('button',{name:'添加费用项'}).first().click()
+   expect(await page.getByRole('textbox',{name:'费用项目'}).nth(2).evaluate(el=>el===document.activeElement)).toBe(true)
+   await page.getByRole('button',{name:'移除费用项'}).nth(2).click()
+   expect(await page.getByRole('textbox',{name:'费用项目'}).count()).toBe(4)
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+ }finally{await page.close()}
+})
+
 it('production canvas waits for the batch, measures offscreen iframe content, then persists one standard arrangement without taking focus',async()=>{
  const page=await browser.newPage({viewport:{width:1240,height:760}}),errors=[]
  page.on('pageerror',error=>errors.push(error.message))

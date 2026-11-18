@@ -142,11 +142,30 @@ export function bindWorkbenchLibraryLinks(panels,links){
  }
  return synchronizeFinancialLinks(nodes).map((node,i)=>({...panels[i],...(node.containerSpec?{artifact:node.containerSpec}:{})}))
 }
+// A single subject followed by reading/refresh actions describes a feed.
+// Anything else (specified sources, time windows, additional jobs) stays with the planner.
+export function simpleNewsBrief(request) {
+ if (typeof request !== 'string' || request.length > 150) return null
+ const parts=request.normalize('NFKC').trim().split(/[，,。.!！；;\n]+/u).map(part=>part.trim()).filter(Boolean)
+ const match=/^(?:(?:请|帮我|给我|我想|我要|我|想|做|建|搭|弄|来|生成|一个|一张|个)\s*)*([\p{L}\d][\p{L}\d +.-]{0,24}?)(早报|晨报|晚报)(?:工作台|研究看板|看板)?$/u.exec(parts.shift() ?? '')
+ if (!match || /和|与|以及|分别|同时|并|及|只|不要|禁止|附件|上周|昨天|本周|近\d|来源|来自|限定|按|根据|日报|研报|\band\b/iu.test(match[1])) return null
+ const refresh=/^(?:每天|每日)(?:自动|自行|自己|定时)?更新$/u
+ const reading=/^(?:(?:能|可|可以|支持)?(?:点|点开|点击)(?:新闻)?标题(?:能|可|可以)?(?:看|查看|阅读|打开)|(?:能|可|可以)?(?:打开|查看|阅读))(?:新闻)?原文$/u
+ if (!parts.every(part=>refresh.test(part)||reading.test(part))) return null
+ const topic=match[1].trim(),options={query:topic,dataSource:'doubao'}
+ if (parts.some(part=>refresh.test(part))) Object.assign(options,{refreshEnabled:true,refreshMinutes:1440})
+ return {title:topic+match[2],type:'news',prompt:'按发布时间阅读'+topic+'报道，可打开原文。',library:{id:'builtin-news',options}}
+}
+
 // Collapse inferred beats only when an existing feed already matches the
 // whole request. Any remaining subject, source, count or layout stays authored.
 export function consolidateDailyNewsFeeds(plan, request) {
  if (typeof request !== 'string' || request.length > 200 || plan.dataMode === 'simulated' ||
      plan.tabs?.length || plan.links?.length || plan.sharedDatasets?.length || !Array.isArray(plan.panels) || plan.panels.length < 2) return plan
+ const brief=simpleNewsBrief(request)
+ if (brief && plan.panels.some(panel=>panel?.library?.id==='builtin-news') &&
+     plan.panels.every(panel=>['builtin-news','builtin-quote','builtin-watchlist','builtin-indices'].includes(panel?.library?.id) &&
+       !panel.artifact && !panel.content && !panel.publicData && !panel.htmlFile)) return {...plan,panels:[brief]}
  const normalize = value => value.normalize('NFKC').toLowerCase().replace(/人工智能/gu, 'ai').replace(/\s+/gu, '')
  const text = normalize(request)
  if (!/新闻|资讯|要闻|news/u.test(text)) return plan
