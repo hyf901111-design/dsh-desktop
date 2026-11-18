@@ -12,7 +12,7 @@
         "featureName": "研究工作台生成、选源和图表交付优化",
         "branch": "codex/feat/workbench-delivery-20261118",
         "baseCommit": "13e3d123a050daa7d19c807ca816aa894998717c",
-        "tipCommit": "c1180b09a57842f09708c1429e6176bc268fa1a1",
+        "tipCommit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
         "commits": [
           {
             "commit": "c1180b09a57842f09708c1429e6176bc268fa1a1",
@@ -20,6 +20,13 @@
               "13e3d123a050daa7d19c807ca816aa894998717c"
             ],
             "subject": "让研究组件复用真实来源定时更新，改进图表阅读、排行下钻与栏目验收"
+          },
+          {
+            "commit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
+            "parents": [
+              "c1180b09a57842f09708c1429e6176bc268fa1a1"
+            ],
+            "subject": "升级已安装客户端的研究回执，校验新旧趋势图的键盘读数"
           }
         ],
         "files": [
@@ -169,6 +176,10 @@
           },
           {
             "status": "M",
+            "path": "test/component-reading-footer-browser.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/financial-widget-client.test.js"
           },
           {
@@ -180,8 +191,24 @@
             "path": "test/research-native-interactivity.test.ts"
           },
           {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/stored-template-refinements.test.js"
+          },
+          {
             "status": "A",
             "path": "test/workbench-content-metric-view.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-feedback-upgrade-preservation.test.js"
           },
           {
             "status": "M",
@@ -213,8 +240,8 @@
             ],
             "outcome": "passed",
             "summary": "主进程类型检查",
-            "verifiedCommit": "c1180b09a57842f09708c1429e6176bc268fa1a1",
-            "completedAt": "2026-11-18T06:33:18.413Z",
+            "verifiedCommit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
+            "completedAt": "2026-11-18T06:46:13.706Z",
             "timeoutMs": 420000
           },
           {
@@ -258,12 +285,17 @@
               "test/workbench-dataset-view.test.js",
               "test/dataset-view-contract.test.js",
               "test/component-data-service.test.ts",
-              "test/workbench-source-snapshot.test.js"
+              "test/workbench-source-snapshot.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/workbench-feedback-upgrade-preservation.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/component-reading-footer-browser.test.js",
+              "test/stored-template-refinements.test.js"
             ],
             "outcome": "passed",
             "summary": "真实取数、卡内交互、分栏、来源交接与完成回执聚焦回归",
-            "verifiedCommit": "c1180b09a57842f09708c1429e6176bc268fa1a1",
-            "completedAt": "2026-11-18T06:34:22.508Z",
+            "verifiedCommit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
+            "completedAt": "2026-11-18T06:47:34.545Z",
             "timeoutMs": 420000
           }
         ],
@@ -279,7 +311,7 @@
         "risks": [
           "实际模型耗时、第三方接口可用性与最终选卡组合以本地客户端复跑为准"
         ],
-        "generatedAt": "2026-11-18T06:34:22.508Z"
+        "generatedAt": "2026-11-18T06:47:34.545Z"
       }
     }
   ],
