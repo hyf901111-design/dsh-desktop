@@ -29,7 +29,10 @@ function operationsRuntime(type,local){
    count.textContent=done+' / '+rows.length+' 已完成';
    let shown=0;
    for(const row of rows){const checked=row.querySelector('input').checked;row.dataset.completed=String(checked);const statusHidden=filter.value==='todo'?checked:filter.value==='done'?!checked:filter.value.startsWith('status:')?row.dataset.status!==filter.value.slice(7):false;row.hidden=statusHidden||Boolean(owner?.value&&row.dataset.owner!==owner.value);if(!row.hidden)shown++;}
-   find('task-empty').hidden=shown>0;const visible=find('task-visible');visible.textContent='显示 '+shown+' / '+rows.length+' 条';visible.hidden=filter.value===''&&!owner?.value;
+   const empty=find('task-empty');
+   empty.hidden=shown>0;
+   empty.textContent=!rows.length&&local?'添加第一项任务，开始记录。':'当前筛选没有任务';
+   const visible=find('task-visible');visible.textContent='显示 '+shown+' / '+rows.length+' 条';visible.hidden=filter.value===''&&!owner?.value;
   }
   list.addEventListener('change',refresh);filter.addEventListener('change',refresh);owner?.addEventListener('change',refresh);
   if(local){

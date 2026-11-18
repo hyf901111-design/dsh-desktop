@@ -15,7 +15,7 @@ export const OPERATIONS_TEMPLATES = Object.freeze([
 ].map(t=>Object.freeze({...t,type:t.id,version:['note','rss'].includes(t.id)?t.version:'21z-20260930',minWidth:t.minWidth??400,minHeight:t.minHeight??320})));
 const shapes = {
  progress:'items:[{label:"资料收集",current:24,target:24},{label:"数据核验",current:20,target:30}]；1–20项，current/target为有限非负原值，target必须大于0，宿主从合计计算总进度；可选unit、deadline、status。',
- tasks:'items:[{id:"a",title:"核对财务来源",completed:false,status:"进行中",owner:"研究组",due:"2026-10-15",priority:"高",detail:"逐项核验披露日期"}]；1–100条不同id，completed是布尔值，status/owner/due/priority/detail可选。status保留来源业务状态，支持按状态和负责人筛选；本地勾选仅改变个人完成记录，不改写来源status。'
+ tasks:'items:[{id:"a",title:"核对财务来源",completed:false,status:"进行中",owner:"研究组",due:"2026-10-15",priority:"高",detail:"逐项核验披露日期"}]；快照需1–100条记录。个人清单用mode:"local"，用户尚未提供事项时用items:[]，以便自行添加。每条id唯一，completed是布尔值，status/owner/due/priority/detail可选。status保留来源业务状态，支持按状态和负责人筛选；本地勾选仅改变个人完成记录，不改写来源status。'
 };
 export function operationsTemplateSchema(type){
  const common='公共字段 version:1,type,title,asOf（来源及数据时点）；可选 subject（正文业务标题）、note、mode:"snapshot"或"local"。默认snapshot仅展示来源记录；local支持保存到本画布的个人进度、清单、审阅意见和已读标记，不向外部业务系统写入，也不声称已更新原始数据源。';
@@ -40,7 +40,8 @@ export function operationsDataIssue(s){
  for(const key of ['subject','unit','deadline','status','owner','note'])if(s[key]!==undefined&&!text(s[key],key==='note'?2000:256))return `${key} 无效`;
  if(s.mode!==undefined&&!['snapshot','local'].includes(s.mode))return 'mode 必须为 snapshot 或 local';
  const maximum=s.type==='progress'?20:100;
- if(!Array.isArray(s.items)||!s.items.length||s.items.length>maximum)return `items 必须包含1–${maximum}项`;
+ const minimum=s.type==='tasks'&&s.mode==='local'?0:1;
+ if(!Array.isArray(s.items)||s.items.length<minimum||s.items.length>maximum)return `items 必须包含${minimum}–${maximum}项`;
  const seen=new Set();
  for(const [index,item]of s.items.entries()){
   if(s.type==='progress'){

@@ -21,9 +21,9 @@ function runtime(data){
  return window;
 }
 describe('Figma 21Z operations data templates',()=>{
- it.each(['progress','tasks'])('gives a %s generation child the selected contract instead of custom HTML',type=>{
+ it.each(['progress','tasks'])('gives a %s generation child the selected presentation contract',type=>{
   const prompt=buildResearchTaskPrompt({parentSessionId:'session',canvasNodeId:'panel',kind:'container',prompt:workbenchPanelPrompt({title:'运营'}, {title:type,type,prompt:'展示本周运营记录',size:'large'})});
-  expect(prompt).toContain('唯一交付格式：'+operationsTemplateSchema(type));expect(prompt).toMatch(/ework-workbench-components v\d+\.\d+\.\d+/u);
+  expect(prompt).toContain(operationsTemplateSchema(type));expect(prompt).toMatch(/ework-workbench-components v\d+\.\d+\.\d+/u);
  });
  it.each(['progress','tasks'])('retains complete %s source data through the public creation path',type=>{
   const artifact=samples[type],panel={title:artifact.title,type,prompt:'按提供记录展示',size:'large',artifact};
@@ -58,6 +58,21 @@ describe('Figma 21Z operations data templates',()=>{
   input.checked=false;input.dispatchEvent(new window.Event('change',{bubbles:true}));
   expect(document.getElementById('operation-count').textContent).toBe('1 / 3 已完成');
   expect(document.querySelector('details').textContent).toContain('逐项核验来源与披露日期');
+ });
+ it('mounts a blank personal checklist and accepts the first real task',()=>{
+  const artifact={version:1,type:'tasks',title:'一周待办',asOf:'我的清单',mode:'local',items:[]};
+  const plan=validateWorkbench({requestId:'weekly-tasks',title:artifact.title,dataMode:'source',panels:[{title:artifact.title,prompt:'在本地添加并勾选本周的待办事项',type:'tasks',size:'large',artifact}]});
+  const d=runtime(plan.panels[0].artifact).document;
+  expect(d.querySelectorAll('.task-entry')).toHaveLength(0);
+  expect(d.getElementById('task-empty').textContent).toContain('添加第一项任务');
+  d.getElementById('add-task').click();
+  d.getElementById('new-task-title').value='周四整理笔记';
+  d.getElementById('add-task-form').dispatchEvent(new d.defaultView.Event('submit',{bubbles:true,cancelable:true}));
+  const check=d.querySelector('.task-entry input');
+  check.checked=true;check.dispatchEvent(new d.defaultView.Event('change',{bubbles:true}));
+  expect(d.getElementById('operation-count').textContent).toBe('1 / 1 已完成');
+  expect(operationsDataIssue({...artifact,mode:'snapshot'})).toBeTruthy();
+  expect(operationsDataIssue({...samples.progress,mode:'local',items:[]})).toBeTruthy();
  });
  it('updates local progress and refuses invalid counts without changing the total',()=>{
   const window=runtime({...samples.progress,mode:'local'}),document=window.document,input=document.getElementById('progress-1');

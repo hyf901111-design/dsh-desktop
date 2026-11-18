@@ -78,6 +78,9 @@ it('gives an actionable initial structure for the current request, then yields t
  expect(update([user('只看股指期货，创建一个研究工作台')]).text).not.toContain('上期所')
  const comparison=update([user('创建一个区域门店销售对比工作台')]).text
  expect(comparison).toContain('排序图');expect(comparison).not.toContain('行情')
+ expect(update([user('弄个美元兑人民币的看板。')]).text).toContain('报价日期')
+ expect(update([user('做个看板，每天扫一眼 AI 新闻。')]).text).toContain('点标题可读原文')
+ expect(update([user('帮我弄个一周待办看板。')]).text).toContain('可添加、勾选')
  const step={key:'first-public-step',kind:'assistant-step',location:{turn:{turn:4}},data:{blocks:[{kind:'reasoning',text:'private'}]}}
  expect(update([futures,step])?.kind).toBe('received')
  expect(update([futures,{...step,data:{blocks:[{kind:'text',text:'按到期月份看价差'}]}}])).toBeNull()

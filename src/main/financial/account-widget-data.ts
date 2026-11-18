@@ -72,7 +72,9 @@ export async function queryAccountFinancialWidget(
       const url = new URL(item.url)
       const title = item.title?.trim()
       if (!title || !['https:', 'http:'].includes(url.protocol) || url.username || url.password) return []
-      const time = item.publishedAt && Number.isFinite(Date.parse(item.publishedAt)) ? item.publishedAt : null
+      // The search provider uses Unix epoch zero for undated articles.
+      const published = Date.parse(item.publishedAt ?? '')
+      const time = item.publishedAt && Number.isFinite(published) && published !== 0 ? item.publishedAt : null
       return [{ id: url.href, title: title.slice(0, 300), source: item.siteName?.trim() || url.hostname, time, url: url.href, summary: item.snippet?.slice(0, 1200) || '' }]
     })
     return { source: label, news }
