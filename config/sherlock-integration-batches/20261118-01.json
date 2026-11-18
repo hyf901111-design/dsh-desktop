@@ -158,6 +158,52 @@
           "方舟无可见水印开关已独立部署，托管网关本地桩验证已通过。"
         ],
         "generatedAt": "2026-11-18T01:44:48.858Z"
+      },
+      "merged": {
+        "mergeCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
+        "verificationCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
+        "checks": [
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "npm",
+              "test",
+              "--",
+              "test/browser-page-context-rendered.test.js",
+              "test/browser-menu-overlay-focus.test.ts",
+              "test/slash-menu-expanded.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/image-factory-actions-menu.test.ts",
+              "test/image-factory-gallery.test.ts",
+              "test/image-factory.test.js",
+              "test/context-menu-target.test.js",
+              "-t",
+              "^(?!.*matches workspace menu material)"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-page-context-rendered.test.js test/browser-menu-overlay-focus.test.ts test/slash-menu-expanded.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvases.test.ts test/image-factory-canvas-workspace.test.ts test/image-factory-actions-menu.test.ts test/image-factory-gallery.test.ts test/image-factory.test.js test/context-menu-target.test.js -t ^(?!.*matches workspace menu material)",
+            "verifiedCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
+            "completedAt": "2026-11-18T01:45:24.005Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
+            "completedAt": "2026-11-18T01:45:24.005Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "recordedAt": "2026-11-18T01:45:24.005Z"
       }
     }
   ],
