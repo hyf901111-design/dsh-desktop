@@ -46,7 +46,7 @@ it('upgrades the exact installed v2 status layer while rejecting a changed histo
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchConversationLiveActivity(source)
  const frozen=JSON.parse(await readFile('test/fixtures/conversation-live-activity-v2.json','utf8')).definition
  const compatible=transformWorkbenchConversationPresentation(next,true)
- const start=compatible.indexOf('/* ework:conversation-live-activity:v7 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
+ const start=compatible.indexOf('/* ework:conversation-live-activity:v8 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
  const previous=compatible.slice(0,start)+frozen+compatible.slice(end)
  expect(patchConversationLiveActivity(previous)).toBe(next)
  expect(()=>patchConversationLiveActivity(previous.replace('2.4s linear infinite','1s linear infinite'))).toThrow('definition drifted')
@@ -82,6 +82,7 @@ it('gives an actionable initial structure for the current request, then yields t
  expect(update([user('做个看板，每天扫一眼 AI 新闻。')]).text).toContain('点标题可读原文')
  expect(update([user('帮我弄个一周待办看板。')]).text).toContain('可添加、勾选')
  expect(update([user('做个出游预算看板，想比比两套方案，改人数就能算人均，整页还能带走。')]).text).toContain('总价与人均费用')
+ expect(update([user('做个租房看板，想比两套房，调调租金和通勤天数，看每月差多少。')]).text).toContain('总额和方案间的差额')
  expect(update([user('看这个网页的新闻，做个看板')]).text).not.toContain('下载整页')
  const step={key:'first-public-step',kind:'assistant-step',location:{turn:{turn:4}},data:{blocks:[{kind:'reasoning',text:'private'}]}}
  expect(update([futures,step])?.kind).toBe('received')
