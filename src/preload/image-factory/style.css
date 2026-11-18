@@ -111,7 +111,8 @@
   .if-region[data-processing=true]::before {animation:none;opacity:.6}
   .if-region[data-processing=true]::after {display:none;animation:none}
 }
-.if-canvas-status {position:absolute;bottom:0;left:0;right:0;height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;color:var(--if-muted);font-size:12px;pointer-events:none}
+.if-canvas-status {position:absolute;bottom:0;left:0;right:0;height:38px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 14px;
+  background:var(--if-main);color:var(--if-muted);font-size:12px;pointer-events:none}
 .if-canvas-status .if-zoom {display:flex;align-items:center;gap:3px;pointer-events:auto}
 .if-zoom .if-button {height:27px;min-width:24px;padding:0 5px}
 .if-toast {position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;
@@ -290,12 +291,12 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 .if-drawer-tabs {gap:3px}
 .if-toolbar .if-drawer-tabs {padding-inline-end:7px;border-inline-end:1px solid var(--if-line)}
 .if-drawer {position:absolute;z-index:6;left:0;top:0;bottom:38px;width:var(--if-drawer-width);min-height:0;
-  display:flex;flex-direction:column;background:var(--if-panel);border-right:1px solid var(--if-line);
+  display:flex;flex-direction:column;background:var(--if-panel);
   animation:if-reveal-drawer 175ms ease-out}
 @keyframes if-reveal-drawer {from {transform:translateX(-100%)} to {transform:translateX(0)}}
 .if-drawer-header {display:flex;align-items:center;justify-content:space-between;gap:3px;flex:none;
-  padding:8px;border-bottom:1px solid var(--if-line)}
-.if-drawer-header strong {padding-inline-start:4px;font-size:13px;font-weight:550}
+  margin-inline:12px;padding-block:8px;border-bottom:1px solid var(--if-line)}
+.if-drawer-header strong {font-size:13px;font-weight:550}
 .if-drawer-header .if-button {height:29px;min-width:29px;padding-inline:6px;gap:4px;font-size:12px}
 .if-drawer-header .if-symbol {--if-icon-size:14px}
 .if-drawer-header > .if-button {flex:none}
