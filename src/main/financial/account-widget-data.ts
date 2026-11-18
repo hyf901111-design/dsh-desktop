@@ -65,18 +65,37 @@ export async function queryAccountFinancialWidget(
     if (query.action !== 'news') throw Error('豆包搜索仅用于资讯查询')
     if (!options.doubao) throw Error('豆包搜索暂不可用')
     const topic = query.query?.trim() || '财经市场'
-    const keyword = Array.from(topic).length <= 93 && !/新闻|要闻|资讯/.test(topic) ? topic + ' 最新新闻' : topic
+    const hasWindow = /\d{4}年|\d{4}[-/]\d|回顾|历史|昨天|今天|本[周月年]|上[周月]|去[年冬]|(?:近|过去)[一二两三四五六七八九十半\d]+[天周年月]/u.test(topic)
+    const suffix = hasWindow ? ' 新闻报道' : ' 近一周新闻报道'
+    const keyword = Array.from(topic + suffix).length <= 100 ? topic + suffix : topic
     const result = await options.doubao(keyword, 8, signal)
+    const seenTitles = new Set<string>()
+    const seenUrls = new Set<string>()
     const news = result.sources.flatMap(item => {
       if (typeof item.url !== 'string' || item.url.length > 4096 || !URL.canParse(item.url)) return []
       const url = new URL(item.url)
       const title = item.title?.trim()
       if (!title || !['https:', 'http:'].includes(url.protocol) || url.username || url.password) return []
+      // A search hit can be a feed, a search form or a profile instead of a story.
+      const canonical = new URL(url)
+      canonical.hash = ''
+      for (const key of [...canonical.searchParams.keys()]) {
+        if (/^(?:utm_|spm$|fbclid$)/i.test(key)) canonical.searchParams.delete(key)
+      }
+      const path = canonical.pathname.replace(/\/+$/, '')
+      const indexPage = /^(?:\/(?:zh(?:-cn)?|en))?(?:\/(?:news|daily|latest|index(?:\.html?)?))?$/i.test(path)
+      const searchPage = /(?:^|\/)(?:search|searchresult)(?:\/|$)/i.test(path)
+      const searchQuery = [...canonical.searchParams.keys()].some(key => /^(?:q|keyword|query)$/i.test(key))
+      if (searchPage || indexPage && (!canonical.search || searchQuery) || /(?:的\s*微博|的\s*个人主页)$/.test(title)) return []
+      const titleKey = title.replace(/\s+/gu, '').toLowerCase()
+      if (seenTitles.has(titleKey) || seenUrls.has(canonical.href)) return []
+      seenTitles.add(titleKey)
+      seenUrls.add(canonical.href)
       // The search provider uses Unix epoch zero for undated articles.
       const published = Date.parse(item.publishedAt ?? '')
       const time = item.publishedAt && Number.isFinite(published) && published !== 0 ? item.publishedAt : null
       return [{ id: url.href, title: title.slice(0, 300), source: item.siteName?.trim() || url.hostname, time, url: url.href, summary: item.snippet?.slice(0, 1200) || '' }]
-    })
+    }).sort((a, b) => (Date.parse(b.time ?? '') || 0) - (Date.parse(a.time ?? '') || 0))
     return { source: label, news }
   }
   if (source !== 'tushare' && source !== 'datapro') throw Error('未登记的金融数据源')

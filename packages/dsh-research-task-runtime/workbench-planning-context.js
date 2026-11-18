@@ -8,6 +8,13 @@ export function initialWorkbenchInformationPlan(request, english = false) {
   if (typeof request !== 'string' || !request.trim()) return ''
   const text = request.normalize('NFKC')
   const say = (zh, en) => english ? en : zh
+  const portable = /整页.{0,6}(?:带走|下载|导出)|(?:生成|导出|下载|带走|保存).{0,8}(?:独立网页|网页文件|HTML\s*文件)|\b(?:portable|downloadable|standalone)\s+(?:web\s?page|HTML)\b/iu.test(text)
+  const sharedInputs = /改.{0,10}(?:计算|重算|就能算|联动)|共享(?:参数|输入)|参数联动|\b(?:recalculate|shared inputs?)\b/iu.test(text)
+  if (portable && sharedInputs && !/不要|禁止|不需要|取消|\b(?:without|do not)\b/iu.test(text)) {
+    return /预算|人均|\bbudget\b/iu.test(text)
+      ? say('会把可改的预算项、人数和方案对比放进同一张网页。改动输入就能核对新的总价与人均费用，也可以从看板下载整页。', 'I’ll put the editable costs, group size and scenarios on one downloadable page so you can compare totals and per-person costs as you change the inputs.')
+      : say('会把共用的输入、计算和比较结果放在同一张可交互网页中，在看板内操作，也可以下载整页。', 'I’ll put the shared inputs, calculations and comparisons on one interactive page that you can use on the board and download.')
+  }
   if (/附件|上传|原型|仅用|只用|只根据|仅根据|离线|不联网|禁止联网|\.xlsx?\b|\.csv\b|\.docx?\b|\.pdf\b|\b(?:offline|attached|uploaded|prototype)\b/iu.test(text)) {
     return say('先从指定材料提取对象、指标和来源。可比较的记录进入图表，原文和依据放在同卡的详情中。', 'I’ll extract the subjects, measures and sources from the specified material, chart comparable records, and keep the original evidence in the card details.')
   }

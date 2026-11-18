@@ -154,6 +154,8 @@ it('recognizes the actual related latest real news wording without expanding it 
   expect(panel.prompt).toContain('无法取得时明确缺失')
   input.title = '财经要闻'; input.prompt = '展示最新真实财经新闻，保留来源、时间和链接。'
   expect(validatePanel(input).publicData).toMatchObject({ profile: 'news' })
+  input.prompt = '展示最新真实财经新闻，只看人工智能。'
+  expect(validatePanel(input).publicData).toBeUndefined()
 })
 
 it('normalizes only absent or completely empty source artifact slots, retaining strict supplied-data and simulation checks', () => {
