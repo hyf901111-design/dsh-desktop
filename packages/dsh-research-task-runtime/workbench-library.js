@@ -1,4 +1,5 @@
 import {componentLibraryBuiltins} from './component-library-catalog.js'
+import {isDeepStrictEqual} from 'node:util'
 import {financialWidgetDefaults,financialWidgetSpec,financialCanLink,synchronizeFinancialLinks} from './financial-widget-contract.js'
 import {financialIndexCatalog} from './financial-index-catalog.js'
 import {retrospectiveNewsRecords} from './news-source-scope.js'
@@ -140,4 +141,24 @@ export function bindWorkbenchLibraryLinks(panels,links){
   nodes[t].containerSpec={...nodes[t].containerSpec,[nodes[t].containerSpec.widget==='quote'?'linkedWatchlistId':'linkedSourceId']:nodes[s].id}
  }
  return synchronizeFinancialLinks(nodes).map((node,i)=>({...panels[i],...(node.containerSpec?{artifact:node.containerSpec}:{})}))
+}
+// Collapse inferred beats only when an existing feed already matches the
+// whole request. Any remaining subject, source, count or layout stays authored.
+export function consolidateDailyNewsFeeds(plan, request) {
+ if (typeof request !== 'string' || request.length > 200 || plan.dataMode === 'simulated' ||
+     plan.tabs?.length || plan.links?.length || plan.sharedDatasets?.length || !Array.isArray(plan.panels) || plan.panels.length < 2) return plan
+ const normalize = value => value.normalize('NFKC').toLowerCase().replace(/人工智能/gu, 'ai').replace(/\s+/gu, '')
+ const text = normalize(request)
+ if (!/新闻|资讯|要闻|news/u.test(text)) return plan
+ const feeds=[]
+ for (const panel of plan.panels) {
+  if (panel?.library?.id !== 'builtin-news' || panel.artifact || panel.content || panel.publicData || panel.htmlFile ||
+      typeof panel.library.options?.query !== 'string') return plan
+  const {query,...settings}=panel.library.options
+  if (feeds.length && !isDeepStrictEqual(settings,feeds[0].settings)) return plan
+  feeds.push({topic:normalize(query),settings,panel})
+ }
+ const routine=/^(?:请|帮我|给我|我想|我|做|建|搭|弄|搞|一个|个|一张|工作台|研究看板|看板|日报|每天|每日|早上|平时|随时|扫一眼|看一眼|快速看|看看|浏览|跟踪|最新|的|新闻|资讯|要闻|please|make|create|build|me|an?|daily|scan|follow|latest|news|dashboard|[，,。.!！])*$/u
+ const primary=feeds.find(({topic}) => topic && text.includes(topic) && routine.test(text.replace(topic,'')))
+ return primary ? {...plan,panels:[primary.panel]} : plan
 }

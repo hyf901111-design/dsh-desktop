@@ -3,7 +3,7 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {validateWorkbench,layoutWorkbench,workbenchPanelPrompt} from '../packages/dsh-research-task-runtime/workbench-plan.js'
-import {bindWorkbenchLibraryLinks,includeFuturesInformationSources} from '../packages/dsh-research-task-runtime/workbench-library.js'
+import {bindWorkbenchLibraryLinks,consolidateDailyNewsFeeds,includeFuturesInformationSources} from '../packages/dsh-research-task-runtime/workbench-library.js'
 import {synchronizeFinancialLinks,changeWatchlist} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {componentLibraryBuiltins} from '../packages/dsh-research-task-runtime/component-library-catalog.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
@@ -161,3 +161,19 @@ it('decodes exchange-suffixed A-share symbols and preserves a sixty-second index
  expect(result.panels[0].artifact).toMatchObject({widget:'indices',refreshMinutes:1,refreshEnabled:true,
   symbols:[{code:'000001',market:'SH',name:'上证指数'},{code:'000300',market:'SH',name:'沪深300'}]});
 });
+
+it('retains the matching general news feed for a single-topic daily glance and respects authored structure',()=>{
+ const feed=(query,dataSource='doubao')=>({type:'news',title:query,prompt:'浏览报道',library:{id:'builtin-news',options:{query,dataSource}}})
+ const plan={panels:[feed('大模型'),feed('人工智能'),feed('算力与芯片'),feed('海外 AI 大厂')]}
+ const request='做个看板，每天扫一眼 AI 新闻。'
+ expect(consolidateDailyNewsFeeds(plan,request).panels).toEqual([plan.panels[1]])
+ expect(plan.panels).toHaveLength(4)
+ const space={panels:[feed('航天'),feed('卫星')]}
+ expect(consolidateDailyNewsFeeds(space,'弄个航天新闻看板').panels).toEqual([space.panels[0]])
+ for(const text of ['按栏目整理 AI 新闻，分开展示大模型和芯片','做个看板，每天扫一眼 AI 和医药新闻','做个看板，每天扫一眼 AI 新闻，还要美股行情','做个只用附件的AI新闻看板','不要做AI新闻看板']){
+  expect(consolidateDailyNewsFeeds(plan,text)).toBe(plan)
+ }
+ for(const other of [{...plan,tabs:[{label:'新闻',panelIndexes:[0,1]}]},{panels:[feed('人工智能'),feed('大模型','sina')]},{panels:[feed('人工智能'),{type:'chart',title:'行业走势'}]}]){
+  expect(consolidateDailyNewsFeeds(other,request)).toBe(other)
+ }
+})

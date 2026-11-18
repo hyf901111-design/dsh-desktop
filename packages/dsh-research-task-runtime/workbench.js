@@ -1,5 +1,5 @@
 import {workbenchRequestedStyle} from './workbench-request-style.js';
-import {WORKBENCH_LIBRARY_GUIDANCE,WORKBENCH_LIBRARY_IDS,bindWorkbenchLibraryLinks,includeFuturesInformationSources} from './workbench-library.js';
+import {WORKBENCH_LIBRARY_GUIDANCE,WORKBENCH_LIBRARY_IDS,bindWorkbenchLibraryLinks,consolidateDailyNewsFeeds,includeFuturesInformationSources} from './workbench-library.js';
 import {workbenchExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js';
 import {workbenchSourcePolicy,workbenchObservedSourcesForPolicy} from './workbench-source-policy.js';
 import {captureWorkbenchObservedSources} from './workbench-observed-sources.js';
@@ -345,8 +345,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             const fundReader = fundScope && !observedSources?.length &&
                 Array.isArray(resolved.panels) && resolved.panels.some(panel=>panel&&!panel.artifact&&!panel.publicData) &&
                 fundComparisonReader(ctx,exec.agent);
+            const previousPlan=plans.find(plan=>plan.parentSessionId===parentSessionId && plan.requestId===resolved.requestId);
+            const requestText=originalImageMessageId||documentPaths ? undefined : originalHumanRequest?.text;
+            const newsPlan=previousPlan?.panels?.length > 1 ? resolved : consolidateDailyNewsFeeds(resolved,requestText);
             const candidate = fundReader ? includeFundComparisonOverview(resolved,originalRequest,MAX_WORKBENCH_PANELS) :
-                includeFuturesInformationSources(resolved, originalImageMessageId||documentPaths ? undefined : originalRequest, MAX_WORKBENCH_PANELS, plans.find(plan=>plan.parentSessionId===parentSessionId && plan.requestId===resolved.requestId));
+                includeFuturesInformationSources(newsPlan, requestText && originalRequest, MAX_WORKBENCH_PANELS, previousPlan);
             const {input:submitted,scopeDeficits:submittedDeficits} = validateWorkbenchDelivery(candidate, validationOptions);
             let input = submitted;
             let scopeDeficits = submittedDeficits;

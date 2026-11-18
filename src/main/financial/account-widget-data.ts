@@ -85,8 +85,10 @@ export async function queryAccountFinancialWidget(
       const path = canonical.pathname.replace(/\/+$/, '')
       const indexPage = /^(?:\/(?:zh(?:-cn)?|en))?(?:\/(?:news|daily|latest|index(?:\.html?)?))?$/i.test(path)
       const searchPage = /(?:^|\/)(?:search|searchresult)(?:\/|$)/i.test(path)
-      const searchQuery = [...canonical.searchParams.keys()].some(key => /^(?:q|keyword|query)$/i.test(key))
-      if (searchPage || indexPage && (!canonical.search || searchQuery) || /(?:的\s*微博|的\s*个人主页)$/.test(title)) return []
+      const articleKey = [...canonical.searchParams].some(([key, value]) => /^(?:p|post|article|story|item|aid|id)(?:_?id)?$/i.test(key) && value.trim())
+      const pagedFeed = /(?:^|[/-])(?:[a-z]+[_-])?(?:news|archive[s]?|category|tag)(?:$|\/)/i.test(path) && canonical.searchParams.has('page')
+      const archiveTitle = /\barchives?\s*[|·]|(?:的\s*微博|的\s*个人主页)$/i.test(title)
+      if (searchPage || indexPage && !articleKey || pagedFeed || archiveTitle) return []
       const titleKey = title.replace(/\s+/gu, '').toLowerCase()
       if (seenTitles.has(titleKey) || seenUrls.has(canonical.href)) return []
       seenTitles.add(titleKey)

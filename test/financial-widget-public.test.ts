@@ -192,6 +192,11 @@ it('maps Doubao news source and optional publication time independently of retri
   {url:'https://example.org/reprint',title:'比特币市场消息'},
   {url:'https://example.net/zh/news?utm_source=feed',title:'新闻栏目首页'},
   {url:'https://example.net/?q=今日市场',title:'搜索结果'},
+  {url:'https://example.net/?locale=zh-CN',title:'行业资讯与动态'},
+  {url:'https://example.net/zh/news?__nc=123',title:'AI 新闻快讯'},
+  {url:'https://example.net/en/ai_news?page=3',title:'AI News - 最新人工智能行业资讯'},
+  {url:'https://example.net/ja/artificial-intelligence/',title:'人工知能 Archives | eWeek'},
+  {url:'https://example.com/?p=329',title:'编辑部报道'},
   {url:'https://example.org/story/326?q=finance',title:'市场收盘报道',publishedAt:'2026-11-13T17:30:00+08:00'},
   {url:'https://name:pass@example.net/private',title:'Invalid'}
  ]}))
@@ -202,7 +207,8 @@ it('maps Doubao news source and optional publication time independently of retri
   {title:'市场收盘报道',source:'example.org',time:'2026-11-13T17:30:00+08:00'},
   {title:'比特币市场消息',source:'市场通讯',time:'2026-11-12T09:00:00+08:00'},
   {title:'交易所资讯',source:'example.net',time:null},
-  {title:'未标注日期的报道',source:'example.org',time:null}
+  {title:'未标注日期的报道',source:'example.org',time:null},
+  {title:'编辑部报道',source:'example.com',time:null}
  ]})
  await service.query({action:'news',query:'上周市场',source:'doubao'})
  expect(doubao).toHaveBeenLastCalledWith('上周市场 新闻报道',8,expect.any(AbortSignal))
