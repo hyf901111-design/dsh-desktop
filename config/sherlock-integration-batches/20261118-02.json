@@ -9,39 +9,118 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "等待首页项目输入就绪并响应首次斜杠操作",
+        "featureName": "按真实口语需求规划原生组件或交互网页并直接放上研究看板",
         "branch": "codex/feat/workbench-delivery-20261118",
-        "baseCommit": "0a70e2dddefbbd1f68c0050ca2454a2cb55228c2",
-        "tipCommit": "c942501ab600a11ca315537272e11f2fb746929d",
+        "baseCommit": "c942501ab600a11ca315537272e11f2fb746929d",
+        "tipCommit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
         "commits": [
           {
-            "commit": "c942501ab600a11ca315537272e11f2fb746929d",
+            "commit": "ace4796731b927c63cf655bbe9a890801135ba13",
             "parents": [
-              "0a70e2dddefbbd1f68c0050ca2454a2cb55228c2"
+              "c942501ab600a11ca315537272e11f2fb746929d"
             ],
-            "subject": "等待项目输入就绪后展开首页首次点击的命令菜单"
+            "subject": "识别口语看板需求并按单一用途组织汇率、新闻和待办组件"
+          },
+          {
+            "commit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
+            "parents": [
+              "ace4796731b927c63cf655bbe9a890801135ba13"
+            ],
+            "subject": "按交互需求生成便携网页并在研究看板内直接使用"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
+            "path": "packages/dsh-research-task-runtime/attachment-template-contract.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/pending-conversation.mjs"
+            "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
           },
           {
             "status": "M",
-            "path": "test/fixtures/pending-conversation-browser.tsx"
+            "path": "packages/dsh-research-task-runtime/operations-artifact.js"
           },
           {
             "status": "M",
-            "path": "test/pending-conversation-rendered.test.js"
+            "path": "packages/dsh-research-task-runtime/operations-template-contract.js"
           },
           {
             "status": "M",
-            "path": "test/pending-conversation.test.js"
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-library.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-source-progress.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-webpage.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/attachment-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/generation-core.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/financial/account-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-file-preview.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/attachment-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-public.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/operations-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-file-preview.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-resultative-request.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-webpage-file.test.js"
           }
         ],
         "checks": [
@@ -53,8 +132,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "c942501ab600a11ca315537272e11f2fb746929d",
-            "completedAt": "2026-11-18T08:54:38.440Z",
+            "verifiedCommit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
+            "completedAt": "2026-11-18T10:50:45.398Z",
             "timeoutMs": 420000
           },
           {
@@ -63,107 +142,36 @@
               "run",
               "--maxWorkers=3",
               "--testTimeout=30000",
-              "test/pending-conversation-rendered.test.js",
-              "test/pending-conversation.test.js",
-              "test/pending-conversation-panel.test.js",
-              "test/pending-composer-preferences.test.js",
-              "test/command-popup-position-browser.test.js",
-              "test/workspace-draft-state.test.js"
+              "test/workbench-resultative-request.test.js",
+              "test/operations-template.test.js",
+              "test/research-creation-progress.test.js",
+              "test/financial-widget-public.test.ts",
+              "test/conversation-live-activity.test.js",
+              "test/workbench-webpage-file.test.js",
+              "test/attachment-template.test.js",
+              "test/research-file-preview.test.ts",
+              "test/bundled-component-skill.test.js"
             ],
             "outcome": "passed",
-            "summary": "首页项目命令、草稿切换、会话恢复与原生菜单聚焦回归",
-            "verifiedCommit": "c942501ab600a11ca315537272e11f2fb746929d",
-            "completedAt": "2026-11-18T08:54:57.407Z",
+            "summary": "口语建板、阶段回执、专题新闻、待办、网页落盘及原文件预览",
+            "verifiedCommit": "17c1abe76c67a53899d8d96cee8266d7a4575856",
+            "completedAt": "2026-11-18T10:51:03.033Z",
             "timeoutMs": 420000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原地实测签名客户端，项目已选，首次点击只出现会话而无菜单，第二次才展开。补丁在 Chromium 中使用生产输入框、草稿绑定器、原生菜单控制器和列表核验，从空草稿、带光标的草稿以及键入 / 进入，延迟会话初始化后第一次操作就显示选项；显示和查询不会发送消息。"
+          "summary": "集成前在签名客户端实测三种口语看板与一个动词对照，记录耗时、重复资讯和未挂载文件。修改后的生产预览组件在隔离 Chromium 中挂载网页、点击计算并下载原文件。集成后继续签名客户端实测。"
         },
         "acceptanceCriteria": [
-          "首页初次点击或键入 / 等待该项目的新输入就绪后展开",
-          "输入内容和光标范围保留，未实际编辑的草稿恢复不丢弃操作，真正编辑或切换会话后不展开旧菜单",
-          "切换研究发送零条消息，普通发送、重试、应用侧栏和弹出菜单仍可用"
+          "弄个和做个看板均能触发规划与即时回执",
+          "单一需求聚焦能操作、能更新的原生组件",
+          "适合的共享状态流程能生成项目 HTML 并在看板中直接预览、操作及下载"
         ],
         "risks": [
-          "命令是否可用取决于所选项目注册的命令目录"
+          "真实取数与模型响应时长受提供方影响，网页模式适用于本地项目与离线交互"
         ],
-        "generatedAt": "2026-11-18T08:54:57.407Z"
-      },
-      "merged": {
-        "mergeCommit": "0636e450e3d85192668d5b940db8178d9cdbd188",
-        "verificationCommit": "0636e450e3d85192668d5b940db8178d9cdbd188",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "0636e450e3d85192668d5b940db8178d9cdbd188",
-            "completedAt": "2026-11-18T08:55:01.547Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "0636e450e3d85192668d5b940db8178d9cdbd188",
-            "completedAt": "2026-11-18T08:55:01.547Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--testTimeout=20000",
-              "test/research-task-runtime.test.js",
-              "test/hosted-ark-runtime.test.js",
-              "test/research-grid-generation-fit.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/generation-progress-persistence.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/research-workbench-feedback-actions.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-reading.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/chart-detail-projection.test.js",
-              "test/component-reading-footer.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/conversation-response-history.test.js",
-              "test/conversation-response-history-browser.test.js",
-              "test/component-source-projection.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-fund-comparison.test.js",
-              "test/workbench-observed-sources.test.js",
-              "test/workbench-source-views.test.js",
-              "test/workbench-source-snapshot.test.js",
-              "test/workbench-source-exclusive-execution.test.js",
-              "test/workbench-source-policy.test.js",
-              "test/bundled-tushare-mcp.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --testTimeout=20000 test/research-task-runtime.test.js test/hosted-ark-runtime.test.js test/research-grid-generation-fit.test.js test/research-generation-controls.test.ts test/generation-progress-persistence.test.js test/research-workbench-feedback.test.js test/research-workbench-feedback-actions.test.js test/workbench-feedback-upgrade-preservation.test.js test/research-planning-feedback.test.js test/cartesian-chart-details.test.js test/cartesian-chart-reading.test.js test/cartesian-chart-axis-precision.test.js test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/chart-detail-projection.test.js test/component-reading-footer.test.js test/component-reading-footer-browser.test.js test/stored-template-refinements.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-history.test.js test/conversation-response-history-browser.test.js test/component-source-projection.test.js test/workbench-execution-policy.test.js test/workbench-fund-comparison.test.js test/workbench-observed-sources.test.js test/workbench-source-views.test.js test/workbench-source-snapshot.test.js test/workbench-source-exclusive-execution.test.js test/workbench-source-policy.test.js test/bundled-tushare-mcp.test.ts",
-            "verifiedCommit": "0636e450e3d85192668d5b940db8178d9cdbd188",
-            "completedAt": "2026-11-18T08:55:01.547Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-18T08:55:01.547Z"
+        "generatedAt": "2026-11-18T10:51:03.886Z"
       }
     }
   ],
