@@ -163,6 +163,12 @@
       "tip": "12e8b942d3f1ec86f83fa263d31f07338efca0a6",
       "decision": "docs/superpowers/parked/2026-11-10-release-1.5.1-scope.md",
       "reason": "用户已取消的光标动效排查归档；保留原现场，不恢复。"
+    },
+    {
+      "branch": "codex/feat/odyssey-web-165-20261118",
+      "tip": "bb9d04fb94b8b5997f340efdf95fa6eae096e093",
+      "decision": "docs/releases/sherlock-1.6.6.md",
+      "reason": "网页端源码按用户要求交付至独立仓库和部署环境，保留原分支，排除于 1.6.6 桌面客户端发布。"
     }
   ]
 }
