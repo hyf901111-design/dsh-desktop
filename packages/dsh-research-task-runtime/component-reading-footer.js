@@ -2,7 +2,7 @@
 // controls so saved interaction paths and the inert source model stay intact.
 // Kept self-contained because the preview client serializes this function.
 export function refineComponentReadingFooter(html){
- if(typeof html!=='string'||html.includes('data-component-reading-footer="v9"'))return html;
+ if(typeof html!=='string'||html.includes('data-component-reading-footer="v10"'))return html;
  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
@@ -14,7 +14,7 @@ export function refineComponentReadingFooter(html){
  if(!kpi&&!chart&&!market)return html;
  // Replace only our previous display layer. The original model and every
  // existing control remain in their original DOM positions for saved replay.
- html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[12345678]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
+ html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[1-9]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
  // Only real disclosure markup in verified host templates receives the new
  // default. Source JSON and executable strings must remain byte-for-byte intact.
  html=html.replace(/<(script|style|textarea)\b[^>]*>[^]*?<\/\1\s*>|<details\b[^>]*>/giu,tag=>{
@@ -37,7 +37,7 @@ export function refineComponentReadingFooter(html){
  // Hide only metadata reproduced below. Never collapse chart legends,
  // selected-record readouts, per-metric missing states, or full data controls.
  const hidden=[...(kpi?['.indicator-asof','.indicator-footer']:[]),...(chart?['figure>figcaption']:[]),...(market?['body>footer.market-footer']:[])];
- const style=`<style data-component-reading-footer="v9">${hidden.map(selector=>selector+'{display:none!important}').join('')}
+ const style=`<style data-component-reading-footer="v10">${hidden.map(selector=>selector+'{display:none!important}').join('')}
  body>.component-reading-footer:not(:has(.component-reading-tabs)){display:none!important}
  body>.component-reading-footer>details{display:none!important}
  body>.component-reading-footer{box-sizing:border-box;display:block;clear:both;flex:none;margin:8px 0 0!important;padding:6px 0 2px!important;border:0;border-top:1px solid var(--sherlock-border,#8883);color:var(--sherlock-muted,#888);font:11px/18px var(--sherlock-font-sans,system-ui);text-align:left}
@@ -54,7 +54,7 @@ export function refineComponentReadingFooter(html){
  .component-reading-footer a{color:var(--sherlock-link);text-underline-offset:3px}
  /* Flatten only the two host disclosures into one visual row. Original
     parents stay intact, preserving data controls and old interaction routes. */
- body[data-chart-template]:has(svg.template-chart) .chart-readout{display:flex;align-items:center;min-height:32px;padding:7px 10px;margin:6px 0 0;line-height:18px;border-radius:4px;overflow-wrap:anywhere}
+ body[data-chart-template]:has(svg.template-chart) .chart-readout{display:flex;align-items:center;min-height:32px;padding:8px 10px;margin:12px 0 4px;line-height:18px;border-radius:4px;overflow-wrap:anywhere}
  body[data-chart-template]:has(svg.template-chart) .chart-readout-category{color:var(--sherlock-muted)}
  body[data-chart-template]:has(svg.template-chart) .chart-readout-series strong{font-weight:650}
  body[data-chart-template]:has(svg.template-chart) details table :is(th,td)[hidden]{display:none!important}
@@ -63,7 +63,7 @@ export function refineComponentReadingFooter(html){
  body[data-component-reading-tabs]>details,body[data-component-reading-tabs]>.component-reading-footer,body[data-component-reading-tabs]>.component-reading-footer>details{display:contents!important}
  body[data-component-reading-tabs]>.component-reading-footer>details{display:none!important}
  body[data-component-reading-tabs]>details>summary,body[data-component-reading-tabs]>.component-reading-footer>details>summary{display:none!important}
- .component-reading-tabs{grid-row:2;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:3;margin-top:8px;height:34px;background:var(--sherlock-surface);color:var(--sherlock-muted);font:11px/18px var(--sherlock-font-sans,system-ui)}
+ .component-reading-tabs{grid-row:2;grid-column:1;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:3;margin-top:12px;height:34px;background:var(--sherlock-surface);color:var(--sherlock-muted);font:11px/18px var(--sherlock-font-sans,system-ui)}
  .component-reading-tabs[hidden]{display:none}
  .component-reading-tabs [role=tablist]{display:flex;align-items:center;gap:2px;padding:2px;height:30px;border-radius:7px;background:var(--sherlock-surface-muted)}
  /* Own these controls in the host layer as well as standalone previews, so

@@ -315,26 +315,47 @@ body .ew-financial-connection-frame{fill:none;stroke:currentColor;stroke-width:2
 
 body .ew-financial-footer .ew-financial-source-details{flex:none;white-space:nowrap;border:0;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer}body .ew-financial-footer .ew-financial-source-details:hover{text-decoration:underline}
 
-.ew-futures-panel{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column;gap:8px;padding:10px 14px 0;color:var(--fw-text);font-variant-numeric:tabular-nums;container:ew-futures / inline-size}
-.ew-futures-heading,.ew-futures-subheading,.ew-futures-axis-caption{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.ew-futures-heading{flex:none}
-.ew-futures-heading select{max-width:65%}
-.ew-futures-heading a,.ew-futures-panel small,.ew-futures-axis-caption,.ew-futures-rank-scale{color:var(--fw-muted);font-size:11px}
-.ew-futures-tabs{display:flex;align-items:center;gap:4px;border-bottom:1px solid var(--fw-grid);overflow-x:auto;white-space:nowrap;flex:none}
+.ew-futures-panel,.ew-futures-directory{box-sizing:border-box;flex:1 1 0;min-height:0;min-width:0;display:flex;flex-direction:column;gap:10px;padding-block:4px 6px;color:var(--fw-text);font-variant-numeric:tabular-nums}
+.ew-futures-panel{container:ew-futures / inline-size}
+.ew-financial-futures{--futures-section-gap:12px}
+.ew-futures-curve-content{display:grid;grid-template-columns:minmax(0,1fr);row-gap:var(--futures-section-gap)}
+.ew-futures-directory>.ew-futures-panel{padding-block:0}
+.ew-futures-heading{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"product tabs source";align-items:center;gap:6px 14px;flex:none;padding-bottom:4px;border-bottom:1px solid var(--fw-grid)}
+.ew-futures-heading select{grid-area:product;justify-self:start;max-width:100%}
+.ew-futures-heading a{grid-area:source;justify-self:end}
+.ew-futures-subheading,.ew-futures-axis-caption{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ew-futures-panel small,.ew-futures-axis-caption,.ew-futures-rank-scale,.ew-directory-tools [role=status]{color:var(--fw-muted);font-size:11px}
+.ew-futures-tabs{grid-area:tabs;display:flex;min-width:0;align-items:stretch;overflow-x:auto;white-space:nowrap;scrollbar-width:thin}
+.ew-directory-tools{display:grid;flex:none;grid-template-columns:minmax(80px,1fr) auto auto;grid-template-areas:"search count source";align-items:center;gap:6px 12px}
+.ew-directory-tools input{grid-area:search;width:100%}
+.ew-directory-tools [role=status]{grid-area:count;white-space:nowrap}
+.ew-directory-tools a{grid-area:source;justify-self:end}
+.ew-futures-heading a,.ew-directory-tools a{display:inline-flex;align-items:center;min-height:32px;white-space:nowrap}
+.ew-futures-directory>.ew-futures-scroll{flex:1 1 0;min-width:0}
+.ew-futures-directory>.ew-directory-back{align-self:flex-start}
+.ew-directory-reference{flex:none;max-height:42%;overflow:auto;border-top:1px solid var(--fw-grid)}
+.ew-directory-reference summary{cursor:pointer}
+.ew-directory-reference a{display:block}
+@container ew-futures (max-width:560px){
+  .ew-futures-heading{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"product source" "tabs tabs";row-gap:4px;padding-bottom:0}
+}
+@container financial-widget (max-width:390px){
+  .ew-directory-tools{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"search search" "count source"}
+}
 .ew-futures-view,.ew-futures-scroll{min-height:0;overflow:auto}
 .ew-futures-view{flex:1}
 .ew-futures-view p{margin:8px 0;color:var(--fw-muted)}
-.ew-futures-metrics{display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px clamp(16px,6%,64px);padding:2px 0 8px}
+.ew-futures-metrics{display:flex;align-items:flex-start;flex-wrap:wrap;gap:6px clamp(16px,6%,64px);padding-block-start:2px}
 .ew-futures-metrics small,.ew-futures-metrics strong{display:block}
 .ew-futures-metrics strong{margin-top:2px;color:var(--fw-text);font-size:21px;line-height:1.25}
-.ew-futures-term{padding:3px 2px 4px}
+.ew-futures-term{display:grid;grid-template-columns:minmax(0,1fr);min-width:0}
 .ew-futures-axis-caption{line-height:16px}
-.ew-futures-curve{display:block;width:100%;height:clamp(155px,22cqw,216px);overflow:visible;outline-offset:-2px}
+.ew-futures-curve{display:block;width:100%;margin-block-start:6px;height:clamp(155px,22cqw,216px);overflow:visible;outline-offset:-2px}
 .ew-futures-curve:focus-visible{outline:1px solid var(--fw-accent)}
 .ew-futures-curve :is(.rScV5Q_chartGrid,.rScV5Q_chartAxis){stroke:var(--fw-grid);stroke-width:1}
 .ew-futures-curve .rScV5Q_chartLabel{fill:var(--fw-muted);font:11px Inter,'Noto Sans SC',system-ui}
 .ew-futures-curve [data-chart-point]{cursor:pointer}
-.ew-futures-readout{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 12px;padding:7px 9px;background:var(--fw-row);border-inline-start:3px solid var(--fw-ma-1);font-size:12px;line-height:17px}
+.ew-futures-readout{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-block-start:var(--futures-section-gap);padding:8px 10px;background:var(--fw-row);border-inline-start:3px solid var(--fw-ma-1);font-size:12px;line-height:18px}
 .ew-futures-readout strong{color:var(--fw-text)}
 .ew-futures-scroll table{border-collapse:collapse;width:100%;font-size:12px}
 .ew-futures-scroll :is(th,td){padding:6px 5px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--fw-grid)}
@@ -382,8 +403,18 @@ body .ew-financial-footer .ew-financial-source-details{flex:none;white-space:now
   .ew-futures-rank-axis [data-axis=min],.ew-futures-rank-axis [data-axis=max]{display:none}
 }
 @layer ework-workbench{
-  body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-futures-panel .ew-futures-tabs button{border-radius:0!important;padding:3px 6px 5px!important;border-bottom:2px solid transparent!important;height:28px!important}
+  body .ew-financial-widget.ew-financial-futures{padding-inline:12px!important}
+  body .ew-financial-futures .ew-financial-footer{margin-block-start:6px;min-height:30px;padding-block:4px 6px;border-block-start:1px solid var(--fw-grid)}
+  body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-futures-heading select{height:32px!important;max-width:100%;padding:0 24px 0 8px!important;border:1px solid var(--fw-border)!important;background-color:var(--fw-card)!important;background-position:right 6px center!important;color:var(--fw-text)!important}
+  body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-futures-panel .ew-futures-tabs button{flex:0 0 auto;border-radius:0!important;padding:5px 9px!important;border-bottom:2px solid transparent!important;height:34px!important}
   body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-futures-panel .ew-futures-tabs button[aria-selected=true]{color:var(--fw-text)!important;border-bottom-color:var(--fw-ma-1)!important;font-weight:600!important}
+  body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-futures-tabs button:hover{background:var(--fw-row)!important;color:var(--fw-text)!important}
+  body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-directory-tools input{height:32px!important;padding:4px 8px!important;max-width:none!important}
+  body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-directory-product{display:block;width:100%;height:32px!important;text-align:start;color:var(--fw-accent)!important}
+  body .ew-futures-directory>.ew-futures-scroll :is(th,td){text-align:start!important}
+  body .ew-futures-directory>.ew-futures-scroll :is(th,td):last-child{text-align:end!important}
+  body .ew-futures-directory>.ew-futures-scroll th:has(.ew-directory-product){padding-block:0!important;padding-inline:2px!important}
+  body .ew-futures-directory>.ew-futures-scroll thead{position:sticky;inset-block-start:0;z-index:1;background:var(--fw-heading)}
   body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-futures-panel .ew-futures-switch button[aria-pressed=true]{background:var(--fw-control)!important;color:var(--fw-text)!important}
   body :is([data-ework-grid],.en-root) [data-research-node-id] .ew-financial-widget .ew-futures-panel :is(.ew-futures-rank-row,.ew-futures-positions button){height:auto!important;min-height:33px!important;border-radius:0!important;padding:3px 6px!important;color:var(--fw-text)!important}
 }

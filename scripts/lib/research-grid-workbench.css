@@ -163,6 +163,9 @@ body [data-ework-grid] button.odyssey-data-stamp:not(:disabled),body [data-ework
  body [data-ework-grid] [data-research-node-id]::before,body [data-ework-grid] [data-research-node-id]::after{display:none!important}
 }
 body [data-ework-grid] .ew-grid-selection-ring{position:absolute;inset:0;z-index:100;pointer-events:none;border-radius:4px;box-shadow:none}
+/* Native controls share the canvas document. Its capture listener already
+   sees selection modifiers; the iframe gesture shield would steal the click. */
+body [data-ework-grid][data-canvas-tool=select] .rScV5Q_previewBody:has([data-research-preview-interactive],[data-workbench-reading]):not(:has(iframe,[data-research-native-web]))>[data-research-preview-shield]{pointer-events:none!important}
 /* Keep unselected iframe input in the parent document so its wheel reaches
    the canvas even before the sandbox bridge is ready. Selection opens input. */
 body [data-ework-grid][data-canvas-tool=select] .rScV5Q_richNode:not([data-selected=true]):not([open])>.rScV5Q_previewBody:has(iframe[data-research-html-artifact])>.rScV5Q_previewShield{pointer-events:auto!important}

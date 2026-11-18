@@ -29,3 +29,35 @@ it('quotes current-page text as untrusted reference and rejects unreadable or pr
 it('uses ordinary Q&A input and webpage context when the underlying view is Notes or Research',()=>{const shared=vi.fn(props=>props),react={useSyncExternalStore:()=>undefined,useState:()=>[null,()=>{}]},jsx={jsx:(component,props)=>component===shared?shared(props):{component,props},jsxs:()=>({}),Fragment:()=>null},render=new Function('react','react_jsx_runtime','document','eworkPendingConversation','EWorkSharedInputBar','EWorkBrowserReference','return ('+EWorkPendingInputBar.toString()+')')(react,jsx,{body:{dataset:{workspaceSurface:'browser'}}},null,shared,()=>null);render({eworkNotes:true,researchCanvasWorkspace:{},researchFileReferences:['old'],researchArtifactReferences:['old']});expect(shared.mock.calls[0][0]).toMatchObject({eworkNotes:false,researchCanvasWorkspace:undefined,researchFileReferences:[],researchArtifactReferences:[]});shared.mockClear();render({subagentPanel:true,eworkNotes:true});expect(shared.mock.calls[0][0].eworkNotes).toBe(true)})
 
 it('keeps the handed-off draft without sending if navigation changes while native preferences are pending',async()=>{let finish;const f=fixture({prepareSession:()=>new Promise(resolve=>{finish=resolve})}),sending=f.send();await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));f.session.current='another';finish();await sending;expect(f.real.restoreDraftState).toHaveBeenCalled();expect(f.real.submit).not.toHaveBeenCalled();expect(f.pending.getSnapshot().busy).toBe(false)})
+
+it('never opens the old project when the picker changes during a command handoff',async()=>{
+ const f=fixture(),selection={start:1,end:1};
+ let finish;
+ f.sessions.create.mockImplementation(()=>new Promise(resolve=>{finish=resolve}));
+ const opening=f.pending.activate({selection});
+ await f.pending.activate({selection});
+ expect(f.sessions.create).toHaveBeenCalledTimes(1);
+ f.pending.selectWorkspace('B');
+ f.pending.selectWorkspace('A');
+ finish('old');
+ await opening;
+ expect(f.sessions.open).not.toHaveBeenCalled();
+ expect(f.shell.commitSend).not.toHaveBeenCalled();
+ expect(f.pending.getSnapshot()).toMatchObject({workspaceId:'A',activating:false});
+});
+
+it('uses the latest input and keeps webpage research out of opening a home command',async()=>{
+ const context=vi.fn(),commands=vi.fn(),shell={snapshot:{draft:'/',draftRev:1,imageIds:[],occurrences:[]},track:vi.fn(),commitSend:vi.fn()};
+ const f=fixture({makeShell:()=>shell,openCommands:commands,prepareContext:context});
+ let finish;
+ f.sessions.create.mockImplementation(()=>new Promise(resolve=>{finish=resolve}));
+ shell.track('/',1,'insertText');
+ shell.snapshot={...shell.snapshot,draft:'/model',draftRev:2};
+ shell.track('/model',6,'insertText');
+ expect(f.sessions.create).toHaveBeenCalledTimes(1);
+ finish('typed');
+ await vi.waitFor(()=>expect(commands).toHaveBeenCalledWith('typed',f.real,{start:6,end:6},true));
+ expect(f.real.restoreDraftState).toHaveBeenCalledWith(expect.objectContaining({draft:'/model'}));
+ expect(context).not.toHaveBeenCalled();
+ expect(f.real.submit).not.toHaveBeenCalled();
+});

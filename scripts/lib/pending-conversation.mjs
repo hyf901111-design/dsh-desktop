@@ -1,46 +1,94 @@
-/** UI-owned first-message draft. Project choice and pane visibility never create a session. */
-export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,prepareContext,prepareSession,releaseImages}){
- const listeners=new Set();let disposed=false,explicit=false,state={workspaceId:undefined,busy:false,rightSession:undefined};
- const publish=patch=>{state={...state,...patch};for(const fn of listeners)fn()};
+/** Keep project selection and drafts local until an action actually needs a session. */
+export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,prepareContext,prepareSession,releaseImages,openCommands,setView,currentSurface}){
+ const listeners=new Set();let disposed=false,explicit=false,projectRevision=0,state={workspaceId:undefined,busy:false,activating:false,rightSession:undefined};
+ const publish=patch=>{
+  if('workspaceId' in patch&&patch.workspaceId!==state.workspaceId)projectRevision++;
+  state={...state,...patch};for(const fn of listeners)fn();
+ };
  const target=()=>workspaces.list.getSnapshot().items.find(item=>item.workspaceId===state.workspaceId);
- const chooseDefault=()=>{if(disposed||explicit||target())return;const snapshot=workspaces.list.getSnapshot(),id=snapshot.recentWorkspaceId;if(snapshot.items.some(item=>item.workspaceId===id))publish({workspaceId:id})};
- const send=async(_text,_images,mode,admission,external)=>{
-  if(disposed||state.busy){if(external)throw Error('正在准备对话，请稍候。');return}
+ const chooseDefault=()=>{
+  if(disposed||explicit&&target())return;
+  const snapshot=workspaces.list.getSnapshot();
+  if(snapshot.phase==='pending')return;
+  explicit=false;
+  const id=snapshot.items.find(item=>item.workspaceId===snapshot.recentWorkspaceId)?.workspaceId;
+  if(state.workspaceId!==id)publish({workspaceId:id});
+ };
+ const send=async(_text,_images,mode,admission,external,control)=>{
+  if(disposed||state.busy||state.activating){
+   if(external)throw Error('正在准备对话，请稍候。');
+   if(!disposed&&!control&&state.activating)shell.notify('error','正在打开项目会话，草稿已保留。');
+   return;
+  }
   const draft=admission??shell.snapshot,project=target(),before=sessions.list.getSnapshot().current;
-  if(!external&&!draft.draft.trim()&&!draft.imageIds?.length)return;
+  if(!external&&!control&&!draft.draft.trim()&&!draft.imageIds?.length)return;
   if(!project){if(external)throw Error('请先选择项目。');shell.notify('error','请先选择项目。');return}
   if(before!==undefined){if(external)throw Error('当前会话已变化，请重试。');shell.notify('error','当前会话已变化，输入已保留。');return}
-  publish({busy:true});shell.setResearchContextPreparing(true);
+  const surface=currentSurface?.(),revision=projectRevision;
+  const ownsProject=()=>!disposed&&projectRevision===revision&&target()?.path===project.path&&currentSurface?.()===surface;
+  publish(control?{activating:true}:{busy:true});
+  if(!control)shell.setResearchContextPreparing(true);
   let handedOff;
   try{
-   const context=await prepareContext?.();
-   if(disposed||sessions.list.getSnapshot().current!==before||target()?.path!==project.path||shell.snapshot.draftRev!==draft.draftRev)throw Error('输入或项目已变化，请重新发送。');
+   const context=control?undefined:await prepareContext?.();
+   if(!ownsProject()||sessions.list.getSnapshot().current!==before||(!control&&shell.snapshot.draftRev!==draft.draftRev))throw Error('输入或项目已变化，请重试。');
    const id=await sessions.create({workspaceId:project.workspaceId});
-   if(disposed||![undefined,id].includes(sessions.list.getSnapshot().current))throw Error('当前会话已变化，输入已保留。');
+   if(!ownsProject()||![undefined,id].includes(sessions.list.getSnapshot().current))throw Error('当前会话已变化，输入已保留。');
+   // A control can take time to connect. Carry edits made while the user was typing.
+   const transfer=control?shell.snapshot:draft;
    const real=getInput(id);
    if(!real||real.disposed||real.snapshot.draft||real.snapshot.imageIds?.length)throw Error('新会话输入尚未就绪，原输入已保留。');
-   if(draft.imageIds?.length&&!real.addImages([...draft.imageIds]))throw Error('图片未能加入新会话，原输入已保留。');
-   real.restoreDraftState(draft);
-   handedOff=real;real.setResearchContextPreparing?.(true);
-   publish({rightSession:id});const handoff=onCreated(id,context);sessions.open(id);
-   shell.commitSend([...(draft.imageIds??[])],draft.draft);
+   if(transfer.imageIds?.length&&!real.addImages([...transfer.imageIds]))throw Error('图片未能加入新会话，原输入已保留。');
+   real.restoreDraftState(transfer);
+   handedOff=real;if(!control)real.setResearchContextPreparing?.(true);
+   explicit=false;publish({rightSession:id});
+   const handoff=onCreated(id,context);
+   if(control?.view)setView(id,control.view);
+   sessions.open(id);
+   shell.commitSend([...(transfer.imageIds??[])],transfer.draft);
    const transferredRevision=real.snapshot.draftRev;
    await handoff;
    await prepareSession?.(id);
-   if(disposed||sessions.list.getSnapshot().current!==id||real.snapshot.draftRev!==transferredRevision)throw Error('当前会话或草稿已变化，首条消息保留在新会话中，请重新发送。');
+   if(disposed||sessions.list.getSnapshot().current!==id||currentSurface?.()!==surface)throw Error('当前会话已变化，草稿已保留。');
+   if(control){
+    if(!control.view&&real.snapshot.draftRev===transferredRevision)openCommands(id,real,control.selection,control.typed);
+    return;
+   }
+   if(real.snapshot.draftRev!==transferredRevision)throw Error('草稿已变化，首条消息保留在新会话中，请重新发送。');
    // The real shell owns file/reference serialization and command adjudication.
    real.setResearchContextPreparing?.(false);
    if(external)await external(id);else real.submit(mode);
   }catch(error){if(external)throw error;(handedOff??shell).notify?.('error',error?.message||'会话未能创建，输入已保留。')}
-  finally{handedOff?.setResearchContextPreparing?.(false);shell.setResearchContextPreparing(false);publish({busy:false})}
+  finally{if(!control){handedOff?.setResearchContextPreparing?.(false);shell.setResearchContextPreparing(false)}publish(control?{activating:false}:{busy:false})}
  };
  const shell=makeShell({defaultSink:send});
+ let typedSelection;
+ const activate=control=>send(undefined,undefined,'queue',undefined,undefined,control);
+ const typedCommand={typed:true,get selection(){return typedSelection}};
+ if(openCommands){
+  const track=shell.track.bind(shell);
+  shell.track=(text,caret,inputType)=>{
+   track(text,caret,inputType);
+   typedSelection={start:caret,end:caret};
+   if(state.workspaceId&&inputType?.startsWith('insert')&&/(?:^|\s)\/[^\s/]*$/u.test(text.slice(0,caret)))void activate(typedCommand);
+  };
+ }
  // Keep raw occurrences until a real session supplies its registered codecs.
  shell.submit=mode=>send(shell.snapshot.draft,[...(shell.snapshot.imageIds??[])],mode||'queue',shell.snapshot);
  chooseDefault();const off=workspaces.list.subscribe?.(chooseDefault);
- return{shell,submitExternal:fn=>send(undefined,undefined,'queue',undefined,fn),subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},getSnapshot:()=>state,
-  selectWorkspace(id){if(state.busy)throw Error('正在发送，请稍候。');if(!workspaces.list.getSnapshot().items.some(item=>item.workspaceId===id))throw Error('项目已不可用。');explicit=true;publish({workspaceId:id})},
+ return{shell,submitExternal:fn=>send(undefined,undefined,'queue',undefined,fn),activate,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},getSnapshot:()=>state,
+  selectWorkspace(id){if(state.busy)throw Error('正在发送，请稍候。');if(!workspaces.list.getSnapshot().items.some(item=>item.workspaceId===id))throw Error('项目已不可用。');explicit=true;if(state.workspaceId!==id)publish({workspaceId:id})},
   dispose(){disposed=true;off?.();releaseImages?.(shell.snapshot.imageIds??[]);shell.dispose();listeners.clear()}}
+}
+/** Header for a project whose first draft has not needed a host session yet. */
+export function EWorkPendingHomeHeader({pending,busy}){
+ const views=pending.views;
+ react.useSyncExternalStore(views.subscribe,views.version);
+ const css=ConversationRoot_module_css_default;
+ return react.createElement('header',{className:css.header,'data-srb-session-header':'','data-odyssey-home-header':true},
+  react.createElement('span',{className:css.crumbs},react.createElement('span',{className:css.crumb},document.documentElement.dataset.odysseyLocale==='en'?'New Session':'新会话')),
+  react.createElement('div',{className:css.tabs,'data-srb-tabs':'',role:'tablist'},views.list().map(tab=>
+   react.createElement('button',{...conversationViewTabProps(tab,'chat',view=>{if(view!=='chat')void pending.activate({view})}),disabled:busy,key:tab.id}))));
 }
 /** Same native InputBar as ordinary chat, supplied by the pending draft. */
 export function EWorkPendingInputBar(props){
@@ -52,7 +100,9 @@ export function EWorkPendingInputBar(props){
  const state=react.useSyncExternalStore(pending?.subscribe||(()=>()=>{}),pending?.getSnapshot||(()=>undefined));
  if(!props.pendingConversation||!pending)return react_jsx_runtime.jsx(EWorkSharedInputBar,props);
  const shell=pending.shell;
- return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,disabled:!state.workspaceId||state.busy,
+ const disabled=props.disabled||!state.workspaceId||state.busy;
+ return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,disabled,
+  toggleCommandMenu:!disabled&&!state.activating?selection=>pending.activate({selection}):undefined,
   command:async line=>{
    const match=/^\/permission ([^\s]+)$/.exec(line);
    if(!match)return false;

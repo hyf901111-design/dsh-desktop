@@ -37,7 +37,9 @@ it('shows the plot and selected value before opening complete exchange-rate data
   expect(await frame.locator('figcaption').isVisible()).toBe(false);
   const chart=await frame.locator('svg').boundingBox(),tab=await dataTab.boundingBox();
   expect(chart.height).toBeGreaterThanOrEqual(160);
-  expect(chart.y+chart.height).toBeLessThan(tab.y);
+  const readout=await frame.locator('.chart-readout').boundingBox();
+  expect(readout.y-chart.y-chart.height).toBeGreaterThanOrEqual(12);
+  expect(tab.y-readout.y-readout.height).toBeGreaterThanOrEqual(12);
   expect(tab.y+tab.height).toBeLessThanOrEqual(330);
   expect(await frame.locator('.chart-readout strong').allTextContents()).toContain(String(values.at(-1)));
   await frame.locator('svg').press('Home');

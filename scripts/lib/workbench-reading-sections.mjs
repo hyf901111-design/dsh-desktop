@@ -47,7 +47,9 @@ export function workbenchReadingOutline(markdown) {
       if (block.tagName !== 'P' || strong?.nodeName !== 'STRONG') return []
       const title = clean(strong.textContent), after = strong.nextSibling
       if (!title || title.length > 120 || !/\p{L}/u.test(title) || /[。！？.!?]$/u.test(title)) return []
-      const inlineSection = ordinal.test(title) && after?.nodeType === 3 && /^\s*[—–:：-]\s*\S/u.test(after.textContent)
+      const inlineSection = after?.nodeType === 3 && (ordinal.test(title)
+        ? /^\s*[—–:：-]\s*\S/u.test(after.textContent)
+        : title.length <= 32 && /^\s*[:：]\s*\S/u.test(after.textContent))
       if (after && after.nodeName !== 'BR' && !inlineSection && !(after.nodeType === 3 && /^\s*\n/u.test(after.textContent))) return []
       return [heading(title, i)]
     })
