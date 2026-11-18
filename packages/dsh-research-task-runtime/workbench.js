@@ -39,7 +39,7 @@ export function listWorkbenchObservedSources(session,messageId,schemas) {
     return observedSourceViews(captureWorkbenchObservedSources({session,messageId,schemas,onRejected:()=>{}}));
 }
 const publicDataRequestsSchema = { type: 'array', items: { type: 'object', additionalProperties: false, properties: {
-    source: { type: 'string', required: true, enum: ['tencent-quotes','tencent-history','kraken-ticker','kraken-candles','sina-news'] },
+    source: { type: 'string', required: true, enum: ['tencent-quotes','tencent-history','kraken-ticker','kraken-candles','sina-news','ecb-fx'] },
     parameters_json: { type: 'string', required: true, description: '原来源参数JSON字符串。腾讯报价symbols数组每请求1–12个，超限分面板；例如 {"symbols":["sh510300"]}。Kraken pair:XBTUSD或ETHUSD，分钟图interval:1,limit:60；腾讯历史symbol:sh510300,limit:20（日线）；新浪limit:12。证券交易所必须确认，不猜后缀。' }
 } } };
 const refreshReceipt = () => ({refreshStatus:'unverified',refreshGuidance:'刷新配置待确认；以实际绑定及成功刷新状态为准，不能由计划承诺自动刷新已生效。'});
@@ -587,10 +587,10 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         sourceView: {...OBSERVED_SOURCE_VIEW_SCHEMA,description:OBSERVED_SOURCE_GUIDANCE},
                         artifact: { oneOf: [{ type: 'object', additionalProperties: true }, { type: 'null' }], description: '可选。已取得的真实数据或明确模拟数据，按 template 数据契约填写 version:1、type、title 及数据字段；无需 HTML。deferred模式优先省略，null仅在该模式表示尚未提供数据；其他模式不接受null。真实来源/时点就近标注。' },
                         publicData: { type: 'object', additionalProperties: false, description: '嵌套于panel的已适配来源配置；必须显式填写publicData.profile，只在prompt写profile无效。例如 {"profile":"quotes-table","requests":[{"source":"tencent-quotes","parameters_json":"{\\"symbols\\":[\\"sh510300\\"]}"}],"intervalMinutes":1}。宿主并行取数、渲染模板并保存自动刷新；无需先query、抄写数据或逐卡模型。与artifact/模拟模式互斥。', properties: {
-                            profile: { type: 'string', enum: Object.keys(PUBLIC_DATA_PROFILES), description: 'quotes-table/quotes-metrics用tencent-quotes；crypto-metrics用kraken-ticker（1–8个pair，每请求一个pair，3–8个自动合成表格，宜layout:wide）；price-volume用kraken-candles或tencent-history；candlestick仅tencent-history日线；news用sina-news且panel.type=news，其余panel.type=market。应显式提供；仅单个腾讯报价请求且明确声明table类型、market.table或key/label列结构时，缺键可由宿主推导quotes-table。模糊或冲突的显示意图仍报错，显式配置不被覆盖。' },
-                            intervalMinutes: { type: 'number', description: '默认1分钟；0仅手动；遵从用户指定的频率。' },
+                            profile: { type: 'string', enum: Object.keys(PUBLIC_DATA_PROFILES), description: 'quotes-table/quotes-metrics用tencent-quotes；crypto-metrics用kraken-ticker（1–8个pair，每请求一个pair，3–8个自动合成表格，宜layout:wide）；price-volume用kraken-candles或tencent-history；candlestick仅tencent-history日线；news用sina-news且panel.type=news；ecb-usd-cny用panel.type=chart，省略requests即取最近30个公布日并每日刷新，其余panel.type=market。应显式提供；仅单个腾讯报价请求且明确声明table类型、market.table或key/label列结构时，缺键可由宿主推导quotes-table。模糊或冲突的显示意图仍报错，显式配置不被覆盖。' },
+                            intervalMinutes: { type: 'number', description: 'ECB日参考汇率默认1440分钟，其他默认1分钟；0仅手动；遵从用户指定的频率。' },
                             layoutProfile: { type: 'string', enum: ['openterminal'], description: '仅quotes-table、price-volume、news支持专用OpenTerminal布局；不改变原生金融组件或metrics布局。' },
-                            requests: { ...publicDataRequestsSchema, required: true }
+                            requests: { ...publicDataRequestsSchema, description: '仅 ecb-usd-cny 可省略；自定义该窗口时提供相同limit的USD及CNY两项ecb-fx请求。其他模板必须提供具体请求。' }
                         } }
                     } } },
             sharedDatasets: WORKBENCH_DATASETS_SCHEMA

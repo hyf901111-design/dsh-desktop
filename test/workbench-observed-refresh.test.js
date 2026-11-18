@@ -3,7 +3,9 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises'
 import {join} from 'node:path'
 import {tmpdir} from 'node:os'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
-import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench.js'
+import {registerWorkbench,validateWorkbench} from '../packages/dsh-research-task-runtime/workbench.js'
+import {preparePublicDataPanel,validatePublicDataPanel} from '../packages/dsh-research-task-runtime/workbench-public-data.js'
+import {materializeComponentMapping} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {ComponentDataRefresh} from '../packages/dsh-research-task-runtime/component-data-refresh.js'
 import {readTemplateModel} from '../packages/dsh-research-task-runtime/component-template-registry.js'
 import {captureWorkbenchObservedSources} from '../packages/dsh-research-task-runtime/workbench-observed-sources.js'
@@ -27,6 +29,28 @@ const ecbResponse=(currency,rows=observedRates)=>({
  records:rows.map(row=>({time:row.date,value:row[currency==='USD'?'eurusd':'eurcny'],currency,base:'EUR',status:'A'})).reverse(),
 })
 const ecbEvents=()=>['USD','CNY'].flatMap(currency=>pair(publicTool,ecbArgs(currency),ecbResponse(currency),currency))
+it('builds and replays one daily ECB chart without hand-written observations',async()=>{
+ const profile='ecb-usd-cny'
+ const panel={title:'美元兑人民币',type:'chart',prompt:'美元兑人民币参考汇率走势和明细',publicData:{profile}}
+ const plan=validateWorkbench({requestId:'fx-direct',title:'汇率看板',panels:[panel]})
+ expect(plan.panels[0].publicData).toMatchObject({intervalMinutes:1440,requests:['USD','CNY'].map(currency=>({source:'ecb-fx',parameters_json:JSON.stringify({currency,limit:30})}))})
+ const request=(currency,limit=5)=>({source:'ecb-fx',parameters_json:JSON.stringify({currency,limit})})
+ const requests=[request('CNY'),request('USD')]
+ const client={query:vi.fn(async args=>ecbResponse(JSON.parse(args.parameters_json).currency))}
+ const result=await preparePublicDataPanel({...panel,publicData:{profile,requests,intervalMinutes:0}},client)
+ expect(client.query).toHaveBeenCalledTimes(2)
+ expect(result.data.series[0].values).toEqual(observedRates.map(row=>row.usdcny))
+ expect(readTemplateModel(JSON.parse(result.output)).data.detailRows).toHaveLength(5)
+ expect(result.recipe.intervalMinutes).toBe(0)
+ expect(result.recipe.requests.map(r=>[r.key,r.toolId])).toEqual([['cny','public_data_query'],['usd','public_data_query']])
+ const rolling=[...observedRates,{date:'2026-11-18',eurusd:1.1,eurcny:7.48}]
+ const latest=materializeComponentMapping(result.recipe.mapping,{usd:ecbResponse('USD',rolling),cny:ecbResponse('CNY',rolling)})
+ expect(latest.detailRows.at(-1)).toEqual(['2026-11-18',6.8,1.1,7.48])
+ expect(()=>materializeComponentMapping(result.recipe.mapping,{usd:ecbResponse('USD',rolling),cny:ecbResponse('CNY')})).toThrow(/同一公布日/)
+ for(const invalid of [[request('CNY')],[request('CNY'),request('USD',8)],[request('EUR'),request('USD')],[request('USD',101),request('CNY',101)]]){
+  expect(()=>validatePublicDataPanel({profile,requests:invalid},'chart')).toThrow()
+ }
+})
 async function fixture(text,events,execute,effect='read'){
  const session={id:'board-refresh',events:[human(text),...events]},sources=[{name:publicTool},{name:plugin},{name:'financial_query'}]
  const directory=await mkdtemp(join(tmpdir(),'observed-refresh-'))

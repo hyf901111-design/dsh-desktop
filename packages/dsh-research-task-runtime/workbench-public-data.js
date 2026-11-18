@@ -4,6 +4,8 @@ import {financialCryptoIntervals,findFinancialCryptoSymbol} from './financial-cr
 import {generalNewsScope,NEWS_CAPACITY_MARKER,NEWS_DISPLAY_INSTRUCTION} from './news-source-scope.js'
 import {normalizeCryptoTickerResult} from './crypto-source-results.js'
 import {NEWS_QUERY_MARKER} from './news-query-coverage.js'
+import { materializeEcbCrossRate } from './observed-ecb-cross-rate.js'
+import { acceptArtifactOutput } from './artifact-output.js'
 
 // These recipes describe the bundled adapter's schema, never model-authored
 // paths, executable code, arbitrary URLs or connector credentials.
@@ -13,6 +15,7 @@ export const PUBLIC_DATA_PROFILES = Object.freeze({
   'crypto-metrics': { type: 'market', variant: 'metrics', sources: ['kraken-ticker'] },
   'price-volume': { type: 'market', variant: 'price-volume', sources: ['kraken-candles', 'tencent-history'] },
   candlestick: { type: 'market', variant: 'candlestick', sources: ['tencent-history'] },
+  'ecb-usd-cny': { type: 'chart', variant: 'line', sources: ['ecb-fx'] },
   news: { type: 'news', sources: ['sina-news'] }
 })
 const object = v => v && typeof v === 'object' && !Array.isArray(v)
@@ -30,15 +33,26 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
   const profile = object(value) && PUBLIC_DATA_PROFILES[value.profile]
   if (!profile || profile.type !== type || Object.keys(value).some(k => !['profile', 'requests', 'intervalMinutes', 'layoutProfile'].includes(k))) throw Error('免费源组件类型或参数无效')
   if (value.layoutProfile !== undefined && (value.layoutProfile !== 'openterminal' || !['quotes-table', 'price-volume', 'news'].includes(value.profile))) throw Error(`publicData.layoutProfile 不支持 ${value.profile}；仅 quotes-table、price-volume、news 可设 openterminal。保留 profile、原请求和 panel.layout，只移除此不兼容的 layoutProfile，不改数据范围。`)
-  const intervalMinutes = value.intervalMinutes ?? 1
+  const ecb = value.profile === 'ecb-usd-cny'
+  const intervalMinutes = value.intervalMinutes ?? (ecb ? 1440 : 1)
   if (!Number.isInteger(intervalMinutes) || intervalMinutes < 0 || intervalMinutes > 10080) throw Error('免费源组件刷新频率无效')
   // Eight is the existing data-bound request budget, not a larger metrics grid.
-  if (!Array.isArray(value.requests) || !value.requests.length || value.requests.length > (value.profile === 'crypto-metrics' ? 8 : 1)) throw Error('免费源组件请求数量无效')
-  const requests = value.requests.map(request => {
+  const inputs = ecb && value.requests === undefined ? ['USD', 'CNY'].map(currency => ({
+    source: 'ecb-fx', parameters_json: JSON.stringify({ currency, limit: 30 })
+  })) : value.requests
+  const maxRequests = value.profile === 'crypto-metrics' ? 8 : ecb ? 2 : 1
+  if (!Array.isArray(inputs) || !inputs.length || inputs.length > maxRequests) throw Error('免费源组件请求数量无效')
+  const requests = inputs.map(request => {
     if (!object(request) || Object.keys(request).some(k => !['source', 'parameters_json'].includes(k)) || !profile.sources.includes(request.source) || typeof request.parameters_json !== 'string' || request.parameters_json.length > 5000) throw Error('免费源组件只接受当前模板支持的内置来源和参数')
     let parameters
     try { parameters = JSON.parse(request.parameters_json) } catch { throw Error('parameters_json必须为JSON对象字符串') }
     if (!object(parameters)) throw Error('parameters_json必须为JSON对象字符串')
+    if (ecb) {
+      const { currency, limit } = parameters
+      if (Object.keys(parameters).some(key => !['currency', 'limit'].includes(key)) || !['USD', 'CNY'].includes(currency) ||
+          !Number.isInteger(limit) || limit < 1 || limit > 100) throw Error('ECB 美元兑人民币只支持 USD、CNY 和 1–100 个公布日')
+      return { source: request.source, parameters_json: JSON.stringify({ currency, limit }) }
+    }
     // New plans check adapter capabilities before acceptance. Persisted tasks
     // retain their shape contract so old failed recipes remain recoverable.
     if(request.source==='kraken-ticker'||request.source==='kraken-candles'){
@@ -68,6 +82,12 @@ export function validatePublicDataPanel(value, type, { strictParameters = false 
     return { source: request.source, parameters_json: request.parameters_json }
   })
   if (new Set(requests.map(r => JSON.stringify(r))).size !== requests.length) throw Error('免费源组件请求重复')
+  if (ecb) {
+    const windows = requests.map(request => JSON.parse(request.parameters_json))
+    if (windows.length !== 2 || windows[0].currency === windows[1].currency || windows[0].limit !== windows[1].limit) {
+      throw Error('ECB 美元兑人民币需要相同窗口的 USD 和 CNY 两项请求')
+    }
+  }
   return { profile: value.profile, requests, intervalMinutes, ...(value.layoutProfile ? { layoutProfile: value.layoutProfile } : {}) }
 }
 
@@ -331,6 +351,19 @@ export async function preparePublicDataPanel(panel, client, signal, now = new Da
     return outcome.value
   })
   if (responses.some((response, i) => response?.sourceId !== requests[i].args.source || !Array.isArray(response.records) || !crypto&&!response.records.length) || !responses.some(response=>response.records.length)) throw Error('免费来源没有返回该组件所需的真实记录')
+  if (publicData.profile === 'ecb-usd-cny') {
+    const bindingRequests = requests.map(request => ({
+      key: JSON.parse(request.args.parameters_json).currency.toLowerCase(), toolId: request.tool, args: request.args
+    }))
+    const mapping = { version: 1, type: 'chart', variant: 'line', title: panel.title, observedWorkbench: {
+      kind: 'ecb-cross-rate', count: JSON.parse(requests[0].args.parameters_json).limit, digits: 4,
+      columnNames: ['日期', 'USD/CNY', 'EUR/USD', 'EUR/CNY'], seriesNames: ['USD/CNY'], unit: '人民币元/美元'
+    } }
+    const data = materializeEcbCrossRate(mapping, Object.fromEntries(bindingRequests.map((r, i) => [r.key, responses[i]])))
+    const output = acceptArtifactOutput(JSON.stringify(data))
+    if (!output) throw Error('欧洲央行参考汇率未通过图表校验')
+    return { data, output, recipe: { requests: bindingRequests, mapping, intervalMinutes: publicData.intervalMinutes } }
+  }
   const mapping = mappingFor({ ...panel, publicData }, responses)
   const result = resolveBoundComponent(JSON.stringify({ version: 1, type: 'data-bound', requests, mapping }), requests.map((r, i) => ({ tool: r.tool, args: r.args, response: responses[i] })), now)
   if (!result) throw Error('免费来源映射未通过模板校验')

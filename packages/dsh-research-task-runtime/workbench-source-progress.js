@@ -171,7 +171,7 @@ export function workbenchStructuredSourceGuidance(tools, request) {
   const futures = /期货|\bfutures\b/iu.test(request)
   return [
     '按用户指定来源和联网限制执行。先复用本轮已核验且覆盖同一标的、字段和区间的真实记录。没有缺项就直接交付，有缺项只补缺失数据。行情、时间序列及成批记录优先选择适用的结构化来源。',
-    tools.some(tool => tool.name === 'public_data_query') && /美元(?:兑|对)人民币|USD\s*\/?\s*CNY/iu.test(request) ? '美元兑人民币日参考汇率：如果该口径满足需求和来源约束，直接用 public_data_query 的 ecb-fx 分别取相同窗口的 USD 和 CNY 日记录，按同一公布日将每欧元的 CNY 除以 USD。将最新值、走势和明细放在同一卡，标签用公布日期、序列名与明细列名统一为 USD/CNY，保留原始来源、单位及数值精度以复用滚动查询。只有用户需要中间价、盘中价格或指定其他来源时才另查对应口径。' : '',
+    tools.some(tool => tool.name === 'public_data_query') && /美元(?:兑|对)人民币|USD\s*\/?\s*CNY/iu.test(request) ? '美元兑人民币日参考汇率：如果该口径满足需求和来源约束，直接调用 research_workbench_create 提交一张 type:"chart"、publicData:{"profile":"ecb-usd-cny"} 的面板，宿主用 public_data_query 的 ecb-fx 读取 USD 和 CNY、按同一公布日计算交叉汇率，在同一卡展示走势和明细并按日滚动刷新。一次提交即可；省略预查、脚本计算、逐行抄写和额外概览卡。只有用户需要中间价、盘中价格或指定其他来源时才另查对应口径。' : '',
     hasTushare ? 'Tushare 适用于其目录覆盖的国内行情、财报、基金及 ETF 数据。接口已知就直接查询；覆盖不确定时按需求查目录一次，收到空定义后切换到适用且已授权的来源。' : '',
     datapro ? '火山方舟专业数据集（' + datapro.name + '）适用于其覆盖的行情和金融数据。写清市场、证券或合约代码、字段和时间区间，以返回的实际记录核验覆盖与交易日。' : '',
     futures && datapro ? '期货先确定交易所、目标交易日仍在市的合约和所需字段，主力身份须由来源证实。来源约束允许时，用具体代码和已收盘交易日向火山专业数据查询。未指定合约时先从获准的来源核实合约清单及月份。用返回的代码、交易日、逐行行情和覆盖信息核对结果。未识别标的先纠正代码，全空指标及仅有标识的条目按缺失处理，部分有效记录继续复用。' : '',
