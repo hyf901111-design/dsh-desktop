@@ -170,7 +170,17 @@ describe('workbench planning continuation', () => {
       expect(run.wire.system).toContain('可见的键盘焦点')
       expect(run.wire.system).toContain('htmlFile.stylePreset="compact-v1"')
       expect(run.wire.system).toContain('浅色、深色和彭博模式共用布局')
+      expect(run.wire.system).toContain('costComparison')
     } finally { run.dispose() }
+  })
+
+  it('plans a simple morning brief in one native feed call',async()=>{
+    const run=await planningRun('给我做个科技早报看板，每天更新，点标题能看原文。')
+    try{
+      expect(run.wire.tools.map(tool=>tool.name)).toEqual(['research_workbench_create'])
+      expect(run.wire.system).toContain('"query":"科技"')
+      expect(run.wire.system).toContain('"refreshMinutes":1440')
+    }finally{run.dispose()}
   })
 
   it.each([

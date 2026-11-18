@@ -81,3 +81,20 @@ it('embeds the compact stylesheet in the portable file, with stable metadata on 
   expect(withHead).toContain('</style></head><body>')
   expect(()=>prepareWorkbenchWebpages(pageWith(html.replace('增加人数','a'.repeat(255000))),'trip','')).toThrow('256 KB')
 })
+
+it('saves a portable comparison from costs alone, preserving missing amounts, labels and retry identity',async()=>{
+  const {root,prepared,create}=await host()
+  const costs={unit:'人',currency:'元',plans:[
+    {name:'A&B <团餐>',costs:[{label:'包间',basis:'fixed'},{label:'套餐',basis:'perUnit',amount:0}]},
+    {name:'另一家',costs:[{label:'包间',basis:'fixed',amount:100}]}]}
+  const input=page=>({...spec,panels:[{type:'files',title:'预算',htmlFile:{name:'聚餐.html',...page}}]})
+  const receipt=await create(input({costComparison:costs}))
+  const item=prepared[0].artifact.items[0],saved=await readFile(join(root,item.relativePath),'utf8')
+  const data=JSON.parse(saved.match(/<script type="application\/json" id="budget-data">([^<]+)<\/script>/)[1])
+  expect(data.plans).toEqual(costs.plans);expect(saved).toContain('@layer workbench-compact')
+  expect(item.sizeBytes).toBe(Buffer.byteLength(saved))
+  expect((await create(input({costComparison:costs}))).planId).toBe(receipt.planId)
+  expect(()=>prepareWorkbenchWebpages(input({costComparison:costs,html}),'trip','')).toThrow('只提交其中一项')
+  for(const invalid of [{plans:[]},{...costs,quantity:0},{...costs,plans:[costs.plans[0],{name:'B',costs:[{label:'包间',basis:'fixed',amount:-1}]}]}])
+    expect(()=>prepareWorkbenchWebpages(input({costComparison:invalid}),'trip','')).toThrow('费用比较')
+})

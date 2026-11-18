@@ -1,6 +1,6 @@
 import {workbenchPomodoroSettings} from './workbench-pomodoro.js';
 import { isDeepStrictEqual } from 'node:util'
-import {WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
+import {simpleNewsBrief, WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
 import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js'
 import {componentCreationRequest,latestClientModeForAuthority,planningHumanRequest} from './conversation-components-policy.js'
 import { generalFuturesWorkbench, workbenchPlanningContext } from './workbench-planning-context.js'
@@ -17,6 +17,7 @@ import {isWorkbenchPrototypeTableRead} from './prototype-source-authority.js'
 import {pastedWorkbenchBlocks} from './workbench-pasted-tables.js'
 import {newsRecordTableGuidance} from './news-source-scope.js'
 import {WEBPAGE_GUIDANCE} from './workbench-webpage.js'
+import {portableUnitCostRequest} from './workbench-cost-page.js'
 
 const builtinTushareRead=Symbol.for('ework.builtin-tushare.read')
 const builtinTushareCatalog=Symbol.for('ework.builtin-tushare.catalog')
@@ -132,6 +133,18 @@ function sourceCreationParameters(parameters) {
     else delete properties.preset
   }
   return { ...parameters, additionalProperties: false, properties, ...(parameters.required ? { required: parameters.required.filter(name => !omitted.has(name)) } : {}) }
+}
+
+function newsBriefCreationTool(tool) {
+  const description='创建当前用户要求的单主题新闻阅读看板。'
+  const parameters=tool.parameters, root=parameters?.properties, panel=root?.panels?.items
+  if (!panel?.properties) return {...tool,description}
+  const library={type:'object',additionalProperties:false,required:['id','options'],properties:{
+    id:{type:'string',enum:['builtin-news']},options:{type:'object',additionalProperties:false,properties:{
+      query:{type:'string'},dataSource:{type:'string',enum:['doubao']},refreshEnabled:{type:'boolean'},refreshMinutes:{type:'integer'}}}}}
+  const properties={title:panel.properties.title,prompt:panel.properties.prompt,type:{type:'string',enum:['news']},library}
+  return {...tool,description,parameters:{...parameters,properties:{
+    title:{type:'string'},panels:{type:'array',items:{...panel,properties,required:['title','type','library']}}},required:['title','panels']}}
 }
 function prototypeCreationParameters(parameters, allowLibrary = true) {
   const source=sourceCreationParameters(parameters)
@@ -422,6 +435,20 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     })
     state.sourceSchemas = tools
     state.sourceProgress.updateTools(tools)
+    const standalone=!simulation && !documentPaths && !prototypeSource && !hasPastedTable
+    const brief=standalone && !offline && simpleNewsBrief(human.text)
+    if (brief) {
+      const create=tools.find(tool=>tool.name===CREATE_TOOL)
+      if (create) {
+        return {...request,tools:[newsBriefCreationTool(create)],
+          system:[request.system, '本轮只需一份可刷新的主题早报。用 research_workbench_create 直接提交 '+JSON.stringify({title:brief.title,panels:[brief]})+'。组件挂载后读取对应主题的最新报道。提交后根据回执简要说明阅读方式。'].join('\n')}
+      }
+    }
+    if (standalone && portableUnitCostRequest(human.text)) {
+      const create=tools.find(tool=>tool.name===CREATE_TOOL)
+      if (create) return {...request,tools,
+        system:[request.system,WEBPAGE_GUIDANCE,'本题优先用 htmlFile:{name,costComparison:{unit,currency,plans:[{name,costs:[{label,basis}]}]}}。固定费用用 fixed，每人或每件的单价用 perUnit。未提供金额留空让用户填，交互和图表由宿主生成，可直接提交。'].join('\n')}
+    }
     const sharedSourceGuidance = observedSources?.some(record=>record.response && !Array.isArray(record.response) &&
       !Array.isArray(record.response.records)) &&
       '本轮已有可交接的嵌套来源。源目录没有平面编号时，按实际响应保留面板所需对象、字段和时点。组件可先从本地快照读取同一响应，缺覆盖时才补查。'

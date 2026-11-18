@@ -170,6 +170,11 @@ it('retains the matching general news feed for a single-topic daily glance and r
  expect(plan.panels).toHaveLength(4)
  const space={panels:[feed('航天'),feed('卫星')]}
  expect(consolidateDailyNewsFeeds(space,'弄个航天新闻看板').panels).toEqual([space.panels[0]])
+ const proposed={panels:[feed('科技行业动态'),feed('海外科技'),{title:'指数',library:{id:'builtin-indices'}},{title:'比特币',library:{id:'builtin-quote'}}]}
+ expect(consolidateDailyNewsFeeds(proposed,'给我做个科技早报看板，每天更新，点标题能看原文。').panels)
+   .toMatchObject([{title:'科技早报',library:{id:'builtin-news',options:{query:'科技',dataSource:'doubao',refreshMinutes:1440}}}])
+ for(const text of ['做个科技早报，另加比特币行情','科技早报，只用昨天的数据','做个科技和医药早报','根据附件做个科技早报'])
+   expect(consolidateDailyNewsFeeds(proposed,text)).toBe(proposed)
  for(const text of ['按栏目整理 AI 新闻，分开展示大模型和芯片','做个看板，每天扫一眼 AI 和医药新闻','做个看板，每天扫一眼 AI 新闻，还要美股行情','做个只用附件的AI新闻看板','不要做AI新闻看板']){
   expect(consolidateDailyNewsFeeds(plan,text)).toBe(plan)
  }

@@ -8,7 +8,7 @@ export function initialWorkbenchInformationPlan(request, english = false) {
   if (typeof request !== 'string' || !request.trim()) return ''
   const text = request.normalize('NFKC')
   const say = (zh, en) => english ? en : zh
-  const portable = /整页.{0,6}(?:带走|下载|导出)|(?:生成|导出|下载|带走|保存).{0,8}(?:独立网页|网页文件|HTML\s*文件)|\b(?:portable|downloadable|standalone)\s+(?:web\s?page|HTML)\b/iu.test(text)
+  const portable = /(?:整页|网页|HTML\s*文件).{0,6}(?:带走|下载|导出)|(?:导出|下载|带走|保存).{0,8}(?:网页|HTML\s*文件)|生成.{0,8}(?:独立网页|网页文件|HTML\s*文件)|\b(?:portable|downloadable|standalone)\s+(?:web\s?page|HTML)\b/iu.test(text)
   const sharedInputs = /改.{0,10}(?:计算|重算|就能算|联动)|共享(?:参数|输入)|参数联动|\b(?:recalculate|shared inputs?)\b/iu.test(text)
   if (portable && sharedInputs && !/不要|禁止|不需要|取消|\b(?:without|do not)\b/iu.test(text)) {
     return /预算|人均|\bbudget\b/iu.test(text)
@@ -44,7 +44,8 @@ export function initialWorkbenchInformationPlan(request, english = false) {
   if (/关系|结构图|架构|路径|产业链|传导|hierarchy|relationship/iu.test(text)) {
     ideas.push(say('对象之间的层级或传导关系用关系图呈现，保留每条关系的依据。', 'I’ll map the hierarchy or transmission paths and keep the evidence behind each relationship.'))
   }
-  if (broadFutures || /资讯|新闻|要闻|公告|舆情|news|headlines|announcements/iu.test(text)) {
+  const newsBrief = /早报|晨报|晚报|\b(?:morning|evening) brief(?:ing)?\b/iu.test(text) && /更新|原文|头条|每天|每日|链接|\b(?:daily|update|links?|headlines)\b/iu.test(text)
+  if (broadFutures || newsBrief || /资讯|新闻|要闻|公告|舆情|news|headlines|announcements/iu.test(text)) {
     ideas.push(say('同一主题的新闻事件集中浏览，点标题可读原文。持续跟踪时使用可搜索、可刷新的列表。', 'I’ll group news on the same topic into a searchable, refreshable feed with dated entries and links to the originals.'))
   }
   return ideas.join(english ? ' ' : '')
