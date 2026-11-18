@@ -9,110 +9,44 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究工作台生成、选源和图表交付优化",
+        "featureName": "修复首页项目命令与视图切换，改善工作台组件交互和布局",
         "branch": "codex/feat/workbench-delivery-20261118",
-        "baseCommit": "13e3d123a050daa7d19c807ca816aa894998717c",
-        "tipCommit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
+        "baseCommit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
+        "tipCommit": "0a70e2dddefbbd1f68c0050ca2454a2cb55228c2",
         "commits": [
           {
-            "commit": "c1180b09a57842f09708c1429e6176bc268fa1a1",
+            "commit": "61efc97603b4aee96fef2cb5399e23d3c799f47b",
             "parents": [
-              "13e3d123a050daa7d19c807ca816aa894998717c"
+              "4a9f2a7ce7f36579e8daaddab99d33c7588303be"
             ],
-            "subject": "让研究组件复用真实来源定时更新，改进图表阅读、排行下钻与栏目验收"
+            "subject": "将研究速览的加粗主题标题呈现为可切换栏目"
           },
           {
-            "commit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
+            "commit": "95d1f2589f6bb3f7548c4990a5cde66d7e1420f9",
             "parents": [
-              "c1180b09a57842f09708c1429e6176bc268fa1a1"
+              "61efc97603b4aee96fef2cb5399e23d3c799f47b"
             ],
-            "subject": "升级已安装客户端的研究回执，校验新旧趋势图的键盘读数"
+            "subject": "修复画布拦截研究组件页签点击并调整品种搜索和栏目的自适应间距"
+          },
+          {
+            "commit": "e9299e5b3a14b9c344197c604d01af7e540dd1ed",
+            "parents": [
+              "95d1f2589f6bb3f7548c4990a5cde66d7e1420f9"
+            ],
+            "subject": "按图表和读数实测高度自动整理工作台，为信息栏与来源保留间距"
+          },
+          {
+            "commit": "0a70e2dddefbbd1f68c0050ca2454a2cb55228c2",
+            "parents": [
+              "e9299e5b3a14b9c344197c604d01af7e540dd1ed"
+            ],
+            "subject": "修复已选项目的首页缺少顶栏和无法打开斜杠菜单"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-content.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-derived-values.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-metric-view.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-refresh-policy.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/component-request-credentials.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/financial-widget-contract.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/futures-directory.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/observed-content-refresh.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/observed-ecb-cross-rate.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-library.js"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-observed-refresh.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-observed-sources.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-panel-delivery.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
           },
           {
             "status": "M",
@@ -120,19 +54,7 @@
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-source-views.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/figma-canvas-client.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/financial-futures-directory.mjs"
+            "path": "scripts/lib/browser-app-native.mjs"
           },
           {
             "status": "M",
@@ -140,11 +62,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/financial-widget-client.mjs"
+            "path": "scripts/lib/financial-widget.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/financial-widget.css"
+            "path": "scripts/lib/pending-conversation.mjs"
           },
           {
             "status": "M",
@@ -152,11 +74,11 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-native-interactivity.mjs"
+            "path": "scripts/lib/research-grid-ui.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-workbench-feedback.mjs"
+            "path": "scripts/lib/research-grid-workbench.css"
           },
           {
             "status": "M",
@@ -164,71 +86,27 @@
           },
           {
             "status": "M",
-            "path": "src/main/component-data/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/cartesian-chart-details.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/component-data-submission.test.js"
-          },
-          {
-            "status": "M",
             "path": "test/component-reading-footer-browser.test.js"
           },
           {
             "status": "M",
-            "path": "test/financial-widget-client.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-ecb-currency-content.json"
+            "path": "test/component-reading-footer.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-native-interactivity.test.ts"
+            "path": "test/fixtures/pending-conversation-browser.tsx"
           },
           {
             "status": "M",
-            "path": "test/research-planning-feedback.test.js"
+            "path": "test/pending-conversation-rendered.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-workbench-feedback.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/stored-template-refinements.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-content-metric-view.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-feedback-upgrade-preservation.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-library.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/workbench-observed-refresh.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-panel-delivery.test.js"
+            "path": "test/pending-conversation.test.js"
           },
           {
             "status": "M",
             "path": "test/workbench-reading-sections-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-source-snapshot.test.js"
           }
         ],
         "checks": [
@@ -239,153 +117,65 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "主进程类型检查",
-            "verifiedCommit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
-            "completedAt": "2026-11-18T06:46:13.706Z",
+            "summary": "类型检查",
+            "verifiedCommit": "0a70e2dddefbbd1f68c0050ca2454a2cb55228c2",
+            "completedAt": "2026-11-18T08:24:19.722Z",
             "timeoutMs": 420000
           },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
+              "--maxWorkers=3",
               "--testTimeout=30000",
-              "--maxWorkers=4",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/financial-widget-futures.test.ts",
-              "test/financial-widget-client.test.js",
-              "test/financial-widget-contract.test.js",
-              "test/notes-component-library.test.ts",
-              "test/workbench-refresh-state.test.js",
-              "test/workbench-planning-phase.test.js",
               "test/workbench-reading-sections-browser.test.js",
-              "test/workbench-panel-delivery.test.js",
-              "test/workbench-sdk-receipt.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-observed-sources.test.js",
-              "test/workbench-source-exclusive-execution.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/research-workbench-refresh-feedback.test.js",
-              "test/generation-progress-persistence.test.js",
-              "test/workbench-library.test.js",
-              "test/component-content.test.js",
-              "test/workbench-fund-comparison.test.js",
-              "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-reading.test.js",
-              "test/research-native-interactivity.test.ts",
-              "test/workbench-content-metric-view.test.js",
-              "test/workbench-observed-refresh.test.js",
-              "test/component-data-submission.test.js",
-              "test/component-data-refresh.test.js",
-              "test/component-derived-values.test.js",
-              "test/component-source-binding.test.js",
-              "test/component-refresh-policy.test.js",
-              "test/workbench-dataset-view.test.js",
-              "test/dataset-view-contract.test.js",
-              "test/component-data-service.test.ts",
-              "test/workbench-source-snapshot.test.js",
-              "test/research-workbench-feedback-actions.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/research-planning-feedback.test.js",
+              "test/financial-widget-client.test.js",
+              "test/financial-widget-layout.test.js",
+              "test/financial-widget-contract.test.js",
+              "test/workbench-planning-phase.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/workbench-auto-arrange-browser.test.js",
+              "test/workbench-auto-arrange.test.js",
               "test/component-reading-footer-browser.test.js",
-              "test/stored-template-refinements.test.js"
+              "test/component-reading-footer.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/pending-conversation-rendered.test.js",
+              "test/pending-conversation.test.js",
+              "test/pending-conversation-panel.test.js",
+              "test/research-native-interactivity.test.ts"
             ],
             "outcome": "passed",
-            "summary": "真实取数、卡内交互、分栏、来源交接与完成回执聚焦回归",
-            "verifiedCommit": "4a9f2a7ce7f36579e8daaddab99d33c7588303be",
-            "completedAt": "2026-11-18T06:47:34.545Z",
+            "summary": "研究组件栏目、宽窄卡片、来源页脚与自动整理聚焦回归",
+            "verifiedCommit": "0a70e2dddefbbd1f68c0050ca2454a2cb55228c2",
+            "completedAt": "2026-11-18T08:25:04.942Z",
+            "timeoutMs": 420000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-workbench-wheel-shield.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "跨文档预览与画布手势回归",
+            "verifiedCommit": "0a70e2dddefbbd1f68c0050ca2454a2cb55228c2",
+            "completedAt": "2026-11-18T08:24:05.262Z",
             "timeoutMs": 420000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "同题真实客户端上一轮约 1.5 秒展示需求回执，2 分 25 秒结束，核对品种排行、期限曲线、持仓和逐合约明细。变更后的真实 Chromium 渲染验证宽窄卡，原始汇率及目录数据验证更新和取数失败保留。"
+          "summary": "实际客户端原地复现首页已选项目且命令禁用，重新选择原项目仍失效。用相同生产首页渲染器实点恢复项目的四个标签和斜杠按钮，验证键入斜杠、带草稿切换研究以及跨项目异步保护。原工作台复现手势遮罩吞掉原生控件点击，宽卡整理后读数裁切。更改后的生产渲染组件已用 Chromium 实点四个栏目、搜索并下钻，在多个宽度验证控件与图表上下间距、延迟到数后自动整理，检查保存的原始栏目。"
         },
         "acceptanceCriteria": [
-          "先按研究问题规划可跟踪的组件和交互，已获取的数据依照发布节奏更新",
-          "过期合约、空来源及部分覆盖据实呈现，新品种采用在市合约及同交易日的有效结算价",
-          "栏目和来源可切换，层级资料以关系图阅读"
+          "首页已选项目显示原生栏目，首次点击命令或键入 / 使用该项目且保留草稿；单纯选择项目无需生成对话",
+          "未选中的组件也能响应普通点击，保留真正的画布手势和 iframe 保护",
+          "宽窄卡搜索、计数和来源分行或分列；横轴、选中合约与来源均有独立空间",
+          "迟到和换行的数据按实际高度装入自动整理的卡片，保存的工作台重新打开即可使用"
         ],
         "risks": [
-          "实际模型耗时、第三方接口可用性与最终选卡组合以本地客户端复跑为准"
+          "正常布局依赖渲染器读取当前字体和列宽；数据时间与行情提供方的发布节奏一致"
         ],
-        "generatedAt": "2026-11-18T06:47:34.545Z"
-      },
-      "merged": {
-        "mergeCommit": "89c42929d94f7f13cba2505d046a29baf214c797",
-        "verificationCommit": "89c42929d94f7f13cba2505d046a29baf214c797",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "89c42929d94f7f13cba2505d046a29baf214c797",
-            "completedAt": "2026-11-18T06:49:37.113Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "89c42929d94f7f13cba2505d046a29baf214c797",
-            "completedAt": "2026-11-18T06:49:37.113Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--testTimeout=20000",
-              "test/research-task-runtime.test.js",
-              "test/hosted-ark-runtime.test.js",
-              "test/research-grid-generation-fit.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/generation-progress-persistence.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/research-workbench-feedback-actions.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-reading.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/chart-detail-projection.test.js",
-              "test/component-reading-footer.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/conversation-response-history.test.js",
-              "test/conversation-response-history-browser.test.js",
-              "test/component-source-projection.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-fund-comparison.test.js",
-              "test/workbench-observed-sources.test.js",
-              "test/workbench-source-views.test.js",
-              "test/workbench-source-snapshot.test.js",
-              "test/workbench-source-exclusive-execution.test.js",
-              "test/workbench-source-policy.test.js",
-              "test/bundled-tushare-mcp.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --testTimeout=20000 test/research-task-runtime.test.js test/hosted-ark-runtime.test.js test/research-grid-generation-fit.test.js test/research-generation-controls.test.ts test/generation-progress-persistence.test.js test/research-workbench-feedback.test.js test/research-workbench-feedback-actions.test.js test/workbench-feedback-upgrade-preservation.test.js test/research-planning-feedback.test.js test/cartesian-chart-details.test.js test/cartesian-chart-reading.test.js test/cartesian-chart-axis-precision.test.js test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/chart-detail-projection.test.js test/component-reading-footer.test.js test/component-reading-footer-browser.test.js test/stored-template-refinements.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-history.test.js test/conversation-response-history-browser.test.js test/component-source-projection.test.js test/workbench-execution-policy.test.js test/workbench-fund-comparison.test.js test/workbench-observed-sources.test.js test/workbench-source-views.test.js test/workbench-source-snapshot.test.js test/workbench-source-exclusive-execution.test.js test/workbench-source-policy.test.js test/bundled-tushare-mcp.test.ts",
-            "verifiedCommit": "89c42929d94f7f13cba2505d046a29baf214c797",
-            "completedAt": "2026-11-18T06:49:37.113Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-18T06:49:37.113Z"
+        "generatedAt": "2026-11-18T08:25:04.942Z"
       }
     }
   ],
