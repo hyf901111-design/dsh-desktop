@@ -96,11 +96,11 @@ it('新闻和公告标题通过桌面桥打开原文，保留普通浏览器链�
  const fallback=f.host.querySelector('a.ew-news-title');expect((await f.event('click',fallback)).defaultPrevented).toBe(false);expect(fallback.target).toBe('_blank');expect(fallback.rel).toContain('noopener')
 })
 it('六项列表直接放置、选中和恢复，保留原节点，无配置面板及模型任务',async()=>{
- const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));const items=[...f.document.querySelectorAll('[data-financial-place]')];expect(items.map(x=>x.dataset.financialPlace)).toEqual(['watchlist','quote','indices','news','announcements','calendar']);await f.event('click',items[0]);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('[role=dialog][open]')).toBeNull()
+ const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));const items=[...f.document.querySelectorAll('[data-financial-place]')];expect(items.map(x=>x.dataset.financialPlace)).toEqual(['watchlist','quote','indices','news','announcements','futures','calendar']);await f.event('click',items[0]);expect(f.workspace.getSnapshot().artifacts[0].containerSpec.widget).toBe('watchlist');expect(f.document.querySelector('[role=dialog][open]')).toBeNull()
  await f.act(async()=>['quote','indices','news'].forEach(k=>f.workspace.createFinancialWidget(k)));expect(f.workspace.getSnapshot().artifacts).toHaveLength(4);expect(f.workspace.getSnapshot().selection.selectedNodeIds).toEqual([f.workspace.getSnapshot().artifacts[3].id]);expect(f.host.querySelectorAll('[data-financial-widget]')).toHaveLength(4);expect(f.generation.generate).not.toHaveBeenCalled()
  const reopened=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test');expect(reopened.getSnapshot().artifacts.map(n=>n.containerSpec.widget)).toEqual(['watchlist','quote','indices','news'])
 })
-it('组件库六项菜单，关闭与加号独立对齐，点击加号直接放置',async()=>{
+it('组件库菜单，关闭与加号独立对齐，点击加号直接放置',async()=>{
  const f=await fixture();await f.event('click',f.document.querySelector('[data-financial-library]'));
  const menu=f.document.querySelector('.ew-financial-library');expect(menu.querySelector('p')).toBeNull();expect(f.document.activeElement).toBe(menu);
  await f.event('keydown',menu,{key:'ArrowUp'});expect(f.document.activeElement.dataset.financialPlace).toBe('calendar');await f.event('keydown',menu,{key:'Home'});expect(f.document.activeElement.dataset.financialPlace).toBe('watchlist');
@@ -365,3 +365,22 @@ it('原生现货行情可从标题选 BTC 并在数据设置切换交易所',asy
  await vi.waitFor(()=>expect(bridge.request).toHaveBeenCalledWith(expect.objectContaining({action:'history',source:'bitfinex',symbols:[crypto]})))
  expect(f.workspace.getSnapshot().artifacts[0].containerSpec.dataSource).toBe('bitfinex')
 },30000)
+
+it('期货卡在品种、曲线、持仓和明细间切换，沿用同一日报，刷新后保留当前栏目',async()=>{
+ let date='2026-11-17'
+ const contract=(code,month,settlement,openInterest)=>({code,month,settlement,openInterest,volume:0,close:null})
+ const rb={code:'rb',name:'螺纹钢',unit:'元/吨',contracts:[contract('RB2612','2612',2993,10),contract('RB2701','2701',null,30),contract('RB2702','2702',3010,20)]}
+ const cu={code:'cu',name:'铜',unit:'元/吨',contracts:[contract('CU2612','2612',103500,40),contract('CU2701','2701',104000,90)]}
+ const request=vi.fn(async()=>({source:'上期所交易日报',receivedAt:date+'T09:00:00Z',futuresReport:{date,products:[rb,cu],url:'https://www.shfe.com.cn/'}}))
+ const f=await fixture({financialWidget:{request}});await f.act(async()=>f.workspace.createFinancialWidget('futures'))
+ const card=f.host.querySelector('[data-financial-widget=futures]'),tabs=card.querySelectorAll('[role=tab]')
+ expect(request.mock.calls[0][0]).toMatchObject({action:'futures',source:'shfe'})
+ expect(card.querySelector('.ew-futures-curve path').getAttribute('d').match(/M/g)).toHaveLength(2)
+ await f.event('click',tabs[1]);expect(card.querySelector('ol li').textContent).toContain('RB2701')
+ await f.event('keydown',tabs[1],{key:'ArrowRight'});expect(card.querySelectorAll('tbody tr')).toHaveLength(3)
+ const select=card.querySelector('select');select.value='cu';await f.event('change',select)
+ expect(card.querySelector('tbody tr').textContent).toContain('CU2612');expect(request).toHaveBeenCalledTimes(1)
+ date='2026-11-18';await f.act(async()=>card.__eworkRefreshFinancial())
+ expect(card.querySelector('[aria-selected=true]').textContent).toBe('合约明细')
+ expect(card.querySelector('.ew-financial-source-time').textContent).toContain(date)
+})

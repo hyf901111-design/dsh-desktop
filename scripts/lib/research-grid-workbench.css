@@ -38,6 +38,25 @@ body [data-ework-grid] [data-research-node-id] [data-research-preview-body]:has(
 body [data-ework-grid] [data-research-node-id] :is(.rScV5Q_containerDraft,.rScV5Q_textPreview){flex:1;min-width:0;min-height:0;overflow:auto;padding:12px!important}
 body [data-ework-grid] .rScV5Q_containerDraft textarea{flex:1;min-height:48px!important;width:100%;box-sizing:border-box;font-size:13px!important;resize:none!important}
 body [data-ework-grid] .rScV5Q_containerDraftFooter{flex:none}
+
+/* Keep section navigation in view as the original Markdown scrolls below it. */
+.ew-reading-sections{display:flex;flex:1 1 0;flex-direction:column;min-width:0;min-height:0}
+.ew-reading-nav{flex:none;display:flex;align-items:center;gap:4px;min-width:0;margin-inline:12px;border-bottom:1px solid var(--grid-border,#8885)}
+.ew-reading-scroll{flex:1;min-width:0;overflow-x:auto;overscroll-behavior-inline:contain;scrollbar-width:none}
+.ew-reading-nav [role=tablist]{display:flex;gap:4px;align-items:stretch;width:max-content;padding:2px 0}
+.ew-reading-nav [role=tab],.ew-reading-picker{box-sizing:border-box;position:relative;flex:none;min-height:30px;padding:4px 8px;border:0;border-radius:3px;background:transparent;color:var(--grid-text,currentColor);font:500 12px/18px var(--ds-font-sans,system-ui,sans-serif);cursor:pointer}
+.ew-reading-nav [role=tab]{max-width:192px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ew-reading-nav [role=tab]:hover,.ew-reading-picker:hover{background:color-mix(in srgb,currentColor 7%,transparent)}
+.ew-reading-nav [aria-selected=true]{font-weight:650;background:color-mix(in srgb,currentColor 8%,transparent)}
+.ew-reading-nav [aria-selected=true]::after{content:'';position:absolute;inset:auto 7px 0;height:2px;background:var(--grid-accent,currentColor)}
+.ew-reading-nav [role=tab]:focus-visible,.ew-reading-picker:focus-within,.ew-reading-body[role=tabpanel]:focus-visible{outline:2px solid var(--grid-accent,currentColor);outline-offset:-2px}
+.ew-reading-picker{display:grid;place-items:center;width:28px;padding:0}
+.ew-reading-picker select{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+body [data-ework-grid] .ew-reading-sections .ew-reading-body{box-sizing:border-box;flex:1 1 0;min-width:0;min-height:0;overflow:auto;overflow-wrap:anywhere}
+.ew-reading-body[role=tabpanel]>:first-child{display:block;columns:auto;max-width:78ch;margin-inline:auto}
+.ew-reading-body [data-reading-hidden]{display:none!important}
+.ew-reading-body [data-reading-heading]>strong:first-child{display:block;margin-bottom:6px;font-size:1.08em}
+
 body [data-ework-grid] .ew-grid-chrome-host{position:absolute;inset:0;pointer-events:none;z-index:55}
 body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-header{display:flex;align-items:center;gap:6px;box-sizing:border-box;height:34px;padding:0 10px;pointer-events:auto;cursor:grab;user-select:none;touch-action:none;background:var(--grid-card);color:var(--grid-text);font:600 12px/16px Inter,"Noto Sans SC",system-ui,sans-serif;border-radius:4px 4px 0 0}
 body :is([data-ework-grid],.en-note-file,.en-native-component) .ew-grid-title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:clip}

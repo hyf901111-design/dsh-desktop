@@ -64,14 +64,15 @@ function observation(result: JsonObject, revision: number, signature: string): C
     // receivedAt and source come only from the existing trusted native service.
     const receivedAt = typeof result.receivedAt === 'string' ? Date.parse(result.receivedAt) : NaN;
     const rows = Array.isArray(result.quotes) ? result.quotes.filter(object) : [];
-    const useful = rows.length > 0 || Array.isArray(result.bars) && result.bars.length > 0 || !result.error && (Array.isArray(result.news) || Array.isArray(result.announcements));
+    const report = object(result.futuresReport) ? result.futuresReport as JsonObject : undefined;
+    const useful = !result.error && Array.isArray(report?.products) && report.products.length > 0 || rows.length > 0 || Array.isArray(result.bars) && result.bars.length > 0 || !result.error && (Array.isArray(result.news) || Array.isArray(result.announcements));
     if (!useful || !timestamp(receivedAt))
         return null;
     const sourceNames = [...new Set([result.source, ...rows.map(row => row.source)].filter((s): s is string => typeof s === 'string' && s.trim().length > 0 && s.length <= 1000))];
     if (!sourceNames.length)
         return null;
     const lastBar = Array.isArray(result.bars) ? result.bars.at(-1) : undefined;
-    const dataAsOf = [...rows.map(row => row.quotedAt || row.asOf), result.asOf, object(lastBar) ? (lastBar as Record<string, unknown>).date : undefined].find(v => typeof v === 'string' && v.length > 0 && v.length <= 2048);
+    const dataAsOf = [...rows.map(row => row.quotedAt || row.asOf), result.asOf, report?.date, object(lastBar) ? (lastBar as Record<string, unknown>).date : undefined].find(v => typeof v === 'string' && v.length > 0 && v.length <= 2048);
     return { specRevision: revision, querySignature: signature, receivedAt, sourceNames, ...(dataAsOf ? { dataAsOf } : {}), result: clone(result) };
 }
 /** Independent, owner-scoped conversation instances. No canvas state is read or written. */
@@ -111,7 +112,7 @@ export class ConversationComponentStore {
                 if (!['financial-widget', 'chart', 'table', 'kpi', 'markdown', 'html', 'mind-map', 'summary'].includes(nodeType))
                     throw Error('对话组件类型无效');
                 for (const [action, o] of Object.entries(value.observations))
-                    if (!['quotes', 'history', 'news', 'announcements'].includes(action) || !object(o) || o.specRevision !== value.revision || typeof o.querySignature !== 'string' || !timestamp(o.receivedAt) || !Array.isArray(o.sourceNames) || !o.sourceNames.every((s: unknown) => typeof s === 'string') || !object(o.result) || Buffer.byteLength(JSON.stringify(o)) > MAX_OBSERVATION + 8192)
+                    if (!['quotes', 'history', 'news', 'announcements', 'futures'].includes(action) || !object(o) || o.specRevision !== value.revision || typeof o.querySignature !== 'string' || !timestamp(o.receivedAt) || !Array.isArray(o.sourceNames) || !o.sourceNames.every((s: unknown) => typeof s === 'string') || !object(o.result) || Buffer.byteLength(JSON.stringify(o)) > MAX_OBSERVATION + 8192)
                         throw Error('对话组件观察记录无效');
                 const key = JSON.stringify([value.ownerAccountId, value.sessionId, value.turnId, value.requestId]), session = JSON.stringify([value.ownerAccountId, value.sessionId]);
                 if (ids.has(value.id) || keys.has(key) || (counts.get(session) ?? 0) >= 128)
@@ -264,7 +265,7 @@ export class ConversationComponentStore {
     }
     observe(owner: string, target: ConversationComponentTarget, revision: number, query: JsonObject, result: JsonObject, guard: Guard = noGuard): Promise<boolean> {
         return this.mutate(items => { const item = this.find(owner, target, items); if (item.revision !== revision)
-            return false; const action = query.action; if (typeof action !== 'string' || !['quotes', 'history', 'news', 'announcements'].includes(action))
+            return false; const action = query.action; if (typeof action !== 'string' || !['quotes', 'history', 'news', 'announcements', 'futures'].includes(action))
             throw Error('金融观察类型无效。'); const entry = observation(result, revision, nativeQuerySignature(query)); if (!entry)
             return false; const old = item.observations[action]; if (old && old.receivedAt > entry.receivedAt)
             return false; item.observations[action] = entry; const all = Object.values(item.observations).filter(o => o.specRevision === revision), latest = all.reduce((a, b) => a.receivedAt >= b.receivedAt ? a : b); item.provenance = { sourceNames: [...new Set(all.flatMap(o => o.sourceNames))], sourceState: 'native-observed', refreshKind: 'native', fetchedAt: latest.receivedAt, ...(latest.dataAsOf ? { dataAsOf: latest.dataAsOf } : {}) }; return true; }, guard);

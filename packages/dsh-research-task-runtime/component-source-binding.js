@@ -427,16 +427,26 @@ export function componentSnapshotData(data) {
   return {...data,asOf:typeof data.asOf==='string'&&data.asOf.trim()?data.asOf+(data.asOf.includes(status)?'':' · '+status):status}
 }
 
+// DataPro can return code=0 and an item for a recognized security with all
+// business fields null. A partial response with actual records is still usable.
+export function emptyDataProFinanceResult(response) {
+ if(response?.dataset_type!=='stock_finance'||!Array.isArray(response.items))return false
+ const coverage=response.query_info?.result_coverage
+ return response.items.length===0||response.error_info?.error_type==='no_data'||
+   response.total===0&&Array.isArray(coverage?.reason_codes)&&coverage.reason_codes.includes('ALL_NULL')
+}
+
 // financial_query has no host refresh recipe. Its observed structured records
 // can still be mapped once without asking a model to retranscribe every value.
 export function componentMappableSource(record) {
  if(record?.purpose==='discovery'||!record?.response||typeof record.response!=='object')return false
+ if(emptyDataProFinanceResult(record.response))return false
  if(record.purpose!=='snapshot')return true
  if(record.tool==='web_fetch')return Array.isArray(record.response.records)||record.response.data&&typeof record.response.data==='object'
  // The local reader's non-callable descriptor owns the original response.
  // Its paged reads omit snapshotKind and expose rows through records instead.
  if(record.tool==='workbench_source_read'&&record.args?.snapshot===true&&record.response.snapshotKind==='workbench-observed-source'){
-  return record.response.data!==null&&typeof record.response.data==='object'
+  return record.response.data!==null&&typeof record.response.data==='object'&&!emptyDataProFinanceResult(record.response.data)
  }
  return ['financial_query','workbench_source_read'].includes(record.tool)&&Array.isArray(record.response.records)&&record.response.records.length>0&&(record.response.status===undefined||['complete','partial'].includes(record.response.status))
 }

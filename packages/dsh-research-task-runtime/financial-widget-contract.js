@@ -34,12 +34,12 @@ const periodRequests={
  '1w':/周\s*(?:K|线)|\b1w\b/iu
 }
 export function financialWidgetDefaults(widget){
- const titles={watchlist:'自选',quote:'行情面板',indices:'市场指数',news:'新闻列表',announcements:'公告列表'}
+ const titles={watchlist:'自选',quote:'行情面板',indices:'市场指数',futures:'期货期限结构',news:'新闻列表',announcements:'公告列表'}
  if(!titles[widget])return null
  return {version:1,type:'financial-widget',widget,title:titles[widget],symbols:widget==='indices'?[
   {code:'000300',market:'SH',name:'沪深300'},{code:'000001',market:'SH',name:'上证指数'},
   {code:'399001',market:'SZ',name:'深证成指'},{code:'399006',market:'SZ',name:'创业板指'},
-  {code:'000688',market:'SH',name:'科创50'},{code:'000016',market:'SH',name:'上证50'}]:[],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:'',...['quote','indices'].includes(widget)?{dataSource:'backup'}:{}}
+  {code:'000688',market:'SH',name:'科创50'},{code:'000016',market:'SH',name:'上证50'}]:[],period:'1d',adjustment:'none',indicators:['MA','VOL','MACD'],market:'all',query:'',...(widget==='futures'?{dataSource:'shfe',refreshMinutes:60}:['quote','indices'].includes(widget)?{dataSource:'backup'}:{})}
 }
 // Adapter capability is a host fact. Planner-selected display options cannot
 // turn a successfully mounted shell into an unsupported data request.
@@ -79,7 +79,7 @@ export function financialWidgetPlanSpec(value,request=''){
 
 export function financialWidgetSpec(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['version','type','widget','title','symbols','period','adjustment','indicators','market','query','selectedSymbol','linkedWatchlistId','linkedSourceId','visibleBars','dataSource','refreshMinutes','refreshEnabled'].includes(k)))return null
- if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news','announcements'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
+ if(value.version!==1||value.type!=='financial-widget'||!['watchlist','quote','indices','news','announcements','futures'].includes(value.widget)||typeof value.title!=='string'||!value.title.trim()||value.title.length>256)return null
  if(!Array.isArray(value.symbols)||value.symbols.length>(['quote','announcements'].includes(value.widget)?1:value.widget==='indices'?64:200))return null
  const ids=new Set()
  for(const s of value.symbols){
@@ -90,6 +90,7 @@ export function financialWidgetSpec(value){
   if(s.market==='INDEX'&&(value.widget!=='indices'||!financialIndexCatalog().some(e=>e.symbol.code===s.code)))return null
   const id=s.market+':'+s.code;if(ids.has(id))return null;ids.add(id)
  }
+ if(value.widget==='futures'&&(value.dataSource!=='shfe'||value.symbols.length)||value.dataSource==='shfe'&&value.widget!=='futures')return null
  const source=value.dataSource,cryptoSource=financialCryptoSources.includes(source),mainlandSource=financialMainlandSources.includes(source),quoteMarket=value.symbols[0]?.market
  if((cryptoSource||mainlandSource)&&value.widget!=='quote'||financialNewsSources.includes(source)&&value.widget!=='news')return null
  if(value.widget==='quote'&&quoteMarket&&((quoteMarket==='CRYPTO')!==cryptoSource||mainlandSource&&!['SH','SZ','BJ'].includes(quoteMarket)))return null
@@ -97,7 +98,7 @@ export function financialWidgetSpec(value){
  if(!periods.includes(value.period)||!adjustments.includes(value.adjustment)||!Array.isArray(value.indicators)||new Set(value.indicators).size!==value.indicators.length||value.indicators.some(i=>!['MA','VOL','MACD'].includes(i))||!['all','SH','SZ','BJ','HK','US'].includes(value.market)||typeof value.query!=='string'||value.query.length>100||/[\u0000-\u001f]/.test(value.query))return null
  if(value.selectedSymbol!==undefined&&(!['watchlist','quote'].includes(value.widget)||typeof value.selectedSymbol!=='string'||!ids.has(value.selectedSymbol)))return null
  if(value.visibleBars!==undefined&&(value.widget!=='quote'||!Number.isInteger(value.visibleBars)||value.visibleBars<1||value.visibleBars>320))return null
- if(source!==undefined&&!['default','backup',...financialNewsSources,...financialCryptoSources,...financialMainlandSources].includes(source)||value.refreshMinutes!==undefined&&(!Number.isInteger(value.refreshMinutes)||value.refreshMinutes<0||value.refreshMinutes>10080)||value.refreshEnabled!==undefined&&typeof value.refreshEnabled!=='boolean')return null
+ if(source!==undefined&&!['default','backup','shfe',...financialNewsSources,...financialCryptoSources,...financialMainlandSources].includes(source)||value.refreshMinutes!==undefined&&(!Number.isInteger(value.refreshMinutes)||value.refreshMinutes<0||value.refreshMinutes>10080)||value.refreshEnabled!==undefined&&typeof value.refreshEnabled!=='boolean')return null
  if(value.linkedWatchlistId!==undefined&&(value.widget!=='quote'||typeof value.linkedWatchlistId!=='string'||!value.linkedWatchlistId.trim()||value.linkedWatchlistId.length>200||/[\u0000-\u001f]/.test(value.linkedWatchlistId)))return null
  if(value.linkedSourceId!==undefined&&(!['news','announcements'].includes(value.widget)||typeof value.linkedSourceId!=='string'||!value.linkedSourceId.trim()||value.linkedSourceId.length>200||/[\u0000-\u001f]/.test(value.linkedSourceId)))return null
  return Object.freeze({...value,symbols:Object.freeze(value.symbols.map(s=>Object.freeze({...s}))),indicators:Object.freeze([...value.indicators])})
@@ -168,7 +169,7 @@ export function synchronizeFinancialLinks(artifacts){
 export function financialWidgetDimensions(spec,initial=false){
  if(spec?.widget==='watchlist')return {width:320,height:initial?600:130+36*Math.min(12,Math.max(2,spec.symbols?.length||0))}
  if(spec?.widget==='indices')return {width:980,height:Math.min(600,200+124*Math.max(0,Math.ceil((spec.symbols?.length||6)/6)-1))}
- return ({quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340},announcements:{width:620,height:340}})[spec?.widget]
+ return ({futures:{width:716,height:420},quote:{width:716,height:600},indices:{width:980,height:200},news:{width:620,height:340},announcements:{width:620,height:340}})[spec?.widget]
 }
 export function financialIndicators(bars){
  const values=bars.map(b=>b.close),sma=(values,n)=>values.map((v,i)=>i<n-1||values.slice(i-n+1,i+1).some(x=>!Number.isFinite(x))?null:values.slice(i-n+1,i+1).reduce((a,b)=>a+b,0)/n)

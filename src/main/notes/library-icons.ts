@@ -7,4 +7,4 @@ import calendar from '../../../build/figma-component-library/calendar.svg?raw'
 import custom from '../../../build/figma-component-library/custom.svg?raw'
 
 // These are the same source assets used by FinancialLibraryIcon in research.
-export const noteLibraryIcons:Record<string,string> = {watchlist,quote,indices,news,announcements,calendar,custom}
+export const noteLibraryIcons:Record<string,string> = {watchlist,quote,indices,futures:indices,news,announcements,calendar,custom}

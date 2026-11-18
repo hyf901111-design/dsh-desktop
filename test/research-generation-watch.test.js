@@ -106,24 +106,24 @@ describe('任务检查切板恢复', () => {
     const patched = patchResearchGenerationWatch(source)
     expect(createSourceFile('client.js', patched, ScriptTarget.Latest, false, ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     expect(patchResearchGenerationWatch(patched)).toBe(patched)
-    for(const version of ['V1','V2','V3','V4','V5','V6','V7']){
-      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V8 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
+    for(const version of ['V1','V2','V3','V4','V5','V6','V7','V8']){
+      const previous=patched.replace('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V9 */',`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)
       const upgraded=patchResearchGenerationWatch(previous)
       // Production's later i18n/formatter passes may rewrite the inline hook.
       // Upgrades preserve its protocol and become idempotent; byte equality
       // against a differently transformed input is not a behavioral contract.
       expect(patchResearchGenerationWatch(upgraded)).toBe(upgraded)
-      expect(upgraded.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V8')).toHaveLength(2)
+      expect(upgraded.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V9')).toHaveLength(2)
       expect(createSourceFile('client.js',upgraded,ScriptTarget.Latest,false,ScriptKind.JS).parseDiagnostics).toHaveLength(0)
     }
-    const hookStart=patched.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V8 */'),hookEnd=patched.indexOf('}, [sessionId, workspace, selectionGeneration?.inspect]);',hookStart)
-    const staleHook=patched.slice(hookStart,hookEnd).replace('RECOVERY_V8','RECOVERY_V4').replace("cacheKey='__sherlockWorkbenchGenerationV1'","cacheKey='STALE_V4_INLINE_PUBLISHER'")
+    const hookStart=patched.indexOf('/* SHERLOCK_GENERATION_WATCH_RECOVERY_V9 */'),hookEnd=patched.indexOf('}, [sessionId, workspace, selectionGeneration?.inspect]);',hookStart)
+    const staleHook=patched.slice(hookStart,hookEnd).replace('RECOVERY_V9','RECOVERY_V4').replace("cacheKey='__sherlockWorkbenchGenerationV1'","cacheKey='STALE_V4_INLINE_PUBLISHER'")
     const currentV4=patched.slice(0,hookStart)+staleHook+patched.slice(hookEnd)
     expect(currentV4).toContain('STALE_V4_INLINE_PUBLISHER')
     const upgradedV4=patchResearchGenerationWatch(currentV4)
     expect(upgradedV4).not.toContain('STALE_V4_INLINE_PUBLISHER')
     expect(patchResearchGenerationWatch(upgradedV4)).toBe(upgradedV4)
-    expect(patched.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V8')).toHaveLength(2)
+    expect(patched.split('SHERLOCK_GENERATION_WATCH_RECOVERY_V9')).toHaveLength(2)
     expect(patched).toContain("if (boundedString(request?.parentSessionId) !== session.sessionId) return Promise.reject(new Error('研究会话已失效'))")
     expect(patched).toContain('return sherlockBoardsAdapter.inspectShared(session.sessionId,request)')
     expect(patched).toContain('this.deps.generationInspectSink(request, options)')

@@ -1,6 +1,7 @@
 import {scalarEntityArgumentIssue} from './component-scalar-entity-arguments.js'
 import {extractDelimitedEvidence,delimitedTableIntegrityIssue} from './delimited-evidence.js'
 import {componentCohortRequest,componentDeliveryScopeIssue} from './component-delivery-scope.js'
+import {workbenchChartTextFallback, workbenchNamedTableCoverage} from './workbench-panel-delivery.js'
 import {componentAcquisitionBudget} from './component-acquisition-budget.js'
 import {componentDiscoveryProgress} from './component-discovery-progress.js'
 import {componentAcquisitionFollowup} from './component-acquisition-followup.js'
@@ -975,10 +976,16 @@ function workbenchSourceEvidenceIssue(policy, records, sharedRecords = []) {
 
 const PARTIAL_DELIVERY_MODES = new Set(['source-snapshot', 'readable-content', 'incomplete-scope', 'data-missing'])
 
-function workbenchChartTextFallback(artifact) {
-  if (artifact?.type !== 'markdown') return undefined
-  return /[（(](?:数据缺失|暂无数据|no data|data unavailable)[）)]$/iu.test(artifact.title?.trim() ?? '')
-    ? 'data-missing' : 'readable-content'
+function panelChartTextFallback(artifact, prompt, hostContext) {
+  if (!hostContext?.workbenchRequest && !workbenchPanelScope(prompt)) return
+  return workbenchChartTextFallback(artifact, hostContext?.sourceRequirement ?? workbenchPanelIntent(prompt), workbenchPanelFormat(prompt))
+}
+
+function panelDelivery(artifact, prompt, hostContext, previous) {
+  const fallback = panelChartTextFallback(artifact, prompt, hostContext)
+  if (fallback === 'data-missing') return partialDelivery(fallback, '缺少绘制图表所需的可核验数据。')
+  if (previous) return previous
+  if (fallback) return partialDelivery(fallback, '已保留可读资料，原定图表尚未生成。')
 }
 
 function taskDelivery(task){
@@ -994,8 +1001,15 @@ function partialDelivery(recoveryMode, ...requirements) {
   })
 }
 
-function panelDeliveryScope(artifact, prompt, hostContext, documentEvidence, view) {
+function panelNamedCoverage(artifact, prompt, hostContext) {
+  if (hostContext?.workbenchRequest || workbenchPanelScope(prompt)) {
+    return workbenchNamedTableCoverage(artifact, hostContext?.sourceRequirement ?? workbenchPanelIntent(prompt))
+  }
+}
+
+function panelDeliveryScope(artifact, prompt, hostContext, documentEvidence, view, named = panelNamedCoverage(artifact, prompt, hostContext)) {
   const {workbenchRequest, sourceRequirement, sharedEvidence, sharedDatasets} = hostContext ?? {}
+  if (named?.issue) return named.issue
   if (!workbenchRequest || !artifact) return
   const title = prompt.match(/^工作台：[^\n]+\n本面板：([^\n]+)/u)?.[1] ?? artifact.title ?? ''
   // The host passes the panel requirement and original workbench request separately.
@@ -1207,7 +1221,7 @@ function restoredTask(raw, now) {
       task.error = error.message
       task.completedAt = now
       task.lastSeq = Number.MAX_SAFE_INTEGER
-      return { task, interrupted: true }
+      return { task, changed: true }
     }
   }
   if (task.deliveryStatus && (
@@ -1227,7 +1241,17 @@ function restoredTask(raw, now) {
     if (Number.isFinite(stored.startedAt)) task.startedAt = stored.startedAt
     if (Number.isFinite(stored.completedAt)) task.completedAt = stored.completedAt
   }
-  return { task, interrupted }
+  // Older completed tasks may only have the artifact. Reclassify retained
+  // results against their own panel contract without rerunning the model.
+  let delivery
+  if (task.kind === 'container' && !task.deliveryStatus && task.finalOutput && originalState === 'completed' &&
+      (task.hostContext?.workbenchRequest || workbenchPanelScope(task.prompt))) {
+    const artifact = JSON.parse(task.finalOutput)
+    const named = panelNamedCoverage(artifact, task.prompt, task.hostContext)
+    delivery = panelDelivery(artifact, task.prompt, task.hostContext, named?.issue && partialDelivery('incomplete-scope', named.issue))
+    if (delivery) Object.assign(task, delivery)
+  }
+  return { task, changed: interrupted || Boolean(delivery) }
 }
 
 export class ResearchTaskRuntime {
@@ -1274,7 +1298,7 @@ export class ResearchTaskRuntime {
         throw new ResearchTaskError('INVALID_STORAGE', '任务标识重复')
       }
       this.tasks.set(restored.task.taskId, restored.task)
-      changed ||= restored.interrupted
+      changed ||= restored.changed
     }
     this.restored = true
     if (changed) await this.persist()
@@ -1499,8 +1523,9 @@ export class ResearchTaskRuntime {
       const preparedRequirement=panel.artifact?.type==='view'&&panel.preparedRequirement!==undefined
         ? requiredString(panel.preparedRequirement,5000,'共同数据视图需求无效') : undefined
       const hostContext = restoreWorkbenchHostContext(panel.hostContext)
-      const scopeIssue = panelDeliveryScope(JSON.parse(output), request.prompt, hostContext, panel.documentEvidence, panel.view)
-      const delivery = scopeIssue ? partialDelivery('incomplete-scope', scopeIssue) : {}
+      const artifact = JSON.parse(output)
+      const scopeIssue = panelDeliveryScope(artifact, request.prompt, hostContext, panel.documentEvidence, panel.view)
+      const delivery = panelDelivery(artifact, request.prompt, hostContext, scopeIssue && partialDelivery('incomplete-scope', scopeIssue))
       return { request, output, preparedRequirement, hostContext, delivery }
     })
     if (new Set(prepared.map(p => p.request.canvasNodeId)).size !== prepared.length) throw new ResearchTaskError('INVALID_REQUEST', '组件标识重复')
@@ -1795,6 +1820,9 @@ export class ResearchTaskRuntime {
           preparedReleaseCohortIssue({artifact, observedSources:evidence, originalRequest, panelRequest})
       }
       const cohortRequest=componentCohortRequest(panelRequest,task.hostContext?.workbenchRequest?.originalRequest)
+      const scopeIssueFor = (artifact, named = panelNamedCoverage(artifact, task.prompt, task.hostContext)) => task.hostContext?.workbenchRequest
+        ? panelDeliveryScope(artifact, task.prompt, task.hostContext, result.documentEvidence, undefined, named ?? null)
+        : named?.issue ?? componentDeliveryScopeIssue(artifact, cohortRequest)
       const bindingRequested = componentBindingRequested(panelRequest)
       const historyOptions=/(?:相对\s*沪深300|沪深300.{0,8}(?:基准|参考))/u.test(panelRequest)?{benchmarkSymbol:'000300.SH'}:{}
       const panelContract=task.kind==='container'?workbenchPanelScope(task.prompt)?.contract:undefined
@@ -2036,21 +2064,24 @@ export class ResearchTaskRuntime {
           }
           if (task.kind === 'container' && output) {
             const artifact = mapped?.capacitySnapshot ? mapped.data : JSON.parse(output)
-            if (attempt === 0 && task.hostContext?.workbenchRequest && plannedFormat === 'chart' &&
-                workbenchChartTextFallback(artifact) === 'readable-content') {
+            if (attempt === 0 && panelChartTextFallback(artifact, task.prompt, task.hostContext) === 'readable-content') {
               bindingRepairEvidence = componentBindingEvidence(sourceRecords)
               if (bindingRepairEvidence) throw new ResearchTaskError('INVALID_OUTPUT',
                 '趋势卡仍是文字。复用本轮可核验的日期与数值，按原需求交付真正的图表；保留有效记录、单位与来源，不重新取数。')
             }
-            deliveryScopeIssue = task.hostContext?.workbenchRequest
-              ? panelDeliveryScope(artifact, task.prompt, task.hostContext, result.documentEvidence)
-              : componentDeliveryScopeIssue(artifact, cohortRequest)
+            const namedCoverage = panelNamedCoverage(artifact, task.prompt, task.hostContext)
+            const retained = validatedPartial?.namedCoverage
+            if (retained?.actual && (!namedCoverage || [...retained.covered].some(label => !namedCoverage.covered.has(label)))) {
+              deliveryScopeIssue = validatedPartial.issue
+              throw new ResearchTaskError('GENERATION_FAILED', '补查结果省略了此前已取得的有效条目，请保留这些记录。' + deliveryScopeIssue)
+            }
+            deliveryScopeIssue = scopeIssueFor(artifact, namedCoverage ?? null)
             if (deliveryScopeIssue) {
               // Keep a validated draft if bounded repair cannot fill the gap.
               // Source, date, document, and presentation checks run first.
-              if (task.hostContext?.workbenchRequest && !requiredReleaseScope &&
+              if ((task.hostContext?.workbenchRequest || namedCoverage) && !requiredReleaseScope &&
                   !/占位骨架/u.test(deliveryScopeIssue) && !containsContainerPlaceholder(output)) {
-                validatedPartial = { output, data: artifact, issue: deliveryScopeIssue }
+                validatedPartial = { output, data: artifact, issue: deliveryScopeIssue, namedCoverage }
               }
               throw new ResearchTaskError('GENERATION_FAILED', deliveryScopeIssue)
             }
@@ -2353,20 +2384,12 @@ export class ResearchTaskRuntime {
         const deliveredData = readableSnapshot?.output === output ? [readableSnapshot.data] : extractArtifactObjects(output)
         const releaseIssue = deliveredData.map(releaseIssueFor).find(Boolean)
         if (releaseIssue) throw new ResearchTaskError('GENERATION_FAILED', releaseIssue)
-        const unmetScope = deliveredData.map(data => task.hostContext?.workbenchRequest
-          ? panelDeliveryScope(data, task.prompt, task.hostContext, result.documentEvidence)
-          : componentDeliveryScopeIssue(data, cohortRequest)).find(Boolean)
+        const unmetScope = deliveredData.map(data => scopeIssueFor(data)).find(Boolean)
         if (unmetScope && !delivery && !readableSnapshot?.recoveryMode) {
           throw new ResearchTaskError('GENERATION_FAILED', unmetScope)
         }
         output=acceptArtifactOutput(retainObservedComponentProvenance(output,result.documentEvidence,sourceRecords))??output
-        const chartFallback = task.hostContext?.workbenchRequest && plannedFormat === 'chart'
-          ? workbenchChartTextFallback(deliveredData[0]) : undefined
-        if (chartFallback === 'data-missing') {
-          delivery = partialDelivery(chartFallback, '缺少绘制图表所需的可核验数据。')
-        } else if (chartFallback && !delivery) {
-          delivery = partialDelivery(chartFallback, '已保留可读资料，原定图表尚未生成。')
-        }
+        delivery = panelDelivery(deliveredData[0], task.prompt, task.hostContext, delivery)
         await this.finish(task, 'completed', { finalOutput: output, ...(delivery ?? (readableSnapshot?.recoveryMode === 'source-snapshot' ? taskDelivery(readableSnapshot) : {})) })
       } else {
         const message = result?.stopReason === 'completed'

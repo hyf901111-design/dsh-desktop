@@ -10,8 +10,8 @@ export function workbenchRefreshTooltip(lastSuccess,now=Date.now()) {
   return {relative,absolute:new Date(at).toLocaleString('zh-CN',{month:'long',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})}
 }
 export function workbenchRefreshState(node,binding,{rss=null,reload=false,error=''}={}) {
-  const spec=node?.containerSpec||{},native=spec.type==='financial-widget'&&['watchlist','quote','indices','news','announcements'].includes(spec.widget)
-  const nativeSource=native&&(spec.widget==='news'&&!spec.linkedSourceId||Array.isArray(spec.symbols)&&spec.symbols.length>0)
+  const spec=node?.containerSpec||{},native=spec.type==='financial-widget'&&['watchlist','quote','indices','news','announcements','futures'].includes(spec.widget)
+  const nativeSource=native&&(spec.widget==='futures'||spec.widget==='news'&&!spec.linkedSourceId||Array.isArray(spec.symbols)&&spec.symbols.length>0)
   // Binding snapshots come from the validated host service, not static card
   // data, generation timestamps, or a merely authored sourceBinding object.
   const bound=!native&&Boolean(binding&&binding.nodeId===node?.id)
@@ -107,7 +107,10 @@ export function WorkbenchChrome({node,sessionId,selected,readOnly,previewMode=fa
   const rss=componentRssStatusView(node)
   const refreshing=busy||binding?.status==='refreshing'
   const refreshState=workbenchRefreshState(node,binding,{rss,reload:typeof onReload==='function',error})
-  const time=workbenchRefreshTooltip(rss?rss.lastSuccess:binding?.lastSuccess||node.lastSuccessfulAt||(node.generationStatus==='completed'&&node.deliveryStatus!=='partial'?node.generationCompletedAt:null),now)
+  const fallbackTime=node.containerSpec?.type==='financial-widget'
+    ? node.lastSuccessfulAt!==node.generationCompletedAt&&node.lastSuccessfulAt
+    : node.lastSuccessfulAt||(node.generationStatus==='completed'&&node.deliveryStatus!=='partial'?node.generationCompletedAt:null)
+  const time=workbenchRefreshTooltip(rss?rss.lastSuccess:binding?.lastSuccess||fallbackTime,now)
   const refresh=async()=>{
     if(busy||readOnly)return {error:'组件当前不可刷新'}
     setBusy(true)

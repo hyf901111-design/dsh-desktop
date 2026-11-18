@@ -46,6 +46,12 @@ describe('same-cohort bond-fund workbench',()=>{
   expect(createToolProxy(catalog,{})[catalogMark]).toBe(true)
   expect(createToolProxy({...catalog,connectionId:'custom'}, {})[catalogMark]).toBeUndefined()
   expect(createToolProxy({...catalog,effect:'unknown'}, {})[catalogMark]).toBeUndefined()
+  expect(createToolProxy({...catalog,rawName:undefined,operationId:'tushare_catalog'}, {})[catalogMark]).toBe(true)
+  const dataProMark=Symbol.for('ework.builtin-datapro.read')
+  const dataPro={...binding,connectionId:'builtin:datapro-mcp:0123456789abcdef',rawName:'dataPro_search'}
+  expect(createToolProxy(dataPro,{})[dataProMark]).toBe(true)
+  expect(createToolProxy({...dataPro,rawName:undefined,operationId:'dataPro_search'},{})[dataProMark]).toBe(true)
+  expect(createToolProxy({...dataPro,connectionId:'custom'},{})[dataProMark]).toBeUndefined()
   const agent={},token={},name=proxy.name
   let dispatch
   const ctx={tools:{schemas:()=>[{name:'public_data_query'},{name}],get:()=>proxy,execute:async value=>{

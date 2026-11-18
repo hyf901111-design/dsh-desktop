@@ -3,6 +3,7 @@ import {WORKBENCH_LIBRARY_GUIDANCE,WORKBENCH_LIBRARY_IDS,bindWorkbenchLibraryLin
 import {workbenchExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js';
 import {workbenchSourcePolicy,workbenchObservedSourcesForPolicy} from './workbench-source-policy.js';
 import {captureWorkbenchObservedSources} from './workbench-observed-sources.js';
+import {workbenchTushareDirectory} from './workbench-source-progress.js';
 import {compileObservedSourceView, observedSourceViews, OBSERVED_SOURCE_GUIDANCE, OBSERVED_SOURCE_VIEW_SCHEMA, OBSERVED_SOURCES_TOOL} from './workbench-source-views.js';
 import {assertPrivateResearchSession} from './board-runtime.js'
 import { createHash, randomUUID } from 'node:crypto';
@@ -46,7 +47,9 @@ const partialDelivery=task=>task.deliveryStatus==='partial'?{deliveryStatus:'par
 function workbenchReceiptDetail(plan) {
     const scopeDetail = plan.sharedComparisonError || plan.scopeDeficits?.map(scopeDeficitText).join('\n');
     const failed = plan.panels.filter(panel=>panel.error).map(panel=>`「${panel.title}」${panel.error}`).join('\n');
-    const detail = [scopeDetail, failed, plan.sourceCaptureWarning].filter(Boolean).join('\n');
+    const partial = plan.panels.filter(panel=>panel.deliveryStatus==='partial' && !plan.scopeDeficits?.some(issue=>issue.panel===panel.title))
+        .map(panel=>panel.unmetRequirements?.[0] && '「'+panel.title+'」'+panel.unmetRequirements[0]).filter(Boolean).join('\n');
+    const detail = [scopeDetail, partial, failed, plan.sourceCaptureWarning].filter(Boolean).join('\n');
     return detail ? {detail} : {};
 }
 const scopeDeficitText = issue => issue.message ?? `「${issue.panel}」要求${issue.expected}${issue.unit}${issue.entity}，${issue.actual===null?'实际数量尚无法核验':`实际交付${issue.actual}，尚缺${issue.missing}`}。`;
@@ -230,8 +233,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             })};
         };
         const sourceCaptureWarnings = new Set();
-        const observedSources=originalHumanRequest&&args?.dataMode!=='simulated'&&!documentExclusive?captureWorkbenchObservedSources({
-            session:exec.agent.session,messageId:originalHumanRequest.messageId,schemas:ctx.tools.schemas?.(exec.agent)??[],
+        const captureSources=originalHumanRequest&&args?.dataMode!=='simulated'&&!documentExclusive;
+        const sourceSchemas=captureSources ? ctx.tools.schemas?.(exec.agent)??[] : [];
+        const tushareDirectory=workbenchTushareDirectory(ctx.tools,exec.agent,sourceSchemas);
+        const observedSources=captureSources?captureWorkbenchObservedSources({
+            session:exec.agent.session,messageId:originalHumanRequest.messageId,schemas:sourceSchemas,tushareDirectory,
             onRejected:reason=>sourceCaptureWarnings.add(reason)
         }):undefined;
         if (args.panels?.some(panel => panel?.sourceView !== undefined)) {
@@ -380,10 +386,11 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 }
             }
             // Resolve before queuing so ambiguous human restrictions remain explicit.
+            const unavailableTushare=tushareDirectory?.snapshot();
             const contexts = new Map(originalRequest ? input.panels.filter(p => !p.publicData).map(panel => {
                 const authored=args.panels?.find(value=>value?.title?.trim()===panel.title);
                 const publicSourceRequests=authored?workbenchQuoteSourceRequests(authored):undefined;
-                const sourcePolicy=input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel, {publicSourceRequests}) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt};
+                const sourcePolicy=input.dataMode !== 'simulated' ? workbenchSourcePolicy(originalRequest, panel, {publicSourceRequests,unavailableTushare}) : {pluginRequired:false,pluginProhibited:false,preferenceRequest:panel.prompt};
                 const sharedObservedRecords=workbenchObservedSourcesForPolicy(observedSources,sourcePolicy);
                 return [JSON.stringify([panel.title,panel.type,panel.prompt]), {...(originalImageMessageId ? {sourceMessageId:originalImageMessageId} : {}),sourcePolicy,sourceRequirement:panel.prompt,...(sharedObservedRecords?{sharedObservedRecords}:{}),...(usesHumanSourceScope({originalRequest,dataMode:input.dataMode}) ? {explicitScope:workbenchExplicitScope(originalRequest,panel)} : {}),workbenchRequest:{originalRequest:input.originalRequest,dataMode:input.dataMode ?? 'source'}}];
             }) : []);

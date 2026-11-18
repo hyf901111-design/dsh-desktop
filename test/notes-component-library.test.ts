@@ -9,9 +9,10 @@ it('uses the research library catalog and saved names, cloning a fresh independe
   store.list = () => [{id:'custom-1',name:'已重命名组件'}]
   store.read = id => {if(id!=='custom-1')throw Error('组件不存在');return {node:structuredClone(saved) as any}}
   const items = noteLibraryItems(store)
-  expect(items.slice(0,6).map(item=>item.id)).toEqual(componentLibraryBuiltins().map(item=>item.id));expect(items.slice(0,6).map(item=>item.icon)).toEqual(componentLibraryBuiltins().map(item=>item.widget))
+  const builtins=items.filter(item=>item.group==='内置组件')
+  expect(builtins.map(item=>item.id)).toEqual(componentLibraryBuiltins().map(item=>item.id));expect(builtins.map(item=>item.icon)).toEqual(componentLibraryBuiltins().map(item=>item.widget))
   expect(items.at(-1)).toMatchObject({id:'custom-1',title:'已重命名组件',icon:'custom'})
-  for (const item of items.slice(0,6)) {
+  for (const item of builtins) {
     const node = noteLibraryNode(store,item.id,'alice')
     expect(node).toMatchObject({kind:'generated-container',generationStatus:'completed',noteLibrary:true})
     expect(node.containerSpec.type).toBe(item.id==='builtin-calendar'?'calendar-tool':'financial-widget')

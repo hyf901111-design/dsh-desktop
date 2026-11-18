@@ -1,3 +1,6 @@
+import * as panelDelivery from '../../packages/dsh-research-task-runtime/workbench-panel-delivery.js'
+const {workbenchDeliveryIntent, workbenchChartTextFallback, workbenchNamedTargets, workbenchNamedTableCoverage} = panelDelivery
+
 // The canvas already owns the accepted generation state for every card,
 // including off-screen cards. Publish only identity and state, never contents,
 // prompts, tool arguments, errors or private model reasoning.
@@ -5,7 +8,10 @@ export function researchWorkbenchRecoveryMode(node) {
  const spec=node?.containerSpec
  if(!spec)return null
  if(node.deliveryStatus==='partial'&&['source-snapshot','readable-content','incomplete-scope','data-missing'].includes(node.recoveryMode))return node.recoveryMode
- if(spec.type==='markdown'&&/[（(](?:数据缺失|暂无数据|no data|data unavailable)[）)]$/iu.test(spec.title?.trim()??''))return 'data-missing'
+ const prompt=node.containerPrompt??''
+ const fallback=workbenchChartTextFallback(spec,prompt)
+ if(fallback)return fallback
+ if(node.workbenchId&&workbenchNamedTableCoverage(spec,prompt)?.issue)return 'incomplete-scope'
  if(spec.type!=='html'||typeof spec.html!=='string')return null
  if(/<body\b[^>]*\sdata-observed-table-recovery(?:[=\s>])/i.test(spec.html))return 'source-snapshot'
  if(/<body\b[^>]*\sdata-readable-content-recovery(?:[=\s>])/i.test(spec.html))return 'readable-content'
@@ -227,14 +233,15 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  ]})
 }
 
-export function researchWorkbenchFeedbackDefinitions(){return [researchWorkbenchRecoveryMode,isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
+export function researchWorkbenchRecoveryDefinitions(){return [workbenchDeliveryIntent,workbenchChartTextFallback,workbenchNamedTargets,workbenchNamedTableCoverage,researchWorkbenchRecoveryMode].map(fn=>fn.toString()).join('\n')}
+export function researchWorkbenchFeedbackDefinitions(){return researchWorkbenchRecoveryDefinitions()+'\n'+[isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v14 */',ending='/* ework:workbench-feedback:end */'
+ const marker='/* ework:workbench-feedback:v15 */',ending='/* ework:workbench-feedback:end */'
  source=source.replace('\nconst workbenchMeta=planningResponseMetadata(activityNodes);','')
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'+ending+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[0123]|[1-9]) \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[0-4]|[1-9]) \*\//)
  if(previous>=0){
   // Several later patches append their own helpers before ExecutionStatusGroup.
   // Replace this patch's functions only; never consume those adjacent owners.

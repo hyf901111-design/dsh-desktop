@@ -1,4 +1,4 @@
-import {componentDiscoveryToolNames,componentSourceCollector} from './component-source-binding.js'
+import {componentDiscoveryToolNames,componentSourceCollector,emptyDataProFinanceResult} from './component-source-binding.js'
 import {decodeDataResponse} from './component-data-refresh.js'
 import {expandBusinessEvidence} from './component-source-projection.js'
 import {workbenchPlanningSession} from './workbench-prototype-evidence.js'
@@ -50,7 +50,8 @@ export function restoreWorkbenchObservedSources(value){
  if(value===undefined)return undefined
  if(!Array.isArray(value)||!value.length)invalid()
  if(value.length>WORKBENCH_OBSERVED_SOURCE_LIMITS.records||bytes(value)>WORKBENCH_OBSERVED_SOURCE_LIMITS.bytes)quota()
- return Object.freeze(value.map(restoreObservedRecord))
+ const records=value.map(restoreObservedRecord).filter(record=>!emptyDataProFinanceResult(record.response))
+ return records.length?Object.freeze(records):undefined
 }
 
 // The spill preview is for display. Keep policy-approved content before that
@@ -87,7 +88,7 @@ function observedResult(result,retained,tool,args){
 // Replay only paired, successful tool observations belonging to this authored
 // request. Assistant prose, injected user messages and unrelated history never
 // supply records. Capture synchronously before queueing the workbench.
-export function captureWorkbenchObservedSources({session,messageId,schemas=[],onRejected}={}){
+export function captureWorkbenchObservedSources({session,messageId,schemas=[],onRejected,tushareDirectory}={}){
  if(typeof messageId!=='string'||!messageId)return undefined
  const events=workbenchPlanningSession(session)?.events??[]
  const start=events.findLastIndex(event=>authoredMessages(event).at(-1)?.id===messageId)
@@ -117,10 +118,14 @@ export function captureWorkbenchObservedSources({session,messageId,schemas=[],on
   calls.delete(id)
   const durableResult=message.content?.find(block=>block.type==='tool-result'&&block.toolCallId===id)
   const {name:tool,arguments:rawArgs}=call.data
-  if(!durableResult||durableResult.isError||durableResult.error||discovery.has(tool))continue
+  if(!durableResult||durableResult.isError||durableResult.error||discovery.has(tool)&&tool!==tushareDirectory?.catalog)continue
   let args
   try{args=typeof rawArgs==='string'?JSON.parse(rawArgs):rawArgs}catch{continue}
   if(!object(args)||tool==='public_data_query'&&args.operation!=='query'||tool==='financial_query'&&['resolve','search','catalog'].includes(args.intent))continue
+  if(tool===tushareDirectory?.catalog){
+   try{tushareDirectory.observe(args,decodeDataResponse(durableResult))}catch{}
+   continue
+  }
   const result=observedResult(durableResult,preSpill?.get(id),tool,args)
   let resultBytes
   try{resultBytes=bytes(result)}catch{reject('invalid');continue}
@@ -142,7 +147,7 @@ export function captureWorkbenchObservedSources({session,messageId,schemas=[],on
     continue
    }
   }
-  if(!record||record.response?.kind==='catalog'||!object(record.response)&&!Array.isArray(record.response)&&!record.snapshotRows?.length)continue
+  if(!record||record.response?.kind==='catalog'||emptyDataProFinanceResult(record.response)||!object(record.response)&&!Array.isArray(record.response)&&!record.snapshotRows?.length)continue
   try{record=restoreObservedRecord(record)}catch{reject('invalid');continue}
   const previous=records.findIndex(prior=>prior.tool===tool&&isDeepStrictEqual(prior.args,args))
   if(previous>=0&&tool==='web_fetch'&&!record.response&&records[previous].response)continue

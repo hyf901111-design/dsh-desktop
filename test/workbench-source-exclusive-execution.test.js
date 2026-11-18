@@ -70,6 +70,26 @@ it('installs a real SDK monotonic guard before the component first tool call and
  expect(execute).toHaveBeenCalledTimes(2)
 })
 
+it('skips parent-confirmed missing Tushare APIs before a child dispatch and leaves other agents and APIs usable',async()=>{
+ const ctx=new Context();new SystemPrompt(ctx,{});new ToolRuntime(ctx);cleanup.push(()=>ctx.fiber.dispose())
+ const executes=[],scope={catalog:'ework__catalog',read:'ework__read',apis:['fut_daily']}
+ for(const [kind,name] of [['read',scope.read],['catalog',scope.catalog]]){
+  ctx.tools.register({name,description:'受信来源',parameters:{type:'object',properties:{api_name:{type:'string'}}},
+   [Symbol.for('ework.builtin-tushare.'+kind)]:true,output:{schema:{},render:()=>[]},execute:async args=>{executes.push([name,args.api_name]);return {}}})
+ }
+ const child={id:'source-child'},other={id:'other'},childScope=createScope(ctx,child),otherScope=createScope(ctx,other)
+ child.ctx=childScope.ctx;other.ctx=otherScope.ctx;cleanup.push(()=>childScope.dispose());cleanup.push(()=>otherScope.dispose())
+ const call=(agent,name,api_name)=>ctx.tools.execute({name,arguments:{api_name},agent,callId:crypto.randomUUID(),signal:new AbortController().signal})
+ let first
+ ctx.provide('subagents',{async start(){ctx.emit('agent/created',{agent:child});first=await call(child,scope.read,'fut_daily');return{localAgent:child}}})
+ await startComponentAgent(ctx,{parent:{id:'parent'},sourcePolicy:{unavailableTushare:scope}})
+ expect(first.isError).toBe(true)
+ expect((await call(child,scope.catalog,'fut_daily')).isError).toBe(true)
+ expect((await call(child,scope.read,'fund_nav')).isError).toBe(false)
+ expect((await call(other,scope.read,'fut_daily')).isError).toBe(false)
+ expect(executes).toEqual([[scope.read,'fund_nav'],[scope.read,'fut_daily']])
+})
+
 it('completes the offline three-company eight-column source mapping with honest missing report dates and no refresh binding',async()=>{
  const f=fixture(),{task,start,bindData}=await run(f)
  expect(task.state,task.error).toBe('completed');expect(start).toHaveBeenCalledOnce();expect(bindData).not.toHaveBeenCalled()
