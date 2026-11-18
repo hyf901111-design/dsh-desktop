@@ -9,126 +9,37 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "图像画布、模板画廊与浏览器斜杠菜单",
+        "featureName": "统一图像底栏背景并调整图层及品牌资产侧栏",
         "branch": "codex/feat/image-canvas-controls-20261118",
-        "baseCommit": "c4fe071689699ab72ca8d274854a02b3a4bb6899",
-        "tipCommit": "7203cedb22ba462292705ec1de2881ebba8f668a",
+        "baseCommit": "7203cedb22ba462292705ec1de2881ebba8f668a",
+        "tipCommit": "c9e5d48f185009b2745de9f4b1746e27b6c186d6",
         "commits": [
           {
-            "commit": "629be13cd411aa2408a81104d23b33f7da9b5174",
+            "commit": "c9e5d48f185009b2745de9f4b1746e27b6c186d6",
             "parents": [
-              "c4fe071689699ab72ca8d274854a02b3a4bb6899"
+              "7203cedb22ba462292705ec1de2881ebba8f668a"
             ],
-            "subject": "功能：完善图像画布选区操作、比例切换与模板画廊"
-          },
-          {
-            "commit": "7203cedb22ba462292705ec1de2881ebba8f668a",
-            "parents": [
-              "629be13cd411aa2408a81104d23b33f7da9b5174"
-            ],
-            "subject": "修复：浏览器右侧斜杠菜单透底与长列表滚动"
+            "subject": "优化：统一图像底栏背景并收整侧栏分隔线"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/main/context-menu-target.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/image-factory-canvases.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/native-menus.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-refinements.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/actions-menu.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/brand-assets.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/canvas-workspace.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/gallery.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/layer-groups.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/layers.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/raster.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/image-factory/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-page-context-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/context-menu-target.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-canvases.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
-              "test/browser-page-context-rendered.test.js",
-              "test/browser-menu-overlay-focus.test.ts",
-              "test/slash-menu-expanded.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-factory-gallery.test.ts",
-              "test/image-factory.test.js",
-              "test/context-menu-target.test.js",
-              "-t",
-              "^(?!.*matches workspace menu material)"
+              "test/image-factory-layer-gesture.test.ts"
             ],
             "outcome": "passed",
-            "summary": "110 项画布、画廊和浏览器聚焦测试通过",
-            "verifiedCommit": "7203cedb22ba462292705ec1de2881ebba8f668a",
-            "completedAt": "2026-11-18T01:44:48.858Z",
+            "summary": "18 项图像界面交互聚焦检查通过",
+            "verifiedCommit": "c9e5d48f185009b2745de9f4b1746e27b6c186d6",
+            "completedAt": "2026-11-18T02:10:19.792Z",
             "timeoutMs": 60000
           },
           {
@@ -139,71 +50,21 @@
             ],
             "outcome": "passed",
             "summary": "Node 类型检查通过",
-            "verifiedCommit": "7203cedb22ba462292705ec1de2881ebba8f668a",
-            "completedAt": "2026-11-18T01:44:48.858Z",
+            "verifiedCommit": "c9e5d48f185009b2745de9f4b1746e27b6c186d6",
+            "completedAt": "2026-11-18T02:10:19.792Z",
             "timeoutMs": 90000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "编辑器框选、缩放、复制粘贴、删除、比例交互通过。浏览器深浅主题的长模型列表完整投影、滚动和点击通过。"
+          "summary": "渲染验证通过，深浅主题下两个侧栏均无描边，标题分隔线双侧各 12 px，底栏与顶栏背景一致。"
         },
         "acceptanceCriteria": [
-          "多选可右键编组和取消编组，整组缩放、复制粘贴、删除与 PNG/JPG 下载。",
-          "品牌元素可以越出画框并保存，其画框外内容可继续编辑。切换比例保留原图和图层宽高比。",
-          "模板上方留白收紧，底部切换为中性灰。浏览器右侧斜杠子菜单背景清晰并可滚动。"
+          "图像底栏和顶栏背景一致。",
+          "图层和品牌资产侧栏无外描边，标题分隔线对齐标题与关闭按钮。"
         ],
-        "risks": [
-          "两项共享菜单材质断言在基线同样失败，已核对为消息中心原有样式期望。",
-          "方舟无可见水印开关已独立部署，托管网关本地桩验证已通过。"
-        ],
-        "generatedAt": "2026-11-18T01:44:48.858Z"
-      },
-      "merged": {
-        "mergeCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
-        "verificationCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
-        "checks": [
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-page-context-rendered.test.js",
-              "test/browser-menu-overlay-focus.test.ts",
-              "test/slash-menu-expanded.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/image-factory-actions-menu.test.ts",
-              "test/image-factory-gallery.test.ts",
-              "test/image-factory.test.js",
-              "test/context-menu-target.test.js",
-              "-t",
-              "^(?!.*matches workspace menu material)"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-page-context-rendered.test.js test/browser-menu-overlay-focus.test.ts test/slash-menu-expanded.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvases.test.ts test/image-factory-canvas-workspace.test.ts test/image-factory-actions-menu.test.ts test/image-factory-gallery.test.ts test/image-factory.test.js test/context-menu-target.test.js -t ^(?!.*matches workspace menu material)",
-            "verifiedCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
-            "completedAt": "2026-11-18T01:45:24.005Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2f28d32436ac24dced64a702674d8bebd51abeb6",
-            "completedAt": "2026-11-18T01:45:24.005Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-18T01:45:24.005Z"
+        "risks": [],
+        "generatedAt": "2026-11-18T02:10:19.792Z"
       }
     }
   ],
