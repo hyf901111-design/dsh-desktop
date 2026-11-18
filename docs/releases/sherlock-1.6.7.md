@@ -29,3 +29,20 @@
 - Right-click selected image layers to group, resize together or export them. Change the canvas aspect ratio from the toolbar. The editor footer matches the toolbar, and the Layers and Brand Assets dividers align with their headings.
 
 - Unread dots now appear in the notification entry and message list. Slash-command submenus in the built-in browser scroll independently and cover the webpage beneath them.
+
+## 发布验证
+
+- 构建提交 `babb5a5c25d7256bafd9a5e43d770b0df8026c87`。320 项聚焦检查、类型检查和生产构建通过。正式包在隔离配置中成功打开对话首页，旧配置迁移与 DSH Desktop 共存检查通过。
+- App 和 DMG 已使用 Developer ID 签名，旧客户端兼容桥保留原更新证书。已核验签名、两个 ZIP、DMG 及其中的 App。按要求跳过 Apple 公证。
+- 两个公开更新源均提供 1.6.7 和中英文更新日志。已核验版本资源与稳定下载地址的缓存策略、文件名、单段 Range 响应和 blockmap。
+- 从线上前一版 1.6.5 的缓存分别重建两个 1.6.7 ZIP。两份合成文件的 SHA-512 均与签名发布包一致。
+
+| 通道 | 完整包（字节） | 传输（字节） | 复用（字节） | Range 请求 |
+| --- | ---: | ---: | ---: | ---: |
+| 标准 | 934,334,832 | 93,212,117 | 841,122,715 | 176 |
+| 旧签名兼容 | 1,011,812,891 | 137,015,322 | 874,797,569 | 280 |
+
+- Homebrew Cask 已同步到 1.6.7，Tap 提交 `b1238db5aba7ac15591054e63c8e32804ebd5c6d`，公开 Cask 的 DMG SHA-256 为 `5fd95bfd24a739951c3dd157043a7f68d1f5de88301ed7673568770dff82a7e8`。
+- 滚动清理移除了 1.6.0 的五个版本资源，1.6.5 的差分基线仍可访问。
+
+[下载 EWork Odyssey 1.6.7（macOS Apple Silicon）](https://updates.evanarts.com/releases/v1.6.7/sherlock-mac-arm64.dmg)
