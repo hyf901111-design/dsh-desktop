@@ -46,7 +46,7 @@ it('upgrades the exact installed v2 status layer while rejecting a changed histo
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchConversationLiveActivity(source)
  const frozen=JSON.parse(await readFile('test/fixtures/conversation-live-activity-v2.json','utf8')).definition
  const compatible=transformWorkbenchConversationPresentation(next,true)
- const start=compatible.indexOf('/* ework:conversation-live-activity:v4 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
+ const start=compatible.indexOf('/* ework:conversation-live-activity:v5 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
  const previous=compatible.slice(0,start)+frozen+compatible.slice(end)
  expect(patchConversationLiveActivity(previous)).toBe(next)
  expect(()=>patchConversationLiveActivity(previous.replace('2.4s linear infinite','1s linear infinite'))).toThrow('definition drifted')
@@ -67,6 +67,20 @@ it('acknowledges only an accepted Workbench submission or its authoritative acti
  expect(update([user(request,4,'steering')])).toBeNull()
  expect(update([user()],{running:false})).toBeNull()
  expect(update([user()],{openState:'loading'})).toBeNull()
+})
+
+it('gives an actionable initial structure for the current request, then yields to public model text',()=>{
+ const futures=user('生成一个期货衍生品研究工作台')
+ expect(update([futures]).text).toMatch(/品种.*近远月结算价.*持仓分布.*明细.*交易日报.*事件/)
+ expect(update([futures],{english:true}).text).toContain('open interest')
+ const file=update([user('根据上传的期货附件创建一个研究工作台')]).text
+ expect(file).toContain('指定材料');expect(file).not.toContain('上期所')
+ expect(update([user('只看股指期货，创建一个研究工作台')]).text).not.toContain('上期所')
+ const comparison=update([user('创建一个区域门店销售对比工作台')]).text
+ expect(comparison).toContain('排序图');expect(comparison).not.toContain('行情')
+ const step={key:'first-public-step',kind:'assistant-step',location:{turn:{turn:4}},data:{blocks:[{kind:'reasoning',text:'private'}]}}
+ expect(update([futures,step])?.kind).toBe('received')
+ expect(update([futures,{...step,data:{blocks:[{kind:'text',text:'按到期月份看价差'}]}}])).toBeNull()
 })
 
 it('reports actual source observations and verified plan acceptance without leaking payloads',()=>{

@@ -1,5 +1,5 @@
 import {workbenchRequestedStyle} from './workbench-request-style.js';
-import {WORKBENCH_LIBRARY_GUIDANCE,WORKBENCH_LIBRARY_IDS,bindWorkbenchLibraryLinks} from './workbench-library.js';
+import {WORKBENCH_LIBRARY_GUIDANCE,WORKBENCH_LIBRARY_IDS,bindWorkbenchLibraryLinks,includeFuturesInformationSources} from './workbench-library.js';
 import {workbenchExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js';
 import {workbenchSourcePolicy,workbenchObservedSourcesForPolicy} from './workbench-source-policy.js';
 import {captureWorkbenchObservedSources} from './workbench-observed-sources.js';
@@ -330,7 +330,8 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             const fundReader = fundScope && !observedSources?.length &&
                 Array.isArray(resolved.panels) && resolved.panels.some(panel=>panel&&!panel.artifact&&!panel.publicData) &&
                 fundComparisonReader(ctx,exec.agent);
-            const candidate = fundReader ? includeFundComparisonOverview(resolved,originalRequest,MAX_WORKBENCH_PANELS) : resolved;
+            const candidate = fundReader ? includeFundComparisonOverview(resolved,originalRequest,MAX_WORKBENCH_PANELS) :
+                includeFuturesInformationSources(resolved, originalImageMessageId||documentPaths ? undefined : originalRequest, MAX_WORKBENCH_PANELS, plans.find(plan=>plan.parentSessionId===parentSessionId && plan.requestId===resolved.requestId));
             const {input:submitted,scopeDeficits:submittedDeficits} = validateWorkbenchDelivery(candidate, validationOptions);
             let input = submitted;
             let scopeDeficits = submittedDeficits;
@@ -543,7 +544,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             links:{type:'array',description:'组件节点联动。panels零基序号；自选→行情/新闻/公告，行情→新闻/公告，每目标至多一个来源。',items:{type:'object',additionalProperties:false,properties:{sourcePanel:{type:'integer',required:true},targetPanel:{type:'integer',required:true}}}},
             tabs: {type:'array',description:'原生看板页签。要求分页面/按页签切换时必填；每卡恰好归属一页，不在 prompt 中假装有页签。',items:{type:'object',additionalProperties:false,properties:{name:{type:'string',required:true},panelIndexes:{type:'array',required:true,description:'本页 panels 的零起始下标，如 [0,1,2]。',items:{type:'integer'}}}}},
             panels: { type: 'array', required: true, description: '必填。自定义工作台提交1–30个含title/prompt/type的完整面板，size可省略由宿主按内容排版；已取得内容直接提交content，已有规范组件可提交artifact；完整共同记录用sharedDatasets+view。仅内置preset使用空数组[]。', items: { type: 'object', additionalProperties: false, properties: {
-                        title: { type: 'string', description: '卡片标题；已有 content.title 或 artifact.title 时可复用，其他面板必填。' }, prompt: { type: 'string', required: true, description: '描述本面板的问题、范围、日期、单位、来源和用户所需操作。已取得且授权共享的工具结果由宿主提供受限本地快照，子任务可用 workbench_source_read 复用；无需在每卡重复抄录。' },
+                        title: { type: 'string', description: '卡片标题；已有 content.title 或 artifact.title 时可复用，其他面板必填。' }, prompt: { type: 'string', description: '待取数或生成的卡必须描述研究问题、范围、来源和所需操作。提供完整 content 的面板可省略，沿用其标题；子任务可用 workbench_source_read 复用已授权的资料。' },
                         note: {type:'string',description:'可选，2000 字以内的规划补充说明。经核对的成品附注写入 content.note 或受支持的 artifact.note。'},
                         type: { type: 'string', enum: types, required: true, description: 'view必须同时提供完整sharedDatasets与每卡view，不能作为deferred占位。table仅支持平面行、排序和搜索，不能逐条展开详情。时序记录可用timeline/calendar等合适模板；明确需要可展开表格或独特业务交互时用html；模拟场景保留deferred与sharedContext，由受限子卡离线生成自包含HTML；真实记录保持原数据性质和来源约束，不改称模拟。散点图用 market 且 prompt 声明 variant: scatter；普通柱状图用 chart 并声明 chart.bar；指标卡 metrics 只显示数值，不会渲染散点或柱状图。' }, size: { type: 'string', enum: ['small', 'medium', 'large', 'wide'], description: '可省略，由宿主按内容选择尺寸。通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
                         layout: {type:'string',enum:['standard','wide'],description:'可选的语义阅读布局；排程、宽对照、图表与独立详情并排时用wide跨整行，其余standard。不要所有面板选同一宽度；手动尺寸优先。'},

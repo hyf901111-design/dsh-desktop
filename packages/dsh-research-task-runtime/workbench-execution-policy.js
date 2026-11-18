@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util'
 import {WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
 import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js'
 import {componentCreationRequest,latestClientModeForAuthority,planningHumanRequest} from './conversation-components-policy.js'
-import { workbenchPlanningContext } from './workbench-planning-context.js'
+import { generalFuturesWorkbench, workbenchPlanningContext } from './workbench-planning-context.js'
 import { LIVE_WORKBENCH_PRESETS } from './live-workbench-presets.js'
 import {MAX_PROTOTYPE_WINDOWS,planningPrototypeEvidence,prototypeEvidenceCall,prototypeEvidenceSchema,prototypeEvidenceProgress,prototypeEvidenceGuidance,prototypeEvidenceRequestCurrent,workbenchPlanningSession} from './workbench-prototype-evidence.js'
 import { DOCUMENT_WORKBENCH_PLANNING, workbenchDocumentInputs, workbenchDocumentScope, workbenchDocumentPrompt } from './workbench-document-evidence.js'
@@ -305,9 +305,10 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       if (!accepted) {
         const { simulation } = planningDataIntent(human.text)
         const evidence=planningPrototypeEvidence(agent.session,human)
-        if (!simulation && readDocumentEvidence && workbenchDocumentScope(human.text, evidence)) return workbenchPlanningContext() + '\n' + DOCUMENT_WORKBENCH_PLANNING
-        if(evidence.required.length&&!simulation)return workbenchPlanningContext()+'\n'+PROTOTYPE_PLANNING_GUIDANCE+'\n'+prototypeEvidenceGuidance(evidence)
-        return workbenchPlanningContext() + '\n' + (simulation ? WORKBENCH_EARLY_PLAN : SOURCE_PLANNING_TOOL_GUIDANCE + '\n' + OBSERVED_SOURCE_GUIDANCE) + (evidence.required.length ? '\n' + prototypeEvidenceGuidance(evidence) : '')
+        const context=workbenchPlanningContext(undefined,human.text)
+        if (!simulation && readDocumentEvidence && workbenchDocumentScope(human.text, evidence)) return context + '\n' + DOCUMENT_WORKBENCH_PLANNING
+        if(evidence.required.length&&!simulation)return context+'\n'+PROTOTYPE_PLANNING_GUIDANCE+'\n'+prototypeEvidenceGuidance(evidence)
+        return context + '\n' + (simulation ? WORKBENCH_EARLY_PLAN : SOURCE_PLANNING_TOOL_GUIDANCE + '\n' + OBSERVED_SOURCE_GUIDANCE) + (evidence.required.length ? '\n' + prototypeEvidenceGuidance(evidence) : '')
       }
       if(accepted.incomplete)return '工作台生成未完成。只根据工具已核实的缺口简短说明结果，不要声称完成或重复提交。'
       return workbenchNeedsInlineBinding(accepted.args, human.text)
@@ -424,6 +425,8 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       !Array.isArray(record.response.records)) &&
       '本轮已有可交接的嵌套来源。源目录没有平面编号时，按实际响应保留面板所需对象、字段和时点。组件可先从本地快照读取同一响应，缺覆盖时才补查。'
     if (documentGuidance) return { ...request, system: [request.system, documentGuidance, newsRecordTableGuidance(human.text), PLANNING_PROGRESS_GUIDANCE].filter(Boolean).join('\n'), tools }
+    if (!prototypeSource && !simulation && generalFuturesWorkbench(human.text)) return {...request,tools,system:[request.system,sharedSourceGuidance,sourceDirectory,state.sourceProgress.guidance(),WORKBENCH_LIBRARY_GUIDANCE,
+      '本次是开放式期货衍生品研究，没有指定跨所全量、会员排行或盘中频率。可先提交现成的商品期货日报（builtin-futures）与按主题更新的要闻（builtin-news），给日报标注交易所覆盖。日报已支持持仓最大合约的品种涨跌排行，点击可进期限曲线、持仓和明细，无需为相同数据预查目录或重复制卡。结合研究问题决定是否补充交易机制关系图、品种索引或其他有独立用途的入口。现货替代指标仅在用户要求或有明确比较关系时使用。已被组件库覆盖的字段由组件在挂载及刷新时读取；需要其他真实数据的面板保留明确范围和来源交给单卡取数，或复用本轮已有记录。用同一次 research_workbench_create 提交组件组合，已有 content 不用另写 prompt，任何规格需修正时保留其他有效项。',PLANNING_PROGRESS_GUIDANCE].filter(Boolean).join('\n')}
     return { ...request, system: [request.system, sourceDirectory, sharedSourceGuidance, sourceOnly&&SOURCE_MODE_GUIDANCE, WORKBENCH_LIBRARY_GUIDANCE, WORKBENCH_TABS_GUIDANCE, prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : DATA_FIRST_GUIDANCE, !simulation&&!offline&&!prototypeSource?workbenchStructuredSourceGuidance(tools,human.text)+state.sourceProgress.guidance():'', prototypeEvidenceGuidance(state.evidenceTargets), PLANNING_PROGRESS_GUIDANCE, newsRecordTableGuidance(human.text,{planning:!offline&&!simulation}),
       !offline && !availableSources.length && fundComparisonCount(human.text) && fundComparisonReader(ctx,agent) && '【中长期纯债基金共同取数】本题命中宿主的同批基金比较取数能力。直接提交完整面板规划，省略 preset、publicData 和未取得的 artifact。宿主取得可比基金样本、净值与管理人后交给各卡复用。',
       offline && !state.evidenceTargets.required.length && '【离线工作台】直接调用 research_workbench_create 交付整套卡。题中现成记录随同一调用提交，保留零、负数、原单位、台账来源与计算口径。交互工具从明确的字段和操作开始，不虚构提交记录。',

@@ -368,7 +368,7 @@ it('原生现货行情可从标题选 BTC 并在数据设置切换交易所',asy
 
 it('期货卡在品种、曲线、持仓和明细间切换，沿用同一日报，刷新后保留当前栏目',async()=>{
  let date='2026-11-17'
- const contract=(code,month,settlement,openInterest)=>({code,month,settlement,openInterest,volume:0,close:null})
+ const contract=(code,month,settlement,openInterest)=>({code,month,settlement,previousSettlement:100000,openInterest,volume:0,close:null})
  const rb={code:'rb',name:'螺纹钢',unit:'元/吨',contracts:[contract('RB2612','2612',2993,10),contract('RB2701','2701',null,30),contract('RB2702','2702',3010,20)]}
  const cu={code:'cu',name:'铜',unit:'元/吨',contracts:[contract('CU2612','2612',103500,40),contract('CU2701','2701',104000,90)]}
  const request=vi.fn(async()=>({source:'上期所交易日报',receivedAt:date+'T09:00:00Z',futuresReport:{date,products:[rb,cu],url:'https://www.shfe.com.cn/'}}))
@@ -383,4 +383,9 @@ it('期货卡在品种、曲线、持仓和明细间切换，沿用同一日报�
  date='2026-11-18';await f.act(async()=>card.__eworkRefreshFinancial())
  expect(card.querySelector('[aria-selected=true]').textContent).toBe('合约明细')
  expect(card.querySelector('.ew-financial-source-time').textContent).toContain(date)
+ await f.event('click',tabs[3])
+ const ranked=card.querySelectorAll('.ew-futures-rank button')
+ expect(ranked).toHaveLength(1);expect(ranked[0].textContent).toContain('+4.00%')
+ await f.event('click',ranked[0]);expect(select.value).toBe('cu')
+ expect(card.querySelector('[aria-selected=true]').textContent).toBe('期限结构')
 })

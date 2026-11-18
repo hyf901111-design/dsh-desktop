@@ -1,9 +1,10 @@
 import {createHash} from 'node:crypto'
 import {classifyResearchCreationRequest} from '../../packages/dsh-research-task-runtime/component-delivery-intent.js'
+import {generalFuturesWorkbench,initialWorkbenchInformationPlan} from '../../packages/dsh-research-task-runtime/workbench-planning-context.js'
 import {stripConversationResponseHistory} from './conversation-response-history.mjs'
 import {planningResponseMetadata} from './research-planning-feedback.mjs'
 import {conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,statusPresentationCss,transformStatusPresentation,transformWorkbenchConversationPresentation} from './conversation-status-presentation.mjs'
-const START='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
+const START='/* ework:conversation-live-activity:v5 */',V4='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
 
 const workbenchSourceObservationCache = new WeakMap()
 
@@ -51,7 +52,8 @@ export function workbenchConversationUpdate({ running, runningTurn, settledTurn,
  const promptIndex = current.findLastIndex(node => ['user','steering'].includes(node.kind))
  const prompt = current[promptIndex], ownerKey = prompt?.key ?? pending?.key
  if (!ownerKey || prompt && (prompt.kind !== 'user' || prompt.data?.source?.kind !== 'user')) return null
- if (classify(readText(prompt?.data?.content ?? pending?.submission?.content ?? []))?.kind !== 'workbench') return null
+ const request=readText(prompt?.data?.content ?? pending?.submission?.content ?? [])
+ if (classify(request)?.kind !== 'workbench') return null
  const milestone = (kind, zh, en) => ({ ownerKey, kind, text: say(zh, en) })
  const calls = current.slice(promptIndex + 1).filter(node => node.kind === 'tool-call' && node.data?.root)
  const plans = readPlans(calls).plans
@@ -85,7 +87,10 @@ export function workbenchConversationUpdate({ running, runningTurn, settledTurn,
  if (found) return milestone('sources', '已读取部分来源资料，组件计划尚未提交。', 'Some source material was retrieved. The component plan is still pending.')
  if (gaps) return milestone('sources', '有来源未能读取，可在执行详情中查看。', 'Some sources could not be read. See the activity details for more information.')
  if (checking) return milestone('checking', '正在查找和核对工作台所需的资料。', 'Finding and checking the sources needed for the workbench.')
- return milestone('received', '已收到创建工作台的请求。接下来会梳理所需的内容和组件。', 'Your workbench request was received. The next step is to work out the content and components it needs.')
+ const hasPublicReply=current.slice(promptIndex+1).some(node=>node.kind==='assistant-step'&&node.data?.blocks?.some(block=>block.kind==='text'&&block.text?.trim()))
+ if(hasPublicReply)return null
+ const design=initialWorkbenchInformationPlan(request,english)
+ return {ownerKey,kind:'received',text:say('已收到创建工作台的请求。','Your workbench request was received. ')+(design||say('接下来会梳理所需的内容和组件。','The next step is to work out the content and components it needs.'))}
 }
 
 function workbenchConversationFlow(flow, options) {
@@ -159,7 +164,7 @@ function ConversationLiveActivity(props) {
   react.createElement('span',null,state.label+parallel))
 }
 const CSS=statusPresentationCss
-const definition=()=>START+'\nconst workbenchSourceObservationCache = new WeakMap();\n'+[conversationLiveActivity,ConversationLiveActivity,conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,workbenchSourceObservation,workbenchConversationUpdate,workbenchConversationFlow,WorkbenchConversationUpdate,classifyResearchCreationRequest].map(fn=>fn.toString()).join('\n')+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-live-activity-style");if(!style){style=document.createElement("style");style.id="ework-live-activity-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
+const definition=()=>START+'\nconst workbenchSourceObservationCache = new WeakMap();\n'+[conversationLiveActivity,ConversationLiveActivity,conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,workbenchSourceObservation,workbenchConversationUpdate,workbenchConversationFlow,WorkbenchConversationUpdate,classifyResearchCreationRequest,generalFuturesWorkbench,initialWorkbenchInformationPlan].map(fn=>fn.toString()).join('\n')+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-live-activity-style");if(!style){style=document.createElement("style");style.id="ework-live-activity-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
 const CHAT_END='\n\t\t\t\t\t\t]\n\t\t\t\t\t}), (0, react_jsx_runtime.jsx)(OdysseyReadingStatus,'
 const CHAT_NEXT=',react.createElement(ConversationLiveActivity,{running,runningTurn:runningTurnNumber,order,nodeStore,flow:nativeSubmittedFlow,noteRows,canvasTasks,openState,t})'+CHAT_END
 const SHARED_END="!ongoing&&continuations.length>0&&!tails.length&&react.createElement(MessageIconActions,{text:continuations.at(-1).reason??'',t}))"
@@ -168,12 +173,12 @@ const SHARED_NEXT=SHARED_LEGACY.replace('nodeStore,canvasTasks','nodeStore,flow:
 function scope(source,anchor,from,to){const a=source.indexOf(anchor),b=source.indexOf('\n\t\t//#endregion',a);if(a<0||b<a)throw Error('Live activity scope missing: '+anchor);const part=source.slice(a,b);if(part.split(from).length!==2)throw Error('Live activity anchor drifted: '+anchor);return source.slice(0,a)+part.replace(from,to)+source.slice(b)}
 export function stripConversationLiveActivity(source){
  source=stripConversationResponseHistory(source)
- const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:START,a=source.indexOf(marker)
+ const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),v4=source.includes(V4),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:v4?V4:START,a=source.indexOf(marker)
  if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
  const end=source.indexOf(END,a),block=source.slice(a,end+END.length+1)
- const historicalHash=legacy?'6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':previous?'e7f1ff04a7719a5abde00da1bd1fe91f49b155f61e1b013f5f3a0d319084b7a3':v3?'d169fef72132cd6ce5cd77d8aa6145cdba0dc3dd7bbfdc86c63032189f6963ef':null
+ const historicalHash=legacy?'6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':previous?'e7f1ff04a7719a5abde00da1bd1fe91f49b155f61e1b013f5f3a0d319084b7a3':v3?'d169fef72132cd6ce5cd77d8aa6145cdba0dc3dd7bbfdc86c63032189f6963ef':v4?'578940255480b5473821c0a226b95a1d7624ce5cd75b8f1197b9f8a7327f1f2c':null
  if(source.split(marker).length!==2||source.split(END).length!==2||end<a||(historicalHash?createHash('sha256').update(block).digest('hex')!==historicalHash:block!==definition()))throw Error('Live activity definition drifted')
- if(!historicalHash)source=transformWorkbenchConversationPresentation(source,true)
+ if(v4||!historicalHash)source=transformWorkbenchConversationPresentation(source,true)
  if(!legacy)source=transformStatusPresentation(source,true)
  source=scope(source,'function ChatView(',CHAT_NEXT,CHAT_END)
  source=scope(source,'function SharedResearchRequest(',legacy?SHARED_LEGACY:SHARED_NEXT,SHARED_END)

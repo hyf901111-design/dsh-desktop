@@ -48,9 +48,9 @@ async function fixture(preparedDelivery = {}) {
   }
 }
 
-function renderedReceipt(result, status) {
+function renderedReceipt(result, status, panels=['研究说明'], templateIds=['note']) {
   expect(result, JSON.stringify(result)).toMatchObject({ isError: false, value: {
-    planId: expect.any(String), panels: ['研究说明'], templateIds: ['note'], status,
+    planId: expect.any(String), panels, templateIds, status,
     refreshStatus: 'unverified', refreshGuidance: expect.stringContaining('以实际绑定及成功刷新状态为准')
   } })
   expect(result.content).toEqual([{ type: 'text', text: JSON.stringify(result.value) }])
@@ -95,6 +95,24 @@ it('returns the unresolved panel requirement with an incomplete inline receipt a
   const receipt=renderedReceipt(await f.invoke(args),'incomplete')
   expect(receipt.detail).toContain(delivery.unmetRequirements[0])
   expect(renderedReceipt(await f.invoke(structuredClone(args)),'incomplete')).toEqual(receipt)
+})
+
+it('accepts complete rows, prose and a heading tree alongside native live widgets without duplicate prompts',async()=>{
+  const f=await fixture()
+  const args={requestId:'prepared-research',title:'期货衍生品研究工作台',panels:[
+    {title:'在市合约',type:'financial-widget',prompt:'切换品种和到期月',library:{id:'builtin-futures',options:{query:'rb'}}},
+    {title:'市场事件',type:'news',prompt:'跟踪商品期货要闻',library:{id:'builtin-news',options:{query:'商品期货',dataSource:'doubao'}}},
+    {title:'研究框架',type:'mind-map',content:{title:'研究框架',body:'价格结构下按合约到期月份观察基差与月差。',visualization:{kind:'hierarchy',outline:'# 研究框架\n## 价格结构\n### 月差\n## 持仓'}}},
+    {title:'合约口径',type:'table',content:{title:'合约口径',rows:[{口径:'结算价',单位:'元/吨'}]}},
+    {title:'方法说明',type:'markdown',content:{title:'方法说明',body:'比较相同交易日、相同报价单位的合约。'}}
+  ]}
+  const titles=args.panels.map(panel=>panel.title)
+  const ids=['financial-widget.futures','financial-widget.news','mind-map','table','markdown']
+  const receipt=renderedReceipt(await f.invoke(args),'prepared',titles,ids)
+  expect(renderedReceipt(await f.invoke(args),'prepared',titles,ids).planId).toBe(receipt.planId)
+  expect(f.tasks.size).toBe(5)
+  const absent=await f.invoke({requestId:'missing-requirement',title:'未准备数据',panels:[{title:'行情',type:'chart'}]})
+  expect(absent.isError).toBe(true);expect(f.tasks.size).toBe(5)
 })
 
 it('keeps preparing compatible with the registered SDK output contract', async () => {

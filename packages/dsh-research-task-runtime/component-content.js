@@ -13,6 +13,20 @@ const plain = value => value && typeof value === 'object' && !Array.isArray(valu
 const cell = value => value == null || value === '' ? '—' : typeof value === 'object' ? JSON.stringify(value) : typeof value === 'boolean' ? String(value) : value
 const contentChartKinds = ['bar','horizontal','line','area','groupedBar']
 
+function hierarchyOutline(outline) {
+ if(typeof outline!=='string')return outline
+ const headings=outline.trim().split(/\r?\n/).filter(line=>line.trim()).map(line=>/^(#{1,6})[ \t]+(\S.*)$/u.exec(line.trim()))
+ if(headings.length<2||headings[0]?.[1]!=='#')return outline
+ let previous=1
+ const lines=[headings[0][0]]
+ for(const heading of headings.slice(1)){
+  const depth=heading?.[1].length
+  if(!depth||depth<2||depth>previous+1)return outline
+  lines.push('  '.repeat(depth-2)+'- '+heading[2]);previous=depth
+ }
+ return lines.join('\n')
+}
+
 export function compileComponentContent(content) {
  if (!plain(content)) throw Error('content 需要正文或完整记录。')
  const keys=['title','body','rows','columns','visualization','sources','asOf','note','unit','metrics']
@@ -39,7 +53,7 @@ export function compileComponentContent(content) {
   // footer instead of passing metadata keys the native parser rejects.
   const sourceLines=(content.sources??[]).map(row=>[row.label??row.name??row.title,row.text,row.url].filter(Boolean).join(' · '))
   if(kind==='hierarchy'){
-   const data=parseDerivedSpec({version:1,type:'mind-map',title:base.title,content:view.outline,
+   const data=parseDerivedSpec({version:1,type:'mind-map',title:base.title,content:hierarchyOutline(view.outline),
     source:{title:content.sources?.[0]?.label||base.title,text:[content.body,...sourceLines].join('\n\n')},
     ...(base.asOf?{asOf:base.asOf}:{}),...(base.note?{note:base.note}:{})})
    if(!data)throw Error('关系图需要一个 # 根标题，其下用两空格缩进的逐项列表保留材料里的上下级关系。')
