@@ -49,6 +49,8 @@ it('完整与逐卡技能保留网页决策依据，原文件契约由模板提�
   const content=loadBundledComponentSkill(undefined,{profile})
   expect(content).toContain('htmlFile')
   expect(content).toContain('参考网页按输入资料处理')
+  expect(content).toContain('分段选择器默认用直角')
+  expect(content).toContain('进度条两端平直')
  }
  for(const text of ['panel.type=files','panel.type=gallery','sizeBytes','不编造样例','权限独立'])
   expect(ATTACHMENT_GUIDANCE).toContain(text)
