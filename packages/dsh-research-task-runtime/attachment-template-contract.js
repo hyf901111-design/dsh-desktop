@@ -7,7 +7,7 @@ export const ATTACHMENT_TEMPLATES=Object.freeze([
 export function parseAttachmentSpec(value){
  const record=(v,required,optional=[])=>v&&typeof v==='object'&&!Array.isArray(v)&&required.every(k=>Object.hasOwn(v,k))&&Object.keys(v).every(k=>required.includes(k)||optional.includes(k))
  const text=(v,max)=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(v)
- if(!record(value,['version','type','title','items'],['description','source','date','asOf','presentation'])||value.version!==1||!['files','gallery'].includes(value.type)||!text(value.title,256)||!Array.isArray(value.items)||value.items.length>128)return null
+ if(!record(value,['version','type','title','items'],['description','source','date','asOf','presentation','comparisonPlanNames'])||value.version!==1||!['files','gallery'].includes(value.type)||!text(value.title,256)||!Array.isArray(value.items)||value.items.length>128)return null
  for(const key of ['description','source','date','asOf'])if(value[key]!==undefined&&!text(value[key],key==='description'?4096:key==='source'?1024:128))return null
  const ids=new Set(),items=[]
  for(const item of value.items){
@@ -30,5 +30,6 @@ export function parseAttachmentSpec(value){
   if(value.presentation!=='webpage'||value.type!=='files'||items.length!==1||!page.relativePath?.endsWith('.workbench.html')||!(/\.html?$/i.test(page.name))||page.permissions?.preview===false)return null
  }
  if(new TextEncoder().encode(JSON.stringify(value)).length>256000)return null
- return Object.freeze({...value,items:Object.freeze(items)})
+ if(value.comparisonPlanNames!==undefined && (value.presentation!=='webpage'||!Array.isArray(value.comparisonPlanNames)||value.comparisonPlanNames.length<2||!value.comparisonPlanNames.every(name=>text(name,256000))))return null
+ return Object.freeze({...value,items:Object.freeze(items),...(value.comparisonPlanNames?{comparisonPlanNames:Object.freeze([...value.comparisonPlanNames])}:{})})
 }

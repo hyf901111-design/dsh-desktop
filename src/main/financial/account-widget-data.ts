@@ -56,6 +56,23 @@ function quoteFromBar(symbol: SymbolRef, bars: ReturnType<typeof normalizeFinanc
     asOf: last.date, quotedAt: null, timeZone: 'Asia/Shanghai', currency: 'CNY', source, quality: '收盘日线' }
 }
 
+function newsDisplayText(value?: string): string {
+  const text = value?.trim() ?? ''
+  // Some search snippets split Chinese into search terms, including the headline.
+  if ((text.match(/\p{Script=Han}[ \t]+(?=\p{Script=Han})/gu)?.length ?? 0) < 2) return text
+  return text.replace(/(\p{Script=Han})[ \t]+(?=\p{Script=Han})/gu, '$1')
+    .replace(/[ \t]+([，。！？；：、）”’,;!?])/gu, '$1')
+    .replace(/([，。！？；：、（“‘])[ \t]+/gu, '$1')
+}
+
+function publisherSectionIndex(path: string, title: string): boolean {
+  if (!/\/(?:index|node_\d+)\.s?html?$/i.test(path)) return false
+  if (/\/(?:articles?|posts?|stor(?:y|ies)|20\d{2}(?:[-/]?\d{2})*)\//i.test(path)) return false
+  const segments = title.split(/[_|｜]/u).map(segment => segment.replace(/\s+/gu, ''))
+  return /^[\p{Script=Han}A-Za-z]{0,10}(?:新闻|快讯|资讯|要闻|频道)$/u.test(segments[0] ?? '') ||
+    segments.some(segment => /^[\p{Script=Han}A-Za-z]{0,8}频道$/u.test(segment))
+}
+
 export async function queryAccountFinancialWidget(
   query: Row, options: AccountFinancialSources, signal: AbortSignal, now = new Date()
 ): Promise<Row> {
@@ -66,7 +83,7 @@ export async function queryAccountFinancialWidget(
     if (!options.doubao) throw Error('豆包搜索暂不可用')
     const topic = query.query?.trim() || '财经市场'
     const hasWindow = /\d{4}年|\d{4}[-/]\d|回顾|历史|昨天|今天|本[周月年]|上[周月]|去[年冬]|(?:近|过去)[一二两三四五六七八九十半\d]+[天周年月]/u.test(topic)
-    const suffix = hasWindow ? ' 新闻报道' : ' 近一周新闻报道'
+    const suffix = hasWindow ? ' 新闻报道原文' : ' 近一周新闻报道原文'
     const keyword = Array.from(topic + suffix).length <= 100 ? topic + suffix : topic
     const result = await options.doubao(keyword, 8, signal)
     const seenTitles = new Set<string>()
@@ -74,7 +91,7 @@ export async function queryAccountFinancialWidget(
     const news = result.sources.flatMap(item => {
       if (typeof item.url !== 'string' || item.url.length > 4096 || !URL.canParse(item.url)) return []
       const url = new URL(item.url)
-      const title = item.title?.trim()
+      const title = newsDisplayText(item.title)
       if (!title || !['https:', 'http:'].includes(url.protocol) || url.username || url.password) return []
       // A search hit can be a feed, a search form or a profile instead of a story.
       const canonical = new URL(url)
@@ -88,7 +105,7 @@ export async function queryAccountFinancialWidget(
       const articleKey = [...canonical.searchParams].some(([key, value]) => /^(?:p|post|article|story|item|aid|id)(?:_?id)?$/i.test(key) && value.trim())
       const pagedFeed = /(?:^|[/-])(?:[a-z]+[_-])?(?:news|archive[s]?|category|tag)(?:$|\/)/i.test(path) && canonical.searchParams.has('page')
       const archiveTitle = /\barchives?\s*[|·]|(?:的\s*微博|的\s*个人主页)$/i.test(title)
-      if (searchPage || indexPage && !articleKey || pagedFeed || archiveTitle) return []
+      if (searchPage || !articleKey && (indexPage || publisherSectionIndex(path, title)) || pagedFeed || archiveTitle) return []
       const titleKey = title.replace(/\s+/gu, '').toLowerCase()
       if (seenTitles.has(titleKey) || seenUrls.has(canonical.href)) return []
       seenTitles.add(titleKey)
@@ -96,7 +113,7 @@ export async function queryAccountFinancialWidget(
       // The search provider uses Unix epoch zero for undated articles.
       const published = Date.parse(item.publishedAt ?? '')
       const time = item.publishedAt && Number.isFinite(published) && published !== 0 ? item.publishedAt : null
-      return [{ id: url.href, title: title.slice(0, 300), source: item.siteName?.trim() || url.hostname, time, url: url.href, summary: item.snippet?.slice(0, 1200) || '' }]
+      return [{ id: url.href, title: title.slice(0, 300), source: item.siteName?.trim() || url.hostname, time, url: url.href, summary: newsDisplayText(item.snippet).slice(0, 1200) }]
     }).sort((a, b) => (Date.parse(b.time ?? '') || 0) - (Date.parse(a.time ?? '') || 0))
     return { source: label, news }
   }
