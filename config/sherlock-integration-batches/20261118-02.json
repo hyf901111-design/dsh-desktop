@@ -9,26 +9,37 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "让独立网页跟随看板主题、按正文高度整理并使用标准组件操作栏",
+        "featureName": "让生成的网页采用易方达官网数据页的紧凑布局，颜色随四种看板主题切换",
         "branch": "codex/feat/workbench-delivery-20261118",
-        "baseCommit": "665d34b249b158045b03b491de0506480fbdea77",
-        "tipCommit": "57a409640b2255fc9df7e9ce360c54ae7c94884a",
+        "baseCommit": "57a409640b2255fc9df7e9ce360c54ae7c94884a",
+        "tipCommit": "7f61b55dd62ea0af225e28750a34f5262eb84097",
         "commits": [
           {
-            "commit": "57a409640b2255fc9df7e9ce360c54ae7c94884a",
+            "commit": "b3ec7f7daf6b822c156104893a3fe0b171de7784",
             "parents": [
-              "665d34b249b158045b03b491de0506480fbdea77"
+              "57a409640b2255fc9df7e9ce360c54ae7c94884a"
             ],
-            "subject": "让网页组件跟随四种看板配色、按正文高度整理并统一顶栏底栏"
+            "subject": "让看板网页生成时优先采用直角控件和简洁分区"
+          },
+          {
+            "commit": "7f61b55dd62ea0af225e28750a34f5262eb84097",
+            "parents": [
+              "b3ec7f7daf6b822c156104893a3fe0b171de7784"
+            ],
+            "subject": "将易方达官网数据页提炼为随看板主题切换的紧凑网页样式"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/workbench-webpage-preview.d.ts"
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-data-submission.js"
           },
           {
             "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-webpage-compact.js"
+          },
+          {
+            "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-webpage-preview.js"
           },
           {
@@ -37,34 +48,62 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/attachment-client.mjs"
+            "path": "skills/ework-workbench-components/SKILL.md"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-state.mjs"
+            "path": "skills/ework-workbench-components/_meta.json"
           },
           {
             "status": "M",
-            "path": "scripts/lib/research-grid-ui.mjs"
+            "path": "skills/ework-workbench-components/references/adaptation-and-acceptance.md"
           },
           {
             "status": "M",
-            "path": "scripts/lib/workbench-style-client.mjs"
+            "path": "skills/ework-workbench-components/references/generation-core.md"
           },
           {
             "status": "M",
-            "path": "src/main/state/research-file-preview.ts"
+            "path": "test/attachment-template.test.js"
           },
           {
             "status": "M",
-            "path": "test/research-file-preview.test.ts"
+            "path": "test/component-data-submission.test.js"
           },
           {
             "status": "M",
             "path": "test/workbench-auto-arrange-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-webpage-file.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "--maxWorkers=2",
+              "test/workbench-execution-policy.test.js",
+              "test/attachment-template.test.js",
+              "test/workbench-webpage-file.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/component-data-submission.test.js",
+              "test/workbench-style.test.js",
+              "test/research-file-preview.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "生成请求与工具、技能、网页文件、模式和无障碍交互的聚焦回归",
+            "verifiedCommit": "7f61b55dd62ea0af225e28750a34f5262eb84097",
+            "completedAt": "2026-11-18T15:41:13.699Z",
+            "timeoutMs": 240000
+          },
           {
             "argv": [
               "npm",
@@ -72,118 +111,35 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "主进程与页面预览类型检查",
-            "verifiedCommit": "57a409640b2255fc9df7e9ce360c54ae7c94884a",
-            "completedAt": "2026-11-18T14:48:00.632Z",
+            "summary": "客户端类型检查",
+            "verifiedCommit": "7f61b55dd62ea0af225e28750a34f5262eb84097",
+            "completedAt": "2026-11-18T15:41:14.827Z",
             "timeoutMs": 240000
           },
           {
             "argv": [
               "./node_modules/.bin/vitest",
               "run",
-              "--maxWorkers=3",
-              "test/workbench-webpage-file.test.js",
-              "test/attachment-template.test.js",
-              "test/research-file-preview.test.ts",
-              "test/research-custom-arrange-content.test.js",
-              "test/research-grid-generation-fit.test.js",
-              "test/workbench-style.test.js",
               "test/workbench-auto-arrange-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "网页原件、沙箱、卡片主题、编辑态及整理交互的聚焦回归",
-            "verifiedCommit": "57a409640b2255fc9df7e9ce360c54ae7c94884a",
-            "completedAt": "2026-11-18T14:48:25.569Z",
+            "summary": "真实 Chromium 画布、网页主题、密度与输入交互的聚焦回归",
+            "verifiedCommit": "7f61b55dd62ea0af225e28750a34f5262eb84097",
+            "completedAt": "2026-11-18T15:41:55.395Z",
             "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 生产画布加载项目内现有出游预算、租房比较文件，验证四种配色、切换时保留输入、窄宽度下内页末尾可见；通用导出菜单可保存原 HTML。"
+          "summary": "以真实 Chromium 核对官网基金详情的页签、读数、行高与分隔线；将保存的网页在 320px 宽度嵌入沙箱，验证四种主题、表格内部滚动、输入值、键盘焦点和图注间距。"
         },
         "acceptanceCriteria": [
-          "既有网页无需重新生成即可适配浅色、深色、企业、OpenTerminal",
-          "一键和自动整理按网页正文和实际宽度定高，增删内容支持双向适配",
-          "网页仅用组件标准顶栏和来源底栏，HTML 文件可从导出菜单保存"
+          "便携网页及自定义 HTML 生成策略按需求选择层次和直角控件，省去纯装饰色带",
+          "紧凑样式随网页保存，自定义交互可保留，窄卡优先换行并在表内查看宽明细",
+          "易方达主题采用官网数据页的蓝青主辅色，浅、深、彭博模式继承自身配色"
         ],
-        "risks": [
-          "离线原 HTML 保留其独立样式；已有旧回归文件在基线对现行对话面板有失效的恢复锚点，与本次聚焦回归独立。"
-        ],
-        "generatedAt": "2026-11-18T14:48:30.060Z"
-      },
-      "merged": {
-        "mergeCommit": "921445c33318bc590e05a7ec98dc23c65e0126ce",
-        "verificationCommit": "921445c33318bc590e05a7ec98dc23c65e0126ce",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "921445c33318bc590e05a7ec98dc23c65e0126ce",
-            "completedAt": "2026-11-18T14:48:35.164Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "921445c33318bc590e05a7ec98dc23c65e0126ce",
-            "completedAt": "2026-11-18T14:48:35.164Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--testTimeout=20000",
-              "test/research-task-runtime.test.js",
-              "test/hosted-ark-runtime.test.js",
-              "test/research-grid-generation-fit.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/generation-progress-persistence.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/research-workbench-feedback-actions.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-reading.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/chart-detail-projection.test.js",
-              "test/component-reading-footer.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/conversation-response-history.test.js",
-              "test/conversation-response-history-browser.test.js",
-              "test/component-source-projection.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-fund-comparison.test.js",
-              "test/workbench-observed-sources.test.js",
-              "test/workbench-source-views.test.js",
-              "test/workbench-source-snapshot.test.js",
-              "test/workbench-source-exclusive-execution.test.js",
-              "test/workbench-source-policy.test.js",
-              "test/bundled-tushare-mcp.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --testTimeout=20000 test/research-task-runtime.test.js test/hosted-ark-runtime.test.js test/research-grid-generation-fit.test.js test/research-generation-controls.test.ts test/generation-progress-persistence.test.js test/research-workbench-feedback.test.js test/research-workbench-feedback-actions.test.js test/workbench-feedback-upgrade-preservation.test.js test/research-planning-feedback.test.js test/cartesian-chart-details.test.js test/cartesian-chart-reading.test.js test/cartesian-chart-axis-precision.test.js test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/chart-detail-projection.test.js test/component-reading-footer.test.js test/component-reading-footer-browser.test.js test/stored-template-refinements.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-history.test.js test/conversation-response-history-browser.test.js test/component-source-projection.test.js test/workbench-execution-policy.test.js test/workbench-fund-comparison.test.js test/workbench-observed-sources.test.js test/workbench-source-views.test.js test/workbench-source-snapshot.test.js test/workbench-source-exclusive-execution.test.js test/workbench-source-policy.test.js test/bundled-tushare-mcp.test.ts",
-            "verifiedCommit": "921445c33318bc590e05a7ec98dc23c65e0126ce",
-            "completedAt": "2026-11-18T14:48:35.164Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-18T14:48:35.164Z"
+        "risks": [],
+        "generatedAt": "2026-11-18T15:41:55.396Z"
       }
     }
   ],
