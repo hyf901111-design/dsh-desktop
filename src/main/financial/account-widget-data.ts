@@ -66,13 +66,16 @@ function newsDisplayText(value?: string): string {
 }
 
 function publisherSectionIndex(path: string, title: string): boolean {
-  if (/\/(?:articles?|posts?|stor(?:y|ies)|20\d{2}(?:[-/]?\d{2})*)\//i.test(path)) return false
-  const segments = title.split(/[_|｜]|\s+[-–—]\s+/u).map(segment => segment.replace(/\s+/gu, ''))
-  const index = /\/(?:index|node_\d+)\.s?html?$/i.test(path)
-  const section = /(?:\/|[-_])(?:news|latest|updates|archives?)\/?$/i.test(path) || path.endsWith('/')
-  if (!index && !(section && segments.length > 1)) return false
-  return /^[\p{Script=Han}A-Za-z]{0,10}(?:新闻|快讯|资讯|要闻|频道)$/u.test(segments[0] ?? '') ||
-    segments.some(segment => /^[\p{Script=Han}A-Za-z]{0,8}频道$/u.test(segment))
+  if (/\/(?:articles?|posts?|stor(?:y|ies)|details?|20\d{2}(?:[-/]?\d{2})*)\//i.test(path)) return false
+  if (/\/(?:list|channel|category)[_-]\d+(?:\.s?html?)?\/?$/i.test(path)) return true
+  const indexFile = /\/(?:index|node_\d+)\.s?html?$/i.test(path)
+  const sectionPath = /(?:\/|[-_])(?:news|latest|updates|archives?)\/?$/i.test(path)
+  const directory = /\/[a-z]+(?:_[a-z]+)*\/$/i.test(path)
+  if (!indexFile && !sectionPath && !directory) return false
+  const [heading] = title.split(/[_|｜]|\s+[-–—]\s+|[-—]{2,}/u)
+  const label = heading?.replace(/\s+/gu, '') ?? ''
+  return /^[\p{Script=Han}A-Za-z]{0,10}(?:新闻|快讯|资讯|要闻|频道|首页|热点|推荐|扫描)$/u.test(label) ||
+    /(?:^|[_|｜])[\p{Script=Han}A-Za-z]{0,8}频道(?:[_|｜]|$)/u.test(title)
 }
 
 export async function queryAccountFinancialWidget(
