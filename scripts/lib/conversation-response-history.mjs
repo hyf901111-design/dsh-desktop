@@ -41,12 +41,14 @@ export function conversationResponseHistory(flow, nodeStore, runningTurn) {
 
 export function ConversationResponseHistoryDetails({activityNodes,detailGroups,seatProps,t}) {
  const allowed=new Set(detailGroups.flatMap(group=>group.nodeKeys))
+ const visible=activityNodes.filter(node=>allowed.has(node.key)||assistantStepText(node))
+ const groups=typeof conversationActivityRecords==='function'?conversationActivityRecords(visible):visible.map(node=>[node])
  return react.createElement('div',{'data-response-history-details':'',role:'group','aria-label':t('execution.details.title')},
-  ...activityNodes.map(node=>{
+  ...groups.map(group=>{
+   const node=group[0]
    if(assistantStepText(node))return react.createElement('div',{key:node.key,'data-response-history-report':node.key},
     react.createElement(AssistantMarkdown,{blocks:finalAnswerBlocks(node.data.blocks),streaming:false,interrupted:false,openFile:seatProps.openFile,loadImage:seatProps.loadImage,t}))
-   if(!allowed.has(node.key))return null
-   return react.createElement(ConversationActivityDetails,{key:node.key,activityNodes:[node],detailGroups,seatProps,t,running:false})
+   return react.createElement(ConversationActivityDetails,{key:node.key,activityNodes:group,detailGroups,seatProps,t,running:false})
   }))
 }
 
@@ -63,7 +65,7 @@ body [data-response-history-details] [data-response-history-report]{--odyssey-re
 body [data-response-history-report] p:first-child{margin-top:0}
 body [data-response-history-report] p:last-child{margin-bottom:0}
 `
-const START='/* ework:conversation-response-history:v2 */',PREVIOUS='/* ework:conversation-response-history:v1 */',END='/* ework:conversation-response-history:end */'
+const START='/* ework:conversation-response-history:v3 */',V2='/* ework:conversation-response-history:v2 */',V1='/* ework:conversation-response-history:v1 */',END='/* ework:conversation-response-history:end */'
 const definition=()=>START+'\n'+conversationResponseHistory.toString()+'\n'+ConversationResponseHistoryDetails.toString()+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-response-history-style");if(!style){style=document.createElement("style");style.id="ework-response-history-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
 const pairs=[
  ['!!entry.canvasTask || detailGroups.length > 0;', '!!entry.canvasTask || detailGroups.length > 0 || entry.responseHistory && activityNodes.some(node=>assistantStepText(node));'],
@@ -88,10 +90,11 @@ function transform(source,inverse=false,previous=false){
  return scope(source,'const ExecutionStatusGroup =','\n\t\t//#endregion',previous?pairs:[...pairs,elapsedPair],inverse)
 }
 export function stripConversationResponseHistory(source){
- const previous=source.includes(PREVIOUS),marker=previous?PREVIOUS:START,a=source.indexOf(marker);if(a<0){if(source.includes('ework:conversation-response-history:')||source.includes('function conversationResponseHistory('))throw Error('Unknown response history layer');return source}
+ const markers=[V1,V2,START].filter(marker=>source.includes(marker)),marker=markers[0],a=marker?source.indexOf(marker):-1;if(a<0){if(source.includes('ework:conversation-response-history:')||source.includes('function conversationResponseHistory('))throw Error('Unknown response history layer');return source}
  const b=source.indexOf(END,a),block=source.slice(a,b+END.length+1)
- if(source.split(marker).length!==2||source.includes(previous?START:PREVIOUS)||source.split(END).length!==2||(previous?createHash('sha256').update(block).digest('hex')!=='f2776ffff6caa19670085e265d2622bdc2f20dfaf592040379c90f475a28eebd':block!==definition()))throw Error('Response history definition drifted')
- return transform(source.replace(block,''),true,previous)
+ const hash=marker===V1?'f2776ffff6caa19670085e265d2622bdc2f20dfaf592040379c90f475a28eebd':marker===V2?'043382be6a05ceb2d4b2deba02f90502fb7c56da09be15f52d4c2dedbc3b7cce':null
+ if(markers.length!==1||source.split(marker).length!==2||source.split(END).length!==2||(hash?createHash('sha256').update(block).digest('hex')!==hash:block!==definition()))throw Error('Response history definition drifted')
+ return transform(source.replace(block,''),true,marker===V1)
 }
 export function patchConversationResponseHistory(source){
  source=transform(stripConversationResponseHistory(source))

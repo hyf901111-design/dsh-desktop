@@ -2,7 +2,9 @@ import {it,expect} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
 // Strict installation bytes must use Node's untransformed function source.
-const {conversationLiveActivity,patchConversationLiveActivity,stripConversationLiveActivity}=createRequire(import.meta.url)('../scripts/lib/conversation-live-activity.mjs')
+const require=createRequire(import.meta.url)
+const {conversationLiveActivity,patchConversationLiveActivity,stripConversationLiveActivity,workbenchConversationUpdate}=require('../scripts/lib/conversation-live-activity.mjs')
+const {conversationActivityRecords,conversationToolFailureLabel,transformWorkbenchConversationPresentation}=require('../scripts/lib/conversation-status-presentation.mjs')
 const tool=(name,done=false,turn=2)=>({kind:'tool-call',location:{turn:{turn}},data:{root:done?{kind:'tool-call',call:{name}}:{name}}})
 const activity=(nodes=[],rest={})=>conversationLiveActivity({running:true,runningTurn:2,order:nodes.map((_,i)=>i),nodeStore:new Map(nodes.map((n,i)=>[i,n])),labelForNode:n=>'Working: '+n.data.root.name,...rest})
 it('installs one reversible activity footer on both native conversation hosts',async()=>{
@@ -43,8 +45,62 @@ it('retains honest note and canvas activity when those owners run without a pare
 it('upgrades the exact installed v2 status layer while rejecting a changed historical definition',async()=>{
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchConversationLiveActivity(source)
  const frozen=JSON.parse(await readFile('test/fixtures/conversation-live-activity-v2.json','utf8')).definition
- const start=next.indexOf('/* ework:conversation-live-activity:v3 */'),end=next.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
- const previous=next.slice(0,start)+frozen+next.slice(end)
+ const compatible=transformWorkbenchConversationPresentation(next,true)
+ const start=compatible.indexOf('/* ework:conversation-live-activity:v4 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
+ const previous=compatible.slice(0,start)+frozen+compatible.slice(end)
  expect(patchConversationLiveActivity(previous)).toBe(next)
  expect(()=>patchConversationLiveActivity(previous.replace('2.4s linear infinite','1s linear infinite'))).toThrow('definition drifted')
+})
+
+const request='请创建一个工作台，包含行情与公告'
+const user=(text=request,turn=4,kind='user')=>({key:'prompt',kind,location:{turn:{turn}},data:{content:[{type:'text',text}],source:{kind:'user'}}})
+const result=(key,name,root={},turn=4)=>({key,kind:'tool-call',location:{turn:{turn}},data:{root:{kind:'tool-result',call:{name,argsRaw:'{}'},...root}}})
+const update=(nodes,props={})=>workbenchConversationUpdate({running:true,runningTurn:4,openState:'open',order:nodes.map(n=>n.key),nodeStore:new Map(nodes.map(n=>[n.key,n])),flow:nodes.map(n=>({kind:'node',key:n.key})),readText:parts=>parts.map(part=>part.text).join(''),...props})
+const pending=(props={})=>({kind:'native-submitted-user',key:'submitted:r1',submission:{mode:'queue',initialImmediate:true,accepted:true,content:user().data.content,...props}})
+
+it('acknowledges only an accepted Workbench submission or its authoritative active turn',()=>{
+ expect(update([], {running:false,runningTurn:null,flow:[pending()]})).toMatchObject({kind:'received',ownerKey:'submitted:r1'})
+ expect(update([user()])).toMatchObject({kind:'received',ownerKey:'prompt'})
+ for(const options of [{accepted:false},{initialImmediate:false},{mode:'steer'}])expect(update([],{flow:[pending(options)]})).toBeNull()
+ expect(update([user('核对原有工作台的数据')])).toBeNull()
+ expect(update([user(request,3)])).toBeNull()
+ expect(update([user(request,4,'steering')])).toBeNull()
+ expect(update([user()],{running:false})).toBeNull()
+ expect(update([user()],{openState:'loading'})).toBeNull()
+})
+
+it('reports actual source observations and verified plan acceptance without leaking payloads',()=>{
+ const search=result('s','web_search'),old=result('old','web_fetch',{isError:true},3)
+ const failure=result('failure','web_fetch',{isError:true,call:{name:'web_fetch',argsRaw:'{"url":"https://example.com?secret=123"}'}})
+ const fetch=result('fetch','web_fetch',{meta:{statusCode:200,truncated:false},content:[{type:'text',text:'Fetched https://example.com/private (HTTP 200)\n\nactual source content'}]})
+ const truncated=result('truncated','web_fetch',{meta:{statusCode:200,truncated:true},content:fetch.data.root.content})
+ const plan=result('plan','research_workbench_create',{content:[{type:'text',text:'{"status":"accepted","planId":"id-1","panels":["private name","other"]}'}]})
+ expect(update([user(),search,old])).toMatchObject({kind:'checking'})
+ expect(update([user(),search,failure])).toMatchObject({kind:'sources',text:expect.stringMatching(/未能读取/)})
+ expect(update([user(),fetch,truncated])).toMatchObject({kind:'sources',text:expect.stringMatching(/读取部分.*不完整/)})
+ expect(update([user(),fetch])).toMatchObject({kind:'sources',text:expect.stringMatching(/已读取/)})
+ expect(update([user(),{...tool('research_workbench_create',false,4),key:'creating-plan'}])).toMatchObject({kind:'submitting'})
+ expect(update([user(),plan])).toMatchObject({kind:'submitted',text:expect.stringMatching(/已受理.*2 个组件/)})
+ expect(update([user(),plan],{running:false,settledTurn:4})).toMatchObject({kind:'submitted'})
+ expect(update([user(),plan],{running:false,settledTurn:5})).toBeNull()
+ expect(update([user(),search],{running:false,settledTurn:4})).toBeNull()
+ expect(update([user(),{...plan,data:{root:{...plan.data.root,isError:true}}}])).toMatchObject({kind:'plan-failed'})
+ expect(update([user(),{...plan,data:{root:{...plan.data.root,content:[]}}}])).toMatchObject({kind:'received'})
+ expect(JSON.stringify(update([user(),search,failure,fetch,plan]))).not.toMatch(/https|secret|private|id-1/)
+})
+
+it('distinguishes data queries from discovery calls and avoids a success claim for empty rows',()=>{
+ const data=(operation,records)=>result('data','public_data_query',{call:{name:'public_data_query',argsRaw:JSON.stringify({operation})},content:[{type:'text',text:JSON.stringify({records})}]})
+ expect(update([user(),data('catalog',[{value:1}])])).toMatchObject({kind:'checking'})
+ expect(update([user(),data('query',[])])).toMatchObject({kind:'sources',text:expect.stringMatching(/未能读取/)})
+ expect(update([user(),data('query',[{value:123456}])],{english:true})).toMatchObject({kind:'sources',text:expect.stringMatching(/Some source material was retrieved/)})
+ expect(update([user(),data('query',[{value:123456}])]).text).not.toContain('123456')
+})
+
+it('groups adjacent webpage read failures and preserves each original activity record',()=>{
+ const a=result('a','web_fetch',{isError:true,content:[{type:'text',text:'Error: The browser could not load readable webpage content. Open the URL in a research link component to inspect it.'}]}),b=result('b','web_fetch',{isError:true}),s=result('s','web_search'),c=result('c','web_fetch',{isError:true})
+ expect(conversationToolFailureLabel(a.data.root)).toBe('网页读取失败，浏览器未取得可读内容')
+ expect(conversationToolFailureLabel(b.data.root)).toBe('网页读取失败')
+ expect(conversationToolFailureLabel(s.data.root)).toBeNull()
+ expect(conversationActivityRecords([a,b,s,c]).map(group=>group.map(node=>node.key))).toEqual([['a','b'],['s'],['c']])
 })

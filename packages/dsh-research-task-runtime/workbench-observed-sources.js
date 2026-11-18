@@ -15,6 +15,7 @@ const rejectionWarnings=Object.freeze({
  invalid:'部分已取得来源无法完整校验，未交接；子卡仅使用可核验资料，并按原授权补齐缺口。'
 })
 const decoderQuotaErrors=new Set(['数据超过组件容量','接口返回的数据过大','还原后的业务响应超出组件容量'])
+const preSpillSources=new WeakMap()
 function authoredMessages(event){
  const messages=event.type==='user/message'?[event.data]:event.type==='agent/inbox/spliced'?event.data?.inserted??[]:[]
  return messages.filter(message=>message?.source?.kind==='user')
@@ -52,6 +53,37 @@ export function restoreWorkbenchObservedSources(value){
  return Object.freeze(value.map(restoreObservedRecord))
 }
 
+// The spill preview is for display. Keep policy-approved content before that
+// transformation, then check the corresponding durable result before reuse.
+export function retainWorkbenchPreSpillSource(session,messageId,callId,tool,args,content,schemas){
+ if(!sourceTool(tool)||typeof callId!=='string'||!callId||!object(args)||
+    componentDiscoveryToolNames(schemas).has(tool)||
+    tool==='public_data_query'&&args.operation!=='query'||
+    tool==='financial_query'&&['resolve','search','catalog'].includes(args.intent)||
+    !Array.isArray(content)||!content.length||!content.every(block=>block.type==='text'&&typeof block.text==='string'))return
+ let scope=preSpillSources.get(session)
+ if(scope?.messageId!==messageId){
+  scope={messageId,results:new Map(),bytes:0}
+  preSpillSources.set(session,scope)
+ }
+ if(scope.results.has(callId)||scope.results.size>=WORKBENCH_OBSERVED_SOURCE_LIMITS.records)return
+ const size=bytes(content)
+ if(scope.bytes+size>WORKBENCH_OBSERVED_SOURCE_LIMITS.bytes)return
+ scope.results.set(callId,{tool,args:structuredClone(args),content:structuredClone(content)})
+ scope.bytes+=size
+}
+
+export function clearWorkbenchPreSpillSources(session,messageId){
+ if(preSpillSources.get(session)?.messageId===messageId)preSpillSources.delete(session)
+}
+
+function observedResult(result,retained,tool,args){
+ if(retained?.tool!==tool||!isDeepStrictEqual(retained.args,args))return result
+ const isSpillPreview=result.content?.some(block=>block.type==='text'&&
+  typeof block.text==='string'&&/^\(Omitted \d+ bytes\. Full formatted result stored at: /mu.test(block.text))
+ return isSpillPreview?{...result,content:retained.content}:result
+}
+
 // Replay only paired, successful tool observations belonging to this authored
 // request. Assistant prose, injected user messages and unrelated history never
 // supply records. Capture synchronously before queueing the workbench.
@@ -63,6 +95,8 @@ export function captureWorkbenchObservedSources({session,messageId,schemas=[],on
  const allowed=(Array.isArray(schemas)?schemas:[]).map(schema=>schema.name).filter(sourceTool)
  if(!allowed.length)return undefined
  const discovery=componentDiscoveryToolNames(schemas),calls=new Map(),records=[]
+ const scope=preSpillSources.get(session)
+ const preSpill=scope?.messageId===messageId?scope.results:undefined
  const reject=reason=>{
   if(typeof onRejected==='function')return onRejected(rejectionWarnings[reason])
   if(reason==='quota')quota()
@@ -81,12 +115,13 @@ export function captureWorkbenchObservedSources({session,messageId,schemas=[],on
   const id=message.source.callId,call=calls.get(id)
   if(!call)continue
   calls.delete(id)
-  const result=message.content?.find(block=>block.type==='tool-result'&&block.toolCallId===id)
+  const durableResult=message.content?.find(block=>block.type==='tool-result'&&block.toolCallId===id)
   const {name:tool,arguments:rawArgs}=call.data
-  if(!result||result.isError||result.error||discovery.has(tool))continue
+  if(!durableResult||durableResult.isError||durableResult.error||discovery.has(tool))continue
   let args
   try{args=typeof rawArgs==='string'?JSON.parse(rawArgs):rawArgs}catch{continue}
   if(!object(args)||tool==='public_data_query'&&args.operation!=='query'||tool==='financial_query'&&['resolve','search','catalog'].includes(args.intent))continue
+  const result=observedResult(durableResult,preSpill?.get(id),tool,args)
   let resultBytes
   try{resultBytes=bytes(result)}catch{reject('invalid');continue}
   if(resultBytes>WORKBENCH_OBSERVED_SOURCE_LIMITS.bytes){reject('quota');continue}
@@ -94,7 +129,8 @@ export function captureWorkbenchObservedSources({session,messageId,schemas=[],on
   if(tool==='web_fetch'){
    // Reuse the existing exact-URL and fingerprint checks for rendered pages.
    const collector=componentSourceCollector([tool],schemas)
-   collector.accept(call);collector.accept(event)
+   collector.accept(call);collector.accept(result===durableResult?event:{...event,
+    data:{...event.data,message:{...message,content:[result]}}})
    record=collector.records[0]
   }else{
    try{

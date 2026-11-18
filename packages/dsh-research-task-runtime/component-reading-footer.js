@@ -2,23 +2,25 @@
 // controls so saved interaction paths and the inert source model stay intact.
 // Kept self-contained because the preview client serializes this function.
 export function refineComponentReadingFooter(html){
- if(typeof html!=='string'||html.includes('data-component-reading-footer="v8"'))return html;
+ if(typeof html!=='string'||html.includes('data-component-reading-footer="v9"'))return html;
  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1];
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  const data=model?.data;if(!data||data.version!==1)return html;
  const kpi=model.templateId==='kpi'&&model.version==='21z-kpi-20261001'&&data.type==='kpi'&&html.includes('EWORK_KPI_SOURCE_V1');
  const chart=model.version==='22a-20260930'&&data.type==='chart'&&model.templateId==='chart.'+data.variant&&html.includes('data-chart-template="'+data.variant+'"');
+ const cartesian=chart&&html.includes('svg class="template-chart"');
  const market=model.version==='21m-20260923-v1'&&data.type==='market'&&model.templateId==='market.'+data.variant&&html.includes('data-sherlock-market="'+data.variant+'"');
  if(!kpi&&!chart&&!market)return html;
  // Replace only our previous display layer. The original model and every
  // existing control remain in their original DOM positions for saved replay.
- html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[1234567]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
+ html=html.replace(/<footer class="component-reading-footer"[^]*?<\/footer>/u,'').replace(/<style data-component-reading-footer="v[12345678]">[^]*?<\/style>/u,'').replace(/<script>\(function installReadingTabs\(\)[^]*?<\/script>/u,'');
  // Only real disclosure markup in verified host templates receives the new
  // default. Source JSON and executable strings must remain byte-for-byte intact.
  html=html.replace(/<(script|style|textarea)\b[^>]*>[^]*?<\/\1\s*>|<details\b[^>]*>/giu,tag=>{
   if(!/^<details\b/i.test(tag))return tag;
   if(!/\sdata-workbench-default-open\s*=/i.test(tag))tag=tag.slice(0,-1)+' data-workbench-default-open="component-details-v1">';
+  if(cartesian)return tag.replace(/\sopen(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?=\s|>)/i,'');
   return /\sopen(?:\s|=|>)/i.test(tag)?tag:tag.slice(0,-1)+' open>';
  });
  if(kpi)html=html.replaceAll('current={version:1,open:[]}','current={version:1,open:tiles.map((_,i)=>i)}').replaceAll('current=valid(s)?s:{version:1,open:[]}','current=valid(s)?s:{version:1,open:tiles.map((_,i)=>i)}');
@@ -35,7 +37,7 @@ export function refineComponentReadingFooter(html){
  // Hide only metadata reproduced below. Never collapse chart legends,
  // selected-record readouts, per-metric missing states, or full data controls.
  const hidden=[...(kpi?['.indicator-asof','.indicator-footer']:[]),...(chart?['figure>figcaption']:[]),...(market?['body>footer.market-footer']:[])];
- const style=`<style data-component-reading-footer="v8">${hidden.map(selector=>selector+'{display:none!important}').join('')}
+ const style=`<style data-component-reading-footer="v9">${hidden.map(selector=>selector+'{display:none!important}').join('')}
  body>.component-reading-footer:not(:has(.component-reading-tabs)){display:none!important}
  body>.component-reading-footer>details{display:none!important}
  body>.component-reading-footer{box-sizing:border-box;display:block;clear:both;flex:none;margin:8px 0 0!important;padding:6px 0 2px!important;border:0;border-top:1px solid var(--sherlock-border,#8883);color:var(--sherlock-muted,#888);font:11px/18px var(--sherlock-font-sans,system-ui);text-align:left}
@@ -53,6 +55,9 @@ export function refineComponentReadingFooter(html){
  /* Flatten only the two host disclosures into one visual row. Original
     parents stay intact, preserving data controls and old interaction routes. */
  body[data-chart-template]:has(svg.template-chart) .chart-readout{display:flex;align-items:center;min-height:32px;padding:7px 10px;margin:6px 0 0;line-height:18px;border-radius:4px;overflow-wrap:anywhere}
+ body[data-chart-template]:has(svg.template-chart) .chart-readout-category{color:var(--sherlock-muted)}
+ body[data-chart-template]:has(svg.template-chart) .chart-readout-series strong{font-weight:650}
+ body[data-chart-template]:has(svg.template-chart) details table :is(th,td)[hidden]{display:none!important}
  body[data-component-reading-tabs]{display:grid;grid-template-columns:minmax(0,1fr);align-content:start}
  body[data-component-reading-tabs]>figure{grid-row:1;grid-column:1}
  body[data-component-reading-tabs]>details,body[data-component-reading-tabs]>.component-reading-footer,body[data-component-reading-tabs]>.component-reading-footer>details{display:contents!important}
@@ -89,7 +94,7 @@ export function refineComponentReadingFooter(html){
   if(!data||!source||!bar)return;
   const disclosures=[data],panels=[data.querySelector('.data-scroll')],tabs=[...bar.querySelectorAll('[role=tab]')],toggle=bar.querySelector('.component-reading-toggle');
   if(panels.some(panel=>!panel)||tabs.length!==1)return;
-  let active=0,expanded=true;
+  let active=0,expanded=data.open;
   panels.forEach((panel,i)=>{panel.id='component-reading-panel-'+i;panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',tabs[i].id);tabs[i].setAttribute('aria-controls',panel.id);});
   const render=()=>{
    document.body.dataset.componentReadingTabs=expanded?'expanded':'collapsed';
@@ -114,6 +119,6 @@ export function refineComponentReadingFooter(html){
   });
   bar.hidden=false;render();
  }
- const tabs=chart&&html.includes('svg class="template-chart"')?'<div class="component-reading-tabs" hidden><button class="component-reading-toggle" type="button" aria-label="展开组件详情" aria-expanded="false"></button><div role="tablist" aria-label="组件详情"><button id="component-reading-tab-0" type="button" role="tab" aria-selected="true">完整数据</button></div></div>':'';
+ const tabs=cartesian?'<div class="component-reading-tabs" hidden><button class="component-reading-toggle" type="button" aria-label="展开组件详情" aria-expanded="false"></button><div role="tablist" aria-label="组件详情"><button id="component-reading-tab-0" type="button" role="tab" aria-selected="true">完整数据</button></div></div>':'';
  return html.replace('</body>',`<footer class="component-reading-footer" aria-label="组件数据说明"><details open data-workbench-default-open="component-details-v1"><summary>口径与来源</summary><dl>${rows.join('')}</dl></details>${tabs}</footer>${style}${tabs?'<script>('+installReadingTabs.toString()+')();</script>':''}</body>`);
 }

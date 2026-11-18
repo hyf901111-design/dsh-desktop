@@ -4,7 +4,8 @@
 export function researchWorkbenchRecoveryMode(node) {
  const spec=node?.containerSpec
  if(!spec)return null
- if(node.deliveryStatus==='partial'&&['source-snapshot','readable-content','incomplete-scope'].includes(node.recoveryMode))return node.recoveryMode
+ if(node.deliveryStatus==='partial'&&['source-snapshot','readable-content','incomplete-scope','data-missing'].includes(node.recoveryMode))return node.recoveryMode
+ if(spec.type==='markdown'&&/[（(](?:数据缺失|暂无数据|no data|data unavailable)[）)]$/iu.test(spec.title?.trim()??''))return 'data-missing'
  if(spec.type!=='html'||typeof spec.html!=='string')return null
  if(/<body\b[^>]*\sdata-observed-table-recovery(?:[=\s>])/i.test(spec.html))return 'source-snapshot'
  if(/<body\b[^>]*\sdata-readable-content-recovery(?:[=\s>])/i.test(spec.html))return 'readable-content'
@@ -63,8 +64,9 @@ export function workbenchProgressState(plans,snapshot,english=false,refreshSnaps
  const phase=!snapshot?'waiting':!total?'empty':unknown?'unknown':pending&&snapshot.active===false?'inactive':pending?'running':failed||cancelled||partial?'partial':'completed'
  const title=phase==='waiting'?say('等待组件状态','Awaiting component status'):phase==='empty'?say('当前画布没有这批组件','These components are not on the current canvas'):phase==='unknown'?say('组件状态待确认','Component status needs verification'):phase==='inactive'?say('组件状态等待更新','Awaiting updated component status'):phase==='running'?say(`组件生成中 · 已生成 ${completed}/${total}`,`Generating components · ${completed}/${total} generated`):phase==='partial'?say(`组件生成已结束 · ${completed}/${total} 已完整生成`,`Generation ended · ${completed}/${total} fully generated`):say(`组件已生成 · ${completed}/${total}`,`Components generated · ${completed}/${total}`)
  const readable=partialNodes.filter(n=>n.recoveryMode==='readable-content').length,scopeIncomplete=partialNodes.filter(n=>n.recoveryMode==='incomplete-scope').length
- const sources=partial-readable-scopeIncomplete
- const counts=[say(`已生成 ${completed}`,`${completed} generated`),sources?say(`来源明细 ${sources}（原功能未完成）`,`${sources} source snapshots (original features incomplete)`):'',readable?say(`保留可读内容 ${readable}`,`${readable} readable fallbacks`):'',scopeIncomplete?say(`覆盖不完整 ${scopeIncomplete}`,`${scopeIncomplete} with incomplete coverage`):'',pending?say(`进行中 ${pending}`,`${pending} in progress`):'',failed?say(`未完成 ${failed}`,`${failed} failed`):'',cancelled?say(`已停止 ${cancelled}`,`${cancelled} stopped`):'',unknown?say(`待确认 ${unknown}`,`${unknown} unverified`):''].filter(Boolean).join(' · ')
+ const missingData=partialNodes.filter(n=>n.recoveryMode==='data-missing').length
+ const sources=partial-readable-scopeIncomplete-missingData
+ const counts=[say(`已生成 ${completed}`,`${completed} generated`),sources?say(`来源明细 ${sources}（原功能未完成）`,`${sources} source snapshots (original features incomplete)`):'',readable?say(`保留可读内容 ${readable}`,`${readable} readable fallbacks`):'',scopeIncomplete?say(`覆盖不完整 ${scopeIncomplete}`,`${scopeIncomplete} with incomplete coverage`):'',missingData?say(`数据缺失 ${missingData}`,`${missingData} missing data`):'',pending?say(`进行中 ${pending}`,`${pending} in progress`):'',failed?say(`未完成 ${failed}`,`${failed} failed`):'',cancelled?say(`已停止 ${cancelled}`,`${cancelled} stopped`):'',unknown?say(`待确认 ${unknown}`,`${unknown} unverified`):''].filter(Boolean).join(' · ')
  const scope=planned&&total!==planned?say(`当前画布 ${total} 个组件，原计划 ${planned} 个。`,`Current canvas: ${total} components; original plan: ${planned}.`):''
  const detail=phase==='waiting'?say('正在读取这批组件在画布中的实际生成状态。','Reading the actual generation state of these canvas components.'):phase==='empty'?say('尚未挂载或已从画布移除。','Not mounted or removed from the canvas.'):[counts,scope,snapshot.active===false?say('以上为上次状态，打开研究看板可查看最新进度。','These are the last observed states; open the research canvas for current progress.'):''].filter(Boolean).join(' ')
  const rows=new Map((refreshSnapshot?.rows??[]).map(row=>[row.nodeId,row])),refreshGroups=new Map()
@@ -227,12 +229,12 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
 
 export function researchWorkbenchFeedbackDefinitions(){return [researchWorkbenchRecoveryMode,isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v13 */',ending='/* ework:workbench-feedback:end */'
+ const marker='/* ework:workbench-feedback:v14 */',ending='/* ework:workbench-feedback:end */'
  source=source.replace('\nconst workbenchMeta=planningResponseMetadata(activityNodes);','')
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'+ending+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[012]|[1-9]) \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[0123]|[1-9]) \*\//)
  if(previous>=0){
   // Several later patches append their own helpers before ExecutionStatusGroup.
   // Replace this patch's functions only; never consume those adjacent owners.

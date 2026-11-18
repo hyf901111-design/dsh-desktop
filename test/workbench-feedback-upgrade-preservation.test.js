@@ -1,6 +1,9 @@
+import {createRequire} from 'node:module'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
-import {patchResearchWorkbenchFeedback} from '../scripts/lib/research-workbench-feedback.mjs'
+const require=createRequire(import.meta.url)
+const {patchResearchWorkbenchFeedback}=require('../scripts/lib/research-workbench-feedback.mjs')
+const {stripHomeWorkbenchProgress}=require('../scripts/lib/home-workbench-progress.mjs')
 
 it('preserves neighboring component and response helpers when upgrading the real installed bundle',()=>{
  const source=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
@@ -9,9 +12,16 @@ it('preserves neighboring component and response helpers when upgrading the real
  expect(foreign).toBeGreaterThan(start);expect(foreign).toBeLessThan(tail)
  const retained=source.slice(foreign,tail),upgraded=patchResearchWorkbenchFeedback(source)
  expect(upgraded).toContain(retained)
- for(const marker of ['conversation-components:v2','conversation-response-progress:v3','conversation-response-history:v2'])expect(upgraded).toContain('/* ework:'+marker+' */')
+ for(const owner of ['conversation-components','conversation-response-progress','conversation-response-history']){
+  const marker=source.match(new RegExp('/\\* ework:'+owner+':v\\d+ \\*/'))?.[0]
+  expect(marker).toBeTypeOf('string')
+  expect(upgraded.includes(marker)).toBe(true)
+ }
  expect(upgraded).toContain('/* ework:workbench-feedback:end */')
  expect(patchResearchWorkbenchFeedback(upgraded)).toBe(upgraded)
- expect(patchResearchWorkbenchFeedback(upgraded.replace('workbench-feedback:v13','workbench-feedback:v11'))).toBe(upgraded)
+ const base=stripHomeWorkbenchProgress(upgraded)
+ for(const priorVersion of [11,13]) {
+  expect(patchResearchWorkbenchFeedback(base.replace('workbench-feedback:v14',`workbench-feedback:v${priorVersion}`))).toBe(base)
+ }
  expect(()=>new Function(upgraded)).not.toThrow()
 })

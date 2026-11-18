@@ -64,6 +64,22 @@ it('does not offer disclosure for a simple answer without public progress or act
   expect(await button.innerText()).toContain('用时')
  }finally{await page.close()}
 })
+it('preserves each failed webpage read inside one group in completed Workbench history',async()=>{
+ const{page,errors}=await fixture();try{
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('done'))
+  await page.locator('[data-response-history] button').first().click()
+  const failed=page.locator('[data-response-history-details] [data-activity-read-failures]')
+  await expect.poll(()=>failed.locator(':scope > summary').textContent()).toContain('2 次网页读取未成功')
+  await failed.locator(':scope > summary').click()
+  const records=failed.locator('[data-activity-record]')
+  expect(await records.evaluateAll(nodes=>nodes.map(node=>node.getAttribute('data-activity-record')))).toEqual(['workbench-failure1','workbench-failure2'])
+  for(const [index,key] of ['workbench-failure1','workbench-failure2'].entries()){
+   await records.nth(index).locator('summary').click()
+   expect(await records.nth(index).locator('[data-response-original-detail="'+key+'"]').isVisible()).toBe(true)
+  }
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
 it('keeps the total header above an initial reply and live tools, with no elapsed bullet',async()=>{
  const{page,errors}=await fixture();try{
   await page.evaluate(()=>window.responseFixture.statusSequence('initial'))

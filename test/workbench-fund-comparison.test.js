@@ -41,6 +41,11 @@ describe('same-cohort bond-fund workbench',()=>{
   const proxy=createToolProxy(binding,{})
   expect(proxy[mark]).toBe(true)
   expect(createToolProxy({...binding,connectionId:'custom'}, {})[mark]).toBeUndefined()
+  const catalog = {...binding,rawName:'tushare_catalog'}
+  const catalogMark=Symbol.for('ework.builtin-tushare.catalog')
+  expect(createToolProxy(catalog,{})[catalogMark]).toBe(true)
+  expect(createToolProxy({...catalog,connectionId:'custom'}, {})[catalogMark]).toBeUndefined()
+  expect(createToolProxy({...catalog,effect:'unknown'}, {})[catalogMark]).toBeUndefined()
   const agent={},token={},name=proxy.name
   let dispatch
   const ctx={tools:{schemas:()=>[{name:'public_data_query'},{name}],get:()=>proxy,execute:async value=>{

@@ -20,6 +20,64 @@ function expectContentFirstInstructions(prompt) {
   expect(prompt).toMatch(/submit_component_data[^\n]*content/u)
 }
 
+it.each([
+  ['原油走势（数据缺失）', '本次未能取得所需的收盘价序列。', 'data-missing'],
+  ['沪金走势', '2026-11-17：一条保留的可读记录。', 'readable-content']
+])('records a workbench chart returned as text as partial: %s', async (title, content, recoveryMode) => {
+  const {ResearchTaskRuntime}=await runtimeModule()
+  const artifact={version:1,type:'markdown',title,content}
+  const runtime = new ResearchTaskRuntime({
+    adapter:{start:async()=>({childSessionId:'chart',dispose:async()=>{},result:Promise.resolve({
+      stopReason:'completed',output:[{type:'text',text:JSON.stringify(artifact)}]
+    })})},
+    storage:memoryTaskStorage(),createId:sequentialTaskIds()
+  })
+  try {
+    const prompt=workbenchPanelPrompt({title:'期货研究',dataMode:'source'},
+      {title:'主力连续走势',prompt:'绘制主力连续合约收盘价折线图。',type:'chart',size:'medium'})
+    const task=await runtime.start({...containerRequest('chart-panel'),prompt},{
+      sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:'绘制走势'},
+      sourceRequirement:'绘制走势',workbenchRequest:{originalRequest:'生成一个期货衍生品研究工作台',dataMode:'source'}
+    })
+    const inspect=()=>runtime.inspect({parentSessionId:'parent-1',taskId:task.taskId})
+    await eventually(()=>expect(inspect().state).toBe('completed'))
+    expect(inspect()).toMatchObject({deliveryStatus:'partial',recoveryMode,unmetRequirements:[expect.any(String)]})
+    expect(JSON.parse(inspect().finalOutput)).toEqual(artifact)
+  } finally {await runtime.dispose()}
+})
+
+it('repairs a workbench trend without repeating a successful data request',async()=>{
+  const {ResearchTaskRuntime}=await runtimeModule(),calls=[]
+  const data=[{date:'2026-11-16',close:10},{date:'2026-11-17',close:12}]
+  const note={version:1,type:'markdown',title:'期货走势',content:'保留已取得的两条记录。'}
+  const chart={version:1,type:'chart',variant:'line',title:'期货走势',labels:data.map(row=>row.date),
+    series:[{name:'收盘价',values:data.map(row=>row.close)}]}
+  const adapter={start:async request=>{
+    calls.push(request)
+    return {childSessionId:'chart-repair-'+calls.length,dispose:async()=>{},result:Promise.resolve(calls.length===1
+      ? {stopReason:'completed',output:[{type:'text',text:JSON.stringify(note)}],
+        sourceRecords:[{tool:'query_futures',args:{symbol:'test'},response:{records:data}}]}
+      : {stopReason:'completed',output:[{type:'text',text:JSON.stringify(chart)}]})}
+  }}
+  const runtime=new ResearchTaskRuntime({adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds()})
+  try {
+    const request='绘制期货收盘价折线图。'
+    const prompt=workbenchPanelPrompt({title:'期货研究',dataMode:'source'},{title:'期货走势',type:'chart',size:'medium',prompt:request})
+    const task=await runtime.start({...containerRequest('trend-repair'),prompt},{
+      sourcePolicy:{pluginRequired:false,pluginProhibited:false,preferenceRequest:request},
+      sourceRequirement:request,workbenchRequest:{originalRequest:'生成期货研究工作台',dataMode:'source'}
+    })
+    const inspect=()=>runtime.inspect({parentSessionId:'parent-1',taskId:task.taskId})
+    await eventually(()=>expect(inspect().state).toBe('completed'))
+    expect(calls).toHaveLength(2)
+    expect(calls[1]).toMatchObject({synthesisOnly:true,prompt:expect.stringContaining('不重新检索')})
+    const delivered=JSON.parse(inspect().finalOutput)
+    expect(delivered).toMatchObject({type:'html',title:chart.title})
+    expect(readTemplateModel(delivered)?.data).toMatchObject(chart)
+    expect(inspect().deliveryStatus).toBeUndefined()
+  } finally {await runtime.dispose()}
+})
+
 
 it('recovers the newest task of an owned canvas node without resurrecting an older attempt',async()=>{
   const {ResearchTaskRuntime}=await runtimeModule();
@@ -979,6 +1037,26 @@ describe('Research model connection failures', () => {
     expect(launches.startedTaskIds()).toHaveLength(2)
     await runtime.dispose()
   })
+  it('recovers a provider stream that ended without a finish reason once', async () => {
+    const { ResearchTaskRuntime } = await runtimeModule()
+    const launches = deferredTaskAdapter()
+    const runtime = new ResearchTaskRuntime({adapter:launches.adapter,storage:memoryTaskStorage(),createId:sequentialTaskIds(),retryDelayMs:0})
+    const task = await runtime.start(containerRequest())
+    const inspect = () => runtime.inspect({parentSessionId:'parent-1',taskId:task.taskId})
+    try {
+      const failure = {type:'turn/end',data:{reason:{kind:'error',error:{code:'PI_AI_ERROR',
+        message:'Stream ended without finish_reason (request-private-token)'}}}}
+      await launches.waitForStarts(1)
+      launches.event(task.taskId,failure)
+      launches.complete(task.taskId,undefined,'error')
+      await launches.waitForStarts(2)
+      launches.event(task.taskId,failure)
+      launches.complete(task.taskId,undefined,'error')
+      await eventually(()=>expect(inspect()).toMatchObject({state:'failed',error:'模型连接中断，请稍后重试。'}))
+      expect(launches.startedTaskIds()).toHaveLength(2)
+      expect(JSON.stringify(inspect())).not.toContain('request-private-token')
+    } finally {await runtime.dispose()}
+  })
   it('recovers once from provider pressure and keeps cancellation effective during backoff', async () => {
     const { ResearchTaskRuntime } = await runtimeModule()
     const launches = deferredTaskAdapter()
@@ -1445,6 +1523,22 @@ describe('Research task Subagent adapter', () => {
       return runtime.createSubagentAdapter(ctx).start({ parentSessionId: parent.id, kind: 'container', query, prompt, hostContext, signal: new AbortController().signal, onSessionEvent: vi.fn(), onProgress })
     } }
   }
+
+  it('routes an authenticated workbench child to mounted sources without an unrelated host search',async()=>{
+    const fixture=containerAdapterFixture()
+    fixture.ctx.tools={schemas:()=>[
+      {name:'ework__tushare',description:'Tushare 金融数据'},
+      {name:'ework__datapro',description:'火山方舟专业数据集只读检索'},
+      {name:'web_search'},{name:'web_fetch'}
+    ]}
+    const handle=await fixture.start('监控商品期货最新价格',undefined,{workbenchRequest:{dataMode:'source'}})
+    try {
+      const request=fixture.ctx.subagents.start.mock.calls[0][1]
+      expect(request.prompt[0].text).toMatch(/先复用本轮已核验[\s\S]*Tushare[\s\S]*火山方舟[\s\S]*豆包搜索/u)
+      expect(fixture.ctx.web.search).not.toHaveBeenCalled()
+      expect(fixture.ctx.web.fetch).not.toHaveBeenCalled()
+    } finally { await handle.dispose() }
+  })
 
   it('uses trusted host source policy rather than the planner route in the SDK child',async()=>{
     const fixture=containerAdapterFixture()

@@ -11,7 +11,7 @@ const {patchConversationLiveActivity,stripConversationLiveActivity}=require('../
 beforeAll(async()=>{
  let native=stripConversationLiveActivity(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  native=patchConversationLiveActivity(patchFigmaReadingConversation(native))
- source=native.replace(/^\s*exports\.\w+ = [^;\n]+;$/gm,'').replace('\n\t\treturn module.exports;','\n\t\texports.__responseChat=ChatView;exports.__responseAssistant=AssistantNodeView;exports.__responseExecution=ExecutionStatusGroup;exports.__responseUseProgress=useConversationResponseProgress;exports.__responseShared=SharedResearchRequest;exports.__responseDictionaries={zh,en};exports.__responseBind=()=>{sherlockBoardsPage.PersonalResearchHistory=()=>null;sherlockBoardsAdapter=null};return module.exports;')
+ source=native.replace(/^\s*exports\.\w+ = [^;\n]+;$/gm,'').replace('\n\t\treturn module.exports;','\n\t\texports.__responseChat=ChatView;exports.__responseAssistant=AssistantNodeView;exports.__responseExecution=ExecutionStatusGroup;exports.__responseUseProgress=useConversationResponseProgress;exports.__responseShared=SharedResearchRequest;exports.__responseDictionaries={zh,en};exports.__responseBind=()=>{sherlockBoardsPage.PersonalResearchHistory=()=>null;sherlockBoardsAdapter=null};exports.__watchSubmissions=deps=>NativeConversationSubmissions.watch(deps);return module.exports;')
  bundle=(await build({entryPoints:['test/fixtures/conversation-response-progress-browser.tsx'],bundle:true,platform:'browser',format:'iife',write:false,loader:{'.svg':'dataurl','.css':'empty'},define:{'process.env.NODE_ENV':'"development"'}})).outputFiles[0].text
  const assets='node_modules/@deepseek-ai/dsh-web-frontend/dist/assets',names=(await readdir(assets)).filter(name=>/^index-.*\.css$/.test(name));css=(await Promise.all(names.map(name=>readFile(assets+'/'+name,'utf8')))).join('\n')+'\n'+await readFile('src/preload/figma-reading.css','utf8')
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -42,6 +42,54 @@ it('keeps the same activity row in the shared right-panel native task and hides 
  const{page,errors}=await fixture();try{
   await page.evaluate(()=>{window.responseFixture.activity('read');window.responseFixture.shared()});await expect.poll(()=>page.locator('[data-shared-native-task] [data-response-progress][data-state=running]').count()).toBe(1)
   await page.evaluate(()=>window.responseFixture.activity('done'));await expect.poll(()=>page.locator(liveSelector).count()).toBe(0);expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+it('shows Workbench updates in the native conversation with no reasoning visible',async()=>{
+ const{page,errors}=await fixture();try{
+  const update=page.locator('[data-workbench-conversation-progress]'),reading=page.locator(liveSelector)
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('initial'))
+  await expect.poll(()=>update.innerText()).toContain('已收到创建工作台的请求')
+  expect((await update.boundingBox()).y).toBeLessThan((await reading.boundingBox()).y)
+  expect(await update.evaluate(node=>getComputedStyle(node).animationName)).toBe('none')
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('reading'))
+  await expect.poll(()=>update.innerText()).toContain('正在查找和核对')
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('sources'))
+  await expect.poll(()=>update.innerText()).toContain('已读取部分来源资料')
+  await reading.getByRole('button').first().click()
+  const failures=reading.locator('[data-activity-read-failures]')
+  await expect.poll(()=>failures.locator(':scope > summary').textContent()).toContain('2 次网页读取未成功')
+  await failures.locator(':scope > summary').click()
+  await expect.poll(()=>failures.locator('[data-activity-record] > summary').allTextContents()).toEqual([
+   '网页读取失败，浏览器未取得可读内容','网页读取失败，浏览器未取得可读内容'
+  ])
+  await failures.locator('[data-activity-record] > summary').last().click()
+  expect(await failures.locator('[data-response-original-detail="workbench-failure2"]').isVisible()).toBe(true)
+  expect(await page.locator('body').innerText()).not.toContain('private workbench reasoning')
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('submitted'))
+  await expect.poll(()=>update.innerText()).toContain('已受理，共 2 个组件')
+  await page.screenshot({path:evidence+'/workbench-conversation-progress.png'})
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('done'))
+  await expect.poll(()=>reading.count()).toBe(0)
+  expect(await update.innerText()).toContain('已受理，共 2 个组件')
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('final'))
+  await expect.poll(()=>update.count()).toBe(0)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+it('shows the receipt on the native prompt acknowledgement before the new turn arrives',async()=>{
+ const{page,errors}=await fixture();try{
+  const update=page.locator('[data-workbench-conversation-progress]')
+  await page.evaluate(()=>window.responseFixture.workbenchSubmit('queued'))
+  await expect.poll(()=>update.count()).toBe(0)
+  await page.evaluate(()=>window.responseFixture.workbenchSubmit('request'))
+  await expect.poll(()=>page.locator('[data-native-submitted-user]').count()).toBe(1)
+  expect(await update.count()).toBe(0)
+  await page.evaluate(()=>window.responseFixture.workbenchSubmit('accepted'))
+  await expect.poll(()=>update.innerText()).toContain('已收到创建工作台的请求')
+  await page.evaluate(()=>window.responseFixture.workbenchPhase('initial'))
+  await expect.poll(()=>page.locator('[data-native-submitted-user]').count()).toBe(0)
+  expect(await update.count()).toBe(1)
+  expect(errors).toEqual([])
  }finally{await page.close()}
 })
 it('shows Back to latest only for real content below and hides after content collapse, resize, removal or scrolling down',async()=>{

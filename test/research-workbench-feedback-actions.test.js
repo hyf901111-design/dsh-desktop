@@ -1,3 +1,4 @@
+import {createRequire} from 'node:module'
 import {expect,it} from 'vitest'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
@@ -6,7 +7,7 @@ import * as jsx from 'react/jsx-runtime'
 import {renderToStaticMarkup} from 'react-dom/server'
 import {componentDataStatusDefinitions} from '../scripts/lib/component-data-status.mjs'
 import {stripHomeWorkbenchProgress} from '../scripts/lib/home-workbench-progress.mjs'
-import {publishResearchWorkbenchProgress,patchResearchWorkbenchFeedback,researchWorkbenchFeedbackDefinitions} from '../scripts/lib/research-workbench-feedback.mjs'
+const {publishResearchWorkbenchProgress,patchResearchWorkbenchFeedback,researchWorkbenchFeedbackDefinitions}=createRequire(import.meta.url)('../scripts/lib/research-workbench-feedback.mjs')
 
 // Upgrade the real installed helper in place. Unwinding unrelated canvas and
 // composer patches would couple these receipt controls to old grid anchors.

@@ -25,7 +25,7 @@ export function componentPluginSourceRequired(request='') {
   })
 }
 
-const planningSourceInstruction = sources => `工作台首次规划只需理解需求、拆分组件并立即提交组件计划。在各 panel.prompt 中保留用户指定的来源、所需字段和来源、日期与单位要求，由各组件任务独立取数并展示；父会话不要提前查询整套业务数据、编写页面或配置刷新。除宿主已声明的publicData直通和用户明确指定的来源外，panel.prompt只写业务需求，不替子任务编写工具调用流程，不猜接口能力。financial_query的research/profile仅支持公募基金，不能取A股财报或公司公告。用户未规定历史跨度时保留原来的“近期”等范围，不自行扩大到一年或多年度。按内容选择适合的可视化，不强制套用固定组件组合。当前会话实际可见的来源入口：${sources.join('；')}。这些入口用于记录来源路线；接口发现和目录结果不是真实业务数据，不能填成已取得的记录。`
+const planningSourceInstruction = sources => `本轮可见的数据工具：${sources.join('；')}。按用户要求的来源、字段、范围和时点选择。同批数据批量取得并跨卡复用；只有未覆盖的字段或期间交由组件补查。面板需求保留原来源、日期和单位。financial_query 的 research/profile 适用于公募基金研究与资料。`
 
 // Initial planning records source intent. Workers receive the detailed
 // acquisition guidance after the parent has submitted its component plan.
@@ -77,12 +77,12 @@ export function preferredComponentSourceTools(schemas, request, sourcePolicy) {
 
 export function componentSourceInstruction(tools, request = '', now = new Date(), { planning = false } = {}) {
   if (!tools?.length) return ''
+  if (planning) return planningSourceInstruction(tools.map(tool => `${tool.name}（${tool.description}）`))
   const progress='【来源进展】同一来源的目录连续两次为空即停止同源发现；在原授权范围改用其他当前可用来源。工具名失效后不猜别名、不继续旧名重试；按当前可用工具重新选择。已有数据先保留，只补缺失范围。来源不足如实说明，不用模板样例替代。'
   if (tools.some(tool=>/tushare/i.test(tool.description))) {
     const latest=latestStatementRequest(request)?'用户要最新或最近一期已披露财务、未指定报告期时，不按日历猜 period。先用当前接口支持的不带 period 的限量查询取得真实 end_date，再按实际报告期及披露日选择最近记录。单个季度空记录不等于公司没有财报；仅补查尚缺的最近有效报告，不重查已有估值。income 的 start_date/end_date 是公告日；原始数据未证实最新覆盖时标明本次返回记录的最近报告。':''
-    return progress+(planning ? planningSourceInstruction(tools.map(tool=>`${tool.name}（${tool.description}）`)) : '【Tushare 取数】'+TUSHARE_SOURCE_GUIDANCE+' 当前授权工具：'+tools.map(tool=>`${tool.name}（${tool.description}）`).join('；'))+latest
+    return progress+'【Tushare 取数】'+TUSHARE_SOURCE_GUIDANCE+' 当前授权工具：'+tools.map(tool=>`${tool.name}（${tool.description}）`).join('；')+latest
   }
-  if (planning) return progress+planningSourceInstruction(tools.map(tool => `${tool.name}（${tool.description}）`))
   const statementRequest=request.replace(/(?:不要|不取|不看|无需)(?:读取|查询|使用|获取)?(?:财报|财务(?:报表|指标)?|利润表)/gu,'')
   const aShare=/A股|A[- ]?shares?|中国上市公司|\b(?:[69]\d{5}\.SH|[023]\d{5}\.SZ|[489]\d{5}\.BJ)\b/iu.test(statementRequest)
   const formal=/已披露|正式财报|定期报告|财报|财务(?:与经营|指标|报表|差异|对比)|利润表|filed|reported|financial statements?|income statements?/iu.test(statementRequest)

@@ -20,11 +20,13 @@ export function validateToolBinding(tool) {
 
 export function createToolProxy(binding, runtime) {
   validateToolBinding(binding)
+  const builtinTushareRead = binding.effect === 'read' && /^builtin:tushare-mcp:[a-f0-9]{16}$/u.test(binding.connectionId)
   return {
     name: toolRegistrationName(binding.id), description: binding.description,
-    ...(binding.effect === 'read' && binding.rawName === 'tushare_query' &&
-      /^builtin:tushare-mcp:[a-f0-9]{16}$/u.test(binding.connectionId)
+    ...(builtinTushareRead && binding.rawName === 'tushare_query'
       ? {[Symbol.for('ework.builtin-tushare.read')]: true} : {}),
+    ...(builtinTushareRead && binding.rawName === 'tushare_catalog'
+      ? {[Symbol.for('ework.builtin-tushare.catalog')]: true} : {}),
     parameters: structuredClone(binding.inputSchema),
     output: { schema: {}, render: (_arguments, value) => value.content },
     execute: async (args, exec) => {

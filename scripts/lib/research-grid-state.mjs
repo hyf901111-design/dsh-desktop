@@ -1,4 +1,5 @@
 import { createResearchGrid } from '../../packages/dsh-research-task-runtime/research-grid.js'
+import { researchWorkbenchRecoveryMode } from './research-workbench-feedback.mjs'
 export const researchGridNodeIds=new Set()
 export function workbenchScrollExtent(contentBottom,visibleHeight,rowStep,toolbarSpace) {
   if(contentBottom>visibleHeight)return Math.ceil(contentBottom+15*rowStep)
@@ -23,7 +24,28 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
   const geometry=n=>[n.x,n.y,n.width,n.height].join(':')
   const freeCells=items=>items.map(c=>{const {freePosition,...box}=c,n=nodesById.get(c.id);return n?.kind==='planning-card'||n?.kind==='generated-container'&&(!n.workbenchId||n.preserveGenerationSize)&&!n.containerSpec&&n.creationMode!=='selection'&&!['completed','failed'].includes(n.generationStatus)?{...box,freePosition:true}:box})
   function visibleCells(projectWidth=width||1000){
-    const m=grid.metrics(projectWidth),baseLimits=c=>{
+    const m=grid.metrics(projectWidth)
+    const compactStatus=c=>{
+      const node=nodesById.get(c.id)
+      if(!node?.workbenchId||node.preserveGenerationSize||contentOverrides.has(c.id)||c.arrangeColumns!==undefined)return false
+      if(!node.containerSpec)return ['failed','interrupted','cancelled'].includes(node.generationStatus)
+      return node.containerSpec.type==='markdown'&&['data-missing','readable-content'].includes(researchWorkbenchRecoveryMode(node))
+    }
+    const compactCells=shared?[]:cells.filter(compactStatus)
+    const compactIds=new Set(compactCells.map(c=>c.id))
+    const regular=cells.filter(c=>!compactIds.has(c.id))
+    const prioritize=regular.some(c=>nodesById.get(c.id)?.generationStatus==='completed')
+    let tail=Math.max(0,...regular.map(c=>c.y+c.h))
+    let band=Math.max(-1,...regular.map(c=>c.arrangeBand??-1))+1
+    const projections=new Map()
+    for(const cell of compactCells.sort((a,b)=>a.y-b.y||a.x-b.x)){
+      const h=Math.min(cell.h,m.minRows)
+      projections.set(cell.id,{...cell,h,...(prioritize?{y:tail,x:0,w:m.columns,
+        ...(cell.arrangeBand!==undefined?{arrangeBand:band++}:{} )}: {})})
+      tail+=h
+    }
+    const viewCells=compactCells.length?cells.map(c=>projections.get(c.id)??c):cells
+    const baseLimits=c=>{
       const node=nodesById.get(c.id),min=grid.minimum(node,m,node?.kind==='planning-card'&&!contentOverrides.has(c.id))
       // Explicit columns keep their saved spans consistently for all components.
       if([1,2,3].includes(c.arrangeColumns))min.w=Math.min(min.w,c.w)
@@ -36,7 +58,7 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
     const fitHeight=(c,min,value)=>value&&Math.min(300,value.native&&!value.layoutFit&&Number.isFinite(value.extraHeight)?Math.max(c.h,min)+Math.ceil(value.extraHeight/m.rowStep):Math.ceil((value.height+m.gap)/m.rowStep))
     // Keep row/column structure through asynchronous intrinsic measurements.
     // Padding used to close a band is only projected on this client.
-    const arranged=grid.projectArranged(cells,c=>baseLimits(c).w,c=>{
+    const arranged=grid.projectArranged(viewCells,c=>baseLimits(c).w,c=>{
       const min=baseLimits(c).h,value=matchingMeasurement(c,c.w)
       if(!value)return Math.max(min,c.h)
       const measured=fitHeight(c,min,value)
@@ -55,31 +77,31 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
       }
       return min
     }
-    const fitted=cells.map(c=>{const value=matchingMeasurement(c,Math.max(c.w,baseLimits(c).w));return value?.layoutFit&&!contentOverrides.has(c.id)?{...c,h:Math.max(m.minRows,fitHeight(c,m.minRows,value))}:c})
-    const hasFit=fitted.some((c,i)=>c.h!==cells[i].h)
-    if(!hasFit&&!cells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return grid.alignResponsiveSpans(cells)
+    const fitted=viewCells.map(c=>{const value=matchingMeasurement(c,Math.max(c.w,baseLimits(c).w));return value?.layoutFit&&!contentOverrides.has(c.id)?{...c,h:Math.max(m.minRows,fitHeight(c,m.minRows,value))}:c})
+    const hasFit=compactCells.length>0||fitted.some((c,i)=>c.h!==cells[i].h)
+    if(!hasFit&&!viewCells.some(c=>c.h<limits(c).h||c.w<limits(c).w))return grid.alignResponsiveSpans(viewCells)
     // Preserve existing column intent when a narrow left column reaches the
     // shared minimum. Borrow the neighbouring column's spare span before
     // falling back to wrapping; every card on those edges moves together.
     let horizontal=fitted
     const handled=new Set()
-    for(const row of [...new Set(cells.map(c=>c.y))].sort((a,b)=>a-b)){
-      const peers=cells.filter(c=>c.y===row).sort((a,b)=>a.x-b.x)
+    for(const row of [...new Set(viewCells.map(c=>c.y))].sort((a,b)=>a-b)){
+      const peers=viewCells.filter(c=>c.y===row).sort((a,b)=>a.x-b.x)
       if(peers.length<2||peers[0].x!==0||peers.at(-1).x+peers.at(-1).w!==40||peers.some((c,i)=>i&&c.x!==peers[i-1].x+peers[i-1].w))continue
-      const edges=[0,...peers.map(c=>c.x+c.w)],minima=peers.map((p,i)=>Math.max(...cells.filter(c=>c.x===edges[i]&&c.x+c.w===edges[i+1]).map(c=>limits(c).w))),spans=peers.map((c,i)=>Math.max(c.w,minima[i]))
+      const edges=[0,...peers.map(c=>c.x+c.w)],minima=peers.map((p,i)=>Math.max(...viewCells.filter(c=>c.x===edges[i]&&c.x+c.w===edges[i+1]).map(c=>limits(c).w))),spans=peers.map((c,i)=>Math.max(c.w,minima[i]))
       const signature=edges.join(':');if(handled.has(signature))continue;handled.add(signature)
       let deficit=spans.reduce((a,b)=>a+b,0)-40
       if(minima.reduce((a,b)=>a+b,0)>40){
         // Below the combined minimum, stack this column family at full width
         // instead of leaving the former right column floating halfway across.
-        horizontal=horizontal.map(c=>{const original=cells.find(value=>value.id===c.id),a=edges.indexOf(original.x),b=edges.indexOf(original.x+original.w);return a>=0&&b>a?{...c,x:0,w:40}:c})
+        horizontal=horizontal.map(c=>{const original=viewCells.find(value=>value.id===c.id),a=edges.indexOf(original.x),b=edges.indexOf(original.x+original.w);return a>=0&&b>a?{...c,x:0,w:40}:c})
         continue
       }
       for(let i=spans.length-1;i>=0&&deficit>0;i--){const take=Math.min(deficit,spans[i]-minima[i]);spans[i]-=take;deficit-=take}
       if(deficit>0)continue
       if(spans.every((w,i)=>w===peers[i].w))continue
       const fitted=[0];spans.forEach(span=>fitted.push(fitted.at(-1)+span))
-      horizontal=horizontal.map(c=>{const original=cells.find(value=>value.id===c.id),a=edges.indexOf(original.x),b=edges.indexOf(original.x+original.w);return a>=0&&b>a?{...c,x:fitted[a],w:fitted[b]-fitted[a]}:c})
+      horizontal=horizontal.map(c=>{const original=viewCells.find(value=>value.id===c.id),a=edges.indexOf(original.x),b=edges.indexOf(original.x+original.w);return a>=0&&b>a?{...c,x:fitted[a],w:fitted[b]-fitted[a]}:c})
     }
     const placed=[]
     for(const cell of [...horizontal].sort((a,b)=>a.y-b.y||a.x-b.x)){
@@ -88,7 +110,17 @@ export function createWorkbenchGridState(storage,sessionId,shared=false) {
       while(collisions.length){next.y=Math.max(...collisions.map(c=>c.y+c.h));collisions=placed.filter(c=>grid.overlap(next,c))}
       placed.push(next)
     }
-    const byId=new Map(grid.alignResponsiveSpans(hasFit?grid.compact(placed):placed).map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
+    let positioned=placed
+    if(compactCells.length&&prioritize){
+      const delivered=grid.compact(placed.filter(c=>!compactIds.has(c.id)))
+      let bottom=Math.max(0,...delivered.map(c=>c.y+c.h))
+      positioned=[...delivered,...placed.filter(c=>compactIds.has(c.id)).map(c=>{
+        const next={...c,y:bottom}
+        bottom+=c.h
+        return next
+      })]
+    }else if(hasFit)positioned=grid.compact(placed)
+    const byId=new Map(grid.alignResponsiveSpans(positioned).map(c=>[c.id,c]));return cells.map(c=>byId.get(c.id))
   }
   function reconcile(snapshot) {
     if(!width)return snapshot

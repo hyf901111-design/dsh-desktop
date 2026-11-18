@@ -198,21 +198,166 @@ export function renderCartesianChart(spec) {
   const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const precise=spec.axisDecimals!==undefined,geometryProgram=precise?'('+cartesianChartAxisPrecision.toString()+')('+cartesianChartSvg.toString()+')':cartesianChartSvg.toString();
   const geometry=(precise?cartesianChartAxisPrecision(cartesianChartSvg):cartesianChartSvg)(spec);
-  const rows=spec.labels.map((l,i)=>`<tr><td>${esc(l)}</td>${spec.series.map(s=>`<td>${s.values[i]}</td>`).join('')}${(spec.detailRows?.[i]?.slice(1)??[]).map(value=>`<td>${esc(value===null?'—':value)}</td>`).join('')}</tr>`).join('');
+  const {seriesNames,seriesHeaders,detailColumns,selectedDetails}=cartesianChartPresentation(spec);
+  // Notes verifies the original script and read-only table shape verbatim.
+  // The preview upgrades that program only after the artifact is accepted.
+  const plottedHeaders=spec.detailRows?seriesHeaders:spec.series.map(series=>series.name+(spec.unit?' ('+spec.unit+')':''));
+  const headers=[detailColumns[0]??'分类',...plottedHeaders,...selectedDetails.map(column=>detailColumns[column])];
+  const rows=spec.labels.map((label,i)=>{
+    const values=[label,...spec.series.map(series=>series.values[i]),...selectedDetails.map(column=>spec.detailRows[i][column])];
+    return `<tr>${values.map(value=>`<td>${esc(value===null?'—':value)}</td>`).join('')}</tr>`;
+  }).join('');
+  const encoded=JSON.stringify(spec).replace(/</g,'\\u003c');
+  const program=spec.detailRows
+    ? `(${cartesianChartReadingRuntime.toString()})(${encoded},${geometryProgram},${cartesianChartPresentation.toString()});`
+    : `(${cartesianChartRuntime.toString()})(${encoded},${geometryProgram});`;
   const html=`<!doctype html><html><head><meta charset="utf-8"><style>
-body{margin:0;padding:10px 12px;font:12px/1.5 var(--sherlock-font-sans);color:var(--sherlock-text);background:var(--sherlock-surface)}*{box-sizing:border-box}figure{margin:0;min-width:0}.chart-context,figcaption{color:var(--sherlock-muted);overflow-wrap:anywhere}.chart-context{margin-bottom:4px}.legend{display:flex;gap:4px 12px;flex-wrap:wrap;margin-bottom:6px}.legend button{font:inherit;display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--sherlock-control-text,var(--sherlock-text));padding:3px 0;cursor:pointer}.legend i{width:12px;height:3px;background:var(--series)}.legend button[aria-pressed="false"]{opacity:.4}.legend button:focus-visible{outline:1px solid var(--sherlock-muted)}svg{display:block;width:100%;max-width:100%;overflow:visible}svg text{fill:var(--sherlock-muted);font:11px var(--sherlock-font-sans)}.grid{stroke:var(--sherlock-border);stroke-width:.5}.chart-cursor{stroke:var(--sherlock-muted);stroke-width:1;stroke-dasharray:3 3;pointer-events:none}.chart-readout{background:var(--sherlock-surface-muted);color:var(--sherlock-text);min-height:36px;padding:6px 8px;margin:6px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}figcaption{font-size:11px}details{border-top:1px solid var(--sherlock-border);margin-top:8px;padding-top:6px}summary{cursor:pointer}.data-scroll{max-height:200px;overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:11px}th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--sherlock-border)}th:first-child,td:first-child{text-align:left}thead{color:var(--sherlock-text);background:var(--sherlock-surface-muted)}tbody tr:hover{background:var(--sherlock-surface-muted)}
-</style></head><body data-research-kind="chart" data-chart-template="${spec.variant}"><figure><div class="chart-context">${esc([spec.subtitle,spec.variant==='percentBar'?'占比 · 原值单位：'+(spec.unit||'未提供'):spec.unit].filter(Boolean).join(' · '))}</div><div class="legend">${spec.series.map((s,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" aria-label="显示或隐藏${esc(s.name)}"><i style="--series:var(--sherlock-chart-${i%8+1},var(--sherlock-chart-${i%6+1}))"></i>${esc(s.name)}</button>`).join('')}</div><svg class="template-chart" viewBox="0 0 ${geometry.width} ${geometry.height}" height="240" role="img" tabindex="0" aria-label="${esc(spec.title)}">${geometry.markup}</svg><div class="chart-readout" role="status" aria-live="polite">${esc(spec.labels[0])}</div><figcaption>${esc([spec.asOf,spec.note].filter(Boolean).join(' · '))}</figcaption></figure><details><summary>查看完整数据</summary><div class="data-scroll"><table><thead><tr><th>${esc(spec.detailColumns?.[0]??'分类')}</th>${spec.series.map(s=>`<th>${esc(s.name)}${spec.unit?' ('+esc(spec.unit)+')':''}</th>`).join('')}${(spec.detailColumns?.slice(1)??[]).map(name=>`<th>${esc(name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details><script>(${cartesianChartRuntime.toString()})(${JSON.stringify(spec).replace(/</g,'\\u003c')},${geometryProgram});</script></body></html>`;
-  const content=spec.detailRows?html.replace('</body>',`<script>(${installCartesianChartDetails.toString()})(${JSON.stringify(spec).replace(/</g,'\\u003c')});</script></body>`):html;
+body{margin:0;padding:10px 12px;font:12px/1.5 var(--sherlock-font-sans);color:var(--sherlock-text);background:var(--sherlock-surface)}*{box-sizing:border-box}figure{margin:0;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;column-gap:12px}
+.chart-context,figcaption{color:var(--sherlock-muted);overflow-wrap:anywhere}
+.chart-context:empty{display:none}
+.legend{display:flex;gap:4px 12px;flex-wrap:wrap;grid-column:2;justify-content:flex-end}
+.chart-context:empty+.legend{grid-column:1/-1;justify-content:flex-start}
+figure>svg,.chart-readout,figcaption{grid-column:1/-1}
+@media(max-width:359px){figure{grid-template-columns:minmax(0,1fr)}.legend{grid-column:1;justify-content:flex-start}}.legend button{font:inherit;display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--sherlock-control-text,var(--sherlock-text));padding:3px 0;cursor:pointer;min-width:0;max-width:100%;overflow-wrap:anywhere;text-align:left}.legend i{width:12px;height:3px;flex:none;background:var(--series)}.legend button[aria-pressed="false"]{opacity:.4}.legend button:focus-visible{outline:1px solid var(--sherlock-muted)}svg{display:block;width:100%;max-width:100%;overflow:visible}svg text{fill:var(--sherlock-muted);font:11px var(--sherlock-font-sans)}.grid{stroke:var(--sherlock-border);stroke-width:.5}.chart-cursor{stroke:var(--sherlock-muted);stroke-width:1;stroke-dasharray:3 3;pointer-events:none}.chart-readout{background:var(--sherlock-surface-muted);color:var(--sherlock-text);min-height:36px;padding:6px 8px;margin:6px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.chart-readout-category{color:var(--sherlock-muted)}
+.chart-readout-series strong{font-weight:650;font-variant-numeric:tabular-nums}
+figcaption{font-size:11px;white-space:pre-wrap}details{border-top:1px solid var(--sherlock-border);margin-top:8px;padding-top:6px}summary{cursor:pointer}.data-scroll{max-height:200px;overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:11px}th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--sherlock-border)}th:first-child,td:first-child{text-align:left}thead{color:var(--sherlock-text);background:var(--sherlock-surface-muted)}tbody tr:hover{background:var(--sherlock-surface-muted)}
+</style></head><body data-research-kind="chart" data-chart-template="${spec.variant}"><figure><div class="chart-context">${esc([spec.subtitle,spec.variant==='percentBar'?'占比 · 原值单位：'+(spec.unit||'未提供'):spec.unit].filter(Boolean).join(' · '))}</div><div class="legend">${spec.series.map((_,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" aria-label="显示或隐藏${esc(seriesNames[i])}"><i style="--series:var(--sherlock-chart-${i%8+1},var(--sherlock-chart-${i%6+1}))"></i>${esc(seriesNames[i])}</button>`).join('')}</div><svg class="template-chart" viewBox="0 0 ${geometry.width} ${geometry.height}" height="240" role="img" tabindex="0" aria-label="${esc(spec.title)}">${geometry.markup}</svg><div class="chart-readout" role="status" aria-live="polite">${esc(spec.labels[0])}</div><figcaption>${esc([spec.asOf,spec.note].filter(Boolean).join(' · '))}</figcaption></figure><details><summary>查看完整数据</summary><div class="data-scroll"><table><thead><tr><th>${esc(headers[0])}</th>${headers.slice(1).map(name=>`<th>${esc(name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details><script>${program}</script></body></html>`;
+  const content=spec.detailRows?html.replace('</body>',`<script>(${installCartesianChartDetails.toString()})(${encoded},${JSON.stringify(selectedDetails)});</script></body>`):html;
   return {version:1,type:'html',title:spec.title,html:content};
+}
+
+export function cartesianChartPresentation(spec) {
+  const unit=typeof spec.unit==='string'?spec.unit.trim():'';
+  const withoutUnit=name=>{
+    let label=name.trim();
+    while(unit){
+      const suffix=label.match(/\s*[（(]([^（）()]+)[）)]$/u);
+      const base=suffix&&label.slice(0,suffix.index).trimEnd();
+      if(!base||suffix[1].trim()!==unit)break;
+      label=base;
+    }
+    return label;
+  };
+  const seriesNames=spec.series.map(series=>withoutUnit(series.name));
+  const seriesHeaders=seriesNames.map(name=>unit?name+'（'+unit+'）':name);
+  const detailColumns=Array.isArray(spec.detailColumns)?spec.detailColumns:[];
+  const selectedDetails=[],duplicateDetails=[];
+  for(let column=1;column<detailColumns.length;column++){
+    const detail=detailColumns[column];
+    const duplicate=typeof detail==='string'&&Array.isArray(spec.detailRows)&&spec.detailRows.length===spec.labels.length&&
+      spec.series.some((series,i)=>withoutUnit(detail)===seriesNames[i]&&
+        spec.detailRows.every((row,point)=>row?.[column]===series.values[point]));
+    (duplicate?duplicateDetails:selectedDetails).push(column);
+  }
+  return {unit,seriesNames,seriesHeaders,detailColumns,selectedDetails,duplicateDetails};
+}
+
+export function cartesianChartReadingRuntime(spec, geometry, presentation) {
+  const svg=document.querySelector('.template-chart'),readout=document.querySelector('.chart-readout');
+  const legend=[...document.querySelectorAll('[data-chart-series]')], visible=spec.series.map(()=>true);
+  const {unit,seriesNames,seriesHeaders,detailColumns,duplicateDetails}=presentation(spec);
+  let selected=0, size=null, frame=0;
+  const setLabel=(element,label)=>{
+    if(!element)return;
+    const text=[...element.childNodes].find(node=>node.nodeType===3);
+    if(text&&text.textContent!==label)text.textContent=label;
+  };
+  // Preserve legacy sorting controls and the original routes of the saved
+  // table. New artifacts omit the duplicate cells when the table is rendered.
+  const table=document.querySelector('body>details table'),headers=[...(table?.tHead?.querySelector('tr')?.cells??[])];
+  if(duplicateDetails.length&&headers.length===spec.series.length+detailColumns.length){
+    for(const row of table.rows)for(const column of duplicateDetails){
+      const cell=row.cells[spec.series.length+column];
+      if(cell)cell.hidden=true;
+    }
+  }
+  spec.series.forEach((_,i)=>{
+    const label=seriesHeaders[i],header=headers[i+1],button=header?.querySelector('button');
+    setLabel(button??header,label);
+    if(header?.hasAttribute('data-column-label'))header.setAttribute('data-column-label',label);
+    if(button?.hasAttribute('aria-label'))button.setAttribute('aria-label','按'+label+'排序');
+    setLabel(legend[i],seriesNames[i]);
+    if(legend[i])legend[i].setAttribute('aria-label','显示或隐藏'+seriesNames[i]);
+  });
+  const readoutContent=document.createElement('span');
+  readoutContent.className='chart-readout-content';
+  readout.replaceChildren(readoutContent);
+  const describe=()=>{
+    const total=spec.series.reduce((sum,s,i)=>sum+(visible[i]?s.values[selected]:0),0);
+    const category=document.createElement('span');
+    category.className='chart-readout-category';category.textContent=spec.labels[selected];
+    const fields=[category];
+    for(const [i,series] of spec.series.entries()){
+      if(!visible[i])continue;
+      const field=document.createElement('span'),value=document.createElement('strong');
+      const raw=series.values[selected];
+      field.className='chart-readout-series';value.textContent=String(raw);
+      const percent=spec.variant==='percentBar'?' ('+(total?raw/total*100:0).toFixed(1)+'%)':'';
+      field.append(' · '+seriesNames[i]+' ',value,(unit?' '+unit:'')+percent);
+      fields.push(field);
+    }
+    readoutContent.replaceChildren(...fields);
+    svg.setAttribute('aria-label',readout.textContent+'；左右方向键查看相邻数据');
+    if(size){const p=size.categoryStart+(selected+.5)*size.categorySize,cursor=svg.querySelector('.chart-cursor');for(const key of size.horizontal?['y1','y2']:['x1','x2'])cursor.setAttribute(key,String(p));}
+  };
+  // createElementNS/textContent work under the preview's Trusted Types policy.
+  // No HTML parsing or model-supplied markup enters the live SVG.
+  const mount=part=>{
+    if(typeof part==='string')return document.createTextNode(part);
+    const el=document.createElementNS('http://www.w3.org/2000/svg',part.tag);
+    for(const [key,value] of Object.entries(part.attributes))el.setAttribute(key,String(value));
+    el.append(...part.children.map(mount));return el;
+  };
+  let lastWidth=0,lastHeight=0;
+  const draw=()=>{
+    frame=0;lastWidth=svg.parentElement.clientWidth;lastHeight=window.innerHeight;describe();
+    const outerHeight=element=>{const style=getComputedStyle(element);return style.display==='none'?0:element.getBoundingClientRect().height+parseFloat(style.marginTop||0)+parseFloat(style.marginBottom||0);};
+    const bodyStyle=getComputedStyle(document.body);
+    const disclosures=[...document.querySelectorAll('body>details,body>.component-reading-footer')].map(el=>{
+      const style=getComputedStyle(el),summary=el.querySelector('summary');
+      return (summary?outerHeight(summary):0)+['marginTop','marginBottom','paddingTop','paddingBottom','borderTopWidth','borderBottomWidth'].reduce((sum,key)=>sum+(parseFloat(style[key])||0),0);
+    });
+    // Expanded records scroll naturally; they must not squash the chart.
+    const compactFooter=document.querySelector('.component-reading-footer');
+    const tabBar=document.querySelector('.component-reading-tabs:not([hidden])');
+    const footerHeight=tabBar?outerHeight(tabBar):compactFooter?Math.max(0,...disclosures):disclosures.reduce((sum,h)=>sum+h,0);
+    const headerHeight=svg.getBoundingClientRect().top-svg.parentElement.getBoundingClientRect().top;
+    const chrome=headerHeight+[...document.querySelectorAll('.chart-readout,figcaption')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+footerHeight+2;
+    // The host fits the card to its open records. Use an intrinsic plot height
+    // here instead of feeding the newly enlarged iframe back into the plot.
+    // This also keeps the tabs in place when switching between detail panels.
+    const expanded=document.body.dataset.componentReadingTabs==='expanded'||!tabBar&&document.querySelector('body>details[open]');
+    size=geometry(spec,lastWidth,visible,expanded?240:lastHeight-chrome);svg.setAttribute('viewBox',`0 0 ${size.width} ${size.height}`);svg.style.height=size.height+'px';svg.replaceChildren(...size.elements.map(mount));describe();
+  };
+  const select=i=>{
+    const next=Math.max(0,Math.min(spec.labels.length-1,i));
+    if(next===selected)return;
+    selected=next;describe();
+  };
+  svg.addEventListener('pointermove',event=>{const el=event.target.closest('[data-point]');if(el)select(Number(el.dataset.point));});
+  svg.addEventListener('click',event=>{const el=event.target.closest('[data-point]');if(el)select(Number(el.dataset.point));});
+  svg.addEventListener('keydown',event=>{const i=['ArrowLeft','ArrowUp'].includes(event.key)?selected-1:['ArrowRight','ArrowDown'].includes(event.key)?selected+1:event.key==='Home'?0:event.key==='End'?spec.labels.length-1:null;if(i===null)return;event.preventDefault();select(i);});
+  legend.forEach((button,i)=>button.addEventListener('click',()=>{
+    if(visible[i]&&visible.filter(Boolean).length===1)return;
+    visible[i]=!visible[i];button.setAttribute('aria-pressed',String(visible[i]));draw();
+  }));
+  const schedule=()=>{if((svg.parentElement.clientWidth!==lastWidth||window.innerHeight!==lastHeight)&&!frame)frame=requestAnimationFrame(draw);};
+  const observer=new ResizeObserver(schedule);observer.observe(svg.parentElement);window.addEventListener('resize',schedule);draw();
+  const schedulePresentation=()=>{if(!frame)frame=requestAnimationFrame(draw);};
+  window.addEventListener('sherlock-presentation-change',schedulePresentation);
+  // Host metadata/styles are appended after this script in saved previews.
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',draw,{once:true});
+  window.addEventListener('pagehide',()=>{observer.disconnect();window.removeEventListener('resize',schedule);window.removeEventListener('sherlock-presentation-change',schedulePresentation);if(frame)cancelAnimationFrame(frame);},{once:true});
 }
 
 // Supplementary fields stay in one collapsed table. Sorting changes its view,
 // never the chart's source order or the relationship between labels and values.
-export function installCartesianChartDetails(spec) {
+export function installCartesianChartDetails(spec, selectedDetails) {
   const table=document.querySelector('body[data-chart-template] details table');
   if(!table||!spec.detailRows)return;
   const rows=[...table.tBodies[0].rows],headers=[...table.tHead.rows[0].cells];
-  const values=spec.labels.map((label,i)=>[label,...spec.series.map(series=>series.values[i]),...spec.detailRows[i].slice(1)]);
+  const values=spec.labels.map((label,i)=>[label,...spec.series.map(series=>series.values[i]),...selectedDetails.map(column=>spec.detailRows[i][column])]);
   const collator=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
   let selected=-1,ascending=true;
   headers.forEach((header,column)=>{
