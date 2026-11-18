@@ -154,15 +154,31 @@ it('requires the current child to acquire the plugin response before enabling li
  expect(acquired.bindData.mock.calls[0][1]).toMatchObject({intervalMinutes:1,requests:[{toolId:'t_abc123',args:acquired.args}]});
 });
 
-async function fixture(request,events=[],partial=false){
+async function fixture(request,events=[],partial=false,providers=[]){
  const directory=await mkdtemp(join(tmpdir(),'workbench-observed-'));clean.push(()=>rm(directory,{recursive:true,force:true}))
  const filePath=join(directory,'plans.json');const tools=new Map();let route
  const runtime={startBatch:vi.fn(async({panels})=>panels.map((_,i)=>({taskId:'pending-'+i}))),startPreparedBatch:vi.fn(async({panels})=>panels.map((_,i)=>({taskId:'prepared-'+i,...(partial?{deliveryStatus:'partial',recoveryMode:'incomplete-scope',unmetRequirements:['实际交付1项，仍缺31项。']}:{})}))),inspect:()=>({finalOutput:'retained-output',deliveryStatus:'partial',recoveryMode:'incomplete-scope',unmetRequirements:['实际交付1项，仍缺31项。']})}
- const ctx={agents:{get:()=>({})},tools:{schemas:()=>schemas,register:value=>{tools.set(value.name,value);return()=>{}}},webServer:{register:value=>{route=value;return()=>{}}}}
+ const ctx={agents:{get:()=>({})},tools:{schemas:()=>[...schemas,...providers],get:name=>providers.find(tool=>tool.name===name),register:value=>{tools.set(value.name,value);return()=>{}}},webServer:{register:value=>{route=value;return()=>{}}}}
  clean.push(await registerWorkbench(ctx,runtime,{filePath,isTrustedRequest:()=>true,readJsonBody:async()=>({parentSessionId:'observed-parent'})}))
  const exec={agent:{session:{id:'observed-parent',events:[human('current',request),...events]}},signal:new AbortController().signal}
  return {runtime,exec,run:args=>tools.get('research_workbench_create').execute(args,exec),catalog:()=>tools.get('research_workbench_source_catalog').execute({},exec),plans:async()=>JSON.parse(await readFile(filePath,'utf8')),route:()=>route}
 }
+
+it('freezes only authenticated exact empty directories into source-backed component jobs',async()=>{
+ const catalog='ework__catalog',read='ework__read',empty={source:'Tushare',kind:'catalog',interfaces:[]}
+ const providers=[{name:catalog,description:'目录不是业务数据',[Symbol.for('ework.builtin-tushare.catalog')]:true},{name:read,[Symbol.for('ework.builtin-tushare.read')]:true}]
+ const f=await fixture('生成一个期货研究工作台',[
+  ...pair('exact',catalog,{api_name:'fut_daily'},empty),...pair('search',catalog,{query:'商品期货'},empty),
+  ...pair('spoof','ework__schema',{api_name:'fund_nav'},empty),...pair('bad',catalog,{api_name:'daily_basic'},empty,{isError:true}),
+  ...pair('mismatch',catalog,{api_name:'fund_basic'},empty,{toolCallId:'wrong-id'}),
+  ...pair('present',catalog,{api_name:'income'},{...empty,interfaces:[{api:'income'}]})
+ ],false,providers)
+ await f.run({requestId:'missing',title:'期货研究',panels:[{title:'合约明细',type:'table',prompt:'补查在市合约的最近成交量。'}]})
+ const host=f.runtime.startBatch.mock.calls[0][1].panels[0]
+ const restored=restoreWorkbenchHostContext(JSON.parse(JSON.stringify(host)))
+ expect(restored.sourcePolicy.unavailableTushare).toEqual({catalog,read,apis:['fut_daily']})
+ expect(restored.sharedObservedRecords).toBeUndefined()
+})
 
 it('uses one observed response for both prepared cards and pinpoints a broken chart field before retry',async()=>{
  const rows=[{date:'2026-11-10',netValue:1.02},{date:'2026-11-09',netValue:1.01}]

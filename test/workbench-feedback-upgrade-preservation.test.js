@@ -20,8 +20,8 @@ it('preserves neighboring component and response helpers when upgrading the real
  expect(upgraded).toContain('/* ework:workbench-feedback:end */')
  expect(patchResearchWorkbenchFeedback(upgraded)).toBe(upgraded)
  const base=stripHomeWorkbenchProgress(upgraded)
- for(const priorVersion of [11,13]) {
-  expect(patchResearchWorkbenchFeedback(base.replace('workbench-feedback:v14',`workbench-feedback:v${priorVersion}`))).toBe(base)
+ for(const priorVersion of [11,13,14]) {
+  expect(patchResearchWorkbenchFeedback(base.replace('workbench-feedback:v15',`workbench-feedback:v${priorVersion}`))).toBe(base)
  }
  expect(()=>new Function(upgraded)).not.toThrow()
 })

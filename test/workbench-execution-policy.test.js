@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 import { glmReasoningEntry, patchGlmReasoningCapabilities } from '../scripts/lib/glm-reasoning-capabilities.mjs'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import { runHumanSteerableGeneration } from '../scripts/lib/human-steering-yield.mjs'
 
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
 afterEach(() => vi.unstubAllGlobals())
@@ -245,7 +246,7 @@ async function sourcePlanningHarness(text, schemas) {
   const events = new Map()
   const parent = session(text)
   parent.events[0].data.role = 'user'
-  const agent = {session: parent}
+  const agent = {session: parent, inbox:{nextStep:[]}, ctx:{on:()=>()=>{}}}
   const turn = 1, signal = new AbortController().signal
   let guard
   const dispose = registerWorkbenchExecutionPolicy({
@@ -254,14 +255,15 @@ async function sourcePlanningHarness(text, schemas) {
       get(name) {
         if(name==='ework__tushare_read')return {[Symbol.for('ework.builtin-tushare.read')]:true}
         if(name==='ework__tushare_catalog')return {[Symbol.for('ework.builtin-tushare.catalog')]:true}
+        if(name==='ework__datapro')return {[Symbol.for('ework.builtin-datapro.read')]:true}
       }
     },
     systemPrompt: {context: () => () => {}},
     on(name, fn) { events.set(name, fn); return () => {} }
   })
-  const request = () => events.get('agent/request-context')({agent, turn, signal}, async () => ({
+  const request = () => runHumanSteerableGeneration(agent, signal, stepSignal => events.get('agent/request-context')({agent, turn, signal:stepSignal}, async () => ({
     system:'base', messages:[parent.events[0].data], tools:[{name:'research_workbench_create'}, ...schemas]
-  }))
+  })))
   await request()
   let nextId = 0
   const start = (name, args) => {
@@ -297,7 +299,9 @@ it('reuses matching directories, rejects a proven unsupported built-in API and p
     h.result(otherCatalog, JSON.stringify({source:'Tushare',kind:'catalog',interfaces:[]}))
     const catalog = h.start('ework__tushare_catalog', {api_name:'fut_daily'})
     h.result(catalog, JSON.stringify({source:'Tushare',kind:'catalog',interfaces:[]}))
+    const continued = await h.request()
     expect(h.start('ework__tushare_read', {api_name:'fut_daily',params:{trade_date:'20261118'},fields:'close',limit:100}).issue).toContain('未提供')
+    expect(continued.system).toContain('fut_daily')
     expect(h.start('ework__tushare_read', {api_name:'index_daily',params:{trade_date:'20261118'},fields:'close',limit:100}).issue).toBeUndefined()
     expect(h.start('ework__datapro', {query:'取螺纹钢期货近十个交易日的收盘价和成交量'}).issue).toBeUndefined()
     const wire = await h.request()
@@ -307,6 +311,32 @@ it('reuses matching directories, rejects a proven unsupported built-in API and p
     expect(wire.system).toContain('适用的结构化')
     expect(wire.tools.map(tool => tool.name)).toContain('web_fetch')
   } finally { h.dispose() }
+})
+
+it('does not repeat a DataPro no-data or missing-target request and allows corrections and partial real records', async () => {
+  const {captureWorkbenchObservedSources} = await import('../packages/dsh-research-task-runtime/workbench-observed-sources.js')
+  const {componentAcquiredBusinessData} = await import('../packages/dsh-research-task-runtime/component-source-binding.js')
+  const name='ework__datapro', schemas=[{name,description:'火山方舟专业数据集只读检索'}]
+  const h=await sourcePlanningHarness('生成一个期货衍生品研究工作台',schemas)
+  const missing='螺纹钢主力合约最新日行情',expired='RB2601 2026-11-17 收盘价',current='RB2612 2026-11-17 收盘价'
+  const noData={code:0,dataset_type:'stock_finance',items:[{证券代码:'RB2601.SHF',基本面:{table:{收盘价:[null]}}}],total:0,error_info:{error_type:'no_data'}}
+  const partial={code:0,dataset_type:'stock_finance',items:[{证券代码:'RB2612.SHF',行情:{records:[{日期:'2026-11-17',收盘价:3101}]}}],query_info:{result_coverage:{status:'partial'}}}
+  try{
+    h.result(h.start(name,{query:missing}),'Error: '+JSON.stringify({code:4003,dataset_type:'stock_finance',items:[],error_info:{error_type:'missing_target'}}),true)
+    await h.request()
+    expect(h.start(name,{query:missing}).issue).toMatch(/标的|代码/u)
+    const first=h.start(name,{query:expired})
+    expect(first.issue).toBeUndefined()
+    h.result(first,JSON.stringify(noData))
+    await h.request()
+    expect(h.start(name,{query:expired}).issue).toMatch(/有效|记录/u)
+    expect(componentAcquiredBusinessData({tool:name,args:{query:expired},response:noData})).toBe(false)
+    const corrected=h.start(name,{query:current})
+    expect(corrected.issue).toBeUndefined()
+    h.result(corrected,JSON.stringify(partial))
+    expect(componentAcquiredBusinessData({tool:name,args:{query:current},response:partial})).toBe(true)
+    expect(captureWorkbenchObservedSources({session:h.parent,messageId:'human',schemas})).toEqual([{tool:name,args:{query:current},response:partial}])
+  }finally{h.dispose()}
 })
 
 it('moves away from unreadable raw quote endpoints without restricting supplied URLs or ordinary public pages', async () => {
@@ -351,4 +381,13 @@ it('recovers only paired successful pre-spill business evidence for the active a
     expect(capture()).toHaveLength(1)
     expect(capture({schemas:[]})).toBeUndefined()
   } finally {h.dispose()}
+})
+
+it('只给计划中需更新的内联数据卡保留绑定步骤，遵守快照及离线要求',async()=>{
+ const {workbenchNeedsInlineBinding}=await import('../packages/dsh-research-task-runtime/workbench-execution-policy.js')
+ const plan={panels:[{title:'合约持仓',prompt:'按交易日自动更新',content:{rows:[{volume:0}]}}]}
+ expect(workbenchNeedsInlineBinding(plan,'生成一个研究工作台')).toBe(true)
+ expect(workbenchNeedsInlineBinding(plan,'仅需要静态快照')).toBe(false)
+ expect(workbenchNeedsInlineBinding(plan,'不联网')).toBe(false)
+ expect(workbenchNeedsInlineBinding({panels:[{library:{id:'builtin-futures'},prompt:'自动更新'}]},'生成一个研究工作台')).toBe(false)
 })

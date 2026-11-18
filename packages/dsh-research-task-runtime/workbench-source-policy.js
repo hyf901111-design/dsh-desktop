@@ -5,6 +5,7 @@ import {isDeepStrictEqual} from 'node:util'
 import {validateWorkbenchDatasets} from './dataset-view-contract.js'
 import {WORKBENCH_SOURCE_TOOL} from './workbench-source-snapshot.js'
 import {restoreWorkbenchObservedSources} from './workbench-observed-sources.js'
+import {restoreUnavailableTushare} from './workbench-source-progress.js'
 
 const webOnly = /(?:(?:只|仅)(?:能|可)?(?:使用|用)|走|使用|用)\s*(?:公开)?网页/u
 const plugin = /tushare|通联|datayes|萝卜投研|\bMCP\b|插件/iu
@@ -102,7 +103,8 @@ export function workbenchSourcePolicy(originalRequest, panel, options={}) {
   // Remove model source names from routing preferences, not from the task:
   // entities, fields, dates, units and template contracts remain untouched.
   const preferenceRequest = `${panel.title}\n${panel.prompt}`.replace(/tushare|通联|datayes|萝卜投研|\bMCP\b|插件/giu, '') + (humanSource ? `\n${humanSource}` : '')
-  return Object.freeze({pluginRequired, pluginProhibited, preferenceRequest,...publicSourceRequests?{publicSourceRequests}:{}})
+  const unavailableTushare=!pluginProhibited && restoreUnavailableTushare(options.unavailableTushare)
+  return Object.freeze({pluginRequired, pluginProhibited, preferenceRequest,...publicSourceRequests?{publicSourceRequests}:{},...unavailableTushare?{unavailableTushare}:{}})
 }
 
 // Internal host/storage shape only. The public start validator never accepts
@@ -140,6 +142,8 @@ export function restoreWorkbenchHostContext(value) {
   }
   const sharedDatasets=value.sharedDatasets===undefined?undefined:validateWorkbenchDatasets(value.sharedDatasets)
   const sharedObservedRecords=restoreWorkbenchObservedSources(value.sharedObservedRecords)
+  const unavailableTushare=restoreUnavailableTushare(policy.unavailableTushare)
+  if(unavailableTushare&&(policy.pluginProhibited||workbenchRequest?.dataMode!=='source'))ambiguous()
   if(sharedObservedRecords&&workbenchObservedSourcesForPolicy(sharedObservedRecords,policy)?.length!==sharedObservedRecords.length)ambiguous()
-  return Object.freeze({...(value.sourceMessageId === undefined ? {} : {sourceMessageId:value.sourceMessageId}),...(value.explicitScope === undefined ? {} : {explicitScope:restoreExplicitScope(value.explicitScope)}),...(workbenchRequest ? {workbenchRequest} : {}),...(sharedDatasets?{sharedDatasets}:{}),...(sharedObservedRecords?{sharedObservedRecords}:{}),...(sharedEvidence?{sharedEvidence}:{}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest,...policy.publicSourceRequests===undefined?{}:{publicSourceRequests:strictPublicRequests(policy.publicSourceRequests)}}),sourceRequirement:value.sourceRequirement})
+  return Object.freeze({...(value.sourceMessageId === undefined ? {} : {sourceMessageId:value.sourceMessageId}),...(value.explicitScope === undefined ? {} : {explicitScope:restoreExplicitScope(value.explicitScope)}),...(workbenchRequest ? {workbenchRequest} : {}),...(sharedDatasets?{sharedDatasets}:{}),...(sharedObservedRecords?{sharedObservedRecords}:{}),...(sharedEvidence?{sharedEvidence}:{}),sourcePolicy:Object.freeze({pluginRequired:policy.pluginRequired,pluginProhibited:policy.pluginProhibited,preferenceRequest:policy.preferenceRequest,...unavailableTushare?{unavailableTushare}:{},...policy.publicSourceRequests===undefined?{}:{publicSourceRequests:strictPublicRequests(policy.publicSourceRequests)}}),sourceRequirement:value.sourceRequirement})
 }

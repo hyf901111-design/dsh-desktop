@@ -17,7 +17,7 @@ const input = () => ({ requestId: 'sdk-receipt-once', title: '来源研究', pan
   { title: '研究说明', type: 'note', size: 'large', prompt: '展示原始资料并明确数据缺口。' }
 ] })
 
-async function fixture() {
+async function fixture(preparedDelivery = {}) {
   // No authority HTTP, model transport, or child SDK is involved. Keep the
   // production registration, persistence, idempotence and SDK pipeline real.
   vi.stubEnv('SHERLOCK_RESEARCH_CONTEXT_URL', '')
@@ -32,7 +32,7 @@ async function fixture() {
   const start = async (request, prepared) => request.panels.map(panel => {
     const task = { taskId: randomUUID(), canvasNodeId: panel.canvasNodeId, prepared }
     tasks.set(task.taskId, task)
-    return { taskId: task.taskId }
+    return { taskId: task.taskId, ...(prepared ? preparedDelivery : {}) }
   })
   const filePath = join(dir, 'plans.json')
   const dispose = await registerWorkbench(ctx, {
@@ -86,6 +86,15 @@ it('returns a rendered prepared receipt for supplied content without starting ge
   expect(renderedReceipt(await f.invoke(structuredClone(args)), 'prepared')).toEqual(receipt)
   expect(await f.plans()).toHaveLength(1)
   expect(f.tasks.size).toBe(1)
+})
+
+it('returns the unresolved panel requirement with an incomplete inline receipt and its replay', async () => {
+  const delivery={deliveryStatus:'partial',recoveryMode:'data-missing',unmetRequirements:['缺少绘制图表所需的可核验数据。']}
+  const f=await fixture(delivery), args=input()
+  args.panels[0].artifact={version:1,type:'note',title:'研究说明',asOf:'用户原始资料',content:'已保留数据核验说明。'}
+  const receipt=renderedReceipt(await f.invoke(args),'incomplete')
+  expect(receipt.detail).toContain(delivery.unmetRequirements[0])
+  expect(renderedReceipt(await f.invoke(structuredClone(args)),'incomplete')).toEqual(receipt)
 })
 
 it('keeps preparing compatible with the registered SDK output contract', async () => {

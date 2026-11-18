@@ -6,11 +6,21 @@ function researchPartialDeliveryFields(receipt) {
   return { deliveryStatus: 'partial', recoveryMode: receipt.recoveryMode, unmetRequirements: [...requirements] };
 }
 
-function researchContainerDeliveryFields(spec, receipt, completedAt) {
+function researchRetainedDeliveryFields(spec, receipt, node) {
   const delivery = researchPartialDeliveryFields(receipt);
+  if (delivery.deliveryStatus || !node?.workbenchId || !spec) return delivery;
+  const mode = researchWorkbenchRecoveryMode({workbenchId:node.workbenchId, containerPrompt:node.containerPrompt, containerSpec:spec});
+  if (!mode) return delivery;
+  const issue = mode === 'incomplete-scope' ? workbenchNamedTableCoverage(spec, node.containerPrompt)?.issue : undefined;
+  const reason = issue || (mode === 'data-missing' ? '缺少绘制图表所需的可核验数据。' : '已保留可读资料，原定功能尚未完成。');
+  return {deliveryStatus:'partial', recoveryMode:mode, unmetRequirements:[reason.slice(0, 240)]};
+}
+
+function researchContainerDeliveryFields(spec, receipt, completedAt, node) {
+  const delivery = researchRetainedDeliveryFields(spec, receipt, node);
   return {
     containerSpec: spec, generationCompletedAt: completedAt,
-    ...(researchWorkbenchRecoveryMode({ ...delivery, containerSpec: spec }) ? delivery : { lastSuccessfulAt: completedAt })
+    ...(spec?.type === 'financial-widget' || researchWorkbenchRecoveryMode({ ...delivery, containerSpec: spec }) ? delivery : { lastSuccessfulAt: completedAt })
   };
 }
 
@@ -61,21 +71,35 @@ function ResearchDataFallbackContent({ node, children }) {
 }
 
 export function patchResearchPartialDelivery(source) {
-  const marker = '/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V2 */';
+  const marker = '/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V3 */';
   if (source.includes(marker)) return source;
   const replace = (before, after) => {
     if (source.split(before).length !== 2) throw Error('部分交付回执无法定位原生入口：' + before.slice(0, 90));
     source = source.replace(before, after);
   };
   const canonical = 'function canonicalResearchCanvasArtifactNode(value) {';
-  const definitions = [researchPartialDeliveryFields, researchContainerDeliveryFields, ResearchPartialDeliveryNotice, ResearchDataFallbackContent].map(fn => fn.toString()).join('\n');
+  const definitions = [researchPartialDeliveryFields, researchRetainedDeliveryFields, researchContainerDeliveryFields, ResearchPartialDeliveryNotice, ResearchDataFallbackContent].map(fn => fn.toString()).join('\n');
   const preview = '(0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, officePreview, onHtmlSize, onUpgradeSize })';
-  replace(preview, '(0, react_jsx_runtime.jsx)(ResearchDataFallbackContent, { node, children: ' + preview + ' })');
-  const old = source.indexOf('/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V1 */');
+  if (!source.includes('/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V2 */')) {
+    replace(preview, '(0, react_jsx_runtime.jsx)(ResearchDataFallbackContent, { node, children: ' + preview + ' })');
+  }
+  const upgradeReceipts = () => {
+    const parsed = 'const containerSpec = container && value.containerSpec !== void 0 ? parseResearchContainerSpec(value.containerSpec) : null;';
+    replace(parsed, parsed + '\nconst retainedDelivery = generationStatus === "completed" ? researchRetainedDeliveryFields(containerSpec,value,value) : researchPartialDeliveryFields(value);');
+    replace('{ containerSpec, ...researchPartialDeliveryFields(value) }', '{ containerSpec, ...retainedDelivery }');
+    replace('...(lastSuccessfulAt === null ? {} : { lastSuccessfulAt })',
+      '...(lastSuccessfulAt === null || (retainedDelivery.deliveryStatus || containerSpec?.type === "financial-widget") && lastSuccessfulAt === value.generationCompletedAt ? {} : { lastSuccessfulAt })');
+    replace('researchContainerDeliveryFields(parseResearchContainerSpec(p.preparedOutput),p.preparedDelivery ?? p,Date.now())',
+      'researchContainerDeliveryFields(parseResearchContainerSpec(p.preparedOutput),p.preparedDelivery ?? p,Date.now(),{workbenchId:plan.id,containerPrompt:p.prompt})');
+    replace('researchContainerDeliveryFields(spec, inspection, completedAt)', 'researchContainerDeliveryFields(spec, inspection, completedAt, current)');
+    return source;
+  };
+  const old = source.search(/\/\* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V[12] \*\//u);
   if (old >= 0) {
     const end = source.indexOf(canonical, old);
     if (end < 0) throw Error('部分交付回执升级入口缺失');
-    return source.slice(0, old) + marker + '\n' + definitions + '\n' + source.slice(end);
+    source = source.slice(0, old) + marker + '\n' + definitions + '\n' + source.slice(end);
+    return upgradeReceipts();
   }
   replace(canonical, marker + '\n' + definitions + '\n' + canonical);
   replace('...(containerSpec === null ? {} : { containerSpec }),',
@@ -93,5 +117,5 @@ export function patchResearchPartialDelivery(source) {
     'children: [(0, react_jsx_runtime.jsx)(ResearchPartialDeliveryNotice, { node, onRetry }), activeGeneration ? (0, react_jsx_runtime.jsx)("div", { className: "rScV5Q_containerNotice",');
   replace('onGenerate: onSubmitContainer, onUpgradeSize:onExpandGeneration,',
     'onGenerate: onSubmitContainer, onRetry: readOnly || retryDisabled ? undefined : onRetryGeneration, onUpgradeSize:onExpandGeneration,');
-  return source;
+  return upgradeReceipts();
 }

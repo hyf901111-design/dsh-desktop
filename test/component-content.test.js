@@ -65,3 +65,11 @@ it('keeps record count available to scope verification after changing presentati
  const {snapshot}=render({title:'基金比较',rows:[{name:'仅一只',value:1}],visualization:{kind:'line',label:'name',values:['missing']}})
  expect(componentDeliveryScopeIssue(snapshot.data,'至少比较8只基金')).toBeTruthy()
 })
+
+it('形成可展开的原生关系图，保存完整依据和来源，拒绝无效的关系结构',()=>{
+ const content={title:'研究框架',body:'供给由产能和库存构成。',sources,asOf:'2026-11-17',visualization:{kind:'hierarchy',outline:'# 供需\n- 供给\n  - 产能\n  - 库存'}}
+ const {artifact}=render(content)
+ expect(artifact).toMatchObject({type:'mind-map',content:content.visualization.outline,asOf:content.asOf,source:{text:expect.stringContaining(content.body)}})
+ expect(artifact.source.text).toContain(sources[0].url)
+ expect(()=>compileComponentContent({...content,visualization:{kind:'hierarchy',outline:'没有根节点'}})).toThrow()
+})

@@ -2,6 +2,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 import {createRequire} from 'node:module'
 import {financialClientFixture} from './helpers/financial-widget-client-fixture.js'
 import {generationProgressOnly,patchGenerationProgressPersistence} from '../scripts/lib/generation-progress-persistence.mjs'
+import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 
 let f
 const require=createRequire(import.meta.url)
@@ -26,6 +27,35 @@ async function setup(node=card){
 }
 const apply=async value=>{let result;await f.act(async()=>{result=f.workspace.applyGenerationInspection(card.id,value)});return result}
 describe('生成进度的瞬态更新与持久结果',()=>{
+ it('records creation of a native financial component without a successful data-read timestamp',async()=>{
+  await setupPartial()
+  const spec=financialWidgetDefaults('indices')
+  const panel={nodeId:card.id,taskId:'task-1',title:spec.title,prompt:'展示行情。',x:0,y:0,width:600,height:350,preparedOutput:JSON.stringify(spec)}
+  await f.act(async()=>f.workspace.applyWorkbench({id:'native-quotes',createdAt:Date.now(),panels:[panel]}))
+  const node=f.workspace.getSnapshot().artifacts[0]
+  expect(node.generationStatus).toBe('completed')
+  expect(node.lastSuccessfulAt).toBeUndefined()
+ })
+ it('restores and collapses a legacy missing market curve without reporting a successful generation',async()=>{
+  await setupPartial()
+  const spec={version:1,type:'markdown',title:'期限结构（2026-11-17）——数据缺失，暂无法绘制',content:'数据读取详情。'.repeat(400)}
+  const panel={nodeId:card.id,taskId:'task-1',title:'期限结构',prompt:'按合约月份绘制期限结构折线。',x:0,y:0,width:600,height:600,preparedOutput:JSON.stringify(spec)}
+  await f.act(async()=>f.workspace.applyWorkbench({id:'legacy-curve',createdAt:Date.now(),panels:[panel]}))
+  const live=f.workspace.getSnapshot().artifacts[0]
+  expect(live).toMatchObject({deliveryStatus:'partial',recoveryMode:'data-missing'})
+  expect(live.lastSuccessfulAt).toBeUndefined()
+  const saved=JSON.parse(f.win.localStorage.getItem(canvasKey))[0]
+  for(const key of ['deliveryStatus','recoveryMode','unmetRequirements'])delete saved[key]
+  saved.lastSuccessfulAt=saved.generationCompletedAt
+  f.win.localStorage.setItem(canvasKey,JSON.stringify([saved]))
+  const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test').getSnapshot().artifacts[0]
+  expect(restored).toMatchObject({deliveryStatus:'partial',recoveryMode:'data-missing',containerSpec:spec})
+  expect(restored.lastSuccessfulAt).toBeUndefined()
+  const note=f.host.querySelector('[data-research-fallback-content="data-missing"]')
+  expect(note?.open).toBe(false)
+  expect(note?.querySelector('summary')?.textContent).toContain('查看缺数说明')
+  expect(f.host.querySelector('[data-research-partial-delivery="data-missing"] button')?.textContent).toBe('重试')
+ })
  it('persists missing chart data, collapses the original explanation and keeps a targeted retry',async()=>{
   await setupPartial()
   const panel={nodeId:card.id,taskId:'task-1',title:'原油走势',prompt:card.containerPrompt,x:0,y:0,width:600,height:600}

@@ -3,10 +3,11 @@ import {componentReadableDocumentTable} from './component-readable-snapshot.js'
 import {nativeProvenance} from './component-provenance.js'
 import {tableShapeIssue} from './template-data-contract.js'
 import {kpiDataIssue} from './kpi-template-contract.js'
+import {parseDerivedSpec} from './derived-template-contract.js'
 
 // One content model, independent of the renderer. Choosing a chart is a hint;
 // it must never remove rows or force the model to reacquire the same material.
-export const COMPONENT_CONTENT_GUIDANCE = '常规交付直接用 content:{title,body?,rows?,columns?,visualization?,sources?,asOf?,note?}。body 是完整正文；rows 是完整对象记录数组，columns 可省略（自动保留全部字段），或 [{key,label}]；技术字段名须用 label 保留用户可读的指标名称。基础图表用 visualization:{kind:"bar|horizontal|line|area|groupedBar",label:"名称或日期字段",values:["真实数值字段"],unit?}。K线、散点、瀑布、环图、风险矩阵等用对应原生 artifact。sources:[{label,url?}] 保存真实出处。content 不填 version/type、HTML、样式或交互代码。已取结构化响应优先用来源引用，避免复制大量数据。'
+export const COMPONENT_CONTENT_GUIDANCE = '常规交付直接用 content:{title,body?,rows?,columns?,visualization?,sources?,asOf?,note?}。body 是完整正文；rows 是完整对象记录数组，columns 可省略（自动保留全部字段），或 [{key,label}]；技术字段名须用 label 保留用户可读的指标名称。基础图表用 visualization:{kind:"bar|horizontal|line|area|groupedBar",label:"名称或日期字段",values:["真实数值字段"],unit?}。结构关系用 visualization:{kind:"hierarchy",outline:"一个 # 根标题和嵌套项目列表"}，body 保留完整依据。K线、散点、瀑布、环图、风险矩阵等用对应原生 artifact。sources:[{label,url?}] 保存真实出处。content 不填 version/type、HTML、样式或交互代码。已取结构化响应优先用来源引用，避免复制大量数据。'
 
 const plain = value => value && typeof value === 'object' && !Array.isArray(value)
 const cell = value => value == null || value === '' ? '—' : typeof value === 'object' ? JSON.stringify(value) : typeof value === 'boolean' ? String(value) : value
@@ -31,11 +32,19 @@ export function compileComponentContent(content) {
   if(issue)throw Error(issue);
   return {data};
  }
+ if(kind==='hierarchy'&&content.rows!==undefined)throw Error('有层级字段的记录请用 sharedDatasets 与 hierarchy 保留全部行。')
  if(content.rows===undefined){
   if(!content.body?.trim())throw Error('尚无正文或记录，不能把空组件标记完成。')
   // Markdown has a strict wire shape. Keep its evidence in the readable
   // footer instead of passing metadata keys the native parser rejects.
   const sourceLines=(content.sources??[]).map(row=>[row.label??row.name??row.title,row.text,row.url].filter(Boolean).join(' · '))
+  if(kind==='hierarchy'){
+   const data=parseDerivedSpec({version:1,type:'mind-map',title:base.title,content:view.outline,
+    source:{title:content.sources?.[0]?.label||base.title,text:[content.body,...sourceLines].join('\n\n')},
+    ...(base.asOf?{asOf:base.asOf}:{}),...(base.note?{note:base.note}:{})})
+   if(!data)throw Error('关系图需要一个 # 根标题，其下用两空格缩进的逐项列表保留材料里的上下级关系。')
+   return {data}
+  }
   return {data:{version:1,title:base.title,type:'markdown',
    content:[content.body,content.note,content.asOf,...sourceLines].filter(Boolean).join('\n\n')}}
  }
