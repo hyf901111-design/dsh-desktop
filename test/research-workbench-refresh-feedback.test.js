@@ -1,16 +1,24 @@
 import {expect,it,vi} from 'vitest'
 import {readFileSync} from 'node:fs'
+import {createRequire} from 'node:module'
 import {runInNewContext,Script} from 'node:vm'
 import {Window} from 'happy-dom'
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
+import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
+import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 import * as react from 'react'
 import * as jsx from 'react/jsx-runtime'
 import {createRoot} from 'react-dom/client'
-import {patchComponentDataRefresh} from '../scripts/lib/component-data-refresh.mjs'
-import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {createComponentDataStatusStore} from '../scripts/lib/component-data-status.mjs'
 import {publishResearchWorkbenchProgress,workbenchProgressState} from '../scripts/lib/research-workbench-feedback.mjs'
 import {financialWidgetDefaults} from '../packages/dsh-research-task-runtime/financial-widget-contract.js'
 import {installResearchGenerationWatch} from '../scripts/lib/research-generation-watch.mjs'
+
+// These patches serialize functions for the client VM. Load their production source.
+const require=createRequire(import.meta.url)
+const {restoreResearchGridWorkbench,patchResearchGridWorkbench}=require('../scripts/lib/research-grid-workbench.mjs')
+const {patchComponentDataRefresh}=require('../scripts/lib/component-data-refresh.mjs')
+const {patchResearchCreationProgress}=require('../scripts/lib/research-creation-progress.mjs')
 
 it('mounts the injected feedback with the native workspace, host bridge and builtin store through active, unmounted and Notes states',async()=>{
  const window=new Window(),document=window.document
@@ -18,10 +26,12 @@ it('mounts the injected feedback with the native workspace, host bridge and buil
  let descriptor,stopWatch,monitor,root
  try{
   const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
-  let source=patchComponentDataRefresh(patchResearchCreationProgress(installed))
+  const gridInput=restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(installed))))
+  let source=patchComponentDataRefresh(patchResearchCreationProgress(gridInput))
   // Run the real current-store block replacement, rather than a second fixture store.
   const stale=source.replace('snapshotSession:sessionId=>summaries.get(sessionId)??empty,','snapshotSession:sessionId=>null,')
   expect(patchComponentDataRefresh(stale)).toBe(source)
+  source=patchResearchGridWorkbench(source)
   source=source.replace('const componentDataStatusStore=createComponentDataStatusStore();','const componentDataStatusStore=createComponentDataStatusStore();window.__refreshTest={Component:ResearchWorkbenchProgress,store:componentDataStatusStore,createMonitor:createComponentDataStatusMonitor,publishInactive:publishInactiveResearchWorkbenchProgress,publish:publishResearchWorkbenchProgress};')
   new Script(source)
   window.__ModuleLoader__={load:value=>descriptor=value}
