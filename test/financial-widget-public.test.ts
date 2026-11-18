@@ -180,7 +180,9 @@ it('routes selected MCP prices through fixed account tools with exact symbols, d
  expect(fetch).not.toHaveBeenCalled()
 })
 
-it('maps Doubao news source and optional publication time independently of retrieval time',async()=>{
+it('maps Doubao news source and optional publication time independently of retrieval time',async({onTestFinished})=>{
+ vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-11-18T20:00:00+08:00'))
+ onTestFinished(()=>{vi.useRealTimers()})
  const doubao=vi.fn(async()=>({provider:'doubao' as const,truncated:false as const,sources:[
   {url:'https://example.com/btc',title:'比特币市场消息',siteName:'市场通讯',publishedAt:'2026-11-12T09:00:00+08:00',snippet:'市场动态'},
   {url:'https://example.net/btc',title:'交易所资讯'},
@@ -200,6 +202,11 @@ it('maps Doubao news source and optional publication time independently of retri
   {url:'https://www.news.cn/tech/kjkx/index.html',title:'科技快讯_新华科技_新华网'},
   {url:'https://kjj.hefei.gov.cn/kjzx/index.html',title:'科技资讯_合肥市科学技术局'},
   {url:'https://news.youth.cn/kj/index.htm',title:'科技_新闻频道_中国青年网'},
+  {url:'https://zggxjs.cn/tech-news',title:'科技新闻 - 中国高新科技网'},
+  {url:'https://www3.xinhuanet.com/tech/kjkx/',title:'科技快讯_新华科技_新华网'},
+  {url:'https://ncsti.gov.cn/kjdt/kjrd/qtrd_kjrd/202606/t20260622_250075.html',title:'一周前沿科技盘点',publishedAt:'2026-06-22T00:00:00+08:00'},
+  {url:'https://example.org/next',title:'未来日期的文章',publishedAt:'2026-11-21T08:00:00+08:00'},
+  {url:'https://example.org/modern-chips/',title:'新型芯片发布 - 科技周报'},
   {url:'https://example.com/tech/index.html?article_id=561',title:'最新 科技 新闻',snippet:'国产 芯片 亮相 大会 ， 支持 RISC-V 指令集。'},
   {url:'https://example.com/2026/11/chip-news/index.html',title:'如何核实科技新闻'},
   {url:'https://example.com/?p=329',title:'编辑部报道'},
@@ -208,16 +215,19 @@ it('maps Doubao news source and optional publication time independently of retri
  ]}))
  const service=createPublicFinancialWidgetData({identity:()=> 'one',accountSources:{doubao}})
  const result=await service.query({action:'news',query:'比特币',source:'doubao'})
- expect(doubao).toHaveBeenCalledWith('比特币 近一周新闻报道原文',8,expect.any(AbortSignal))
+ expect(doubao).toHaveBeenCalledWith('比特币 近一周新闻报道原文（截至2026-11-18）',8,expect.any(AbortSignal))
  expect(result).toMatchObject({source:'豆包搜索',receivedAt:expect.any(String),news:[
   {title:'市场收盘报道',source:'example.org',time:'2026-11-13T17:30:00+08:00'},
   {title:'比特币市场消息',source:'市场通讯',time:'2026-11-12T09:00:00+08:00'},
   {title:'交易所资讯',source:'example.net',time:null},
   {title:'未标注日期的报道',source:'example.org',time:null},
+  {title:'新型芯片发布 - 科技周报',time:null},
   {title:'最新科技新闻',summary:'国产芯片亮相大会，支持 RISC-V 指令集。'},
   {title:'如何核实科技新闻',source:'example.com'},
   {title:'编辑部报道',source:'example.com',time:null}
  ]})
  await service.query({action:'news',query:'上周市场',source:'doubao'})
  expect(doubao).toHaveBeenLastCalledWith('上周市场 新闻报道原文',8,expect.any(AbortSignal))
+ const archive=await service.query({action:'news',query:'2026年6月科技新闻',source:'doubao'})
+ expect(archive.news).toContainEqual(expect.objectContaining({title:'一周前沿科技盘点'}))
 })
