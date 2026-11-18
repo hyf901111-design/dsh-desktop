@@ -9,47 +9,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "科技早报排除频道索引并按费用网页实际方案核验交付",
+        "featureName": "让科技早报滚动刷新只收录符合日期的文章并过滤栏目入口",
         "branch": "codex/feat/workbench-delivery-20261118",
-        "baseCommit": "d4ca35862fffa1f4353be1cbf515eaeac1b7a931",
-        "tipCommit": "275a7e66cfdaebadc7700647b8774f538bfb6542",
+        "baseCommit": "275a7e66cfdaebadc7700647b8774f538bfb6542",
+        "tipCommit": "f6ee9748fae09f8d0a63f70c1789b3cc1113e7ba",
         "commits": [
           {
-            "commit": "e3612d3cf7e6931f032f6d01bc696487afefd451",
+            "commit": "f6ee9748fae09f8d0a63f70c1789b3cc1113e7ba",
             "parents": [
-              "d4ca35862fffa1f4353be1cbf515eaeac1b7a931"
+              "275a7e66cfdaebadc7700647b8774f538bfb6542"
             ],
-            "subject": "过滤科技早报误收的媒体频道页并整理中文标题"
-          },
-          {
-            "commit": "275a7e66cfdaebadc7700647b8774f538bfb6542",
-            "parents": [
-              "e3612d3cf7e6931f032f6d01bc696487afefd451"
-            ],
-            "subject": "按便携费用网页中的实际方案核验对比覆盖范围"
+            "subject": "让滚动科技早报排除栏目入口和过期报道"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/attachment-template-contract.d.ts"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/attachment-template-contract.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-delivery-scope.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-webpage.js"
-          },
           {
             "status": "M",
             "path": "src/main/financial/account-widget-data.ts"
@@ -57,10 +30,6 @@
           {
             "status": "M",
             "path": "test/financial-widget-public.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-webpage-file.test.js"
           }
         ],
         "checks": [
@@ -69,15 +38,12 @@
               "./node_modules/.bin/vitest",
               "run",
               "--maxWorkers=2",
-              "test/financial-widget-public.test.ts",
-              "test/workbench-webpage-file.test.js",
-              "test/workbench-quantity-coverage.test.js",
-              "test/attachment-template.test.js"
+              "test/financial-widget-public.test.ts"
             ],
             "outcome": "passed",
-            "summary": "新闻来源过滤、原生组件阅读和费用页交付范围的聚焦回归",
-            "verifiedCommit": "275a7e66cfdaebadc7700647b8774f538bfb6542",
-            "completedAt": "2026-11-18T16:35:48.834Z",
+            "summary": "滚动资讯、历史查看与新闻来源的聚焦回归",
+            "verifiedCommit": "f6ee9748fae09f8d0a63f70c1789b3cc1113e7ba",
+            "completedAt": "2026-11-18T16:55:22.968Z",
             "timeoutMs": 240000
           },
           {
@@ -88,109 +54,21 @@
             ],
             "outcome": "passed",
             "summary": "客户端类型检查",
-            "verifiedCommit": "275a7e66cfdaebadc7700647b8774f538bfb6542",
-            "completedAt": "2026-11-18T16:35:53.370Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "./node_modules/.bin/vitest",
-              "run",
-              "--testTimeout=25000",
-              "test/financial-widget-client.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "核对新闻阅读、原文打开和持久化组件交互",
-            "verifiedCommit": "275a7e66cfdaebadc7700647b8774f538bfb6542",
-            "completedAt": "2026-11-18T16:36:13.527Z",
+            "verifiedCommit": "f6ee9748fae09f8d0a63f70c1789b3cc1113e7ba",
+            "completedAt": "2026-11-18T16:55:34.782Z",
             "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在真实科技早报点击展开摘要，检查标题链接，记录科技日报、新华科技、合肥科技资讯和中国青年网的四个栏目入口。将四种实际链接重放到来源适配器，验证文章标识与日期路径的正向样例。在实际聚餐网页的两个页签，输入费用，人数从四改到五，两家店总额由520/480变成620/585。"
+          "summary": "在真实测试客户端逐项展开科技早报，核对正文路径和标注时间，采集两个栏目和一篇六月旧稿。收入回归样例，验证有文章标识、真实稿件、历史查询和未知发布日期仍按原义展示。"
         },
         "acceptanceCriteria": [
-          "新闻卡剔除已识别的媒体频道页，文章标识和正常报道路径可以继续打开",
-          "修复搜索分词造成的中文标题间距并保留英文与数字",
-          "费用网页按实际参与对比的不同方案核验，单一文件可以容纳两家店，也要发现真正少交的方案或文件"
+          "日常新闻的已知发布时间落在滚动一周内，历史需求能检索旧稿",
+          "科技新闻及新华科技栏目入口从文章中剔除，可打开的文章仍可展开和跳转"
         ],
         "risks": [],
-        "generatedAt": "2026-11-18T16:36:13.527Z"
-      },
-      "merged": {
-        "mergeCommit": "f4c3cd5ffadf9360db9b2539acbf4eff179124a5",
-        "verificationCommit": "f4c3cd5ffadf9360db9b2539acbf4eff179124a5",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "f4c3cd5ffadf9360db9b2539acbf4eff179124a5",
-            "completedAt": "2026-11-18T16:36:19.031Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f4c3cd5ffadf9360db9b2539acbf4eff179124a5",
-            "completedAt": "2026-11-18T16:36:19.031Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "--testTimeout=20000",
-              "test/research-task-runtime.test.js",
-              "test/hosted-ark-runtime.test.js",
-              "test/research-grid-generation-fit.test.js",
-              "test/research-generation-controls.test.ts",
-              "test/generation-progress-persistence.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/research-workbench-feedback-actions.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/cartesian-chart-details.test.js",
-              "test/cartesian-chart-reading.test.js",
-              "test/cartesian-chart-axis-precision.test.js",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/chart-detail-projection.test.js",
-              "test/component-reading-footer.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "test/stored-template-refinements.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/conversation-response-history.test.js",
-              "test/conversation-response-history-browser.test.js",
-              "test/component-source-projection.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-fund-comparison.test.js",
-              "test/workbench-observed-sources.test.js",
-              "test/workbench-source-views.test.js",
-              "test/workbench-source-snapshot.test.js",
-              "test/workbench-source-exclusive-execution.test.js",
-              "test/workbench-source-policy.test.js",
-              "test/bundled-tushare-mcp.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npx vitest run --testTimeout=20000 test/research-task-runtime.test.js test/hosted-ark-runtime.test.js test/research-grid-generation-fit.test.js test/research-generation-controls.test.ts test/generation-progress-persistence.test.js test/research-workbench-feedback.test.js test/research-workbench-feedback-actions.test.js test/workbench-feedback-upgrade-preservation.test.js test/research-planning-feedback.test.js test/cartesian-chart-details.test.js test/cartesian-chart-reading.test.js test/cartesian-chart-axis-precision.test.js test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/chart-detail-projection.test.js test/component-reading-footer.test.js test/component-reading-footer-browser.test.js test/stored-template-refinements.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-history.test.js test/conversation-response-history-browser.test.js test/component-source-projection.test.js test/workbench-execution-policy.test.js test/workbench-fund-comparison.test.js test/workbench-observed-sources.test.js test/workbench-source-views.test.js test/workbench-source-snapshot.test.js test/workbench-source-exclusive-execution.test.js test/workbench-source-policy.test.js test/bundled-tushare-mcp.test.ts",
-            "verifiedCommit": "f4c3cd5ffadf9360db9b2539acbf4eff179124a5",
-            "completedAt": "2026-11-18T16:36:19.031Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-18T16:36:19.031Z"
+        "generatedAt": "2026-11-18T16:55:34.783Z"
       }
     }
   ],
