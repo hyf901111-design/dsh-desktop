@@ -7,6 +7,15 @@ import {classifyResearchCreationRequest} from '../scripts/lib/research-creation-
 const file='/Users/heyafeng/Downloads/指数运营工作台_v3_候选.html'
 const original=pathToFileURL(file).href+' 你去根据这个原型文件，在研究看板上帮我把这个原型里的指数运营看板用工作台形式做出来'
 const session=text=>({header:{},events:[{type:'user/message',data:{id:'user',role:'user',source:{kind:'user'},content:[{type:'text',text}]}}],append(type,data){this.events.push({type,data})}})
+it.each(['弄个美元兑人民币的看板。','帮我弄个一周待办看板。','请帮我搞个项目进度工作台','来个天气看板'])('routes a short spoken request through both canvas entry points: %s',text=>{
+ expect(classifyResearchCreationRequest(text)).toMatchObject({kind:'workbench',request:text})
+ expect(workbenchCreationRequest(session(text))?.target).toBe('workbench')
+ expect(componentCreationRequest(session(text))?.target).toBe('workbench')
+})
+it.each(['别给我弄个看板','给我别弄个新看板','我刚弄了个看板','如何弄个看板？','他说“帮我弄个看板”','把这个看板弄得清楚点','帮我弄个看板的截图','来个看板的链接'])('keeps non-creation uses out of the planner: %s',text=>{
+ expect(classifyResearchCreationRequest(text)).toBeNull()
+ expect(workbenchCreationRequest(session(text))).toBeNull()
+})
 it('rejects a planning placeholder before it can become a durable receipt',()=>{
  const base={requestId:'report',title:'报告工作台',dataMode:'source'}
  expect(()=>validateWorkbench({...base,panels:[{title:'占位',prompt:'占位',type:'markdown'}]})).toThrow('面板只有占位文字')

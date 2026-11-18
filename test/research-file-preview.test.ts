@@ -1271,6 +1271,28 @@ describe('sherlock-preview protocol responses', () => {
     expect((await registry.handle(new Request(descriptor.url))).status).toBe(404)
   })
 
+  it('opens a self-contained workbench page from sidebar or Finder with isolated scripts and no project subresources', async () => {
+    const { registry, workspace } = await fixture()
+    const name = '旅行分账.workbench.html'
+    const source = '<!doctype html><html><body><output>0</output><script>document.querySelector("output").value=4</script></body></html>'
+    await writeFile(path.join(workspace, name), source)
+    const origin = 'http://127.0.0.1:43123'
+    const descriptors = [
+      await registry.admitSidebar({sessionId:'session-1',nodeId:'page',relativePath:name}),
+      await registry.admitFinder({sessionId:'session-1',nodeId:'dropped',path:path.join(workspace, name)})
+    ]
+    for (const descriptor of descriptors) {
+      expectDescriptor(descriptor)
+      const response = await registry.handle(new Request(descriptor.url),origin)
+      expect(await response.text()).toBe(source)
+      const policy = response.headers.get('Content-Security-Policy')
+      expect(policy).toContain("sandbox allow-scripts; default-src 'none'")
+      expect(policy).toContain("connect-src 'none'")
+      expect(policy).not.toContain('allow-same-origin')
+      expect((await registry.handle(new Request(new URL('sibling.js',descriptor.url)),origin)).status).toBe(403)
+    }
+  })
+
   it('serves HTML capability-origin modules and practical local resources inside one realpath-fenced root', async () => {
     const { registry, root } = await fixture()
     const site = path.join(root, 'site')

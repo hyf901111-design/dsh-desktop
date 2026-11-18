@@ -9,7 +9,7 @@ const tool=(name,done=false,turn=2)=>({kind:'tool-call',location:{turn:{turn}},d
 const activity=(nodes=[],rest={})=>conversationLiveActivity({running:true,runningTurn:2,order:nodes.map((_,i)=>i),nodeStore:new Map(nodes.map((n,i)=>[i,n])),labelForNode:n=>'Working: '+n.data.root.name,...rest})
 it('installs one reversible activity footer on both native conversation hosts',async()=>{
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),base=stripConversationLiveActivity(source),next=patchConversationLiveActivity(base)
- expect(patchConversationLiveActivity(next)).toBe(next);expect(stripConversationLiveActivity(next)).toBe(base)
+ expect(patchConversationLiveActivity(next.replace('/* ework:conversation-live-activity:v6 */','/* ework:conversation-live-activity:v5 */'))).toBe(next);expect(patchConversationLiveActivity(next)).toBe(next);expect(stripConversationLiveActivity(next)).toBe(base)
  expect(next.match(/react.createElement\(ConversationLiveActivity,/g)).toHaveLength(2)
  expect(()=>stripConversationLiveActivity(next.replace('2.4s linear infinite','1s linear infinite'))).toThrow(/drifted/)
 })
@@ -46,7 +46,7 @@ it('upgrades the exact installed v2 status layer while rejecting a changed histo
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchConversationLiveActivity(source)
  const frozen=JSON.parse(await readFile('test/fixtures/conversation-live-activity-v2.json','utf8')).definition
  const compatible=transformWorkbenchConversationPresentation(next,true)
- const start=compatible.indexOf('/* ework:conversation-live-activity:v5 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
+ const start=compatible.indexOf('/* ework:conversation-live-activity:v6 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
  const previous=compatible.slice(0,start)+frozen+compatible.slice(end)
  expect(patchConversationLiveActivity(previous)).toBe(next)
  expect(()=>patchConversationLiveActivity(previous.replace('2.4s linear infinite','1s linear infinite'))).toThrow('definition drifted')
@@ -78,6 +78,9 @@ it('gives an actionable initial structure for the current request, then yields t
  expect(update([user('只看股指期货，创建一个研究工作台')]).text).not.toContain('上期所')
  const comparison=update([user('创建一个区域门店销售对比工作台')]).text
  expect(comparison).toContain('排序图');expect(comparison).not.toContain('行情')
+ expect(update([user('弄个美元兑人民币的看板。')]).text).toContain('报价日期')
+ expect(update([user('做个看板，每天扫一眼 AI 新闻。')]).text).toContain('点标题可读原文')
+ expect(update([user('帮我弄个一周待办看板。')]).text).toContain('可添加、勾选')
  const step={key:'first-public-step',kind:'assistant-step',location:{turn:{turn:4}},data:{blocks:[{kind:'reasoning',text:'private'}]}}
  expect(update([futures,step])?.kind).toBe('received')
  expect(update([futures,{...step,data:{blocks:[{kind:'text',text:'按到期月份看价差'}]}}])).toBeNull()

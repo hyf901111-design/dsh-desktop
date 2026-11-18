@@ -9,6 +9,9 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   function normalizeComponentClause(text){
     return text.replace(/📎\s*文件：`(?:\\`|[^`])+`/gu,'').trim().replace(/^(?:(?:另外|另行|同时|然后|但是|但|并且|并)\s*)+/u,'')
       .replace(/^(?:(?:请|麻烦|帮我|现在|先|本轮|这次)\s*)*(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?\s*/u,'')
+      // A spoken “弄个看板” requests the same delivery as “做个看板”.
+      // Match the action at the start of the clause and retain its negation.
+      .replace(/^((?:(?:请|麻烦|帮我|给我|为我|替我|先|再|顺便|现在|不要|不用|无需|别|暂不)\s*)*)(?:弄|搞|来)(?=一?[个张套份])(?!.{0,100}(?:看板|工作台|组件|图表|表格|卡片)(?:的)?(?:截图|链接|地址|生成方法|创建步骤|使用说明))/u,'$1做')
       // Chinese imperatives need no classifier/quantity after 做. Normalize
       // only the parser's view so the same negation, quotation and history
       // checks also cover “给团队做发布工作台”; retain the authored request.
@@ -22,7 +25,7 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
     // Quoted commands describe material to read; they do not authorize another
     // deliverable. Keep quoted titles and filenames that are not instructions.
     return text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'')
-      .replace(/“[^”]*”|「[^」]*」|『[^』]*』|‘[^’]*’|"[^"\n]*"|'[^'\n]*'/gu,quote=>/^(?:(?:请|先|再|继续|如何|怎么|怎样|必须|需要)\s*)*(?:制作|创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|构建|修复|修改|编辑|调整|优化|完成|导出|保存|交付|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|\b(?:create|build|generate)\b)/iu.test(normalizeComponentClause(quote.slice(1,-1)))?'':quote)
+      .replace(/“[^”]*”|「[^」]*」|『[^』]*』|‘[^’]*’|"[^"\n]*"|'[^'\n]*'/gu,quote=>/^(?:(?:请|麻烦|帮我|给我|替我|为我|先|再|继续|如何|怎么|怎样|必须|需要)\s*)*(?:制作|创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|构建|修复|修改|编辑|调整|优化|完成|导出|保存|交付|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|\b(?:create|build|generate)\b)/iu.test(normalizeComponentClause(quote.slice(1,-1)))?'':quote)
   }
   function deliveryObjectText(tail){
     const phrase=tail.trim().replace(/^(?:成|为)?(?:至少|约)?(?:[一二三四五六七八九十\d]+\s*(?:个|张|套|份)?|an?\s+)\s*/iu,'')

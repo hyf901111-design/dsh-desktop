@@ -4,7 +4,7 @@ import {generalFuturesWorkbench,initialWorkbenchInformationPlan} from '../../pac
 import {stripConversationResponseHistory} from './conversation-response-history.mjs'
 import {planningResponseMetadata} from './research-planning-feedback.mjs'
 import {conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,statusPresentationCss,transformStatusPresentation,transformWorkbenchConversationPresentation} from './conversation-status-presentation.mjs'
-const START='/* ework:conversation-live-activity:v5 */',V4='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
+const START='/* ework:conversation-live-activity:v6 */',V5='/* ework:conversation-live-activity:v5 */',V4='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
 
 const workbenchSourceObservationCache = new WeakMap()
 
@@ -173,11 +173,13 @@ const SHARED_NEXT=SHARED_LEGACY.replace('nodeStore,canvasTasks','nodeStore,flow:
 function scope(source,anchor,from,to){const a=source.indexOf(anchor),b=source.indexOf('\n\t\t//#endregion',a);if(a<0||b<a)throw Error('Live activity scope missing: '+anchor);const part=source.slice(a,b);if(part.split(from).length!==2)throw Error('Live activity anchor drifted: '+anchor);return source.slice(0,a)+part.replace(from,to)+source.slice(b)}
 export function stripConversationLiveActivity(source){
  source=stripConversationResponseHistory(source)
- const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),v4=source.includes(V4),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:v4?V4:START,a=source.indexOf(marker)
+ const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),v4=source.includes(V4),v5=source.includes(V5),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:v4?V4:v5?V5:START,a=source.indexOf(marker)
  if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
  const end=source.indexOf(END,a),block=source.slice(a,end+END.length+1)
  const historicalHash=legacy?'6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':previous?'e7f1ff04a7719a5abde00da1bd1fe91f49b155f61e1b013f5f3a0d319084b7a3':v3?'d169fef72132cd6ce5cd77d8aa6145cdba0dc3dd7bbfdc86c63032189f6963ef':v4?'578940255480b5473821c0a226b95a1d7624ce5cd75b8f1197b9f8a7327f1f2c':null
- if(source.split(marker).length!==2||source.split(END).length!==2||end<a||(historicalHash?createHash('sha256').update(block).digest('hex')!==historicalHash:block!==definition()))throw Error('Live activity definition drifted')
+ const v5Hash='51cc8be2cdf432f3a44bfbcac133c6c91a061030b0465832287b1f0c83faf605'
+ const exactDefinition=v5 ? createHash('sha256').update(block).digest('hex')===v5Hash || block===definition().replace(START,V5) : historicalHash ? createHash('sha256').update(block).digest('hex')===historicalHash : block===definition()
+ if(source.split(marker).length!==2||source.split(END).length!==2||end<a||!exactDefinition)throw Error('Live activity definition drifted')
  if(v4||!historicalHash)source=transformWorkbenchConversationPresentation(source,true)
  if(!legacy)source=transformStatusPresentation(source,true)
  source=scope(source,'function ChatView(',CHAT_NEXT,CHAT_END)
