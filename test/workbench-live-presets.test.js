@@ -31,13 +31,17 @@ describe('实时国内ETF预设与声明参数', () => {
       { code: '399006', market: 'SZ', name: '创业板指' }, { code: '000300', market: 'SH', name: '沪深300' }
     ])
     const direct = plan.panels.filter(p => p.publicData)
-    expect(direct.map(p => p.publicData.profile)).toEqual(['quotes-table', 'quotes-metrics', 'price-volume', 'price-volume', 'price-volume', 'news'])
+    expect(direct.map(p => p.publicData.profile)).toEqual(['quotes-table', 'quotes-metrics', 'price-volume', 'price-volume', 'price-volume'])
+    const news = plan.panels.find(p => p.type === 'news')
+    expect(news.publicData).toBeUndefined()
+    expect(news.prompt).toContain(plan.title)
+    expect(news.prompt).toContain('不得扩大为全市场新闻')
     const table = direct[0]
     expect(JSON.parse(table.publicData.requests[0].parameters_json).symbols).toEqual([
       'sh510300', 'sh510050', 'sh510500', 'sz159915', 'sh588000', 'sh512880', 'sh512480', 'sh512690', 'sh518880', 'sh513100'
     ])
     expect(direct.every(p => !p.artifact && p.publicData.intervalMinutes === 1)).toBe(true)
-    expect(direct.filter(p => ['quotes-table', 'price-volume', 'news'].includes(p.publicData.profile)).every(p => p.publicData.layoutProfile === 'openterminal')).toBe(true)
+    expect(direct.filter(p => ['quotes-table', 'price-volume'].includes(p.publicData.profile)).every(p => p.publicData.layoutProfile === 'openterminal')).toBe(true)
     expect(direct.find(p => p.publicData.profile === 'quotes-metrics').publicData.layoutProfile).toBeUndefined()
     for (const p of direct) for (const r of p.publicData.requests) {
       const args = JSON.parse(r.parameters_json)
@@ -70,54 +74,50 @@ describe('实时国内ETF预设与声明参数', () => {
     expect(input.panels[0].intervalMinutes).toBe(1)
   })
 
-  it('gives the initial generic ETF request an executable preset while respecting narrower or offline requests', () => {
+  it('offers presets as an option and keeps narrow or offline ETF requests free of a fixed watchlist', () => {
     let prompt
     registerWorkbenchExecutionPolicy({ tools: { schemas: () => [{ name: 'public_data_query' }] }, systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
     const text = request => prompt.text({ agent: { session: session(request) } })
     const initial = text('生成一个国内热门基金数据行情研究工作台')
-    const match = initial.match(/\{"title":"国内热门基金ETF行情研究工作台"[^\n]+/u)
-    expect(match).not.toBeNull()
-    const call = JSON.parse(match[0])
-    expect(validateWorkbench({ ...call, requestId: 'policy' }).panels).toHaveLength(8)
+    expect(initial).toContain('research_workbench_create')
+    expect(initial).toContain('需求匹配时也可使用 library/publicData/preset')
     for (const narrower of ['生成一个国内热门基金数据行情研究工作台，只要4张卡', '创建沪深300ETF行情工作台', '生成一个模拟国内热门基金数据行情工作台', '禁止联网生成国内热门基金行情工作台', '生成国内热门基金行情工作台，每5分钟刷新', '根据上传记录生成国内热门基金行情工作台'])
       expect(text(narrower)).not.toContain('preset":"cn-hot-etf-live')
   })
 
-  it('offers valid nested JSON for custom source panels rather than relying on dotted prose', () => {
-    let prompt
-    registerWorkbenchExecutionPolicy({ tools: { schemas: () => [{ name: 'public_data_query' }] }, systemPrompt: { context: value => { prompt = value; return () => {} } }, on: () => () => {} })
-    const text = prompt.text({ agent: { session: session('创建沪深300ETF行情工作台') } })
-    const call = JSON.parse(text.match(/单面板完整示例：(.*)。quotes-table/u)[1])
-    expect(validateWorkbench({ ...call, requestId: 'custom-policy' }).panels[0].publicData.requests).toEqual([request])
-  })
-
-  it('accepts both the compact live preset and the observed flattened alias at the registered tool boundary', async () => {
+  it('accepts the preset and preserves the requested symbols in nested and flattened custom plans at the tool boundary', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'etf-preset-schema-'))
     let tool
     const ctx = { tools: { register: value => { tool = value; return () => {} } }, webServer: { register: () => () => {} } }
     const dispose = await registerWorkbench(ctx, {}, { filePath: join(dir, 'plans.json') })
     try {
       expect(validateJsonSchemaValue(tool.parameters, preset)).toEqual([])
-      expect(validateJsonSchemaValue(tool.parameters, { requestId: 'alias', title: '行情', panels: [{ ...panel, ...source }] })).toEqual([])
+      for (const custom of [{ ...panel, publicData: source }, { ...panel, ...source }]) {
+        const call = { requestId: 'custom', title: '沪深300ETF行情', panels: [custom] }
+        expect(validateJsonSchemaValue(tool.parameters, call)).toEqual([])
+        const plan = validateWorkbench(call)
+        expect(plan.panels).toHaveLength(1)
+        expect(plan.panels[0].publicData.requests).toEqual([request])
+      }
     } finally { dispose(); await rm(dir, { recursive: true, force: true }) }
   })
 
-  it('prepares the six source cards with real source-shaped records, persisted layouts and no model launch', async () => {
+  it('prepares the five market-data cards with bound records and persisted layouts without a model launch', async () => {
     const query = vi.fn(async ({ source, parameters_json }) => {
       const p = JSON.parse(parameters_json)
       if (source === 'tencent-quotes') return { sourceId: source, source: '腾讯财经', dataTime: '2026-10-19 15:00:00', units: {}, records: p.symbols.map((symbol, i) => ({ symbol, code: symbol.slice(2), name: symbol, price: 1 + i / 10, priceUnit: 'CNY', changePercent: i, open: 1, high: 2, low: 0.9, time: '2026-10-19 15:00:00' })) }
       if (source === 'tencent-history') return { sourceId: source, source: '腾讯财经', dataTime: '2026-10-19', units: { price: 'CNY', volume: '手' }, records: [{ time: '2026-10-16', open: 1, high: 2, low: 0.9, close: 1.2, volume: 100 }, { time: '2026-10-19', open: 1.2, high: 2, low: 1.1, close: 1.5, volume: 0 }] }
-      return { sourceId: source, source: '新浪财经', dataTime: '2026-10-19T01:00:00Z', units: {}, records: [{ title: '来源标题', publisher: '来源媒体', time: '2026-10-19T01:00:00Z', url: 'https://finance.sina.com.cn/news/test.shtml' }] }
+      throw new Error('Unexpected market-data source: ' + source)
     })
     const adapter = { start: vi.fn(), bindData: vi.fn(async () => {}) }
     const runtime = new ResearchTaskRuntime({ adapter, storage: { save: async () => {} }, publicDataClient: { query } })
     try {
       const panels = validateWorkbench(preset).panels.filter(p => p.publicData)
       const receipts = await runtime.startPublicDataBatch({ parentSessionId: 'p', panels: panels.map((p, i) => ({ ...p, canvasNodeId: `source-${i}` })) })
-      await vi.waitFor(() => expect(receipts.map(r => runtime.inspect({ parentSessionId: 'p', taskId: r.taskId }).state)).toEqual(Array(6).fill('completed')))
+      await vi.waitFor(() => expect(receipts.map(r => runtime.inspect({ parentSessionId: 'p', taskId: r.taskId }).state)).toEqual(Array(5).fill('completed')))
       expect(adapter.start).not.toHaveBeenCalled()
-      expect(query).toHaveBeenCalledTimes(6)
-      expect(adapter.bindData).toHaveBeenCalledTimes(6)
+      expect(query).toHaveBeenCalledTimes(5)
+      expect(adapter.bindData).toHaveBeenCalledTimes(5)
       for (const [, recipe, output] of adapter.bindData.mock.calls) {
         expect(recipe.intervalMinutes).toBe(1)
         expect(recipe.requests[0].toolId).toBe('public_data_query')
