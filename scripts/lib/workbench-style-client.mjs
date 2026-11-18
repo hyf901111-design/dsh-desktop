@@ -80,13 +80,13 @@ export function useWorkbenchStyle({rootRef,workspace}) {
     root.dispatchEvent(new view.CustomEvent('sherlock-workbench-style-change'))
    }
    hydrated=true
-   for(const frame of root.querySelectorAll('iframe[data-research-html-artifact]')){
+   for(const frame of root.querySelectorAll('iframe[data-research-html-artifact],iframe[data-research-workbench-webpage]')){
     const signature=mode+':'+globalDark+':'+doc.documentElement.dataset.odysseyLocale
     if(frames.get(frame)===signature)continue
     frames.set(frame,signature);sendWorkbenchFramePresentation(frame)
    }
   }
-  const loaded=e=>{if(e.target?.matches?.('iframe[data-research-html-artifact]')){frames.delete(e.target);sync()}}
+  const loaded=e=>{if(e.target?.matches?.('iframe[data-research-html-artifact],iframe[data-research-workbench-webpage]')){frames.delete(e.target);sync()}}
   const locale=new view.MutationObserver(sync);locale.observe(doc.documentElement,{attributes:true,attributeFilter:['data-odyssey-locale']})
   const off=workspace.subscribe(sync),observer=new view.MutationObserver(sync),theme=new view.MutationObserver(sync)
   observer.observe(root,{childList:true,subtree:true});theme.observe(doc.body,{attributes:true,attributeFilter:['data-ds-dark-theme']})

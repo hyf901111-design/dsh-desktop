@@ -18,6 +18,7 @@ import {
   type TrustedWindow
 } from '../ipc-trust'
 import { isTrustedAppUrl } from '../security-policy'
+import { workbenchWebpagePreviewSuffix } from '../../../packages/dsh-research-task-runtime/workbench-webpage-preview.js'
 
 export const RESEARCH_PREVIEW_SCHEME = 'sherlock-preview'
 export const RESEARCH_PREVIEW_CSP = [
@@ -47,6 +48,7 @@ const DEFAULT_CAPABILITY_TTL_MS = 15 * 60 * 1000
 const MAX_PATH_LENGTH = 8 * 1024
 const MAX_ID_LENGTH = 512
 const MAGIC_PREFIX_BYTES = 512
+const workbenchPreviewTail = Buffer.from(workbenchWebpagePreviewSuffix)
 const MAX_JSON_VALIDATION_BYTES = 4 * 1024 * 1024
 const MAX_NATIVE_TEXT_PREVIEW_BYTES = 2 * 1024 * 1024
 const MAX_OFFICE_PREVIEW_BYTES = 64 * 1024 * 1024
@@ -879,17 +881,18 @@ function encodedPathAttack(rawUrl: string): boolean {
   return /%(?:00|2e|2f|5c)/i.test(rawPath) || rawPath.includes('\\') || rawPath.includes('\0')
 }
 
-function requestResource(requestUrl: string): { token: string; relativePath: string } | null {
+function requestResource(requestUrl: string): { token: string; relativePath: string; workbench: boolean } | null {
   if (encodedPathAttack(requestUrl)) return null
   try {
     const parsed = new URL(requestUrl)
+    const workbench = parsed.pathname === '/' && parsed.search === '?workbench'
     if (parsed.protocol !== `${RESEARCH_PREVIEW_SCHEME}:` || parsed.username || parsed.password ||
-        parsed.port || parsed.search || parsed.hash || !opaqueId(parsed.hostname)) return null
+        parsed.port || (parsed.search && !workbench) || parsed.hash || !opaqueId(parsed.hostname)) return null
     const decoded = decodeURIComponent(parsed.pathname)
     if (decoded.includes('\0') || decoded.includes('\\')) return null
     const segments = decoded.split('/').filter(Boolean)
     if (segments.some((segment) => segment === '.' || segment === '..')) return null
-    return { token: parsed.hostname, relativePath: segments.join(path.sep) }
+    return { token: parsed.hostname, relativePath: segments.join(path.sep), workbench }
   } catch {
     return null
   }
@@ -1129,6 +1132,7 @@ export class ResearchFilePreviewRegistry {
     // Workbench pages carry their own code and assets. They also use this
     // isolated document policy when the project file is dragged onto a board.
     const standalonePage = authorization.name.toLowerCase().endsWith('.workbench.html')
+    if (resource.workbench && !(standalonePage && authorization.allowSubresources && allowedOrigin)) return errorResponse(403, 'Preview path denied.')
     if (standalonePage && resource.relativePath !== '') return errorResponse(403, 'Preview path denied.')
     if (capability.mediaContentType && resource.relativePath !== '') return errorResponse(403, 'Preview path denied.')
     if (
@@ -1215,23 +1219,31 @@ export class ResearchFilePreviewRegistry {
         ].join('; '))
       }
       headers.set('Accept-Ranges', 'bytes')
+      // Only the embedded representation has a small host-owned suffix. Raw
+      // reads and original-file exports use the exact bytes on disk.
+      const size = file.size + (resource.workbench ? workbenchPreviewTail.length : 0)
       const rangeHeader = request.headers.get('range')
-      const range = rangeHeader === null ? null : parseRange(rangeHeader, file.size)
+      const range = rangeHeader === null ? null : parseRange(rangeHeader, size)
       if (rangeHeader !== null && range === null) {
-        headers.set('Content-Range', `bytes */${file.size}`)
+        headers.set('Content-Range', `bytes */${size}`)
         headers.set('Content-Length', '0')
         return new Response(null, { status: 416, headers })
       }
       const start = range?.start ?? 0
-      const end = range?.end ?? Math.max(0, file.size - 1)
-      const length = file.size === 0 ? 0 : end - start + 1
+      const end = range?.end ?? Math.max(0, size - 1)
+      const length = size === 0 ? 0 : end - start + 1
       headers.set('Content-Length', String(length))
-      if (range) headers.set('Content-Range', `bytes ${start}-${end}/${file.size}`)
-      const responseBody = request.method === 'HEAD' || length === 0
-        ? null
-        : officeBytes === undefined
-          ? this.fileSystem.stream(candidate, start, end) as BodyInit
-          : Buffer.from(officeBytes.subarray(start, end + 1))
+      if (range) headers.set('Content-Range', `bytes ${start}-${end}/${size}`)
+      let responseBody: BodyInit | null = null
+      if (request.method !== 'HEAD' && length > 0) {
+        if (resource.workbench && end >= file.size) {
+          const tail = workbenchPreviewTail.subarray(Math.max(0, start-file.size), end-file.size+1)
+          responseBody = start >= file.size ? tail : this.fileSystem.stream(candidate,start,file.size-1)
+            .pipeThrough(new TransformStream<Uint8Array, Uint8Array>({flush(controller) { controller.enqueue(tail) }}))
+        } else {
+          responseBody = officeBytes === undefined ? this.fileSystem.stream(candidate,start,end) : Buffer.from(officeBytes.subarray(start,end+1))
+        }
+      }
       return new Response(responseBody, { status: range ? 206 : 200, headers })
     } catch (error) {
       return isMissingFileError(error)

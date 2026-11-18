@@ -297,15 +297,24 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
   const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs
   const choose=action=>{onClose();action?.()}
   const saveLibrary=async()=>{if(saving||readOnly)return;setSaving(true);setSaveError('');try{await customLibraryRequest({action:'save',sessionId:target.sessionId,nodeId:target.node.id});window.dispatchEvent(new CustomEvent('ework-component-library-changed'));window.dispatchEvent(new CustomEvent('ework-component-library-saved',{detail:{sessionId:target.sessionId}}));onClose()}catch(e){setSaveError(customLibraryError(e))}finally{setSaving(false)}}
-  const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{await exportWorkbenchContent(card(),target.node,format);onClose()}catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
+  const pageExport=target.node.containerSpec?.presentation==='webpage'&&target.node.containerSpec.items[0]?.permissions?.download!==false
+  const formats=pageExport?['html','svg','png','jpg']:['svg','png','jpg']
+  const exportAs=async format=>{if(exporting)return;cancelLeave();setExporting(true);setExportError('');try{
+    if(format==='html'){
+      const save=card()?.querySelector('[data-research-attachment-preset="webpage"]')?.__eworkSaveWebpage
+      if(!save)throw Error('请等待网页载入后重试')
+      await save()
+    }else await exportWorkbenchContent(card(),target.node,format)
+    onClose()
+  }catch(e){setExportError(e?.message||'导出失败，请重试')}finally{setExporting(false)}}
   const row=(icon,label,action,disabled=readOnly,attributes={})=>previewMode&&!['expand','duplicate','data'].includes(icon)&&label!=='刷新行情与资讯'?null:jsxs('button',{...attributes,type:'button',role:'menuitem',disabled,onMouseEnter:leave,onClick:()=>choose(action),children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label})]},label)
   const separator=key=>previewMode?null:jsx('div',{className:'ew-grid-divider',role:'separator'},key)
   const flyout=(kind,icon,label,trigger,disabled=false)=>previewMode&&kind!=='export'?null:jsxs('button',{ref:trigger,'data-workbench-native-flyout':kind,type:'button',role:'menuitem','aria-label':label,'aria-haspopup':'menu','aria-expanded':detail?.kind===kind,disabled,onMouseEnter:()=>openDetail(kind),onClick:()=>openDetail(kind),onKeyDown:e=>{if(e.key==='ArrowRight'){e.preventDefault();openDetail(kind,true)}},children:[jsx(WorkbenchIcon,{name:icon}),jsx('span',{children:label}),jsx('span',{children:'›'})]})
   react.useEffect(()=>mountWorkbenchNativeMenu(ref.current,{
-    export:['svg','png','jpg'].map(format=>({label:format.toUpperCase(),run:()=>exportAs(format)})),
+    export:formats.map(format=>({label:format.toUpperCase(),run:()=>exportAs(format)})),
     mind:RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>({label:option.label,disabled:readOnly,run:()=>choose(()=>onDerived('mind-map',option.value))})),
     settings:(settings||[]).map(action=>({label:action.label,disabled:readOnly&&action.writes||action.disabled,run:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()})}))
-  },onClose,(()=>{const box=card()?.querySelector('[data-workbench-more]')?.getBoundingClientRect();return box?{x:box.right-206,y:box.top,width:206,height:box.height}:undefined})()),[target.node.id,target.sessionId,readOnly,previewMode])
+  },onClose,(()=>{const box=card()?.querySelector('[data-workbench-more]')?.getBoundingClientRect();return box?{x:box.right-206,y:box.top,width:206,height:box.height}:undefined})()),[target.node.id,target.sessionId,readOnly,previewMode,pageExport])
   const [menuPlacement,setMenuPlacement]=react.useState(null)
   react.useLayoutEffect(()=>{
     const menu=ref.current;if(!menu)return
@@ -348,7 +357,7 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     target.node.containerSpec?.type!=='financial-widget'&&settings?.length>0&&flyout('settings','settings','组件设置',settingsRef),
     separator('settings'),
     row('remove','移除组件',()=>workspace.removeNodes([target.node.id]))
-  ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','data-workspace-background-portal':'','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...['svg','png','jpg'].map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),card()?.open?card():document.body)
+  ]}),detail&&jsx('div',{ref:subRef,className:'ew-grid-menu ew-grid-submenu',role:'menu','data-workspace-background-portal':'','aria-label':detail.kind==='mind'?'思维导图详细度':detail.kind==='export'?'导出格式':'组件设置',style:{left:detail.left,top:detail.top,width:detail.width},onMouseEnter:cancelLeave,onMouseLeave:leave,onKeyDown:e=>{if(e.key==='ArrowLeft'){e.preventDefault();cancelLeave();setDetail(null);trigger(detail.kind).current?.focus()}},children:detail.kind==='export'?[...formats.map(format=>jsx('button',{type:'button',role:'menuitem',disabled:exporting,onClick:()=>exportAs(format),children:format.toUpperCase()},format)),exportError&&jsx('span',{role:'alert',children:exportError})]:detail.kind==='mind'?RESEARCH_MIND_MAP_DETAIL_OPTIONS.map(option=>jsx('button',{type:'button',role:'menuitem',onClick:()=>choose(()=>onDerived('mind-map',option.value)),children:option.label},option.value)):settings?.map(action=>jsxs('button',{type:'button',role:'menuitem',disabled:readOnly&&action.writes||action.disabled,onClick:()=>choose(()=>{if((!readOnly||!action.writes)&&!action.disabled)action.run?.()}),children:[jsx(WorkbenchIcon,{name:action.icon}),jsx('span',{children:action.label})]},action.label))})]}),card()?.open?card():document.body)
 }
 
 export function handleWorkbenchMultiSelect(root,workspace,event) {
@@ -674,6 +683,10 @@ export function workbenchMeasuredDimensions(node,value,width=value?.width||node.
   // 50/100-row page. Quote metrics retain their bounded reading viewport.
   return {width:preferred.width,height:table&&value?.intrinsicTable===true?Math.min(12000,height):metrics||table?Math.min(840,height):height}
 }
+export function workbenchWebpageKey(node) {
+  if(node?.containerSpec?.presentation==='webpage')return node.containerSpec.items?.[0]?.relativePath
+  if(!node?.containerSpec&&node?.name?.toLowerCase().endsWith('.workbench.html'))return node.authorizationId
+}
 export function measureWorkbenchContents(root,nodes,availableHeight=0) {
   const measured=new Map(),cache=root?.__eworkContentMeasurements
   for(const node of nodes){
@@ -682,6 +695,11 @@ export function measureWorkbenchContents(root,nodes,availableHeight=0) {
     if(node.kind==='planning-card'||node.kind==='generated-container'&&!node.containerSpec){measured.set(node.id,{width:656,height:node.kind==='planning-card'?220:320});continue}
     const value=cache?.get(node.id)
     const preferred=researchOptimalDimensions({...node,width:0,height:0})
+    if(node.containerSpec?.presentation==='webpage'||!node.containerSpec&&node.name?.toLowerCase().endsWith('.workbench.html')){
+      const pageKey=workbenchWebpageKey(node)
+      measured.set(node.id,pageKey&&value?.pageKey===pageKey?workbenchMeasuredDimensions(node,value):{width:preferred.width,height:Math.max(preferred.height,node.height||0)})
+      continue
+    }
     // The settlement curve has a natural height at its arranged width. Keep
     // its controls, wrapped readout and provenance outside the plot budget.
     if(node.containerSpec?.type==='financial-widget'&&node.containerSpec.widget==='futures'){
@@ -815,13 +833,13 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
   if(!workspace.organizeCanvas(measured,mode,typeof researchPreviewArrangeToken==='undefined'?undefined:researchPreviewArrangeToken))return false
   const grid=createResearchGrid(),availableWidth=Math.min(before.canvasSize.width||800,before.canvasSize.availableWidth||Infinity),width=workspace.getWorkbenchContentWidth?.(availableWidth)??availableWidth,m=grid.metrics(width)
   const arranged=currentGridNodes()
-  const expected=new Map(arranged.filter(n=>n.containerSpec?.type==='html'&&!researchCandleTemplate(n)&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
-    const old=oldNodes.find(o=>o.id===n.id),cache=oldCache.get(n.id),frame=root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] iframe[data-research-html-artifact]')
+  const expected=new Map(arranged.filter(n=>workbenchWebpageKey(n)||n.containerSpec?.type==='html'&&!researchCandleTemplate(n)&&!root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] [data-sherlock-market-native]')).map(n=>{
+    const old=oldNodes.find(o=>o.id===n.id),cache=oldCache.get(n.id),frame=root.querySelector('[data-research-node-id="'+CSS.escape(n.id)+'"] :is(iframe[data-research-html-artifact],iframe[data-research-workbench-webpage])')
     const inset=cache?Math.max(0,old.width-cache.width):Math.max(0,n.width-(frame?.clientWidth||n.width))
-    return [n.id,{html:n.containerSpec.html,width:Math.round(n.width-inset)}]
+    return [n.id,{key:workbenchWebpageKey(n)??n.containerSpec.html,width:Math.round(n.width-inset)}]
   }))
   let cells=workspace.getWorkbenchCells(),encoded=JSON.stringify(cells),done=false,nativeReady=false,settle,deadline,nativeTimer
-  const unchanged=()=>workspace.getActiveBoardTab?.()===activeTab&&JSON.stringify(workspace.getWorkbenchCells())===encoded&&expected.size===[...workspace.getSnapshot().artifacts].filter(n=>expected.has(n.id)&&n.containerSpec?.html===expected.get(n.id).html).length
+  const unchanged=()=>workspace.getActiveBoardTab?.()===activeTab&&JSON.stringify(workspace.getWorkbenchCells())===encoded&&expected.size===currentGridNodes().filter(n=>expected.has(n.id)&&(workbenchWebpageKey(n)??n.containerSpec?.html)===expected.get(n.id).key).length
   const finishOnTabChange=event=>{if(event.target?.closest?.('[data-board-tab]'))finish()}
   const finish=(save=true)=>{
     if(done)return;done=true;view.clearTimeout(settle);view.clearTimeout(deadline);view.clearTimeout(nativeTimer)
@@ -840,12 +858,12 @@ export function arrangeWorkbenchContents(root,workspace,measured,mode='standard'
     const next=cells.map(c=>{
       const target=expected.get(c.id),cache=root.__eworkContentMeasurements?.get(c.id)
       const node=currentNodes.find(n=>n.id===c.id)
-      const card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]'),frame=card?.querySelector('iframe[data-research-html-artifact]')
+      const card=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"]'),frame=card?.querySelector('iframe[data-research-html-artifact],iframe[data-research-workbench-webpage]')
       const cardWidth=(card?.getBoundingClientRect().width||0)/workbenchCanvasZoom(root),rendered=!cardWidth||node&&Math.abs(cardWidth-node.width)<=2
       // First-load offscreen frames have no cached inset. Once mounted, use
       // their actual inner width; do not mistake card padding for stale data.
       if(target&&rendered&&frame?.clientWidth>0)target.width=Math.round(frame.clientWidth)
-      const matched=target&&rendered&&cache?.html===target.html&&Math.abs(cache.width-target.width)<=2
+      const matched=target&&rendered&&cache&&(cache.pageKey??cache.html)===target.key&&Math.abs(cache.width-target.width)<=2
       if(target&&!matched)complete=false
       const nativeCard=root.querySelector('[data-research-node-id="'+CSS.escape(c.id)+'"] [data-sherlock-market-native]')
       if(target&&nativeCard){expected.delete(c.id);complete=false}
@@ -1033,16 +1051,27 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
         if(!id||!workspace.getSnapshot().selection.selectedNodeIds.includes(id))return
         root.__eworkContentFit?.finish();root.focus({preventScroll:true});workspace[data.action]();return
       }
-      if(!data||typeof data!=='object'||Array.isArray(data)||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>2400||data.height<1||data.height>12000)return
+      if(!data||typeof data!=='object'||Array.isArray(data)||data.type!=='sherlock-workbench-content-size'||!Number.isInteger(data.width)||!Number.isInteger(data.height)||data.width<1||data.width>12000||data.height<1||data.height>12000)return
       const intrinsic=data.intrinsicMetrics===true||data.intrinsicTable===true,disclosureOpen=data.disclosureOpen===true
       if(Object.keys(data).length!==3+Number(intrinsic)+Number(disclosureOpen))return
-      const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
-      const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
-      if(node?.containerSpec?.type==='html'){
-        root.__eworkScrollbars?.();const prior=contentMeasurements.get(id),value={html:node.containerSpec.html,width:data.width,height:data.height,...(frame.clientHeight>0?{chromeHeight:Math.max(58,Math.min(200,Math.ceil((frame.closest('[data-research-node-id]')?.offsetHeight||node.height)-frame.offsetHeight)))}:{}),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:data.intrinsicTable===true?{intrinsicTable:true}:{})};contentMeasurements.set(id,value)
-        workspace.setWorkbenchContentHeight(id,{html:value.html,width:node.width,height:workbenchMeasuredDimensions(node,value).height,disclosureOpen,...((data.intrinsicTable===true||data.intrinsicMetrics===true||data.intrinsic===true)&&!node.preserveGenerationSize?{layoutFit:true}:{})})
+      const frame=[...root.querySelectorAll('iframe[data-research-html-artifact],iframe[data-research-workbench-webpage]')].find(f=>f.contentWindow===event.source)
+      if(!frame)return
+      const card=frame.closest('[data-research-node-id]'),id=card?.getAttribute('data-research-node-id'),snapshot=workspace.getSnapshot()
+      const node=snapshot.artifacts.find(n=>n.id===id)??snapshot.files.find(n=>n.id===id)
+      const pageKey=frame.hasAttribute('data-research-workbench-webpage')&&workbenchWebpageKey(node)
+      if(pageKey){
+        if(event.origin!=='null'||Object.keys(data).length!==3||Math.abs(frame.clientWidth-data.width)>2||card.hasAttribute('open'))return
+      }else if(node?.containerSpec?.type!=='html'||data.width>2400)return
+      {
+        const prior=contentMeasurements.get(id),identity=pageKey?{pageKey}:{html:node.containerSpec.html}
+        const chromeHeight=frame.clientHeight>0?Math.max(0,Math.min(200,card.offsetHeight-frame.offsetHeight)):58
+        const value={...identity,width:data.width,height:data.height,chromeHeight:pageKey?chromeHeight:Math.max(58,chromeHeight),...(data.intrinsicMetrics===true?{intrinsicMetrics:true}:data.intrinsicTable===true?{intrinsicTable:true}:{})}
+        contentMeasurements.set(id,value)
+        root.__eworkScrollbars?.()
+        const source=pageKey?(node.containerSpec?{native:true,contentKey:JSON.stringify(node.containerSpec)}:{fileAuthorizationId:node.authorizationId}):identity
+        workspace.setWorkbenchContentHeight(id,{...source,width:node.width,height:workbenchMeasuredDimensions(node,value).height,disclosureOpen,...((pageKey||intrinsic)&&!node.preserveGenerationSize?{layoutFit:true}:{})})
         if(root.__eworkContentFit)root.__eworkContentFit.refit()
-        else if(workspace.getWorkbenchResponsiveArrange()&&prior?.html===value.html&&prior.width===value.width&&Math.abs(prior.height-value.height)>1&&Math.abs(frame.clientWidth-value.width)<=2)root.__eworkRequestResponsiveArrange?.()
+        else if(workspace.getWorkbenchResponsiveArrange()&&((!prior&&pageKey)||prior&&(prior.pageKey??prior.html)===(value.pageKey??value.html)&&prior.width===value.width&&Math.abs(prior.height-value.height)>1)&&Math.abs(frame.clientWidth-value.width)<=2)root.__eworkRequestResponsiveArrange?.()
       }
     }
     window.addEventListener('message',contentSize)
@@ -1100,7 +1129,7 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     for(const id of nativeFitted.keys())if(!nodes.some(node=>node.id===id))nativeFitted.delete(id)
     const fitNativeContents=()=>{
       if(!active||root.hasAttribute('data-grid-operation'))return
-      const candidates=nodes.filter(node=>node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.type!=='html'&&!['financial-widget','iframe','youtube','calendar-tool'].includes(node.containerSpec.type)&&!node.preserveGenerationSize)
+      const candidates=nodes.filter(node=>node.kind==='generated-container'&&node.containerSpec&&node.containerSpec.presentation!=='webpage'&&node.containerSpec.type!=='html'&&!['financial-widget','iframe','youtube','calendar-tool'].includes(node.containerSpec.type)&&!node.preserveGenerationSize)
       const height=workspace.getWorkbenchResponsiveArrange()?(snapshot.canvasSize.visibleHeight||snapshot.canvasSize.height):0
       const fitKey=node=>JSON.stringify([node.width,node.containerSpec,node.containerSpec.type==='chart'?height:0])
       const unfitted=candidates.filter(node=>nativeFitted.get(node.id)!==fitKey(node))

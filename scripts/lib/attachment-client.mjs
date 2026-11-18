@@ -16,10 +16,9 @@ body [data-research-canvas][data-ework-grid] [data-research-node-id] :is([data-r
 .ew-attachment-failure{padding:8px!important;color:var(--grid-muted)!important}.ew-attachment dialog{position:fixed!important;inset:0!important;max-width:90vw!important;width:960px!important;max-height:85vh!important;margin:auto!important;padding:16px!important;border:1px solid var(--grid-border)!important;border-radius:8px!important;background:var(--grid-card)!important;color:var(--grid-text)!important;overflow:auto!important}
 .ew-attachment dialog::backdrop{background:#0008!important}.ew-attachment-view{display:flex!important;flex-direction:column!important;gap:12px!important}.ew-attachment-full-image{display:block!important;max-width:100%!important;max-height:60vh!important;object-fit:contain!important;margin:auto!important}.ew-attachment-file-preview{position:relative!important;height:55vh!important;min-height:180px!important;overflow:auto!important}.ew-attachment-file-preview>*{height:100%!important;max-width:100%!important}
 .ew-attachment progress{width:100%!important;height:6px!important;accent-color:var(--grid-accent,#00a6e9)!important}.ew-attachment [role=alert]{color:var(--grid-text)!important}.ew-attachment-import{display:none!important}
-.ew-attachment-webpage{height:100%!important;min-height:240px;padding:0!important;gap:0!important}
-.ew-attachment-webpage .ew-attachment-file-preview{height:auto!important;flex:1 1 auto!important;min-height:180px!important}
+.ew-attachment-webpage{height:100%!important;min-height:0;padding:0!important;gap:0!important}
+.ew-attachment-webpage .ew-attachment-file-preview{height:auto!important;flex:1 1 auto!important;min-height:0!important}
 .ew-attachment-webpage iframe{display:block;width:100%;height:100%;border:0}
-.ew-attachment-webpage footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--grid-border)}
 }
 `
 export function ResearchAttachmentLocalPreview({item,nodeId,sessionId,visible,officePreview,noteDocument=false,readOnly=false,annotationSource,onNaturalSize,onPageStatus}){
@@ -68,7 +67,26 @@ export function ResearchAttachmentPreset({node,sessionId,visible=true,officePrev
  react.useEffect(()=>{if(selected&&spec.items.some(i=>i.id===selected&&i.permissions?.preview!==false)&&visible){dialog.current?.showModal?.()}else dialog.current?.close?.()},[selected,visible,spec.items])
  react.useEffect(()=>()=>{dialog.current?.close?.()},[])
  const choose=id=>{if(id&&!spec.items.some(i=>i.id===id&&allowed(i,'preview')))return;setSelected(id);if(id)researchAttachmentViews.set(key,id);else researchAttachmentViews.delete(key);if(researchAttachmentViews.size>512)researchAttachmentViews.delete(researchAttachmentViews.keys().next().value)}
- const download=async item=>{if(!allowed(item,'download')||busy)return;setBusy(true);setNotice('正在下载原文件…');try{const bridge=window.dshDesktop?.researchCanvasExport;if(!bridge?.save)throw Error('当前客户端不支持原文件下载。');const result=item.url?await bridge.save({kind:'remote-original',suggestedName:item.name.slice(0,160),url:item.url}):await descriptor(item).then(d=>bridge.save({kind:'original',suggestedName:item.name.slice(0,160),...identity(item),authorizationId:d.authorizationId}));setNotice(result.status==='saved'?'原文件已保存':result.status==='cancelled'?'已取消保存':result.message??'原文件下载失败，请重试。')}catch(error){setNotice(error.message)}finally{setBusy(false)}}
+ const saveOriginal=async item=>{
+  if(!allowed(item,'download'))throw Error('当前附件不可下载。')
+  const bridge=window.dshDesktop?.researchCanvasExport
+  if(!bridge?.save)throw Error('当前客户端不支持原文件下载。')
+  const suggestedName=item.name.slice(0,160)
+  if(item.url)return bridge.save({kind:'remote-original',suggestedName,url:item.url})
+  const file=await descriptor(item)
+  try{return await bridge.save({kind:'original',suggestedName,...identity(item),authorizationId:file.authorizationId})}
+  finally{window.dshDesktop?.researchPreview?.release?.({...identity(item),authorizationId:file.authorizationId,capabilityToken:file.capabilityToken})}
+ }
+ const download=async item=>{if(!allowed(item,'download')||busy)return;setBusy(true);setNotice('正在下载原文件…');try{const result=await saveOriginal(item);setNotice(result.status==='saved'?'原文件已保存':result.status==='cancelled'?'已取消保存':result.message??'原文件下载失败，请重试。')}catch(error){setNotice(error.message)}finally{setBusy(false)}}
+ react.useLayoutEffect(()=>{
+  const element=root.current,page=spec.items[0]
+  if(!element||spec.presentation!=='webpage'||!allowed(page,'download'))return
+  element.__eworkSaveWebpage=async()=>{
+   const result=await saveOriginal(page)
+   if(result.status!=='saved'&&result.status!=='cancelled')throw Error(result.message||'原文件下载失败，请重试。')
+  }
+  return()=>{delete element.__eworkSaveWebpage}
+ },[spec,sessionId,node.id])
  const remove=item=>{if(!allowed(item,'remove'))return;if(save({...spec,items:spec.items.filter(i=>i.id!==item.id)})){window.dshDesktop?.researchLinkFrame?.releaseNative?.(identity(item));setNotice('已从组件移除，原文件仍保留。');if(selected===item.id)choose(null)}else setNotice('附件未移除，请重试。')}
  const importFiles=async input=>{
   if(readOnly||busy||!input?.length)return
@@ -94,8 +112,7 @@ export function ResearchAttachmentPreset({node,sessionId,visible=true,officePrev
   const page=spec.items[0],file=resolved[page.id],error=failures[page.id]
   return jsxs('section',{ref:root,className:'ew-attachment ew-attachment-webpage','data-research-attachment-preset':'webpage','data-research-preview-interactive':'',onPointerDown:e=>e.stopPropagation(),children:[
    jsx('style',{children:RESEARCH_ATTACHMENT_CSS}),
-   jsx('div',{className:'ew-attachment-file-preview',children:file?jsx(ResearchAttachmentLocalPreview,{item:{...page,authorizationId:file.authorizationId},nodeId:identity(page).nodeId,sessionId,visible}):jsx('p',{role:error?'alert':'status',className:'ew-attachment-failure',children:error??'正在打开项目网页…'})}),
-   jsxs('footer',{children:[notice&&jsx('span',{role:'status',children:notice}),error&&jsx('button',{type:'button',onClick:()=>retryPreview(page),children:'重新打开'}),allowed(page,'download')&&jsx('button',{type:'button',disabled:busy||!file,onClick:()=>download(page),children:'下载网页文件'})]})
+   jsx('div',{className:'ew-attachment-file-preview',children:file?jsx(ResearchAttachmentLocalPreview,{item:{...page,authorizationId:file.authorizationId},nodeId:identity(page).nodeId,sessionId,visible}):jsxs('div',{role:error?'alert':'status',className:'ew-attachment-failure',children:[error??'正在打开项目网页…',error&&jsx('button',{type:'button',onClick:()=>retryPreview(page),children:'重新打开'})]})})
   ]})
  }
  const previewItem=spec.items.find(i=>i.id===selected),index=spec.items.findIndex(i=>i.id===selected),navigable=spec.items.filter(i=>allowed(i,'preview')&&sourceExists(i)),navigationIndex=navigable.findIndex(i=>i.id===selected),items=spec.items.filter(i=>[i.name,i.description,i.source].some(v=>v?.toLowerCase().includes(query.toLowerCase())))
@@ -118,6 +135,10 @@ export function patchAttachmentClient(source){
  if(source.includes(start)){const a=source.indexOf(start),b=source.indexOf(end,a);if(b<0)throw Error('Attachment definitions boundary missing');source=source.slice(0,a)+definitions+source.slice(b+end.length)}
  else{const anchor='function createResearchWorkspaceSession(storage, sessionId) {';if(source.split(anchor).length!==2)throw Error('Attachment host missing');source=source.replace(anchor,definitions+'\n'+anchor)}
  const once=(a,b)=>{if(source.includes(b))return;if(source.split(a).length!==2)throw Error('Attachment anchor missing: '+a.slice(0,90));source=source.replace(a,b)}
+ const htmlFrame='"data-research-html-preview": "",'
+ once(htmlFrame,htmlFrame+'\n                "data-research-workbench-webpage": preview.descriptor.name?.toLowerCase().endsWith(".workbench.html") || void 0,')
+ const frameSource='src: preview.descriptor.url,\n\t\t\t\ttitle: node.displayName ?? node.name,'
+ once(frameSource,'src: preview.descriptor.name?.toLowerCase().endsWith(".workbench.html") ? preview.descriptor.url + "?workbench" : preview.descriptor.url,\n\t\t\t\ttitle: node.displayName ?? node.name,')
  const types=/const RESEARCH_CONTAINER_TYPES = (?:\/\* @__PURE__ \*\/ )?new Set\(\[[^\]]+\]/;if(!source.match(types))throw Error('Attachment native types missing');if(!source.match(types)[0].includes('"files"'))source=source.replace(types,s=>s.replace('new Set([','new Set(["files", "gallery", '))
  if(!source.includes('if (value.type === "files" || value.type === "gallery") return researchAttachmentSpec(value);'))once('if (value.type === "web") {','if (value.type === "files" || value.type === "gallery") return researchAttachmentSpec(value);\n\t\t\tif (value.type === "web") {')
  if(!source.includes("if (['files','gallery'].includes(spec.type)) return [spec.title"))once("if (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;","if (['files','gallery'].includes(spec.type)) return [spec.title,spec.source,spec.date,spec.description,...spec.items.map(i=>[i.name,i.description,i.source,i.date,i.url,i.relativePath].filter(Boolean).join(' · '))].filter(Boolean).join('\\n');\n\t\t\tif (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;")

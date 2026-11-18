@@ -1290,7 +1290,24 @@ describe('sherlock-preview protocol responses', () => {
       expect(policy).toContain("connect-src 'none'")
       expect(policy).not.toContain('allow-same-origin')
       expect((await registry.handle(new Request(new URL('sibling.js',descriptor.url)),origin)).status).toBe(403)
+      const embedded = descriptor.url+'?workbench'
+      const view = await registry.handle(new Request(embedded),origin)
+      const bytes = Buffer.from(await view.arrayBuffer())
+      expect(view.headers.get('Content-Security-Policy')).toBe(policy)
+      expect(bytes.toString()).toContain('data-workbench-page-style')
+      expect(bytes.subarray(0,Buffer.byteLength(source)).toString()).toBe(source)
+      const head = await registry.handle(new Request(embedded,{method:'HEAD'}),origin)
+      expect(head.headers.get('Content-Length')).toBe(String(bytes.length))
+      const start = Buffer.byteLength(source)-3
+      const range = await registry.handle(new Request(embedded,{headers:{Range:`bytes=${start}-${start+12}`}}),origin)
+      expect(range.status).toBe(206)
+      expect(Buffer.from(await range.arrayBuffer())).toEqual(bytes.subarray(start,start+13))
+      expect((await registry.handle(new Request(embedded))).status).toBe(403)
     }
+    await writeFile(path.join(workspace,'regular.html'),source)
+    const regular = await registry.admitSidebar({sessionId:'session-1',nodeId:'raw',relativePath:'regular.html'})
+    expectDescriptor(regular)
+    expect((await registry.handle(new Request(regular.url+'?workbench'),origin)).status).toBe(403)
   })
 
   it('serves HTML capability-origin modules and practical local resources inside one realpath-fenced root', async () => {
