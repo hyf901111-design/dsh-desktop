@@ -66,9 +66,11 @@ function newsDisplayText(value?: string): string {
 }
 
 function publisherSectionIndex(path: string, title: string): boolean {
-  if (!/\/(?:index|node_\d+)\.s?html?$/i.test(path)) return false
   if (/\/(?:articles?|posts?|stor(?:y|ies)|20\d{2}(?:[-/]?\d{2})*)\//i.test(path)) return false
-  const segments = title.split(/[_|｜]/u).map(segment => segment.replace(/\s+/gu, ''))
+  const segments = title.split(/[_|｜]|\s+[-–—]\s+/u).map(segment => segment.replace(/\s+/gu, ''))
+  const index = /\/(?:index|node_\d+)\.s?html?$/i.test(path)
+  const section = /(?:\/|[-_])(?:news|latest|updates|archives?)\/?$/i.test(path) || path.endsWith('/')
+  if (!index && !(section && segments.length > 1)) return false
   return /^[\p{Script=Han}A-Za-z]{0,10}(?:新闻|快讯|资讯|要闻|频道)$/u.test(segments[0] ?? '') ||
     segments.some(segment => /^[\p{Script=Han}A-Za-z]{0,8}频道$/u.test(segment))
 }
@@ -83,7 +85,7 @@ export async function queryAccountFinancialWidget(
     if (!options.doubao) throw Error('豆包搜索暂不可用')
     const topic = query.query?.trim() || '财经市场'
     const hasWindow = /\d{4}年|\d{4}[-/]\d|回顾|历史|昨天|今天|本[周月年]|上[周月]|去[年冬]|(?:近|过去)[一二两三四五六七八九十半\d]+[天周年月]/u.test(topic)
-    const suffix = hasWindow ? ' 新闻报道原文' : ' 近一周新闻报道原文'
+    const suffix = hasWindow ? ' 新闻报道原文' : ` 近一周新闻报道原文（截至${dayInChina(now)}）`
     const keyword = Array.from(topic + suffix).length <= 100 ? topic + suffix : topic
     const result = await options.doubao(keyword, 8, signal)
     const seenTitles = new Set<string>()
@@ -105,14 +107,15 @@ export async function queryAccountFinancialWidget(
       const articleKey = [...canonical.searchParams].some(([key, value]) => /^(?:p|post|article|story|item|aid|id)(?:_?id)?$/i.test(key) && value.trim())
       const pagedFeed = /(?:^|[/-])(?:[a-z]+[_-])?(?:news|archive[s]?|category|tag)(?:$|\/)/i.test(path) && canonical.searchParams.has('page')
       const archiveTitle = /\barchives?\s*[|·]|(?:的\s*微博|的\s*个人主页)$/i.test(title)
-      if (searchPage || !articleKey && (indexPage || publisherSectionIndex(path, title)) || pagedFeed || archiveTitle) return []
+      if (searchPage || !articleKey && (indexPage || publisherSectionIndex(canonical.pathname, title)) || pagedFeed || archiveTitle) return []
+      // An undated story has no verified publication time. A dated story must fit the requested rolling week.
+      const published = Date.parse(item.publishedAt ?? '')
+      const time = item.publishedAt && Number.isFinite(published) && published !== 0 ? item.publishedAt : null
+      if (!hasWindow && time && (published < now.getTime() - 7 * 86400_000 || published > now.getTime())) return []
       const titleKey = title.replace(/\s+/gu, '').toLowerCase()
       if (seenTitles.has(titleKey) || seenUrls.has(canonical.href)) return []
       seenTitles.add(titleKey)
       seenUrls.add(canonical.href)
-      // The search provider uses Unix epoch zero for undated articles.
-      const published = Date.parse(item.publishedAt ?? '')
-      const time = item.publishedAt && Number.isFinite(published) && published !== 0 ? item.publishedAt : null
       return [{ id: url.href, title: title.slice(0, 300), source: item.siteName?.trim() || url.hostname, time, url: url.href, summary: newsDisplayText(item.snippet).slice(0, 1200) }]
     }).sort((a, b) => (Date.parse(b.time ?? '') || 0) - (Date.parse(a.time ?? '') || 0))
     return { source: label, news }
