@@ -125,3 +125,42 @@ it('projects the trusted page context as material with finite commands and keeps
 it('removes the restored state button and returns its width to the address box',async()=>{const{page}=await fixture();try{const address=page.locator('.eb-address-wrap'),original=await address.evaluate(el=>el.getBoundingClientRect().width);await page.evaluate(()=>window.publish({translation:{state:'translated',completed:10,total:10,canRestore:true}}));expect(await address.evaluate(el=>el.getBoundingClientRect().width)).toBeLessThan(original);await page.locator('.eb-translation-status').click();expect(await page.locator('.eb-translation-status').count()).toBe(0);expect(await address.evaluate(el=>el.getBoundingClientRect().width)).toBeCloseTo(original,1)}finally{await page.close()}})
 
 it('keeps translation hover paint padded even under host button reset styles',async()=>{const{page}=await fixture();try{await page.addStyleTag({content:'body button{padding:0!important;min-height:0!important}'});await page.evaluate(()=>window.publish({translation:{state:'partial',completed:2,total:8,canRestore:true}}));const button=page.locator('.eb-translation-status');await button.hover();const m=await button.evaluate(el=>{const s=getComputedStyle(el);return{left:parseFloat(s.paddingLeft),right:parseFloat(s.paddingRight),top:parseFloat(s.paddingTop),bottom:parseFloat(s.paddingBottom),height:el.getBoundingClientRect().height}});expect(m.left).toBeGreaterThanOrEqual(10);expect(m.right).toBeGreaterThanOrEqual(10);expect(m.top).toBeGreaterThanOrEqual(6);expect(m.bottom).toBeGreaterThanOrEqual(6);expect(m.height).toBeGreaterThanOrEqual(32);expect(await button.evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)')}finally{await page.close()}})
+
+it.each([false, true])('projects the complete composer flyout over a live webpage (dark: %s)', async dark => {
+ const {page}=await fixture({dark,width:1200})
+ try{
+  await page.evaluate(()=>{
+   document.body.dataset.workspaceSurface='browser'
+   document.querySelector('.pI_x6G_centerCol').style.right='300px'
+   window.startProjection()
+   const card=document.createElement('div')
+   card.className='mufS8W_card'
+   card.dataset.eworkCommand='model'
+   card.dataset.eworkCascadeSide='left'
+   card.style.cssText='position:fixed;top:8px;left:600px;width:264px;display:flex;flex-direction:column;background:#333a'
+   card.setAttribute('popover','manual')
+   card.innerHTML='<input aria-label="搜索模型"><div role="listbox" class="mufS8W_viewport" style="overflow-y:auto">' +
+     Array.from({length:60},(_,index)=>'<button role="option" style="display:block;height:36px">模型 '+index+'</button>').join('')+'</div>'
+   document.body.append(card)
+   card.showPopover()
+   card.querySelector('input').focus()
+   card.lastElementChild.addEventListener('click',event=>{window.model=event.target.textContent})
+  })
+  await expect.poll(()=>page.evaluate(()=>window.calls.filter(([method])=>method==='menu').at(-1)?.[1].html.includes('搜索模型'))).toBe(true)
+  const result=await page.evaluate(()=>{
+   const card=document.querySelector('.mufS8W_card')
+   const current=window.calls.filter(([method])=>method==='menu').at(-1)[1]
+   const projected=new DOMParser().parseFromString(current.html,'text/html')
+   const root=projected.querySelector('[data-native-menu-root]')
+   const list=root.querySelector('[role=listbox]')
+   window.nativeAction({id:current.id,revision:current.revision,kind:'scroll',controlId:list.dataset.nativeControl,scrollTop:1024})
+   window.nativeAction({id:current.id,revision:current.revision,kind:'click',controlId:list.lastElementChild.dataset.nativeControl})
+   return {background:root.style.backgroundColor,manual:root.hasAttribute('popover'),scroll:card.lastElementChild.scrollTop,
+    viewportHeight:card.lastElementChild.clientHeight,viewportScrollHeight:card.lastElementChild.scrollHeight,model:window.model}
+  })
+  expect(result).toMatchObject({background:dark?'rgb(38, 38, 38)':'rgb(246, 246, 246)',manual:false,model:'模型 59'})
+  expect(result.viewportHeight).toBeLessThanOrEqual(420)
+  expect(result.viewportScrollHeight).toBeGreaterThan(result.viewportHeight)
+  expect(result.scroll).toBeGreaterThan(0)
+ }finally{await page.close()}
+})
