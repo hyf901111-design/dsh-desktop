@@ -17,16 +17,18 @@ beforeAll(async()=>{
  const baseConversation=stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(installed))))
  const raw=patchSpreadsheetClient(patchBrowserAppNative(baseConversation)),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8'),['WorkspacePicker'])}
+ input.triggers=expose(await readFile(base+'dsh-client-ui-input-trigger/lib/client.js','utf8'),['MenuView'])
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
  const result=await build({entryPoints:['test/fixtures/pending-conversation-browser.tsx'],bundle:true,platform:'browser',format:'iife',outfile:'pending.js',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl','.ttf':'dataurl'},plugins:[{name:'raw',setup(b){b.onResolve({filter:/\?raw$/},async args=>({path:(await b.resolve(args.path.slice(0,-4),{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css+='\n'+(result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>browser?.close())
-it.each(['slash button','typed slash','research tab'])('opens the selected home project for %s without submitting the draft',async action=>{
+it.each(['empty button','button with draft','typed slash','research tab'])('hands the first home %s to the mounted project without submitting',async action=>{
  const page=await browser.newPage({viewport:{width:1200,height:760}});
+ page.setDefaultTimeout(4500);
  try{
   await page.setContent('<style>'+css+'</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right"><div id="right-body"></div></aside>');
-  await page.evaluate(data=>window.pendingInput={...data,recentWorkspaceId:'B'},input);
+  await page.evaluate(data=>window.pendingInput={...data,recentWorkspaceId:'B',verifyHandoff:true},input);
   await page.addScriptTag({content:script});
   const home=page.locator('#app [data-odyssey-page=home]');
   await home.getByText('研究项目 B',{exact:true}).waitFor();
@@ -34,24 +36,30 @@ it.each(['slash button','typed slash','research tab'])('opens the selected home 
   expect(await home.getByRole('button',{name:'命令',exact:true}).isEnabled()).toBe(true);
   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([]);
   const field=home.locator('textarea');
-  let expected;
+  const text=action==='typed slash'?'/':action==='empty button'?'':'保留草稿';
   if(action==='typed slash'){
    await field.pressSequentially('/');
-   expected={type:'commands',id:'new-session',draft:'/',caret:1,typed:true};
   }else{
-   await field.fill('保留草稿');
+   if(text)await field.fill(text);
    if(action==='research tab'){
     await home.getByRole('tab',{name:'研究',exact:true}).click();
-    expected={type:'view',id:'new-session',view:'research'};
    }else{
-    await field.evaluate(el=>el.setSelectionRange(2,2));
+    if(text)await field.evaluate(el=>el.setSelectionRange(2,2));
     await home.getByRole('button',{name:'命令',exact:true}).click();
-    expected={type:'commands',id:'new-session',draft:'保留草稿',caret:2,typed:false};
    }
   }
-  const open={type:'open',id:'new-session'};
-  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toEqual([
-   {type:'create',workspaceId:'B'},...action==='research tab'?[expected,open]:[open,expected],
+  const project=page.locator('[data-mounted-project=new-session]');
+  await project.waitFor();
+  expect(await project.locator('textarea').inputValue()).toBe(text);
+  expect(await page.getByRole('listbox').count()).toBe(0);
+  await page.evaluate(()=>window.pendingFixture.readySession());
+  if(action!=='research tab'){
+   await project.getByRole('listbox').getByRole('option').first().waitFor({state:'visible'});
+   const range=action==='typed slash'?[0,1]:text?[2,2]:[0,0];
+   expect(await page.evaluate(()=>{const {start,end,draftRev}=window.pendingFixture.controller.menu.getSnapshot().hit.span;return {range:[start,end],current:draftRev===window.pendingFixture.real.snapshot.draftRev}})).toEqual({range,current:true});
+  }
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   {type:'create',workspaceId:'B'},...action==='research tab'?[{type:'view',id:'new-session',view:'research'}]:[],{type:'open',id:'new-session'},
   ]);
  }finally{await page.close()}
 },15000)
