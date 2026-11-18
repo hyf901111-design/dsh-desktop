@@ -49,6 +49,8 @@ it('restores the observed domain for saved trend charts and preserves legend, cu
  expect(ticks[0]).toBe('89.35');expect(ticks[4]).toBe('103.65');
  w.document.querySelector('[data-chart-series="0"]').click();
  expect(w.document.querySelectorAll('g[data-series]')).toHaveLength(1);
+ expect(w.document.querySelector('.chart-readout').textContent).toContain('基准 101');
+ w.document.querySelector('.template-chart').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Home',bubbles:true}));
  expect(w.document.querySelector('.chart-readout').textContent).toContain('基准 100');
  expect(embeddedRoutes(next)).toEqual(embeddedRoutes(old));expect(routes(next)).toEqual(routes(old));
  expect(readTemplateModel({type:'html',html:next})).toEqual(readTemplateModel({type:'html',html:old}));
