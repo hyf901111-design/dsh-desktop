@@ -176,6 +176,80 @@
           "正常布局依赖渲染器读取当前字体和列宽；数据时间与行情提供方的发布节奏一致"
         ],
         "generatedAt": "2026-11-18T08:25:04.942Z"
+      },
+      "merged": {
+        "mergeCommit": "35b05ba33c3e4d9eb4a92c46f5147e2840181532",
+        "verificationCommit": "35b05ba33c3e4d9eb4a92c46f5147e2840181532",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "35b05ba33c3e4d9eb4a92c46f5147e2840181532",
+            "completedAt": "2026-11-18T08:25:08.870Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "35b05ba33c3e4d9eb4a92c46f5147e2840181532",
+            "completedAt": "2026-11-18T08:25:08.870Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "--testTimeout=20000",
+              "test/research-task-runtime.test.js",
+              "test/hosted-ark-runtime.test.js",
+              "test/research-grid-generation-fit.test.js",
+              "test/research-generation-controls.test.ts",
+              "test/generation-progress-persistence.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/research-workbench-feedback-actions.test.js",
+              "test/workbench-feedback-upgrade-preservation.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/cartesian-chart-details.test.js",
+              "test/cartesian-chart-reading.test.js",
+              "test/cartesian-chart-axis-precision.test.js",
+              "test/cartesian-chart-template.test.js",
+              "test/cartesian-chart-label-spacing.test.js",
+              "test/chart-detail-projection.test.js",
+              "test/component-reading-footer.test.js",
+              "test/component-reading-footer-browser.test.js",
+              "test/stored-template-refinements.test.js",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "test/conversation-response-history.test.js",
+              "test/conversation-response-history-browser.test.js",
+              "test/component-source-projection.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-fund-comparison.test.js",
+              "test/workbench-observed-sources.test.js",
+              "test/workbench-source-views.test.js",
+              "test/workbench-source-snapshot.test.js",
+              "test/workbench-source-exclusive-execution.test.js",
+              "test/workbench-source-policy.test.js",
+              "test/bundled-tushare-mcp.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npx vitest run --testTimeout=20000 test/research-task-runtime.test.js test/hosted-ark-runtime.test.js test/research-grid-generation-fit.test.js test/research-generation-controls.test.ts test/generation-progress-persistence.test.js test/research-workbench-feedback.test.js test/research-workbench-feedback-actions.test.js test/workbench-feedback-upgrade-preservation.test.js test/research-planning-feedback.test.js test/cartesian-chart-details.test.js test/cartesian-chart-reading.test.js test/cartesian-chart-axis-precision.test.js test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/chart-detail-projection.test.js test/component-reading-footer.test.js test/component-reading-footer-browser.test.js test/stored-template-refinements.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-history.test.js test/conversation-response-history-browser.test.js test/component-source-projection.test.js test/workbench-execution-policy.test.js test/workbench-fund-comparison.test.js test/workbench-observed-sources.test.js test/workbench-source-views.test.js test/workbench-source-snapshot.test.js test/workbench-source-exclusive-execution.test.js test/workbench-source-policy.test.js test/bundled-tushare-mcp.test.ts",
+            "verifiedCommit": "35b05ba33c3e4d9eb4a92c46f5147e2840181532",
+            "completedAt": "2026-11-18T08:25:08.870Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-18T08:25:08.870Z"
       }
     }
   ],
