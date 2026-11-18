@@ -19,6 +19,10 @@ export function initialWorkbenchInformationPlan(request, english = false) {
     return say('先从指定材料提取对象、指标和来源。可比较的记录进入图表，原文和依据放在同卡的详情中。', 'I’ll extract the subjects, measures and sources from the specified material, chart comparable records, and keep the original evidence in the card details.')
   }
   if (/禁止|不要|不需要|仅限|只需|只看|只做|只要|仅做|\b(?:only|exclude|without|do not)\b/iu.test(text)) return ''
+  if (/(?:调调|调整|改改|改动|改一下|修改|adjust|change)/iu.test(text) &&
+      /比(?:较|比|两)|对比|比较|compare/iu.test(text) && /差多少|差额|划算|成本|费用|总价|人均|difference|cost/iu.test(text)) {
+    return say('会把各方案的可调输入放在同一个比较工具里。改动一个数字，就能看到总额和方案间的差额怎样变化。', 'I’ll put the scenarios and their editable inputs in one comparison tool so you can see how each adjustment changes the totals and their difference.')
+  }
   const futures = /期货|\bfutures\b/iu.test(text)
   const specialized = /期权|股指|中金所|大商所|郑商所|广期所|外盘|境外|海外|盘中|分钟|分时|历史|回测|回放|[12]\d{3}年|\b(?:CME|CFFEX|DCE|CZCE|GFEX|intraday|historical|options)\b/iu.test(text)
   const broadFutures = generalFuturesWorkbench(text)
