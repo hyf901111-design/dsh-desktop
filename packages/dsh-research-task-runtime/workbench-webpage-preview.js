@@ -132,8 +132,10 @@ const pageCss = workbenchModeCss() + `
   :root:is([data-workbench-style="dark"],[data-workbench-style="openterminal"]){color-scheme:dark}
   :root[data-workbench-style],:root[data-workbench-style] body{height:auto!important;min-height:0!important;background-color:var(--sherlock-bg)!important;color:var(--sherlock-text)!important}
   :root[data-workbench-style] body>:where(main,#root,#app,.app,.page,.wrap){min-height:0!important;height:auto!important}
-  :where(:root[data-workbench-style]) :where(input,select,button,textarea){color:inherit;accent-color:var(--sherlock-control-primary)}
-  :root[data-workbench-style] :focus-visible{outline-color:var(--sherlock-control-primary)}
+  @layer workbench-compact {
+    :where(:root[data-workbench-style]) :where(input,select,button,textarea){color:inherit;accent-color:var(--sherlock-control-primary)}
+    :where(:root[data-workbench-style]) :where(:focus-visible){outline-color:var(--sherlock-control-primary)}
+  }
 }`
 
 export const workbenchWebpagePreviewSuffix = '\n<style data-workbench-page-style>'+pageCss+'</style><script>('+

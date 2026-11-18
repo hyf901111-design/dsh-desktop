@@ -168,6 +168,8 @@ describe('workbench planning continuation', () => {
       expect(run.wire.system).toContain('border-radius: 0')
       expect(run.wire.system).toContain('省去摘要侧边色条、分区顶部色带和胶囊外框')
       expect(run.wire.system).toContain('可见的键盘焦点')
+      expect(run.wire.system).toContain('htmlFile.stylePreset="compact-v1"')
+      expect(run.wire.system).toContain('浅色、深色和彭博模式共用布局')
     } finally { run.dispose() }
   })
 
