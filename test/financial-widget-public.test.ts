@@ -196,20 +196,28 @@ it('maps Doubao news source and optional publication time independently of retri
   {url:'https://example.net/zh/news?__nc=123',title:'AI 新闻快讯'},
   {url:'https://example.net/en/ai_news?page=3',title:'AI News - 最新人工智能行业资讯'},
   {url:'https://example.net/ja/artificial-intelligence/',title:'人工知能 Archives | eWeek'},
+  {url:'https://www.stdaily.com/web/gjxw/node_388.html',title:'国际科技新闻'},
+  {url:'https://www.news.cn/tech/kjkx/index.html',title:'科技快讯_新华科技_新华网'},
+  {url:'https://kjj.hefei.gov.cn/kjzx/index.html',title:'科技资讯_合肥市科学技术局'},
+  {url:'https://news.youth.cn/kj/index.htm',title:'科技_新闻频道_中国青年网'},
+  {url:'https://example.com/tech/index.html?article_id=561',title:'最新 科技 新闻',snippet:'国产 芯片 亮相 大会 ， 支持 RISC-V 指令集。'},
+  {url:'https://example.com/2026/11/chip-news/index.html',title:'如何核实科技新闻'},
   {url:'https://example.com/?p=329',title:'编辑部报道'},
   {url:'https://example.org/story/326?q=finance',title:'市场收盘报道',publishedAt:'2026-11-13T17:30:00+08:00'},
   {url:'https://name:pass@example.net/private',title:'Invalid'}
  ]}))
  const service=createPublicFinancialWidgetData({identity:()=> 'one',accountSources:{doubao}})
  const result=await service.query({action:'news',query:'比特币',source:'doubao'})
- expect(doubao).toHaveBeenCalledWith('比特币 近一周新闻报道',8,expect.any(AbortSignal))
+ expect(doubao).toHaveBeenCalledWith('比特币 近一周新闻报道原文',8,expect.any(AbortSignal))
  expect(result).toMatchObject({source:'豆包搜索',receivedAt:expect.any(String),news:[
   {title:'市场收盘报道',source:'example.org',time:'2026-11-13T17:30:00+08:00'},
   {title:'比特币市场消息',source:'市场通讯',time:'2026-11-12T09:00:00+08:00'},
   {title:'交易所资讯',source:'example.net',time:null},
   {title:'未标注日期的报道',source:'example.org',time:null},
+  {title:'最新科技新闻',summary:'国产芯片亮相大会，支持 RISC-V 指令集。'},
+  {title:'如何核实科技新闻',source:'example.com'},
   {title:'编辑部报道',source:'example.com',time:null}
  ]})
  await service.query({action:'news',query:'上周市场',source:'doubao'})
- expect(doubao).toHaveBeenLastCalledWith('上周市场 新闻报道',8,expect.any(AbortSignal))
+ expect(doubao).toHaveBeenLastCalledWith('上周市场 新闻报道原文',8,expect.any(AbortSignal))
 })
