@@ -62,7 +62,18 @@ body{
 .workspace-app-title,.workspace-app-title *{-webkit-app-region:drag;user-select:none;cursor:default}
 @container(max-width:700px){html:not([data-navigation-sidebar-only]) .workspace-app-title:not(.workspace-app-heading)>span{display:none}}
 @container(max-width:480px){.workspace-app-topbar{gap:4px}}
-.workspace-home-topbar{position:absolute;inset:0 auto auto 0;z-index:10;pointer-events:none}
+.workspace-home-topbar{
+  position:absolute;inset:0 48px auto 0;width:auto;min-width:0;z-index:10;pointer-events:none;
+}
+.workspace-home-topbar .eb-workspace-controls{flex:0 1 auto}
+.workspace-home-topbar .eb-workspace-tabs{--workspace-tab-limit:100%;flex-shrink:0;overflow:visible}
+@container(max-width:480px){
+  .workspace-home-topbar .eb-workspace-tabs[aria-hidden=false]{
+    position:absolute;left:var(--odyssey-app-title-inset);top:38px;
+    max-width:calc(100cqw - 28px);flex-wrap:wrap;
+  }
+}
+
 .workspace-home-topbar :is(.workspace-app-title,.eb-workspace-controls){pointer-events:auto}
 .workspace-home-topbar .workspace-app-title>i{mask-image:${navigationAppIcon('new-chat')}}
 .workspace-app-heading[data-workspace-app=scheduled]>i{mask-image:${navigationAppIcon('scheduled')}}
@@ -130,7 +141,13 @@ body:has(>.workspace-view-settings[open]) :is(.wSkVaW_header,.wSkVaW_titleRow,.w
   grid-template-columns:44px repeat(4,56px) 28px;height:28px;
 }
 .workspace-view-fixed{text-align:center}
-.workspace-view-palette{grid-template-columns:repeat(6,minmax(0,1fr));margin-top:8px}
+.workspace-view-palette{
+  display:flex;justify-content:flex-start;margin-top:8px;padding-block:4px;border-radius:8px;
+  background:var(--odyssey-menu,#fff);backdrop-filter:blur(24px);
+}
+.workspace-view-settings .workspace-view-palette>button{flex:0 0 48px}
+.workspace-view-settings .workspace-view-palette>button[hidden]{display:none}
+
 .workspace-view-settings button:not([data-navigation-delete]){
   display:grid;place-items:center;padding:0;border:0;border-radius:7px;background:transparent;
   color:inherit;line-height:1;-webkit-app-region:no-drag;
@@ -149,16 +166,18 @@ body:has(>.workspace-view-settings[open]) :is(.wSkVaW_header,.wSkVaW_titleRow,.w
 .workspace-view-settings .workspace-view-slot>button:first-child,.workspace-view-settings .workspace-view-palette>button{
   width:100%;min-width:0;height:28px;font:inherit;line-height:20px;white-space:nowrap;cursor:grab;
 }
-.workspace-view-settings .workspace-view-palette>button{
-  background:var(--odyssey-menu,#fff);backdrop-filter:blur(24px);
-}
-.workspace-view-settings .workspace-view-palette>button:is(:hover,[aria-pressed=true]){
-  background:color-mix(in srgb,var(--odyssey-menu,#fff),currentColor 12%);
-}
 .workspace-view-settings :is(.workspace-view-slot,.workspace-view-palette)>button>span{
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .workspace-view-settings .workspace-view-slot[data-empty]>button{cursor:pointer}
+.workspace-view-settings .workspace-view-slot[data-empty]>button::before,
+.workspace-view-settings .workspace-view-slot[data-empty]>button::after{content:none}
+.workspace-view-slot>button[data-workspace-editor-app]{translate:var(--workspace-slot-shift,0px) 0;transition:translate 180ms ease,opacity 140ms ease}
+.workspace-view-settings[data-dragging] .workspace-view-slot>button{pointer-events:none}
+.workspace-view-settings[data-dragging] .workspace-view-remove{visibility:hidden}
+.workspace-view-slot[data-slot-source]>button[data-workspace-editor-app]{opacity:0}
+.workspace-view-slot[data-slot-evicted]>button[data-workspace-editor-app]{opacity:.2}
+
 .workspace-view-settings[data-picking] .workspace-view-slot>button:first-child{cursor:copy}
 .workspace-view-settings [data-workspace-editor-app]{touch-action:none}
 .workspace-view-drag-ghost{
@@ -175,7 +194,10 @@ body:has(>.workspace-view-settings[open]) :is(.wSkVaW_header,.wSkVaW_titleRow,.w
 .workspace-view-settings .eb-workspace-edit{cursor:pointer}
 .workspace-view-settings-status{margin:6px 0 0;padding:4px 8px;border-radius:6px;background:var(--odyssey-menu,#fff)}
 .workspace-view-settings-status:empty{display:none}
-@media(prefers-reduced-motion:reduce){.workspace-view-palette>button>span{animation:none}}
+@media(prefers-reduced-motion:reduce){
+  .workspace-view-palette>button>span{animation:none}
+  .workspace-view-slot>button[data-workspace-editor-app]{transition:none}
+}
 .eb-app-divider{width:1px;height:16px;background:var(--eb-line);flex:none}.eb-tab-scroll{display:flex;gap:8px;min-width:0;overflow:auto;scrollbar-width:none}.eb-tab{height:32px;width:auto;min-width:80px;display:flex;align-items:center;gap:8px;padding:0 10px!important;color:var(--eb-muted)!important;font-size:13px!important}.eb-tab[aria-selected=true]{background:var(--eb-field);color:var(--eb-ink)!important}.eb-tab[data-pinned=true]{width:42px;min-width:42px}.eb-tab .eb-icon{width:14px;height:14px}.eb-tab-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}.eb-tab-close{width:20px;height:20px;display:grid;place-items:center;border-radius:4px}.eb-tab-close:hover{background:var(--eb-line)}.eb-tab-close .eb-icon{width:17px;height:17px}
 .eb-tab-scroll{position:relative;flex:1 1 0;max-width:var(--eb-tabs-max);overflow-x:auto;overflow-y:hidden}
 .eb-tab{position:relative;flex:1 1 0;min-width:32px;max-width:240px;overflow:hidden;cursor:pointer;border-radius:7px;line-height:17px}

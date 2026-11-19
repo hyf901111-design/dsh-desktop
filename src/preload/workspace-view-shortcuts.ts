@@ -1,5 +1,5 @@
 import {
-  defaultNavigationShortcuts, isTopNavigationApp, topNavigationApps, topShortcutCount,
+  defaultNavigationShortcuts, isTopNavigationApp, replaceNavigationShortcut, topNavigationApps, topShortcutCount,
   type NavigationShortcuts, type TopNavigationApp
 } from '../shared/navigation-shortcuts'
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
@@ -29,15 +29,16 @@ export function workspaceViewButton(document: Document, sessionId: string, view:
 }
 
 // Keep the incoming switcher open without replaying the manual animation.
-const expandingView = new WeakMap<Document, { sessionId: string; view: string; arrived: boolean }>()
+const expandingView = new WeakMap<Document, { sessionId: string | null; view: string; arrived: boolean }>()
+const globalWorkspaceNavigation = new WeakMap<Document, (view: string) => void>()
 
-export function keepWorkspaceViewsExpanded(document: Document, sessionId: string, view: string) {
+export function keepWorkspaceViewsExpanded(document: Document, sessionId: string | null, view: string) {
   const transition = { sessionId, view, arrived: false }
   expandingView.set(document, transition)
   document.documentElement.setAttribute('data-workspace-tabs-switching', '')
   document.defaultView?.setTimeout(() => {
     if (expandingView.get(document) === transition && !transition.arrived) clearWorkspaceViewsExpansion(document)
-  }, 2000)
+  }, sessionId === null ? 10000 : 2000)
 }
 
 export function clearWorkspaceViewsExpansion(document: Document) {
@@ -47,13 +48,25 @@ export function clearWorkspaceViewsExpansion(document: Document) {
 
 export function takeWorkspaceViewsExpansion(document: Document, sessionId: string | undefined, view: string | undefined) {
   const transition = expandingView.get(document)
-  if (!transition || transition.arrived || transition.sessionId !== sessionId || transition.view !== view) return false
+  if (!transition || transition.arrived ||
+    (transition.sessionId !== null && transition.sessionId !== sessionId) || transition.view !== view) return false
   transition.arrived = true
   const win = document.defaultView!
   win.requestAnimationFrame(() => win.requestAnimationFrame(() => {
     if (expandingView.get(document) === transition) clearWorkspaceViewsExpansion(document)
   }))
   return true
+}
+
+export function canNavigateGlobalWorkspace(document: Document) {
+  return globalWorkspaceNavigation.has(document)
+}
+
+export function navigateGlobalWorkspace(document: Document, view: string, reveal: () => void) {
+  if (view === 'chat') {
+    keepWorkspaceViewsExpanded(document, null, view)
+    reveal()
+  } else globalWorkspaceNavigation.get(document)?.(view)
 }
 
 export function navigateWorkspaceView(document: Document, sessionId: string, view: string, reveal: () => void) {
@@ -145,7 +158,18 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   nav.className = 'eb-workspace-tabs'
   controls.append(toggle, nav)
   let owner: HTMLElement | undefined, ownerId: string | undefined, expanded = false, frame = 0
-  let openingHome: AbortController | undefined
+  let ownerOnHome = false, openingHome: AbortController | undefined
+  if (openHome) globalWorkspaceNavigation.set(document, view => {
+    const app = topNavigationApps.find(candidate => viewForApp[candidate] === view)
+    if (!app) return
+    openingHome?.abort()
+    const request = new win.AbortController()
+    openingHome = request
+    keepWorkspaceViewsExpanded(document, null, view)
+    void Promise.resolve().then(() => openHome(app, request.signal)).catch(() => {
+      if (openingHome === request) clearWorkspaceViewsExpansion(document)
+    })
+  })
   const english = () => document.documentElement.dataset.odysseyLocale === 'en'
   const buttons = workspaceViews.map(([view, zh, en]) => {
     const button = document.createElement('button')
@@ -153,15 +177,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     button.dataset.workspaceNativeView = view
     button.addEventListener('click', () => {
       if (!owner || activeHeader() !== owner || button.getAttribute('aria-current') === 'true') return
-      if (owner.matches(homeRoot)) {
-        const app = topNavigationApps.find(app => viewForApp[app] === view)
-        if (app && openHome) {
-          openingHome?.abort()
-          openingHome = new win.AbortController()
-          void Promise.resolve(openHome(app, openingHome.signal)).catch(() => {})
-        }
-        return
-      }
+      if (owner.matches(homeRoot)) { navigateGlobalWorkspace(document, view, reveal); return }
       const id = owner.dataset.eworkNotesSession
       if (id) navigateWorkspaceView(document, id, view, reveal)
     })
@@ -197,18 +213,25 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   const sync = () => {
     frame = 0
     const header = activeHeader()
-    const onHome = header?.matches(homeRoot)
-    const id = onHome ? undefined : header?.dataset.eworkNotesSession
-    const selected = onHome ? 'chat' : header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected=true]')?.dataset.conversationViewId
+    const onHome = !!header?.matches(homeRoot)
     const transition = expandingView.get(document)
+    const id = onHome
+      ? header?.querySelector<HTMLElement>('[data-srb-session-header][data-ework-notes-session]')?.dataset.eworkNotesSession ??
+        (transition?.view === 'chat' ? transition.sessionId ?? undefined : undefined)
+      : header?.dataset.eworkNotesSession
+    const selected = onHome ? 'chat' : header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected=true]')?.dataset.conversationViewId
+    const nextOwnerId = onHome ? undefined : id
     const arrivingExpanded = takeWorkspaceViewsExpansion(document, id, selected)
-    const enteringNativeView = transition?.sessionId === id && nativeViews.some(([view]) => view === transition?.view)
-    if (header !== owner || id !== ownerId) {
+    const enteringNativeView = !!transition && (transition.sessionId === null || transition.sessionId === id) &&
+      nativeViews.some(([view]) => view === transition.view)
+    if (header !== owner || nextOwnerId !== ownerId || onHome !== ownerOnHome) {
+      const sameViewOwner = !!header && !!owner && nextOwnerId === ownerId && onHome === ownerOnHome
       controls.remove()
       homeTopbar.remove()
       owner = header
-      ownerId = id
-      expand(arrivingExpanded || enteringNativeView)
+      ownerId = nextOwnerId
+      ownerOnHome = onHome
+      expand(arrivingExpanded || enteringNativeView || (sameViewOwner && expanded))
       updated = ''
     } else if (arrivingExpanded) expand(true)
     if (!header) return
@@ -251,6 +274,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     observer.disconnect()
     win.cancelAnimationFrame(frame)
     openingHome?.abort()
+    if (openHome) globalWorkspaceNavigation.delete(document)
     document.removeEventListener('sherlock:workspace-surface-change', schedule)
     unobserve()
     controls.remove()
@@ -322,6 +346,23 @@ export function mountWorkspaceViewCustomization(document: Document) {
       target = slot
       target?.setAttribute('data-drop-target', '')
     }
+    const previewMove = (slot: HTMLElement | undefined, app: TopNavigationApp) => {
+      const current = settings.get()
+      const targetIndex = slot ? Number(slot.dataset.workspaceEditorSlot) : undefined
+      const next = targetIndex === undefined ? current.filter(isTopNavigationApp) : replaceNavigationShortcut(
+        { ...defaultNavigationShortcuts, top: current }, 'top', targetIndex, app
+      ).top
+      for (const [index, slotButton] of slotButtons.entries()) {
+        const item = slotButton.dataset.workspaceEditorApp
+        if (!isTopNavigationApp(item)) continue
+        const wrapper = slotButton.parentElement!
+        const position = next.indexOf(item)
+        const to = slotButtons[position]?.parentElement?.offsetLeft
+        wrapper.toggleAttribute('data-slot-source', item === app)
+        wrapper.toggleAttribute('data-slot-evicted', position < 0)
+        wrapper.style.setProperty('--workspace-slot-shift', (to === undefined ? 16 : to - wrapper.offsetLeft) + 'px')
+      }
+    }
     const pick = (app?: TopNavigationApp) => {
       picked = app
       panel.toggleAttribute('data-picking', !!app)
@@ -345,6 +386,10 @@ export function mountWorkspaceViewCustomization(document: Document) {
     const slotButtons: HTMLButtonElement[] = []
     const renderSlots = () => {
       const values = settings.get().filter(isTopNavigationApp)
+      for (const option of choices) {
+        const app = option.dataset.workspaceEditorApp
+        option.hidden = isTopNavigationApp(app) && values.includes(app)
+      }
       const slots = Array.from({ length: topShortcutCount }, (_, index) => {
         const app = values[index]
         const slot = document.createElement('div')
@@ -376,7 +421,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
         button.addEventListener('click', () => {
           if (picked) apply(index, picked, true)
           else if (isTopNavigationApp(app)) pick(app)
-          else choices[0]?.focus()
+          else choices.find(choice => !choice.hidden)?.focus()
         })
         return slot
       })
@@ -399,6 +444,12 @@ export function mountWorkspaceViewCustomization(document: Document) {
       press = undefined
       highlight()
       ghost.remove()
+      panel.removeAttribute('data-dragging')
+      for (const slot of strip.querySelectorAll<HTMLElement>('[data-workspace-editor-slot]')) {
+        slot.removeAttribute('data-slot-source')
+        slot.removeAttribute('data-slot-evicted')
+        slot.style.removeProperty('--workspace-slot-shift')
+      }
     }
     panel.addEventListener('pointerdown', event => {
       suppressClick = false
@@ -415,11 +466,16 @@ export function mountWorkspaceViewCustomization(document: Document) {
         pick()
         ghost.textContent = appName(press.app)
         panel.append(ghost)
+        panel.setAttribute('data-dragging', '')
+        previewMove(undefined, press.app)
         suppressClick = true
       }
       ghost.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`
       const slot = slotAt(event)
-      if (target !== slot) highlight(slot)
+      if (target !== slot) {
+        highlight(slot)
+        previewMove(slot, press.app)
+      }
     })
     panel.addEventListener('pointerup', event => {
       if (!press || press.id !== event.pointerId) return

@@ -512,7 +512,7 @@ function initializeUi(): void {
   document.addEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
   const openNavigationApp = async (app: NavigationShortcut, signal: AbortSignal, region?: NavigationRegion) => {
     workspaceViewRequest++
-    clearWorkspaceViewsExpansion(document)
+    if (region !== 'top') clearWorkspaceViewsExpansion(document)
     delete document.body.dataset.sessionWorkspaceSwitch
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app
@@ -545,7 +545,7 @@ function initializeUi(): void {
     else await scheduledView.open()
   }
   const disposeSessionWorkspaceViews = mountSessionWorkspaceViewShortcuts(document,
-    () => workspaceSurfaceHost.revealConversation(), openNavigationApp)
+    () => workspaceSurfaceHost.revealConversation(), (app, signal) => openNavigationApp(app, signal, 'top'))
   const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, openNavigationApp)
   const disposeWorkspaceContent = mountWorkspaceContentIndicators(document,
     (sessionId, views) => ipcRenderer.invoke('workspace-views:content', sessionId, views))
