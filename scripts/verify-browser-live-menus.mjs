@@ -28,7 +28,6 @@ function rendererFixture(){
   const calls=[],actions=[];let states=0
   const compact=input=>{const {html,css,...metadata}=input;let hash=0;for(let index=0;index<(html?.length||0);index++)hash=(Math.imul(hash,31)+html.charCodeAt(index))|0;return{...metadata,htmlBytes:html?.length,htmlHash:hash,cssBytes:css?.length}}
   const bridge={
-   workspacePointerInBar:bounds=>ipcRenderer.invoke('browser-app:request','workspace-pointer-in-bar',{bounds}),
    request:async(method,input={})=>{calls.push({method,input:method==='menu'?compact(input):input,at:performance.now()});return ipcRenderer.invoke('browser-app:request',method,input)},
    subscribe:listener=>{const receive=(_,state)=>{states++;listener(state)};ipcRenderer.on('browser-app:state',receive);return()=>ipcRenderer.removeListener('browser-app:state',receive)},
    subscribeAction:listener=>{const receive=(_,action)=>{actions.push(action);listener(action)};ipcRenderer.on('browser-app:menu-event',receive);return()=>ipcRenderer.removeListener('browser-app:menu-event',receive)},

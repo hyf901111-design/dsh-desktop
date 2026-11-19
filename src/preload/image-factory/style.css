@@ -26,7 +26,6 @@
 .if-top button,.if-top .eb-workspace-controls {-webkit-app-region:no-drag}
 .if-work:has(.if-more[aria-expanded=true],.if-tab-list) .if-top,
 .if-work:has(.if-more[aria-expanded=true],.if-tab-list) .if-top :is(.workspace-app-title,.workspace-app-title *,.if-top-title) {-webkit-app-region:no-drag}
-.if-top .eb-workspace-tabs {transition:flex-basis 200ms cubic-bezier(.2,.8,.2,1),opacity 200ms ease}
 .if-top-title {white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;-webkit-app-region:drag}
 .if-top-title:not(:empty) {border-left:1px solid var(--if-line);padding-left:12px;margin-left:4px}
 .if-top .eb-tab:focus-visible {outline-offset:-2px}
@@ -209,7 +208,6 @@ body[data-workspace-surface="image-factory"]:has([data-dsh-panel-host][data-odys
 }
 .if-gallery-tag {padding:2px 6px;border-radius:5px;background:var(--if-field);line-height:16px}
 @media(prefers-reduced-motion:reduce) {
-  .if-top .eb-workspace-tabs {transition:none}
   .if-gallery-viewport {scrollbar-width:thin}
   .if-gallery-cycle[data-repeat=true] {display:none}
   .if-gallery-art::before,.if-gallery-use {transition:none}

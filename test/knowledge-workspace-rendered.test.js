@@ -206,7 +206,6 @@ beforeAll(async () => {
         memory,
         async openImageFactoryCopy(id) { window.openImageRequest = { id, action: 'copy' } },
         async openImageFactorySource(id) { window.openImageRequest = { id, action: 'source' } },
-        workspacePointerInBar: document.body.hasAttribute('data-test-negative-native-pointer') ? async () => false : undefined,
         async request(method, args) {
           if (method === 'snapshot') return structuredClone(window.data)
           if (method === 'edit' && args.type === 'create-folder') {
@@ -924,7 +923,6 @@ it('keeps the workspace shortcuts open across the draggable knowledge header', a
         </header></div>
       </div>`)
     await page.evaluate(() => {
-      document.body.dataset.testNegativeNativePointer = ''
       document.querySelector('[data-conversation-view-id="notes"]').addEventListener('click', () => {
         document.body.dataset.selectedView = 'notes'
       })
@@ -948,14 +946,17 @@ it('keeps the workspace shortcuts open across the draggable knowledge header', a
     await title.hover()
     expect(await shortcuts.count()).toBe(0)
     await toggle.click()
-    await page.waitForTimeout(210)
+    await expect.poll(() => header.locator('.eb-workspace-tabs').evaluate(el =>
+      el.getAnimations().some(animation => animation.effect.getTiming().duration === 340))).toBe(true)
     expect(await toggle.getAttribute('aria-expanded')).toBe('true')
     await toggle.click()
     expect(await toggle.getAttribute('aria-expanded')).toBe('false')
     await title.hover()
     await toggle.hover()
+    expect(await shortcuts.count()).toBe(0)
+    await toggle.click()
     await shortcuts.waitFor()
-    expect(await shortcuts.getByRole('button').allTextContents()).toEqual(['对话', '研究', '笔记', '表格', '浏览器', '图像', '知识库'])
+    expect(await shortcuts.locator('[data-workspace-native-view]').allTextContents()).toEqual(['对话', '研究', '笔记', '表格'])
     expect(await shortcuts.getByRole('button', { name: '切换到笔记' }).evaluate(region)).toBe('no-drag')
     await title.hover()
     await files.hover()
@@ -964,7 +965,8 @@ it('keeps the workspace shortcuts open across the draggable knowledge header', a
     await page.waitForTimeout(210)
     expect(await toggle.getAttribute('aria-expanded')).toBe('true')
     await library.getByRole('button', { name: '筛选', exact: true }).hover()
-    await expect.poll(() => toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(await toggle.getAttribute('aria-expanded')).toBe('true')
+    await toggle.click()
     await toggle.focus()
     await toggle.press('Enter')
     await shortcuts.getByRole('button', { name: '切换到笔记' }).press('Escape')

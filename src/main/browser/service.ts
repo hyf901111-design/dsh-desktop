@@ -6,7 +6,7 @@ import {browserBookmarkAddress,updateBrowserBookmark,removeBrowserBookmarks} fro
 import {createBrowserPageAgent} from './page-agent'
 import {trackBrowserFavicon} from './favicon'
 import {createBrowserCorners} from './corners'
-import {app,clipboard,dialog,safeStorage,screen,session,shell,WebContentsView,type BrowserWindow,type WebContents,type IpcMain,type DownloadItem,type Session} from 'electron'
+import {app,clipboard,dialog,safeStorage,session,shell,WebContentsView,type BrowserWindow,type WebContents,type IpcMain,type DownloadItem,type Session} from 'electron'
 import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,constants} from 'node:fs'
 import {copyFile,stat} from 'node:fs/promises'
 import {join,basename,dirname} from 'node:path'
@@ -204,15 +204,6 @@ export function registerBrowserApp(options:Options){
   if(!model.tabs.length)model.newTab()
   if(method==='snapshot'){if(nativeMenus)void menu.warm();if(nativeRegion)void region.warm().catch(()=>{});return snapshot()}
   if(method==='check-downloads'){await checkDownloads();return true}
-  if(method==='workspace-pointer-in-bar'){
-   const bounds=input.bounds
-   if(!bounds||!['x','y','width','height'].every(key=>Number.isFinite(bounds[key]))||bounds.width<=0||bounds.height<=0)return false
-   const win=window()
-   if(!win.isVisible()||win.isMinimized())return false
-   const content=win.getContentBounds(),pointer=screen.getCursorScreenPoint(),zoom=win.webContents.getZoomFactor()
-   const x=(pointer.x-content.x)/zoom,y=(pointer.y-content.y)/zoom
-   return x>=bounds.x&&x<bounds.x+bounds.width&&y>=bounds.y&&y<bounds.y+bounds.height
-  }
   if(method==='menu-hide'){if(input?.passive){if(input.id===noticeScope?.id)hideNotices();return true}if(!input?.id||input.id===menuScope?.id){const focused=menu.isFocused();hideMenu();if(focused)window().webContents.focus()}return true}
   if(method==='menu'){
    if(!nativeMenus||!appActive||input.owner!==ownerSessionId||input.tabId!==current().id||input.url!==current().url||!current().url||current().page||current().error)throw Error('菜单所属网页已变化。')
