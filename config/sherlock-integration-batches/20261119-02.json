@@ -9,10 +9,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "切换图像页签时回收空画廊",
+        "featureName": "顶栏保持同一会话并切换视图，回收空画廊",
         "branch": "codex/feat/navigation-shortcuts-20261119",
         "baseCommit": "5b698e9b8a84586eac35448f79ac6ffe91d4f739",
-        "tipCommit": "4adf9fbf7fc01f71c89e7c3d67427de536f64222",
+        "tipCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
         "commits": [
           {
             "commit": "4adf9fbf7fc01f71c89e7c3d67427de536f64222",
@@ -20,9 +20,20 @@
               "5b698e9b8a84586eac35448f79ac6ffe91d4f739"
             ],
             "subject": "切换图像页签时回收没有编辑内容的画廊"
+          },
+          {
+            "commit": "497c4211c069bea38f1674de42109b3c797e2a6d",
+            "parents": [
+              "4adf9fbf7fc01f71c89e7c3d67427de536f64222"
+            ],
+            "subject": "恢复同一会话在顶栏悬停切换应用视图"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/lib/image-factory-native.mjs"
@@ -33,7 +44,51 @@
           },
           {
             "status": "M",
+            "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/navigation-shortcuts.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
           }
         ],
         "checks": [
@@ -44,9 +99,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript 检查通过",
-            "verifiedCommit": "4adf9fbf7fc01f71c89e7c3d67427de536f64222",
-            "completedAt": "2026-11-19T11:42:25.591Z",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
+            "completedAt": "2026-11-19T11:52:20.750Z",
             "timeoutMs": 60000
           },
           {
@@ -54,6 +109,9 @@
               "npm",
               "test",
               "--",
+              "test/navigation-shortcuts.test.ts",
+              "test/browser-app-native.test.js",
+              "test/image-factory.test.js",
               "test/image-factory-native.test.js",
               "test/image-factory-canvases.test.ts",
               "test/image-factory-canvas-workspace.test.ts",
@@ -61,23 +119,44 @@
               "test/pending-conversation.test.js"
             ],
             "outcome": "passed",
-            "summary": "66 项针对图像页签、画布、项目草稿和应用返回的检查通过",
-            "verifiedCommit": "4adf9fbf7fc01f71c89e7c3d67427de536f64222",
-            "completedAt": "2026-11-19T11:42:25.591Z",
+            "summary": "103 项与导航、图像页签及项目上下文直接相关的检查通过",
+            "verifiedCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
+            "completedAt": "2026-11-19T11:52:20.750Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "npm",
+              "test",
+              "--",
+              "test/browser-app-rendered.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "shared hover switcher|expands workspace shortcuts|owner-matched native workspace tabs|expanded workspace controls|opens workspace tabs only|hides the native add actions|workspace shortcuts open across"
+            ],
+            "outcome": "passed",
+            "summary": "Chromium 中检查七种模式选项、会话归属、窄栏布局和排除页面",
+            "verifiedCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
+            "completedAt": "2026-11-19T11:52:20.750Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 渲染实际图像画廊和画布页签，验证启动回收旧空页签、从浏览器选项目后返回图像、打开已编辑画布后回收空画廊。"
+          "summary": "Chromium 渲染验证展收、切换会话视图、共享同一会话项目以及图像空页签的显示。"
         },
         "acceptanceCriteria": [
-          "回收旧的未编辑页签，当前最多保留一个空画廊",
-          "切页签或离开图像应用回收闲置画廊",
-          "保留已编辑画布、输入草稿和执行中任务"
+          "会话顶栏悬停展开七种视图选项",
+          "切换视图保留当前会话和项目，首页、插件、定时任务不显示",
+          "图像空画廊在离开页签或应用后回收"
         ],
-        "risks": [],
-        "generatedAt": "2026-11-19T11:42:25.591Z"
+        "risks": [
+          "只支持研究视图的专用看板沿用原有会话能力限制"
+        ],
+        "generatedAt": "2026-11-19T11:52:20.750Z"
       }
     }
   ],
