@@ -12,7 +12,7 @@ import {
 import type { KnowledgeViewMessage, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
-import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
+import { findWorkspaceSession, navigateWorkspaceView, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
 import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
 import { knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
@@ -235,14 +235,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       if (view === 'chat') host.revealConversation()
       return
     }
-    const button = workspaceViewButton(document, sessionId, view)
-    if (!button?.isConnected || button.disabled) {
+    if (view === 'knowledge') { workspaceHover.current?.setExpanded(false); return }
+    if (!navigateWorkspaceView(document, sessionId, view, () => host.revealConversation()))
       setNotice({ text: '此会话视图暂不可用，请先打开对应会话。', error: true })
-      return
-    }
-    host.revealConversation()
-    const current = workspaceViewButton(document, sessionId, view)
-    if (current?.isConnected && !current.disabled) current.click()
   }
 
   useLayoutEffect(() => {
@@ -872,7 +867,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           aria-expanded={workspaceExpanded} aria-controls="knowledge-workspace-tabs"
           onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true" /></button>
         <nav id="knowledge-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label="工作区视图" aria-hidden={!workspaceExpanded}>
-          {workspaceViews.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} aria-label={`切换到${label}`}
+          {workspaceViews.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'knowledge'} aria-label={`切换到${label}`}
             tabIndex={workspaceExpanded ? 0 : -1} disabled={!hasWorkspaceSession && view !== 'chat'}
             title={!hasWorkspaceSession && view !== 'chat' ? `选择会话后可打开${label}` : label}
             onClick={() => openWorkspaceView(view)}>{label}</button>)}

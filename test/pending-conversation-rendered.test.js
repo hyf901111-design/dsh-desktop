@@ -319,6 +319,39 @@ it('changes only the right project, drops an empty draft, and opens the new work
  } finally { await page.close() }
 },16000);
 
+it('retains the session project for top-bar mode changes and still follows the manual default via the app rail', async () => {
+ const page=await browser.newPage({viewport:{width:1280,height:830}}),errors=[]
+ page.on('pageerror',error=>errors.push(error.message))
+ try {
+  await page.route('http://127.0.0.1/topbar-project',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset=utf-8>'}))
+  await page.goto('http://127.0.0.1/topbar-project')
+  await page.setContent('<style>'+css+'#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:32%;max-width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
+  await page.evaluate(input=>{window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true}},input)
+  await page.addScriptTag({content:script})
+  await page.evaluate(()=>window.pendingFixture.openSurface('browser'))
+  const chip=page.locator('#right [data-odyssey-composer-project] .pXSMma_workspace')
+  await chip.getByText('研究项目 A',{exact:true}).waitFor()
+  await chip.click()
+  await page.getByText('研究项目 B',{exact:true}).click()
+  await chip.getByText('研究项目 B',{exact:true}).waitFor()
+  for(const mode of ['image-factory','knowledge','browser']) {
+   await page.evaluate(mode=>{
+    document.body.dataset.sessionWorkspaceSwitch=window.pendingFixture.current.current
+    window.pendingFixture.openSurface(mode)
+   },mode)
+   await chip.getByText('研究项目 A',{exact:true}).waitFor()
+   expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
+  }
+  await page.evaluate(()=>{
+   delete document.body.dataset.sessionWorkspaceSwitch
+   window.pendingFixture.openSurface('image-factory')
+  })
+  await chip.getByText('研究项目 B',{exact:true}).waitFor()
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  expect(errors).toEqual([])
+ } finally { await page.close() }
+},15000)
+
 const projectModes = ['image-factory','browser','knowledge','notes','spreadsheet','research'];
 it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
  'keeps the active $mode page when changing or clearing the right project (dark: $dark)',

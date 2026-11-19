@@ -1,11 +1,13 @@
 import {expect,it,vi} from 'vitest'
 import {Window} from 'happy-dom'
 import {createRequire} from 'node:module'
+import {stripComposerWorkspaceBar} from '../scripts/lib/patch-figma-final-shell.mjs'
+import {stripKnowledgeSharedResearch} from '../scripts/lib/knowledge-shared-research.mjs'
 import {stripSpreadsheetClient} from '../scripts/lib/spreadsheet-client.mjs'
 import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-header-client.mjs'
 import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
 import {imageFactoryPrompt,readImageFactoryContext,stripImageFactoryContext} from '../packages/dsh-research-task-runtime/image-factory-context.js'
-const stripNewer = source => stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(source)))
+const stripNewer = source => stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(stripComposerWorkspaceBar(source)))))
 import {installBrowserNative,installWorkspaceAppSessions,browserSourceCodec,patchBrowserAppNative,stripBrowserAppNative,browserUserTextSegments} from '../scripts/lib/browser-app-native.mjs'
 import {installImageFactoryContext} from '../scripts/lib/image-factory-native.mjs'
 import {installKnowledgeSourceNavigation} from '../scripts/lib/knowledge-client.mjs'
@@ -66,7 +68,7 @@ it.each(['other-image','workspace-sheet'])('returns to the spreadsheet opened fr
  const disposeApps = installWorkspaceAppSessions({ sessions, doc, isBoardOnly: () => false, viewFor })
  const disposeKnowledge = installKnowledgeSourceNavigation({ sessions, selectView, document: doc })
  const image = installImageFactoryContext({ sessions, doc, win, setTaskView: id => selectView(id, 'chat'),
-  taskStorage: { read: async () => ({ epoch:1, tabs:Object.keys(byId).map(scope => ({ scope })) }), write: async () => {} } })
+  taskStorage: { read: async () => ({ epoch:1, tabs:Object.keys(byId).map(scope => ({ scope, title: scope })) }), write: async () => {} } })
  try {
   host.register('knowledge', doc.createElement('div'))
   host.register('image-factory', doc.createElement('div'))

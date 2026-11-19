@@ -26,17 +26,17 @@ export function installImageFactoryContext({
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable: name === 'inspect-tab' }))
   function hasTabActivity(scope) {
     const catalog = sessions.list.getSnapshot()
-    const summary = scope !== null && catalog.byId[scope]
+    const summary = scope !== null && catalog.byId?.[scope]
     if (summary?.running) return true
     if (!signal('inspect-tab', { scope })) return true
     if ([...jobs.values()].some(job => job.sessionId === scope || scope === null && job.draft)) return true
     if (hasProjectDraftActivity?.(scope ?? undefined)) return true
-    const pending = scope === null ? getPending() : undefined
+    const pending = scope === null ? getPending?.() : undefined
     const pendingState = pending?.getSnapshot?.()
     if (pendingState?.busy || pendingState?.activating) return true
-    const session = scope === null ? undefined : sessions.binding(scope)?.session?.getSnapshot()
+    const session = scope === null ? undefined : sessions.binding(scope)?.session?.getSnapshot?.()
     if (session?.running || session?.queue?.length || session?.pending?.length || session?.subagent) return true
-    const input = (scope === null ? pending?.shell : getExistingInput(scope))?.snapshot
+    const input = (scope === null ? pending?.shell : getExistingInput?.(scope))?.snapshot
     if (input?.draft?.trim() || input?.imageIds?.length || input?.occurrences?.length) return true
     // A session may also contain work from another mode. Look for image requests specifically.
     const chat = session?.chat

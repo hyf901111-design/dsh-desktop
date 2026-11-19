@@ -10,6 +10,8 @@ import {createComponentDataBridge} from './component-data-bridge'
 import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
+import { mountWorkspaceTopbarStyles } from './workspace-topbar'
+import { findWorkspaceSession, mountSessionWorkspaceViewShortcuts, sessionWorkspaceAppViews, sessionWorkspaceViewEvent, type SessionWorkspaceAppView } from './workspace-view-shortcuts'
 import { noteBlocksFromFile } from './notes/editor'
 import { openKnowledgeSession } from './knowledge/session-directory'
 import type { FileEditorMode, FileEditorSource } from '../shared/file-editor.mjs'
@@ -486,7 +488,33 @@ function initializeUi(): void {
   })
   const openImageFactory = () => { void flushBeforeCreate().then(imageFactory.open).catch(() => {}) }
   window.addEventListener(imageFactoryOpenEvent, openImageFactory)
+  mountWorkspaceTopbarStyles(document)
+  const disposeSessionWorkspaceViews = mountSessionWorkspaceViewShortcuts(document,
+    () => workspaceSurfaceHost.revealConversation(), workspacePointerInBar)
+  let workspaceViewRequest = 0
+  const openSessionWorkspaceView = async (sessionId: string, view: SessionWorkspaceAppView) => {
+    const request = ++workspaceViewRequest
+    const origin = workspaceSurfaceHost.current()
+    await flushBeforeCreate()
+    if (request !== workspaceViewRequest || workspaceSurfaceHost.current() !== origin ||
+        findWorkspaceSession(document)?.dataset.eworkNotesSession !== sessionId ||
+        !findWorkspaceSession(document, sessionId)?.querySelector('[data-srb-tabs]')) return
+    document.body.dataset.sessionWorkspaceSwitch = sessionId
+    if (view === 'browser') await browserApp.open(sessionId)
+    if (view === 'image-factory') imageFactory.openInSession(sessionId)
+    if (view === 'knowledge') window.dispatchEvent(new CustomEvent(knowledgeOpenEvent))
+  }
+  const onSessionWorkspaceView = (event: Event) => {
+    const detail = (event as CustomEvent<{ sessionId: string; view: SessionWorkspaceAppView }>).detail
+    if (!detail?.sessionId || findWorkspaceSession(document)?.dataset.eworkNotesSession !== detail.sessionId ||
+        !sessionWorkspaceAppViews.some(([id]) => id === detail.view)) return
+    event.preventDefault()
+    void openSessionWorkspaceView(detail.sessionId, detail.view).catch(() => {})
+  }
+  document.addEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
   const openNavigationApp = async (app: NavigationShortcut, signal: AbortSignal, region?: NavigationRegion) => {
+    workspaceViewRequest++
+    delete document.body.dataset.sessionWorkspaceSwitch
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app
     if (surface && surface === targetSurface) return
@@ -530,7 +558,8 @@ function initializeUi(): void {
     open: openNavigationApp
   })
   window.addEventListener('unload', () => {
-    navigationShortcuts?.dispose(); disposeHomeAppShortcuts(); imageFactory.dispose()
+    navigationShortcuts?.dispose(); disposeHomeAppShortcuts(); disposeSessionWorkspaceViews(); imageFactory.dispose()
+    document.removeEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
     window.removeEventListener(imageFactoryOpenEvent, openImageFactory)
   }, { once: true })
   const resetIntegrationIdentity = () => { navigationShortcuts?.reload(); imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
