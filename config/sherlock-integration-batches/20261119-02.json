@@ -9,30 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "中文槽位紧凑排序和顶栏直接切换",
+        "featureName": "复用首页编辑槽位和删除角标",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "4d064e53dc3f94c568df4653dbbbac668d13915a",
-        "tipCommit": "e0aba5631e3778b0170b6f2b678459ada5204c25",
+        "baseCommit": "e0aba5631e3778b0170b6f2b678459ada5204c25",
+        "tipCommit": "24be74502a302c7f1f3db99098f81e1f5c57f6d2",
         "commits": [
           {
-            "commit": "da7e919a1e4462af3e0ad64b1a84c3bd0ea73aef",
+            "commit": "24be74502a302c7f1f3db99098f81e1f5c57f6d2",
             "parents": [
-              "4d064e53dc3f94c568df4653dbbbac668d13915a"
+              "e0aba5631e3778b0170b6f2b678459ada5204c25"
             ],
-            "subject": "将顶栏槽位改为文字标签并减轻候选抖动"
-          },
-          {
-            "commit": "e0aba5631e3778b0170b6f2b678459ada5204c25",
-            "parents": [
-              "da7e919a1e4462af3e0ad64b1a84c3bd0ea73aef"
-            ],
-            "subject": "跨应用切换保持顶栏展开，支持标签插入顺移"
+            "subject": "复用首页顶栏槽位和删除样式并统一对齐"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/home-app-shortcuts.ts"
+            "path": "src/preload/navigation-shortcuts.css"
           },
           {
             "status": "M",
@@ -44,15 +37,7 @@
           },
           {
             "status": "M",
-            "path": "src/shared/navigation-shortcuts.ts"
-          },
-          {
-            "status": "M",
             "path": "test/browser-app-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/navigation-shortcuts.test.ts"
           }
         ],
         "checks": [
@@ -64,8 +49,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "e0aba5631e3778b0170b6f2b678459ada5204c25",
-            "completedAt": "2026-11-19T13:43:25.497Z",
+            "verifiedCommit": "24be74502a302c7f1f3db99098f81e1f5c57f6d2",
+            "completedAt": "2026-11-19T14:05:43.159Z",
             "timeoutMs": 60000
           },
           {
@@ -79,12 +64,12 @@
               "test/browser-app-rendered.test.js",
               "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "sizes top-bar labels|workspace width and opacity|expands workspace shortcuts|expanded workspace controls|workspace shortcuts open across|shares editable shortcuts|shared switcher|keeps the new-tab button|owner-matched native workspace tabs|hides the native add actions|opens workspace tabs on click"
+              "sizes top-bar labels|workspace width and opacity|expanded workspace controls|workspace shortcuts open across|shared switcher|shares editable shortcuts"
             ],
             "outcome": "passed",
-            "summary": "12 项渲染聚焦检查通过",
-            "verifiedCommit": "e0aba5631e3778b0170b6f2b678459ada5204c25",
-            "completedAt": "2026-11-19T13:43:25.497Z",
+            "summary": "7 项渲染聚焦检查通过",
+            "verifiedCommit": "24be74502a302c7f1f3db99098f81e1f5c57f6d2",
+            "completedAt": "2026-11-19T14:05:43.159Z",
             "timeoutMs": 60000
           },
           {
@@ -96,89 +81,22 @@
             ],
             "outcome": "passed",
             "summary": "4 项快捷入口配置检查通过",
-            "verifiedCommit": "e0aba5631e3778b0170b6f2b678459ada5204c25",
-            "completedAt": "2026-11-19T13:43:25.497Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "node",
-              "/tmp/ework-image-switcher-carry-rendered.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "图像页签保留展开并验证画廊回收",
-            "verifiedCommit": "e0aba5631e3778b0170b6f2b678459ada5204c25",
-            "completedAt": "2026-11-19T13:43:25.497Z",
+            "verifiedCommit": "24be74502a302c7f1f3db99098f81e1f5c57f6d2",
+            "completedAt": "2026-11-19T14:05:43.159Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 深浅色验证槽位直接显示文字、空槽灰底虚线、候选轻摇、拖放插入、顺移、超出四项后移除末项、删除补位及跨应用切换时没有展收动画。"
+          "summary": "Chromium 深浅色验证 56×28 等宽槽位、两行边缘对齐、6px 槽间距、删除角标的旧样式和点击区域，对照确认拖入、移除、补位之后槽位尺寸稳定。"
         },
         "acceptanceCriteria": [
-          "槽位显示中文名称，候选轻微抖动",
-          "已选标签自动靠左，插入时顺移且满四项从末尾挤出一项",
-          "同会话切换应用直接保持顶栏展开，手动控制保留动画"
+          "四个槽位采用首页旧版 56×28 尺寸，上下两行边缘对齐",
+          "已填槽位使用共用圆形减号及 20px 点击区",
+          "添加和删除后维持同一组槽位尺寸与间距"
         ],
         "risks": [],
-        "generatedAt": "2026-11-19T13:43:25.497Z"
-      },
-      "merged": {
-        "mergeCommit": "18ee129e736a79d9c3ea2d9a86ee2e2b776321a4",
-        "verificationCommit": "18ee129e736a79d9c3ea2d9a86ee2e2b776321a4",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "18ee129e736a79d9c3ea2d9a86ee2e2b776321a4",
-            "completedAt": "2026-11-19T13:43:34.786Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "18ee129e736a79d9c3ea2d9a86ee2e2b776321a4",
-            "completedAt": "2026-11-19T13:43:34.786Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "18ee129e736a79d9c3ea2d9a86ee2e2b776321a4",
-            "completedAt": "2026-11-19T13:43:34.786Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T13:43:34.786Z"
+        "generatedAt": "2026-11-19T14:05:43.159Z"
       }
     }
   ],
