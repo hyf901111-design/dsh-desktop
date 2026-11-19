@@ -373,7 +373,7 @@ export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readO
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     const reconcile=()=>{const nodes=[...snapshot.files,...snapshot.artifacts],next=[]
-    for(const node of nodes){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card)continue;let host=card.querySelector(':scope > .ew-grid-chrome-host');if(!host){host=document.createElement('div');host.className='ew-grid-chrome-host';card.appendChild(host)}for(const frame of card.querySelectorAll('iframe[data-research-html-artifact],iframe[data-research-workbench-webpage]'))frame.contentWindow?.postMessage({type:'sherlock-workbench-selection',selected:card.hasAttribute('open')||snapshot.selection.selectedNodeIds.includes(node.id)},'*');next.push({node,host,expanded:card.hasAttribute('open'),blocked:card.hasAttribute('data-research-geometry-blocked')})}
+    for(const node of nodes){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card)continue;let host=card.querySelector(':scope > .ew-grid-chrome-host');if(!host){host=document.createElement('div');host.className='ew-grid-chrome-host';card.appendChild(host)}for(const frame of card.querySelectorAll('iframe[data-research-html-artifact],iframe[data-research-html-preview]'))frame.contentWindow?.postMessage({type:'sherlock-workbench-selection',selected:card.hasAttribute('open')||snapshot.selection.selectedNodeIds.includes(node.id)},'*');next.push({node,host,expanded:card.hasAttribute('open'),blocked:card.hasAttribute('data-research-geometry-blocked')})}
     setHosts(previous=>previous.length===next.length&&next.every((n,i)=>previous[i].host===n.host&&previous[i].node===n.node&&previous[i].expanded===n.expanded&&previous[i].blocked===n.blocked)?previous:next)
     };reconcile();root.addEventListener('load',reconcile,true);const observer=new MutationObserver(reconcile);observer.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['open','data-research-geometry-blocked']});return()=>{observer.disconnect();root.removeEventListener('load',reconcile,true)}
   },[snapshot.files,snapshot.artifacts,snapshot.selection,rootRef])
@@ -1030,8 +1030,12 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const contentSize=event=>{
       const data=event.data
       if(data?.type==='sherlock-content-pan'){
-        if(event.origin!=='null')return
-        const frame=[...root.querySelectorAll('iframe[data-research-workbench-webpage]')].find(el=>el.contentWindow===event.source)
+        const frame=[...root.querySelectorAll('iframe[data-research-html-preview]')].find(el=>el.contentWindow===event.source)
+        if(!frame)return
+        // Standalone pages are opaque. A regular project file retains its
+        // capability origin, including under Electron's preview protocol.
+        const url=new URL(frame.src)
+        if(event.origin!=='null' && event.origin!==url.protocol+'//'+url.host)return
         const card=frame?.closest('[data-research-node-id]')
         if(!card||card.hasAttribute('open')||frame.closest('dialog[open]'))return
         const init=componentWheelPan(data,frame.getBoundingClientRect())

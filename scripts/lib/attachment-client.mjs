@@ -138,7 +138,10 @@ export function patchAttachmentClient(source){
  const htmlFrame='"data-research-html-preview": "",'
  once(htmlFrame,htmlFrame+'\n                "data-research-workbench-webpage": preview.descriptor.name?.toLowerCase().endsWith(".workbench.html") || void 0,')
  const frameSource='src: preview.descriptor.url,\n\t\t\t\ttitle: node.displayName ?? node.name,'
- once(frameSource,'src: preview.descriptor.name?.toLowerCase().endsWith(".workbench.html") ? preview.descriptor.url + "?workbench" : preview.descriptor.url,\n\t\t\t\ttitle: node.displayName ?? node.name,')
+ const workbenchFrameSource='src: preview.descriptor.name?.toLowerCase().endsWith(".workbench.html") ? preview.descriptor.url + "?workbench" : preview.descriptor.url,\n\t\t\t\ttitle: node.displayName ?? node.name,'
+ const boardFrameSource=workbenchFrameSource.replace(': preview.descriptor.url,', ': preview.descriptor.url + "?board-scroll",')
+ if(source.includes(workbenchFrameSource))source=source.replace(workbenchFrameSource,boardFrameSource)
+ else once(frameSource,boardFrameSource)
  const types=/const RESEARCH_CONTAINER_TYPES = (?:\/\* @__PURE__ \*\/ )?new Set\(\[[^\]]+\]/;if(!source.match(types))throw Error('Attachment native types missing');if(!source.match(types)[0].includes('"files"'))source=source.replace(types,s=>s.replace('new Set([','new Set(["files", "gallery", '))
  if(!source.includes('if (value.type === "files" || value.type === "gallery") return researchAttachmentSpec(value);'))once('if (value.type === "web") {','if (value.type === "files" || value.type === "gallery") return researchAttachmentSpec(value);\n\t\t\tif (value.type === "web") {')
  if(!source.includes("if (['files','gallery'].includes(spec.type)) return [spec.title"))once("if (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;","if (['files','gallery'].includes(spec.type)) return [spec.title,spec.source,spec.date,spec.description,...spec.items.map(i=>[i.name,i.description,i.source,i.date,i.url,i.relativePath].filter(Boolean).join(' · '))].filter(Boolean).join('\\n');\n\t\t\tif (spec.type === 'html') return researchHtmlText(spec.html) || spec.title;")

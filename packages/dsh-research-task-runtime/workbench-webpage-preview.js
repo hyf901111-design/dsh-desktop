@@ -1,4 +1,4 @@
-import {researchFrameWheelMessage} from './workbench-frame-wheel.js'
+import {boardFileWheelSuffix} from './workbench-frame-wheel.js'
 import {webpageGeometryCss} from './workbench-webpage-compact.js'
 import {validWorkbenchStyleMessage, workbenchModeCss} from './workbench-style.js'
 
@@ -14,7 +14,7 @@ const roles = {
 
 // Runs only inside the isolated preview document. The parent supplies a mode,
 // never CSS, HTML, file paths or callbacks.
-function installWebpagePreview(validMessage, aliases, frameWheel) {
+function installWebpagePreview(validMessage, aliases) {
   if (parent === window || !document.body) return
   const root = document.documentElement
   const authored = getComputedStyle(root)
@@ -109,27 +109,12 @@ function installWebpagePreview(validMessage, aliases, frameWheel) {
   function schedule() {
     if (!frame) frame = requestAnimationFrame(report)
   }
-  let installed = false, selected = true
+  let installed = false
   addEventListener('message', event => {
-    if (event.source !== parent) return
-    const data = event.data
-    if (data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') {
-      selected = data.selected
-      return
-    }
-    if (!validMessage(data)) return
+    if (event.source !== parent || !validMessage(event.data)) return
     root.dataset.workbenchStyle = event.data.mode
     if (!installed) {
       installed = true
-      // File previews have their own document. Only relay unused wheel input
-      // after the board handshake, after local widgets have handled the event.
-      document.addEventListener('wheel', event => {
-        if (event.metaKey || event.ctrlKey || event.altKey) return
-        const message = frameWheel(event, selected)
-        if (!message) return
-        event.preventDefault()
-        parent.postMessage(message, '*')
-      }, {passive:false})
       adaptTree(root)
       new MutationObserver(records => {
         for (const record of records) {
@@ -165,4 +150,4 @@ const pageCss = workbenchModeCss() + `
 }`
 
 export const workbenchWebpagePreviewSuffix = '\n<style data-workbench-page-style>'+pageCss+'</style><script>('+
-  installWebpagePreview.toString()+')('+validWorkbenchStyleMessage.toString()+','+JSON.stringify(roles)+','+researchFrameWheelMessage.toString()+')</script>'
+  installWebpagePreview.toString()+')('+validWorkbenchStyleMessage.toString()+','+JSON.stringify(roles)+')</script>'+boardFileWheelSuffix

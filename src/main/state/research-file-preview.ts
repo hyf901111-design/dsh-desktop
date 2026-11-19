@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import {
   chmodSync,
   createReadStream,
@@ -18,6 +18,7 @@ import {
   type TrustedWindow
 } from '../ipc-trust'
 import { isTrustedAppUrl } from '../security-policy'
+import { boardFileWheelScript, boardFileWheelSuffix } from '../../../packages/dsh-research-task-runtime/workbench-frame-wheel.js'
 import { workbenchWebpagePreviewSuffix } from '../../../packages/dsh-research-task-runtime/workbench-webpage-preview.js'
 
 export const RESEARCH_PREVIEW_SCHEME = 'sherlock-preview'
@@ -49,6 +50,8 @@ const MAX_PATH_LENGTH = 8 * 1024
 const MAX_ID_LENGTH = 512
 const MAGIC_PREFIX_BYTES = 512
 const workbenchPreviewTail = Buffer.from(workbenchWebpagePreviewSuffix)
+const fileWheelTail = Buffer.from(boardFileWheelSuffix)
+const fileWheelDigest = createHash('sha256').update(boardFileWheelScript).digest('base64')
 const MAX_JSON_VALIDATION_BYTES = 4 * 1024 * 1024
 const MAX_NATIVE_TEXT_PREVIEW_BYTES = 2 * 1024 * 1024
 const MAX_OFFICE_PREVIEW_BYTES = 64 * 1024 * 1024
@@ -806,13 +809,13 @@ function isRootPreviewKind(kind: PreviewKind | undefined): kind is PreviewKind {
   return kind?.rootPreview === true
 }
 
-export function researchPreviewHtmlCsp(capabilityToken: string, frameAncestor: string): string {
+export function researchPreviewHtmlCsp(capabilityToken: string, frameAncestor: string, boardScroll = false): string {
   const source = `${RESEARCH_PREVIEW_SCHEME}://${capabilityToken}`
   return [
     "default-src 'none'",
     `img-src ${source} data: blob: http: https:`,
     `style-src ${source} 'unsafe-inline' http: https:`,
-    `script-src ${source} http: https:`,
+    `script-src ${source} http: https:${boardScroll ? " 'sha256-" + fileWheelDigest + "'" : ''}`,
     `font-src ${source} data: http: https:`,
     `media-src ${source} blob: http: https:`,
     `connect-src ${source} http: https: ws: wss:`,
@@ -830,12 +833,12 @@ export function researchPreviewHtmlCsp(capabilityToken: string, frameAncestor: s
 function securityHeaders(
   contentType?: string,
   corsOrigin?: string,
-  htmlCapability?: { token: string; frameAncestor: string }
+  htmlCapability?: { token: string; frameAncestor: string; boardScroll?: boolean }
 ): Headers {
   const headers = new Headers({
     'Cache-Control': 'no-store',
     'Content-Security-Policy': htmlCapability
-      ? researchPreviewHtmlCsp(htmlCapability.token, htmlCapability.frameAncestor)
+      ? researchPreviewHtmlCsp(htmlCapability.token, htmlCapability.frameAncestor, htmlCapability.boardScroll)
       : RESEARCH_PREVIEW_CSP,
     'Referrer-Policy': 'no-referrer',
     'X-Content-Type-Options': 'nosniff'
@@ -881,18 +884,19 @@ function encodedPathAttack(rawUrl: string): boolean {
   return /%(?:00|2e|2f|5c)/i.test(rawPath) || rawPath.includes('\\') || rawPath.includes('\0')
 }
 
-function requestResource(requestUrl: string): { token: string; relativePath: string; workbench: boolean } | null {
+function requestResource(requestUrl: string): { token: string; relativePath: string; embedded: 'workbench' | 'board-scroll' | null } | null {
   if (encodedPathAttack(requestUrl)) return null
   try {
     const parsed = new URL(requestUrl)
-    const workbench = parsed.pathname === '/' && parsed.search === '?workbench'
+    const query = parsed.search.slice(1)
+    const embedded = parsed.pathname === '/' && (query === 'workbench' || query === 'board-scroll') ? query : null
     if (parsed.protocol !== `${RESEARCH_PREVIEW_SCHEME}:` || parsed.username || parsed.password ||
-        parsed.port || (parsed.search && !workbench) || parsed.hash || !opaqueId(parsed.hostname)) return null
+        parsed.port || (parsed.search && !embedded) || parsed.hash || !opaqueId(parsed.hostname)) return null
     const decoded = decodeURIComponent(parsed.pathname)
     if (decoded.includes('\0') || decoded.includes('\\')) return null
     const segments = decoded.split('/').filter(Boolean)
     if (segments.some((segment) => segment === '.' || segment === '..')) return null
-    return { token: parsed.hostname, relativePath: segments.join(path.sep), workbench }
+    return { token: parsed.hostname, relativePath: segments.join(path.sep), embedded }
   } catch {
     return null
   }
@@ -1132,7 +1136,8 @@ export class ResearchFilePreviewRegistry {
     // Workbench pages carry their own code and assets. They also use this
     // isolated document policy when the project file is dragged onto a board.
     const standalonePage = authorization.name.toLowerCase().endsWith('.workbench.html')
-    if (resource.workbench && !(standalonePage && authorization.allowSubresources && allowedOrigin)) return errorResponse(403, 'Preview path denied.')
+    if (resource.embedded && (!authorization.allowSubresources || !allowedOrigin ||
+        (resource.embedded === 'workbench') !== standalonePage)) return errorResponse(403, 'Preview path denied.')
     if (standalonePage && resource.relativePath !== '') return errorResponse(403, 'Preview path denied.')
     if (capability.mediaContentType && resource.relativePath !== '') return errorResponse(403, 'Preview path denied.')
     if (
@@ -1207,8 +1212,9 @@ export class ResearchFilePreviewRegistry {
 
       const htmlCapability = authorization.allowSubresources &&
         kind.contentType === 'text/html; charset=utf-8' && allowedOrigin
-        ? { token: resource.token, frameAncestor: allowedOrigin }
+        ? { token: resource.token, frameAncestor: allowedOrigin, boardScroll: resource.embedded === 'board-scroll' }
         : undefined
+      if (resource.embedded && !htmlCapability) return fail(403, 'Preview path denied.')
       const headers = securityHeaders(kind.contentType, corsOrigin, htmlCapability)
       if (standalonePage && htmlCapability) {
         headers.set('Content-Security-Policy', [
@@ -1221,7 +1227,9 @@ export class ResearchFilePreviewRegistry {
       headers.set('Accept-Ranges', 'bytes')
       // Only the embedded representation has a small host-owned suffix. Raw
       // reads and original-file exports use the exact bytes on disk.
-      const size = file.size + (resource.workbench ? workbenchPreviewTail.length : 0)
+      const previewTail = resource.embedded === 'workbench' ? workbenchPreviewTail
+        : resource.embedded === 'board-scroll' ? fileWheelTail : undefined
+      const size = file.size + (previewTail?.length ?? 0)
       const rangeHeader = request.headers.get('range')
       const range = rangeHeader === null ? null : parseRange(rangeHeader, size)
       if (rangeHeader !== null && range === null) {
@@ -1236,8 +1244,8 @@ export class ResearchFilePreviewRegistry {
       if (range) headers.set('Content-Range', `bytes ${start}-${end}/${size}`)
       let responseBody: BodyInit | null = null
       if (request.method !== 'HEAD' && length > 0) {
-        if (resource.workbench && end >= file.size) {
-          const tail = workbenchPreviewTail.subarray(Math.max(0, start-file.size), end-file.size+1)
+        if (previewTail && end >= file.size) {
+          const tail = previewTail.subarray(Math.max(0, start-file.size), end-file.size+1)
           responseBody = start >= file.size ? tail : this.fileSystem.stream(candidate,start,file.size-1)
             .pipeThrough(new TransformStream<Uint8Array, Uint8Array>({flush(controller) { controller.enqueue(tail) }}))
         } else {
