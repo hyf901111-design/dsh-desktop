@@ -60,7 +60,7 @@ body{
   --odyssey-app-title-gap:7px;
   --odyssey-app-title-font:500 14px/20px var(--odyssey-font-ui,system-ui);
 }
-.workspace-app-topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;height:var(--odyssey-workspace-header-height,44px);flex:none;padding:0 12px 0 var(--odyssey-app-title-inset)}
+.workspace-app-topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;height:var(--odyssey-workspace-header-height,44px);flex:none;padding:0 12px 0 var(--odyssey-app-title-inset);user-select:none}
 .workspace-app-title{display:flex;align-items:center;gap:var(--odyssey-app-title-gap);height:32px;margin:0;font:var(--odyssey-app-title-font);flex:none;white-space:nowrap}
 .workspace-app-title>i{display:inline-block;flex:none;width:var(--odyssey-app-title-icon-size);height:var(--odyssey-app-title-icon-size);background:currentColor;mask-position:center;mask-size:contain;mask-repeat:no-repeat}
 .workspace-app-title,.workspace-app-title *{-webkit-app-region:drag;user-select:none;cursor:default}

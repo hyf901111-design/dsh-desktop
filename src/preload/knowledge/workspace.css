@@ -19,6 +19,7 @@
   color: var(--knowledge-ink);
   font: 14px/22px var(--odyssey-font-ui, 'Noto Sans SC', sans-serif);
   isolation: isolate;
+  user-select: none;
   container-type: inline-size;
 }
 .knowledge-workspace[data-dark=true] {
@@ -34,6 +35,10 @@
   --knowledge-control-hover: #3b3b3b;
   --knowledge-control-active: #484848;
   color-scheme: dark;
+}
+/* The library is an app surface. Preserve selection in fields and document content. */
+.knowledge-workspace :is(input, textarea, [contenteditable]:not([contenteditable=false]), .knowledge-preview, .knowledge-preview-content, .knowledge-memory-document) {
+  user-select: text;
 }
 .knowledge-workspace[hidden] { display: none !important; }
 .knowledge-workspace[data-settings-open=true] { visibility: hidden; }
