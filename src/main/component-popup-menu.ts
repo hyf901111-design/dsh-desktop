@@ -9,7 +9,7 @@ export class ComponentPopupMenu{
  private current?:{state:NoteMenuState;resolve:(id:string|null)=>void}
  private popup:NoteNativeMenu
  constructor(private parent:BrowserWindow){
-  this.popup=new NoteNativeMenu({getWindow:()=>parent,owner:()=>String(parent.webContents.id),canRead:()=>!!this.current&&!parent.isDestroyed(),title:'组件操作菜单',displayBounds:true,documentHtml:componentMenuDocumentHtml,presentation:componentMenuPresentation,selectable:item=>!this.disabled(item),emit:event=>this.receive(event)})
+  this.popup=new NoteNativeMenu({getWindow:()=>parent,owner:()=>String(parent.webContents.id),canRead:()=>!!this.current&&!parent.isDestroyed(),title:'组件操作菜单',dismissOnOwnerPress:true,displayBounds:true,documentHtml:componentMenuDocumentHtml,presentation:componentMenuPresentation,selectable:item=>!this.disabled(item),emit:event=>this.receive(event)})
  }
  private disabled(item:NoteMenuItem){return (item as ComponentMenuItem).disabled===true||(item as ComponentMenuItem).separator===true}
  show(value:unknown):Promise<string|null>{

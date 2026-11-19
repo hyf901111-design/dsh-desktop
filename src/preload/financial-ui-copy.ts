@@ -1,5 +1,10 @@
+import headerEditLock from '../shared/header-edit-lock.json'
+
 /** Product labels only; security names, article text and saved user titles remain source content. */
 export const financialUiCopy: Record<string,string> = {
+ [headerEditLock.locked.zh]:headerEditLock.locked.en,
+ [headerEditLock.unlocked.zh]:headerEditLock.unlocked.en,
+ [headerEditLock.readOnly.zh]:headerEditLock.readOnly.en,
  '日历':'Calendar','新建事项':'New event','日历已更新':'Calendar updated',
  '组件库':'Component library','关闭组件库':'Close component library',
  '已添加至组件库':'Added to component library',

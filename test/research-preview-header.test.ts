@@ -47,15 +47,15 @@ async function fixture({legacy=false,owned=false,favorites=[] as any[],boards=[]
 
 it('shows the icon-only mode first and keeps board actions in the more menu',async()=>{
  const f=await fixture(),buttons=[...f.host.querySelectorAll('.srb-actions > button')]
- expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(['切换到预览模式','更多看板操作'])
+ expect(buttons.map(button=>button.getAttribute('aria-label'))).toEqual(['未锁定，可编辑。点击锁定','更多看板操作'])
  expect(buttons[0]).toBe(f.toggle())
  expect(f.toggle()!.textContent).toBe('')
- expect(f.toggle()!.querySelector('[data-research-preview-switch]')).toBeNull()
- expect(f.toggle()!.querySelector('[data-research-preview-icon="edit"][data-research-preview-glyph="pencil-line"]')).not.toBeNull()
+ expect(f.toggle()!.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
+ expect(f.toggle()!.querySelector('[data-research-preview-icon="edit"][data-research-preview-glyph="lock-open"]')).not.toBeNull()
  await f.click()
  expect(f.workspaceFor('a').getPreviewMode()).toBe(true)
- expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到编辑模式')
- expect(f.toggle()!.title).toBe('当前为预览模式，点击切换到编辑模式')
+ expect(f.toggle()!.getAttribute('aria-label')).toBe('已锁定，点击解锁编辑')
+ expect(f.toggle()!.title).toBe('已锁定，点击解锁编辑')
  expect(f.toggle()!.textContent).toBe('')
  expect(f.toggle()!.querySelector('[data-research-preview-icon="preview"]')).not.toBeNull()
  const menuButton=buttons[1] as unknown as HTMLButtonElement
@@ -129,6 +129,16 @@ it('disables the real header throughout native ownership and restores its origin
 })
 
 const personalView={boardId:'stable-board',localSessionId:'a',board:{sharingState:'ownerOnly',lifecycle:'active'},permissions:{read:true,manage:true},members:[],presence:[],connection:'online'}
+it('shows a closed noninteractive lock on a read-only board even with an editable local preference',async()=>{
+ const f=await fixture({view:{...personalView,permissions:{read:true,edit:false,manage:false}}})
+ expect(f.toggle()!.getAttribute('aria-label')).toBe('已锁定，仅供查看')
+ expect(f.toggle()!.getAttribute('aria-pressed')).toBe('true')
+ expect(f.toggle()!.disabled).toBe(true)
+ expect(f.toggle()!.querySelector('[data-research-preview-glyph="lock"]')).not.toBeNull()
+ await f.click()
+ expect(f.workspaceFor('a').getPreviewMode()).toBe(false)
+})
+
 it.each([
  {name:'ordinary workspace',favorites:[],boards:[],view:null,add:true},
  {name:'registered favorite with default pin',favorites:[{sessionId:'a',favoriteId:'fav',dedicated:false}],boards:[],view:null,add:false},
@@ -160,7 +170,7 @@ it.each([true,false])('retains shared-view permissions in the board menu (read=%
 it('localizes the real mode toggle state, action and accessible hint live without changing the persisted mode',async()=>{
  const f=await fixture();const stop=mountUiLocalization(f.win.document as unknown as Document);cleanup.push(async()=>stop());
  f.win.document.documentElement.dataset.odysseyLocale='en';await f.win.happyDOM.waitUntilComplete();
- expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to preview mode');expect(f.toggle()!.title).toBe('Edit mode is active. Click to switch to preview mode');
- await f.click();await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('Switch to edit mode');expect(f.toggle()!.title).toBe('Preview mode is active. Click to switch to edit mode');
- f.win.document.documentElement.dataset.odysseyLocale='zh';await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('切换到编辑模式');expect(f.workspaceFor('a').getPreviewMode()).toBe(true);expect(f.errors).toEqual([])
+ expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('Unlocked for editing. Click to lock');expect(f.toggle()!.title).toBe('Unlocked for editing. Click to lock');
+ await f.click();await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('Locked. Click to unlock editing');expect(f.toggle()!.title).toBe('Locked. Click to unlock editing');
+ f.win.document.documentElement.dataset.odysseyLocale='zh';await f.win.happyDOM.waitUntilComplete();expect(f.toggle()!.textContent).toBe('');expect(f.toggle()!.getAttribute('aria-label')).toBe('已锁定，点击解锁编辑');expect(f.workspaceFor('a').getPreviewMode()).toBe(true);expect(f.errors).toEqual([])
 })

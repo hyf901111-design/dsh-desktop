@@ -22,7 +22,7 @@ async function fixture(initial='/work/a.pptx',options:{editable?:boolean,load?:'
   React.useEffect(()=>{
    let current={modes:true,mode:'preview',editable:options.editable!==false,modeBusy:false,saveState:'idle',downloadUrl:'/download/'+props.path.split('/').at(-1),...(options.annotations?{annotations:true,annotationActive:false,annotationBusy:false,annotationIcon:'data:image/svg+xml,fixture'}:{})}
    const publish=(patch:any)=>{current={...current,...patch};props.onToolbarState(current)}
-   const controls={save:()=>{},toggleAnnotations:async()=>{requests.push('annotations:'+props.path);publish({annotationBusy:true});const ok=await new Promise<boolean>(done=>waiting.push(done));publish({annotationBusy:false,...(ok?{annotationActive:!current.annotationActive}:{})});return ok},toggleMode:async()=>{requests.push(props.path);publish({modeBusy:true});const ok=await new Promise<boolean>(done=>waiting.push(done));publish({modeBusy:false,...(ok?{mode:current.mode==='edit'?'preview':'edit'}:{})});return ok},setMode:()=>{}}
+   const controls={save:()=>{},toggleAnnotations:async()=>{requests.push('annotations:'+props.path);publish({annotationBusy:true});const ok=await new Promise<boolean>(done=>waiting.push(done));publish({annotationBusy:false,...(ok?{annotationActive:!current.annotationActive}:{})});return ok},toggleMode:async()=>{requests.push(props.path);publish({modeBusy:true});const ok=await new Promise<boolean>(done=>waiting.push(done));publish({modeBusy:false,...(ok?{mode:current.mode==='edit'?'preview':'edit'}:{})});return ok},setMode:(mode:string)=>publish({mode})}
    mounted.set(props.path,{publish,props,controls});props.onToolbarControls(controls);publish({})
    return()=>props.onToolbarControls(null)
   },[props.path,props.onToolbarControls,props.onToolbarState])
@@ -34,7 +34,7 @@ async function fixture(initial='/work/a.pptx',options:{editable?:boolean,load?:'
  }
  const RegisteredViewer=options.nativeEditor?createPptxEditorComponent(React,(props:any)=>{const viewer=React.useMemo(()=>({getFileVersion:async()=>'v1'}),[]);React.useEffect(()=>{props.onPptxViewer(viewer);return()=>props.onPptxViewer(null)},[props.onPptxViewer]);return React.createElement('div',{'data-pptx-node-id':'2','data-pptx-part':'ppt/slides/slide1.xml','data-pptx-width':200,'data-pptx-height':100},React.createElement('div',{'data-pptx-paragraph':0},'原始标题'))},undefined,require('react-dom').createPortal):Viewer
  const empty=()=>null,primitives=new Proxy({Tooltip:({children}:any)=>children},{get:(target,key)=>target[key as keyof typeof target]??empty}),classes=new Proxy({},{get:(_t,key)=>String(key)})
- const Host=runInNewContext(source.slice(start,end)+'\nEditorHost',{react:React,react_jsx_runtime:jsx,_deepseek_ai_dsh_client_ui_primitives:primitives,sidebar_module_css_default:classes,clsx:(...items:any[])=>items.filter(Boolean).join(' '),baseName$1:(path:string)=>path.split('/').at(-1),treeWidthOf:()=>240,treeOpenOf:()=>false,clampTreeWidth:(v:number)=>v,EditorPathInput:()=>React.createElement('input'),TreePanel:empty,BinaryDownload:empty,openSidebarFile:()=>{},patchMeta:()=>{},mediaUrl:()=>'',planFirstMatch:()=>options.load==='loading'?{kind:'customLoad',viewer:{load:()=>new Promise(()=>{})}}:options.load==='error'?{kind:'customLoad',viewer:{load:async()=>{throw Error('cannot read file')}}}:{kind:'render',viewer:{id:'office-pptx',component:RegisteredViewer}},AbortController,JSON,console,activeLocale:()=> 'zh',t:(key:string)=>({downloadToView:'下载',editorTreeToggle:'打开文件夹',save:'保存',preview:'预览',edit:'编辑'}[key]??key)})
+ const Host=runInNewContext(source.slice(start,end)+'\nEditorHost',{react:React,react_jsx_runtime:jsx,useKnowledgeEditorSource:()=>({record:null}),_deepseek_ai_dsh_client_ui_primitives:primitives,sidebar_module_css_default:classes,clsx:(...items:any[])=>items.filter(Boolean).join(' '),baseName$1:(path:string)=>path.split('/').at(-1),treeWidthOf:()=>240,treeOpenOf:()=>false,clampTreeWidth:(v:number)=>v,EditorPathInput:()=>React.createElement('input'),TreePanel:empty,BinaryDownload:empty,openSidebarFile:()=>{},patchMeta:()=>{},mediaUrl:()=>'',planFirstMatch:()=>options.load==='loading'?{kind:'customLoad',viewer:{load:()=>new Promise(()=>{})}}:options.load==='error'?{kind:'customLoad',viewer:{load:async()=>{throw Error('cannot read file')}}}:{kind:'render',viewer:{id:'office-pptx',component:RegisteredViewer}},AbortController,JSON,console,activeLocale:()=> 'zh',t:(key:string)=>({downloadToView:'下载',editorTreeToggle:'打开文件夹',save:'保存',preview:'预览',edit:'编辑'}[key]??key)})
  const store={subscribe:()=>()=>{},getSnapshot:()=>({prefs:{editorExplorer:true}})},ctx={betterSidebar:{matchFileViewer:()=>({})}},scope={sessionId:'session-a',cwd:'/work'}
  const host=win.document.createElement('main');win.document.body.append(host);const root=createRoot(host)
  const render=async(path:string)=>{await React.act(async()=>{root.render(React.createElement(Host,{ctx,store,scope,tab:{id:'editor',path,title:path.split('/').at(-1)},expanded:false}));await Promise.resolve()})}
@@ -46,25 +46,36 @@ it('wires the real PPT host icon beside the folder and derives its action from t
  const f=await fixture()
  try{
   expect(f.button()).not.toBeNull()
-  expect(f.button().getAttribute('aria-label')).toBe('编辑演示文稿')
-  expect(f.button().getAttribute('aria-pressed')).toBe('false')
+  expect(f.button().getAttribute('aria-label')).toBe('已锁定，点击解锁编辑')
+  expect(f.button().getAttribute('aria-pressed')).toBe('true')
   expect(f.button().previousElementSibling?.getAttribute('aria-label')).toBe('打开文件夹')
   expect(f.host.querySelector('.editorModeToggle')).toBeNull()
   expect(f.requests).toEqual([]);expect(f.host.querySelector('[aria-label="保存"]')).toBeNull()
   await f.click();expect(f.requests).toEqual(['/work/a.pptx']);expect(f.button().disabled).toBe(true)
   await f.click();expect(f.requests).toHaveLength(1)
   await f.settle(true)
-  expect(f.button().getAttribute('aria-label')).toBe('关闭编辑模式')
+  expect(f.button().getAttribute('aria-label')).toBe('未锁定，可编辑。点击锁定')
   expect(f.button().getAttribute('title')).toBeNull()
-  expect(f.button().getAttribute('aria-pressed')).toBe('true')
+  expect(f.button().getAttribute('aria-pressed')).toBe('false')
   expect(f.host.querySelector('[aria-label="保存"]')).not.toBeNull()
-  await f.click();await f.settle(true);expect(f.button().getAttribute('aria-label')).toBe('编辑演示文稿')
+  await f.click();await f.settle(true);expect(f.button().getAttribute('aria-label')).toBe('已锁定，点击解锁编辑')
  }finally{await f.close()}
 })
 
-it.each(['pdf','docx','xlsx'])('does not add the PPT action to a %s viewer',async kind=>{
+it.each(['html','md','docx','xlsx'])('uses the file viewer lock for a %s viewer exposing both modes',async kind=>{
  const f=await fixture('/work/report.'+kind)
- try{expect(f.button()).toBeNull();expect(f.host.querySelector('[aria-label="打开文件夹"]')).not.toBeNull();expect(f.host.querySelector('.editorModeToggle')).not.toBeNull()}finally{await f.close()}
+ try{
+  expect(f.button()).toBeNull()
+  const button=f.host.querySelector('[data-odyssey-file-mode-toggle]') as unknown as HTMLButtonElement
+  expect(button.getAttribute('aria-pressed')).toBe('true')
+  const closed=button.querySelector('path')?.getAttribute('d')
+  await React.act(async()=>button.click())
+  expect(button.getAttribute('aria-pressed')).toBe('false')
+  expect(button.querySelector('svg')?.getAttribute('fill')).toBe('currentColor')
+  expect(button.querySelector('path')?.getAttribute('d')).not.toBe(closed)
+  await React.act(async()=>button.click())
+  expect(button.getAttribute('aria-pressed')).toBe('true')
+ }finally{await f.close()}
 })
 
 it.each(['readonly','loading','error'])('keeps an unavailable PPT action disabled (%s)',async reason=>{
@@ -76,8 +87,8 @@ it('does not claim edit mode after a failed transition and permits retry',async(
  const f=await fixture()
  try{
   await f.click();expect(f.button().getAttribute('aria-busy')).toBe('true');await f.settle(false)
-  expect(f.button().getAttribute('aria-pressed')).toBe('false');expect(f.button().disabled).toBe(false)
-  await f.click();await f.settle(true);expect(f.button().getAttribute('aria-pressed')).toBe('true')
+  expect(f.button().getAttribute('aria-pressed')).toBe('true');expect(f.button().disabled).toBe(false)
+  await f.click();await f.settle(true);expect(f.button().getAttribute('aria-pressed')).toBe('false')
  }finally{await f.close()}
 })
 
@@ -86,12 +97,12 @@ it('ignores previous-file callbacks and pending completions after switching the 
  try{
   const old=f.mounted.get('/work/a.pptx');await f.click()
   await f.render('/work/b.pptx')
-  expect(f.button().getAttribute('aria-pressed')).toBe('false');expect(f.button().disabled).toBe(false)
+  expect(f.button().getAttribute('aria-pressed')).toBe('true');expect(f.button().disabled).toBe(false)
   await React.act(async()=>{old.props.onToolbarState({modes:true,mode:'edit',editable:true});old.props.onToolbarControls(old.controls)})
-  expect(f.button().getAttribute('aria-pressed')).toBe('false')
-  await f.settle(true);expect(f.button().getAttribute('aria-pressed')).toBe('false')
+  expect(f.button().getAttribute('aria-pressed')).toBe('true')
+  await f.settle(true);expect(f.button().getAttribute('aria-pressed')).toBe('true')
   await f.click();expect(f.requests).toEqual(['/work/a.pptx','/work/b.pptx']);await f.settle(true)
-  await f.render('/work/a.pptx');expect(f.button().getAttribute('aria-pressed')).toBe('false')
+  await f.render('/work/a.pptx');expect(f.button().getAttribute('aria-pressed')).toBe('true')
  }finally{await f.close()}
 })
 
@@ -108,10 +119,10 @@ it('connects the real PPT editor to the sidebar icon without opening its edit br
   expect(opens).toEqual([]);expect(f.button().disabled).toBe(false);expect(f.host.querySelector('[contenteditable=true]')).toBeNull();expect(f.host.querySelector('[role=status]')).toBeNull()
   await f.click()
   expect(opens).toHaveLength(1);expect(opens[0]).toMatchObject({path:'/work/native.pptx'})
-  expect(f.button().getAttribute('aria-pressed')).toBe('true');expect(f.host.querySelector('[contenteditable=true]')).not.toBeNull()
+  expect(f.button().getAttribute('aria-pressed')).toBe('false');expect(f.host.querySelector('[contenteditable=true]')).not.toBeNull()
   expect(f.host.querySelector('[data-ppt-editor] [role=status]')?.textContent).toContain('编辑模式')
-  await f.click();expect(f.button().getAttribute('aria-label')).toBe('编辑演示文稿');expect(f.host.querySelector('[contenteditable=true]')).toBeNull()
-  await f.render('/work/next.pptx');expect(opens).toHaveLength(1);expect(f.button().getAttribute('aria-pressed')).toBe('false');expect(f.host.querySelector('[role=status]')).toBeNull()
+  await f.click();expect(f.button().getAttribute('aria-label')).toBe('已锁定，点击解锁编辑');expect(f.host.querySelector('[contenteditable=true]')).toBeNull()
+  await f.render('/work/next.pptx');expect(opens).toHaveLength(1);expect(f.button().getAttribute('aria-pressed')).toBe('true');expect(f.host.querySelector('[role=status]')).toBeNull()
  }finally{await f.close()}
 })
 
@@ -120,7 +131,7 @@ it('keeps the annotation icon in the same native header row and follows only the
   const button=()=>f.host.querySelector('[data-odyssey-pptx-annotation-toggle]') as any
   expect(button()?.previousElementSibling).toBe(f.button());expect(button()?.getAttribute('aria-label')).toBe('标注演示文稿');expect(button()?.querySelector('img')?.width).toBe(16)
   await React.act(async()=>{button().click();button().click()});expect(f.requests).toEqual(['annotations:/work/a.pptx']);expect(button().disabled).toBe(true)
-  await f.settle(true);expect(button().getAttribute('aria-pressed')).toBe('true');expect(button().getAttribute('aria-label')).toBe('关闭标注模式');expect(f.button().getAttribute('aria-pressed')).toBe('false')
+  await f.settle(true);expect(button().getAttribute('aria-pressed')).toBe('true');expect(button().getAttribute('aria-label')).toBe('关闭标注模式');expect(f.button().getAttribute('aria-pressed')).toBe('true')
   const old=f.mounted.get('/work/a.pptx');await f.render('/work/b.pptx');await React.act(async()=>old.publish({annotationActive:true}));expect(button().getAttribute('aria-pressed')).toBe('false')
  }finally{await f.close()}
 })
@@ -129,7 +140,7 @@ it('opens actual read-only annotations from the real header without opening or s
  const handle={getSnapshot:()=>({scene:{slides:[],slideSize:{width:800,height:450}},basis:{documentId:'doc',fileVersion:'v1'},marks:[],selectedId:null,revealSeq:0}),subscribe:()=>()=>{},dispose:()=>disposed++}
  const opened:any[]=[],f=await fixture('/work/a.pptx',{nativeEditor:true,bridge,annotationCoordinator:{open:async(source:any)=>{opened.push(source);return handle}}});try{
   await React.act(async()=>{(f.host.querySelector('[data-odyssey-pptx-annotation-toggle]') as any).click();await Promise.resolve()})
-  expect(opened).toEqual([{sessionId:'session-a',source:{kind:'workspace',relativePath:'a.pptx'}}]);expect(f.host.querySelector('[data-pptx-annotation-toolbar]')).not.toBeNull();expect(f.button().getAttribute('aria-pressed')).toBe('false')
+  expect(opened).toEqual([{sessionId:'session-a',source:{kind:'workspace',relativePath:'a.pptx'}}]);expect(f.host.querySelector('[data-pptx-annotation-toolbar]')).not.toBeNull();expect(f.button().getAttribute('aria-pressed')).toBe('true')
   await React.act(async()=>{(f.host.querySelector('[data-odyssey-pptx-annotation-toggle]') as any).click()});expect(f.host.querySelector('[data-pptx-annotation-toolbar]')).toBeNull();expect(disposed).toBe(1)
  }finally{await f.close()}
 })

@@ -9,6 +9,7 @@ beforeAll(async()=>{
  const output=await build({stdin:{resolveDir:process.cwd(),loader:'tsx',contents:`
  import React from 'react';import {createRoot} from 'react-dom/client';
  import {ResearchBoardHeader} from './src/preload/research-boards-ui';import {installBoardUiStyles} from './src/preload/research-board-dialogs';
+ import {NoteViewMode} from './src/preload/notes/view-mode';
  import {ChallengePicker} from './src/preload/notes/challenge-ui';import {mountUiLocalization} from './src/preload/ui-localization';
  import {createResearchPreviewModeState} from './scripts/lib/research-preview-mode.mjs';import {mountFloatingSurfaces} from './src/preload/floating-surfaces';
  mountUiLocalization(document);installBoardUiStyles(document);mountFloatingSurfaces(document);
@@ -16,7 +17,7 @@ beforeAll(async()=>{
  window.locked=false;const mode=createResearchPreviewModeState(localStorage,'pill-board',ownership),workspace={getPreviewMode:mode.get,setPreviewMode:mode.set,subscribePreviewMode:mode.subscribe,getPreviewModeLocked:mode.isLocked,subscribePreviewModeLock:mode.subscribe};
  const page={workspaceFor:()=>workspace,getState:()=>({account:{user:{userId:'self'}},favorites:[],boards:[]}),subscribe:()=>()=>{},version:()=>0,getView:()=>null,isResearch:()=>true,showError:error=>{throw error},favorite:async()=>{}};
  window.levelChanges=[];let setDisabled,setDark;
- function App(){const [value,setValue]=React.useState(0),[disabled,updateDisabled]=React.useState(false),[dark,updateDark]=React.useState(false);setDisabled=updateDisabled;setDark=updateDark;return <main><header id="research" className="wSkVaW_header"><div className="wSkVaW_titleRow" data-testid="blank-titlebar" style={{flex:1,height:40}}/><ResearchBoardHeader page={page} sessionId="pill-board" active/></header><header id="notes" data-ework-notes-session="pill-note"><div className="en-challenge-tools" data-dark={dark} data-header="true"><ChallengePicker value={value} dark={dark} disabled={disabled} onChange={next=>{window.levelChanges.push(next);setValue(next)}}/></div></header></main>}
+ function App(){const [noteLocked,setNoteLocked]=React.useState(false);const [value,setValue]=React.useState(0),[disabled,updateDisabled]=React.useState(false),[dark,updateDark]=React.useState(false);setDisabled=updateDisabled;setDark=updateDark;return <main><header id="research" className="wSkVaW_header"><div className="wSkVaW_titleRow" data-testid="blank-titlebar" style={{flex:1,height:40}}/><ResearchBoardHeader page={page} sessionId="pill-board" active/></header><header id="notes" data-ework-notes-session="pill-note"><span data-en-view-mode-host="pill-note"/><NoteViewMode sessionId="pill-note" preview={noteLocked} disabled={disabled} onToggle={()=>setNoteLocked(!noteLocked)}/><div className="en-challenge-tools" data-dark={dark} data-header="true"><ChallengePicker value={value} dark={dark} disabled={disabled} onChange={next=>{window.levelChanges.push(next);setValue(next)}}/></div></header></main>}
  createRoot(document.getElementById('root')).render(<App/>);window.fixture={workspace,setDisabled(value){window.locked=value;listeners.forEach(listener=>listener());setDisabled(value)},setDark(value){document.body.toggleAttribute('data-ds-dark-theme',value);setDark(value)}};
  `},bundle:true,write:false,format:'iife',platform:'browser',loader:{'.css':'empty','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'})
  script=output.outputFiles[0]!.text;challengeCss=await readFile('src/preload/notes/challenge.css','utf8');panelCss=await readFile('src/preload/figma-panels.css','utf8')
@@ -34,6 +35,15 @@ for(const dark of [false,true])for(const locale of ['zh','en'])it(`keeps mode an
   await page.route('https://header-pills.test/',(route:any)=>route.fulfill({contentType:'text/html',body:`<html data-odyssey-locale="${locale}"><meta charset="utf-8"><style>html,body{margin:0;font:13px/20px system-ui;background:#f2f2f2}body[data-ds-dark-theme]{background:#1f1f1f}header{display:flex;justify-content:flex-end;align-items:center;height:54px;padding:0 24px;margin:20px}button{font:inherit}</style><div id="root"></div></html>`}))
   await page.goto('https://header-pills.test/');await page.addStyleTag({content:challengeCss});await page.addScriptTag({content:script});await page.locator('[data-research-preview-toggle]').waitFor();await page.evaluate((dark:boolean)=>(window as any).fixture.setDark(dark),dark)
   const research=page.locator('[data-research-preview-toggle]'),notes=page.locator('.en-challenge-trigger'),records:any[]=[]
+  const lock=page.locator('.en-header-view-mode')
+  expect(await lock.getAttribute('aria-label')).toBe(locale==='en'?'Unlocked for editing. Click to lock':'未锁定，可编辑。点击锁定')
+  const openPath=await lock.locator('path').getAttribute('d')
+  await lock.focus();await lock.press('Space')
+  expect(await lock.getAttribute('aria-pressed')).toBe('true')
+  expect(await lock.getAttribute('aria-label')).toBe(locale==='en'?'Locked. Click to unlock editing':'已锁定，点击解锁编辑')
+  expect(await lock.locator('svg').getAttribute('fill')).toBe('currentColor')
+  expect(await lock.locator('path').getAttribute('d')).not.toBe(openPath)
+  await lock.press('Enter');expect(await lock.getAttribute('aria-pressed')).toBe('false')
   expect(await notes.isEnabled()).toBe(true);expect(await notes.getAttribute('aria-label')).toBe(locale==='en'?'AI Copilot mode: Off':'随航模式，当前关闭')
   for(const [name,control]of [['research',research],['notes',notes]]as const){
    await page.mouse.move(4,4);const idle=await style(control)
@@ -47,7 +57,7 @@ for(const dark of [false,true])for(const locale of ['zh','en'])it(`keeps mode an
    await page.mouse.down();await page.waitForTimeout(180);const pressed=await style(control);expect(pressed.background).not.toBe(hover.background);await page.mouse.move(4,4);await page.mouse.up()
    records.push({name,idle,hover,pressed})
   }
-  await research.click();await expect.poll(()=>research.getAttribute('aria-pressed')).toBe('true');expect(await research.textContent()).toBe('');await expect.poll(()=>research.getAttribute('aria-label')).toBe(locale==='en'?'Switch to edit mode':'切换到编辑模式')
+  await research.click();await expect.poll(()=>research.getAttribute('aria-pressed')).toBe('true');expect(await research.textContent()).toBe('');await expect.poll(()=>research.getAttribute('aria-label')).toBe(locale==='en'?'Locked. Click to unlock editing':'已锁定，点击解锁编辑')
   await notes.click();const slider=page.getByRole('slider');await slider.waitFor();expect(await notes.getAttribute('aria-expanded')).toBe('true');await slider.press('End');await expect.poll(()=>page.evaluate(()=>(window as any).levelChanges)).toEqual([4]);await slider.press('Escape')
   await page.evaluate(()=>(window as any).fixture.setDisabled(true));await expect.poll(()=>research.isDisabled()).toBe(true);await expect.poll(()=>notes.isDisabled()).toBe(true)
   for(const control of [research,notes]){const disabled=await style(control);expect(disabled.opacity).toBe('0.5');expect(disabled.cursor).toBe('default')}
@@ -71,11 +81,11 @@ it('shows a visible bubble naming the action on either research header icon',asy
  const tip=page.locator('[data-odyssey-floating-tooltip]:popover-open')
  try {
   await mode.hover()
-  await expect.poll(()=>tip.allTextContents().then((values:string[])=>values[0]),{timeout:4000}).toBe('切换到预览模式')
+  await expect.poll(()=>tip.allTextContents().then((values:string[])=>values[0]),{timeout:4000}).toBe('未锁定，可编辑。点击锁定')
   await mode.click()
   await page.mouse.move(400,160)
   await mode.hover()
-  await expect.poll(()=>tip.allTextContents().then((values:string[])=>values[0]),{timeout:4000}).toBe('切换到编辑模式')
+  await expect.poll(()=>tip.allTextContents().then((values:string[])=>values[0]),{timeout:4000}).toBe('已锁定，点击解锁编辑')
   await more.hover()
   await expect.poll(()=>tip.allTextContents().then((values:string[])=>values[0]),{timeout:4000}).toBe('更多看板操作')
   await more.click()

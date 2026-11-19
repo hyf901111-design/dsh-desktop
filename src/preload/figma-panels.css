@@ -394,6 +394,7 @@ body:has(.cubgiG_seat[aria-expanded="true"]) :is(.wSkVaW_header,.wSkVaW_titleRow
 
 /* Native drag regions must yield pointer events to dismiss open top-layer UI. */
 body:has(.wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],.srb-members-popover:popover-open,.srb-avatar-info:popover-open,.srb-session-search[open]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}
+body:has(.ew-grid-menu[role="menu"]) :is(.wSkVaW_header,.wSkVaW_titleRow),
 body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]),
 body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]) .wSkVaW_titleRow{-webkit-app-region:no-drag}
 

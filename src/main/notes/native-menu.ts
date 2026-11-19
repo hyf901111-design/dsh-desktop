@@ -18,7 +18,7 @@ export class NoteNativeMenu implements NotesNativeMenu {
   private current?: OpenMenu
   private retired = new Set<string>()
   constructor(private options: { getWindow(): BrowserWindow | undefined; owner(): string; canRead(sessionId: string): boolean;
-    title?:string;displayBounds?:boolean;documentHtml?:string;presentation?:typeof noteMenuPresentation;
+    title?:string;displayBounds?:boolean;dismissOnOwnerPress?:boolean;documentHtml?:string;presentation?:typeof noteMenuPresentation;
     emit?:(event:NoteMenuEvent)=>void;selectable?:(item:NoteMenuItem)=>boolean
   }) {}
   private createPopup(parent: BrowserWindow): BrowserWindow {
@@ -112,7 +112,26 @@ export class NoteNativeMenu implements NotesNativeMenu {
       for (const event of events) (parent as NodeJS.EventEmitter).on(event, cancel)
       const navigating = (_event:unknown,_url:string,_inPlace:boolean,isMainFrame:boolean) => { if(isMainFrame) cancel() }
       parent.webContents.on('did-start-navigation', navigating)
-      state.unlisten = () => { parent.removeListener('blur',blur); for (const event of events) (parent as NodeJS.EventEmitter).removeListener(event, cancel); parent.webContents.removeListener('did-start-navigation', navigating) }
+      // The panel is non-key. Clicking the owner or an embedded page can leave window focus unchanged.
+      const surfaces = new Set<Electron.WebContents>()
+      const watchView = (view: Electron.View) => {
+        if ('webContents' in view) surfaces.add((view as Electron.WebContentsView).webContents)
+        view.children.forEach(watchView)
+      }
+      const ownerPress = (_event: Electron.Event, input: Electron.MouseInputEvent) => {
+        if (input.type === 'mouseDown') cancel()
+      }
+      if (this.options.dismissOnOwnerPress) {
+        surfaces.add(parent.webContents)
+        watchView(parent.contentView)
+        for (const surface of surfaces) surface.on('before-mouse-event', ownerPress)
+      }
+      state.unlisten = () => {
+        parent.removeListener('blur', blur)
+        for (const event of events) (parent as NodeJS.EventEmitter).removeListener(event, cancel)
+        parent.webContents.removeListener('did-start-navigation', navigating)
+        for (const surface of surfaces) surface.removeListener('before-mouse-event', ownerPress)
+      }
       state.ready = this.configurePopup(state,popup)
     }
     this.current.input = input

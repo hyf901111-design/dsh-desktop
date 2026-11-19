@@ -43,7 +43,7 @@ it('projects Shift + arrows from the native workbook into the chat and restores 
     page.on('pageerror', error => errors.push(error.message))
     await page.route('http://127.0.0.1/spreadsheet-fixture', route => route.fulfill({ contentType: 'text/html',
       body: `<!doctype html><main data-odyssey-page="spreadsheet" style="position:fixed;inset:0 330px 0 0">
-      <div data-ework-spreadsheet-view="keyboard-reference"></div></main>
+      <header data-ework-spreadsheet-actions style="height:42px"></header><section style="position:absolute;inset:42px 0 0"><div data-ework-spreadsheet-view="keyboard-reference"></div></section></main>
       <aside data-research-composer-host style="position:fixed;inset:0 0 0 auto;width:320px">
         <div data-composer-card><div data-sheet-context-anchor>参考当前表格内容</div>
           <div><div data-input-backdrop></div><textarea data-odyssey-file-reference-session="keyboard-reference"></textarea></div>
@@ -56,6 +56,16 @@ it('projects Shift + arrows from the native workbook into the chat and restores 
     const reference = page.locator('.ew-sheet-pending-reference')
     const wholeWorkbook = page.locator('[data-sheet-context-anchor]')
     await wholeWorkbook.waitFor()
+    const editLock=page.locator('[data-action="view-mode"]')
+    expect(await editLock.getAttribute('aria-pressed')).toBe('false')
+    const openPath=await editLock.locator('path').getAttribute('d')
+    await editLock.click()
+    await expect.poll(()=>editLock.getAttribute('aria-pressed')).toBe('true')
+    expect(await editLock.locator('path').getAttribute('d')).not.toBe(openPath)
+    expect(await page.locator('[data-field="formula"]').getAttribute('readonly')).not.toBeNull()
+    await editLock.press('Space')
+    await expect.poll(()=>editLock.getAttribute('aria-pressed')).toBe('false')
+    expect(await page.locator('[data-field="formula"]').getAttribute('readonly')).toBeNull()
     await grid.click({ position: { x: 65, y: 45 } })
     await page.keyboard.down('Shift')
     await page.keyboard.press('ArrowRight')

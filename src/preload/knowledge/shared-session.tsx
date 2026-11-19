@@ -89,7 +89,7 @@ export function mountSharedKnowledgeSessions(document: Document, host: Workspace
           {copying ? '正在创建…' : copied ? '打开副本' : '创建副本'}
         </button>
         <span className="knowledge-shared-session-mode" title="共享会话仅供查看"
-          aria-label={knowledgeSessionLabels[entry.mode] + '预览 · 只读'}><HeaderViewModeIcon preview />预览</span>
+          aria-label={knowledgeSessionLabels[entry.mode] + '已锁定，仅供查看'}><HeaderViewModeIcon preview />已锁定</span>
       </div>
       {notice && <p className="knowledge-session-copy-notice" role="status">{notice}</p>}
     </>)

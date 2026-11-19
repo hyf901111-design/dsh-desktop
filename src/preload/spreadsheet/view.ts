@@ -3,6 +3,7 @@ import {chartKindLabels,escapeSheetText as text,inferChartFields,spreadsheetChar
 import type {WorkbookRecord} from '../../main/spreadsheet/store'
 import type {SheetContextCommand,SheetEngine} from './engine'
 import {HorizontalAlign,isNullCell} from '@univerjs/core'
+import headerEditLock from '../../shared/header-edit-lock.json'
 import {sheetIcon as icon} from './icons'
 import {translateSpreadsheetCopy} from './ui-copy'
 import {browserIcons} from '../browser/icons'
@@ -367,12 +368,13 @@ class SpreadsheetView{
   if(!header)return
   header.hidden=!this.record.workbook
   if(!this.record.workbook){header.replaceChildren();return}
-  const mode=this.preview?'preview':'edit'
-  if(header.dataset.sheetViewMode!==mode||header.childElementCount===0){
+  const locked=this.preview||!this.canEdit
+  const mode=locked?'preview':'edit'
+  const label=!this.canEdit?headerEditLock.readOnly:locked?headerEditLock.locked:headerEditLock.unlocked
+  const copy=this.doc.documentElement.dataset.odysseyLocale==='en'?label.en:label.zh
+  if(header.dataset.sheetViewMode!==mode||header.querySelector('[data-action=view-mode]')?.getAttribute('aria-label')!==copy){
    header.dataset.sheetViewMode=mode
-   const label=this.preview?'切换到编辑模式':'切换到预览模式'
-   const copy=this.doc.documentElement.dataset.odysseyLocale==='en'?(this.preview?'Switch to editing':'Switch to preview'):label
-   header.innerHTML=button('view-mode','',{glyph:this.preview?'view':'edit',label:copy,pressed:this.preview})+
+   header.innerHTML=button('view-mode','',{glyph:locked?'lock':'lock-open',label:copy,pressed:locked})+
     button('menu','',{glyph:'more',label:'更多表格操作',value:'book'})
   }
   header.querySelector<HTMLButtonElement>('[data-action=view-mode]')!.disabled=!this.canEdit||this.busy||this.switchingMode

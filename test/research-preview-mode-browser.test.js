@@ -522,10 +522,10 @@ it.each(['workspace','listed-board'])('shows two matching icon tiles and the boa
    for(const mode of ['编辑模式','预览模式']){
     expect(await modeButton.textContent()).toBe('')
     expect(await modeButton.locator('[data-research-preview-switch]').count()).toBe(0)
-    expect(await modeButton.locator('[data-research-preview-glyph="'+(mode==='编辑模式'?'pencil-line':'eye')+'"]').count()).toBe(1)
-    const target=mode==='编辑模式'?'预览模式':'编辑模式'
-    expect(await modeButton.getAttribute('aria-label')).toBe('切换到'+target)
-    await modeButton.click();await expect.poll(()=>modeButton.getAttribute('aria-label')).toBe('切换到'+mode)
+    expect(await modeButton.locator('[data-research-preview-glyph="'+(mode==='编辑模式'?'lock-open':'lock')+'"]').count()).toBe(1)
+    const unlocked=mode==='编辑模式',lock='未锁定，可编辑。点击锁定',unlock='已锁定，点击解锁编辑'
+    expect(await modeButton.getAttribute('aria-label')).toBe(unlocked?lock:unlock)
+    await modeButton.click();await expect.poll(()=>modeButton.getAttribute('aria-label')).toBe(unlocked?unlock:lock)
    }
    await more.click()
    const menu=page.getByRole('menu',{name:'看板操作',exact:true}),bounds=await menu.boundingBox()

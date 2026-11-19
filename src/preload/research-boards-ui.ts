@@ -1,4 +1,5 @@
 import { ResearchBoardHeaderMenu } from './research-board-header-menu'
+import headerEditLock from '../shared/header-edit-lock.json'
 import { HeaderViewModeIcon } from './header-view-mode-icon'
 import { mergeSharedCanvas } from './shared-board-canvas-merge'
 import { sharedCanvasContent, withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
@@ -2053,7 +2054,7 @@ function currentBoard(page: ResearchBoardsPage, id: string) {
 function boardIcon(_kind: 'people' | 'boards') {
   return h('span', { className: 'srb-people-icon', 'aria-hidden': true })
 }
-function ResearchBoardPreviewToggle({page,sessionId}:{page:ResearchBoardsPage;sessionId:string}) {
+function ResearchBoardPreviewToggle({page,sessionId,readOnly}:{page:ResearchBoardsPage;sessionId:string;readOnly:boolean}) {
   const workspace=page.workspaceFor?.(sessionId)
   const subscribe=React.useCallback((listener:()=>void)=>workspace?.subscribePreviewMode?.(listener)??(()=>{}),[workspace])
   const read=React.useCallback(()=>workspace?.getPreviewMode?.()===true,[workspace])
@@ -2061,14 +2062,16 @@ function ResearchBoardPreviewToggle({page,sessionId}:{page:ResearchBoardsPage;se
   const subscribeLock=React.useCallback((listener:()=>void)=>workspace?.subscribePreviewModeLock?.(listener)??(()=>{}),[workspace])
   const readLock=React.useCallback(()=>workspace?.getPreviewModeLocked?.()===true,[workspace])
   const locked=React.useSyncExternalStore(subscribeLock,readLock,readLock)
-  const currentMode=preview?'预览模式':'编辑模式',targetMode=preview?'编辑模式':'预览模式'
+  const editingLocked=readOnly||preview
+  const label=(readOnly?headerEditLock.readOnly:preview?headerEditLock.locked:headerEditLock.unlocked).zh
+  const description=locked?'工作台演示进行中，结束后可切换模式':label
   if(!workspace?.getPreviewMode||!workspace?.setPreviewMode)return null
   return h('button',{
     type:'button',className:'srb-header-control srb-preview-toggle','data-research-preview-toggle':'',
-    'aria-label':preview?'切换到编辑模式':'切换到预览模式','aria-pressed':preview,
-    title:locked?'工作台演示进行中，结束后可切换模式':'当前为'+currentMode+'，点击切换到'+targetMode,disabled:locked,
+    'aria-label':description,'aria-pressed':editingLocked,
+    title:description,disabled:readOnly||locked,
     onClick:()=>{try{workspace.setPreviewMode(!workspace.getPreviewMode())}catch(error){page.showError(error)}}
-  },h(HeaderViewModeIcon,{preview,'data-research-preview-icon':preview?'preview':'edit','data-research-preview-glyph':preview?'eye':'pencil-line'}))
+  },h(HeaderViewModeIcon,{preview:editingLocked,'data-research-preview-icon':editingLocked?'preview':'edit','data-research-preview-glyph':editingLocked?'lock':'lock-open'}))
 }
 export function ResearchBoardHeader({
   page,
@@ -2106,7 +2109,7 @@ export function ResearchBoardHeader({
           !v.permissions.read ? '共享访问已结束' : v.board.lifecycle === 'archived' ? '已归档' : '仅自己可见'),
       h(ResearchBoardPresence, { page, sessionId, showInvite: false })
     ),
-    h(ResearchBoardPreviewToggle, { page, sessionId }),
+    h(ResearchBoardPreviewToggle, { page, sessionId, readOnly: v?.permissions.edit === false || v?.board.lifecycle === 'archived' }),
     h(ResearchBoardHeaderMenu, {
       key: sessionId,
       workspace: page.workspaceFor?.(sessionId),
