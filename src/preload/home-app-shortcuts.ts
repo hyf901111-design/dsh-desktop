@@ -1,9 +1,28 @@
+import newChatIcon from '../../build/brand/odyssey-b-new-chat-18.svg?inline'
+import newWorkspaceIcon from '../../build/brand/odyssey-b-workspace-add-18.svg?inline'
 import knowledgeApp from '../../build/brand/odyssey-knowledge-base.svg?inline'
 import spreadsheetAdd from './spreadsheet/assets-grid-add.svg?inline'
 import factoryIcon from './image-factory/assets/factory.svg?inline'
 import styles from './home-app-shortcuts.css?raw'
+import { navigationApps as apps, type NavigationApp, type NavigationShortcut } from '../shared/navigation-shortcuts'
 
-import { navigationApps as apps, type NavigationApp } from '../shared/navigation-shortcuts'
+const appIcons = {
+  browser: '/odyssey-home-browser-28.svg',
+  knowledge: knowledgeApp,
+  'image-factory': factoryIcon,
+  plugin: '/odyssey-home-plugin-28.svg',
+  scheduled: '/odyssey-home-scheduled-28.svg',
+  research: '/odyssey-home-research-28.svg',
+  note: '/odyssey-home-note-28.svg',
+  spreadsheet: spreadsheetAdd,
+  'new-chat': newChatIcon,
+  'new-workspace': newWorkspaceIcon
+} satisfies Record<NavigationShortcut, string>
+
+export function navigationAppIcon(app: NavigationShortcut) {
+  return 'url("' + appIcons[app].replaceAll('"', '%22') + '")'
+}
+
 const labels = {
   zh: ['浏览器', '知识库', '图像', '插件', '定时任务', '研究看板', '笔记', '表格'],
   en: ['Browser', 'Knowledge Base', 'Images', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet']
@@ -29,8 +48,7 @@ export function mountHomeAppShortcuts(doc: Document, open: (app: NavigationApp, 
     const button = doc.createElement('button')
     button.type = 'button'
     button.dataset.homeApp = app
-    const inlineIcon = app === 'knowledge' ? knowledgeApp : app === 'spreadsheet' ? spreadsheetAdd : app === 'image-factory' ? factoryIcon : undefined
-    if (inlineIcon) button.style.setProperty('--home-app-icon', 'url("' + inlineIcon.replaceAll('"', '%22') + '")')
+    button.style.setProperty('--home-app-icon', navigationAppIcon(app))
     const icon = doc.createElement('span')
     icon.className = 'home-app-shortcut-icon'
     icon.setAttribute('aria-hidden', 'true')

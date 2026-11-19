@@ -1,20 +1,22 @@
 import {
-  isNavigationApp, navigationSlotCount, normalizeNavigationShortcuts, replaceNavigationShortcut,
-  type NavigationApp, type NavigationRegion, type NavigationShortcuts
+  isNavigationApp, isNavigationShortcut, navigationSlotCount, normalizeNavigationShortcuts, replaceNavigationShortcut,
+  type NavigationApp, type NavigationShortcut, type NavigationRegion, type NavigationShortcuts
 } from '../shared/navigation-shortcuts'
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
-import { icons } from './scheduled/icons'
+import { navigationAppIcon } from './home-app-shortcuts'
 import styles from './navigation-shortcuts.css?raw'
 
 const presentation = {
-  browser: ['浏览器', 'Browser', icons.browserRail],
-  knowledge: ['知识库', 'Knowledge Base', icons.knowledge],
-  'image-factory': ['图像', 'Images', icons.factory],
-  plugin: ['插件', 'Plugins', icons.plugin],
-  scheduled: ['定时任务', 'Scheduled tasks', icons.clock],
-  research: ['研究', 'Research', icons.research],
-  note: ['笔记', 'Notes', icons.noteDark],
-  spreadsheet: ['表格', 'Spreadsheet', icons.spreadsheet]
+  browser: ['浏览器', 'Browser'],
+  knowledge: ['知识库', 'Knowledge Base'],
+  'image-factory': ['图像', 'Images'],
+  plugin: ['插件', 'Plugins'],
+  scheduled: ['定时任务', 'Scheduled tasks'],
+  research: ['研究', 'Research'],
+  note: ['笔记', 'Notes'],
+  spreadsheet: ['表格', 'Spreadsheet'],
+  'new-chat': ['新建对话', 'New chat'],
+  'new-workspace': ['新建工作区', 'New workspace']
 } as const
 const nativeApps = { research: 'research', notes: 'note', spreadsheet: 'spreadsheet' } as const
 const tabsSelector = '.pI_x6G_centerCol [data-srb-tabs], .eb-workspace-tabs'
@@ -26,10 +28,10 @@ const holdTime = 360
 type Bridge = {
   read(): unknown
   save(value: NavigationShortcuts): boolean
-  open(app: NavigationApp, signal: AbortSignal): Promise<void> | void
+  open(app: NavigationShortcut, signal: AbortSignal, region: NavigationRegion): Promise<void> | void
 }
 
-type PickedApp = { app: NavigationApp; region?: NavigationRegion }
+type PickedApp = { app: NavigationShortcut; region?: NavigationRegion }
 type PointerHold = {
   id: number; x: number; y: number; app: NavigationApp
   timer?: number; armed: boolean; moving: boolean
@@ -64,8 +66,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   let frame = 0
   const deleteButtons = new Map<HTMLButtonElement, HTMLButtonElement>()
   const english = () => doc.documentElement.dataset.odysseyLocale === 'en'
-  const label = (app: NavigationApp) => presentation[app][english() ? 1 : 0]
-  const glyph = (app: NavigationApp) => 'url("' + presentation[app][2].replaceAll('"', '%22') + '")'
+  const label = (app: NavigationShortcut) => presentation[app][english() ? 1 : 0]
   const setAttribute = (element: Element, name: string, next: string) => {
     if (element.getAttribute(name) !== next) element.setAttribute(name, next)
   }
@@ -85,7 +86,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     for (let index = 0; index < navigationSlotCount; index++) {
       const app = value[region][index] ?? null
       const existing = children.find(child => child.hasAttribute('data-navigation-owned') && child.dataset.navigationSlot === String(index))
-      const original = app ? native.get(app) : undefined
+      const original = isNavigationApp(app) ? native.get(app) : undefined
       const button = original ?? existing ?? doc.createElement('button')
       setAttribute(button, 'data-navigation-slot', String(index))
       setAttribute(button, 'data-navigation-region', region)
@@ -101,11 +102,13 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       setAttribute(button, 'aria-label', name)
       setAttribute(button, 'title', name)
       if (region === 'side') {
-        const mask = app ? glyph(app) : ''
+        button.toggleAttribute('data-navigation-next', index === value.side.indexOf(null))
+        const mask = app ? navigationAppIcon(app) : ''
         if (button.style.getPropertyValue('--navigation-glyph') !== mask) button.style.setProperty('--navigation-glyph', mask)
         const surface = app === 'plugin' ? 'integrations' : app === 'note' ? 'notes' : app
         setAttribute(button, 'aria-pressed', String(Boolean(app && doc.body.dataset.workspaceSurface === surface)))
       } else {
+        if (container.hasAttribute('data-srb-tabs') && !button.classList.contains('wSkVaW_tab')) button.classList.add('wSkVaW_tab')
         if (button.textContent !== (app ? name : '')) button.textContent = app ? name : ''
         setAttribute(button, 'tabindex', container.getAttribute('aria-hidden') === 'true' ? '-1' : '0')
       }
@@ -114,10 +117,6 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   }
 
   function sync() {
-    const count = String(1 + value.top.filter(Boolean).length)
-    if (doc.body.style.getPropertyValue('--navigation-tab-count') !== count) {
-      doc.body.style.setProperty('--navigation-tab-count', count)
-    }
     for (const tabs of doc.querySelectorAll(tabsSelector)) {
       if (tabs.closest('[data-odyssey-subagent-panel]')) continue
       tabs.toggleAttribute('data-navigation-tabs', true)
@@ -170,7 +169,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     status.textContent = ''
     sync()
   }
-  function apply(button: HTMLButtonElement, app: NavigationApp | null) {
+  function apply(button: HTMLButtonElement, app: NavigationShortcut | null) {
     const region = button.dataset.navigationRegion as NavigationRegion
     update(replaceNavigationShortcut(value, region, Number(button.dataset.navigationSlot), app))
   }
@@ -178,6 +177,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     editing = active
     picked = selection
     doc.body.toggleAttribute('data-navigation-editing', active)
+    doc.body.toggleAttribute('data-navigation-picking', Boolean(selection))
     if (selection?.region) doc.body.dataset.navigationEditingRegion = selection.region
     else delete doc.body.dataset.navigationEditingRegion
     if (active && !frame) frame = win.requestAnimationFrame(positionDeletes)
@@ -204,14 +204,15 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
         button = doc.createElement('button')
         button.type = 'button'
         button.dataset.navigationDelete = ''
+        button.dataset.navigationRegion = slot.dataset.navigationRegion
         button.addEventListener('click', () => apply(slot, null))
         deleteButtons.set(slot, button)
         deletes.append(button)
       }
       const app = slot.dataset.navigationApp
-      setAttribute(button, 'aria-label', (english() ? 'Remove ' : '删除') + (isNavigationApp(app) ? label(app) : ''))
-      const left = (rect.right - 9) + 'px'
-      const top = (rect.top - 4) + 'px'
+      setAttribute(button, 'aria-label', (english() ? 'Remove ' : '删除') + (isNavigationShortcut(app) ? label(app) : ''))
+      const left = (rect.right - 12) + 'px'
+      const top = (rect.top - 7) + 'px'
       if (button.style.left !== left) button.style.left = left
       if (button.style.top !== top) button.style.top = top
     }
@@ -341,7 +342,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     if (!hold.moving && distance <= 6) return
     hold.moving = true
     if (!ghost.isConnected) {
-      ghost.style.setProperty('--navigation-glyph', glyph(hold.app))
+      ghost.style.setProperty('--navigation-glyph', navigationAppIcon(hold.app))
       doc.body.append(ghost)
     }
     ghost.style.left = event.clientX + 'px'
@@ -377,7 +378,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     }
     if (menu && !target.closest('[data-navigation-menu]')) closeMenu()
     const button = targetAt(target)
-    if (!button) return
+    if (!button || button.hasAttribute('data-home-guide-entry-click')) return
     if (editing || button.hasAttribute('data-navigation-owned')) {
       event.preventDefault()
       event.stopImmediatePropagation()
@@ -390,7 +391,8 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       return
     }
     const app = button.dataset.navigationApp
-    if (!button.hasAttribute('data-navigation-owned') || !isNavigationApp(app) || (button.dataset.navigationRegion === 'side' && button.getAttribute('aria-pressed') === 'true')) return
+    const region = button.dataset.navigationRegion as NavigationRegion
+    if (!button.hasAttribute('data-navigation-owned') || !isNavigationShortcut(app) || (button.dataset.navigationRegion === 'side' && button.getAttribute('aria-pressed') === 'true')) return
     pending?.abort()
     const controller = new AbortController()
     pending = controller
@@ -398,7 +400,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     const report = () => {
       if (!controller.signal.aborted) status.textContent = english() ? 'Could not open app' : '应用打开失败'
     }
-    try { void Promise.resolve(bridge.open(app, controller.signal)).catch(report) } catch { report() }
+    try { void Promise.resolve(bridge.open(app, controller.signal, region)).catch(report) } catch { report() }
   }
   function onKey(event: KeyboardEvent) {
     if (event.key === 'Escape' && (menu || editing)) {
@@ -444,6 +446,12 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   sync()
   return {
     sidebar: () => value.side,
+    pinSidebar(app: NavigationShortcut) {
+      if (value.side.includes(app)) return
+      const index = value.side.indexOf(null)
+      if (index < 0) setEditing(true, { app, region: 'side' })
+      else update(replaceNavigationShortcut(value, 'side', index, app))
+    },
     reload() {
       pending?.abort()
       stopPointer()
@@ -462,7 +470,6 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       rail.remove()
       status.remove()
       style.remove()
-      doc.body.style.removeProperty('--navigation-tab-count')
       doc.querySelectorAll('[data-navigation-owned]').forEach(node => node.remove())
       doc.querySelectorAll('[data-navigation-tabs],[data-navigation-unpinned],' + slotSelector).forEach(node => {
         for (const attribute of ['data-navigation-tabs', 'data-navigation-unpinned', 'data-navigation-slot', 'data-navigation-region', 'data-navigation-app']) {

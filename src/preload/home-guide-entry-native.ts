@@ -16,12 +16,15 @@ const TARGET='data-home-guide-entry-target',CLICK='data-home-guide-entry-click'
 const kinds=['board','workbench','note','ppt','report','spreadsheet'],actions=['home-input','home-chat','home-research','home-notes','new-chat','new-research','new-note','new-spreadsheet']
 export const homeGuideMode=(kind:HomeGuideEntryKind)=>kind==='board'||kind==='workbench'?'research':kind==='note'?'notes':kind==='spreadsheet'?'spreadsheet':'chat'
 export const sidebarMoreItemSelector='.st-menu[data-sidebar-more="true"] button[role="menuitem"]'
-export function isSidebarSpreadsheetMenuItem(target:HTMLElement){
+export function isSidebarNewSpreadsheetEntry(target:HTMLElement){
+ if(target.matches('[data-navigation-rail] [data-navigation-app=spreadsheet]'))return true
  const label=target.getAttribute('aria-label')||target.textContent?.trim()||''
  return target.matches(sidebarMoreItemSelector)&&['新建表格','New spreadsheet','New Spreadsheet'].includes(label)
 }
 export function isSidebarNewSessionEntry(target:HTMLElement,action:SidebarNewSessionAction){
  if(!target.matches('[data-dsh-sidebar-root] button,'+sidebarMoreItemSelector))return false
+ const app=action==='new-note'?'note':action==='new-research'?'research':'new-chat'
+ if(target.matches('[data-navigation-rail] [data-navigation-app="'+app+'"]'))return true
  if(action==='new-note'&&target.hasAttribute('data-sidebar-new-note'))return true
  const label=target.getAttribute('aria-label')||target.textContent?.trim()||''
  const names=action==='new-note'?['新笔记','新建笔记','New note','New Note']:action==='new-research'?['新建研究','新研究','New research','New Research']:['新建对话','新对话','New chat','New Chat']
@@ -50,7 +53,7 @@ function available(document:Document,target:HTMLElement){
 }
 function matches(document:Document,target:HTMLElement,action:HomeGuideEntryAction,kind:HomeGuideEntryKind){
  if(!available(document,target))return false
- if(kind==='spreadsheet')return action==='new-spreadsheet'&&isSidebarSpreadsheetMenuItem(target)
+ if(kind==='spreadsheet')return action==='new-spreadsheet'&&isSidebarNewSpreadsheetEntry(target)
  const mode=homeGuideMode(kind)
  if(action.startsWith('home-')&&action!=='home-input')return action==='home-'+mode&&target.matches('[data-srb-tabs] button[data-conversation-view-id="'+mode+'"]')&&!!target.closest('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]')
  if(action==='home-input'){
