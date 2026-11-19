@@ -9,55 +9,34 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "对话首页窗口拖动、输入框样式和无项目对话",
+        "featureName": "统一项目栏图标和关闭按钮状态，修复探索页背景点击",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "33f5bb38e15215a0f5ac7df4e8b63811c3d042d5",
-        "tipCommit": "749a5a56e2ef8a68ea4cc8dee5eafa5d1e6f1c2d",
+        "baseCommit": "749a5a56e2ef8a68ea4cc8dee5eafa5d1e6f1c2d",
+        "tipCommit": "4de0eb9a79adf1a34524065078734f86e180d9b1",
         "commits": [
           {
-            "commit": "749a5a56e2ef8a68ea4cc8dee5eafa5d1e6f1c2d",
+            "commit": "7f95b06b9e45470aa79ebefbe6badb0cda7203d0",
             "parents": [
-              "33f5bb38e15215a0f5ac7df4e8b63811c3d042d5"
+              "749a5a56e2ef8a68ea4cc8dee5eafa5d1e6f1c2d"
             ],
-            "subject": "支持无项目对话并修复首页拖动与输入框描边"
+            "subject": "修复探索页透明留白点击无法关闭"
+          },
+          {
+            "commit": "4de0eb9a79adf1a34524065078734f86e180d9b1",
+            "parents": [
+              "7f95b06b9e45470aa79ebefbe6badb0cda7203d0"
+            ],
+            "subject": "统一项目栏图标并区分关闭按钮悬停状态"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/board-directory-picker.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-tasks.mjs"
-          },
           {
             "status": "M",
             "path": "scripts/lib/patch-figma-final-shell.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/pending-conversation.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-home.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-reading.css"
+            "path": "src/preload/explore-menu.ts"
           },
           {
             "status": "M",
@@ -65,23 +44,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/pending-conversation-browser.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "path": "test/explore-menu-browser.test.ts"
           },
           {
             "status": "M",
             "path": "test/pending-conversation-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation.test.js"
           }
         ],
         "checks": [
@@ -93,8 +60,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "749a5a56e2ef8a68ea4cc8dee5eafa5d1e6f1c2d",
-            "completedAt": "2026-11-19T09:11:04.876Z",
+            "verifiedCommit": "4de0eb9a79adf1a34524065078734f86e180d9b1",
+            "completedAt": "2026-11-19T09:32:23.071Z",
             "timeoutMs": 60000
           },
           {
@@ -102,14 +69,14 @@
               "npm",
               "test",
               "--",
-              "test/pending-conversation.test.js",
-              "test/browser-region-native.test.js",
-              "test/image-factory-native.test.js"
+              "test/explore-menu-browser.test.ts",
+              "-t",
+              "visible backdrop gaps|top-origin drag|hands quick actions|expands search across|closes from the surrounding background"
             ],
             "outcome": "passed",
-            "summary": "43 个会话交接及图像页签行为测试通过",
-            "verifiedCommit": "749a5a56e2ef8a68ea4cc8dee5eafa5d1e6f1c2d",
-            "completedAt": "2026-11-19T09:11:04.876Z",
+            "summary": "背景留白、保留窗口拖动、搜索分级关闭和快捷卡片均通过",
+            "verifiedCommit": "4de0eb9a79adf1a34524065078734f86e180d9b1",
+            "completedAt": "2026-11-19T09:32:23.071Z",
             "timeoutMs": 60000
           },
           {
@@ -120,83 +87,26 @@
               "test/pending-conversation-rendered.test.js",
               "test/figma-final-shell-patch.test.ts",
               "-t",
-              "works without a project|drag region|shows the local work location|docks project controls|locks its picker|hands the first|restores the conversation homepage|renders native welcome"
+              "works without a project|shows the local work location|docks project controls|locks its picker"
             ],
             "outcome": "passed",
-            "summary": "14 个渲染及项目交互测试通过",
-            "verifiedCommit": "749a5a56e2ef8a68ea4cc8dee5eafa5d1e6f1c2d",
-            "completedAt": "2026-11-19T09:11:04.876Z",
+            "summary": "深浅主题首页和侧屏图标一致，清除按钮有独立悬停反馈，无项目和项目锁定仍正确",
+            "verifiedCommit": "4de0eb9a79adf1a34524065078734f86e180d9b1",
+            "completedAt": "2026-11-19T09:32:23.071Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "验证首页清除项目和侧屏菜单入口、保留草稿并发送、深浅主题无描边及首页标题区域兜底。"
+          "summary": "在 Chromium 核验探索页空白区域和两个输入区深浅主题。"
         },
         "acceptanceCriteria": [
-          "首页保留窗口拖动区及右侧面板按钮",
-          "输入框底色可辨识且无描边",
-          "两个入口可取消项目，保留草稿并在独立目录中开始会话",
-          "图像切换与项目更换维持原页签数量"
+          "两个图标同为 16 像素线框，关闭按钮直接悬停时有实底反馈",
+          "探索标题栏、标签栏、快速开始卡片缝隙、用量卡片周围的虚化留白可点击关闭",
+          "卡片、菜单、搜索和标题栏窗口拖动保留既有操作"
         ],
         "risks": [],
-        "generatedAt": "2026-11-19T09:11:04.876Z"
-      },
-      "merged": {
-        "mergeCommit": "3937e3008cc88c4e056d99fd5f4b9e21c0b23ae8",
-        "verificationCommit": "3937e3008cc88c4e056d99fd5f4b9e21c0b23ae8",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3937e3008cc88c4e056d99fd5f4b9e21c0b23ae8",
-            "completedAt": "2026-11-19T09:11:11.422Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "3937e3008cc88c4e056d99fd5f4b9e21c0b23ae8",
-            "completedAt": "2026-11-19T09:11:11.422Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "3937e3008cc88c4e056d99fd5f4b9e21c0b23ae8",
-            "completedAt": "2026-11-19T09:11:11.422Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T09:11:11.422Z"
+        "generatedAt": "2026-11-19T09:32:23.071Z"
       }
     }
   ],
