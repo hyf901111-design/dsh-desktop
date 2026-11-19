@@ -21,7 +21,8 @@ const presentation = {
 const nativeApps = { research: 'research', notes: 'note', spreadsheet: 'spreadsheet' } as const
 const tabsSelector = '.pI_x6G_centerCol [data-srb-tabs], .eb-workspace-tabs'
 const groupSelector = '[data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup'
-const sourceSelector = '[data-home-app-shortcuts] button[data-home-app]'
+const traySelector = '[data-home-app-shortcuts]'
+const sourceSelector = traySelector + ' button[data-home-app]'
 const slotSelector = '[data-navigation-slot]'
 const holdTime = 360
 
@@ -61,7 +62,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   let consumeClick = false
   let hovering: HTMLButtonElement | null = null
   let menu: HTMLElement | undefined
-  let menuAnchor: HTMLButtonElement | undefined
+  let menuAnchor: HTMLElement | undefined
   let pending: AbortController | undefined
   let frame = 0
   const deleteButtons = new Map<HTMLButtonElement, HTMLButtonElement>()
@@ -102,11 +103,12 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       setAttribute(button, 'aria-label', name)
       setAttribute(button, 'title', name)
       if (region === 'side') {
-        button.toggleAttribute('data-navigation-next', index === value.side.indexOf(null))
         const mask = app ? navigationAppIcon(app) : ''
         if (button.style.getPropertyValue('--navigation-glyph') !== mask) button.style.setProperty('--navigation-glyph', mask)
         const surface = app === 'plugin' ? 'integrations' : app === 'note' ? 'notes' : app
-        setAttribute(button, 'aria-pressed', String(Boolean(app && doc.body.dataset.workspaceSurface === surface)))
+        if (app) setAttribute(button, 'aria-pressed', String(doc.body.dataset.workspaceSurface === surface))
+        else button.removeAttribute('aria-pressed')
+        setAttribute(button, 'tabindex', app ? '0' : '-1')
       } else {
         if (container.hasAttribute('data-srb-tabs') && !button.classList.contains('wSkVaW_tab')) button.classList.add('wSkVaW_tab')
         if (button.textContent !== (app ? name : '')) button.textContent = app ? name : ''
@@ -233,8 +235,9 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     menuAnchor = undefined
   }
 
-  type MenuItem = [action: string, zh: string, en: string, icon: 'edit' | 'remove' | 'top' | 'side', run: () => void]
-  function showMenu(anchor: HTMLButtonElement, items: MenuItem[], keyboard: boolean) {
+  type MenuItem = [action: string, zh: string, en: string, icon: 'edit' | 'remove', run: () => void]
+  type MenuPoint = { x: number; y: number }
+  function showMenu(anchor: HTMLElement, items: MenuItem[], keyboard: boolean, point?: MenuPoint) {
     closeMenu()
     menuAnchor = anchor
     anchor.closest('.eb-workspace-tabs')?.setAttribute('data-navigation-retain', '')
@@ -244,9 +247,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     menu.setAttribute('aria-label', english() ? 'Shortcuts' : '快捷入口')
     const shapes = {
       edit: '<path d="m3 13 1-4 7.4-7.4 3 3L7 12l-4 1ZM10.3 2.7l3 3"/>',
-      remove: '<path d="M3 4h10M6 4V2h4v2M4.5 4l.6 10h5.8l.6-10M7 7v4m2-4v4"/>',
-      top: '<rect x="2" y="3" width="12" height="10" rx="2"/><path d="M2 6.5h12"/>',
-      side: '<rect x="2" y="3" width="12" height="10" rx="2"/><path d="M5.5 3v10"/>'
+      remove: '<path d="M3 4h10M6 4V2h4v2M4.5 4l.6 10h5.8l.6-10M7 7v4m2-4v4"/>'
     }
     for (const [action, zh, en, icon, run] of items) {
       const row = doc.createElement('button')
@@ -259,7 +260,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       menu.append(row)
     }
     doc.body.append(menu)
-    positionMenu(anchor, menu)
+    positionMenu(anchor, menu, point)
     const opened = menu
     const focus = () => {
       if (keyboard && menu === opened) opened.querySelector('button')?.focus()
@@ -273,27 +274,24 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     else focus()
   }
 
-  function positionMenu(anchor: HTMLButtonElement, popup: HTMLElement) {
+  function positionMenu(anchor: HTMLElement, popup: HTMLElement, point?: MenuPoint) {
     const anchorBox = anchor.getBoundingClientRect()
     const width = popup.offsetWidth
     const height = popup.offsetHeight
     const side = anchor.dataset.navigationRegion === 'side'
-    const source = anchor.matches(sourceSelector)
-    const x = side ? anchorBox.right + 8 : anchorBox.left
-    const y = side ? anchorBox.top : source ? anchorBox.top - height - 8 : anchorBox.bottom + 8
+    const source = anchor.closest(traySelector)
+    const x = point?.x ?? (side ? anchorBox.right + 8 : anchorBox.left)
+    const y = point ? point.y + 4 : side ? anchorBox.top : source ? anchorBox.top - height - 8 : anchorBox.bottom + 8
     popup.style.left = Math.max(8, Math.min(x, win.innerWidth - width - 8)) + 'px'
     popup.style.top = Math.max(8, Math.min(y, win.innerHeight - height - 8)) + 'px'
   }
 
-  function openContext(target: Element | null, keyboard = false) {
-    const source = target?.closest<HTMLButtonElement>(sourceSelector)
-    const app = source?.dataset.homeApp
-    if (source && isNavigationApp(app)) {
-      const items: MenuItem[] = []
-      if (!value.top.includes(app)) items.push(['top', '添加到顶栏', 'Add to top bar', 'top', () => setEditing(true, { app, region: 'top' })])
-      if (!value.side.includes(app)) items.push(['side', '添加到侧栏', 'Add to sidebar', 'side', () => setEditing(true, { app, region: 'side' })])
-      if (items.length) showMenu(source, items, keyboard)
-      return items.length > 0
+  function openContext(target: Element | null, keyboard = false, point?: MenuPoint) {
+    const tray = target?.closest<HTMLElement>(traySelector)
+    if (tray) {
+      const anchor = target?.closest<HTMLButtonElement>(sourceSelector) ?? tray
+      showMenu(anchor, [['manage', '快捷管理', 'Manage shortcuts', 'edit', () => setEditing(true)]], keyboard, point)
+      return true
     }
     const slot = targetAt(target)
     if (!slot || slot.hasAttribute('data-empty')) return false
@@ -305,7 +303,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   }
 
   function onContext(event: MouseEvent) {
-    if (openContext(event.target as Element)) {
+    if (openContext(event.target as Element, false, { x: event.clientX, y: event.clientY })) {
       event.preventDefault()
       event.stopImmediatePropagation()
     }
@@ -449,8 +447,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     pinSidebar(app: NavigationShortcut) {
       if (value.side.includes(app)) return
       const index = value.side.indexOf(null)
-      if (index < 0) setEditing(true, { app, region: 'side' })
-      else update(replaceNavigationShortcut(value, 'side', index, app))
+      if (index >= 0) update(replaceNavigationShortcut(value, 'side', index, app))
     },
     reload() {
       pending?.abort()

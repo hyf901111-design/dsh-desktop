@@ -51,6 +51,11 @@ describe('home background native context menu', () => {
     expect(items).toEqual([])
   })
 
+  it.each(['#shortcuts', '#shortcut'])('lets the renderer own right-clicks on %s', async selector => {
+    const items = await rightClick(home('<nav data-home-app-shortcuts id="shortcuts"><button id="shortcut">浏览器</button></nav>'), selector)
+    expect(items).toEqual([])
+  })
+
   it('keeps the composer editing menu inside the same home', async () => {
     const items = await rightClick(home('<textarea id="composer"></textarea>'), '#composer', { isEditable: true })
     expect(items.filter(item => item.role).map(item => item.role)).toEqual(['undo', 'redo', 'cut', 'copy', 'paste', 'selectAll'])

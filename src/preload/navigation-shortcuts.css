@@ -4,7 +4,6 @@
 [data-navigation-slot="3"] { order: 4 }
 
 body [data-navigation-tabs] > [data-navigation-unpinned],
-body [data-navigation-rail] > [data-empty],
 body [data-navigation-tabs] > [data-empty] { display: none !important }
 
 body [data-navigation-tabs] > button { -webkit-app-region: no-drag }
@@ -37,14 +36,22 @@ body:not([data-navigation-editing]) [data-navigation-tabs] > button:is(:hover,:f
   gap: 8px;
 }
 [data-navigation-rail] > button {
+  width: 36px;
+  height: 36px;
   border: 0;
   color: #626262;
   background: transparent;
   flex: none;
 }
 body[data-ds-dark-theme] [data-navigation-rail] > button { color: #aaa }
-[data-navigation-rail] > button:is(:hover,:focus-visible,[aria-pressed=true]) {
+[data-navigation-rail] > button:not([data-empty]):is(:hover,:focus-visible,[aria-pressed=true]) {
   background-color: color-mix(in srgb, currentColor 13%, transparent);
+}
+[data-navigation-rail] > button[data-empty] {
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  outline: 1px dashed color-mix(in srgb, currentColor 36%, transparent);
+  outline-offset: -1px;
+  cursor: default;
 }
 [data-navigation-rail] > button:not([data-empty])::before, [data-navigation-ghost]::before {
   display: block;
@@ -68,8 +75,7 @@ body[data-ds-dark-theme][data-navigation-editing] {
   --navigation-slot-border: rgb(200 201 212 / 55%);
   --navigation-slot-target: rgb(215 215 226 / 24%);
 }
-body[data-navigation-editing]:not([data-navigation-editing-region=side]) [data-navigation-tabs] > [data-empty],
-body[data-navigation-picking]:not([data-navigation-editing-region=top]) [data-navigation-rail] > [data-navigation-next] {
+body[data-navigation-editing]:not([data-navigation-editing-region=side]) [data-navigation-tabs] > [data-empty] {
   display: block !important;
 }
 body[data-navigation-editing]:not([data-navigation-editing-region=side]) [data-navigation-tabs] > [data-navigation-slot],

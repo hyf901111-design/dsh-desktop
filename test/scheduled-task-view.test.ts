@@ -517,6 +517,21 @@ it('offers pin actions only in collapsed More and removes a pinned app from that
   more.click()
   expect(doc.querySelector('.st-menu')?.textContent).not.toContain('新建笔记')
   expect(doc.querySelector('[data-st-menu-pin=note]')).toBeNull()
+
+  more.click()
+  pinned.push('browser', 'knowledge', 'image-factory')
+  more.click()
+  const full = [...doc.querySelectorAll<HTMLButtonElement>('[data-st-menu-pin]')]
+  expect(full.length).toBeGreaterThan(0)
+  expect(full.every(button => button.disabled)).toBe(true)
+  full[0]!.click()
+  expect(pinApp).toHaveBeenCalledTimes(1)
+  expect(doc.querySelector('.st-menu')).not.toBeNull()
+
+  more.click()
+  pinned.pop()
+  more.click()
+  expect(doc.querySelector<HTMLButtonElement>('[data-st-menu-pin=scheduled]')?.disabled).toBe(false)
   doc.querySelector('[data-dsh-sidebar-root]')!.setAttribute('data-dsh-sidebar-wide', 'true')
   await vi.waitFor(() => expect(doc.querySelector('.st-menu')).toBeNull())
   more.click()

@@ -1,4 +1,4 @@
-import type { NavigationShortcut } from '../../shared/navigation-shortcuts'
+import { navigationSlotCount, type NavigationShortcut } from '../../shared/navigation-shortcuts'
 import type { IntegrationBridge, TaskCapabilitySummary } from '../../shared/integration-ui'
 import type { IntegrationBinding } from '../../shared/integrations'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
@@ -265,7 +265,12 @@ export class ScheduledTaskView {
       }
       entries.push({ app: 'scheduled', label: english ? 'Scheduled tasks' : '定时任务', icon: 'clock', run: () => void this.open() })
       const available = entries.filter(item => wide || !item.app || !pinned?.includes(item.app))
-      this.showMenu(more, available, wide ? undefined : this.sidebarActions?.pinApp)
+      const pinApp = this.sidebarActions?.pinApp
+      const pins = !wide && pinApp ? {
+        add: pinApp,
+        full: pinned?.length === navigationSlotCount && !pinned.includes(null)
+      } : undefined
+      this.showMenu(more, available, pins)
       const opened=this.menu as HTMLElement|undefined
       if(opened){opened.dataset.sidebarMore='true';opened.dataset.sidebarWide=String(wide)}
     }
@@ -960,7 +965,7 @@ export class ScheduledTaskView {
       { label: '删除任务', danger: true, run: () => this.confirmDelete(t) },
     ])
   }
-  private showMenu(anchor: HTMLElement, items: MenuItem[], pinApp?: (app: NavigationShortcut) => void) {
+  private showMenu(anchor: HTMLElement, items: MenuItem[], pins?: { add(app: NavigationShortcut): void; full: boolean }) {
     if (this.menu && this.menuAnchor === anchor) {
       this.closeMenu()
       anchor.focus()
@@ -991,7 +996,7 @@ export class ScheduledTaskView {
         if (!event.defaultPrevented) item.run()
       }
       const app = item.app
-      if (!pinApp || !app) {
+      if (!pins || !app) {
         menu.append(action)
         continue
       }
@@ -1002,12 +1007,13 @@ export class ScheduledTaskView {
       pin.type = 'button'
       pin.role = 'menuitem'
       pin.dataset.stMenuPin = app
+      pin.disabled = pins.full
       pin.title = english ? 'Pin to sidebar' : '置顶到侧栏'
       pin.setAttribute('aria-label', english ? 'Pin ' + item.label + ' to sidebar' : '置顶' + item.label + '到侧栏')
       pin.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.5 1.7 3.8 3.8-1.8.6-2.2 2.2.3 2.4-1.1 1.1-5.3-5.3 1.1-1.1 2.4.3 2.2-2.2.6-1.8ZM6.8 9.2 3 13"/></svg>'
       pin.onclick = event => {
         this.closeMenu()
-        if (!event.defaultPrevented) pinApp(app)
+        if (!event.defaultPrevented) pins.add(app)
       }
       row.append(action, pin)
       menu.append(row)
