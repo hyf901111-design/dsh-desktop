@@ -70,6 +70,10 @@
 .eb-dialog{top:calc(50% + 50px);max-height:calc(100% - 132px)}
 .eb-find{width:468px;top:126px;min-height:58px}
 .eb-suggestions{left:156px;right:120px;top:96px}
+/* The address bar moves down when the mode switcher needs a second row. */
+.eb-suggestions,.eb-popover:is([data-browser-panel=site],[data-browser-panel=menu]){
+  top:var(--eb-toolbar-popup-top,96px);
+}
 @container(max-width:700px){.eb-popover[data-browser-panel=site]{left:12px}.eb-suggestions{left:12px;right:12px}}
 
 

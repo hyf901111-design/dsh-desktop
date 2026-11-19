@@ -162,7 +162,7 @@ it('restores independent tabs after a desktop restart on a different origin', as
   try { await first.open('A'); await first.select('notes'); await first.open('B'); await first.select('trajectory') } finally { await first.close() }
   const restarted = await fixture({ storage: new ResearchCanvasStorage(directory), port: 5200 })
   try {
-    await restarted.open('B'); expect(restarted.active()).toBe('trajectory')
+    await restarted.open('B'); expect(restarted.active()).toBe('spreadsheet')
     await restarted.open('A'); expect(restarted.active()).toBe('notes')
     await restarted.open('fresh'); expect(restarted.active()).toBe('chat')
   } finally { await restarted.close() }
@@ -295,7 +295,12 @@ it('installs one lifecycle-owned Chat intent and strictly preserves each real sc
   expect(patched.split('/* ework:initial-chat-view-intent:v1 */')).toHaveLength(2)
   expect(patched.split('const storedView = useInitialChatSessionView(sessionId, useStore((s) => s.view), actions);')).toHaveLength(3)
   expect(()=>patchSessionViewPreferences(patched+'\n/* ework:initial-chat-view-intent:v1 */')).toThrow(/intent hook drifted/)
-  expect(()=>patchSessionViewPreferences(patched.replace('installInitialChatViewIntent(chatStore, sessions, researchWorkspaces), "ui-conversation:', 'installInitialChatViewIntent(chatStore, missing, researchWorkspaces), "ui-conversation:'))).toThrow(/intent hook drifted/)
+  const broken = patched.replace(
+    'installInitialChatViewIntent(chatStore, sessions, researchWorkspaces, recordNewChatActivity), "ui-conversation:',
+    'installInitialChatViewIntent(chatStore, missing, researchWorkspaces, recordNewChatActivity), "ui-conversation:'
+  )
+  expect(broken).not.toBe(patched)
+  expect(() => patchSessionViewPreferences(broken)).toThrow(/intent hook drifted/)
 })
 
 it('filters only explicit New Chat reuse in native entry/runtime installers and rejects partial reentry',async()=>{

@@ -145,13 +145,16 @@ export class BrowserAppView {
    const reserved=Math.max(0,parseFloat(win.getComputedStyle(this.document.documentElement).getPropertyValue('--dsh-sidebar-height'))||0)
    this.root.style.left=box.left+'px';this.root.style.top=box.top+'px';this.root.style.width=box.width+'px';this.root.style.height=Math.max(0,bottom-box.top-reserved)+'px';this.root.dataset.dark=String(this.document.body.hasAttribute('data-ds-dark-theme')||this.document.documentElement.dataset.theme==='dark'||this.document.documentElement.classList.contains('dark'));if(center)this.resize?.observe(center)}
   const header=this.root.querySelector<HTMLElement>('.eb-tabs');if(header)reserveWorkspaceRightControl(header)
+  const rounded=this.root.getBoundingClientRect()
+  const toolbar=this.root.querySelector('.eb-toolbar')?.getBoundingClientRect()
+  if(toolbar)this.root.style.setProperty('--eb-toolbar-popup-top',Math.round(toolbar.bottom-rounded.top+4)+'px')
   if(this.panel==='bookmarks')this.positionBookmarks();if(this.panel==='tab-list')this.positionTabList()
   if(this.panel==='recent-downloads')this.positionDownloads()
   this.revealActiveTab()
   const bounds=this.root.querySelector('[data-browser-viewport]')?.getBoundingClientRect(),tab=this.tab()
   // Sample the exposed gutter inside the actual rounded corner, after height clamping.
   let cornerColor=this.root.dataset.dark==='true'?[17,17,17]:[236,236,236]
-  const rounded=this.root.getBoundingClientRect(),layers=(this.document.elementsFromPoint?.(rounded.left+.5,rounded.bottom-.5)??[]).filter(layer=>!this.root.contains(layer)).reverse()
+  const layers=(this.document.elementsFromPoint?.(rounded.left+.5,rounded.bottom-.5)??[]).filter(layer=>!this.root.contains(layer)).reverse()
   if(!layers.length){let backdrop:Element|null=this.document.body;while(backdrop){layers.unshift(backdrop);backdrop=backdrop.parentElement}}
   for(const layer of layers){const color=this.document.defaultView!.getComputedStyle(layer).backgroundColor;if(!/^rgba?\(/.test(color))continue;const channels=color.match(/[\d.]+/g)?.map(Number);if(channels&&channels.length>=3){const alpha=channels[3]??1;cornerColor=cornerColor.map((c,i)=>Math.round((channels[i]??c)*alpha+c*(1-alpha)))}}
   // Keep the webpage behind the shell while Explore's owned pointer uses the
