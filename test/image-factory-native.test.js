@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest'
 import { installImageFactoryContext } from '../scripts/lib/image-factory-native.mjs'
 import { readImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
 
-function fixture(taskStorage, removeProvisionalReference) {
+function fixture(taskStorage, removeProvisionalReference, workspace = () => 'test-workspace') {
   const win = new Window(), doc = win.document
   if (vi.isFakeTimers()) {
     win.setTimeout = (fn, ms) => setTimeout(fn, ms)
@@ -48,7 +48,7 @@ function fixture(taskStorage, removeProvisionalReference) {
     getInput: id => shells.get(id),
     getPending: () => ({ shell, submitExternal: async submit => { handoff(); await submit(session.sessionId) } }),
     send: (...args) => binding.prompt(...args), doc, win, taskStorage, removeProvisionalReference,
-    getTaskWorkspace: () => 'test-workspace', setTaskView: setView,
+    getTaskWorkspace: workspace, standaloneDirectory: async () => '/tmp/standalone/outputs', setTaskView: setView,
   })
   const respond = (error) => doc.addEventListener('sherlock:image-factory-prepare', ({ detail }) => {
     events('prepared', { id: detail.id, ...(error ? { error } : {
@@ -59,6 +59,29 @@ function fixture(taskStorage, removeProvisionalReference) {
   })
   return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank, sessionCatalog, setView, handoff }
 }
+
+it('keeps one tab when its project changes and creates additional projectless tasks in their own directory', async () => {
+  const f = fixture(undefined, undefined, () => null)
+  let tasks
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    f.events('request-session')
+    expect(tasks.active).toBe('native-session')
+    const unassigned = await f.sessionCatalog.create({ sessionId: 'projectless-tab' })
+    f.events('project-changed', { previous: 'native-session', next: unassigned })
+    f.sessionCatalog.open(unassigned)
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual([unassigned])
+    expect(tasks.active).toBe(unassigned)
+
+    f.events('task-action', { kind: 'new' })
+    await vi.waitFor(() => expect(tasks.tabs).toHaveLength(2))
+    expect(f.sessionCatalog.create).toHaveBeenLastCalledWith({ sessionId: tasks.active, cwd: '/tmp/standalone/outputs' })
+  } finally {
+    f.binding.dispose()
+    await f.win.happyDOM.close()
+  }
+})
 
 it('creates a fresh gallery scope per task, switches the native conversation and persists the open tabs', async () => {
   const storage = { read: vi.fn(async () => ({ epoch: 4, tabs: [] })), write: vi.fn(async () => {}) }

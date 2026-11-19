@@ -1,5 +1,5 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
-export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, setView, storage, isBoardOnly = () => false }) {
+export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, standaloneDirectory, setView, storage, isBoardOnly = () => false }) {
   let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
   const validScope = value => value === null ||
     typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
@@ -119,6 +119,13 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     save()
     publish()
   }
+  function replaceActive(previous, scope) {
+    if (!isActive() || active !== previous || !validScope(scope) || !canOpen({ scope }) || tabs.some(tab => tab.scope === scope)) return
+    tabs = tabs.map(tab => tab.scope === previous ? { ...tab, scope } : tab)
+    active = scope
+    save()
+    publish()
+  }
   function setTitle({ scope, title } = {}) {
     if (typeof title !== 'string' || !title.trim()) return
     const tab = tabs.find(item => item.scope === scope)
@@ -149,7 +156,9 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     publish()
     try {
       const workspaceId = getWorkspace?.()
-      const sessionId = await sessions.create({ sessionId: id, ...(workspaceId && { workspaceId }) })
+      const directory = workspaceId === null ? { cwd: await standaloneDirectory() } : workspaceId ? { workspaceId } : {}
+      if (openToken !== token) return
+      const sessionId = await sessions.create({ sessionId: id, ...directory })
       if (openToken !== token) return
       if (sessionId !== id || !sessions.binding(id)) throw Error('新图片任务未能打开。')
       if (replacedTab) {
@@ -231,5 +240,5 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = undefined
     publish()
   }
-  return { sync, action, setTitle, bindDraft, publish, reset, isCreating: () => !!openToken }
+  return { sync, action, setTitle, bindDraft, replaceActive, publish, reset, isCreating: () => !!openToken }
 }

@@ -1,5 +1,5 @@
 /** Keep project selection and drafts local until an action actually needs a session. */
-export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,prepareContext,prepareSession,releaseImages,setView,currentSurface}){
+export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,prepareContext,prepareSession,releaseImages,setView,currentSurface,standaloneDirectory}){
  const listeners=new Set();let disposed=false,explicit=false,projectRevision=0,state={workspaceId:undefined,busy:false,activating:false,rightSession:undefined};
  const publish=patch=>{
   if('workspaceId' in patch&&patch.workspaceId!==state.workspaceId)projectRevision++;
@@ -7,11 +7,11 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
  };
  const target=()=>workspaces.list.getSnapshot().items.find(item=>item.workspaceId===state.workspaceId);
  const chooseDefault=()=>{
-  if(disposed||explicit&&target())return;
+  if(disposed||explicit&&(state.workspaceId===null||target()))return;
   const snapshot=workspaces.list.getSnapshot();
   if(snapshot.phase==='pending')return;
   explicit=false;
-  const id=snapshot.items.find(item=>item.workspaceId===snapshot.recentWorkspaceId)?.workspaceId;
+  const id=snapshot.items.find(item=>item.workspaceId===snapshot.recentWorkspaceId)?.workspaceId??null;
   if(state.workspaceId!==id)publish({workspaceId:id});
  };
  const send=async(_text,_images,mode,admission,external,control)=>{
@@ -20,19 +20,21 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    if(!disposed&&!control&&state.activating)shell.notify('error','正在打开项目会话，草稿已保留。');
    return;
   }
-  const draft=admission??shell.snapshot,project=target(),before=sessions.list.getSnapshot().current;
+  const draft=admission??shell.snapshot,project=target(),standalone=state.workspaceId===null,before=sessions.list.getSnapshot().current;
   if(!external&&!control&&!draft.draft.trim()&&!draft.imageIds?.length)return;
-  if(!project){if(external)throw Error('请先选择项目。');shell.notify('error','请先选择项目。');return}
+  if(!project&&!standalone){if(external)throw Error('项目尚未加载，请稍后重试。');shell.notify('error','项目尚未加载，请稍后重试。');return}
   if(before!==undefined){if(external)throw Error('当前会话已变化，请重试。');shell.notify('error','当前会话已变化，输入已保留。');return}
   const surface=currentSurface?.(),revision=projectRevision;
-  const ownsProject=()=>!disposed&&projectRevision===revision&&target()?.path===project.path&&currentSurface?.()===surface;
+  const ownsProject=()=>!disposed&&projectRevision===revision&&(standalone||target()?.path===project?.path)&&currentSurface?.()===surface;
   publish(control?{activating:true}:{busy:true});
   if(!control)shell.setResearchContextPreparing(true);
   let handedOff;
   try{
    const context=control?undefined:await prepareContext?.();
    if(!ownsProject()||sessions.list.getSnapshot().current!==before||(!control&&shell.snapshot.draftRev!==draft.draftRev))throw Error('输入或项目已变化，请重试。');
-   const id=await sessions.create({workspaceId:project.workspaceId});
+   const options=standalone?{cwd:await standaloneDirectory()}:{workspaceId:project.workspaceId};
+   if(!ownsProject()||sessions.list.getSnapshot().current!==before||(!control&&shell.snapshot.draftRev!==draft.draftRev))throw Error('输入或项目已变化，请重试。');
+   const id=await sessions.create(options);
    if(!ownsProject()||![undefined,id].includes(sessions.list.getSnapshot().current))throw Error('当前会话已变化，输入已保留。');
    // A control can take time to connect. Carry edits made while the user was typing.
    const transfer=control?shell.snapshot:draft;
@@ -71,7 +73,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
   shell.track=(text,caret,inputType)=>{
    track(text,caret,inputType);
    typedSelection={start:caret,end:caret};
-   if(state.workspaceId&&inputType?.startsWith('insert')&&/(?:^|\s)\/[^\s/]*$/u.test(text.slice(0,caret)))void activate(typedCommand);
+   if(state.workspaceId!==undefined&&inputType?.startsWith('insert')&&/(?:^|\s)\/[^\s/]*$/u.test(text.slice(0,caret)))void activate(typedCommand);
   };
  }
  // Keep raw occurrences until a real session supplies its registered codecs.
@@ -87,7 +89,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    // Mounting the real Chat draft advances draftRev even for unchanged empty text.
    return !disposed&&sessions.list.getSnapshot().current===sessionId&&currentSurface?.()===command.surface&&getInput(sessionId)===keyboard&&keyboard.snapshot.draft===command.draft;
   },
-  selectWorkspace(id){if(state.busy)throw Error('正在发送，请稍候。');if(!workspaces.list.getSnapshot().items.some(item=>item.workspaceId===id))throw Error('项目已不可用。');explicit=true;if(state.workspaceId!==id)publish({workspaceId:id})},
+  selectWorkspace(id){if(state.busy)throw Error('正在发送，请稍候。');if(id!==null&&!workspaces.list.getSnapshot().items.some(item=>item.workspaceId===id))throw Error('项目已不可用。');explicit=true;if(state.workspaceId!==id)publish({workspaceId:id})},
   dispose(){disposed=true;off?.();offSession?.();releaseImages?.(shell.snapshot.imageIds??[]);shell.dispose();listeners.clear()}}
 }
 /** Header for a project whose first draft has not needed a host session yet. */
@@ -122,7 +124,7 @@ export function EWorkPendingInputBar(props){
  },[pending,command,props.sessionId,props.subagentPanel,sessionReady,props.keyboard,props.toggleCommandMenu]);
  if(!props.pendingConversation||!pending)return react_jsx_runtime.jsx(EWorkSharedInputBar,props);
  const shell=pending.shell;
- const disabled=props.disabled||!state.workspaceId||state.busy;
+ const disabled=props.disabled||state.workspaceId===undefined||state.busy;
  return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,disabled,
   toggleCommandMenu:!disabled&&!state.activating?selection=>pending.activate({selection}):undefined,
   command:async line=>{
@@ -136,7 +138,7 @@ export function EWorkPendingInputBar(props){
   useNotices:select=>{props.useNotices(value=>value);return select(notice)},useLexicon:select=>{props.useLexicon(value=>value);return select(new Map())},
   addImages:files=>{try{const images=conversationController.createDraftImages(files);if(!shell.addImages(images.map(image=>image.id)))conversationController.releaseDraftImages(images);return null}catch(error){return error.message}},
   removeImage:id=>{conversationController.releaseDraftImage(id);shell.removeImage(id)},draftImages:ids=>conversationController.draftImages(ids),
-  placeholder:state.workspaceId?(props.eworkImageFactory?'描述要生成的图片或海报…':props.placeholder||'输入你的问题…'):'选择项目后开始对话',onRequestWorkspace:props.onRequestWorkspace});
+  placeholder:props.eworkImageFactory?'描述要生成的图片或海报…':props.placeholder||'输入你的问题…',onRequestWorkspace:props.onRequestWorkspace});
 }
 export function browserPromptReference(source){
  if(source===undefined||source===null)return '';
