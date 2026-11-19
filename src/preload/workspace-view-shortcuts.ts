@@ -81,8 +81,10 @@ export class WorkspaceViewHover {
         try { inside = await this.pointerInBar({ x, y, width, height }) } catch {}
       }
       if (generation !== this.generation || this.root.querySelector('.eb-workspace-controls :focus-visible')) return
-      if (!inside && !insideBar()) this.setExpanded(false)
-      else if (this.pointerInBar) this.schedule()
+      const editingShortcuts = this.root.ownerDocument.body.hasAttribute('data-navigation-editing') ||
+        bar.querySelector('.eb-workspace-tabs[data-navigation-retain]')
+      if (!inside && !insideBar() && !editingShortcuts) this.setExpanded(false)
+      else if (this.pointerInBar || editingShortcuts) this.schedule()
     }, hoverDelay)
   }
 

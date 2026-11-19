@@ -50,6 +50,8 @@ import { mountDesktopShellStyles } from './shell-style'
 import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeAppShortcuts } from './home-app-shortcuts'
+import { mountNavigationShortcuts } from './navigation-shortcuts'
+import { defaultNavigationShortcuts, type NavigationApp } from '../shared/navigation-shortcuts'
 import { mountImageGenerationFlow } from './image-generation-flow'
 import { imageFactoryOpenEvent, mountImageFactory } from './image-factory/view'
 import { mountHomeThemes, getHomeThemeController } from './home-themes'
@@ -454,12 +456,14 @@ function initializeUi(): void {
     mountSpreadsheet: async (doc, _host, options) => mountCashFlowGuide(doc, options, spreadsheetView!) })
   const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, { themeController: getHomeThemeController(document)!, onBeforeOpen:()=>{void homeGuides.reset(false)}, onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample:(kind, context)=>playHomeGuideFromExplore(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
+  let navigationShortcuts: ReturnType<typeof mountNavigationShortcuts> | undefined
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
     workspaces: () => ipcRenderer.invoke('scheduled-tasks:request', 'workspaces'),
     save: (input, id) => ipcRenderer.invoke('scheduled-tasks:request', 'save', { input, id }),
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
-  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create,newSpreadsheet:sidebarNewSpreadsheet.create})
+  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create,newSpreadsheet:sidebarNewSpreadsheet.create,
+    pinnedApps: () => navigationShortcuts?.sidebar() ?? defaultNavigationShortcuts.side})
   scheduledView.mount()
   const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
     workspacePointerInBar,
@@ -473,7 +477,10 @@ function initializeUi(): void {
   })
   const openImageFactory = () => { void flushBeforeCreate().then(imageFactory.open).catch(() => {}) }
   window.addEventListener(imageFactoryOpenEvent, openImageFactory)
-  const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, async (app, signal) => {
+  const openNavigationApp = async (app: NavigationApp, signal: AbortSignal) => {
+    const surface = workspaceSurfaceHost.current()?.surface
+    const targetSurface = app === 'plugin' ? 'integrations' : app
+    if (surface && surface === targetSurface) return
     if (app === 'image-factory') {
       await flushBeforeCreate()
       if (!signal.aborted) imageFactory.open()
@@ -490,12 +497,24 @@ function initializeUi(): void {
     else if (app === 'knowledge') window.dispatchEvent(new CustomEvent(knowledgeOpenEvent))
     else if (app === 'plugin') window.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
     else await scheduledView.open()
+  }
+  const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, openNavigationApp)
+  let shortcutProfile: string | undefined
+  navigationShortcuts = mountNavigationShortcuts(document, {
+    read: () => {
+      const saved = ipcRenderer.sendSync('navigation-shortcuts:get')
+      shortcutProfile = saved?.key
+      return saved?.config
+    },
+    save: config => Boolean(shortcutProfile &&
+      ipcRenderer.sendSync('navigation-shortcuts:set', { key: shortcutProfile, config })),
+    open: openNavigationApp
   })
   window.addEventListener('unload', () => {
-    disposeHomeAppShortcuts(); imageFactory.dispose()
+    navigationShortcuts?.dispose(); disposeHomeAppShortcuts(); imageFactory.dispose()
     window.removeEventListener(imageFactoryOpenEvent, openImageFactory)
   }, { once: true })
-  const resetIntegrationIdentity = () => { imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { navigationShortcuts?.reload(); imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
   window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })

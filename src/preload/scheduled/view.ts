@@ -1,3 +1,4 @@
+import type { NavigationApp } from '../../shared/navigation-shortcuts'
 import type { IntegrationBridge, TaskCapabilitySummary } from '../../shared/integration-ui'
 import type { IntegrationBinding } from '../../shared/integrations'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
@@ -91,7 +92,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
-    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>},
+    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationApp|null)[]},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)
@@ -226,6 +227,8 @@ export class ScheduledTaskView {
       if(this.menu){this.closeMenu();return}
       const sidebar = group.closest('[data-dsh-sidebar-root]')
       const wide = sidebar?.getAttribute('data-dsh-sidebar-wide') !== 'false'
+      const pinned = this.sidebarActions?.pinnedApps?.()
+      const showApp = (app: NavigationApp) => wide || Boolean(pinned && !pinned.includes(app))
       const addWorkspace = sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')
       const english = this.document.documentElement.dataset.odysseyLocale === 'en'
       this.showMenu(more, [
@@ -242,9 +245,9 @@ export class ScheduledTaskView {
               label:english?'New spreadsheet':'新建表格',
               icon:'spreadsheet' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('spreadsheet')
             }]:[]),
-            ...(wide&&this.surfaceHost?[{label:english?'Browser':'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
-            ...(wide&&this.surfaceHost?[{label:english?'Knowledge Base':'知识库',icon:'knowledge' as const,run:()=>this.openKnowledge()}]:[]),
-            ...(wide&&this.surfaceHost?[{label:english?'Images':'图像',icon:'factory' as const,run:()=>this.openImageFactory()}]:[]),
+            ...(showApp('browser')&&this.surfaceHost?[{label:english?'Browser':'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
+            ...(showApp('knowledge')&&this.surfaceHost?[{label:english?'Knowledge Base':'知识库',icon:'knowledge' as const,run:()=>this.openKnowledge()}]:[]),
+            ...(showApp('image-factory')&&this.surfaceHost?[{label:english?'Images':'图像',icon:'factory' as const,run:()=>this.openImageFactory()}]:[]),
             ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
               this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
             } }] : []),
@@ -277,7 +280,7 @@ export class ScheduledTaskView {
       const pressed = String(Boolean(homePage))
       if (home.getAttribute('aria-pressed') !== pressed) home.setAttribute('aria-pressed', pressed)
     }
-    if (!collapsed || !this.surfaceHost) {
+    if (!collapsed || !this.surfaceHost || this.sidebarActions?.pinnedApps) {
       group.querySelectorAll('[data-sidebar-browser],[data-sidebar-knowledge],[data-sidebar-image-factory]').forEach(button => button.remove())
       return
     }
