@@ -520,6 +520,9 @@ function initializeUi(): void {
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app
     if (surface && surface === targetSurface) return
+    const inheritSidebarWorkspace = () => {
+      if (region === 'side') document.dispatchEvent(new CustomEvent('sherlock:sidebar-launch-workspace-app', { detail: app }))
+    }
     if (app === 'note') { await openSidebarDocument('note', signal); return }
     if (app === 'new-workspace' || app === 'new-chat' || (region === 'side' && app === 'research')) {
       const sidebar = document.querySelector('[data-dsh-sidebar-root]')
@@ -532,7 +535,7 @@ function initializeUi(): void {
     }
     if (app === 'image-factory') {
       await flushBeforeCreate()
-      if (!signal.aborted) imageFactory.open()
+      if (!signal.aborted) { inheritSidebarWorkspace(); imageFactory.open() }
       return
     }
     if (app === 'spreadsheet') { await openSidebarDocument('spreadsheet', signal); return }
@@ -542,8 +545,10 @@ function initializeUi(): void {
     }
     await notes.flushCurrent()
     if (signal.aborted) return
-    if (app === 'browser') window.dispatchEvent(new CustomEvent('sherlock:browser-request'))
-    else if (app === 'knowledge') window.dispatchEvent(new CustomEvent(knowledgeOpenEvent))
+    if (app === 'browser' || app === 'knowledge') {
+      inheritSidebarWorkspace()
+      window.dispatchEvent(new CustomEvent(app === 'browser' ? 'sherlock:browser-request' : knowledgeOpenEvent))
+    }
     else if (app === 'plugin') window.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
     else await scheduledView.open()
   }

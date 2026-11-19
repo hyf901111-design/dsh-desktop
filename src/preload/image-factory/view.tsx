@@ -1284,8 +1284,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   }
   const useGalleryPrompt = useCallback((prompt: string) => {
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
-    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt }, cancelable: true }))
-  }, [doc])
+    const instruction = t('生成图片：', 'Generate an image: ') + prompt
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt: instruction }, cancelable: true }))
+  }, [doc, t])
   async function openGalleryTemplate(example: GalleryExample) {
     if (busy || creatingTemplate.current) return
     const inImages = () => mounted.current && doc.body.dataset.workspaceSurface === 'image-factory'

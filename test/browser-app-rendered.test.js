@@ -497,12 +497,14 @@ it('keeps the shared switcher expanded and carries the current session through m
    header.closest('.wSkVaW_root').dataset.odysseyPage='conversation'
    header.classList.add('wSkVaW_header')
    header.dataset.odysseyHeaderLayout='narrow'
-   header.closest('.pI_x6G_centerCol').style.width='335px'
+   header.closest('.pI_x6G_centerCol').style.width='680px'
   })
   await expect.poll(()=>controls.locator('.eb-workspace-tabs').evaluate(nav=>
    [...nav.querySelectorAll('button')].every(button=>{
     const {x,y,width,height}=button.getBoundingClientRect()
-    return button.contains(document.elementFromPoint(x+width/2,y+height/2))
+    const toggle=nav.previousElementSibling.getBoundingClientRect()
+    return toggle.right<=x && Math.abs(y+height/2-(toggle.y+toggle.height/2))<1 &&
+      button.contains(document.elementFromPoint(x+width/2,y+height/2))
    })
   )).toBe(true)
   for(const surface of ['integrations','scheduled']) {
@@ -536,7 +538,7 @@ it('keeps the new-tab button immediately after short tab rows and at the edge wh
 })
 
 
-it('fits every workspace label next to crowded browser tabs at three widths',async()=>{
+it('keeps workspace modes and crowded browser tabs on one row at three widths',async()=>{
  const {page,errors}=await fixture(394,700,false)
  try {
   await page.evaluate(()=>{
@@ -558,15 +560,20 @@ it('fits every workspace label next to crowded browser tabs at three widths',asy
   }
   expect(await gear.evaluate(hitTest)).toBe(true)
   const selected=browser.getByRole('tab',{selected:true})
-  expect((await selected.boundingBox()).width).toBeGreaterThanOrEqual(30)
   expect(await browser.evaluate(el=>el.scrollWidth)).toBeLessThanOrEqual(320)
-  expect((await nav.boundingBox()).y).toBeGreaterThan((await selected.boundingBox()).y)
+  const midY=box=>box.y+box.height/2
+  expect(midY(await nav.boundingBox())).toBeCloseTo(midY(await selected.boundingBox()),0)
   expect(await nav.getByRole('button').count()).toBe(6)
   for (const width of [394,754,944]) {
    await page.setViewportSize({width,height:700})
    await expect.poll(()=>browser.evaluate(el=>el.getBoundingClientRect().width)).toBe(width-74)
    await expect.poll(()=>nav.evaluate(el=>el.getAnimations().length)).toBe(0)
-   for (const button of await nav.getByRole('button').all()) expect(await button.evaluate(hitTest)).toBe(true)
+   for (const button of await nav.getByRole('button').all()) {
+    if(width===394) await button.scrollIntoViewIfNeeded()
+    expect(await button.evaluate(hitTest), await button.getAttribute('aria-label')).toBe(true)
+    expect(midY(await button.boundingBox())).toBeCloseTo(midY(await gear.boundingBox()),0)
+   }
+   expect(await browser.locator('.eb-tab-switcher').evaluate(hitTest)).toBe(true)
    if(width===394){
     await page.screenshot({path:evidence+'/workspace-expanded-narrow-light.png'})
     await browser.getByRole('combobox',{name:'搜索或输入网址'}).fill('example')
@@ -744,7 +751,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    window.browserView.close()
    document.body.removeAttribute('data-workspace-surface')
    const center=document.querySelector('.pI_x6G_centerCol')
-   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header data-srb-session-header style="display:flex;align-items:center;height:44px"><span>新研究</span><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
+   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header class="wSkVaW_header" data-odyssey-header-layout="compact" data-srb-session-header><div class="wSkVaW_crumbs"><span class="wSkVaW_crumb">新研究</span></div><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
    document.body.insertAdjacentHTML('beforeend', `
     <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
      <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home aria-label="主页">主页</button></div>
@@ -802,17 +809,22 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await gear.click()
   const dialog=page.getByRole('dialog',{name:'自定义顶栏'})
   const palette=dialog.getByRole('group',{name:'拖动应用到上方顶栏'})
-  const slots=dialog.locator('[data-workspace-editor-slot]')
+  const strip=nav.getByRole('group',{name:'顶栏插槽'})
+  const slots=strip.locator('[data-workspace-editor-slot]')
+  const done=nav.getByRole('button',{name:'完成编辑',exact:true})
   await palette.waitFor()
-  expect(await dialog.getByText('对话',{exact:true}).getAttribute('title')).toBe('对话固定在第一位')
+  expect(await strip.getByText('对话',{exact:true}).getAttribute('title')).toBe('对话固定在第一位')
+  expect(await views.first().isVisible()).toBe(false)
+  expect(await dialog.locator('[data-workspace-editor-slot]').count()).toBe(0)
+  expect(await done.count()).toBe(1)
   expect(await slots.count()).toBe(4)
   expect(await dialog.getByRole('combobox').count()).toBe(0)
   expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','笔记','表格','图像','浏览器','知识库'])
   expect(await dialog.evaluate(panel=>getComputedStyle(panel).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
-  expect(await dialog.locator('.workspace-view-slots,.workspace-view-palette').evaluateAll(rows=>rows.map(row=>{
+  expect(await palette.evaluate(row=>{
    const style=getComputedStyle(row)
    return [style.backgroundColor,style.borderTopWidth,style.boxShadow]
-  }))).toEqual(Array(2).fill([dark?'rgb(38, 38, 38)':'rgb(255, 255, 255)','0px','none']))
+  })).toEqual([dark?'rgb(38, 38, 38)':'rgb(255, 255, 255)','0px','none'])
   expect(await slots.allTextContents()).toEqual(['','','',''])
   expect(await slots.first().getByRole('button').evaluate(button=>['::before','::after'].map(side=>getComputedStyle(button,side).content)))
    .toEqual(['none','none'])
@@ -825,16 +837,23 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    return {x,y,width,height}
   }))
   const emptyGeometry=await slotGeometry()
-  const paletteBox=await palette.boundingBox(), stripBox=await dialog.locator('.workspace-view-slots').boundingBox()
+  const paletteBox=await palette.boundingBox(), stripBox=await strip.boundingBox()
   expect(paletteBox.x).toBe(stripBox.x)
-  expect(paletteBox.width).toBe(330)
-  expect(paletteBox.y-stripBox.y-stripBox.height).toBe(6)
+  const paletteFitsLabels=()=>palette.evaluate(row=> {
+   const buttons=[...row.querySelectorAll('button:not([hidden])')]
+   return Math.abs(row.offsetWidth-(12+6*(buttons.length-1)+buttons.reduce((sum,button)=>sum+button.getBoundingClientRect().width,0)))<1
+  })
+  expect(await paletteFitsLabels()).toBe(true)
   expect(emptyGeometry).toEqual(emptyGeometry.map((slot,index)=>({
    x:emptyGeometry[0].x+index*62,y:emptyGeometry[0].y,width:56,height:28
   })))
   const headerBox=await page.locator('[data-srb-session-header]').boundingBox()
-  expect(stripBox.y).toBeGreaterThanOrEqual(headerBox.y+headerBox.height+8)
-  expect(await dialog.locator('[data-navigation-delete]').count()).toBe(0)
+  expect(stripBox.y+stripBox.height/2).toBeCloseTo(headerBox.y+headerBox.height/2,0)
+  expect(paletteBox.y).toBeGreaterThanOrEqual(headerBox.y+headerBox.height+4)
+  const toggleUnderTest=controls.locator('.eb-workspace-toggle')
+  const toggleBounds=await toggleUnderTest.boundingBox()
+  expect(toggleBounds.x+toggleBounds.width).toBeLessThan(stripBox.x)
+  expect(await strip.locator('[data-navigation-delete]').count()).toBe(0)
   expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('workspace-view-label-wiggle')
   await page.emulateMedia({reducedMotion:'reduce'})
   expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('none')
@@ -847,9 +866,10 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await dragApp('知识库',3)
   expect(await slots.locator('[data-workspace-editor-app]').allTextContents()).toEqual(['图像','笔记','表格','知识库'])
   expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','浏览器'])
-  expect((await palette.boundingBox()).width).toBe(114)
+  expect(await paletteFitsLabels()).toBe(true)
+  expect((await palette.boundingBox()).width).toBeLessThan(paletteBox.width / 2)
   expect(await slotGeometry()).toEqual(emptyGeometry)
-  const deleteButtons=dialog.locator('[data-navigation-delete]')
+  const deleteButtons=strip.locator('[data-navigation-delete]')
   expect(await deleteButtons.count()).toBe(4)
   expect(await deleteButtons.evaluateAll(buttons=>buttons.map(button=>{
    const slot=button.parentElement.getBoundingClientRect(), hit=button.getBoundingClientRect()
@@ -880,25 +900,25 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await page.mouse.up()
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','spreadsheet','image-factory','knowledge'])
   await palette.getByRole('button',{name:'浏览器',exact:true}).press('Enter')
-  await dialog.getByRole('button',{name:'第 3 项 · 表格'}).press('Enter')
+  await strip.getByRole('button',{name:'第 3 项 · 表格'}).press('Enter')
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','browser','spreadsheet','image-factory'])
   await page.evaluate(()=>{window.failTopSave=true})
   await dragApp('研究',3)
   expect(await dialog.getByRole('status').textContent()).toBe('顶栏设置保存失败')
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','browser','spreadsheet','image-factory'])
   await page.evaluate(()=>{window.failTopSave=false})
-  await dialog.getByRole('button',{name:'移除表格'}).click()
+  await strip.getByRole('button',{name:'移除表格'}).click()
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','browser','image-factory',null])
   expect(await deleteButtons.count()).toBe(3)
   expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','表格','知识库'])
-  expect((await palette.boundingBox()).width).toBe(168)
+  expect(await paletteFitsLabels()).toBe(true)
   expect(await slotGeometry()).toEqual(emptyGeometry)
   await dragApp('知识库',3)
   await page.mouse.move(500,230)
-  const editorBox=await dialog.boundingBox()
+  const editorBox=await dialog.boundingBox(), doneBox=await done.boundingBox()
   await page.screenshot({path:evidence+'/workspace-shortcut-editor-'+(dark?'dark':'light')+'.png',animations:'disabled',
-   clip:{x:editorBox.x-2,y:editorBox.y-8,width:editorBox.width+4,height:editorBox.height+10}})
-  await dialog.getByRole('button',{name:'完成编辑'}).click()
+   clip:{x:headerBox.x,y:headerBox.y,width:doneBox.x+doneBox.width-headerBox.x+12,height:editorBox.y+editorBox.height-headerBox.y+8}})
+  await done.click()
   await dialog.waitFor({state:'hidden'})
   await expect.poll(() => views.allTextContents()).toEqual(['对话','笔记','浏览器','图像','知识库'])
   await page.locator('.wSkVaW_root').evaluate(root=>{
@@ -909,11 +929,11 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   const center=page.locator('.pI_x6G_centerCol')
   await center.evaluate(el=>{el.style.containerType='inline-size';el.style.width='340px'})
   await expect.poll(()=>homeBar.locator('.eb-workspace-tabs').evaluate(nav=>{
-   const pane=nav.closest('.pI_x6G_centerCol').getBoundingClientRect()
-   return [...nav.querySelectorAll('button')].every(button=>{
+   const bar=nav.closest('.workspace-home-topbar').getBoundingClientRect()
+   const gear=nav.querySelector('[data-workspace-view-customize]').getBoundingClientRect()
+   return gear.right<=bar.right&&[...nav.querySelectorAll('button')].every(button=>{
     const hit=button.getBoundingClientRect()
-    const visible=document.elementFromPoint(hit.x+hit.width/2,hit.y+hit.height/2)
-    return hit.left>=pane.left&&hit.right<=pane.right&&button.contains(visible)
+    return Math.abs(hit.y+hit.height/2-(bar.top+bar.height/2))<1
    })
   })).toBe(true)
   await center.evaluate(el=>{el.style.containerType='';el.style.width='auto'})

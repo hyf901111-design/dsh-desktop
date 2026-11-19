@@ -17,10 +17,19 @@ it('retains both exact Figma 18px SVGs without runtime downloads',async()=>{cons
 it('replays the complete production entry twice with stable owned layers and no dependency writes',async()=>{
  const entry=await readFile('scripts/verify-frontend-patch-reentry.mjs','utf8')
  const checks=`
-const stripBrowserAppNative=(await import(${JSON.stringify(pathToFileURL(resolve('scripts/lib/browser-app-native.mjs')).href)})).stripBrowserAppNative;
-const stripResearchBoardHeaderClient=(await import(${JSON.stringify(pathToFileURL(resolve('scripts/lib/research-board-header-client.mjs')).href)})).stripResearchBoardHeaderClient;
-const stripSpreadsheetClient=(await import(${JSON.stringify(pathToFileURL(resolve('scripts/lib/spreadsheet-client.mjs')).href)})).stripSpreadsheetClient;
-const own=(source,kind)=>{if(kind==='conversation')source=stripBrowserAppNative(stripResearchBoardHeaderClient(stripSpreadsheetClient(source)));const prefix='/* sherlock:sidebar-new-note:'+kind+':v1 */\\n// ',a=source.indexOf(prefix);if(a<0||source.split(prefix).length!==2)throw Error('Missing/duplicate owned layer '+kind);const b=source.indexOf('\\n/* sherlock:sidebar-new-note:end */',a);const pairs=JSON.parse(source.slice(a+prefix.length,b));let live=source.slice(0,a);for(const[from,to]of [...pairs].reverse()){if(live.split(to).length!==2)throw Error('Owned live hook drift '+kind);live=live.replace(to,from)}return JSON.stringify(pairs)};
+const own=(source,kind)=>{
+ const prefix='/* sherlock:sidebar-new-note:'+kind+':v1 */\\n// ',a=source.indexOf(prefix);
+ if(a<0||source.split(prefix).length!==2)throw Error('Missing/duplicate owned layer '+kind);
+ const b=source.indexOf('\\n/* sherlock:sidebar-new-note:end */',a),pairs=JSON.parse(source.slice(a+prefix.length,b));
+ const live=source.slice(0,a);
+ for(const[from,to]of pairs){
+  // Other conversation patches can insert at the same anchor.
+  const hook=kind==='conversation'&&to.startsWith(from)?to.slice(from.length):to;
+  if(live.split(hook).length!==2)throw Error('Owned live hook drift '+kind);
+ }
+ return JSON.stringify(pairs)
+};
+
 if(own(first,'conversation')!==own(second,'conversation')||own(firstSidebar,'shell')!==own(overlay.get(sidebar),'shell'))throw Error('New Note changed during full-entry replay');
 if(firstSidebar!==overlay.get(sidebar))throw Error('Sidebar bytes changed during full-entry replay');
 `

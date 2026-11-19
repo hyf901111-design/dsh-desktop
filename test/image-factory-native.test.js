@@ -552,7 +552,7 @@ it('adds workspace context to the real native prompt while leaving ordinary chat
   const f = fixture()
   try {
     f.respond()
-    const content = [{ type: 'text', text: '用于活动的海报' }]
+    const content = [{ type: 'text', text: '你好，请生成一张用于活动的海报' }]
     f.doc.body.dataset.workspaceSurface = 'browser'
     await f.binding.prompt(f.session, content, 'queue')
     expect(f.session.prompt).toHaveBeenLastCalledWith(content, 'queue')
@@ -562,6 +562,23 @@ it('adds workspace context to the real native prompt while leaving ordinary chat
     expect(mode).toBe('queue')
     expect(readImageFactoryContext(nativeContent[0].text)).toMatchObject({ operation: 'generate', text: content[0].text })
     expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+it('sends greetings, image analysis and advice as ordinary messages in Images', async () => {
+  const f = fixture()
+  const prepare = vi.fn()
+  f.doc.addEventListener('sherlock:image-factory-prepare', prepare)
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const image = { type: 'image', data: 'QkJC', mediaType: 'image/png', name: '参考.png' }
+    for (const text of ['你好', '看看这张图片有什么问题', '帮我分析这张海报，怎么改更好？',
+      '生成图片的提示词怎么写？', 'Please write a prompt to generate an image', '不要生成图片，先给建议']) {
+      const content = [{ type: 'text', text }, image]
+      expect(await f.binding.prompt(f.session, content, 'queue')).toEqual({ ok: true })
+      expect(f.session.prompt).toHaveBeenLastCalledWith(content, 'queue')
+    }
+    expect(prepare).not.toHaveBeenCalled()
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
@@ -626,7 +643,7 @@ it('unlocks a removed queued image request while an unrelated turn keeps running
     f.state.running = true
     const settled = vi.fn()
     f.doc.addEventListener('sherlock:image-factory-settled', settled)
-    await f.binding.prompt(f.session, [{ type: 'text', text: '第一张活动海报' }], 'queue')
+    await f.binding.prompt(f.session, [{ type: 'text', text: '制作第一张活动海报' }], 'queue')
     const [[content]] = f.session.prompt.mock.calls
     const id = readImageFactoryContext(content[0].text).id
     const other = { placement: 'queued', content: [{ type: 'text', text: '无关的排队对话' }] }
@@ -652,7 +669,7 @@ it('keeps a queued image request through its handoff to the durable native turn'
     const settled = vi.fn()
     const publish = () => { for (const listener of f.listeners) listener() }
     f.doc.addEventListener('sherlock:image-factory-settled', settled)
-    await f.binding.prompt(f.session, [{ type: 'text', text: '下一张海报' }], 'queue')
+    await f.binding.prompt(f.session, [{ type: 'text', text: '生成下一张海报' }], 'queue')
     const [[content]] = f.session.prompt.mock.calls
     f.state.queue = [{ placement: 'queued', content }]
     publish()
@@ -678,7 +695,7 @@ it('projects a completed native tool receipt once even after the canvas is hidde
   try {
     f.respond()
     f.doc.body.dataset.workspaceSurface = 'image-factory'
-    await f.binding.prompt(f.session, [{ type: 'text', text: '活动海报' }], 'queue')
+    await f.binding.prompt(f.session, [{ type: 'text', text: '制作活动海报' }], 'queue')
     const [[content]] = f.session.prompt.mock.calls
     const { id } = readImageFactoryContext(content[0].text)
     f.sessionsState.byId[f.session.sessionId].title = '活动海报会话'

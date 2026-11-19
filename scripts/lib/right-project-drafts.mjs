@@ -1,3 +1,41 @@
+/** Capture the visible project before switching application surfaces. */
+export function installSidebarWorkspaceHandoff({ sessions, workspaces, pending, right, doc = document }) {
+  let launch
+  const current = () => {
+    const projects = workspaces.list.getSnapshot()
+    const { current: owner, byId } = sessions.list.getSnapshot()
+    const draft = right.getSnapshot()
+    if (draft && draft.sessionId === owner) return draft.workspaceId
+    if (owner !== undefined) {
+      const cwd = byId[owner]?.cwd
+      const project = projects.items.find(item => item.sessionIds.includes(owner)) ??
+        (cwd && projects.items.find(item => item.path === cwd))
+      if (project) return project.workspaceId
+      if (cwd && projects.phase === 'ready') return null
+    }
+    const selected = pending.getSnapshot().workspaceId
+    return selected === undefined ? projects.recentWorkspaceId : selected
+  }
+  const capture = ({ detail: mode }) => {
+    launch = { mode, owner: sessions.list.getSnapshot().current, workspaceId: current() }
+  }
+  const clear = () => { launch = undefined }
+  const changed = ({ detail }) => { if (launch?.mode !== detail?.surface) clear() }
+  doc.addEventListener('sherlock:sidebar-launch-workspace-app', capture)
+  doc.addEventListener('sherlock:workspace-surface-change', changed)
+  doc.addEventListener('sherlock:knowledge-identity-changed', clear)
+  return {
+    current,
+    forSurface: (mode, owner) => launch && launch.mode === mode && launch.owner === owner ? launch.workspaceId : undefined,
+    dispose() {
+      clear()
+      doc.removeEventListener('sherlock:sidebar-launch-workspace-app', capture)
+      doc.removeEventListener('sherlock:workspace-surface-change', changed)
+      doc.removeEventListener('sherlock:knowledge-identity-changed', clear)
+    }
+  }
+}
+
 /** A right-hand draft belongs to the visible application and center session. */
 export function createRightProjectDrafts({ globalDraft, makeDraft }) {
   const listeners = new Set()
@@ -53,7 +91,8 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
       const previousMode = visible?.mode
       leave()
       visible = context && { ...context, key: key(context) }
-      const project = globalDraft.getManualWorkspace()
+      const project = context?.launchWorkspaceId === undefined
+        ? globalDraft.getManualWorkspace() : context.launchWorkspaceId
       if (project !== undefined && context?.followDefault && previousMode !== context.mode && project !== context.workspaceId) {
         open(project)
       }

@@ -2,13 +2,14 @@ import {beforeAll,afterAll,expect,it} from 'vitest'
 import {readFile,readdir,mkdir,writeFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
+import {patchSidebarNewNoteShell,stripSidebarNewNoteShell} from '../scripts/lib/sidebar-new-note.mjs'
 import {pathToFileURL} from 'node:url'
 const require=createRequire(import.meta.url),helpers=process.env.SHERLOCK_NEW_CHAT_BASELINE_HELPERS,{patchSessionViewPreferences,patchNewChatSessionRuntime,patchNewChatSidebar}=require(helpers?helpers+'/session-view-preferences.mjs':'../scripts/lib/session-view-preferences.mjs'),{patchFigmaWorkspaceMenus}=require(helpers?helpers+'/figma-workspace-menus.mjs':'../scripts/lib/figma-workspace-menus.mjs')
 const out='/tmp/release140-new-chat-view-20261027',base='node_modules/@deepseek-ai/'
 let browser,script,input,css
 const expose=(source,names)=>source.replace('exports.apply = apply;',`exports.apply = apply;${names.map(name=>`exports.__test${name}=typeof ${name}==='undefined'?undefined:${name};`).join('')}`)
 beforeAll(async()=>{
- await mkdir(out,{recursive:true});const rawRuntime=await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),runtime=patchNewChatSessionRuntime?patchNewChatSessionRuntime(rawRuntime):rawRuntime,conversation=expose(patchSessionViewPreferences(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')),['createChatStore','HomeGuideNativeOriginalConversationRoot','ConversationSessionHeader','ConversationSession','InputBar','installInitialChatViewIntent']),rawSidebar=await readFile(base+'dsh-client-ui-sidebar/lib/client.js','utf8'),sidebar=expose(patchNewChatSidebar?patchNewChatSidebar(rawSidebar):rawSidebar,['SidebarRoot','zh']),workspace=expose(patchFigmaWorkspaceMenus(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspaceBrowser','createWorkspaceViewStore','zh'])
+ await mkdir(out,{recursive:true});const rawRuntime=await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),runtime=patchNewChatSessionRuntime?patchNewChatSessionRuntime(rawRuntime):rawRuntime,conversation=expose(patchSessionViewPreferences(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')),['createChatStore','HomeGuideNativeOriginalConversationRoot','ConversationSessionHeader','ConversationSession','InputBar','installInitialChatViewIntent']),rawSidebar=await readFile(base+'dsh-client-ui-sidebar/lib/client.js','utf8'),sidebar=expose(patchSidebarNewNoteShell(patchNewChatSidebar?patchNewChatSidebar(stripSidebarNewNoteShell(rawSidebar)):stripSidebarNewNoteShell(rawSidebar)),['SidebarRoot','zh']),workspace=expose(patchFigmaWorkspaceMenus(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspaceBrowser','createWorkspaceViewStore','zh'])
  input={runtime,conversation:conversation.replace('exports.__testHomeGuideNativeOriginalConversationRoot=', 'exports.__testNativeRoot=').replace('exports.apply = apply;','exports.apply = apply;exports.__testsetBoards=page=>{sherlockBoardsAdapter=page};'),sidebar,workspace};const built=await build({entryPoints:['test/fixtures/new-chat-view-browser.tsx'],bundle:true,platform:'browser',format:'iife',write:false,loader:{'.css':'empty','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'});script=built.outputFiles[0].text
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(name=>/^index-.*\.css$/.test(name));css=await readFile(require.resolve('@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css'),'utf8')+'\n'+await readFile(assets+'/'+name,'utf8');css+='\n'+[conversation,sidebar,workspace].flatMap(source=>[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(m=>JSON.parse(m[1]))).join('\n')
  const pw=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.chromium??pw.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -46,7 +47,7 @@ it('retains the Chat intent while the desktop preference write is awaiting ackno
 })
 it('keeps New Research explicit and restores another saved Notes session on ordinary navigation',async()=>{
  const {page,errors}=await fixture({warm:true});try{
-  await page.evaluate(()=>window.newChatFixture.storeFor('target').actions.setView('chat'));await page.getByRole('button',{name:'新建研究',exact:true}).click();await expect.poll(()=>page.locator('.wSkVaW_root[data-odyssey-page=research]').count()).toBe(1)
+  await page.evaluate(()=>window.newChatFixture.storeFor('target').actions.setView('chat'));await page.getByRole('button',{name:'研究',exact:true}).click();await expect.poll(()=>page.locator('.wSkVaW_root[data-odyssey-page=research]').count()).toBe(1)
   expect(await page.evaluate(()=>window.newChatFixture.storeFor('target').getSnapshot().view)).toBe('research')
   await page.evaluate(()=>window.newChatFixture.open('elsewhere'));await expect.poll(()=>page.locator('[data-conversation-view-id="notes"][aria-selected=true]').count()).toBe(1);expect(await page.evaluate(()=>window.newChatFixture.storeFor('elsewhere').getSnapshot().view)).toBe('notes');expect(errors).toEqual([])
  }finally{await page.close()}
@@ -61,6 +62,24 @@ it.each([{entry:'sidebar',engagedCurrent:false},{entry:'workspace',engagedCurren
   await writeFile(out+'/pinned-'+entry+'-'+engagedCurrent+'.json',JSON.stringify(state,null,2));expect(state.current).not.toBe('target');expect(state.opened).not.toContain('target');expect(state.pinnedView).toBe('research');expect(state.pinnedDraft).toBe('保留该scope原稿🧭');expect(state.pinnedPreference).toBe('research');if(engagedCurrent){expect(state.created).toHaveLength(1);expect(state.created[0].create.workspaceId).toBe('active');expect(state.current).toMatch(/^fresh-/);expect(state.nodes).toBe(0);expect(state.newDraft).toBe('')}expect(errors).toEqual([])
  }finally{await page.close()}
 })
+it('starts a new Research session in the displayed project even when the last manually chosen project differs',async()=>{
+ const {page,errors}=await fixture({warm:true})
+ try {
+  await page.evaluate(()=>{
+   window.newChatFixture.events.length=0
+   window[Symbol.for('sherlock:pending-conversation')]={
+    getCurrentWorkspace:()=> 'active',
+    getManualWorkspace:()=> 'other'
+   }
+  })
+  await page.getByRole('button',{name:'研究',exact:true}).click()
+  await expect.poll(()=>page.locator('.wSkVaW_root[data-odyssey-page=research]').count()).toBe(1)
+  const state=await page.evaluate(()=>window.newChatFixture.sessions.list.getSnapshot())
+  expect(state.byId[state.current].cwd).toBe('/active')
+  expect(errors).toEqual([])
+ } finally { await page.close() }
+})
+
 it('uses the explicit directory workspace instead of the current Notes workspace',async()=>{
  const {page,errors}=await fixture({warm:true});try{
   await page.evaluate(()=>window.newChatFixture.open('elsewhere'));const noteDraft=await page.evaluate(()=>JSON.stringify(window.newChatFixture.shellFor('elsewhere').snapshot))
