@@ -132,6 +132,10 @@ export class KnowledgeStore {
     }
   }
 
+  hasDocuments() {
+    return this.run(async state => state.documents.length > 0)
+  }
+
   snapshot(): Promise<KnowledgeSnapshot> {
     return this.run(async state => ({
       documents: state.documents.map(publicDocument),

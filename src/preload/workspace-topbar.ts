@@ -1,3 +1,4 @@
+import { workspaceContentViews } from '../shared/navigation-shortcuts'
 import { navigationAppIcon } from './home-app-shortcuts'
 import { icons } from './scheduled/icons'
 import workspaceSettingsIcon from './browser/assets/settings.svg?inline'
@@ -42,6 +43,9 @@ export function revealWorkspaceTab(list: HTMLElement) {
 }
 
 const controls = 'body :is(.workspace-back-button, :is([data-scheduled-panel],[data-workspace-panel=integrations]) [data-odyssey-panel-entry=right])'
+const workspaceDotSelectors = (['chat', ...workspaceContentViews]).map(view =>
+  `html[data-workspace-view-content~="${view}"] .eb-workspace-tabs button[data-workspace-native-view="${view}"]:not([aria-current=true])::after`
+).join(',')
 const sessionHeader = '[data-srb-session-header]:not([data-odyssey-subagent-panel] *)'
 const resident = '.pI_x6G_centerCol .wSkVaW_root'
 const workspaceSessionHeader = `${resident}[data-odyssey-page] ${sessionHeader}`
@@ -88,8 +92,9 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
   transition:width var(--workspace-switch-duration) var(--workspace-switch-ease),opacity var(--workspace-switch-duration) var(--workspace-switch-ease);
 }
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button[data-workspace-native-view]{
-  flex:0 0 auto;height:28px;padding:0 8px;font-size:14px;line-height:20px;white-space:nowrap;
+  position:relative;flex:0 0 auto;height:28px;padding:0 8px;font-size:14px;line-height:20px;white-space:nowrap;
 }
+${workspaceDotSelectors}{content:"";position:absolute;inset:4px 3px auto auto;width:5px;height:5px;border-radius:50%;background:#168bff;pointer-events:none}
 @container(max-width:480px){
  .eb-workspace-tabs{--workspace-tab-limit:128px;gap:2px}
  :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button[data-workspace-native-view]{padding:0 6px;font-size:13px}
