@@ -9,27 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首页完整顶栏、连续切换及拖拽预览",
+        "featureName": "会话模式切换、侧栏新建对话及自动标题",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "a56e7e74c78731f22b1c3980968121769da29c81",
-        "tipCommit": "0d68f5acf1a9fff308f9fa6b32902d0afbce76ad",
+        "baseCommit": "0d68f5acf1a9fff308f9fa6b32902d0afbce76ad",
+        "tipCommit": "ea87ec5c38928332492c304c0d3ebf26768ecde2",
         "commits": [
           {
-            "commit": "0d68f5acf1a9fff308f9fa6b32902d0afbce76ad",
+            "commit": "bc84b819bb65423e8c0444c23b2468eab9051915",
             "parents": [
-              "a56e7e74c78731f22b1c3980968121769da29c81"
+              "0d68f5acf1a9fff308f9fa6b32902d0afbce76ad"
             ],
-            "subject": "修复首页顶栏截断与切换状态并预览拖拽顺移"
+            "subject": "防止新对话复用已有标题的空白会话"
+          },
+          {
+            "commit": "ea87ec5c38928332492c304c0d3ebf26768ecde2",
+            "parents": [
+              "bc84b819bb65423e8c0444c23b2468eab9051915"
+            ],
+            "subject": "独立显示顶栏模式与侧栏应用状态并恢复新建对话图标"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "src/preload/browser/view.ts"
+            "path": "scripts/lib/session-view-preferences.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-app-shortcuts.ts"
           },
           {
             "status": "M",
@@ -37,7 +48,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/knowledge/workspace.tsx"
+            "path": "src/preload/navigation-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
           },
           {
             "status": "M",
@@ -50,6 +65,14 @@
           {
             "status": "M",
             "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/navigation-shortcuts.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
           }
         ],
         "checks": [
@@ -61,8 +84,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "0d68f5acf1a9fff308f9fa6b32902d0afbce76ad",
-            "completedAt": "2026-11-19T14:50:36.095Z",
+            "verifiedCommit": "ea87ec5c38928332492c304c0d3ebf26768ecde2",
+            "completedAt": "2026-11-19T15:00:51.273Z",
             "timeoutMs": 60000
           },
           {
@@ -80,8 +103,8 @@
             ],
             "outcome": "passed",
             "summary": "8 项真实 Chromium 渲染聚焦检查通过",
-            "verifiedCommit": "0d68f5acf1a9fff308f9fa6b32902d0afbce76ad",
-            "completedAt": "2026-11-19T14:50:36.095Z",
+            "verifiedCommit": "ea87ec5c38928332492c304c0d3ebf26768ecde2",
+            "completedAt": "2026-11-19T15:00:51.273Z",
             "timeoutMs": 60000
           },
           {
@@ -93,79 +116,42 @@
             ],
             "outcome": "passed",
             "summary": "4 项快捷导航模型检查",
-            "verifiedCommit": "0d68f5acf1a9fff308f9fa6b32902d0afbce76ad",
-            "completedAt": "2026-11-19T14:50:36.095Z",
+            "verifiedCommit": "ea87ec5c38928332492c304c0d3ebf26768ecde2",
+            "completedAt": "2026-11-19T15:00:51.273Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sidebar-new-session-actions.test.ts",
+              "test/session-title-subject.test.js",
+              "-t",
+              "starts an unnamed Chat|opens Home directly|renders distinct New Chat|native fallback|titles a new spreadsheet|exact edit"
+            ],
+            "outcome": "passed",
+            "summary": "6 项会话创建及标题聚焦检查",
+            "verifiedCommit": "ea87ec5c38928332492c304c0d3ebf26768ecde2",
+            "completedAt": "2026-11-19T15:00:51.273Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "深浅色验证 340px 首页顶部每个标签可命中；首页至无会话浏览器往返保持展开；候选栏连续并隐藏已选项，空槽无符号，悬停插入目标时预览顺移，落点提交；保留蓝点验证。"
+          "summary": "深浅色验证 340px 首页顶部每个标签可命中；首页至无会话浏览器往返保持展开；候选栏连续并隐藏已选项，空槽无符号，悬停插入目标时预览顺移，落点提交；保留蓝点验证。 深浅色首页与浏览器顶栏往返时侧栏无选中，直接点侧栏浏览器恢复选中。"
         },
         "acceptanceCriteria": [
           "窄首页的所有快捷标签都可见且可点击",
           "从首页和现有会话点顶栏切换时保持展开",
           "候选为通体一栏，已选项隐藏，空槽留白",
-          "拖动将其他标签平滑移位，取消恢复"
+          "拖动将其他标签平滑移位，取消恢复",
+          "独立投影视图标签选中状态和侧栏应用选中状态",
+          "初始化对话不复用已有标题的空白会话",
+          "侧栏新建对话显示加号气泡和新建对话名称"
         ],
         "risks": [],
-        "generatedAt": "2026-11-19T14:50:36.095Z"
-      },
-      "merged": {
-        "mergeCommit": "8080f9c6f72142664685e0603057d852a2a40826",
-        "verificationCommit": "8080f9c6f72142664685e0603057d852a2a40826",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "8080f9c6f72142664685e0603057d852a2a40826",
-            "completedAt": "2026-11-19T14:50:48.018Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "8080f9c6f72142664685e0603057d852a2a40826",
-            "completedAt": "2026-11-19T14:50:48.018Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "8080f9c6f72142664685e0603057d852a2a40826",
-            "completedAt": "2026-11-19T14:50:48.018Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T14:50:48.018Z"
+        "generatedAt": "2026-11-19T15:00:51.273Z"
       }
     }
   ],
