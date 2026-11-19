@@ -1,4 +1,8 @@
-import { defaultNavigationShortcuts, isTopNavigationApp, topNavigationApps, type NavigationShortcuts } from '../shared/navigation-shortcuts'
+import {
+  defaultNavigationShortcuts, isTopNavigationApp, topNavigationApps, topShortcutCount,
+  type NavigationShortcuts, type TopNavigationApp
+} from '../shared/navigation-shortcuts'
+import { navigationAppIcon } from './home-app-shortcuts'
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
 
 const nativeViews = [
@@ -45,7 +49,7 @@ const viewForApp = { research: 'research', note: 'notes', spreadsheet: 'spreadsh
 type WorkspaceView = typeof workspaceViews[number]
 type WorkspaceViewPreferences = {
   get(): NavigationShortcuts['top']
-  save(slots: NavigationShortcuts['top']): boolean
+  replace(index: number, app: TopNavigationApp | null): boolean
 }
 export const workspaceViewsChanged = 'sherlock:workspace-view-shortcuts-changed'
 const preferences = new WeakMap<Document, WorkspaceViewPreferences>()
@@ -209,90 +213,187 @@ function makeWorkspaceCustomizationButton(document: Document) {
 
 export function mountWorkspaceViewCustomization(document: Document) {
   const win = document.defaultView!
-  let dialog: HTMLDialogElement | undefined, editing: WorkspaceViewPreferences | undefined
-  const english = () => document.documentElement.dataset.odysseyLocale === 'en'
+  let closeEditor: (() => void) | undefined
   const onClick = (event: MouseEvent) => {
     const anchor = (event.target as Element)?.closest<HTMLButtonElement>('[data-workspace-view-customize]')
+    const nav = anchor?.closest<HTMLElement>('.eb-workspace-tabs')
     const settings = preferences.get(document)
-    if (!anchor || !settings || dialog) return
-    const en = english()
+    if (!anchor || !nav || nav.inert || !settings || closeEditor) return
+
+    const en = document.documentElement.dataset.odysseyLocale === 'en'
     const panel = document.createElement('dialog')
-    dialog = panel
-    editing = settings
     panel.className = 'workspace-view-settings'
     panel.setAttribute('aria-label', en ? 'Customize top bar' : '自定义顶栏')
-    const form = document.createElement('form')
-    const heading = document.createElement('h2')
-    heading.textContent = en ? 'Customize top bar' : '自定义顶栏'
-    const fixed = document.createElement('p')
-    fixed.textContent = en ? '1. Chat (fixed)' : '1. 对话（固定）'
-    form.append(heading, fixed)
-    const draft = settings.get().map(app => isTopNavigationApp(app) ? app : null)
-    const selects: HTMLSelectElement[] = []
-    draft.forEach((app, index) => {
-      const row = document.createElement('label')
-      const order = document.createElement('span')
-      order.textContent = en ? `Position ${index + 2}` : `第 ${index + 2} 项`
-      const field = document.createElement('select')
-      field.add(new win.Option(en ? 'Empty' : '留空', ''))
-      for (const candidate of topNavigationApps) {
-        const view = workspaceViews.find(([id]) => id === viewForApp[candidate])!
-        field.add(new win.Option(view[en ? 2 : 1], candidate))
-      }
-      field.value = app ?? ''
-      field.addEventListener('change', () => {
-        const next = isTopNavigationApp(field.value) ? field.value : null
-        const occupied = next ? draft.indexOf(next) : -1
-        if (occupied >= 0 && occupied !== index) draft[occupied] = draft[index]!
-        draft[index] = next
-        selects.forEach((select, position) => { select.value = draft[position] ?? '' })
-      })
-      selects.push(field)
-      row.append(order, field)
-      form.append(row)
-    })
+    const strip = document.createElement('div')
+    strip.className = 'workspace-view-slots'
+    const fixed = document.createElement('span')
+    fixed.className = 'workspace-view-fixed'
+    fixed.textContent = en ? 'Chat' : '对话'
+    fixed.title = en ? 'Chat is fixed' : '对话固定在第一位'
+    const palette = document.createElement('div')
+    palette.className = 'workspace-view-palette'
+    palette.setAttribute('role', 'group')
+    palette.setAttribute('aria-label', en ? 'Drag apps to the top bar' : '拖动应用到上方顶栏')
+    const closeButton = makeWorkspaceCustomizationButton(document)
+    closeButton.removeAttribute('data-workspace-view-customize')
+    closeButton.title = en ? 'Finish customizing' : '完成编辑'
+    closeButton.setAttribute('aria-label', closeButton.title)
+    closeButton.setAttribute('aria-pressed', 'true')
+    closeButton.addEventListener('click', () => panel.close())
+
     const status = document.createElement('p')
     status.setAttribute('role', 'status')
-    const footer = document.createElement('footer')
-    const cancel = document.createElement('button')
-    const save = document.createElement('button')
-    cancel.type = 'button'
-    cancel.textContent = en ? 'Cancel' : '取消'
-    save.type = 'submit'
-    save.textContent = en ? 'Save' : '保存'
-    footer.append(cancel, save)
-    form.append(status, footer)
-    panel.append(form)
-    cancel.addEventListener('click', () => panel.close())
+    status.className = 'workspace-view-settings-status'
+    const appName = (app: TopNavigationApp) => workspaceViews.find(([view]) => view === viewForApp[app])![en ? 2 : 1]
+    let picked: TopNavigationApp | undefined
+    let dragging: TopNavigationApp | undefined
+    let target: HTMLElement | undefined
+    const highlight = (slot?: HTMLElement) => {
+      target?.removeAttribute('data-drop-target')
+      target = slot
+      target?.setAttribute('data-drop-target', '')
+    }
+    const pick = (app?: TopNavigationApp) => {
+      picked = app
+      panel.toggleAttribute('data-picking', !!app)
+      for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-workspace-editor-app]')) {
+        button.setAttribute('aria-pressed', String(button.dataset.workspaceEditorApp === app))
+      }
+    }
+    const addAppIcon = (button: HTMLButtonElement, app: TopNavigationApp) => {
+      button.dataset.workspaceEditorApp = app
+      button.draggable = true
+      const icon = document.createElement('i')
+      icon.style.setProperty('--workspace-editor-icon', navigationAppIcon(app))
+      icon.setAttribute('aria-hidden', 'true')
+      button.append(icon)
+      button.addEventListener('dragstart', event => {
+        if (!event.dataTransfer) return
+        pick()
+        dragging = app
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('application/x-ework-workspace-view', app)
+      })
+      button.addEventListener('dragend', () => {
+        dragging = undefined
+        highlight()
+      })
+    }
+    const choices = topNavigationApps.map(app => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.title = appName(app)
+      button.setAttribute('aria-label', button.title)
+      button.addEventListener('click', () => pick(picked === app ? undefined : app))
+      addAppIcon(button, app)
+      return button
+    })
+    palette.append(...choices)
+
+    const slotButtons: HTMLButtonElement[] = []
+    const renderSlots = () => {
+      const values = settings.get()
+      const slots = Array.from({ length: topShortcutCount }, (_, index) => {
+        const app = values[index]
+        const slot = document.createElement('div')
+        slot.className = 'workspace-view-slot'
+        slot.dataset.workspaceEditorSlot = String(index)
+        const button = document.createElement('button')
+        button.type = 'button'
+        const position = en ? `Position ${index + 2}` : `第 ${index + 2} 项`
+        button.title = isTopNavigationApp(app) ? appName(app) : (en ? 'Empty slot' : '空槽位')
+        button.setAttribute('aria-label', `${position} · ${button.title}`)
+        slotButtons[index] = button
+        if (isTopNavigationApp(app)) {
+          addAppIcon(button, app)
+          const remove = document.createElement('button')
+          remove.type = 'button'
+          remove.className = 'workspace-view-remove'
+          remove.title = (en ? 'Remove ' : '移除') + appName(app)
+          remove.setAttribute('aria-label', remove.title)
+          remove.textContent = '×'
+          remove.addEventListener('click', () => apply(index, null, true))
+          slot.append(button, remove)
+        } else {
+          slot.setAttribute('data-empty', '')
+          button.textContent = '+'
+          slot.append(button)
+        }
+        button.addEventListener('click', () => {
+          if (picked) apply(index, picked, true)
+          else if (isTopNavigationApp(app)) pick(app)
+          else choices[0]?.focus()
+        })
+        slot.addEventListener('dragover', event => {
+          if (!dragging || !event.dataTransfer) return
+          event.preventDefault()
+          event.dataTransfer.dropEffect = 'move'
+          if (target !== slot) highlight(slot)
+        })
+        slot.addEventListener('dragleave', event => {
+          if (target === slot && !slot.contains(event.relatedTarget as Node | null)) highlight()
+        })
+        slot.addEventListener('drop', event => {
+          if (!dragging) return
+          event.preventDefault()
+          event.stopPropagation()
+          const app = dragging
+          dragging = undefined
+          highlight()
+          apply(index, app)
+        })
+        return slot
+      })
+      strip.replaceChildren(fixed, ...slots, closeButton)
+      pick()
+    }
+    const apply = (index: number, app: TopNavigationApp | null, restoreFocus = false) => {
+      if (preferences.get(document) !== settings) { panel.close(); return }
+      if (!settings.replace(index, app)) {
+        status.textContent = en ? 'Could not save top bar' : '顶栏设置保存失败'
+        return
+      }
+      status.textContent = ''
+      renderSlots()
+      if (restoreFocus) slotButtons[index]?.focus({ preventScroll: true })
+    }
+    const position = () => {
+      const bounds = nav.getBoundingClientRect()
+      if (!nav.isConnected || bounds.height === 0) { panel.close(); return }
+      const left = Math.max(8, Math.min(bounds.left, win.innerWidth - panel.offsetWidth - 8))
+      panel.style.left = left + 'px'
+      panel.style.top = bounds.top + 'px'
+    }
+    const close = () => panel.close()
+    closeEditor = close
     panel.addEventListener('click', event => {
       if (event.target !== panel) return
       const { left, right, top, bottom } = panel.getBoundingClientRect()
-      if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) panel.close()
+      if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) close()
+    })
+    const unobserve = observeWorkspaceViews(document, () => {
+      if (preferences.get(document) !== settings) close()
     })
     panel.addEventListener('close', () => {
+      unobserve()
+      win.removeEventListener('resize', position)
+      document.removeEventListener('sherlock:workspace-surface-change', close)
       panel.remove()
-      if (dialog === panel) { dialog = undefined; editing = undefined }
+      if (closeEditor === close) closeEditor = undefined
       if (anchor.isConnected) anchor.focus({ preventScroll: true })
     }, { once: true })
-    form.addEventListener('submit', event => {
-      event.preventDefault()
-      if (preferences.get(document) === settings && settings.save(draft)) panel.close()
-      else status.textContent = en ? 'Could not save top bar' : '顶栏设置保存失败'
-    })
-    const bounds = anchor.getBoundingClientRect()
-    panel.style.setProperty('--workspace-settings-left', Math.max(16, Math.min(bounds.left, win.innerWidth - 376)) + 'px')
-    panel.style.setProperty('--workspace-settings-top', Math.max(16, Math.min(bounds.bottom + 8, win.innerHeight - 350)) + 'px')
+    win.addEventListener('resize', position)
+    document.addEventListener('sherlock:workspace-surface-change', close)
+    panel.append(strip, palette, status)
+    renderSlots()
     document.body.append(panel)
     panel.showModal()
+    position()
     void prepareBrowserOverlay(document, panel)
   }
   document.addEventListener('click', onClick)
-  const unobserve = observeWorkspaceViews(document, () => {
-    if (editing && preferences.get(document) !== editing) dialog?.close()
-  })
   return () => {
     document.removeEventListener('click', onClick)
-    unobserve()
-    dialog?.close()
+    closeEditor?.()
   }
 }

@@ -423,7 +423,7 @@ it('exposes the shared switcher only on session views and carries the current ow
   for(const [view,label] of [['notes','笔记'],['spreadsheet','表格'],['chat','对话'],['browser','浏览器'],['image-factory','图像'],['knowledge','知识库']]) {
    const toggle=controls.getByRole('button',{name:'展开工作区页签',exact:true})
    if(view==='browser') await page.evaluate(()=>window.setWorkspaceViewPreferences(document,{
-    get:()=>['browser','image-factory','knowledge',null],save:()=>true
+    get:()=>['browser','image-factory','knowledge',null],replace:()=>true
    }))
    await toggle.click()
    await controls.getByRole('button',{name:'切换到'+label,exact:true}).click()
@@ -623,8 +623,8 @@ it('dismisses a browser popup before collapsing the workspace shortcuts on Escap
  }finally{await page.close()}
 })
 
-it('sizes top-bar labels around their content and keeps customization in the expanded switcher',async()=>{
- const {page,errors}=await fixture(1440,900,false)
+it.each([true,false])('sizes top-bar labels and lets users drag app icons into the workspace switcher (dark=%s)',async dark=>{
+ const {page,errors}=await fixture(1440,900,dark)
  try {
   page.setDefaultTimeout(2200)
   await page.evaluate(()=>{
@@ -634,7 +634,7 @@ it('sizes top-bar labels around their content and keeps customization in the exp
    center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header data-srb-session-header data-ework-notes-session="session-A" style="display:flex;align-items:center;height:44px"><span>新研究</span><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
    window.mountNavigationShortcuts(document,{
     read:()=>({top:[null,null,null,null]}),
-    save:value=>{window.savedTop=value.top;return true},
+    save:value=>{if(window.failTopSave)return false;window.savedTop=value.top;return true},
     open:()=>{}
    })
    window.mountSessionWorkspaceViewShortcuts(document,()=>{})
@@ -656,16 +656,46 @@ it('sizes top-bar labels around their content and keeps customization in the exp
   expect(await nav.evaluate(el=>el.getBoundingClientRect().width)).toBeLessThan(90)
   await gear.click()
   const dialog=page.getByRole('dialog',{name:'自定义顶栏'})
-  await dialog.getByText('1. 对话（固定）').waitFor()
-  expect(await dialog.getByRole('combobox').count()).toBe(4)
-  await dialog.getByRole('combobox',{name:'第 2 项'}).selectOption('note')
-  await dialog.getByRole('combobox',{name:'第 3 项'}).selectOption('image-factory')
-  await dialog.getByRole('combobox',{name:'第 4 项'}).selectOption('spreadsheet')
-  await dialog.getByRole('combobox',{name:'第 5 项'}).selectOption('knowledge')
-  await dialog.getByRole('button',{name:'保存',exact:true}).click()
-  await dialog.waitFor({state:'hidden'})
+  const palette=dialog.getByRole('group',{name:'拖动应用到上方顶栏'})
+  const slots=dialog.locator('[data-workspace-editor-slot]')
+  await palette.waitFor()
+  expect(await dialog.getByText('对话',{exact:true}).getAttribute('title')).toBe('对话固定在第一位')
+  expect(await slots.count()).toBe(4)
+  expect(await dialog.getByRole('combobox').count()).toBe(0)
+  expect(await palette.getByRole('button').count()).toBe(6)
+  expect(await palette.locator('i').evaluateAll(icons=>icons.every(icon=>getComputedStyle(icon).maskImage.includes('data:image/svg+xml')))).toBe(true)
+  const paletteBox=await palette.boundingBox(), firstSlot=await slots.first().boundingBox()
+  expect(paletteBox.y).toBeGreaterThan(firstSlot.y+firstSlot.height)
+  expect(Math.abs(firstSlot.y-chatBox.y)).toBeLessThanOrEqual(2)
+  expect(await palette.locator('i').first().evaluate(icon=>getComputedStyle(icon).animationName)).toBe('navigation-shortcut-wiggle')
+  await page.emulateMedia({reducedMotion:'reduce'})
+  expect(await palette.locator('i').first().evaluate(icon=>getComputedStyle(icon).animationName)).toBe('none')
+  await page.emulateMedia({reducedMotion:'no-preference'})
+  const dragApp=(name,index)=>palette.getByRole('button',{name,exact:true}).dragTo(slots.nth(index))
+  await dragApp('笔记',0)
+  await dragApp('图像',1)
+  await dragApp('表格',2)
+  await dragApp('知识库',3)
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','image-factory','spreadsheet','knowledge'])
-  await expect.poll(() => views.allTextContents()).toEqual(['对话','笔记','图像','表格','知识库'])
+  await slots.nth(1).locator('[draggable=true]').dragTo(slots.nth(0))
+  expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','note','spreadsheet','knowledge'])
+  await palette.getByRole('button',{name:'浏览器',exact:true}).press('Enter')
+  await dialog.getByRole('button',{name:'第 3 项 · 笔记'}).press('Enter')
+  expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','browser','spreadsheet','knowledge'])
+  await page.evaluate(()=>{window.failTopSave=true})
+  await dragApp('研究',3)
+  expect(await dialog.getByRole('status').textContent()).toBe('顶栏设置保存失败')
+  expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','browser','spreadsheet','knowledge'])
+  await page.evaluate(()=>{window.failTopSave=false})
+  await slots.nth(3).hover()
+  await dialog.getByRole('button',{name:'移除知识库'}).click()
+  expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','browser','spreadsheet',null])
+  await dragApp('知识库',3)
+  await page.mouse.move(500,230)
+  await dialog.screenshot({path:evidence+'/workspace-shortcut-editor-'+(dark?'dark':'light')+'.png',animations:'disabled'})
+  await dialog.getByRole('button',{name:'完成编辑'}).click()
+  await dialog.waitFor({state:'hidden'})
+  await expect.poll(() => views.allTextContents()).toEqual(['对话','图像','浏览器','表格','知识库'])
   await page.evaluate(()=>{
    document.body.dataset.workspaceSurface='browser'
    document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
@@ -673,7 +703,19 @@ it('sizes top-bar labels around their content and keeps customization in the exp
   })
   const browserControls=page.locator('.eb-root .eb-workspace-controls')
   await browserControls.locator('.eb-workspace-toggle').click()
-  expect(await browserControls.locator('[data-workspace-native-view]').allTextContents()).toEqual(['对话','笔记','图像','表格','知识库'])
+  expect(await browserControls.locator('[data-workspace-native-view]').allTextContents()).toEqual(['对话','图像','浏览器','表格','知识库'])
+  await liveWebsite(page)
+  await browserControls.getByRole('button',{name:'自定义顶栏'}).click()
+  await dialog.waitFor()
+  await expect.poll(()=>page.evaluate(()=>window.browserCalls.filter(c=>c[0]==='layout').at(-1)[1].visible)).toBe(false)
+  await page.mouse.click(500,230)
+  await dialog.waitFor({state:'hidden'})
+  await expect.poll(()=>page.evaluate(()=>window.browserCalls.filter(c=>c[0]==='layout').at(-1)[1].visible)).toBe(true)
+  expect(await page.evaluate(()=>window.browserCalls.slice(window.liveCallStart).filter(c=>c[0]==='capture'))).toEqual([])
+  await browserControls.getByRole('button',{name:'自定义顶栏'}).click()
+  await page.keyboard.press('Escape')
+  await dialog.waitFor({state:'hidden'})
+  expect(await browserControls.getByRole('button',{name:'自定义顶栏'}).evaluate(button=>button===document.activeElement)).toBe(true)
   expect(errors).toEqual([])
  }finally{await page.close()}
 })

@@ -506,7 +506,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   sync()
   const connectWorkspaceViews = () => setWorkspaceViewPreferences(doc, {
     get: () => value.top,
-    save: top => update({ ...value, top: normalizeNavigationShortcuts({ top }).top })
+    replace: (index, app) => update(replaceNavigationShortcut(value, 'top', index, app))
   })
   connectWorkspaceViews()
   const freeSlot = () => editableSlots.find(index => value.side[index] === null)
