@@ -40,13 +40,14 @@ export function installSidebarWorkspaceHandoff({ sessions, workspaces, pending, 
 export function createRightProjectDrafts({ globalDraft, makeDraft }) {
   const listeners = new Set()
   const drafts = new Map()
-  let visible, active
+  const browserProjects = new Map()
+  let visible, active, openBrowserTabs
   const publish = entry => {
     if (entry === active) return
     active = entry
     for (const notify of listeners) notify()
   }
-  const key = ({ sessionId, mode }) => JSON.stringify([sessionId, mode])
+  const key = ({ sessionId, mode, tabId }) => JSON.stringify([sessionId, mode, tabId])
   const hasContent = ({ pending }) => {
     const { draft, imageIds, occurrences } = pending.shell.snapshot
     return Boolean(draft.trim() || imageIds?.length || occurrences?.length)
@@ -59,8 +60,9 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
     drafts.delete(entry.id)
     entry.pending.dispose()
   }
+  const isClosed = entry => entry.tabId && openBrowserTabs && !openBrowserTabs.has(entry.tabId)
   const leave = () => {
-    if (active && !hasActivity(active)) discard(active)
+    if (active && (!hasActivity(active) || isClosed(active) && !active.pending.getSnapshot().busy)) discard(active)
     publish(undefined)
   }
   const open = workspaceId => {
@@ -73,7 +75,7 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
       entry = { ...visible, id, workspaceId }
       entry.pending = makeDraft(entry, {
         isActive: () => active === entry,
-        settled: () => { if (active !== entry && !hasContent(entry) && drafts.get(id) === entry) discard(entry) }
+        settled: () => { if (active !== entry && (!hasContent(entry) || isClosed(entry)) && drafts.get(id) === entry) discard(entry) }
       })
       drafts.set(id, entry)
     }
@@ -86,13 +88,30 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
       const owner = key(context)
       return [...drafts.values()].some(entry => entry.key === owner && hasActivity(entry))
     },
+    pruneBrowserTabs(tabIds) {
+      const openTabs = openBrowserTabs = new Set(tabIds)
+      for (const id of browserProjects.keys()) if (!openTabs.has(id)) browserProjects.delete(id)
+      for (const entry of drafts.values()) {
+        if (entry.tabId && !openTabs.has(entry.tabId) && entry !== active && !entry.pending.getSnapshot().busy) discard(entry)
+      }
+    },
     show(context) {
-      if (visible?.key === (context && key(context))) return
+      if (visible?.key === (context && key(context)) && (!context?.tabId || active)) return
+      if (!visible && !context) return
       const previousMode = visible?.mode
       leave()
       visible = context && { ...context, key: key(context) }
       const project = context?.launchWorkspaceId === undefined
         ? globalDraft.getManualWorkspace() : context.launchWorkspaceId
+      if (context?.tabId) {
+        const initial = browserProjects.has(context.tabId) ? browserProjects.get(context.tabId)
+          : context.followDefault && project !== undefined ? project : context.workspaceId
+        if (initial !== undefined) {
+          browserProjects.set(context.tabId, initial)
+          if (!context.useSharedSession || initial !== context.workspaceId) open(initial)
+        }
+        return
+      }
       if (project !== undefined && context?.followDefault && previousMode !== context.mode && project !== context.workspaceId) {
         open(project)
       }
@@ -100,10 +119,13 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
     select(context, workspaceId) {
       globalDraft.selectWorkspace(workspaceId)
       this.show(context)
-      open(workspaceId)
+      if (context.tabId) browserProjects.set(context.tabId, workspaceId)
+      if (context.useSharedSession && workspaceId === context.workspaceId) leave()
+      else open(workspaceId)
     },
     reset() {
       visible = undefined
+      browserProjects.clear()
       for (const entry of drafts.values()) discard(entry)
       publish(undefined)
     }

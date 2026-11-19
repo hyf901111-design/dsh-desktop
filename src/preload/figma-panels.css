@@ -368,7 +368,9 @@ body:has([data-odyssey-page="research"]) [data-dsh-panel-host][data-odyssey-pane
 .t8lSSG_panel .t8lSSG_tabList::-webkit-scrollbar { display:none; }
 
 
-body .wSkVaW_header, body .wSkVaW_titleRow { -webkit-app-region:drag; }
+body :is(.wSkVaW_header,.wSkVaW_titleRow) { -webkit-app-region:drag; user-select:none; }
+body :is(.wSkVaW_header,.wSkVaW_titleRow) :is(input,textarea,[contenteditable]:not([contenteditable=false])) { user-select:text; }
+body :is(.t8lSSG_tabBar,.t8lSSG_toggleCluster) { user-select:none; }
 body .wSkVaW_header :is(button,input,select,textarea,a,[role=button],[role=tab],[contenteditable=true]),
 body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag; }
 
@@ -419,9 +421,19 @@ body:has(
   justify-content:center; padding-inline:8px!important;
 }
 .t8lSSG_panel [data-odyssey-resident-conversation-tab] .t8lSSG_tabTitle { flex:none; }
+.t8lSSG_panel [data-odyssey-panel-tab][data-odyssey-resident-files-tab] { min-width:max-content; flex-shrink:0; }
+.t8lSSG_panel [data-odyssey-resident-files-tab] .t8lSSG_tabTitle { flex:none; }
+
 
 /* Inactive tabs retain their icon when the available title space runs out. */
 .t8lSSG_panel [data-odyssey-panel-tab]:not([aria-selected=true]) .t8lSSG_tabClose{display:none!important}
 
 body:is([data-workspace-surface=browser],[data-workspace-surface=image-factory]) [data-browser-canvas-action],
 body[data-workspace-surface=knowledge] .t8lSSG_panel [data-browser-canvas-action]{display:none!important}
+
+[data-right-project-draft-hint] {
+  margin:0 8px 5px;
+  color:var(--dsw-alias-label-secondary,var(--odyssey-muted));
+  font:12px/17px var(--odyssey-font-ui,system-ui);
+  overflow-wrap:anywhere;
+}

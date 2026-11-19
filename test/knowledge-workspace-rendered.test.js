@@ -1015,6 +1015,23 @@ it('keeps the workspace shortcuts open across the draggable knowledge header', a
     expect(await title.evaluate(region)).toBe('drag')
     expect(await toggle.evaluate(region)).toBe('no-drag')
     expect(await files.evaluate(region)).toBe('no-drag')
+    const bodyHeading = library.locator('.knowledge-tools > h2')
+    const selectStyle = el => getComputedStyle(el).userSelect
+    expect(await files.evaluate(selectStyle)).toBe('none')
+    expect(await bodyHeading.evaluate(selectStyle)).toBe('none')
+    const start = await files.boundingBox()
+    const end = await bodyHeading.boundingBox()
+    await page.mouse.move(start.x + 8, start.y + start.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(end.x + end.width - 2, end.y + end.height / 2, { steps: 8 })
+    await page.mouse.up()
+    expect(await page.evaluate(() => getSelection().toString())).toBe('')
+    const search = library.locator('.knowledge-search input')
+    await search.fill('拖动选择验证')
+    await search.selectText()
+    expect(await search.evaluate(el => el.value.slice(el.selectionStart, el.selectionEnd))).toBe('拖动选择验证')
+    await search.clear()
+    await search.blur()
     expect(await header.locator('.knowledge-header-tabs button').evaluateAll(buttons => buttons.map(button => {
       const style = getComputedStyle(button)
       return [style.fontSize, style.height, style.paddingInline]

@@ -500,13 +500,21 @@ it('keeps the shared switcher expanded and carries the current session through m
    header.closest('.pI_x6G_centerCol').style.width='680px'
   })
   await expect.poll(()=>controls.locator('.eb-workspace-tabs').evaluate(nav=>
-   [...nav.querySelectorAll('button')].every(button=>{
+   [...nav.querySelectorAll('button:not([hidden],[data-workspace-overflowed])')].every(button=>{
     const {x,y,width,height}=button.getBoundingClientRect()
     const toggle=nav.previousElementSibling.getBoundingClientRect()
     return toggle.right<=x && Math.abs(y+height/2-(toggle.y+toggle.height/2))<1 &&
       button.contains(document.elementFromPoint(x+width/2,y+height/2))
    })
   )).toBe(true)
+  const narrowNav=controls.locator('.eb-workspace-tabs')
+  await narrowNav.evaluate(nav=>{nav.style.maxWidth='128px'})
+  await controls.getByRole('button',{name:'更多工作区页签'}).click()
+  const overflow=page.getByRole('menu',{name:'更多工作区页签'})
+  await overflow.getByRole('menuitem',{name:'知识库'}).click()
+  await overflow.waitFor({state:'detached'})
+  expect(await page.evaluate(()=>window.quickOwners.at(-1))).toEqual(['knowledge','session-B'])
+  await expanded.waitFor()
   for(const surface of ['integrations','scheduled']) {
    await page.evaluate(surface=>{
     document.body.dataset.workspaceSurface=surface
@@ -563,19 +571,25 @@ it('keeps workspace modes and crowded browser tabs on one row at three widths',a
   expect(await browser.evaluate(el=>el.scrollWidth)).toBeLessThanOrEqual(320)
   const midY=box=>box.y+box.height/2
   expect(midY(await nav.boundingBox())).toBeCloseTo(midY(await selected.boundingBox()),0)
-  expect(await nav.getByRole('button').count()).toBe(6)
   for (const width of [394,754,944]) {
    await page.setViewportSize({width,height:700})
    await expect.poll(()=>browser.evaluate(el=>el.getBoundingClientRect().width)).toBe(width-74)
    await expect.poll(()=>nav.evaluate(el=>el.getAnimations().length)).toBe(0)
    for (const button of await nav.getByRole('button').all()) {
-    if(width===394) await button.scrollIntoViewIfNeeded()
     expect(await button.evaluate(hitTest), await button.getAttribute('aria-label')).toBe(true)
     expect(midY(await button.boundingBox())).toBeCloseTo(midY(await gear.boundingBox()),0)
    }
    expect(await browser.locator('.eb-tab-switcher').evaluate(hitTest)).toBe(true)
+   const more=nav.getByRole('button',{name:'更多工作区页签'})
    if(width===394){
+    await more.click()
+    const menu=page.getByRole('menu',{name:'更多工作区页签'})
+    await menu.getByRole('menuitem',{name:'研究'}).waitFor()
+    expect(await nav.getByRole('button',{name:'切换到研究'}).count()).toBe(0)
     await page.screenshot({path:evidence+'/workspace-expanded-narrow-light.png'})
+    await page.keyboard.press('Escape')
+    await menu.waitFor({state:'detached'})
+    expect(await nav.isVisible()).toBe(true)
     await browser.getByRole('combobox',{name:'搜索或输入网址'}).fill('example')
     const suggestions=browser.getByRole('listbox',{name:'网址建议'})
     await suggestions.waitFor()
@@ -583,6 +597,9 @@ it('keeps workspace modes and crowded browser tabs on one row at three widths',a
     expect((await suggestions.boundingBox()).y).toBeGreaterThanOrEqual(toolbar.y+toolbar.height)
     await page.keyboard.press('Escape')
     await suggestions.waitFor({state:'detached'})
+   }else{
+    expect(await more.count()).toBe(0)
+    expect(await nav.getByRole('button',{name:'切换到研究'}).isVisible()).toBe(true)
    }
   }
   expect(errors).toEqual([])

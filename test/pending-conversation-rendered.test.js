@@ -352,6 +352,68 @@ it('retains the session project for top-bar mode changes and still follows the m
  } finally { await page.close() }
 },15000)
 
+it('keeps the research welcome and names the destination when choosing another right project', async () => {
+ const page=await browser.newPage({viewport:{width:1180,height:800}})
+ page.setDefaultTimeout(4500)
+ try {
+  await page.route('http://127.0.0.1/research-project-destination',route=>route.fulfill({contentType:'text/html',body:'<!doctype html>'}))
+  await page.goto('http://127.0.0.1/research-project-destination')
+  await page.setContent('<style>'+css+'#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
+  await page.evaluate(input=>{window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true,initialView:'research'}},input)
+  await page.addScriptTag({content:script})
+  const right=page.locator('#right')
+  const welcome=right.locator('[data-mode-welcome=research]')
+  await welcome.waitFor()
+  await right.locator('.pXSMma_workspace').click()
+  await page.getByText('研究项目 B',{exact:true}).click()
+  await right.getByText('发送后在「研究项目 B」新建会话',{exact:true}).waitFor()
+  expect(await welcome.isVisible()).toBe(true)
+  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+ } finally { await page.close() }
+})
+
+it('restores the chosen project and unsent text separately for each browser tab', async () => {
+ const page=await browser.newPage({viewport:{width:1180,height:800}})
+ page.setDefaultTimeout(4500)
+ try {
+  await page.route('http://127.0.0.1/browser-tab-project',route=>route.fulfill({contentType:'text/html',body:'<!doctype html>'}))
+  await page.goto('http://127.0.0.1/browser-tab-project')
+  await page.setContent('<style>'+css+'#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
+  await page.evaluate(input=>{window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true}},input)
+  await page.addScriptTag({content:script})
+  const switchTab=id=>page.evaluate(tabId=>{
+   document.body.dataset.browserActiveTab=tabId
+   document.dispatchEvent(new CustomEvent('sherlock:browser-active-tab-change',{detail:{tabIds:['one','two']}}))
+   window.pendingFixture.openSurface('browser')
+  },id)
+  const right=page.locator('#right')
+  const picker=right.locator('.pXSMma_workspace')
+  const field=right.locator('textarea')
+  await switchTab('one')
+  await picker.getByText('研究项目 A',{exact:true}).waitFor()
+  await field.fill('第一个网页的草稿')
+  await switchTab('two')
+  await expect.poll(()=>field.inputValue()).toBe('')
+  await picker.click()
+  await page.getByText('研究项目 B',{exact:true}).click()
+  await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  await switchTab('one')
+  await picker.getByText('研究项目 A',{exact:true}).waitFor()
+  await expect.poll(()=>field.inputValue()).toBe('第一个网页的草稿')
+  await switchTab('two')
+  await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  await expect.poll(()=>field.inputValue()).toBe('')
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  await field.fill('第二个网页的消息')
+  await right.getByRole('button',{name:'发送消息',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},
+   {type:'open',id:'new-session'},{type:'send',text:'第二个网页的消息',images:[]}
+  ])
+ } finally { await page.close() }
+})
+
 it('inherits the visible workspace from the app rail even when the last manual project differs', async () => {
  const page=await browser.newPage({viewport:{width:1380,height:900}})
  try {

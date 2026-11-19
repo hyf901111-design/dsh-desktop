@@ -1069,7 +1069,10 @@ function patchComponentTabOverflow(source) {
 
 function patchResidentConversationTab(source) {
   const marker = '/* sherlock:resident-conversation-tab:v1 */'
-  if (source.includes(marker)) return source
+  const residentHook = '"data-odyssey-resident-conversation-tab": fixed || void 0,'
+  const filesHook = '"data-odyssey-resident-files-tab": tab.type === "editor" && !tab.path || void 0,'
+  if (source.includes(marker)) return source.includes(filesHook) ? source
+    : replaceExact(source, residentHook, residentHook + '\n            ' + filesHook, 'resident files layout hook')
   const start = source.indexOf('function TabBar(props) {')
   const end = source.indexOf('\n\t\t//#endregion', start)
   if (start < 0 || end < 0) throw new Error('Resident conversation TabBar boundary missing')
@@ -1094,7 +1097,7 @@ function patchResidentConversationTab(source) {
       };
       ${barReturn}`, 'shared tab renderer')
   bar = replaceExact(bar, listStart, listStart.replace('children: [', 'children: [residentChat && renderTab(residentChat, true), '), 'resident conversation before scroller')
-  bar = replaceExact(bar, '"data-odyssey-panel-tab": true,', '"data-odyssey-panel-tab": true,\n            "data-odyssey-resident-conversation-tab": fixed || void 0,', 'resident conversation layout hook')
+  bar = replaceExact(bar, '"data-odyssey-panel-tab": true,', '"data-odyssey-panel-tab": true,\n            ' + residentHook + '\n            ' + filesHook, 'resident conversation layout hook')
   bar = replaceExact(bar, 'if (!el || !node) return;', 'if (!el) return;', 'clipping when conversation is active')
   bar = replaceExact(bar, 'for (const tab of tabNodes.current.values()) {', 'for (const tab of tabNodes.current.values()) {\n        if (!el.contains(tab)) continue;', 'clipping limited to document tabs')
   bar = replaceExact(bar, `      const left = node.offsetLeft, right = left + node.offsetWidth;
