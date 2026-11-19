@@ -318,3 +318,53 @@ it('changes only the right project, drops an empty draft, and opens the new work
   expect(errors).toEqual([]);
  } finally { await page.close() }
 },16000);
+
+const projectModes = ['image-factory','browser','knowledge','notes','spreadsheet','research'];
+it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
+ 'keeps the active $mode page when changing or clearing the right project (dark: $dark)',
+ async ({mode,dark}) => {
+  const page=await browser.newPage({viewport:{width:dark?1380:1040,height:830}}),errors=[];
+  page.setDefaultTimeout(4500);
+  page.on('pageerror',error=>errors.push(error.message));
+  try {
+   await page.route('http://127.0.0.1/right-project-mode',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><body></body>'}));
+   await page.goto('http://127.0.0.1/right-project-mode');
+   await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:32%;max-width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>');
+   const app=['image-factory','browser','knowledge'].includes(mode);
+   await page.evaluate(({input,mode,dark,app})=>{
+    document.body.toggleAttribute('data-ds-dark-theme',dark);
+    window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true,initialView:app?'chat':mode};
+   },{input,mode,dark,app});
+   await page.addScriptTag({content:script});
+   if(app)await page.evaluate(mode=>window.pendingFixture.openSurface(mode),mode);
+
+   const seat=page.locator('#right [data-odyssey-composer-project]');
+   const chip=seat.locator('.pXSMma_workspace');
+   await chip.getByText('研究项目 A',{exact:true}).waitFor();
+   const center=()=>page.evaluate(()=>({
+    owner:window.pendingFixture.current.current,
+    application:document.body.dataset.workspaceSurface,
+    page:document.querySelector('#app [data-odyssey-page]')?.dataset.odysseyPage
+   }));
+   const original=await center();
+   await chip.click();
+   await page.getByText('研究项目 B',{exact:true}).click();
+   await chip.getByText('研究项目 B',{exact:true}).waitFor();
+   expect(await center()).toEqual(original);
+   expect(await seat.locator('textarea').isEditable()).toBe(true);
+   expect(await seat.locator('[data-note-context-anchor]').count()).toBe(0);
+   expect(await seat.evaluate(el=>{
+    const bounds=el.getBoundingClientRect(),pane=el.closest('#right').getBoundingClientRect();
+    return bounds.left>=pane.left&&bounds.right<=pane.right+1&&el.scrollWidth<=el.clientWidth+1;
+   })).toBe(true);
+   await chip.click();
+   await page.getByRole('menuitem',{name:'不在项目中工作',exact:true}).click();
+   await chip.getByText('选择项目',{exact:true}).waitFor();
+   expect(await center()).toEqual(original);
+   expect(await page.evaluate(()=>window.pendingFixture.record.getManualWorkspace())).toBeNull();
+   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([]);
+   expect(errors).toEqual([]);
+  } finally {await page.close()}
+ },
+ 15000
+);

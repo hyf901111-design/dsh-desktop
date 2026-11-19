@@ -106,7 +106,9 @@ export function EWorkPendingHomeHeader({pending,busy}){
 }
 /** Same native InputBar as ordinary chat, supplied by the pending draft. */
 export function EWorkPendingInputBar(props){
- if(!props.subagentPanel&&['browser','image-factory'].includes(document.body.dataset.workspaceSurface))props={...props,eworkNotes:false,researchCanvasWorkspace:undefined,researchFileReferences:[],researchArtifactReferences:[]};
+ if(props.rightProjectDraft||!props.subagentPanel&&['browser','image-factory'].includes(document.body.dataset.workspaceSurface)){
+  props={...props,eworkNotes:false,eworkSpreadsheet:false,eworkNoteContext:undefined,researchCanvasWorkspace:undefined,researchFileReferences:[],researchArtifactReferences:[]};
+ }
  const pending=props.rightProjectDraft?.pending??eworkPendingConversation;
  const input=react.useSyncExternalStore(pending?.shell.state.subscribe||(()=>()=>{}),pending?.shell.state.getSnapshot||(()=>undefined));
  const notice=react.useSyncExternalStore(pending?.shell.notices.subscribe||(()=>()=>{}),pending?.shell.notices.getSnapshot||(()=>null));

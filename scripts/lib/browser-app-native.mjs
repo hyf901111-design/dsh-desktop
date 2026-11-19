@@ -432,12 +432,13 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
   ]
  }):null;
  `+inputRow);
+ const composerSession='inputBar,\n\t\t\t\tpending,\n\t\t\t\tsession,';
+ replace(composerSession,composerSession.replace('pending,','pending:rightProjectDraft?[]:pending,').replace('session,','session:rightProjectDraft?undefined:session,'));
  const composerProps='\n\t\t\t\tzone,\n\t\t\t\thero,\n\t\t\t\tresearchEmpty,';
  replace(composerProps,composerProps.replace('zone,','zone:rightProjectDraft?undefined:zone,'));
  replace('\n\t\t\t\theroWorkspaceRow,\n\t\t\t\trenderSlot,','\n\t\t\t\theroWorkspaceRow:sidebarMode&&rightWorkspaceRow?rightWorkspaceRow:heroWorkspaceRow,\n\t\t\t\trenderSlot,');
  replace(inputRow,inputRow+`
- pendingConversation:pendingConversation||!!rightProjectDraft,rightProjectDraft,eworkImageFactory:imageFactoryActive,
- ...(rightProjectDraft?{eworkNotes:false,eworkSpreadsheet:false,researchFileReferences:[],researchArtifactReferences:[],researchCanvasWorkspace:undefined}:{}),`)
+ pendingConversation:pendingConversation||!!rightProjectDraft,rightProjectDraft,eworkImageFactory:imageFactoryActive,`)
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
  replace('selectWorkspace: async (workspaceId) => {',`selectWorkspace: async (workspaceId) => {

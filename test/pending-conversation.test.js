@@ -59,6 +59,24 @@ it('quotes current-page text as untrusted reference and rejects unreadable or pr
 
 it('uses ordinary Q&A input and webpage context when the underlying view is Notes or Research',()=>{const shared=vi.fn(props=>props),react={useSyncExternalStore:()=>undefined,useState:()=>[null,()=>{}],useEffect:()=>{}},jsx={jsx:(component,props)=>component===shared?shared(props):{component,props},jsxs:()=>({}),Fragment:()=>null},render=new Function('react','react_jsx_runtime','document','eworkPendingConversation','EWorkSharedInputBar','EWorkBrowserReference','return ('+EWorkPendingInputBar.toString()+')')(react,jsx,{body:{dataset:{workspaceSurface:'browser'}}},null,shared,()=>null);render({eworkNotes:true,researchCanvasWorkspace:{},researchFileReferences:['old'],researchArtifactReferences:['old']});expect(shared.mock.calls[0][0]).toMatchObject({eworkNotes:false,researchCanvasWorkspace:undefined,researchFileReferences:[],researchArtifactReferences:[]});shared.mockClear();render({subagentPanel:true,eworkNotes:true});expect(shared.mock.calls[0][0].eworkNotes).toBe(true)})
 
+it('does not include the center document or board context in a right project draft',()=>{
+ const f=fixture({initialWorkspace:'B'})
+ f.shell.state={subscribe:()=>()=>{},getSnapshot:()=>f.shell.snapshot}
+ f.shell.notices={subscribe:()=>()=>{},getSnapshot:()=>undefined}
+ const render=new Function('react','react_jsx_runtime','document','eworkPendingConversation','InputBar','return ('+EWorkPendingInputBar.toString()+')')(
+  {useSyncExternalStore:(_subscribe,get)=>get(),useEffect:()=>{}},{jsx:(_type,props)=>props},{body:{dataset:{workspaceSurface:'notes'}}},null,()=>null)
+ const props=render({
+  pendingConversation:true,rightProjectDraft:{pending:f.pending},
+  eworkNotes:true,eworkSpreadsheet:true,eworkNoteContext:'center note',
+  researchCanvasWorkspace:{id:'A'},researchFileReferences:['A.pdf'],researchArtifactReferences:['A artifact']
+ })
+ expect(props).toMatchObject({
+  eworkNotes:false,eworkSpreadsheet:false,eworkNoteContext:undefined,researchCanvasWorkspace:undefined,
+  researchFileReferences:[],researchArtifactReferences:[]
+ })
+ expect(props.keyboard).toBe(f.shell)
+})
+
 it('keeps the handed-off draft without sending if navigation changes while native preferences are pending',async()=>{let finish;const f=fixture({prepareSession:()=>new Promise(resolve=>{finish=resolve})}),sending=f.send();await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));f.session.current='another';finish();await sending;expect(f.real.restoreDraftState).toHaveBeenCalled();expect(f.real.submit).not.toHaveBeenCalled();expect(f.pending.getSnapshot().busy).toBe(false)})
 
 it('never opens the old project when the picker changes during a command handoff',async()=>{
