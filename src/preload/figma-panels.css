@@ -387,17 +387,28 @@ body .wSkVaW_header :is([role=menu],[role=listbox]) { -webkit-app-region:no-drag
 /* Panel entries are portaled outside the header DOM but overlap its native drag region. */
 body .t8lSSG_toggleCluster, body [data-odyssey-panel-entry] { -webkit-app-region:no-drag; }
 
-/* A native drag region swallows outside pointer events while a preset menu is open. */
-body:has(.cubgiG_seat[aria-expanded="true"]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}
-
 [data-odyssey-tab-overflow-trigger]:hover{background:color-mix(in srgb,currentColor 8%,transparent)}
 
-/* Native drag regions must yield pointer events to dismiss open top-layer UI. */
-body:has(.wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],.srb-members-popover:popover-open,.srb-avatar-info:popover-open,.srb-session-search[open]) :is(.wSkVaW_header,.wSkVaW_titleRow){-webkit-app-region:no-drag}
-body:has(.ew-grid-menu[role="menu"]) :is(.wSkVaW_header,.wSkVaW_titleRow),
-body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]),
-body .wSkVaW_header:has(.srb-header-more[aria-expanded=true]) .wSkVaW_titleRow{-webkit-app-region:no-drag}
-
+/* While a popup is open, Electron must send titlebar clicks to its outside-pointer handler. */
+body:has(
+  :is([role="menu"],[role="listbox"],.en-toc-popover,.en-challenge-popover):not(
+    [hidden],[hidden] *,[aria-hidden="true"],[aria-hidden="true"] *,[inert],[inert] *,
+    [popover]:not(:popover-open),[popover]:not(:popover-open) *,dialog:not([open]) *
+  ),
+  .cubgiG_seat[aria-expanded="true"],
+  .wSkVaW_header [aria-haspopup="tree"][aria-expanded="true"],
+  .srb-members-popover:popover-open,.srb-avatar-info:popover-open,.srb-session-search[open],
+  .wSkVaW_header .srb-header-more[aria-expanded="true"]
+) {
+  --odyssey-popup-window-drag:no-drag;
+  & :is(
+    #dsh-desktop-drag-region,.dsh-sidebar-drag-region,.wSkVaW_header,.wSkVaW_titleRow,
+    .workspace-app-title,.workspace-app-title *,.if-top,.if-top-title,
+    .eb-root > .eb-tabs,.eb-root > .eb-tabs :is(.eb-app-label,.eb-app-label *),.knowledge-header
+  ) {
+    -webkit-app-region:no-drag!important;
+  }
+}
 
 /* Tabs fit their labels; only inactive tabs yield width when the row is crowded. */
 .t8lSSG_panel [data-odyssey-panel-tab]{flex:0 1 auto;min-width:32px;max-width:160px}

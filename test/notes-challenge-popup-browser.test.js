@@ -11,7 +11,7 @@ beforeAll(async()=>{
  const bridge={request:async(method,input)=>method==='load'?{saved}:method==='save'?{status:'saved',saved:{...input.content,revision:input.revision+1}}:{},draft:async()=>{}};
  mountNotes(document,bridge,{register:(_mode,surface)=>{surface.style.left='240px';surface.style.top='54px';document.body.append(surface)},open:()=>{},close:()=>{},current:()=>'notes'});
  window.seed=async(quote,prefix='')=>{window.editor.replaceBlocks(window.editor.document,[{id:'p',type:'paragraph',content:prefix+quote+'。'}]);const issue={blockId:'p',quote,category:'question',message:'请核对这一段判断。',evidence:[]},store=new YjsThreadStore(CHALLENGE_USER,window.noteDoc.getMap('threads'),new DefaultThreadStoreAuth(CHALLENGE_USER,'editor'));const thread=await store.createThread({metadata:{kind:CHALLENGE_KIND,issue,sourceText:prefix+quote+'。'},initialComment:{body:[{type:'paragraph',content:[{type:'text',text:issue.message,styles:{}}]}]}}),range=findChallengeQuote(window.editor,'p',quote);window.editor.transact(tr=>tr.setMeta('addToHistory',false).addMark(range.from,range.to,tr.doc.type.schema.marks.comment.create({threadId:thread.id,orphan:false})));window.threadId=thread.id;return thread.id};
- `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-styles',setup(b){b.onResolve({filter:/\.css\?inline$/},async args=>{const found=await b.resolve(args.path.slice(0,-7),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-css'}});b.onLoad({filter:/.*/,namespace:'inline-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-popup-controller',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc; const slashMenu = useMemo'),loader:'tsx'}))}}]})
+ `},bundle:true,platform:'browser',conditions:['browser','import','style'],format:'iife',write:false,outfile:'fixture.js',logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'inline-production-assets',setup(b){b.onResolve({filter:/\?(inline|raw)$/},async args=>{const found=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:found.path,namespace:'inline-text'}});b.onLoad({filter:/.*/,namespace:'inline-text'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}},{name:'expose-popup-controller',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async args=>({contents:(await readFile(args.path,'utf8')).replace('  const slashMenu = useMemo','  window.editor=editor;window.challenge=challenge;window.noteDoc=doc; const slashMenu = useMemo'),loader:'tsx'}))}}]})
  script=output.outputFiles.find(file=>file.path.endsWith('.js')).text;css=output.outputFiles.find(file=>file.path.endsWith('.css'))?.text||''
  const playwright=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
  browser=await(playwright.chromium??playwright.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -31,6 +31,31 @@ async function clickText(page,line,x){
  return caret
 }
 async function expectedX(page,left){return page.locator('.en-main').evaluate((el,left)=>{const area=el.getBoundingClientRect();return Math.max(area.left+16,Math.min(left,area.right-336))},left)}
+
+it('dismisses the Notes popovers from the titlebar and restores its drag region', async () => {
+ const {context,page,errors}=await fixture()
+ try {
+  await page.addStyleTag({content:await readFile('src/preload/figma-panels.css','utf8')})
+  const titlebar=page.locator('.wSkVaW_header')
+  const dragRegion=()=>titlebar.evaluate(el=>getComputedStyle(el).getPropertyValue('-webkit-app-region'))
+  expect(await dragRegion()).toBe('drag')
+
+  for (const [trigger,popover] of [
+   ['.en-challenge-trigger','.en-challenge-popover'],
+   ['.en-toc-trigger','.en-toc-popover'],
+  ]) {
+   await page.locator(trigger).click()
+   await page.locator(popover).waitFor()
+   expect(await dragRegion()).toBe('no-drag')
+   await page.locator(popover).click({position:{x:16,y:12}})
+   expect(await page.locator(popover).isVisible()).toBe(true)
+   await page.mouse.click(410,32)
+   await page.locator(popover).waitFor({state:'hidden'})
+   expect(await dragRegion()).toBe('drag')
+  }
+  expect(errors).toEqual([])
+ } finally {await context.close()}
+})
 
 it('anchors a wrapped popup at the clicked character and line, and follows that text on scroll',async()=>{
  const{context,page,errors}=await fixture();try{
