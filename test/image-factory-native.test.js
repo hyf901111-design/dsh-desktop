@@ -552,7 +552,7 @@ it('adds workspace context to the real native prompt while leaving ordinary chat
   const f = fixture()
   try {
     f.respond()
-    const content = [{ type: 'text', text: '你好，请生成一张用于活动的海报' }]
+    const content = [{ type: 'text', text: '你好，我想生成一张用于活动的海报' }]
     f.doc.body.dataset.workspaceSurface = 'browser'
     await f.binding.prompt(f.session, content, 'queue')
     expect(f.session.prompt).toHaveBeenLastCalledWith(content, 'queue')

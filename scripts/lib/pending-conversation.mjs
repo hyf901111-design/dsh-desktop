@@ -143,7 +143,9 @@ export function EWorkPendingInputBar(props){
   useNotices:select=>{props.useNotices(value=>value);return select(notice)},useLexicon:select=>{props.useLexicon(value=>value);return select(new Map())},
   addImages:files=>{try{const images=conversationController.createDraftImages(files);if(!shell.addImages(images.map(image=>image.id)))conversationController.releaseDraftImages(images);return null}catch(error){return error.message}},
   removeImage:id=>{conversationController.releaseDraftImage(id);shell.removeImage(id)},draftImages:ids=>conversationController.draftImages(ids),
-  placeholder:props.eworkImageFactory?'描述要生成的图片或海报…':props.placeholder||'输入你的问题…',onRequestWorkspace:props.onRequestWorkspace});
+  placeholder:props.eworkImageFactory
+   ? (document.documentElement.dataset.odysseyLocale==='en'?'Ask a question or describe an image…':'提问，或描述想做的图片…')
+   : props.placeholder||'输入你的问题…',onRequestWorkspace:props.onRequestWorkspace});
 }
 export function browserPromptReference(source){
  if(source===undefined||source===null)return '';

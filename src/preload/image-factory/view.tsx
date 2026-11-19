@@ -219,7 +219,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const [, redrawBusy] = useState(0)
   const uiOperations = useRef(new Set<CanvasScope>())
   const [toast, setToast] = useState('')
-  const [tasks, setTasks] = useState<TaskTabs>()
+  const [tasks, setTasks] = useState<TaskTabs>(() => ({ tabs: [], busy: false }))
   const [bounds, setBounds] = useState({ width: 0, height: 0 })
   const file = useRef<HTMLInputElement>(null), scroll = useRef<HTMLDivElement>(null), stage = useRef<HTMLDivElement>(null)
   const imageFrame = useRef<HTMLDivElement>(null), commentBubble = useRef<HTMLDivElement>(null)
@@ -238,11 +238,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     [...active.current.values()].some(job => job.scope === key || job.sessionId === key)
   const setScene = (change: (old?: ImageScene) => ImageScene | undefined, persist = true, editKey?: string) => workspace.change(scope, change, persist, editKey)
   const mounted = useRef(true)
-  const creating = tasks?.creating !== undefined
-  const canvasSelected = tasks?.active !== undefined && !tasks.busy
+  const creating = tasks.creating !== undefined
+  const canvasSelected = tasks.active !== undefined && !tasks.busy
   const current = galleryOpen || !canvasSelected ? undefined : scene
-  const showOpening = !creating && (tasks?.busy || tasks?.active !== undefined &&
-    (status === 'loading' || status === 'idle') && !(scope !== null && tasks?.fresh === scope))
+  const showOpening = !creating && (tasks.busy || tasks.active !== undefined &&
+    (status === 'loading' || status === 'idle') && !(scope !== null && tasks.fresh === scope))
   const { zoom, pan, reset: resetViewport, stepZoom, spaceHeld, panning, panPointer, panBy, canZoomIn, canZoomOut } =
     useImageViewport(doc, scroll, imageFrame, Boolean(current) && status === 'ready')
   const selectionDraft = current && selectionDrafts.current.get(current.id)
@@ -1473,7 +1473,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     if (editing) imageFrame.current?.focus({ preventScroll: true })
     releaseText()
   }}>
-    <header className="if-top eb-tabs workspace-app-topbar" data-crowded={!!tasks && tasks.tabs.length > 6} ref={header} onKeyDown={event => {
+    <header className="if-top eb-tabs workspace-app-topbar" data-crowded={tasks.tabs.length > 6} ref={header} onKeyDown={event => {
       if (event.key !== 'Escape' || !workspaceExpanded) return
       event.preventDefault(); event.stopPropagation(); setWorkspaceExpanded(false); workspaceToggle.current?.focus()
     }}>
@@ -1492,9 +1492,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
           <button type="button" className="eb-workspace-edit" data-workspace-view-customize="" aria-label={t('自定义顶栏', 'Customize top bar')} title={t('自定义顶栏', 'Customize top bar')}><i aria-hidden="true" /></button>
         </nav>
       </div>
-      {tasks?.tabs.length ? <ImageTaskTabs doc={doc} header={header} state={tasks} current={scope}
+      <ImageTaskTabs doc={doc} header={header} state={tasks} current={scope}
         title={scene?.title} t={t} action={taskAction}/>
-        : <span className="if-top-title" title={current?.title}>{current?.title}</span>}
+      {!tasks.tabs.length && current?.title && <span className="if-top-title" title={current.title}>{current.title}</span>}
       <CanvasActionsMenu doc={doc} t={t} canExport={!!current?.layers.length && !busy} exporting={exportImage}
         galleryAction={scene && !busy ? galleryOpen ? { label: t('返回画布', 'Return to canvas'), run: closeGallery }
           : { label: t('打开灵感画廊', 'Open inspiration gallery'), run: showGallery } : undefined}/>

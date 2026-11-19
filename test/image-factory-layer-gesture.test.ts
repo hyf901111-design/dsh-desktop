@@ -518,7 +518,7 @@ it('opens a resident Workspace view from Images without triggering return to the
   }
 })
 
-it('keeps the rendered gallery mounted while a fresh task waits for its session and canvas', async () => {
+it('creates a task from the empty gallery and keeps it mounted while the session and canvas load', async () => {
   // @ts-expect-error The native renderer patch ships as untyped JavaScript.
   const { installImageFactoryContext } = await import('../scripts/lib/image-factory-native.mjs')
   const host = new WorkspaceSurfaceHost(document)
@@ -528,6 +528,9 @@ it('keeps the rendered gallery mounted while a fresh task waits for its session 
   const notify = () => listeners.forEach(listener => listener())
   let releaseSession: (() => void) | undefined
   let releaseCanvas: (() => void) | undefined
+  const create = vi.fn(({ sessionId }: { sessionId: string; workspaceId?: string }) => new Promise<string>(resolve => {
+    releaseSession = () => { state.byId[sessionId] = { blank: true }; notify(); resolve(sessionId) }
+  }))
   const sessions = {
     list: {
       getSnapshot: () => state,
@@ -535,11 +538,9 @@ it('keeps the rendered gallery mounted while a fresh task waits for its session 
     },
     binding: (id: string) => state.byId[id] ? {} : undefined,
     open: (id: string) => { state.current = id; notify() },
-    create: ({ sessionId }: { sessionId: string }) => new Promise<string>(resolve => {
-      releaseSession = () => { state.byId[sessionId] = { blank: true }; notify(); resolve(sessionId) }
-    }),
+    create,
   }
-  const runtime = installImageFactoryContext({ sessions, doc: document, win: window } as any)
+  const runtime = installImageFactoryContext({ sessions, doc: document, win: window, getDefaultWorkspace: () => 'selected-project' } as any)
   const factory = mountImageFactory(document, host, {
     storage: {
       read: scope => scope === 'image-task-original' ? Promise.resolve({ epoch: 1 })
@@ -557,10 +558,15 @@ it('keeps the rendered gallery mounted while a fresh task waits for its session 
     const firstGallery = gallery()
     expect(firstGallery).not.toBeNull()
     expect(activeTask()?.dataset.id).toBe('image-task-original')
-    await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="新建图片任务"]')!.click())
+    await act(async () => { document.dispatchEvent(new CustomEvent('sherlock:image-factory-reset')) })
+    expect(activeTask()).toBeNull()
+    const add = document.querySelector<HTMLButtonElement>('[aria-label="新建图片任务"]')
+    expect(add?.disabled).toBe(false)
+    await act(async () => add!.click())
     const newTask = activeTask()?.dataset.id
     expect(newTask).toMatch(/^image-task-/)
     expect(newTask).not.toBe(state.current)
+    expect(create).toHaveBeenCalledExactlyOnceWith({ sessionId: newTask, workspaceId: 'selected-project' })
     expect(gallery()).toBe(firstGallery)
     expect(galleryControl()?.disabled).toBe(true)
 
