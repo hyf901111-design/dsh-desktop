@@ -6,7 +6,7 @@ import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
 export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
-  getTaskWorkspace, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
+  getTaskWorkspace, getDefaultWorkspace, getProjectDraft, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false }
@@ -23,7 +23,7 @@ export function installImageFactoryContext({
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
-  const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, standaloneDirectory,
+  const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, getDefaultWorkspace, standaloneDirectory,
     setView: setTaskView, storage: taskStorage, isBoardOnly,
     signal(name, detail) {
       if (name === 'task-state') publishState()
@@ -50,7 +50,7 @@ export function installImageFactoryContext({
     if (job?.draft && updateScope) syncSession()
   }
   function fill(prompt, gallery = false) {
-    const shell = nativeInput()
+    const shell = getProjectDraft?.()?.shell ?? nativeInput()
     if (!shell || shell.disposed || !isActive() || state.busy || typeof prompt !== 'string' || !prompt.trim()) return false
     const draft = shell.snapshot.draft
     if (!gallery && draft.trim()) { focus(); return true }

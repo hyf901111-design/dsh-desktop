@@ -490,7 +490,7 @@ function initializeUi(): void {
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app
     if (surface && surface === targetSurface) return
-    if (region === 'side' && app === 'note') { await openSidebarDocument('note', signal); return }
+    if (app === 'note') { await openSidebarDocument('note', signal); return }
     if (app === 'new-workspace' || app === 'new-chat' || (region === 'side' && app === 'research')) {
       const sidebar = document.querySelector('[data-dsh-sidebar-root]')
       if (app === 'new-workspace') sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')?.click()
@@ -506,8 +506,8 @@ function initializeUi(): void {
       return
     }
     if (app === 'spreadsheet') { await openSidebarDocument('spreadsheet', signal); return }
-    if (app === 'research' || app === 'note') {
-      await homeActions.run(app === 'research' ? 'board' : 'note', { signal, revealComposer: async () => {} })
+    if (app === 'research') {
+      await homeActions.run('board', { signal, revealComposer: async () => {} })
       return
     }
     await notes.flushCurrent()

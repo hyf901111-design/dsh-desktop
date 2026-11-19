@@ -17,6 +17,22 @@ it('does not allocate an output folder until a first send, and keeps an explicit
  expect(f.sessions.create).toHaveBeenCalledExactlyOnceWith({cwd:'/standalone/outputs'})
  expect(f.real.submit).toHaveBeenCalledExactlyOnceWith('queue')
 })
+it('leaves the center session selected if a right draft is superseded during creation', async () => {
+ let active=true, finishCreate;
+ const f=fixture({initialWorkspace:'B',detached:{sessionId:'center',mode:'notes',isActive:()=>active}});
+ f.session.current='center';
+ f.sessions.create.mockImplementation(()=>new Promise(resolve=>{finishCreate=resolve}));
+ const sending=f.send();
+ await vi.waitFor(()=>expect(f.sessions.create).toHaveBeenCalledExactlyOnceWith({workspaceId:'B'}));
+ active=false;
+ finishCreate('new');
+ await sending;
+ expect(f.session.current).toBe('center');
+ expect(f.sessions.open).not.toHaveBeenCalled();
+ expect(f.shell.commitSend).not.toHaveBeenCalled();
+ expect(f.shell.snapshot.draft).toBe('请总结当前网页');
+});
+
 it('deduplicates concurrent first sends and preserves the draft when creation fails',async()=>{const f=fixture();let release;f.sessions.create.mockImplementation(()=>new Promise((_,reject)=>{release=()=>reject(Error('创建失败'))}));const first=f.send();await Promise.resolve();await f.send();expect(f.sessions.create).toHaveBeenCalledTimes(1);release();await first;expect(f.shell.commitSend).not.toHaveBeenCalled();expect(f.shell.notify).toHaveBeenCalledWith('error','创建失败');expect(f.pending.getSnapshot().busy).toBe(false)})
 
 it('waits for the standalone canvas to enter the session before submitting the first prompt', async () => {
