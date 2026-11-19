@@ -1,6 +1,6 @@
 export const navigationApps = ['browser', 'knowledge', 'image-factory', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet'] as const
 export const topShortcutCount = 4
-export const topNavigationApps = ['research', 'note', 'spreadsheet', 'browser', 'image-factory', 'knowledge'] as const
+export const topNavigationApps = ['research', 'note', 'spreadsheet', 'image-factory', 'browser', 'knowledge'] as const
 export type TopNavigationApp = typeof topNavigationApps[number]
 export function isTopNavigationApp(value: unknown): value is TopNavigationApp {
   return topNavigationApps.some(app => app === value)

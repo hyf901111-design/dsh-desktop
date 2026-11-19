@@ -695,7 +695,11 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   expect(await dialog.getByText('对话',{exact:true}).getAttribute('title')).toBe('对话固定在第一位')
   expect(await slots.count()).toBe(4)
   expect(await dialog.getByRole('combobox').count()).toBe(0)
-  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','笔记','表格','浏览器','图像','知识库'])
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','笔记','表格','图像','浏览器','知识库'])
+  expect(await dialog.locator('.workspace-view-slots,.workspace-view-palette').evaluateAll(rows=>rows.map(row=>{
+   const style=getComputedStyle(row)
+   return [style.backgroundColor,style.borderTopWidth,style.boxShadow]
+  }))).toEqual(Array.from({length:2},()=>['rgba(0, 0, 0, 0)','0px','none']))
   expect(await slots.allTextContents()).toEqual(['','','',''])
   expect(await slots.first().evaluate(slot=>({
    border:getComputedStyle(slot,'::after').borderTopStyle,

@@ -119,15 +119,10 @@ body:has(>.workspace-view-settings[open]) :is(.wSkVaW_header,.wSkVaW_titleRow,.w
   display:grid;align-items:center;gap:6px;padding-inline:6px;box-sizing:border-box;
 }
 .workspace-view-slots{
-  grid-template-columns:44px repeat(4,56px) 28px;height:28px;border-radius:8px;
-  background:var(--odyssey-surface,var(--odyssey-canvas,#fff));box-shadow:0 0 0 1px var(--odyssey-menu-border,#8884);
+  grid-template-columns:44px repeat(4,56px) 28px;height:28px;
 }
 .workspace-view-fixed{text-align:center}
-.workspace-view-palette{
-  grid-template-columns:repeat(6,minmax(0,1fr));margin-top:8px;padding-block:5px;
-  border:1px solid var(--odyssey-menu-border,#8884);border-radius:12px;background:var(--odyssey-menu,#fff);
-  box-shadow:var(--odyssey-menu-shadow,0 8px 24px #0003);backdrop-filter:blur(24px);
-}
+.workspace-view-palette{grid-template-columns:repeat(6,minmax(0,1fr));margin-top:8px}
 .workspace-view-settings button:not([data-navigation-delete]){
   display:grid;place-items:center;padding:0;border:0;border-radius:7px;background:transparent;
   color:inherit;line-height:1;-webkit-app-region:no-drag;
@@ -145,6 +140,12 @@ body:has(>.workspace-view-settings[open]) :is(.wSkVaW_header,.wSkVaW_titleRow,.w
 .workspace-view-slot[data-drop-target]::after{border-color:currentColor}
 .workspace-view-settings .workspace-view-slot>button:first-child,.workspace-view-settings .workspace-view-palette>button{
   width:100%;min-width:0;height:28px;font:inherit;line-height:20px;white-space:nowrap;cursor:grab;
+}
+.workspace-view-settings .workspace-view-palette>button{
+  background:var(--odyssey-menu,#fff);backdrop-filter:blur(24px);
+}
+.workspace-view-settings .workspace-view-palette>button:is(:hover,[aria-pressed=true]){
+  background:color-mix(in srgb,var(--odyssey-menu,#fff),currentColor 12%);
 }
 .workspace-view-settings :is(.workspace-view-slot,.workspace-view-palette)>button>span{
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
