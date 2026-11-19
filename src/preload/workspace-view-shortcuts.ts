@@ -2,7 +2,6 @@ import {
   defaultNavigationShortcuts, isTopNavigationApp, topNavigationApps, topShortcutCount,
   type NavigationShortcuts, type TopNavigationApp
 } from '../shared/navigation-shortcuts'
-import { navigationAppIcon } from './home-app-shortcuts'
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
 
 const nativeViews = [
@@ -28,21 +27,31 @@ export function workspaceViewButton(document: Document, sessionId: string, view:
     ?.querySelector<HTMLButtonElement>(`[data-srb-tabs] button[data-conversation-view-id="${view}"]`)
 }
 
-// Transfer the open switcher only to the requested view in the same session.
-const expandingView = new WeakMap<Document, { sessionId: string; view: string }>()
+// Keep the incoming switcher open without replaying the manual animation.
+const expandingView = new WeakMap<Document, { sessionId: string; view: string; arrived: boolean }>()
 
 export function keepWorkspaceViewsExpanded(document: Document, sessionId: string, view: string) {
-  expandingView.set(document, { sessionId, view })
+  const transition = { sessionId, view, arrived: false }
+  expandingView.set(document, transition)
+  document.documentElement.setAttribute('data-workspace-tabs-switching', '')
+  document.defaultView?.setTimeout(() => {
+    if (expandingView.get(document) === transition && !transition.arrived) clearWorkspaceViewsExpansion(document)
+  }, 2000)
 }
 
 export function clearWorkspaceViewsExpansion(document: Document) {
   expandingView.delete(document)
+  document.documentElement.removeAttribute('data-workspace-tabs-switching')
 }
 
 export function takeWorkspaceViewsExpansion(document: Document, sessionId: string | undefined, view: string | undefined) {
-  const next = expandingView.get(document)
-  if (!next || next.sessionId !== sessionId || next.view !== view) return false
-  clearWorkspaceViewsExpansion(document)
+  const transition = expandingView.get(document)
+  if (!transition || transition.arrived || transition.sessionId !== sessionId || transition.view !== view) return false
+  transition.arrived = true
+  const win = document.defaultView!
+  win.requestAnimationFrame(() => win.requestAnimationFrame(() => {
+    if (expandingView.get(document) === transition) clearWorkspaceViewsExpansion(document)
+  }))
   return true
 }
 
@@ -55,10 +64,13 @@ export function navigateWorkspaceView(document: Document, sessionId: string, vie
   const tab = workspaceViewButton(document, sessionId, view)
   if (!tab?.isConnected || tab.disabled) return false
   document.body.dataset.sessionWorkspaceSwitch = sessionId
+  keepWorkspaceViewsExpanded(document, sessionId, view)
   reveal()
   const current = workspaceViewButton(document, sessionId, view)
-  if (!current?.isConnected || current.disabled) return false
-  keepWorkspaceViewsExpanded(document, sessionId, view)
+  if (!current?.isConnected || current.disabled) {
+    clearWorkspaceViewsExpansion(document)
+    return false
+  }
   current.click()
   return true
 }
@@ -162,12 +174,14 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     const header = activeHeader()
     const id = header?.dataset.eworkNotesSession
     const selected = header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected=true]')?.dataset.conversationViewId
+    const transition = expandingView.get(document)
     const arrivingExpanded = takeWorkspaceViewsExpansion(document, id, selected)
+    const enteringNativeView = transition?.sessionId === id && nativeViews.some(([view]) => view === transition?.view)
     if (header !== owner || id !== ownerId) {
       controls.remove()
       owner = header
       ownerId = id
-      expand(arrivingExpanded)
+      expand(arrivingExpanded || enteringNativeView)
       updated = ''
     } else if (arrivingExpanded) expand(true)
     if (!header) return
@@ -267,7 +281,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
     let picked: TopNavigationApp | undefined
     let press: { id: number; app: TopNavigationApp; x: number; y: number } | undefined
     let suppressClick = false
-    const ghost = document.createElement('i')
+    const ghost = document.createElement('span')
     ghost.className = 'workspace-view-drag-ghost'
     ghost.setAttribute('aria-hidden', 'true')
     let target: HTMLElement | undefined
@@ -283,12 +297,6 @@ export function mountWorkspaceViewCustomization(document: Document) {
         button.setAttribute('aria-pressed', String(button.dataset.workspaceEditorApp === app))
       }
     }
-    const addAppIcon = (button: HTMLButtonElement, app: TopNavigationApp) => {
-      const icon = document.createElement('i')
-      icon.style.setProperty('--workspace-editor-icon', navigationAppIcon(app))
-      icon.setAttribute('aria-hidden', 'true')
-      button.append(icon)
-    }
     const choices = topNavigationApps.map(app => {
       const button = document.createElement('button')
       button.type = 'button'
@@ -303,7 +311,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
 
     const slotButtons: HTMLButtonElement[] = []
     const renderSlots = () => {
-      const values = settings.get()
+      const values = settings.get().filter(isTopNavigationApp)
       const slots = Array.from({ length: topShortcutCount }, (_, index) => {
         const app = values[index]
         const slot = document.createElement('div')
@@ -317,7 +325,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
         slotButtons[index] = button
         if (isTopNavigationApp(app)) {
           button.dataset.workspaceEditorApp = app
-          addAppIcon(button, app)
+          button.textContent = button.title
           const remove = document.createElement('button')
           remove.type = 'button'
           remove.className = 'workspace-view-remove'
@@ -370,11 +378,11 @@ export function mountWorkspaceViewCustomization(document: Document) {
         if (Math.hypot(press.x - event.clientX, press.y - event.clientY) < 5) return
         panel.setPointerCapture(event.pointerId)
         pick()
-        ghost.style.setProperty('--workspace-editor-icon', navigationAppIcon(press.app))
+        ghost.textContent = appName(press.app)
         panel.append(ghost)
         suppressClick = true
       }
-      ghost.style.transform = `translate(${event.clientX - 15}px, ${event.clientY - 15}px)`
+      ghost.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`
       const slot = slotAt(event)
       if (target !== slot) highlight(slot)
     })

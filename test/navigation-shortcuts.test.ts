@@ -27,6 +27,20 @@ it('normalizes six sidebar positions and retains legacy top preferences', () => 
   })
 })
 
+it('packs the top bar to the left and moves other apps when a label is inserted', () => {
+  const legacy = normalizeNavigationShortcuts({ top: [null, 'note', null, 'browser'] })
+  const appended = replaceNavigationShortcut(legacy, 'top', 3, 'research')
+  expect(appended.top).toEqual(['note', 'browser', 'research', null])
+  const inserted = replaceNavigationShortcut(appended, 'top', 1, 'knowledge')
+  expect(inserted.top).toEqual(['note', 'knowledge', 'browser', 'research'])
+  const full = replaceNavigationShortcut(inserted, 'top', 1, 'spreadsheet')
+  expect(full.top).toEqual(['note', 'spreadsheet', 'knowledge', 'browser'])
+  expect(replaceNavigationShortcut(full, 'top', 3, 'note').top)
+    .toEqual(['spreadsheet', 'knowledge', 'browser', 'note'])
+  expect(replaceNavigationShortcut(full, 'top', 1, null).top).toEqual(['note', 'knowledge', 'browser', null])
+  expect(replaceNavigationShortcut(full, 'top', 1, 'spreadsheet')).toBe(full)
+})
+
 it('renders six editable sidebar positions and retains hidden top preferences', async () => {
   const win = new Window()
   const doc = win.document as unknown as Document

@@ -102,6 +102,7 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
 }
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button:disabled{opacity:.4;cursor:default}
 .eb-workspace-tabs[aria-hidden=true]{width:0;opacity:0;pointer-events:none}
+html[data-workspace-tabs-switching] :is(.eb-workspace-tabs,.eb-workspace-toggle>i){transition:none}
 body .eb-workspace-edit{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0!important;-webkit-app-region:no-drag}
 .eb-workspace-edit>i{width:16px;height:16px;background:currentColor;mask:url('${workspaceSettingsIcon.replaceAll("'", '%27')}') center/contain no-repeat}
 body:has(>.workspace-view-settings[open]) .eb-workspace-tabs{visibility:hidden}
@@ -130,32 +131,29 @@ body:has(>.workspace-view-settings[open]) .eb-workspace-tabs{visibility:hidden}
   position:relative;flex:none;border-radius:6px;
   background:var(--odyssey-menu-row,#8882);
 }
-.workspace-view-slot>button:first-child{width:32px;height:26px;cursor:grab}
+.workspace-view-settings .workspace-view-slot>button:first-child{
+  min-width:32px;height:26px;padding-inline:7px 16px;font:inherit;line-height:20px;white-space:nowrap;cursor:grab;
+}
 .workspace-view-slot[data-empty]{background:color-mix(in srgb,var(--odyssey-muted,#888) 14%,transparent)}
 .workspace-view-slot[data-empty]::after{
   content:"";position:absolute;inset:0;border:1px dashed color-mix(in srgb,var(--odyssey-muted,#888) 45%,transparent);
   border-radius:inherit;pointer-events:none;
 }
-.workspace-view-slot[data-empty]>button{cursor:pointer}
+.workspace-view-settings .workspace-view-slot[data-empty]>button{padding:0;cursor:pointer}
 .workspace-view-settings[data-picking] .workspace-view-slot>button:first-child{cursor:copy}
 .workspace-view-slot[data-drop-target]{outline:2px solid var(--odyssey-focus,#4a80fa);outline-offset:-2px}
 .workspace-view-settings .workspace-view-palette>button{
   height:28px;padding:0 7px;font:inherit;line-height:20px;white-space:nowrap;cursor:grab;
 }
-.workspace-view-settings [data-workspace-editor-app]>i{
-  width:16px;height:16px;pointer-events:none;background:currentColor;mask:var(--workspace-editor-icon) center/contain no-repeat;
-}
 .workspace-view-settings [data-workspace-editor-app]{touch-action:none}
 .workspace-view-drag-ghost{
-  position:fixed;inset:0 auto auto 0;display:grid;place-items:center;width:30px;height:30px;
+  position:fixed;inset:0 auto auto 0;translate:-50% -50%;padding:4px 8px;
   border-radius:7px;background:var(--odyssey-canvas,#fff);box-shadow:0 3px 10px #0003;pointer-events:none;
 }
-.workspace-view-drag-ghost::before{
-  content:"";width:18px;height:18px;background:currentColor;mask:var(--workspace-editor-icon) center/contain no-repeat;
-}
-.workspace-view-palette>button>span{animation:navigation-shortcut-wiggle 180ms ease-in-out alternate infinite}
+.workspace-view-palette>button>span{animation:workspace-view-label-wiggle 240ms ease-in-out alternate infinite}
 .workspace-view-palette>button:nth-child(even)>span{animation-direction:alternate-reverse}
 .workspace-view-palette>button:nth-child(3n)>span{animation-delay:-80ms}
+@keyframes workspace-view-label-wiggle{from{transform:rotate(-2deg)}to{transform:rotate(2deg)}}
 .workspace-view-settings .workspace-view-remove{
   position:absolute;top:0;right:0;width:12px;height:12px;border-radius:50%;cursor:pointer;
   background:var(--odyssey-text,#252525);color:var(--odyssey-menu,#fff);opacity:0;
