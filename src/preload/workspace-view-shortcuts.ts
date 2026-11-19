@@ -2,7 +2,6 @@ import {
   defaultNavigationShortcuts, isTopNavigationApp, topNavigationApps, topShortcutCount,
   type NavigationShortcuts, type TopNavigationApp
 } from '../shared/navigation-shortcuts'
-import { navigationAppIcon } from './home-app-shortcuts'
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
 
 const nativeViews = [
@@ -267,7 +266,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
     let picked: TopNavigationApp | undefined
     let press: { id: number; app: TopNavigationApp; x: number; y: number } | undefined
     let suppressClick = false
-    const ghost = document.createElement('i')
+    const ghost = document.createElement('span')
     ghost.className = 'workspace-view-drag-ghost'
     ghost.setAttribute('aria-hidden', 'true')
     let target: HTMLElement | undefined
@@ -282,12 +281,6 @@ export function mountWorkspaceViewCustomization(document: Document) {
       for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-workspace-editor-app]')) {
         button.setAttribute('aria-pressed', String(button.dataset.workspaceEditorApp === app))
       }
-    }
-    const addAppIcon = (button: HTMLButtonElement, app: TopNavigationApp) => {
-      const icon = document.createElement('i')
-      icon.style.setProperty('--workspace-editor-icon', navigationAppIcon(app))
-      icon.setAttribute('aria-hidden', 'true')
-      button.append(icon)
     }
     const choices = topNavigationApps.map(app => {
       const button = document.createElement('button')
@@ -317,7 +310,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
         slotButtons[index] = button
         if (isTopNavigationApp(app)) {
           button.dataset.workspaceEditorApp = app
-          addAppIcon(button, app)
+          button.textContent = button.title
           const remove = document.createElement('button')
           remove.type = 'button'
           remove.className = 'workspace-view-remove'
@@ -370,11 +363,11 @@ export function mountWorkspaceViewCustomization(document: Document) {
         if (Math.hypot(press.x - event.clientX, press.y - event.clientY) < 5) return
         panel.setPointerCapture(event.pointerId)
         pick()
-        ghost.style.setProperty('--workspace-editor-icon', navigationAppIcon(press.app))
+        ghost.textContent = appName(press.app)
         panel.append(ghost)
         suppressClick = true
       }
-      ghost.style.transform = `translate(${event.clientX - 15}px, ${event.clientY - 15}px)`
+      ghost.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`
       const slot = slotAt(event)
       if (target !== slot) highlight(slot)
     })
