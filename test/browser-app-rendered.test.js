@@ -617,6 +617,13 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   expect(await page.locator('.workspace-back-button').isVisible()).toBe(false)
   expect(await page.locator('.eb-toolbar [data-action=back]').isVisible()).toBe(true)
   expect(await homeTabs.isVisible()).toBe(false)
+  const maskGeometry = button => button.evaluate(element => {
+   const icon = getComputedStyle(element, '::before')
+   return [element.getBoundingClientRect().width, icon.width, icon.maskSize]
+  })
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '浏览器' }))).toEqual([36, '28px', '24px'])
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '知识库' }))).toEqual([36, '28px', '27px'])
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '笔记' }))).toEqual([36, '28px', '23px'])
   const activeRail = () => sidebar.locator('[aria-pressed=true]').getAttribute('data-navigation-app')
   for (const [surface, app] of [['browser', 'browser'], ['image-factory', 'image-factory'], ['notes', 'note'], ['scheduled', 'scheduled']]) {
    await page.evaluate(next => { document.body.dataset.workspaceSurface = next }, surface)
