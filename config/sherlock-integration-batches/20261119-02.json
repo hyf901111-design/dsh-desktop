@@ -75,6 +75,62 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-19T08:27:53.711Z"
+      },
+      "merged": {
+        "mergeCommit": "e8eb5f34fc03cb3f6ae9913e2a811b744bef9409",
+        "verificationCommit": "e8eb5f34fc03cb3f6ae9913e2a811b744bef9409",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "e8eb5f34fc03cb3f6ae9913e2a811b744bef9409",
+            "completedAt": "2026-11-19T08:28:19.625Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/navigation-shortcuts.test.ts",
+              "test/browser-app-native.test.js",
+              "test/image-factory.test.js",
+              "test/image-factory-native.test.js",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
+            "verifiedCommit": "e8eb5f34fc03cb3f6ae9913e2a811b744bef9409",
+            "completedAt": "2026-11-19T08:28:19.625Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "npm",
+              "test",
+              "--",
+              "test/browser-app-rendered.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
+            "verifiedCommit": "e8eb5f34fc03cb3f6ae9913e2a811b744bef9409",
+            "completedAt": "2026-11-19T08:28:19.625Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "recordedAt": "2026-11-19T08:28:19.625Z"
       }
     }
   ],
