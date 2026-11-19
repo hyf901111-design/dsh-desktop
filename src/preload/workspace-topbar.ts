@@ -102,6 +102,7 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
 }
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button:disabled{opacity:.4;cursor:default}
 .eb-workspace-tabs[aria-hidden=true]{width:0;opacity:0;pointer-events:none}
+html[data-workspace-tabs-switching] :is(.eb-workspace-tabs,.eb-workspace-toggle>i){transition:none}
 body .eb-workspace-edit{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0!important;-webkit-app-region:no-drag}
 .eb-workspace-edit>i{width:16px;height:16px;background:currentColor;mask:url('${workspaceSettingsIcon.replaceAll("'", '%27')}') center/contain no-repeat}
 body:has(>.workspace-view-settings[open]) .eb-workspace-tabs{visibility:hidden}

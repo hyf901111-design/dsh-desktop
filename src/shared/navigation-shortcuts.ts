@@ -50,11 +50,21 @@ export function normalizeNavigationShortcuts(value: unknown): NavigationShortcut
 export function replaceNavigationShortcut(
   value: NavigationShortcuts, region: NavigationRegion, index: number, app: NavigationShortcut | null
 ): NavigationShortcuts {
-  const slots = value[region]
-  if ((app !== null && region === 'top' && !isNavigationApp(app)) || !Number.isInteger(index) || index < 0 || index >= (region === 'side' ? sidebarShortcutCount : topShortcutCount) || slots[index] === app) return value
+  if (!Number.isInteger(index) || index < 0 || index >= (region === 'side' ? sidebarShortcutCount : topShortcutCount)) return value
+  if (region === 'top') {
+    if (app !== null && !isTopNavigationApp(app)) return value
+    const ordered = value.top.filter(isTopNavigationApp)
+    const from = app === null ? index : ordered.indexOf(app)
+    if (from >= 0) ordered.splice(from, 1)
+    if (app !== null) ordered.splice(index, 0, app)
+    const top = Array.from({ length: topShortcutCount }, (_, position) => ordered[position] ?? null)
+    return top.every((slot, position) => value.top[position] === slot) ? value : { ...value, top }
+  }
+  const slots = value.side
+  if (slots[index] === app) return value
   const next = [...slots]
   const current = app === null ? -1 : slots.indexOf(app)
   if (current >= 0) next[current] = slots[index] ?? null
   next[index] = app
-  return { ...value, [region]: region === 'side' ? compactSidebar(next) : next }
+  return { ...value, side: compactSidebar(next) }
 }
