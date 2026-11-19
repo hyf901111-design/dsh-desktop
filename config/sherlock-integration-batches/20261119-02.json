@@ -9,23 +9,43 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "恢复首页新对话标题与顶栏",
+        "featureName": "顶栏有内容的非当前标签显示蓝点",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "b79f601a7e4214bdf2bf5e6ac97d978c9f1ee889",
-        "tipCommit": "418b1bd2c2b9d1841dd8b6d80c4c0adb8e2ae667",
+        "baseCommit": "418b1bd2c2b9d1841dd8b6d80c4c0adb8e2ae667",
+        "tipCommit": "a56e7e74c78731f22b1c3980968121769da29c81",
         "commits": [
           {
-            "commit": "418b1bd2c2b9d1841dd8b6d80c4c0adb8e2ae667",
+            "commit": "a56e7e74c78731f22b1c3980968121769da29c81",
             "parents": [
-              "b79f601a7e4214bdf2bf5e6ac97d978c9f1ee889"
+              "418b1bd2c2b9d1841dd8b6d80c4c0adb8e2ae667"
             ],
-            "subject": "恢复首页新对话标题和可展开快捷顶栏"
+            "subject": "在有内容的非当前顶栏标签显示蓝点"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "scripts/lib/notes-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/image-factory-canvases.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/workspace-content-indicators.ts"
           },
           {
             "status": "M",
@@ -33,7 +53,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-view-shortcuts.ts"
+            "path": "src/shared/navigation-shortcuts.ts"
           },
           {
             "status": "M",
@@ -49,8 +69,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "418b1bd2c2b9d1841dd8b6d80c4c0adb8e2ae667",
-            "completedAt": "2026-11-19T14:20:04.262Z",
+            "verifiedCommit": "a56e7e74c78731f22b1c3980968121769da29c81",
+            "completedAt": "2026-11-19T14:37:17.355Z",
             "timeoutMs": 60000
           },
           {
@@ -68,78 +88,22 @@
             ],
             "outcome": "passed",
             "summary": "7 项渲染聚焦检查通过",
-            "verifiedCommit": "418b1bd2c2b9d1841dd8b6d80c4c0adb8e2ae667",
-            "completedAt": "2026-11-19T14:20:04.262Z",
+            "verifiedCommit": "a56e7e74c78731f22b1c3980968121769da29c81",
+            "completedAt": "2026-11-19T14:37:17.355Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 深浅色验证首页无会话也显示图标、新对话、展开箭头，点击后显示快捷标签和共用编辑器，点应用走首页导航入口。覆盖编辑区无外框、旧样式等宽槽位和候选顺序。"
+          "summary": "Chromium 验证已保存内容的笔记、对话和浏览器标签在非当前态显示 5px 蓝点，激活后隐藏，切换到其他会话时清除旧状态。保留首页布局和顶栏编辑聚焦检查。"
         },
         "acceptanceCriteria": [
-          "首页出现对话图标和新对话，箭头放在标题后",
-          "点击箭头后显示快捷标签及设置入口",
-          "同一套候选顺序、槽位和删除角标样式用于首页与其他视图"
+          "只在有内容的非当前顶栏标签右上角显示蓝点",
+          "进入该标签立即隐藏，切出后恢复",
+          "会话内容独立判断，空态不标记"
         ],
         "risks": [],
-        "generatedAt": "2026-11-19T14:20:04.262Z"
-      },
-      "merged": {
-        "mergeCommit": "5ad48b14351a048e56a0f9cae1c830900e9fe343",
-        "verificationCommit": "5ad48b14351a048e56a0f9cae1c830900e9fe343",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5ad48b14351a048e56a0f9cae1c830900e9fe343",
-            "completedAt": "2026-11-19T14:20:12.965Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "5ad48b14351a048e56a0f9cae1c830900e9fe343",
-            "completedAt": "2026-11-19T14:20:12.965Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "5ad48b14351a048e56a0f9cae1c830900e9fe343",
-            "completedAt": "2026-11-19T14:20:12.965Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T14:20:12.965Z"
+        "generatedAt": "2026-11-19T14:37:17.355Z"
       }
     }
   ],
