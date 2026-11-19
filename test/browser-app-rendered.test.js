@@ -507,10 +507,44 @@ it('keeps the shared switcher expanded and carries the current session through m
       button.contains(document.elementFromPoint(x+width/2,y+height/2))
    })
   )).toBe(true)
+  await page.evaluate(()=>window.setWorkspaceViewPreferences(document,{
+   get:()=>['image-factory','knowledge','browser','research'],replace:()=>true
+  }))
+  await controls.getByRole('button',{name:'切换到研究',exact:true}).waitFor()
   const narrowNav=controls.locator('.eb-workspace-tabs')
-  await narrowNav.evaluate(nav=>{nav.style.maxWidth='128px'})
-  await controls.getByRole('button',{name:'更多工作区页签'}).click()
+  const overflowButton=controls.getByRole('button',{name:'更多工作区页签'})
   const overflow=page.getByRole('menu',{name:'更多工作区页签'})
+  for(const reduction of [2,18,42,58]) {
+   await narrowNav.evaluate((nav,reduction)=>{
+    const width=parseFloat(nav.style.getPropertyValue('--workspace-view-width'))
+    nav.style.maxWidth=(width-reduction)+'px'
+   },reduction)
+   await overflowButton.waitFor()
+   const arrangement=()=>narrowNav.evaluate(nav=>{
+    const list=nav.querySelector('.eb-workspace-tab-list'),clip=list.getBoundingClientRect()
+    const hidden=[...list.querySelectorAll('[data-workspace-overflowed]')]
+    const visible=[...list.querySelectorAll('button:not([data-workspace-overflowed])')]
+    const overflow=nav.querySelector('.eb-workspace-overflow'),more=overflow.getBoundingClientRect()
+    const gear=nav.querySelector('.eb-workspace-edit').getBoundingClientRect()
+    const shown=visible.every(button=>{
+     const bounds=button.getBoundingClientRect()
+     return bounds.right<=clip.right+.5&&bounds.right<=more.left
+    })
+    const clickable=[2,more.width-2].every(x=>overflow.contains(document.elementFromPoint(more.left+x,more.top+more.height/2)))
+    return {bothVisibleAndHidden:visible.length>0&&hidden.length>0,
+     hiddenOutOfFlow:hidden.every(button=>getComputedStyle(button).position==='absolute'),
+     shown,clickable,controlsFit:gear.right<=nav.getBoundingClientRect().right+.5}
+   })
+   await expect.poll(arrangement, {message:`overflow geometry with ${reduction}px less space`}).toEqual({bothVisibleAndHidden:true,hiddenOutOfFlow:true,shown:true,clickable:true,controlsFit:true})
+   await overflowButton.click({position:{x:2,y:14}})
+   await overflow.waitFor()
+   expect(await overflowButton.getAttribute('aria-expanded')).toBe('true')
+   if(reduction===2)await narrowNav.locator('..').screenshot({path:evidence+'/workspace-overflow-complete-labels.png'})
+   await page.keyboard.press('Escape')
+   await overflow.waitFor({state:'detached'})
+  }
+  await narrowNav.evaluate(nav=>{nav.style.maxWidth='128px'})
+  await overflowButton.click()
   await overflow.getByRole('menuitem',{name:'知识库'}).click()
   await overflow.waitFor({state:'detached'})
   expect(await page.evaluate(()=>window.quickOwners.at(-1))).toEqual(['knowledge','session-B'])

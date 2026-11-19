@@ -3,6 +3,7 @@ import { workspaceContentViews } from '../shared/navigation-shortcuts'
 import { navigationAppIcon } from './home-app-shortcuts'
 import { icons } from './scheduled/icons'
 import workspaceSettingsIcon from './browser/assets/settings.svg?inline'
+import moreIcon from './browser/assets/more.svg?inline'
 import chatIcon from './browser/assets/chat.svg?inline'
 import workspaceIcon from './browser/assets/workspace.svg?inline'
 
@@ -108,12 +109,11 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
 .eb-workspace-tabs[aria-hidden=false]{min-width:28px}
 .eb-workspace-tabs:has(>.eb-workspace-overflow:not([hidden]))[aria-hidden=false]{min-width:calc(56px + var(--workspace-menu-gap,4px))}
 @container(max-width:480px){.eb-workspace-tabs{--workspace-menu-gap:2px}}
-.eb-workspace-tab-list{position:relative;overflow:hidden}
-.eb-workspace-tab-list>button[data-workspace-overflowed]{position:absolute;visibility:hidden;pointer-events:none}
+.eb-workspace-tab-list{position:relative;flex:none;overflow:hidden}
 .eb-workspace-tab-list:not(:has(>button:not([data-workspace-overflowed]))){position:absolute}
-body .eb-workspace-overflow{position:relative;flex:none;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#888);cursor:pointer;-webkit-app-region:no-drag}
+body .eb-workspace-overflow{position:relative;flex:none;display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#888);cursor:pointer;-webkit-app-region:no-drag}
 body .eb-workspace-overflow:is(:hover,:focus-visible,[aria-expanded=true]){background:var(--dsw-alias-interactive-bg-hover,#8882);color:var(--dsw-alias-label-primary,currentColor)}
-.eb-workspace-overflow>i{width:7px;height:7px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg)}
+.eb-workspace-overflow>i{width:16px;height:16px;background:currentColor;mask:url('${moreIcon.replaceAll("'", '%27')}') center/contain no-repeat;pointer-events:none}
 .eb-workspace-overflow[data-has-content]::after{content:'';position:absolute;inset:4px 3px auto auto;width:5px;height:5px;border-radius:50%;background:#168bff}
 body .eb-workspace-overflow[hidden],.eb-workspace-tabs[data-customizing]>.eb-workspace-overflow{display:none}
 .workspace-view-overflow-menu{position:fixed;inset:0 auto auto 0;margin:0;z-index:2147483000;box-sizing:border-box;min-width:128px;max-width:calc(100vw - 16px);padding:4px;border:1px solid var(--dsw-alias-border-l2,#8884);border-radius:8px;background:var(--workspace-editor-surface);color:var(--dsw-alias-label-primary,var(--odyssey-text,#252525));box-shadow:0 8px 22px #0003;-webkit-app-region:no-drag}
@@ -124,6 +124,9 @@ body .eb-workspace-overflow[hidden],.eb-workspace-tabs[data-customizing]>.eb-wor
 
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button[data-workspace-native-view]{
   position:relative;flex:0 0 auto;height:28px;padding:0 8px;font-size:14px;line-height:20px;white-space:nowrap;
+}
+:is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button[data-workspace-overflowed]{
+  position:absolute;visibility:hidden;pointer-events:none;
 }
 ${workspaceDotSelectors}{content:"";position:absolute;inset:4px 3px auto auto;width:5px;height:5px;border-radius:50%;background:#168bff;pointer-events:none}
 @container(max-width:480px){

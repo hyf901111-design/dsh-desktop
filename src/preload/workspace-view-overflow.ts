@@ -65,7 +65,9 @@ export function installWorkspaceViewOverflow(document: Document) {
     trigger.hidden = true
     trigger.setAttribute('aria-haspopup', 'menu')
     trigger.setAttribute('aria-expanded', 'false')
-    trigger.append(document.createElement('i'))
+    const icon = document.createElement('i')
+    icon.setAttribute('aria-hidden', 'true')
+    trigger.append(icon)
     trigger.onclick = () => anchor === trigger ? close(true) : open(nav, trigger)
     trigger.onkeydown = event => {
       if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return
@@ -113,8 +115,8 @@ export function installWorkspaceViewOverflow(document: Document) {
     let visible = 0
     if (available + 0.5 >= total) visible = buttons.length
     else {
-      const triggerAndGear = gearWidth + 28 + gap
-      let remaining = available - triggerAndGear - gap
+      const triggerWidth = parseFloat(win.getComputedStyle(trigger).width)
+      let remaining = available - gearWidth - triggerWidth - 2 * gap
       for (const width of widths) {
         if (remaining + 0.5 < width) break
         visible++
