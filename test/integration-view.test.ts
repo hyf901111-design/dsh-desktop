@@ -53,6 +53,9 @@ it('allows builtin MCP toggles in list/menu/detail while keeping configuration a
 })
 it('renders compact text rows and all four market entries with retained workspace controls', async () => {
     const f = await fixture();
+    const heading = f.doc.querySelector('.workspace-app-title[data-workspace-app="plugin"]');
+    expect(heading?.textContent).toBe('插件');
+    expect(heading?.querySelector('i[aria-hidden="true"]')).not.toBeNull();
     expect(f.doc.querySelector('[data-action=back]')).not.toBeNull();
     expect(f.doc.querySelector('[data-action=panel]')).toBeNull();
     expect(f.doc.querySelector('[data-row-id="plugin-1"]')!.textContent).toContain('需要连接应用');

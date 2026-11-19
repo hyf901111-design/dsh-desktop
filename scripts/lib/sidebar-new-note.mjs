@@ -115,7 +115,7 @@ export function patchSidebarNewNoteShell(input){
     '"aria-label": t("session.newResearch.label"),','"aria-label": t("session.newResearch.label"), "data-sidebar-research-entry": "",'
   )
 
-  const home='(0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.newSessionGroup,children:(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("sidebar.home.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-home":"","aria-label":t("sidebar.home.label"),onClick:openHome})})})'
+  const home='(0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.newSessionGroup,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-home":"","aria-label":t("sidebar.home.label"),onClick:openHome})})'
   const props='function SidebarRoot({ collapsed, width, startSession, startResearchSession, toggleSidebar, t, renderSlot })'
   const inject='const injectProps = () => ({'
   const root='\t\t\treturn (0, react_jsx_runtime.jsxs)("div", {\n\t\t\t\tref: column,'
@@ -136,17 +136,15 @@ export function patchSidebarNewNoteShell(input){
     [root,'\t\t\tconst newSessionControls = '+controls+';\n'+`
     react.useEffect(()=>{
       const rail=column.current;
-      rail?.addEventListener('sherlock:sidebar-open-home',openHome);
       const openChat=()=>startSession();
       const openResearch=()=>startResearchSession();
       rail?.addEventListener('sherlock:sidebar-new-chat',openChat);
       rail?.addEventListener('sherlock:sidebar-new-research',openResearch);
       return()=>{
-        rail?.removeEventListener('sherlock:sidebar-open-home',openHome);
         rail?.removeEventListener('sherlock:sidebar-new-chat',openChat);
         rail?.removeEventListener('sherlock:sidebar-new-research',openResearch);
       };
-    },[openHome,startSession,startResearchSession]);
+    },[startSession,startResearchSession]);
 `+root],
     [foot,'!wide && '+home+',\n'+foot],
     ['"session.new": "新对话",','"session.new": "对话",'],

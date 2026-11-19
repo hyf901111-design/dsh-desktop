@@ -109,6 +109,50 @@ it('creates a fresh gallery scope per task, switches the native conversation and
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
+it('restores the selected Images tab when returning from another app', async () => {
+  const saved = { epoch: 4, tabs: [] }
+  const storage = { read: async () => structuredClone(saved), write: async value => Object.assign(saved, value) }
+  const f = fixture(storage)
+  let tasks, scope
+  const show = () => {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { entry: true })
+  }
+  try {
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    f.doc.addEventListener('sherlock:image-factory-session', event => { scope = event.detail.sessionId })
+    show()
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: 'native-session', busy: false }))
+    f.events('task-action', { kind: 'new' })
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: expect.stringMatching(/^image-task-/), busy: false }))
+    const latest = tasks.active
+    const selected = 'native-session'
+    const expectedTabs = [{ scope: selected }, { scope: latest }]
+    f.events('task-action', { kind: 'select', scope: selected })
+
+    for (const [surface, sessionId] of [['browser', 'browsing'], ['notes', 'writing'], ['knowledge', undefined]]) {
+      f.doc.body.dataset.workspaceSurface = surface
+      if (sessionId) {
+        f.sessionsState.byId[sessionId] = { blank: true }
+        f.sessionCatalog.open(sessionId)
+      } else f.sessionCatalog.clear()
+      show()
+      expect(f.sessionsState.current).toBe(selected)
+      expect(scope).toBe(selected)
+      expect(tasks).toMatchObject({ active: selected, tabs: expectedTabs })
+    }
+    expect(f.sessionCatalog.create).toHaveBeenCalledOnce()
+    expect(saved.tabs).toEqual(expectedTabs)
+
+    f.doc.body.dataset.workspaceSurface = 'browser'
+    f.events('reset')
+    f.sessionCatalog.open('browsing')
+    show()
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: latest, tabs: expectedTabs, busy: false }))
+    expect(f.sessionCatalog.create).toHaveBeenCalledOnce()
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('shows a new tab while the Host is creating its session and rolls back on failure', async () => {
   const storage = { read: async () => ({ epoch: 4, tabs: [] }), write: vi.fn(async () => {}) }
   const f = fixture(storage)

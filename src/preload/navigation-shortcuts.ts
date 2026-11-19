@@ -19,10 +19,12 @@ const presentation = {
   'new-workspace': ['新建工作区', 'New workspace']
 } as const
 const groupSelector = '[data-dsh-sidebar-root] .hHd-Xa_newSessionGroup'
+const expandedGroupSelector = '[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] .hHd-Xa_newSessionGroup'
 const residentSelector = '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page]:not([hidden], [hidden] *, [aria-hidden=true], [aria-hidden=true] *, [data-odyssey-subagent-panel] *)'
 const traySelector = '[data-home-app-shortcuts]'
 const sourceSelector = traySelector + ' button[data-home-app]'
 const slotSelector = '[data-navigation-rail] > [data-navigation-slot]'
+const tooltipSelector = slotSelector + ':not([data-empty]), [data-dsh-sidebar-root] :is([data-sidebar-home], [data-sidebar-chat-entry])'
 const holdTime = 360
 
 type Bridge = {
@@ -50,17 +52,23 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   const ghost = doc.createElement('div')
   ghost.dataset.navigationGhost = ''
   ghost.setAttribute('aria-hidden', 'true')
+  const tooltip = doc.createElement('span')
+  tooltip.dataset.navigationTooltip = ''
+  tooltip.setAttribute('role', 'tooltip')
   const status = doc.createElement('span')
   status.dataset.navigationStatus = ''
   status.setAttribute('role', 'status')
   doc.body.append(status)
 
   let shown: NavigationShortcut[] = []
+  let editableSlots: number[] = []
   let editing = false
   let picked: NavigationApp | undefined
   let pointer: PointerHold | undefined
   let consumeClick = false
   let hovering: HTMLButtonElement | null = null
+  let tooltipAnchor: HTMLElement | undefined
+  let tooltipTimer = 0
   let menu: HTMLElement | undefined
   let menuAnchor: HTMLElement | undefined
   let pending: AbortController | undefined
@@ -70,6 +78,39 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   const label = (app: NavigationShortcut) => presentation[app][english() ? 1 : 0]
   const setAttribute = (element: Element, name: string, next: string) => {
     if (element.getAttribute(name) !== next) element.setAttribute(name, next)
+  }
+
+  function hideTooltip() {
+    win.clearTimeout(tooltipTimer)
+    tooltipAnchor = undefined
+    tooltip.remove()
+  }
+
+  function hoverTooltip(event: PointerEvent | FocusEvent) {
+    if (!(event.target instanceof win.Element)) return
+    const anchor = event.target.closest<HTMLElement>(tooltipSelector)
+    if (!anchor || (event.relatedTarget instanceof win.Node && anchor.contains(event.relatedTarget))) return
+    if (event.type === 'pointerout' || event.type === 'focusout') {
+      if (anchor === tooltipAnchor) hideTooltip()
+      return
+    }
+    if (event.type === 'focusin' && !anchor.matches(':focus-visible')) return
+    hideTooltip()
+    tooltipAnchor = anchor
+    const show = () => {
+      const name = anchor.getAttribute('aria-label')
+      if (!name || tooltipAnchor !== anchor || !anchor.isConnected || editing || menu ||
+          doc.querySelector('.st-menu[data-sidebar-more]') || !anchor.checkVisibility()) return
+      const box = anchor.getBoundingClientRect()
+      tooltip.textContent = name
+      doc.body.append(tooltip)
+      const margin = 12
+      tooltip.style.left = Math.max(margin, Math.min(box.right + 10, win.innerWidth - tooltip.offsetWidth - margin)) + 'px'
+      const halfHeight = tooltip.offsetHeight / 2
+      tooltip.style.top = Math.max(halfHeight + margin, Math.min(box.top + box.height / 2, win.innerHeight - halfHeight - margin)) + 'px'
+    }
+    if (event.type === 'focusin') show()
+    else tooltipTimer = win.setTimeout(show, 500)
   }
 
   function currentShortcut(): NavigationShortcut | 'home' | undefined {
@@ -94,6 +135,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     if (!group) {
       rail.remove()
       shown = []
+      editableSlots = []
     } else {
       const active = currentShortcut()
       const collapsed = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') === 'false'
@@ -109,7 +151,6 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
         button.toggleAttribute('data-empty', !app)
         const name = app ? label(app) : english() ? 'Empty shortcut slot' : '空快捷位'
         setAttribute(button, 'aria-label', name)
-        setAttribute(button, 'title', name)
         const mask = app ? navigationAppIcon(app) : ''
         if (button.style.getPropertyValue('--navigation-glyph') !== mask) button.style.setProperty('--navigation-glyph', mask)
         if (app) setAttribute(button, 'aria-pressed', String(app === active))
@@ -125,17 +166,24 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
         const size = parseFloat(layout.getPropertyValue('--navigation-shortcut-size')) || 36
         capacity = Math.min(capacity, Math.floor((rail.clientWidth + gap) / (size + gap)))
       }
-      Array.from(rail.children).forEach((button, index) => button.toggleAttribute('hidden', !collapsed && index >= capacity))
-      shown = value.side.slice(0, capacity).filter(isNavigationShortcut)
+      editableSlots = value.side.flatMap((app, index) => !collapsed && app === 'new-chat' ? [] : [index]).slice(0, capacity)
+      Array.from(rail.children).forEach((button, index) => button.toggleAttribute('hidden', !editableSlots.includes(index)))
+      shown = editableSlots.map(index => value.side[index]).filter(isNavigationShortcut)
 
       const home = group.querySelector('[data-sidebar-home]')
       const onHome = active === 'home' || (active === 'new-chat' && !value.side.includes('new-chat'))
       if (home) setAttribute(home, 'aria-pressed', String(onHome))
-      const overflowActive = active === 'home' ? !collapsed :
-        Boolean(active && !shown.includes(active) && !(collapsed && onHome))
+      const chat = group.querySelector('[data-sidebar-chat-entry]')
+      if (chat) {
+        setAttribute(chat, 'aria-pressed', String(active === 'home' || active === 'new-chat'))
+      }
+      const overflowActive = Boolean(active && active !== 'home' && !shown.includes(active) &&
+        !(active === 'new-chat' && (!collapsed || onHome)))
       more?.querySelector('button.st-more')?.toggleAttribute('data-navigation-overflow-active', overflowActive)
     }
     if (menuAnchor && (!menuAnchor.isConnected || menuAnchor.closest('[aria-hidden=true],[hidden]'))) closeMenu()
+    if (tooltipAnchor && (!tooltipAnchor.isConnected || tooltipAnchor.closest('[hidden],[data-empty]') ||
+        (tooltip.isConnected && tooltip.textContent !== tooltipAnchor.getAttribute('aria-label')))) hideTooltip()
   }
 
   function targetAt(element: Element | null) {
@@ -168,9 +216,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     update(replaceNavigationShortcut(value, 'side', Number(button.dataset.navigationSlot), app))
   }
   function setEditing(active: boolean, selection?: NavigationApp) {
-    if (active && !editing) {
-      doc.querySelector<HTMLButtonElement>('[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] .hHd-Xa_toggle')?.click()
-    }
+    if (active) hideTooltip()
     editing = active
     picked = selection
     doc.body.toggleAttribute('data-navigation-editing', active)
@@ -228,6 +274,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   type MenuItem = [action: string, zh: string, en: string, icon: 'edit' | 'remove', run: () => void]
   type MenuPoint = { x: number; y: number }
   function showMenu(anchor: HTMLElement, items: MenuItem[], keyboard: boolean, point?: MenuPoint) {
+    hideTooltip()
     closeMenu()
     menuAnchor = anchor
     menu = doc.createElement('div')
@@ -282,7 +329,13 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       return true
     }
     const slot = targetAt(target)
-    if (!slot || slot.hasAttribute('data-empty')) return false
+    if (!slot || slot.hasAttribute('data-empty')) {
+      const group = target?.closest<HTMLElement>(expandedGroupSelector)
+      if (!group) return false
+      const anchor = target?.closest<HTMLButtonElement>('button') ?? group
+      showMenu(anchor, [['manage', '快捷管理', 'Manage shortcuts', 'edit', () => setEditing(true)]], keyboard, point)
+      return true
+    }
     showMenu(slot, [
       ['edit', '编辑快捷入口', 'Edit shortcuts', 'edit', () => setEditing(true)],
       ['remove', '删除快捷入口', 'Remove shortcut', 'remove', () => apply(slot, null)]
@@ -299,12 +352,13 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   function onPointerDown(event: PointerEvent) {
     if (event.button !== 0 || !event.isPrimary) return
     consumeClick = false
+    hideTooltip()
     const target = event.target as Element
     if (!target.closest('[data-navigation-menu]')) closeMenu()
     const source = target.closest<HTMLButtonElement>(sourceSelector)
     const app = source?.dataset.homeApp
     if (!source || !isNavigationApp(app)) {
-      if (!target.closest(slotSelector + ',[data-navigation-menu],[data-navigation-delete]')) setEditing(false)
+      if (!target.closest(slotSelector + ',[data-navigation-menu],[data-navigation-delete],.st-more-zone,.st-menu[data-sidebar-more]')) setEditing(false)
       return
     }
     stopPointer()
@@ -387,6 +441,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     try { void Promise.resolve(bridge.open(app, controller.signal, 'side')).catch(report) } catch { report() }
   }
   function onKey(event: KeyboardEvent) {
+    if (event.key === 'Escape' && !menu && doc.querySelector('.st-menu[data-sidebar-more]')) return
     if (event.key === 'Escape' && (menu || editing)) {
       event.preventDefault()
       event.stopImmediatePropagation()
@@ -413,6 +468,11 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
 
   const lifetime = new win.AbortController()
   const options = { capture: true, signal: lifetime.signal }
+  for (const type of ['pointerover', 'pointerout', 'focusin', 'focusout'] as const) {
+    doc.addEventListener(type, hoverTooltip, options)
+  }
+  win.addEventListener('blur', hideTooltip, options)
+  win.addEventListener('resize', hideTooltip, options)
   win.addEventListener('contextmenu', onContext, options)
   win.addEventListener('pointerdown', onPointerDown, options)
   win.addEventListener('pointermove', onPointerMove, options)
@@ -431,13 +491,15 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   const resize = win.ResizeObserver ? new win.ResizeObserver(sync) : undefined
   resize?.observe(rail)
   sync()
+  const freeSlot = () => editableSlots.find(index => value.side[index] === null)
   return {
     sidebar: () => value.side,
     visibleSidebar: () => shown,
+    sidebarFull: () => freeSlot() === undefined,
     pinSidebar(app: NavigationShortcut) {
-      if (value.side.includes(app)) return
-      const index = value.side.indexOf(null)
-      if (index >= 0) update(replaceNavigationShortcut(value, 'side', index, app))
+      if (value.side.includes(app) || (app === 'new-chat' && rail.closest(expandedGroupSelector))) return
+      const index = freeSlot()
+      if (index !== undefined) update(replaceNavigationShortcut(value, 'side', index, app))
     },
     reload() {
       pending?.abort()
@@ -451,6 +513,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       lifetime.abort()
       observer.disconnect()
       resize?.disconnect()
+      hideTooltip()
       pending?.abort()
       stopPointer()
       closeMenu()

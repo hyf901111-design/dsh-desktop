@@ -569,7 +569,7 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   await page.evaluate(() => {
    const center = document.querySelector('.pI_x6G_centerCol')
    center.insertAdjacentHTML('beforeend', `
-    <div class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header"><button id="session-title">新会话</button><div data-srb-tabs style="display:flex;gap:4px">
+    <div class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header" data-srb-session-header><nav class="wSkVaW_crumbs" style="display:flex;gap:4px;align-items:center"><button id="session-title">新会话</button></nav><div data-srb-tabs style="display:flex;gap:4px">
      <button data-conversation-view-id="chat">对话</button>
      <button data-conversation-view-id="research">研究</button>
      <button data-conversation-view-id="notes">笔记</button>
@@ -580,7 +580,7 @@ it('shares editable shortcuts between the composer and sidebar with global top s
    document.head.append(style)
    document.body.insertAdjacentHTML('beforeend', `
     <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
-     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home>主页</button><button data-sidebar-chat-entry>对话</button><button data-sidebar-research-entry>研究</button><span class="st-more-zone"></span></div>
+     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home aria-label="主页">主页</button><button class="hHd-Xa_newSession" data-sidebar-chat-entry aria-label="对话"><span>对话</span></button><button data-sidebar-research-entry>研究</button><span class="st-more-zone"></span></div>
     </aside>
     <nav data-home-app-shortcuts style="position:fixed;inset:auto 240px 130px 480px;z-index:3000">
      <button data-home-app="image-factory"><span class="home-app-shortcut-icon" style="display:block">图像</span></button>
@@ -637,6 +637,44 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   }
   await page.evaluate(() => { delete document.body.dataset.workspaceSurface })
   await expect.poll(() => page.locator('[data-sidebar-home]').getAttribute('aria-pressed')).toBe('true')
+  const titleIcon = () => page.locator('.wSkVaW_crumbs').evaluate(node => {
+   const style = getComputedStyle(node, '::before')
+   return [style.width, style.height, style.maskImage]
+  })
+  const modeIcons = []
+  for (const mode of ['home', 'research', 'spreadsheet', 'notes']) {
+   await page.evaluate(mode => {
+    const resident = document.querySelector('.wSkVaW_root[data-odyssey-page]')
+    resident.dataset.odysseyPage = mode === 'notes' ? 'conversation' : mode
+    const selected = resident.querySelector('[data-conversation-view-id=notes]')
+    selected.setAttribute('aria-selected', String(mode === 'notes'))
+   }, mode)
+   const [width, height, mask] = await titleIcon()
+   expect([width, height]).toEqual(['18px', '18px'])
+   expect(mask).not.toBe('none')
+   modeIcons.push(mask)
+  }
+  expect(new Set(modeIcons).size).toBe(4)
+  await page.evaluate(() => {
+   document.querySelector('.wSkVaW_root[data-odyssey-page]').dataset.odysseyPage = 'home'
+   document.querySelector('[data-conversation-view-id=notes]').removeAttribute('aria-selected')
+  })
+
+  const tooltip = page.locator('[data-navigation-tooltip]')
+  const hoverStyle = async (button, label) => {
+   await button.hover()
+   await tooltip.waitFor()
+   expect(await tooltip.textContent()).toBe(label)
+   const anchor = await button.boundingBox()
+   const bubble = await tooltip.boundingBox()
+   expect(bubble.x - anchor.x - anchor.width).toBeCloseTo(10)
+   return tooltip.evaluate(node => {
+    const style = getComputedStyle(node)
+    return [style.backgroundColor, style.color, style.fontSize, style.borderRadius, style.padding]
+   })
+  }
+  const homeTooltip = await hoverStyle(page.locator('[data-sidebar-home]'), '主页')
+  expect(await hoverStyle(sidebar.getByRole('button', { name: '知识库' }), '知识库')).toEqual(homeTooltip)
   await drag(sidebar.locator('[data-navigation-slot="2"]'), true)
   expect(await sidebar.locator('[data-navigation-slot="2"]').getAttribute('data-navigation-app')).toBe('image-factory')
   expect(await page.evaluate(() => window.shortcutOpens)).toEqual([])
@@ -698,27 +736,73 @@ it('shares editable shortcuts between the composer and sidebar with global top s
    window.scheduledMenuView.sidebarActions = {
     newNote: () => Promise.resolve(),
     pinnedApps: window.shortcutManager.sidebar,
-    visibleApps: window.shortcutManager.visibleSidebar
+    visibleApps: window.shortcutManager.visibleSidebar,
+    sidebarFull: window.shortcutManager.sidebarFull,
+    pinApp: window.shortcutManager.pinSidebar
    }
    window.scheduledMenuView.mount()
   })
   const visibleApps = () => sidebar.locator('button:visible').evaluateAll(buttons => buttons.map(button => button.dataset.navigationApp))
-  await expect.poll(visibleApps).toEqual(['browser', 'knowledge', 'note'])
-  expect(await page.locator('[data-sidebar-chat-entry]').isVisible()).toBe(false)
+  await expect.poll(visibleApps).toEqual(['browser', 'knowledge'])
+  const chat = page.locator('[data-sidebar-chat-entry]')
+  expect(await chat.isVisible()).toBe(true)
+  expect(await chat.locator('span').isVisible()).toBe(false)
+  expect((await chat.boundingBox()).x).toBeLessThan((await sidebar.boundingBox()).x)
+  expect(await chat.getAttribute('aria-pressed')).toBe('true')
   expect(await page.locator('[data-sidebar-research-entry]').isVisible()).toBe(false)
   const more = page.getByRole('button', { name: '更多', exact: true })
   await more.click()
   const moreMenu = page.locator('[data-sidebar-more]')
+  const menuActions = () => moreMenu.locator('[role=menuitem]:not([data-st-menu-pin])').allTextContents()
+  const pinResearch = moreMenu.locator('[data-st-menu-pin=research]')
   await moreMenu.waitFor()
-  const overflow = await moreMenu.getByRole('menuitem').allTextContents()
-  expect(overflow).toEqual(['主页', '对话', '研究', '图像', '插件', '定时任务'])
-  expect(await moreMenu.locator('[data-st-menu-pin]').count()).toBe(0)
-  await page.evaluate(() => { document.querySelector('[data-dsh-sidebar-root]').style.width = '300px' })
+  expect(await menuActions()).toEqual(['研究', '笔记', '图像', '插件', '定时任务'])
+  expect(await pinResearch.isDisabled()).toBe(true)
+  await page.evaluate(() => { document.querySelector('[data-dsh-sidebar-root]').style.width = '390px' })
   await expect.poll(visibleApps).toEqual(['browser', 'knowledge', 'note', 'scheduled', 'plugin'])
   await moreMenu.waitFor({ state: 'detached' })
+
+  await chat.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: '快捷管理' }).click()
+  expect(await page.locator('[data-dsh-sidebar-wide=true]').count()).toBe(1)
+  expect(await sidebar.locator('[data-empty]:visible').count()).toBe(1)
+  expect(await sidebar.locator('button:visible').count()).toBe(6)
+  expect(await page.locator('[data-navigation-delete][aria-label="删除对话"]').count()).toBe(0)
   await more.click()
   await moreMenu.waitFor()
-  expect(await moreMenu.getByRole('menuitem').allTextContents()).toEqual(['主页', '对话', '研究', '图像'])
+  expect(await menuActions()).toEqual(['研究', '图像'])
+  expect(await pinResearch.isEnabled()).toBe(true)
+  await page.keyboard.press('Escape')
+  await moreMenu.waitFor({ state: 'detached' })
+  expect(await page.locator('body[data-navigation-editing]').count()).toBe(1)
+  await more.click()
+  await pinResearch.click()
+  await expect.poll(visibleApps).toEqual(['browser', 'knowledge', 'note', 'scheduled', 'plugin', 'research'])
+  expect(await page.locator('body[data-navigation-editing]').count()).toBe(1)
+  await page.evaluate(() => { document.querySelector('[data-dsh-sidebar-root]').style.width = '190px' })
+  await expect.poll(visibleApps).toEqual(['browser', 'knowledge'])
+  await page.locator('[data-navigation-delete][aria-label="删除知识库"]').click()
+  await expect.poll(visibleApps).toEqual(['browser', 'note'])
+
+  await page.evaluate(() => {
+   window.savedShortcuts.side = ['new-chat', 'research']
+   window.shortcutManager.reload()
+  })
+  await expect.poll(visibleApps).toEqual(['research'])
+  expect(await chat.isVisible()).toBe(true)
+  expect(await sidebar.locator('[data-navigation-app=new-chat]:visible').count()).toBe(0)
+  await chat.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: '快捷管理' }).click()
+  expect(await sidebar.locator('button:visible').count()).toBe(2)
+  await page.evaluate(() => {
+   window.savedShortcuts.side = []
+   window.shortcutManager.reload()
+  })
+  await expect.poll(visibleApps).toEqual([])
+  await more.click()
+  expect(await pinResearch.isEnabled()).toBe(true)
+  await pinResearch.click()
+  await expect.poll(visibleApps).toEqual(['research'])
   expect(errors).toEqual([])
  } finally { await page.close() }
 })
