@@ -21,7 +21,10 @@ export function installInitialChatViewIntent(chatStore, sessions, researchWorksp
   const key = Symbol.for('sherlock:initial-chat-reuse')
   const policy = { canReuse: id => {
     const page = sherlockBoardsAdapter
-    return sessions.list.getSnapshot().ids.includes(id) && page?.getState?.()?.account?.status === 'ready' &&
+    const state = sessions.list.getSnapshot()
+    // Blank spreadsheets and manually named sessions can have a pinned title.
+    // Reuse only an unnamed session so the first Chat prompt can title it.
+    return state.ids.includes(id) && state.byId[id]?.title === undefined && page?.getState?.()?.account?.status === 'ready' &&
       typeof page.isBoardOnly === 'function' && !page.isBoardOnly(id)
   } }
   window[key] = policy
