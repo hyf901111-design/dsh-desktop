@@ -3,7 +3,11 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
   const validScope = value => value === null ||
     typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
-  const canOpen = tab => tab.scope === null || sessions.binding(tab.scope)
+  const canOpen = tab => {
+    if (tab.scope === null) return true
+    const binding = sessions.binding(tab.scope)
+    return !!binding && binding.state !== 'removed'
+  }
   const publish = (force = false) => {
     const creating = openToken?.tab.scope
     const selected = creating ?? active
@@ -58,18 +62,19 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     return scope ?? undefined
   }
   function reconcile(scope, reopen, entry) {
-    // App navigation resumes an image task rather than adopting the other app's session.
-    if (entry && !reopen) {
-      const available = tabs.filter(canOpen)
-      const previous = available.find(tab => tab.scope === active) ??
-        available.find(tab => tab.scope === scope) ?? available.at(-1)
+    const known = tabs.find(tab => tab.scope === scope)
+    const closedTab = closed.find(tab => tab.scope === scope)
+    // Native workspace sessions can arrive after the app has selected its tab.
+    // Only an explicit canvas request can introduce another session at that point.
+    if (!reopen && (entry || (scope !== null && !known && !closedTab))) {
+      const previous = tabs.find(tab => tab.scope === active && canOpen(tab)) ??
+        (entry ? (known && canOpen(known) ? known : tabs.findLast(canOpen)) : undefined)
       if (previous && (previous.scope !== scope ||
           (scope === null && sessions.list.getSnapshot().current !== draftSession))) {
         select(previous.scope, false)
         return previous.scope
       }
     }
-    const closedTab = closed.find(tab => tab.scope === scope)
     const skipClosed = closedTab && !reopen
     // Keep image tabs when the SDK has no selection. Restore a tab's session
     // only when Images is explicitly entered.
@@ -99,7 +104,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       closed = closed.filter(tab => tab !== closedTab)
       tabs = [...tabs.slice(-31), closedTab].sort(pinnedFirst)
       save()
-    } else if (!tabs.some(tab => tab.scope === scope)) {
+    } else if (!known) {
       tabs = [...tabs.slice(-31), { scope }]
       save()
     }
