@@ -9,39 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "导航快捷入口实机反馈修复与菜单置顶",
+        "featureName": "应用栏快捷管理和侧栏四个固定位置",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "11d6e5f2086da5b309b2f628395aaf7dc5c4ed12",
-        "tipCommit": "1a27399607a15f133afe9ba0c43debdfefe41783",
+        "baseCommit": "1a27399607a15f133afe9ba0c43debdfefe41783",
+        "tipCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
         "commits": [
           {
-            "commit": "1a27399607a15f133afe9ba0c43debdfefe41783",
+            "commit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
             "parents": [
-              "11d6e5f2086da5b309b2f628395aaf7dc5c4ed12"
+              "1a27399607a15f133afe9ba0c43debdfefe41783"
             ],
-            "subject": "修复快捷页签显示与删除并支持菜单置顶侧栏"
+            "subject": "统一快捷管理菜单并保留四个侧栏快捷位"
           }
         ],
         "files": [
           {
             "status": "M",
+            "path": "src/main/context-menu-target.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/home-app-shortcuts.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-app-shortcuts.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-guide-entry-native.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-guide-explore-entry.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
@@ -61,11 +49,11 @@
           },
           {
             "status": "M",
-            "path": "src/shared/navigation-shortcuts.ts"
+            "path": "test/browser-app-rendered.test.js"
           },
           {
             "status": "M",
-            "path": "test/browser-app-rendered.test.js"
+            "path": "test/context-menu-home.test.js"
           },
           {
             "status": "M",
@@ -84,9 +72,9 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "TypeScript 检查通过",
-            "verifiedCommit": "1a27399607a15f133afe9ba0c43debdfefe41783",
-            "completedAt": "2026-11-19T05:24:33.602Z",
+            "summary": "类型检查通过",
+            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
+            "completedAt": "2026-11-19T05:50:16.107Z",
             "timeoutMs": 60000
           },
           {
@@ -95,17 +83,14 @@
               "test",
               "--",
               "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts",
-              "test/home-guide-entry-native.test.ts"
+              "test/context-menu-home.test.js",
+              "test/context-menu-target.test.js",
+              "test/context-menu.test.ts"
             ],
             "outcome": "passed",
-            "summary": "129 项聚焦测试通过",
-            "verifiedCommit": "1a27399607a15f133afe9ba0c43debdfefe41783",
-            "completedAt": "2026-11-19T05:24:33.602Z",
+            "summary": "31 项导航配置和原生菜单用例通过",
+            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
+            "completedAt": "2026-11-19T05:50:16.107Z",
             "timeoutMs": 60000
           },
           {
@@ -118,9 +103,9 @@
               "offers pin actions|keeps More last|puts the real new-note action"
             ],
             "outcome": "passed",
-            "summary": "更多菜单置顶、去重和原入口验证通过",
-            "verifiedCommit": "1a27399607a15f133afe9ba0c43debdfefe41783",
-            "completedAt": "2026-11-19T05:24:33.602Z",
+            "summary": "3 项置顶和侧栏菜单用例通过",
+            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
+            "completedAt": "2026-11-19T05:50:16.107Z",
             "timeoutMs": 60000
           },
           {
@@ -132,84 +117,27 @@
               "test",
               "--",
               "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "shares editable shortcuts|keeps full-size shortcut labels|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
+              "shares editable shortcuts|keeps full-size shortcut labels"
             ],
             "outcome": "passed",
-            "summary": "5 项 Chromium 渲染检查通过",
-            "verifiedCommit": "1a27399607a15f133afe9ba0c43debdfefe41783",
-            "completedAt": "2026-11-19T05:24:33.602Z",
+            "summary": "实际指针右键覆盖应用图标、图标之间和行尾空白，四个侧栏框保留",
+            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
+            "completedAt": "2026-11-19T05:50:16.107Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "验证了真实指针拖放、删除和回补、顶栏无截断、原生页签字号与悬停一致。修复后的客户端实机复测待新包。"
+          "summary": "Chromium 界面实测右键命中范围和侧栏占位，macOS 测试包待复测。"
         },
         "acceptanceCriteria": [
-          "首页、浏览器和图像展开顶栏共享对话以外的四个配置位置，完整显示所有标签。",
-          "顶栏删除按钮能点击，收起侧栏删除后后续入口补位，图标与首页同源。",
-          "收起侧栏更多菜单右侧可置顶，有空位直接追加，满位选中替换。菜单隐藏当前已在收起栏的入口，展开侧栏不显示置顶按钮。"
+          "右键输入框下的应用栏任意位置显示唯一的快捷管理，选择后直接进入拖放编辑状态。",
+          "收起侧栏固定显示四个快捷位置，删除后的空位保留。",
+          "侧栏满四项时更多菜单的置顶按钮置灰，空出位置后恢复。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-19T05:24:33.602Z"
-      },
-      "merged": {
-        "mergeCommit": "59c63cdaaa975850496bc6a2a6bf96f234365620",
-        "verificationCommit": "59c63cdaaa975850496bc6a2a6bf96f234365620",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "59c63cdaaa975850496bc6a2a6bf96f234365620",
-            "completedAt": "2026-11-19T05:24:37.487Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "59c63cdaaa975850496bc6a2a6bf96f234365620",
-            "completedAt": "2026-11-19T05:24:37.487Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "59c63cdaaa975850496bc6a2a6bf96f234365620",
-            "completedAt": "2026-11-19T05:24:37.487Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T05:24:37.487Z"
+        "generatedAt": "2026-11-19T05:50:16.107Z"
       }
     }
   ],
