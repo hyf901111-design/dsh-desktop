@@ -651,7 +651,7 @@ it.each([true,false])('samples the gutter at the actual bottom corners after a t
  }finally{await page.close()}
 })
 
-it('shares editable shortcuts between the composer and sidebar with global top shortcuts hidden', async () => {
+it('shares editable shortcuts between the composer and sidebar while keeping the session view switcher', async () => {
  const { page, errors } = await fixture(1440, 900)
  try {
   await page.evaluate(() => {
@@ -700,7 +700,8 @@ it('shares editable shortcuts between the composer and sidebar with global top s
    await page.mouse.up()
   }
   expect(await browserControls.count()).toBe(1)
-  expect(await browserControls.isVisible()).toBe(false)
+  expect(await browserControls.isVisible()).toBe(true)
+  expect(await browserControls.getByRole('button',{name:'展开工作区页签',exact:true}).getAttribute('aria-expanded')).toBe('false')
   expect(await page.locator('.eb-tab-switcher').isVisible()).toBe(true)
   expect(await page.locator('.eb-tab').first().isVisible()).toBe(true)
   expect(await page.locator('.workspace-back-button').isVisible()).toBe(false)
@@ -823,7 +824,7 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   expect(await sidebar.locator('[data-empty]:visible').count()).toBe(0)
   expect(await moreY()).toBe(moreBeforeEdit)
   await page.evaluate(() => { document.querySelector('.eb-root').hidden = false })
-  expect(await browserControls.isVisible()).toBe(false)
+  expect(await browserControls.isVisible()).toBe(true)
   await page.evaluate(() => {
    document.querySelector('.eb-root').hidden = true
    const aside = document.querySelector('[data-dsh-sidebar-root]')
