@@ -7,8 +7,9 @@ import {createBrowserPageAgent} from './page-agent'
 import {trackBrowserFavicon} from './favicon'
 import {createBrowserCorners} from './corners'
 import {app,clipboard,dialog,safeStorage,screen,session,shell,WebContentsView,type BrowserWindow,type WebContents,type IpcMain,type DownloadItem,type Session} from 'electron'
-import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,copyFileSync} from 'node:fs'
-import {join,basename} from 'node:path'
+import {mkdirSync,readFileSync,renameSync,writeFileSync,existsSync,constants} from 'node:fs'
+import {copyFile,stat} from 'node:fs/promises'
+import {join,basename,dirname} from 'node:path'
 import {randomUUID} from 'node:crypto'
 import {load} from 'cheerio'
 import {createBrowserFindOverlay} from './find-overlay'
@@ -37,7 +38,10 @@ export function registerBrowserApp(options:Options){
  const findPreload=options.findPreload||join(__dirname,'../preload/browser-find.cjs'),nativeFind=existsSync(findPreload)
  const finder=nativeFind?createBrowserFindOverlay(findPreload,window,value=>{const tab=current();if(value.kind==='close'){finder?.hide();live.get(tab.id)?.view.webContents.focus();window().webContents.send('browser-app:shortcut',{key:'Escape'});void request('find',{id:tab.id,text:''}).catch(()=>{})}else if(value.kind==='shortcut'){window().webContents.send('browser-app:shortcut',value)}else void request('find',{id:tab.id,text:value.text,next:value.kind==='next',forward:value.forward}).catch(()=>{})}):undefined
  const menuPreload=options.menuPreload||join(__dirname,'../preload/browser-menu.cjs'),nativeMenus=existsSync(menuPreload)
- let menuScope:{id:string;revision:number;owner:string;tabId:string;url:string;bounds?:{x:number;y:number;width:number;height:number};zoom?:number}|undefined
+ type MenuScope={id:string;revision:number;owner:string;tabId:string;url:string;bounds?:{x:number;y:number;width:number;height:number};zoom?:number}
+ let menuScope:MenuScope|undefined,noticeScope:MenuScope|undefined
+ const notices=createBrowserMenuOverlay(menuPreload,window,()=>{})
+ const hideNotices=()=>{noticeScope=undefined;notices.hide()}
  const menu=createBrowserMenuOverlay(menuPreload,window,value=>{const scope=menuScope;if(!scope||value.id!==scope.id||value.revision!==scope.revision||!appActive||ownerSessionId!==scope.owner||current().id!==scope.tabId||current().url!==scope.url){menu.hide();menuScope=undefined;return}window().webContents.send('browser-app:menu-event',value);if(value.kind==='dismiss'){hideMenu();const through=value.through,b=scope.bounds,z=scope.zoom||1;if(through&&b){const win=window(),[width=0,height=0]=win.getContentSize(),x=Math.round(b.x+through.x*z),y=Math.round(b.y+through.y*z);if(x>=0&&y>=0&&x<width&&y<height){const within=rect&&visible&&x>=rect.x&&x<rect.x+rect.width&&y>=rect.y&&y<rect.y+rect.height,target=within?live.get(scope.tabId)?.view.webContents:win.webContents;if(target&&!target.isDestroyed()){target.focus();const point={x:within?x-rect!.x:x,y:within?y-rect!.y:y,button:through.button||'left',clickCount:1};target.sendInputEvent({...point,type:'mouseDown'});target.sendInputEvent({...point,type:'mouseUp'})}}}}})
  const hideMenu=(notify=false)=>{const scope=menuScope;menuScope=undefined;menu.hide();if(notify&&scope)window().webContents.send('browser-app:menu-event',{id:scope.id,revision:scope.revision,kind:'dismiss'})}
  const routeMenuKey=(event:{preventDefault():void},input:Electron.Input)=>{const scope=menuScope;if(!scope||!appActive||scope.owner!==ownerSessionId||scope.tabId!==current().id||scope.url!==current().url)return false;if(menu.key(input)){event.preventDefault();return true}return false}
@@ -59,12 +63,36 @@ export function registerBrowserApp(options:Options){
  }
  const publish=()=>{if(disposed)return;finder?.update(current());const win=options.getMainWindow();if(win&&!win.isDestroyed())win.webContents.send(eventChannel,snapshot());clearTimeout(persistTimer);persistTimer=setTimeout(persist,300)}
  const publishDownload=()=>{if(downloadPublishTimer)return;downloadPublishTimer=setTimeout(()=>{downloadPublishTimer=undefined;publish()},100)}
+ const checkDownloadFile=async(row:BrowserDownload)=>{
+  if(row.state!=='completed')return false
+  let missing=!row.path
+  if(row.path){
+   try{missing=!(await stat(row.path)).isFile()}
+   catch(error){if(!['ENOENT','ENOTDIR'].includes((error as NodeJS.ErrnoException).code??''))return false;missing=true}
+  }
+  if(!!row.fileMissing===missing)return false
+  row.fileMissing=missing
+  return true
+ }
+ const checkDownloads=async()=>{
+  const changed=await Promise.all(downloads.slice(0,100).map(checkDownloadFile))
+  if(changed.some(Boolean))publish()
+ }
+ const openDownloadFolder=async(savedPath?:string)=>{
+  const folders=new Set([savedPath&&dirname(savedPath),model.settings.downloadPath,app.getPath('downloads')])
+  for(const folder of folders){
+   if(!folder)continue
+   try{if((await stat(folder)).isDirectory()&&!await shell.openPath(folder))return true}catch{}
+  }
+  return false
+ }
  const current=()=>model.tab(model.activeId)
  const closeDownloadOwners=(isPrivate?:boolean)=>{for(const [key,owner]of downloadOwners)if(isPrivate===undefined||key===isPrivate){downloadOwners.delete(key);if(!owner.view.webContents.isDestroyed())owner.view.webContents.close()}}
  const corners=createBrowserCorners(window);let cornerColor=[17,17,17]
  const sync=()=>{
   if(regionScope&&!regionValid())cancelRegion()
   if(menuScope&&(!appActive||ownerSessionId!==menuScope.owner||current().id!==menuScope.tabId||current().url!==menuScope.url))hideMenu()
+  if(noticeScope&&(!visible||!appActive||ownerSessionId!==noticeScope.owner||current().id!==noticeScope.tabId||current().url!==noticeScope.url))hideNotices()
   let shown=false
   for(const [id,e]of live){
    const tab=model.tab(id),show=visible&&id===model.activeId&&!tab.page&&!!tab.url&&!tab.error
@@ -75,7 +103,7 @@ export function registerBrowserApp(options:Options){
   }
   // Valid region operations pin the viewport. Re-adding the corner siblings
   // here would unseat its native pointer capture on every shell layout pass.
-  if(!regionScope)corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise();region.raise();menu.raise()
+  if(!regionScope)corners.layout(rect,shown,cornerColor,shown?window().webContents.getZoomFactor():1);finder?.raise();region.raise();menu.raise();notices.raise()
  }
  const sessionFor=(tab:Pick<BrowserTab,'private'>)=>{
   const s=tab.private?(privateSession??=session.fromPartition('browser-private-'+randomUUID())):session.fromPartition('persist:odyssey-browser-app')
@@ -175,6 +203,7 @@ export function registerBrowserApp(options:Options){
   const internalPage=method==='internal-page'?browserInternalPage(input.page):undefined
   if(!model.tabs.length)model.newTab()
   if(method==='snapshot'){if(nativeMenus)void menu.warm();if(nativeRegion)void region.warm().catch(()=>{});return snapshot()}
+  if(method==='check-downloads'){await checkDownloads();return true}
   if(method==='workspace-pointer-in-bar'){
    const bounds=input.bounds
    if(!bounds||!['x','y','width','height'].every(key=>Number.isFinite(bounds[key]))||bounds.width<=0||bounds.height<=0)return false
@@ -184,13 +213,17 @@ export function registerBrowserApp(options:Options){
    const x=(pointer.x-content.x)/zoom,y=(pointer.y-content.y)/zoom
    return x>=bounds.x&&x<bounds.x+bounds.width&&y>=bounds.y&&y<bounds.y+bounds.height
   }
-  if(method==='menu-hide'){if(!input?.id||input.id===menuScope?.id){const focused=menu.isFocused();hideMenu();if(focused)window().webContents.focus()}return true}
+  if(method==='menu-hide'){if(input?.passive){if(input.id===noticeScope?.id)hideNotices();return true}if(!input?.id||input.id===menuScope?.id){const focused=menu.isFocused();hideMenu();if(focused)window().webContents.focus()}return true}
   if(method==='menu'){
    if(!nativeMenus||!appActive||input.owner!==ownerSessionId||input.tabId!==current().id||input.url!==current().url||!current().url||current().page||current().error)throw Error('菜单所属网页已变化。')
    const win=window(),z=win.webContents.getZoomFactor(),[width=0,height=0]=win.getContentSize(),b=input.bounds
    if(!b||!['x','y','width','height'].every(k=>Number.isFinite(b[k]))||b.x<0||b.y<0||b.width<=0||b.height<=0||b.x*z+b.width*z>width+2||b.y*z+b.height*z>height+2)throw Error('菜单位置无效。')
-   menuScope={id:input.id,revision:input.revision,owner:ownerSessionId,tabId:current().id,url:current().url,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.round(b.width*z),height:Math.round(b.height*z)},zoom:z}
-   return menu.show({...input,id:input.id,revision:input.revision,html:input.html,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.min(width-Math.round(b.x*z),Math.round(b.width*z)),height:Math.min(height-Math.round(b.y*z),Math.round(b.height*z))},zoom:z})
+   const scope={id:input.id,revision:input.revision,owner:ownerSessionId,tabId:current().id,url:current().url,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.round(b.width*z),height:Math.round(b.height*z)},zoom:z}
+   if(input.passive===true)noticeScope=scope;else menuScope=scope
+   const surface=input.passive===true?notices:menu
+   const shown=await surface.show({...input,id:input.id,revision:input.revision,html:input.html,bounds:{x:Math.round(b.x*z),y:Math.round(b.y*z),width:Math.min(width-Math.round(b.x*z),Math.round(b.width*z)),height:Math.min(height-Math.round(b.y*z),Math.round(b.height*z))},zoom:z})
+   if(shown&&surface===menu)notices.raise()
+   return shown
   }
   if(method==='context-command'){checkContext(input.contextToken);const scope=contextScope!,command=scope.commands.get(inputString(input.itemId,40));if(!command||scope.commanded)throw Error('菜单操作已失效。');scope.commanded=true;command();return true}
   if(method==='save-image'){
@@ -286,7 +319,7 @@ export function registerBrowserApp(options:Options){
    publish();return snapshot()
   }
   if(method==='download'){
-   if(input.action==='directory'){await shell.openPath(model.settings.downloadPath||app.getPath('downloads'));return true}
+   if(input.action==='directory')return await openDownloadFolder()?true:{notice:'下载文件夹暂时无法打开，请检查下载位置。',unavailable:true}
    const row=downloads.find(d=>d.id===input.id),item=items.get(input.id);if(!row)throw Error('下载记录已不存在。')
    if(input.action==='pause'&&row.state==='progressing'&&item){item.pause();row.state='paused'}
    else if(input.action==='resume'&&item?.canResume()){item.resume();row.state='progressing'}
@@ -296,9 +329,29 @@ export function registerBrowserApp(options:Options){
     // Retrying a saved download must not depend on an open webpage or select a tab.
     const wc=source&&!source.isDestroyed()&&/^https?:\/\//i.test(source.getURL())?source:downloadOwner(isPrivate).view.webContents;wc.downloadURL(url)
    }
-   else if(input.action==='reveal'&&row.path)shell.showItemInFolder(row.path)
-   else if(input.action==='open'&&row.state==='completed')await shell.openPath(row.path)
-   else if(input.action==='material'&&row.state==='completed'){const id=inputString(input.sessionId,256);if(!id)throw Error('请先打开工作区会话。');const directory=await options.materialDirectory(id);mkdirSync(directory,{recursive:true});const target=join(directory,Date.now()+'-'+basename(row.name));copyFileSync(row.path,target);return {path:target}}
+   else if(['reveal','open','material'].includes(input.action)&&row.state==='completed'){
+    const changed=await checkDownloadFile(row)
+    if(changed)publish()
+    if(row.fileMissing){
+     if(input.action==='reveal'&&await openDownloadFolder(row.path))return {notice:'原文件已移动或删除，已打开下载文件夹。'}
+     return {notice:'原文件已移动或删除，请从下载记录或原网页重新下载。',unavailable:true}
+    }
+    if(input.action==='reveal'){shell.showItemInFolder(row.path);return true}
+    if(input.action==='open')return await shell.openPath(row.path)?{notice:'系统未能打开这个文件，请在文件夹中查看。',unavailable:true}:true
+    const id=inputString(input.sessionId,256)
+    if(!id||id!==ownerSessionId)return {notice:'请先选择当前项目的会话，再加入工作材料。',unavailable:true}
+    try{
+     const directory=await options.materialDirectory(id)
+     if(id!==ownerSessionId)return {notice:'会话已切换，请在目标项目重新操作。',unavailable:true}
+     mkdirSync(directory,{recursive:true})
+     const target=join(directory,randomUUID()+'-'+basename(row.name))
+     await copyFile(row.path,target,constants.COPYFILE_EXCL)
+     return {path:target}
+    }catch{
+     if(await checkDownloadFile(row))publish()
+     return {notice:row.fileMissing?'原文件已移动或删除，请重新下载。':'无法复制到本项目的工作材料，请检查文件和目录权限。',unavailable:true}
+    }
+   }
    else if(input.action==='remove'&&['completed','cancelled','interrupted'].includes(row.state)){downloads.splice(downloads.indexOf(row),1);items.delete(row.id)}
    publish();return snapshot()
   }
@@ -360,9 +413,9 @@ export function registerBrowserApp(options:Options){
   else throw Error('不支持的浏览器操作。')
   sync();publish();return snapshot()
  }
- const detachWindow=()=>{attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents?.removeListener('before-mouse-event',routeRegionPointer);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
+ const detachWindow=()=>{attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents?.removeListener('before-mouse-event',routeRegionPointer);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();for(const tab of model.tabs)translation.cancel(tab.id,{discard:true});hideMenu();hideNotices();corners.dispose();appEpoch++;ownerEpoch++;pageAgent.invalidate();appActive=false;ownerSessionId='';finder?.hide();visible=false;rect=undefined;closeDownloadOwners();for(const e of live.values()){e.epoch++;clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();for(const t of [...model.tabs]){t.loading=false;t.canBack=false;t.canForward=false;if(t.private)model.close(t.id)}if(privateSession){const old=privateSession;privateSession=undefined;sessions.delete(old);void old.clearStorageData().catch(()=>{})}for(const row of [...downloads])if(row.private){items.get(row.id)?.cancel();items.delete(row.id);downloads.splice(downloads.indexOf(row),1)}persist()}
  registerTrustedMainWindowHandler(options.ipcMain,channel,options.getMainWindow,(_event,method:string,input:any)=>request(method,input))
- const dispose=()=>{if(disposed)return;persist();attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents?.removeListener('before-mouse-event',routeRegionPointer);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
+ const dispose=()=>{if(disposed)return;persist();attachedKeyContents?.removeListener('before-input-event',routeMenuKey);attachedKeyContents?.removeListener('before-mouse-event',routeRegionPointer);attachedKeyContents=undefined;imageDownloads.clear();cancelRegion();region.dispose();translation.dispose();pageAgent.dispose();finder?.dispose();menu.dispose();notices.dispose();corners.dispose();disposed=true;clearTimeout(persistTimer);clearTimeout(downloadPublishTimer);closeDownloadOwners();for(const e of live.values()){clearTimeout(e.timeout);if(!e.view.webContents.isDestroyed())e.view.webContents.close()}live.clear();options.ipcMain.removeHandler(channel)}
  window();app.once('before-quit',dispose)
  const agent=async(input:any,signal?:AbortSignal)=>{
   const sessionId=input?.sessionId;if(!appActive||!ownerSessionId||sessionId!==ownerSessionId)throw Error('当前浏览器不属于此对话，请重新打开当前对话后再操作。');if(signal?.aborted)throw Error('网页操作已取消。');

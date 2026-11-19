@@ -1,5 +1,6 @@
 import {EventEmitter} from 'node:events'
-import {mkdtempSync,rmSync} from 'node:fs'
+import {mkdtempSync,readFileSync,rmSync,unlinkSync,writeFileSync} from 'node:fs'
+import {shell} from 'electron'
 import {tmpdir} from 'node:os'
 import {join,resolve} from 'node:path'
 import {afterEach,beforeEach,expect,it,vi} from 'vitest'
@@ -11,7 +12,7 @@ vi.mock('electron',()=>{
  const app=Object.assign(new EventEmitter(),{getPath:()=>'/tmp'});mock.app=app
  const partition=Object.assign(new EventEmitter(),{setPermissionCheckHandler:vi.fn(),setPermissionRequestHandler:vi.fn(),clearStorageData:async()=>{},cookies:{get:async()=>[]}})
  mock.partition=partition
- return{app,Menu:{buildFromTemplate:(template:any[])=>{mock.templates.push(template);return{popup:vi.fn()}}},clipboard:{writeText:vi.fn()},dialog:{},safeStorage:{isEncryptionAvailable:()=>false},shell:{openExternal:vi.fn()},session:{fromPartition:()=>partition},WebContentsView:class{
+ return{app,Menu:{buildFromTemplate:(template:any[])=>{mock.templates.push(template);return{popup:vi.fn()}}},clipboard:{writeText:vi.fn()},dialog:{},safeStorage:{isEncryptionAvailable:()=>false},shell:{openExternal:vi.fn(),openPath:vi.fn(async()=>''),showItemInFolder:vi.fn()},session:{fromPartition:()=>partition},WebContentsView:class{
   bounds:any;visible=false;webContents:any
   constructor(){let url='',zoom=1,destroyed=false;const wc=Object.assign(new EventEmitter(),{mainFrame:{processId:11,routingId:22},isDestroyed:()=>destroyed,isLoadingMainFrame:()=>false,getURL:()=>url,getTitle:()=> 'Synthetic page',getZoomFactor:()=>zoom,setZoomFactor:(value:number)=>{zoom=value},setAudioMuted:vi.fn(),setBackgroundThrottling:vi.fn(),setWindowOpenHandler:vi.fn(),focus:vi.fn(),stop:vi.fn(),close:()=>{destroyed=true},navigationHistory:{canGoBack:()=>false,canGoForward:()=>false},capturePage:vi.fn(async()=>({getSize:()=>({width:101,height:61}),isEmpty:()=>false,toPNG:()=>Buffer.from('original page PNG')})),loadURL:async(value:string)=>{url=value;wc.emit('did-start-navigation',{},url,false,true);wc.emit('did-finish-load')},copy:vi.fn(),paste:vi.fn(),cut:vi.fn(),undo:vi.fn(),redo:vi.fn(),selectAll:vi.fn(),copyImageAt:vi.fn(),downloadURL:vi.fn()});this.webContents=wc;mock.views.push(this)}
   setBounds=(value:any)=>{this.bounds=value};setVisible=(value:boolean)=>{this.visible=value}
@@ -39,7 +40,7 @@ async function fixture(owner='owner-A'){
  const menu=(params:any={})=>{page.webContents.emit('context-menu',{}, {isEditable:false,selectionText:'',editFlags:{},x:50,y:60,...params});return mainWC.send.mock.calls.filter(([name]:any)=>name==='browser-app:context-menu').at(-1)?.[1]}
  const context=(label='框选并询问AI',params:any={})=>{const value=menu(params),item=value.items.find((item:any)=>item.label===label);void service.request('context-command',{contextToken:value.contextToken,itemId:item.id});return mainWC.send.mock.calls.filter(([name]:any)=>name==='browser-app:context-action').at(-1)?.[1]}
  const capture=async()=>service.request('region-start',{contextToken:context().contextToken,dark:true}) as Promise<{operationId:string;rect:BrowserRegionRect;png:string}>
- return{service,page,win,mainWC,layout,context,menu,capture,handlers,bounds,state}
+ return{service,page,win,mainWC,layout,context,menu,capture,handlers,bounds,state,directory}
 }
 const state=(owner:string|null='owner-A')=>({ticket:'ticket-A',ownerSessionId:owner,draft:'提问草稿',draftRev:3,phase:'plain',busy:false,sequence:2,syncVersion:1,canSend:true})
 
@@ -119,3 +120,27 @@ it('notifies shell menus about a click in the visible webpage without consuming 
 })
 
 it('does not reorder native corner views underneath an active selection during stable layout',async()=>{const f=await fixture();await f.capture();mock.corners.layout.mockClear();await f.layout();await f.layout();expect(mock.corners.layout).not.toHaveBeenCalled();await f.service.request('region-cancel');await f.layout();expect(mock.corners.layout).toHaveBeenCalledOnce()})
+
+it('reveals a saved download, copies it into the current project, and handles its subsequent removal',async()=>{
+ const f=await fixture(), path=join(f.directory,'研究材料.txt')
+ writeFileSync(path,'下载的原文件')
+ const item=Object.assign(new EventEmitter(),{
+  getURL:()=>'https://example.test/report.txt',getFilename:()=>'研究材料.txt',getMimeType:()=>'text/plain',
+  getReceivedBytes:()=>18,getTotalBytes:()=>18,getSavePath:()=>path,setSavePath:vi.fn(),isPaused:()=>false,getState:()=>'completed'
+ })
+ mock.partition.emit('will-download',{preventDefault:vi.fn()},item,f.page.webContents)
+ item.emit('done',{},'completed')
+ const {id}=f.service.snapshot().downloads[0]!
+ const action=(value:string)=>f.service.request('download',{id,action:value,sessionId:'owner-A'})
+ await action('reveal')
+ expect(shell.showItemInFolder).toHaveBeenCalledWith(path)
+ const copy=await action('material') as {path:string}
+ expect(readFileSync(copy.path,'utf8')).toBe('下载的原文件')
+ unlinkSync(path)
+ await f.service.request('check-downloads')
+ expect(f.service.snapshot().downloads[0]?.fileMissing).toBe(true)
+ expect(await action('material')).toMatchObject({unavailable:true})
+ expect(await action('reveal')).toMatchObject({notice:expect.stringContaining('打开下载文件夹')})
+ expect(shell.openPath).toHaveBeenCalledWith(f.directory)
+ expect(readFileSync(copy.path,'utf8')).toBe('下载的原文件')
+})

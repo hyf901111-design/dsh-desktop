@@ -5,7 +5,7 @@ type Projected={element:HTMLElement;aria:string|null;inert:boolean}
 const hoverCardSelector='[data-odyssey-hover-card]'
 const notificationCenterSelector='.srb-notifications'
 const composerMenuSelector='._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],[data-ework-command-surface]'
-const selector='[data-browser-panel],.eb-suggestions,.eb-find,.st-menu,.JObwrW_panel[popover]:popover-open,[role=menu],[role=listbox],[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert],.odyssey-subagent-composer-popover,'+hoverCardSelector+','+notificationCenterSelector+','+composerMenuSelector
+const selector='[data-browser-panel],.eb-suggestions,.eb-find,.st-menu,[popover]:popover-open,[role=menu],[role=listbox],[role=dialog],[role=alertdialog],[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert],.odyssey-subagent-composer-popover,'+hoverCardSelector+','+notificationCenterSelector+','+composerMenuSelector
 const passiveSurface=(element:HTMLElement)=>element.matches('[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert]')&&!element.querySelector('button,input,select,textarea,a,[tabindex]')
 const actionable='button,a,input,textarea,select,label,[role=menuitem],[role=menuitemradio],[role=option],[data-action],[tabindex]'
 const styleProperties=('display position box-sizing width height min-width min-height max-width max-height margin-top margin-right margin-bottom margin-left padding-top padding-right padding-bottom padding-left border-top border-right border-bottom border-left border-radius background-color background-image background-size background-position background-repeat background-clip box-shadow color opacity visibility font-family font-size font-weight font-style font-variation-settings font-feature-settings font-optical-sizing font-kerning font-synthesis text-rendering -webkit-font-smoothing color-scheme line-height letter-spacing text-align text-transform text-decoration white-space word-break overflow-wrap text-overflow overflow-x overflow-y overscroll-behavior scrollbar-width flex-grow flex-shrink flex-basis flex-direction flex-wrap align-items align-self justify-items justify-self justify-content gap row-gap column-gap grid-template-columns grid-template-rows grid-auto-flow grid-column order vertical-align mask-image mask-size mask-repeat mask-position z-index top right bottom left transform transform-origin translate cursor outline outline-offset object-fit object-position list-style appearance accent-color resize writing-mode fill stroke stroke-width stroke-linecap stroke-linejoin').split(' ')
@@ -15,20 +15,25 @@ export class NativeBrowserMenuProjection{
  private observer:MutationObserver;private resize:ResizeObserver|undefined;private frame=0;private disposed=false;private request=0
  private roots:Projected[]=[];private controls=new Map<string,Element>();private ids=new Map<string,string>();private nextId=0
  private context='';private group='';private id='';private revision=0;private signature='';private focusId='';private selection?:{start:number;end:number;direction?:string}
- private scrollStyles:string[]=[];private fontStyles?:string;private unsubscribe:()=>void;private style:HTMLStyleElement
- constructor(private document:Document,private bridge:MenuBridge){
+ private scrollStyles:string[]=[];private fontStyles?:string;private unsubscribe?:()=>void;private style:HTMLStyleElement
+ private notices?:NativeBrowserMenuProjection
+ constructor(private document:Document,private bridge:MenuBridge,private noticesOnly=false){
   this.style=document.createElement('style');this.style.textContent='[data-browser-projected]{opacity:0!important;pointer-events:none!important}';document.head.append(this.style)
   this.observer=new document.defaultView!.MutationObserver(records=>{if(records.some(record=>!this.style.contains(record.target)&&!(record.type==='attributes'&&['data-browser-projected','inert','aria-hidden'].includes(record.attributeName||'')&&this.roots.some(root=>root.element===record.target))))void this.sync()})
   this.observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true})
   if(document.defaultView?.ResizeObserver)this.resize=new document.defaultView.ResizeObserver(this.schedule)
   document.addEventListener('scroll',this.schedule,true);document.addEventListener('focusin',this.focus,true);document.defaultView!.addEventListener('resize',this.schedule)
-  this.unsubscribe=bridge.subscribeAction(this.action);this.schedule()
+  if(!noticesOnly){
+   this.notices=new NativeBrowserMenuProjection(document,bridge,true)
+   this.unsubscribe=bridge.subscribeAction(value=>{this.action(value);this.notices?.action(value)})
+  }
+  this.schedule()
  }
  private schedule=()=>{if(!this.disposed&&!this.frame)this.frame=this.document.defaultView!.requestAnimationFrame(()=>{this.frame=0;void this.sync()})}
  private focus=()=>{const active=this.document.activeElement;if(active&&this.roots.some(root=>root.element.contains(active))){const row=[...this.controls].find(([,element])=>element===active);if(row){this.focusId=row[0];this.readSelection(active);this.schedule()}}}
  private readSelection(element:Element){const input=element as HTMLInputElement;if(typeof input.selectionStart==='number')this.selection={start:input.selectionStart,end:input.selectionEnd??input.selectionStart,direction:input.selectionDirection??undefined};else this.selection=undefined}
  private restore(root:Projected){delete root.element.dataset.browserProjected;if(root.aria===null)root.element.removeAttribute('aria-hidden');else root.element.setAttribute('aria-hidden',root.aria);root.element.inert=root.inert;this.resize?.unobserve(root.element)}
- private reset(){this.request++;for(const root of this.roots)this.restore(root);this.roots=[];this.controls.clear();this.ids.clear();this.group='';this.signature='';this.focusId='';this.selection=undefined;const id=this.id;this.id='';if(id)void this.bridge.request('menu-hide',{id}).catch(()=>{})}
+ private reset(){this.request++;for(const root of this.roots)this.restore(root);this.roots=[];this.controls.clear();this.ids.clear();this.group='';this.signature='';this.focusId='';this.selection=undefined;const id=this.id;this.id='';if(id)void this.bridge.request('menu-hide',{id,passive:this.noticesOnly}).catch(()=>{})}
  private key(element:Element,root:Element){
   if(element===root&&root.matches(hoverCardSelector))return this.documentRootId(root)
   const path:number[]=[];let current:Element|null=element;while(current&&current!==root){path.unshift([...current.parentElement!.children].indexOf(current));current=current.parentElement}return [root.getAttribute('data-browser-panel')||root.className,element.tagName,...['data-field','data-action','data-id','data-row-id','data-folder','data-url','name','aria-label','role'].map(name=>element.getAttribute(name)||''),path.join('.')].join('|')}
@@ -106,10 +111,11 @@ export class NativeBrowserMenuProjection{
   }
   const menus=outer.filter(element=>!passiveSurface(element)&&!element.matches(hoverCardSelector))
   const hoverCards=outer.filter(element=>element.matches(hoverCardSelector)&&intersectsPage(element))
-  // An overlapping menu takes precedence. A menu elsewhere must not suppress a card.
-  const roots=menus.some(intersectsPage)?menus:hoverCards.length?hoverCards:outer.filter(passiveSurface)
+  // Notices stay above the live page even while a menu owns keyboard focus.
+  // Keep them in a mouse-transparent window so the gap between surfaces stays clickable.
+  const roots=this.noticesOnly ? outer.filter(passiveSurface).filter(intersectsPage) : menus.some(intersectsPage) ? menus : hoverCards
   if(!roots.some(intersectsPage)){this.reset();return}
-  const hoverCard=roots===hoverCards
+  const hoverCard=!this.noticesOnly&&hoverCards.length>0&&!menus.some(intersectsPage)
   const passive=roots.every(passiveSurface)
   const group=roots.map(element=>element.closest('.eb-root')?'browser:'+(element.getAttribute('data-browser-panel')||element.className):this.documentRootId(element)).join(',')
   if(group!==this.group){this.reset();this.group=group;this.id=crypto.randomUUID();this.revision++;this.ids.clear()}
@@ -129,7 +135,12 @@ export class NativeBrowserMenuProjection{
   const notificationCss=roots.some(root=>root.matches(notificationCenterSelector))?notificationCenterStyles:''
   const pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
   const state={id:this.id,revision:this.revision,owner:browser.dataset.sessionId||'',tabId:browser.dataset.tabId,url:browser.dataset.url,bounds:{x:left,y:top,width:right-left,height:bottom-top},html:copies.join(''),css,focusId:passive?undefined:this.focusId||undefined,selection:this.selection,passive,material,hoverCard,focusOwner:hoverCard||roots.some(root=>root.classList.contains('eb-suggestions')),reducedMotion:win.matchMedia('(prefers-reduced-motion: reduce)').matches}
-  for(const root of this.roots){root.element.dataset.browserProjected='true';root.element.setAttribute('aria-hidden','true');root.element.inert=true;this.resize?.observe(root.element)}
+  for(const {element} of this.roots){
+   if(element.dataset.browserProjected!=='true')element.dataset.browserProjected='true'
+   if(element.getAttribute('aria-hidden')!=='true')element.setAttribute('aria-hidden','true')
+   if(!element.inert)element.inert=true
+   this.resize?.observe(element)
+  }
   const signature=JSON.stringify(state);if(signature===this.signature)return;this.signature=signature;const request=++this.request
   try{if(!await this.bridge.request('menu',state)&&request===this.request&&signature===this.signature)this.dismiss()}catch{if(request===this.request&&signature===this.signature)this.dismiss()}
  }
@@ -166,6 +177,6 @@ export class NativeBrowserMenuProjection{
   const browser=this.document.querySelector<HTMLElement>('.eb-root:not([hidden])[data-native-page=true]')
   if(!this.disposed&&browser?.dataset.tabId===tabId)this.dismiss()
  }
- private dismiss(){const win=this.document.defaultView!;this.reset();for(const type of ['pointerdown','mousedown','click'])this.document.body.dispatchEvent(type==='pointerdown'?new win.PointerEvent(type,{bubbles:true}):new win.MouseEvent(type,{bubbles:true}));this.document.dispatchEvent(new win.CustomEvent('sherlock:browser-native-menu-dismiss'));this.schedule()}
- dispose(){this.disposed=true;this.reset();this.unsubscribe();this.observer.disconnect();this.resize?.disconnect();this.document.defaultView!.cancelAnimationFrame(this.frame);this.document.removeEventListener('scroll',this.schedule,true);this.document.removeEventListener('focusin',this.focus,true);this.document.defaultView!.removeEventListener('resize',this.schedule);this.style.remove()}
+ private dismiss(){const win=this.document.defaultView!;this.reset();if(this.noticesOnly)return;for(const type of ['pointerdown','mousedown','click'])this.document.body.dispatchEvent(type==='pointerdown'?new win.PointerEvent(type,{bubbles:true}):new win.MouseEvent(type,{bubbles:true}));this.document.dispatchEvent(new win.CustomEvent('sherlock:browser-native-menu-dismiss'));this.schedule()}
+ dispose(){this.disposed=true;this.notices?.dispose();this.reset();this.unsubscribe?.();this.observer.disconnect();this.resize?.disconnect();this.document.defaultView!.cancelAnimationFrame(this.frame);this.document.removeEventListener('scroll',this.schedule,true);this.document.removeEventListener('focusin',this.focus,true);this.document.defaultView!.removeEventListener('resize',this.schedule);this.style.remove()}
 }

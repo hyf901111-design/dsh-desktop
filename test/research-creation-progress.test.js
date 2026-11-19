@@ -1,13 +1,19 @@
-import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
+import {researchCreationClient as currentClient} from './fixtures/research-creation-client.mjs'
 import { expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition, patchResearchCreationProgress } from '../scripts/lib/research-creation-progress.mjs'
+import { classifyResearchCreationRequest, workbenchDealMotion, planningCardPosition, patchResearchCreationProgress, creationHasNativeArtifact } from '../scripts/lib/research-creation-progress.mjs'
 import { AFFIRMATIVE_WORKBENCH_REQUESTS, NON_CREATION_WORKBENCH_REQUESTS } from './fixtures/workbench-creation-requests.js'
-import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
-import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
-import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
 import {Window} from 'happy-dom'
-const currentClient=()=>restoreResearchGridWorkbench(stripHomeGuideNative(stripHomeGuidePresentationNative(stripConversationGridOverlays(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))))
+
+it('clears a terminal planning notice when its native component arrives late', () => {
+  const intent = {startedAt:10000, completedAt:18000, state:'failed'}
+  const card = {kind:'generated-container', generationStartedAt:12000, generationStatus:'completed'}
+  expect(creationHasNativeArtifact(intent, [card])).toBe(true)
+  expect(creationHasNativeArtifact({...intent,state:'syncing'}, [card])).toBe(true)
+  expect(creationHasNativeArtifact(intent, [{...card,generationStatus:'queued'}])).toBe(false)
+  expect(creationHasNativeArtifact(intent, [{...card,generationStartedAt:20000}])).toBe(false)
+  expect(creationHasNativeArtifact(intent, [{...card,workbenchId:'other-plan'}])).toBe(false)
+  expect(creationHasNativeArtifact({...intent,state:'stopped'}, [card])).toBe(false)
+})
 
 function paintAckFixture(painted = false) {
   const installed = currentClient()

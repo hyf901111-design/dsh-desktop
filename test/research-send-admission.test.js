@@ -1,10 +1,9 @@
-import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
 import {createRequire} from 'node:module'
 const {stripPptxAnnotationInput,patchPptxAnnotationInput}=createRequire(import.meta.url)('../scripts/lib/pptx-annotation-native.mjs')
 const {patchFigmaInlineReferences}=createRequire(import.meta.url)('../scripts/lib/figma-inline-references-client.mjs')
-const source=()=>readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+const {researchCreationClient:source}=createRequire(import.meta.url)('./fixtures/research-creation-client.mjs')
 
 it.each(['resident','pre-annotation'])('upgrades the existing native send pipeline and remains idempotent: %s',mode=>{
  const original=mode==='resident'?source():stripPptxAnnotationInput(source()),first=patchResearchCreationProgress(original)

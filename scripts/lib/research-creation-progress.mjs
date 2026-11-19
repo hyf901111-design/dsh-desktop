@@ -27,6 +27,17 @@ export function planningCardPosition(viewport, canvasSize, cardWidth = 320, card
   return { x: (screenX - viewport.x) / viewport.scale, y: (screenY - viewport.y) / viewport.scale };
 }
 
+export function creationHasNativeArtifact(intent, artifacts) {
+  if (!intent || !['planning', 'syncing', 'failed'].includes(intent.state)) return false
+  return artifacts.some(node => {
+    if (node.kind !== 'generated-container' || node.workbenchId || !Number.isFinite(node.generationStartedAt)) return false
+    if (node.generationStartedAt < intent.startedAt - 1000) return false
+    if (intent.state === 'planning') return true
+    // A card from this turn may finish painting after the parent turn ends.
+    return node.generationStatus === 'completed' && node.generationStartedAt <= intent.completedAt + 1000
+  })
+}
+
 const BEGIN = '/* ODYSSEY_CREATION_PROGRESS_V3 */'
 const end = 'function InputBar({'
 function helperEnd(source, start) {
@@ -38,6 +49,7 @@ function helperEnd(source, start) {
 const helper = `${BEGIN}
 ${workbenchDealMotion.toString()}
 ${planningCardPosition.toString()}
+${creationHasNativeArtifact.toString()}
 const odysseyCreationIntents = new Map();
 function odysseyCreationOrigin(sessionId, plan) {
   const intent = odysseyCreationIntents.get(sessionId);
@@ -82,6 +94,24 @@ function odysseyCreationDeal(sessionId, plan, origin) {
   timer = setTimeout(finish, Math.min(3000, 1200 + ids.size * 120));
   scan();
 }
+const odysseyBoardDeliveries = new Map();
+function odysseyBoardDelivery(sessionId) {
+  if (odysseyBoardDeliveries.has(sessionId)) return odysseyBoardDeliveries.get(sessionId);
+  try { return JSON.parse(localStorage.getItem('odyssey:board-delivery:' + sessionId)); } catch { return null; }
+}
+function odysseyForgetBoardDelivery(sessionId) {
+  odysseyBoardDeliveries.delete(sessionId);
+  try { localStorage.removeItem('odyssey:board-delivery:' + sessionId); } catch {}
+}
+function odysseyAdmitBoardDelivery(sessionId, draft, startedAt) {
+  const intent = (${classifyResearchCreationRequest.toString()})(draft);
+  if (!intent || !sessionId || !startedAt || sherlockShared(sessionId)) return;
+  const delivery = {request:intent.request, startedAt};
+  odysseyBoardDeliveries.set(sessionId, delivery);
+  try { localStorage.setItem('odyssey:board-delivery:' + sessionId, JSON.stringify(delivery)); } catch {}
+  // Record the originating board even when its tab changes before a model calls a tool.
+  void fetch('/sherlock/research-workbenches/list', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({parentSessionId:sessionId,delivery})}).catch(()=>{});
+}
 function odysseyCreationEmit(sessionId) {
   window.dispatchEvent(new CustomEvent('odyssey:creation-progress', { detail: { sessionId, intent: odysseyCreationIntents.get(sessionId) ?? null } }));
 }
@@ -99,7 +129,9 @@ function odysseyCreationAnnounce(sessionId, draft, subagentPanel, busy, research
 function odysseyCreationFinish(sessionId, outcome = false) {
   const current = odysseyCreationIntents.get(sessionId);
   if (!current) return;
-  if (outcome) odysseyCreationIntents.set(sessionId, { ...current, state: outcome === 'stopped' ? 'stopped' : 'failed', inferredEnd: outcome === 'ended', completedAt: Date.now() });
+  const tracked = typeof odysseyBoardDelivery === 'function' && odysseyBoardDelivery(sessionId);
+  if (tracked && (!outcome || outcome === 'stopped')) odysseyForgetBoardDelivery(sessionId);
+  if (outcome) odysseyCreationIntents.set(sessionId, { ...current, state: outcome === 'stopped' ? 'stopped' : outcome === 'ended' && tracked ? 'syncing' : 'failed', inferredEnd: outcome === 'ended', completedAt: Date.now() });
   else odysseyCreationIntents.delete(sessionId);
   odysseyCreationEmit(sessionId);
 }
@@ -116,6 +148,12 @@ function odysseyCreationStop(sessionId) {
 function odysseyCreationRetry(sessionId) {
   const current = odysseyCreationIntents.get(sessionId);
   if (!current || !['failed', 'stopped'].includes(current.state)) return;
+  if (current.deliveryRetry) {
+    odysseyCreationIntents.set(sessionId, {...current, state:'syncing', deliveryError:undefined});
+    odysseyAdmitBoardDelivery(sessionId, current.request, current.deliveryRetry.startedAt);
+    odysseyCreationEmit(sessionId);
+    return;
+  }
   const detail = { sessionId, request: current.request, handled: false };
   window.dispatchEvent(new CustomEvent('odyssey:creation-retry', { detail }));
   if (!detail.handled) { odysseyCreationIntents.set(sessionId, current); odysseyCreationEmit(sessionId); }
@@ -140,8 +178,8 @@ function ResearchCreationPlanningCard({ intent, sessionId, viewport, canvasSize,
   }, [canvasSize?.width, canvasSize?.height, canvasSize?.availableWidth, canvasSize?.visibleHeight]);
   const planning = intent.state === 'planning', stopping = intent.state === 'stopping';
   const label = intent.kind === 'workbench' ? '创建工作台' : intent.types[0] || '组件规划';
-  const phase = intent.state === 'failed' ? intent.inferredEnd ? '本轮执行已结束，组件暂未显示' : '生成失败 · 未形成组件计划' : intent.state === 'stopped' ? '已停止生成' : intent.state === 'dealing' ? '正在展开组件' : stopping ? '正在停止生成…' : '正在准备内容';
-  const detail = intent.state === 'failed' ? intent.inferredEnd ? '可查看右侧对话，生成结果会继续同步' : '本次未生成组件；原因见右侧对话' : intent.state === 'stopped' ? '已保留需求，可以重新生成' : intent.state === 'dealing' ? intent.panelCount + ' 张组件卡片正在排入画布' : intent.sawRunning ? '正在整理内容与布局，组件会陆续出现在画布上' : '正在准备，请稍候';
+  const phase = intent.state === 'syncing' ? '正在将生成结果放到看板' : intent.state === 'failed' ? intent.deliveryError ? '网页暂未放到看板' : intent.inferredEnd ? '本轮执行已结束，组件暂未显示' : '生成失败 · 未形成组件计划' : intent.state === 'stopped' ? '已停止生成' : intent.state === 'dealing' ? '正在展开组件' : stopping ? '正在停止生成…' : '正在准备内容';
+  const detail = intent.state === 'syncing' ? '正在核对本轮已写入的项目文件' : intent.state === 'failed' ? intent.deliveryError || (intent.inferredEnd ? '可查看右侧对话，生成结果会继续同步' : '本次未生成组件；原因见右侧对话') : intent.state === 'stopped' ? '已保留需求，可以重新生成' : intent.state === 'dealing' ? intent.panelCount + ' 张组件卡片正在排入画布' : intent.sawRunning ? '正在整理内容与布局，组件会陆续出现在画布上' : '正在准备，请稍候';
   const node = { id: intent.id, kind: 'generated-container', title: label, generationStatus: intent.state === 'failed' ? 'failed' : intent.state === 'stopped' ? 'cancelled' : 'running', generationTaskId: intent.id, generationStartedAt: intent.startedAt, generationCompletedAt: intent.completedAt, generationError: detail, generationEvents: [] };
   return react_jsx_runtime.jsxs('section', { className: 'odyssey-creation-planning-card', 'data-research-compact-chrome': '', 'data-research-creation-planning': intent.state,
     'data-research-node-id': occupied ? intent.id : undefined, 'data-workbench-drag-handle': occupied ? intent.id : undefined,
@@ -260,6 +298,9 @@ export function patchResearchCreationProgress(source) {
   source = source.replace(
     "node.kind === 'generated-container' && (node.generationStartedAt ?? 0) >= creationIntent.startedAt - 1000",
     "node.kind === 'generated-container' && !node.workbenchId && (node.generationStartedAt ?? 0) >= creationIntent.startedAt - 1000")
+  source = source.replace(
+    "if (!creationIntent || creationIntent.state !== 'planning') return;\n              if (snapshot.artifacts.some(node => node.kind === 'generated-container' && !node.workbenchId && (node.generationStartedAt ?? 0) >= creationIntent.startedAt - 1000)) odysseyCreationFinish(sessionId);",
+    "if (creationHasNativeArtifact(creationIntent, snapshot.artifacts)) odysseyCreationFinish(sessionId);")
   const pointerGuard = "if (event.target?.closest?.('[data-research-create-popover],[data-research-voice-feedback]')) return;"
   if (!source.includes('/* ODYSSEY_CREATION_POINTER_ISOLATION */')) source = replaceAfter(source, 'function ResearchCanvas({', pointerGuard,
     "/* ODYSSEY_CREATION_POINTER_ISOLATION */ if (event.target?.closest?.('[data-research-create-popover],[data-research-voice-feedback],[data-research-creation-planning]')) return;")
@@ -400,5 +441,26 @@ export function patchResearchCreationProgress(source) {
     const pattern = new RegExp('/\\* ' + marker + ' \\*/\\n[^\\n]+')
     source = pattern.test(source) ? source.replace(pattern, style) : source + '\n' + style + '\n'
   }
-  return patchResearchSendAdmission(patchComposerSubmitPolicy(patchResearchPlanningFeedback(source,classifyResearchCreationRequest)))
+  source = patchResearchSendAdmission(patchComposerSubmitPolicy(patchResearchPlanningFeedback(source,classifyResearchCreationRequest)))
+  const send = 'const admittedSend = await this.conversation().sendSession(attempt.session, prompt, attempt.imageIds, attempt.mode);'
+  if (!source.includes('const odysseyBoardSendAt =')) source = replaceOnce(source, send,
+    'const odysseyBoardSendAt = Date.now();\n          ' + send + '\n          if (researchActive && !admissionBusy && !admittedSend?.busyBeforePrompt) odysseyAdmitBoardDelivery(session.sessionId, attempt.draftState.draft, odysseyBoardSendAt);')
+  if (!source.includes('const polledDelivery =')) {
+    const list = "const response = await fetch('/sherlock/research-workbenches/list', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ parentSessionId: sessionId }), signal: controller.signal });"
+    source = replaceOnce(source, list, 'const polledDelivery = odysseyBoardDelivery(sessionId);\n                        ' + list.replace('parentSessionId: sessionId }','parentSessionId: sessionId, delivery: polledDelivery }'))
+    source = replaceOnce(source, 'const { plans } = await response.json();', `const { plans, deliveryStatus, detail: deliveryError } = await response.json();
+                        if (!active) return;
+                        if (polledDelivery && polledDelivery.startedAt === odysseyBoardDelivery(sessionId)?.startedAt) {
+                            if (deliveryStatus === 'stopped') { odysseyCreationFinish(sessionId,'stopped'); odysseyForgetBoardDelivery(sessionId); }
+                            if (deliveryStatus === 'mounted') { odysseyCreationFinish(sessionId); odysseyForgetBoardDelivery(sessionId); }
+                            if (deliveryStatus === 'unavailable' || deliveryStatus === 'error') {
+                                const intent = odysseyCreationIntents.get(sessionId);
+                                if (intent && deliveryStatus === 'error') {
+                                    odysseyCreationIntents.set(sessionId,{...intent,deliveryError:deliveryError || '上板未完成，可以重试。',deliveryRetry:polledDelivery});
+                                }
+                                odysseyCreationFinish(sessionId, true); odysseyForgetBoardDelivery(sessionId);
+                            }
+                        }`)
+  }
+  return source
 }

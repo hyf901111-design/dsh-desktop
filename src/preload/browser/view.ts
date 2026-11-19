@@ -171,6 +171,7 @@ export class BrowserAppView {
   if(panel==='tab-list')this.positionTabList();if(panel==='bookmarks'){this.bookmarkAnchorBar=!!this.returningFocus?.closest('.eb-bookmarks-bar');this.positionBookmarks()}
   if(panel==='recent-downloads')this.positionDownloads()
   this.panelPresented=true;this.panelOpenedAt=this.document.defaultView!.performance.now();this.suggestions=false;this.query='';this.panel=panel;this.render();this.schedule()
+  if(panel==='recent-downloads')await this.bridge.request('check-downloads')
   if(panel==='print'){try{this.image=await this.bridge.request('capture',{id:this.tab()?.id});if(this.panel===panel)this.render()}catch{}}
   if(this.panel!==panel||!this.panelPresented)return
   if(panel==='zoom')this.focusZoom()
@@ -286,11 +287,11 @@ export class BrowserAppView {
   const records=rows.map(row=>{
    const {active,percent,detail,commands}=downloadDetails(row)
    const id=esc(row.id),name=esc(row.name||'未命名文件')
-   const filename=row.state==='completed'
+   const filename=row.state==='completed'&&!row.fileMissing
     ? `<button type="button" class="eb-recent-download-name" data-action="download-open" data-id="${id}" title="${name}" aria-label="打开 ${name}">${name}</button>`
     : `<strong class="eb-recent-download-name" title="${name}">${name}</strong>`
    const actions=commands.filter(([action])=>action!=='open').map(([action,label,glyph])=>
-    `<button type="button" class="eb-icon-button" data-action="download-${action}" data-id="${id}" title="${label}" aria-label="${label} ${name}">${icon(glyph)}</button>`
+    `<button type="button" class="eb-icon-button" data-action="download-${action}" data-id="${id}" title="${action==='material'?'复制到当前项目的「浏览器工作材料」文件夹':label}" aria-label="${label} ${name}">${icon(glyph)}${action==='material'?'<span>加入工作材料</span>':''}</button>`
    ).join('')
    const bar=active?`<div class="eb-recent-download-progress" role="progressbar" aria-label="${name}下载进度" ${percent===undefined?'':`aria-valuenow="${percent}"`}><span style="width:${percent??25}%"></span></div>`:''
    return `<article class="eb-recent-download-row" data-state="${row.state}">${icon('file')}<div class="eb-recent-download-copy">
@@ -323,6 +324,7 @@ export class BrowserAppView {
  }
  private activityPage(tab:BrowserTab){
   let page=this.activityPages.get(tab.id);if(page)return page
+  if(tab.page==='downloads')void this.bridge.request('check-downloads').catch(error=>this.toast(String(error),true))
   page=new BrowserActivityPage(this.document,tab.page!,{request:async(method,input={})=>{if(method==='download'&&input.action==='material'&&!this.sessionId)throw Error('请先选择一个对话，再加入工作材料。');return this.run(method,method==='download'?{...input,sessionId:this.sessionId}:input)},openUrl:url=>{this.startSection='';this.dismiss();this.settings=false;this.managingBookmarks=false;this.image='';void this.run('new',{url}).catch(error=>this.toast(error.message,true))},clearHistory:()=>{void this.show('clear').catch(error=>this.toast(error.message,true))},notify:(message,error)=>this.toast(message,error)});this.activityPages.set(tab.id,page);return page
  }
  private async openInternal(page:'history'|'downloads'){this.managingBookmarks=false;this.settings=false;this.startSection='';this.findOpen=false;this.dismiss();this.image='';await this.run('internal-page',{page});const tab=this.tab();if(tab?.page)this.activityPage(tab).focusSearch()}
@@ -373,8 +375,9 @@ export class BrowserAppView {
    if(!id||this.downloadActionsInFlight.has(id))return
    this.downloadActionsInFlight.add(id)
    try{
-    await this.run('download',{id,action:action.slice(9),sessionId:this.sessionId})
-    if(action==='download-material')this.toast('下载文件已加入工作材料')
+    const result=await this.run('download',{id,action:action.slice(9),sessionId:this.sessionId})
+    if(result?.notice)this.toast(result.notice,!!result.unavailable)
+    else if(action==='download-material')this.toast('已复制到当前项目的「浏览器工作材料」文件夹')
    }finally{this.downloadActionsInFlight.delete(id)}
    return
   }
