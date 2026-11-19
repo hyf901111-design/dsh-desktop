@@ -9,27 +9,50 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "展开侧栏自适应显示已固定的应用图标",
+        "featureName": "展开侧栏快捷管理与标题统一并修复图像页签",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12",
-        "tipCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
+        "baseCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
+        "tipCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
         "commits": [
           {
-            "commit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
+            "commit": "077dbe99c1f9fbdc54671ae15363e84d1e23b50d",
             "parents": [
-              "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12"
+              "a48dd078872f6adb2014e705a3793e2a2ad7f032"
             ],
-            "subject": "展开侧栏按宽度显示已固定图标并将溢出项移入更多"
+            "subject": "修复切回图像时重复添加任务页签"
+          },
+          {
+            "commit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+            "parents": [
+              "077dbe99c1f9fbdc54671ae15363e84d1e23b50d"
+            ],
+            "subject": "完善展开侧栏快捷管理并统一气泡和应用标题"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
+          },
           {
             "status": "M",
             "path": "scripts/lib/sidebar-new-note.mjs"
           },
           {
             "status": "M",
+            "path": "src/main/context-menu-target.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/style.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/integrations/view.ts"
           },
           {
             "status": "M",
@@ -41,11 +64,39 @@
           },
           {
             "status": "M",
+            "path": "src/preload/scheduled/style.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/scheduled/view.ts"
           },
           {
             "status": "M",
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/navigation-shortcuts.ts"
+          },
+          {
+            "status": "M",
             "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/navigation-shortcuts.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
           },
           {
             "status": "M",
@@ -61,8 +112,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
-            "completedAt": "2026-11-19T06:33:52.855Z",
+            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+            "completedAt": "2026-11-19T07:11:27.102Z",
             "timeoutMs": 60000
           },
           {
@@ -73,29 +124,13 @@
               "test/navigation-shortcuts.test.ts",
               "test/context-menu-home.test.js",
               "test/context-menu-target.test.js",
-              "test/context-menu.test.ts",
               "test/browser-sidebar-entry.test.ts",
               "test/home-guide-entry-native.test.ts"
             ],
             "outcome": "passed",
-            "summary": "95 项导航、原生菜单和入口检查通过",
-            "verifiedCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
-            "completedAt": "2026-11-19T06:33:52.855Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-task-view.test.ts",
-              "-t",
-              "offers pin actions|keeps More last|puts the real new-note action"
-            ],
-            "outcome": "passed",
-            "summary": "3 项侧栏菜单与置顶检查通过",
-            "verifiedCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
-            "completedAt": "2026-11-19T06:33:52.855Z",
+            "summary": "87 项侧栏配置、菜单和入口检查通过",
+            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+            "completedAt": "2026-11-19T07:11:27.102Z",
             "timeoutMs": 60000
           },
           {
@@ -111,9 +146,9 @@
               "shares editable shortcuts"
             ],
             "outcome": "passed",
-            "summary": "真实 Chromium 验证编辑时显示六个位置，退出后空位折叠，以及图标尺寸与 36px 点击范围，验证展开时依据宽度将溢出项送入更多菜单",
-            "verifiedCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
-            "completedAt": "2026-11-19T06:33:52.855Z",
+            "summary": "Chromium 验证两种侧栏形态、宽度变化、快捷管理和标题图标",
+            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+            "completedAt": "2026-11-19T07:11:27.102Z",
             "timeoutMs": 60000
           },
           {
@@ -126,82 +161,55 @@
               "opens Home directly|renders distinct New Chat"
             ],
             "outcome": "passed",
-            "summary": "原生侧栏展开及收起状态的主页、对话、研究路由通过",
-            "verifiedCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
-            "completedAt": "2026-11-19T06:33:52.855Z",
+            "summary": "2 项原生主页、对话和研究入口检查通过",
+            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+            "completedAt": "2026-11-19T07:11:27.102Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/scheduled-task-view.test.ts",
+              "test/integration-view.test.ts",
+              "-t",
+              "offers pin actions|keeps More last|puts the real new-note action|provides only scheduled tasks in More|follows native sidebar resizing|renders compact text rows"
+            ],
+            "outcome": "passed",
+            "summary": "6 项更多菜单、定时任务及插件标题检查通过",
+            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+            "completedAt": "2026-11-19T07:11:27.102Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/image-factory-native.test.js",
+              "test/image-factory-canvas-workspace.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "26 项图像原生会话和画布检查通过，包含反复切回、旧页签恢复和主动新建",
+            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+            "completedAt": "2026-11-19T07:11:27.102Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际 Chromium 检查 190px 和 300px 宽侧栏的应用顺序、可见项、更多菜单、自动收起溢出项、六槽编辑状态与拖放。"
+          "summary": "实际 Chromium 检查固定对话、按宽度溢出、编辑与置顶、统一悬浮气泡、原生会话标题图标。已安排原生桌面构建验证。"
         },
         "acceptanceCriteria": [
-          "展开侧栏直接显示固定应用图标且顺序一致。",
-          "按实际可用宽度隐藏无法容纳的应用，并在更多里保留入口。",
-          "更多菜单在展开侧栏不显示置顶按钮。"
+          "展开侧栏首位固定对话，插槽按宽度提供，溢出进入更多。",
+          "侧栏快捷入口使用同一提示样式，定时任务和插件与会话标题显示对应图标。",
+          "反复切换到图像复用当前任务页签，可主动新增。"
         ],
         "risks": [
-          "旧顶栏偏好继续保存在原配置，侧栏扩容沿用已有顺序。",
-          "旧基线可复现 sidebar-new-session-actions 的研究页签断言和 VM 缺失 setInterval，本次侧栏入口两项均通过。"
+          "沿用旧用户快捷配置和已打开图像任务，未使用新默认覆盖已有偏好。"
         ],
-        "generatedAt": "2026-11-19T06:33:52.855Z"
-      },
-      "merged": {
-        "mergeCommit": "77b029ec9b4b8920c5560353390da9fe2fc76db8",
-        "verificationCommit": "77b029ec9b4b8920c5560353390da9fe2fc76db8",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "77b029ec9b4b8920c5560353390da9fe2fc76db8",
-            "completedAt": "2026-11-19T06:33:57.305Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "77b029ec9b4b8920c5560353390da9fe2fc76db8",
-            "completedAt": "2026-11-19T06:33:57.305Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "77b029ec9b4b8920c5560353390da9fe2fc76db8",
-            "completedAt": "2026-11-19T06:33:57.305Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T06:33:57.305Z"
+        "generatedAt": "2026-11-19T07:11:27.102Z"
       }
     }
   ],
