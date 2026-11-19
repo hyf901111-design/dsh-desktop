@@ -182,6 +182,48 @@ it('restores the selected Images tab when returning from another app', async () 
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
+it('keeps the newly selected workspace when Images resumes an older project tab', async () => {
+  const projects = new Map([['native-session', 'original-workspace'], ['new-workspace-chat', 'new-workspace']])
+  let pendingProject
+  const f = fixture(undefined, undefined, (id = f.sessionsState.current) => id == null ? pendingProject : projects.get(id))
+  let tasks
+  const showImages = () => {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { entry: true })
+  }
+  try {
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    showImages()
+    expect(tasks.active).toBe('native-session')
+
+    f.doc.body.dataset.workspaceSurface = 'browser'
+    f.sessionsState.byId['new-workspace-chat'] = { blank: true }
+    f.sessionCatalog.open('new-workspace-chat')
+    showImages()
+    expect(f.sessionsState.current).toBe('new-workspace-chat')
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual(['native-session', 'new-workspace-chat'])
+
+    f.doc.body.dataset.workspaceSurface = 'notes'
+    projects.set('new-workspace-note', 'new-workspace')
+    f.sessionsState.byId['new-workspace-note'] = { blank: true }
+    f.sessionCatalog.open('new-workspace-note')
+    showImages()
+    expect(f.sessionsState.current).toBe('new-workspace-chat')
+    expect(tasks.tabs).toHaveLength(2)
+
+    f.doc.body.dataset.workspaceSurface = 'browser'
+    pendingProject = 'another-workspace'
+    f.sessionCatalog.clear()
+    showImages()
+    expect(f.sessionsState.current).toBeUndefined()
+    expect(tasks.active).toBeNull()
+    expect(f.sessionCatalog.create).not.toHaveBeenCalled()
+  } finally {
+    f.binding.dispose()
+    await f.win.happyDOM.abort()
+  }
+})
+
 it('shows a new tab while the Host is creating its session and rolls back on failure', async () => {
   const storage = { read: async () => ({ epoch: 4, tabs: [] }), write: vi.fn(async () => {}) }
   const f = fixture(storage)

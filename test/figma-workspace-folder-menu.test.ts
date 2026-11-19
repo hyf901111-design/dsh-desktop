@@ -9,6 +9,9 @@ const patched = patchFigmaWorkspaceMenus(raw)
 
 it('commits the explicit native Chat intent for directory New Chat and rejects a drifted or duplicated hook',()=>{
  expect(patched).toContain('ctx.workspaces.startSession(workspaceId, Object.assign((sessionId) => {')
+ const dismiss = 'document.dispatchEvent(new CustomEvent("sherlock:sidebar-home-opened"));\n'
+ expect(patched).toContain(dismiss + 'window.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat"')
+ expect(patchFigmaWorkspaceMenus(patched.replace(dismiss, ''))).toBe(patched)
  expect(patchFigmaWorkspaceMenus(patched)).toBe(patched)
  expect(()=>patchFigmaWorkspaceMenus(patched+'\n/* odyssey:workspace-new-chat-intent:v1 */')).toThrow(/intent hook drifted/)
  expect(()=>patchFigmaWorkspaceMenus(patched.replace('detail: { sessionId }','detail: { wrongId: sessionId }'))).toThrow(/intent hook drifted/)

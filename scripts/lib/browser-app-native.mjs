@@ -215,9 +215,14 @@ export function patchBrowserAppNative(input){
 ctx.effect(()=>{
  const factory=(${installImageFactoryContext.toString()})({
    sessions,removeProvisionalReference:deleteProvisionalResearchReferenceOccurrence,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
-   getTaskWorkspace:()=>{
-     const state=workspaces.list.getSnapshot(), current=sessions.list.getSnapshot().current;
-     if(current!==undefined&&state.phase==='ready')return state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??null;
+   getTaskWorkspace:(scope=sessions.list.getSnapshot().current)=>{
+     const state=workspaces.list.getSnapshot();
+     if(scope!==null&&scope!==undefined){
+       const cwd=sessions.list.getSnapshot().byId[scope]?.cwd;
+       const workspace=state.items.find(item=>item.sessionIds.includes(scope)) ??
+         (cwd ? state.items.find(item=>item.path===cwd) : undefined);
+       return workspace?.workspaceId ?? (state.phase==='ready'?null:undefined);
+     }
      const selected=eworkPendingConversation?.getSnapshot().workspaceId;
      return selected===undefined?state.recentWorkspaceId:selected;
    },

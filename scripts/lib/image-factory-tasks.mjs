@@ -64,11 +64,14 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   function reconcile(scope, reopen, entry) {
     const known = tabs.find(tab => tab.scope === scope)
     const closedTab = closed.find(tab => tab.scope === scope)
+    const project = entry ? getWorkspace?.() : undefined
+    const canResume = tab => canOpen(tab) && (!entry || tab.scope !== null && tab.scope === scope ||
+      project !== undefined && getWorkspace(tab.scope ?? draftSession ?? null) === project)
     // Native workspace sessions can arrive after the app has selected its tab.
     // Only an explicit canvas request can introduce another session at that point.
     if (!reopen && (entry || (scope !== null && !known && !closedTab))) {
-      const previous = tabs.find(tab => tab.scope === active && canOpen(tab)) ??
-        (entry ? (known && canOpen(known) ? known : tabs.findLast(canOpen)) : undefined)
+      const previous = tabs.find(tab => tab.scope === active && canResume(tab)) ??
+        (entry ? (known && canResume(known) ? known : tabs.findLast(canResume)) : undefined)
       if (previous && (previous.scope !== scope ||
           (scope === null && sessions.list.getSnapshot().current !== draftSession))) {
         select(previous.scope, false)
@@ -80,13 +83,17 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     // only when Images is explicitly entered.
     const home = scope === null && active !== null && sessions.list.getSnapshot().current === undefined
     if (skipClosed || home) {
-      const available = tabs.filter(tab => canOpen(tab) && (tab.scope !== null || skipClosed))
+      const available = tabs.filter(tab => canResume(tab) && (tab.scope !== null || skipClosed))
       const next = available.find(tab => tab.scope === active) ?? available.at(-1)
       if (next) {
         if (skipClosed || entry) select(next.scope, false)
         return next.scope
       }
       if (skipClosed) {
+        if (entry && scope !== null && project !== undefined) {
+          if (!openToken) void action({ kind: 'new' })
+          return undefined
+        }
         if (scope !== null) {
           draftSession = undefined
           sessions.clear()

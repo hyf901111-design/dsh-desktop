@@ -164,7 +164,7 @@ async function researchRuntimeFixture(options: {
 
 const flushResearchEffects = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
-async function newNoteFixture(){
+async function newNoteFixture(pendingWorkspace?: string | null){
  const w=new Window({url:'https://sherlock.local/'});installBrowserGlobals(w);vi.stubGlobal('CustomEvent',w.CustomEvent)
  let sequence=0
  const api:any={
@@ -180,7 +180,11 @@ async function newNoteFixture(){
  const conversation=await loadClientBundle('dsh-client-ui-conversation',w,['createChatStore'],undefined,{'@deepseek-ai/dsh-client-runtime/client':native})
  const chatStore=(conversation.__testcreateChatStore as any)()
  const shell={snapshot:{draft:'原有完整要求😀',draftRev:4,imageIds:['existing-image'],occurrences:[{id:1,source:'skill',offset:2,ref:'original'}]}}
- const stop=installSidebarNewNote({sessions,workspaces,chatStore,inputHub:{},getInput:()=>shell})
+ const stop=installSidebarNewNote({
+  sessions,workspaces,chatStore,inputHub:{},getInput:()=>shell,
+  getPending:()=>({getSnapshot:()=>({workspaceId:pendingWorkspace})}),
+  standaloneDirectory:async()=>'/standalone/outputs'
+ })
  const action=createSidebarNewNoteAction(w.document as unknown as Document,async()=>{})
  return{w,api,sessions,workspaces,chatStore,shell,action,stop:()=>{action.dispose();stop();w.happyDOM.close();vi.unstubAllGlobals()}}
 }
@@ -231,6 +235,19 @@ describe('normal new Note workspace flow',()=>{
     body:expect.stringContaining(id)
    }))
   } finally { action.dispose(); f.stop() }
+ })
+ it.each([
+  {selected:'active',options:{workspaceId:'active'}},
+  {selected:null,options:{cwd:'/standalone/outputs'}}
+ ])('uses the selected Home workspace $selected when opening Notes',async ({selected,options})=>{
+  const f=await newNoteFixture(selected)
+  try {
+   f.sessions.clear()
+   f.workspaces.list.update((state:any)=>{state.recentWorkspaceId='recent'})
+   await f.action.create()
+   expect(f.api.sessions.create).toHaveBeenLastCalledWith(options)
+   expect(f.chatStore.create(f.sessions.list.getSnapshot().current).getSnapshot().view).toBe('notes')
+  } finally {f.stop()}
  })
  it('uses the real SDK fresh create/current workspace and persists Notes without consuming the old draft',async()=>{
   const f=await newNoteFixture();try{

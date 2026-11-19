@@ -67,7 +67,7 @@ body:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odys
   inset:0 0 auto;
   height:var(--odyssey-workspace-header-height,44px);
   z-index:7;
-  -webkit-app-region:drag;
+  -webkit-app-region:var(--odyssey-popup-window-drag,drag);
   user-select:none;
 }
 /* The empty home has no reading content passing behind its resident header.
