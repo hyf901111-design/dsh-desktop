@@ -103,6 +103,7 @@ it('creates a fresh gallery scope per task, switches the native conversation and
     expect(f.sessionCatalog.create).toHaveBeenCalledWith({ workspaceId: 'test-workspace', sessionId: newId })
     expect(f.setView).toHaveBeenCalledWith(newId)
     expect(f.session.prompt).not.toHaveBeenCalled()
+    f.events('task-title', { scope: newId, title: '第二张海报' })
     f.events('task-action', { kind: 'select', scope: 'native-session' })
     expect(f.sessionsState.current).toBe('native-session')
     expect(scope).toBe('native-session')
@@ -113,7 +114,7 @@ it('creates a fresh gallery scope per task, switches the native conversation and
     expect(scope).toBe('native-session')
     expect(f.sessionsState.byId[newId]).toBeDefined()
     expect(storage.write).toHaveBeenLastCalledWith({
-      epoch: 4, tabs: [{ scope: 'native-session', title: '原始海报' }], closed: [{ scope: newId }]
+      epoch: 4, tabs: [{ scope: 'native-session', title: '原始海报' }], closed: [{ scope: newId, title: '第二张海报' }]
     })
     expect(tasks.canRestore).toBe(true)
     f.events('task-action', { kind: 'restore' })
@@ -122,7 +123,7 @@ it('creates a fresh gallery scope per task, switches the native conversation and
     f.events('task-action', { kind: 'reorder', scope: newId, before: 'native-session' })
     expect(tasks.tabs.map(tab => tab.scope)).toEqual([newId, 'native-session'])
     expect(scope).toBe(newId)
-    expect(storage.write).toHaveBeenLastCalledWith({ epoch: 4, tabs: [{ scope: newId }, { scope: 'native-session', title: '原始海报' }] })
+    expect(storage.write).toHaveBeenLastCalledWith({ epoch: 4, tabs: [{ scope: newId, title: '第二张海报' }, { scope: 'native-session', title: '原始海报' }] })
     f.events('task-action', { kind: 'pin', scope: 'native-session' })
     expect(tasks.tabs.map(tab => [tab.scope, !!tab.pinned])).toEqual([['native-session', true], [newId, false]])
     f.events('task-action', { kind: 'close-others', scope: 'native-session' })
@@ -150,7 +151,8 @@ it('restores the selected Images tab when returning from another app', async () 
     await vi.waitFor(() => expect(tasks).toMatchObject({ active: expect.stringMatching(/^image-task-/), busy: false }))
     const latest = tasks.active
     const selected = 'native-session'
-    const expectedTabs = [{ scope: selected }, { scope: latest }]
+    f.events('task-title', { scope: latest, title: '已编辑图像' })
+    const expectedTabs = [{ scope: selected }, { scope: latest, title: '已编辑图像' }]
     f.events('task-action', { kind: 'select', scope: selected })
 
     for (const [surface, sessionId] of [['browser', 'browsing'], ['notes', 'writing'], ['knowledge', undefined]]) {
@@ -277,6 +279,49 @@ it.each(['new-workspace', null])('drops untouched image tabs on return after sel
     f.events('task-action', { kind: 'select', scope: 'saved-canvas' })
     expect(tasks.active).toBe('saved-canvas')
     expect(canvasScope).toBe('saved-canvas')
+  } finally {
+    f.binding.dispose()
+    await f.win.happyDOM.abort()
+  }
+})
+
+it('keeps only the active empty gallery on load, after creating a tab, and while switching tabs', async () => {
+  const empty = 'native-session'
+  const edited = { scope: 'edited-tab', title: '已编辑的图像' }
+  const stored = [{ scope: empty }, { scope: 'old-empty-tab', pinned: true }, edited]
+  const storage = { read: async () => ({ epoch: 1, tabs: stored }), write: vi.fn(async () => {}) }
+  const f = fixture(storage)
+  let tasks
+  const open = () => {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { entry: true })
+  }
+  try {
+    // An unrelated conversation in the same native session is still an untouched image gallery.
+    for (const { scope } of stored) f.sessionsState.byId[scope] = { blank: scope !== 'old-empty-tab' }
+    f.shells.get(empty).snapshot.draft = ''
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    open()
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: empty, tabs: [{ scope: empty }, edited], busy: false }))
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const previous = tasks.active
+      f.events('task-action', { kind: 'new' })
+      await vi.waitFor(() => expect(tasks).toMatchObject({ busy: false, active: expect.not.stringMatching(previous) }))
+      expect(tasks.tabs).toEqual([edited, { scope: tasks.active }])
+      expect(tasks.canRestore).toBe(false)
+    }
+    f.events('task-action', { kind: 'select', scope: edited.scope })
+    expect(tasks).toMatchObject({ active: edited.scope, tabs: [edited] })
+    expect(storage.write.mock.lastCall[0].tabs).toEqual([edited])
+
+    f.events('task-action', { kind: 'new' })
+    await vi.waitFor(() => expect(tasks).toMatchObject({ busy: false, active: expect.stringMatching(/^image-task-/) }))
+    f.doc.body.dataset.workspaceSurface = 'browser'
+    f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change'))
+    expect(storage.write.mock.lastCall[0].tabs).toEqual([edited])
+    open()
+    expect(tasks).toMatchObject({ active: edited.scope, tabs: [edited] })
   } finally {
     f.binding.dispose()
     await f.win.happyDOM.abort()
