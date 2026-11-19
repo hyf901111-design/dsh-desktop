@@ -6,6 +6,14 @@ body .uV2eYG_card, body[data-ds-dark-theme] .uV2eYG_card {
   backdrop-filter:var(--odyssey-composer-backdrop,none)!important; -webkit-backdrop-filter:var(--odyssey-composer-backdrop,none)!important;
   box-shadow:none!important; border:0; border-radius:10.5px;
 }
+body .sRp_composer .uV2eYG_card {
+  --odyssey-composer-fill:#fff;
+  box-shadow:inset 0 0 0 1px var(--odyssey-reading-border)!important;
+}
+body[data-ds-dark-theme] .sRp_composer .uV2eYG_card { --odyssey-composer-fill:#363636; }
+body .sRp_composer .uV2eYG_input::placeholder {
+  color:color-mix(in srgb,var(--odyssey-muted) 85%,var(--odyssey-text));
+}
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_card {
   min-height:126px; max-height:min(368px,50vh); padding:0; gap:0;
 }
