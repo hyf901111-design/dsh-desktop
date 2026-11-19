@@ -277,9 +277,23 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     if(focus)window.requestAnimationFrame(()=>subRef.current?.querySelector('button:not(:disabled)')?.focus())
   }
   react.useEffect(()=>{
-    const outside=e=>{if(!ref.current?.contains(e.target)&&!subRef.current?.contains(e.target)&&!e.target?.closest?.('[data-workbench-more]'))onClose()}
+    const outside=e=>{
+      const path=e.composedPath()
+      if(path.includes(ref.current)||path.includes(subRef.current)||path.some(el=>el?.hasAttribute?.('data-workbench-more')))return
+      onClose()
+    }
+    // Frame events live in their own document. Moving focus back to the trigger on
+    // open also makes the next click detectable when the same frame had focus.
+    card()?.querySelector('[data-workbench-more]')?.focus({preventScroll:true})
+    let focusTimer
+    const frameFocus=()=>{clearTimeout(focusTimer);focusTimer=setTimeout(()=>{if(document.activeElement?.tagName==='IFRAME')onClose()},0)}
+    const framePress=e=>{
+      if(e.data?.type==='sherlock-content-pointer'&&Array.from(document.querySelectorAll('iframe[data-research-html-artifact],iframe[data-research-workbench-webpage]')).some(frame=>frame.contentWindow===e.source))onClose()
+    }
     const key=e=>{if(e.key==='Escape'){e.stopPropagation();onClose()}}
     const scroll=e=>{const scroller=e.target;if(scroller===window||scroller===document||scroller===document.documentElement||scroller===document.body||scroller===card()?.closest('[data-research-canvas]'))onClose()}
+    window.addEventListener('blur',frameFocus)
+    window.addEventListener('message',framePress)
     document.addEventListener('pointerdown',outside,true)
     document.addEventListener('keydown',key,true)
     document.addEventListener('scroll',scroll,true)
@@ -287,6 +301,9 @@ export function WorkbenchMenu({target,workspace,readOnly,onClose,onDerived,onLeg
     window.addEventListener('resize',scroll)
     return()=>{
       cancelLeave()
+      clearTimeout(focusTimer)
+      window.removeEventListener('blur',frameFocus)
+      window.removeEventListener('message',framePress)
       document.removeEventListener('pointerdown',outside,true)
       document.removeEventListener('keydown',key,true)
       document.removeEventListener('scroll',scroll,true)

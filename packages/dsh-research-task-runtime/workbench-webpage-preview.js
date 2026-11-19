@@ -15,6 +15,10 @@ const roles = {
 function installWebpagePreview(validMessage, aliases) {
   if (parent === window || !document.body) return
   const root = document.documentElement
+  addEventListener('pointerdown', event => {
+    if (event.isTrusted && event.button === 0)
+      parent.postMessage({type:'sherlock-content-pointer',metaKey:event.metaKey,shiftKey:event.shiftKey}, '*')
+  }, true)
   const authored = getComputedStyle(root)
   const known = new Map()
   function rgb(literal) {

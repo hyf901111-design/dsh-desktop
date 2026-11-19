@@ -70,6 +70,30 @@ async function open(spec, width=970) {
   return {page, card, panel:card.getByRole('tabpanel'), tabs:card.getByRole('tab'), errors}
 }
 
+it('closes the component menu and export submenu on the first click inside a separately focused frame',async()=>{
+  const {page,card}=await open(commentary)
+  try {
+    await page.evaluate(()=>{
+      const frame=document.createElement('iframe')
+      frame.sandbox='allow-scripts'
+      frame.srcdoc='<button onclick="this.textContent=Number(this.textContent)+1">0</button>'
+      frame.style.cssText='position:fixed;left:0;bottom:0;width:120px;height:40px;z-index:2'
+      document.body.append(frame)
+    })
+    const button=page.frameLocator('iframe[sandbox="allow-scripts"]').getByRole('button')
+    const menu=page.getByRole('menu',{name:'组件更多操作',exact:true})
+    await button.click()
+    for(const clicks of ['2','3']){
+      await card.locator('[data-workbench-more]').click()
+      await menu.getByRole('menuitem',{name:'导出'}).hover()
+      await page.getByRole('menuitem',{name:'SVG',exact:true}).waitFor()
+      await button.click()
+      await expect.poll(()=>menu.count()).toBe(0)
+      expect(await button.textContent()).toBe(clicks)
+    }
+  } finally {await page.close()}
+})
+
 it.each(['numbered','field label'])('opens %s inline research headings as tabs and retains each explanation', async style => {
   const titles=['宏观与产业基本面','价格结构与信号','资金与行为','风险与执行']
   const spec=markdown('研究框架',['系统性研究一个期货品种时，按四层展开：',

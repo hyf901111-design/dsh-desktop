@@ -26,6 +26,25 @@ const instances=()=> (BrowserWindow as any).instances as any[]
 afterEach(()=>{for(const win of instances())if(!win.isDestroyed())win.destroy();instances().length=0;(screen.getCursorScreenPoint as any).mockReturnValue({x:0,y:0})})
 function fixture(){const parent=new BrowserWindow({}),owner={value:'alice'},allowed={value:true},menu=new NoteNativeMenu({getWindow:()=>parent,owner:()=>owner.value,canRead:()=>allowed.value});return{parent:parent as any,owner,allowed,menu}}
 
+it('dismisses the root and submenu on a press in the owner or its embedded view without consuming the click',async()=>{
+ const parent=new BrowserWindow({}) as any,child=new BrowserWindow({}) as any
+ parent.contentView={children:[{children:[],webContents:child.webContents}]}
+ const emit=vi.fn(),menu=new NoteNativeMenu({getWindow:()=>parent,owner:()=>'alice',canRead:()=>true,dismissOnOwnerPress:true,emit})
+ const item=input().items[0]!,root={...item,id:'export',children:[item]}
+ for(const [index,surface] of [child.webContents,parent.webContents].entries()){
+  menu.sync(input({menuId:'outside-'+index,items:[root],submenu:{parentId:'export',selectedIndex:0}}),'alice')
+  await vi.waitFor(()=>expect(instances().at(-1).showInactive).toHaveBeenCalled())
+  const [panel,sub]=instances().slice(-2),event={preventDefault:vi.fn()}
+  for(const popup of [panel,sub])popup.webContents.emit('before-mouse-event',event,{type:'mouseDown'})
+  surface.emit('before-mouse-event',event,{type:'mouseMove'})
+  expect(panel.destroyed||sub.destroyed).toBe(false)
+  surface.emit('before-mouse-event',event,{type:'mouseDown'})
+  expect(panel.destroyed&&sub.destroyed).toBe(true);expect(event.preventDefault).not.toHaveBeenCalled()
+  expect(emit).toHaveBeenCalledTimes(index+1);expect(emit.mock.lastCall![0].action).toBe('cancel')
+  expect(parent.webContents.listenerCount('before-mouse-event')+child.webContents.listenerCount('before-mouse-event')).toBe(0)
+ }
+})
+
 it('uses macOS native glass without blurring a transparent shadow gutter',async()=>{
  if(process.platform!=='darwin')return
  const {menu}=fixture();menu.sync(input(),'alice');const popup=instances().at(-1)
