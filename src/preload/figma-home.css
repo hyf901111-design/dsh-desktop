@@ -63,6 +63,7 @@ body:has(.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([data-odys
 /* The empty home has no reading content passing behind its resident header.
    Figma 683:27243/27493 keeps that atmosphere continuous to the top edge. */
 body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_header[data-srb-session-header]:not([data-odyssey-subagent-panel] *) { backdrop-filter:none; -webkit-backdrop-filter:none; }
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_header[data-srb-session-header]:not([data-odyssey-subagent-panel] *) .wSkVaW_crumbs { display:none; }
 .wSkVaW_root[data-odyssey-page="home"] .wSkVaW_heroGlow { display:none; }
 .wSkVaW_root[data-odyssey-page="home"]>[data-center-composer-host] {
   box-sizing:border-box;

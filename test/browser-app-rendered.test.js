@@ -496,7 +496,7 @@ it.each([600, 1280])('aligns the browser title with native workspace titles at w
    root.innerHTML = '<header class="wSkVaW_header" data-srb-session-header><div class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><span class="wSkVaW_crumb">工作区标题</span></span></div></header>'
    pane.append(root)
    const header = root.firstElementChild, group = header.firstElementChild, label = group.querySelector('.wSkVaW_crumb')
-   return ['home', 'conversation', 'research', 'notes', 'spreadsheet'].map(mode => {
+   return ['conversation', 'research', 'notes', 'spreadsheet'].map(mode => {
     root.dataset.odysseyPage = mode === 'notes' ? 'conversation' : mode
     header.dataset.odysseyHeaderLayout = root.clientWidth < 650 ? 'narrow' : 'regular'
     if (mode === 'notes') document.body.dataset.workspaceSurface = 'notes'
@@ -603,7 +603,7 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   await page.evaluate(() => {
    const center = document.querySelector('.pI_x6G_centerCol')
    center.insertAdjacentHTML('beforeend', `
-    <div class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header" data-srb-session-header><nav class="wSkVaW_crumbs" style="display:flex;gap:4px;align-items:center"><button id="session-title">新会话</button></nav><div data-srb-tabs style="display:flex;gap:4px">
+    <div class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header" data-srb-session-header><nav class="wSkVaW_crumbs"><button id="session-title">新会话</button></nav><div data-srb-tabs style="display:flex;gap:4px">
      <button data-conversation-view-id="chat">对话</button>
      <button data-conversation-view-id="research">研究</button>
      <button data-conversation-view-id="notes">笔记</button>
@@ -742,7 +742,7 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   expect(await sidebar.locator('[data-empty]:visible').count()).toBe(1)
   expect(await moreY()).toBeGreaterThan(moreBeforeEdit)
   expect(await source.locator('span').evaluate(node => getComputedStyle(node).animationName)).toBe('navigation-shortcut-wiggle')
-  expect(await page.locator('#session-title').isVisible()).toBe(true)
+  expect(await page.locator('#session-title').isVisible()).toBe(false)
   expect(await homeTabs.isVisible()).toBe(false)
   await drag(sidebar.locator('[data-navigation-slot="5"]'), false, page.locator('[data-home-app=plugin]'))
   await page.keyboard.press('Escape')

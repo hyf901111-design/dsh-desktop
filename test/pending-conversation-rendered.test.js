@@ -59,6 +59,7 @@ it.each([true, false])('shows the local work location on home and right composer
     expect(layout.blur).toContain('blur(14px)')
     expect(layout.barOpacity).toBeCloseTo(0.343)
     expect(layout.cardFill).toBe(dark ? 'rgba(0, 0, 0, 0.49)' : 'rgba(255, 255, 255, 0.49)')
+    expect(await page.locator('#app [data-srb-session-header] .wSkVaW_crumbs').isVisible()).toBe(false)
     const headline = page.locator('#app .pXSMma_headline')
     expect(await headline.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m42)).toBe(-10)
    } else {
