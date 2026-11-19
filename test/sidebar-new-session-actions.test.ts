@@ -298,6 +298,17 @@ it('opens Home directly and keeps New Chat and New Research as separate actions'
     home?.dispatchEvent(new w.CustomEvent('sherlock:sidebar-new-research', { bubbles: true }))
     expect(startResearchSession).toHaveBeenCalledOnce()
     expect(startSession).toHaveBeenCalledOnce()
+    await act(async () => root.render(createElement(client.__testSidebarRoot, {
+      collapsed: false, width: 240, t: (key: string) => key, toggleSidebar: vi.fn(),
+      openHome, startSession, startResearchSession, renderSlot: () => null
+    })))
+    const sidebar = w.document.querySelector('[data-dsh-sidebar-root]')!
+    sidebar.dispatchEvent(new w.CustomEvent('sherlock:sidebar-open-home', { bubbles: true }))
+    expect(openHome).toHaveBeenCalledTimes(2)
+    sidebar.dispatchEvent(new w.CustomEvent('sherlock:sidebar-new-chat', { bubbles: true }))
+    sidebar.dispatchEvent(new w.CustomEvent('sherlock:sidebar-new-research', { bubbles: true }))
+    expect(startSession).toHaveBeenCalledTimes(2)
+    expect(startResearchSession).toHaveBeenCalledTimes(2)
   } finally {
     await act(async () => root.unmount())
     w.happyDOM.close()

@@ -580,7 +580,7 @@ it('shares editable shortcuts between the composer and sidebar with global top s
    document.head.append(style)
    document.body.insertAdjacentHTML('beforeend', `
     <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
-     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home>主页</button><span class="st-more-zone"></span></div>
+     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home>主页</button><button data-sidebar-chat-entry>对话</button><button data-sidebar-research-entry>研究</button><span class="st-more-zone"></span></div>
     </aside>
     <nav data-home-app-shortcuts style="position:fixed;inset:auto 240px 130px 480px;z-index:3000">
      <button data-home-app="image-factory"><span class="home-app-shortcut-icon" style="display:block">图像</span></button>
@@ -687,6 +687,38 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   expect(await moreY()).toBe(moreBeforeEdit)
   await page.evaluate(() => { document.querySelector('.eb-root').hidden = false })
   expect(await browserControls.isVisible()).toBe(false)
+  await page.evaluate(() => {
+   document.querySelector('.eb-root').hidden = true
+   const aside = document.querySelector('[data-dsh-sidebar-root]')
+   aside.querySelector('[data-sidebar-home]').hidden = true
+   aside.querySelector('.st-more-zone').remove()
+   aside.dataset.dshSidebarWide = 'true'
+   aside.style.width = '190px'
+   window.scheduledMenuView.surfaceHost = {}
+   window.scheduledMenuView.sidebarActions = {
+    newNote: () => Promise.resolve(),
+    pinnedApps: window.shortcutManager.sidebar,
+    visibleApps: window.shortcutManager.visibleSidebar
+   }
+   window.scheduledMenuView.mount()
+  })
+  const visibleApps = () => sidebar.locator('button:visible').evaluateAll(buttons => buttons.map(button => button.dataset.navigationApp))
+  await expect.poll(visibleApps).toEqual(['browser', 'knowledge', 'note'])
+  expect(await page.locator('[data-sidebar-chat-entry]').isVisible()).toBe(false)
+  expect(await page.locator('[data-sidebar-research-entry]').isVisible()).toBe(false)
+  const more = page.getByRole('button', { name: '更多', exact: true })
+  await more.click()
+  const moreMenu = page.locator('[data-sidebar-more]')
+  await moreMenu.waitFor()
+  const overflow = await moreMenu.getByRole('menuitem').allTextContents()
+  expect(overflow).toEqual(['主页', '对话', '研究', '图像', '插件', '定时任务'])
+  expect(await moreMenu.locator('[data-st-menu-pin]').count()).toBe(0)
+  await page.evaluate(() => { document.querySelector('[data-dsh-sidebar-root]').style.width = '300px' })
+  await expect.poll(visibleApps).toEqual(['browser', 'knowledge', 'note', 'scheduled', 'plugin'])
+  await moreMenu.waitFor({ state: 'detached' })
+  await more.click()
+  await moreMenu.waitFor()
+  expect(await moreMenu.getByRole('menuitem').allTextContents()).toEqual(['主页', '对话', '研究', '图像'])
   expect(errors).toEqual([])
  } finally { await page.close() }
 })

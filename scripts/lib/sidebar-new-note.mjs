@@ -135,17 +135,18 @@ export function patchSidebarNewNoteShell(input){
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));`],
     [root,'\t\t\tconst newSessionControls = '+controls+';\n'+`
     react.useEffect(()=>{
-      if(wide)return;
       const rail=column.current;
+      rail?.addEventListener('sherlock:sidebar-open-home',openHome);
       const openChat=()=>startSession();
       const openResearch=()=>startResearchSession();
       rail?.addEventListener('sherlock:sidebar-new-chat',openChat);
       rail?.addEventListener('sherlock:sidebar-new-research',openResearch);
       return()=>{
+        rail?.removeEventListener('sherlock:sidebar-open-home',openHome);
         rail?.removeEventListener('sherlock:sidebar-new-chat',openChat);
         rail?.removeEventListener('sherlock:sidebar-new-research',openResearch);
       };
-    },[wide,startSession,startResearchSession]);
+    },[openHome,startSession,startResearchSession]);
 `+root],
     [foot,'!wide && '+home+',\n'+foot],
     ['"session.new": "新对话",','"session.new": "对话",'],

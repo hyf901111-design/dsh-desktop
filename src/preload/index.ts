@@ -469,6 +469,7 @@ function initializeUi(): void {
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote: () => openSidebarDocument('note'), newSpreadsheet: () => openSidebarDocument('spreadsheet'),
     pinnedApps: () => navigationShortcuts?.sidebar() ?? defaultNavigationShortcuts.side,
+    visibleApps: () => navigationShortcuts?.visibleSidebar() ?? [],
     pinApp: app => navigationShortcuts?.pinSidebar(app)})
   scheduledView.mount()
   const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
