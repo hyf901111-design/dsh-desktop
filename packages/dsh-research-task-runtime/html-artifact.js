@@ -1,3 +1,4 @@
+import {researchFrameWheelMessage} from './workbench-frame-wheel.js'
 import {NOTE_TOOLBAR_GEOMETRY_CSS} from './note-toolbar-style.js'
 import {installWorkbenchStructureReading} from './workbench-structure-reading.js'
 import { installWorkbenchChartMotion } from './workbench-chart-motion.js'
@@ -728,29 +729,13 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
   document.addEventListener('click', event => {
     if (workbench && (event.shiftKey || event.metaKey) && !event.target?.closest?.('input,textarea,[contenteditable=true]')) { event.preventDefault(); event.stopImmediatePropagation() }
   }, true)
-  const canScrollWheel = (target, deltaX, deltaY) => {
-    const vertical = Math.abs(deltaY) >= Math.abs(deltaX)
-    const axis = vertical ? 'overflowY' : 'overflowX'
-    const delta = vertical ? deltaY : deltaX
-    for (let e = target?.nodeType === 1 ? target : target?.parentElement; e; e = e.parentElement) {
-      const root = e === document.scrollingElement
-      let overflow = getComputedStyle(e)[axis]
-      // Root dimensions can report overflow even when CSS disables user scrolling.
-      if (root && overflow === 'visible' && e === document.documentElement && document.body) overflow = getComputedStyle(document.body)[axis]
-      if (!delta || !(/^(auto|scroll|overlay)$/.test(overflow) || root && overflow === 'visible')) continue
-      const [size, view, position] = vertical ? [e.scrollHeight, e.clientHeight, e.scrollTop] : [e.scrollWidth, e.clientWidth, e.scrollLeft]
-      if (size > view + 1 && (delta > 0 ? position < size - view - 1 : position > 1)) return true
-    }
-    return false
-  }
+  const frameWheel = ${researchFrameWheelMessage.toString()}
   document.addEventListener('wheel', event => {
-    if (!event.isTrusted) return
-    if (workbenchSelected !== false && !event.metaKey && !event.ctrlKey && canScrollWheel(event.target, event.deltaX, event.deltaY)) return
+    const message = frameWheel(event, workbenchSelected !== false)
+    if (!message) return
     event.preventDefault()
     event.stopImmediatePropagation()
-    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? document.documentElement.clientHeight : 1
-    const coordinates = { x: Math.max(0, Math.min(1, event.clientX / Math.max(1, document.documentElement.clientWidth))), y: Math.max(0, Math.min(1, event.clientY / Math.max(1, document.documentElement.clientHeight))), deltaX: Math.max(-4096, Math.min(4096, event.deltaX * unit)), deltaY: Math.max(-4096, Math.min(4096, event.deltaY * unit)) }
-    parent.postMessage(event.metaKey || event.ctrlKey ? { type: 'sherlock-content-zoom', ...coordinates, ctrlKey: event.ctrlKey } : { type: 'sherlock-content-pan', ...coordinates }, '*')
+    parent.postMessage(message, '*')
   }, { capture: true, passive: false })
   document.addEventListener('click', event => {
     const anchor = event.target?.closest?.('a[href]')

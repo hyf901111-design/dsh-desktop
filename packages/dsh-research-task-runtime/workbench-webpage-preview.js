@@ -1,3 +1,5 @@
+import {researchFrameWheelMessage} from './workbench-frame-wheel.js'
+import {webpageGeometryCss} from './workbench-webpage-compact.js'
 import {validWorkbenchStyleMessage, workbenchModeCss} from './workbench-style.js'
 
 // A portable page keeps its own defaults outside the board. Older generators
@@ -12,7 +14,7 @@ const roles = {
 
 // Runs only inside the isolated preview document. The parent supplies a mode,
 // never CSS, HTML, file paths or callbacks.
-function installWebpagePreview(validMessage, aliases) {
+function installWebpagePreview(validMessage, aliases, frameWheel) {
   if (parent === window || !document.body) return
   const root = document.documentElement
   const authored = getComputedStyle(root)
@@ -54,6 +56,12 @@ function installWebpagePreview(validMessage, aliases) {
   const properties = ['color','background-color','border-top-color','border-right-color','border-bottom-color','border-left-color','fill','stroke']
   function adaptStyle(style) {
     if (!style?.length) return
+    // Older pages set accent-color on each scenario's native slider. Let the
+    // same palette token paint both its thumb and its selected track.
+    const accent = style.getPropertyValue('accent-color').trim()
+    if (/^var\(--(?:a|b|sherlock-chart-\d+)\)$/.test(accent) && style.getPropertyValue('--page-range-accent') !== accent) {
+      style.setProperty('--page-range-accent',accent)
+    }
     for (const property of properties) {
       const value = style.getPropertyValue(property)
       const next = value && paint(property,value)
@@ -101,12 +109,27 @@ function installWebpagePreview(validMessage, aliases) {
   function schedule() {
     if (!frame) frame = requestAnimationFrame(report)
   }
-  let installed = false
+  let installed = false, selected = true
   addEventListener('message', event => {
-    if (event.source !== parent || !validMessage(event.data)) return
+    if (event.source !== parent) return
+    const data = event.data
+    if (data?.type === 'sherlock-workbench-selection' && Object.keys(data).length === 2 && typeof data.selected === 'boolean') {
+      selected = data.selected
+      return
+    }
+    if (!validMessage(data)) return
     root.dataset.workbenchStyle = event.data.mode
     if (!installed) {
       installed = true
+      // File previews have their own document. Only relay unused wheel input
+      // after the board handshake, after local widgets have handled the event.
+      document.addEventListener('wheel', event => {
+        if (event.metaKey || event.ctrlKey || event.altKey) return
+        const message = frameWheel(event, selected)
+        if (!message) return
+        event.preventDefault()
+        parent.postMessage(message, '*')
+      }, {passive:false})
       adaptTree(root)
       new MutationObserver(records => {
         for (const record of records) {
@@ -128,6 +151,9 @@ function installWebpagePreview(validMessage, aliases) {
 const aliasCss = Object.entries(roles).map(([name,role]) => '--'+name+':var(--sherlock-'+role+')!important').join(';')
 const pageCss = workbenchModeCss() + `
 @media screen {
+  :root[data-workbench-style] { --page-accent:var(--sherlock-control-primary); }
+  :root[data-workbench-style="enterprise"] { --page-accent:var(--sherlock-chart-1); }
+  ${webpageGeometryCss(':root[data-workbench-style]')}
   :root[data-workbench-style]{${aliasCss};--a-soft:color-mix(in srgb,var(--a) 15%,var(--card))!important;--b-soft:color-mix(in srgb,var(--b) 15%,var(--card))!important;color-scheme:light}
   :root:is([data-workbench-style="dark"],[data-workbench-style="openterminal"]){color-scheme:dark}
   :root[data-workbench-style],:root[data-workbench-style] body{height:auto!important;min-height:0!important;background-color:var(--sherlock-bg)!important;color:var(--sherlock-text)!important}
@@ -139,4 +165,4 @@ const pageCss = workbenchModeCss() + `
 }`
 
 export const workbenchWebpagePreviewSuffix = '\n<style data-workbench-page-style>'+pageCss+'</style><script>('+
-  installWebpagePreview.toString()+')('+validWorkbenchStyleMessage.toString()+','+JSON.stringify(roles)+')</script>'
+  installWebpagePreview.toString()+')('+validWorkbenchStyleMessage.toString()+','+JSON.stringify(roles)+','+researchFrameWheelMessage.toString()+')</script>'

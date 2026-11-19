@@ -91,6 +91,42 @@ it('preserves compact webpage layout and input across the offline file and the f
  } finally {await page.close()}
 })
 
+it('flattens older filled panels and paints the actual range track in the board palette',async()=>{
+ const page=await browser.newPage({viewport:{width:500,height:420}})
+ const {PNG}=require('pngjs')
+ const legacy='<style>:root{--b:#ff9900}.stat{padding:6px;border:1px solid #aaa;background:#eee;border-radius:9px}.bar,button{border-radius:9px}.note{border-top:1px solid}.dot{width:5px;height:5px;border-radius:50%}input[type=range]{width:220px;accent-color:var(--b)}</style><div class="stat">月成本</div><div class="bar">构成</div><p class="note">明细</p><i class="dot"></i><input type="range" min="0" max="100" value="50" aria-label="天数">'
+ try{
+  await page.setContent('<iframe sandbox="allow-scripts" style="border:0;width:400px;height:260px"></iframe>')
+  const iframe=page.locator('iframe')
+  await iframe.evaluate((el,html)=>el.srcdoc=html,legacy+workbenchWebpagePreviewSuffix)
+  const child=await (await iframe.elementHandle()).contentFrame()
+  const slider=child.getByRole('slider')
+  await slider.waitFor()
+  const setMode=async mode=>{
+   await iframe.evaluate((el,mode)=>el.contentWindow.postMessage({type:'sherlock-workbench-style',mode,controlTheme:'dark'},'*'),mode)
+   await child.waitForFunction(mode=>document.documentElement.dataset.workbenchStyle===mode,mode)
+  }
+  const colors=async()=>{
+   const {data,width,height}=PNG.sync.read(await slider.screenshot())
+   const rgb=x=>[...data.subarray((Math.floor(height/2)*width+x)*4,(Math.floor(height/2)*width+x)*4+3)]
+   return [rgb(25),rgb(width-25)]
+  }
+  await setMode('enterprise')
+  expect(await colors()).toEqual([[30,185,225],[209,209,216]])
+  expect(await child.evaluate(()=>['.stat','.bar','.note','.dot'].map(s=>{
+   const style=getComputedStyle(document.querySelector(s));return [style.borderRadius,style.borderTopWidth]
+  }))).toEqual([['0px','0px'],['0px','0px'],['0px','1px'],['50%','0px']])
+  await slider.focus();await slider.press('End')
+  expect(await slider.inputValue()).toBe('100')
+  expect(await colors()).toEqual([[30,185,225],[30,185,225]])
+  await slider.press('Home')
+  expect(await colors()).toEqual([[209,209,216],[209,209,216]])
+  await setMode('dark')
+  expect(await colors()).toEqual([[69,69,78],[69,69,78]])
+  expect(await slider.evaluate(el=>el.matches(':focus-visible')&&getComputedStyle(el).outlineWidth==='2px')).toBe(true)
+ }finally{await page.close()}
+})
+
 it('recalculates an editable portable cost comparison at narrow widths with missing, zero and fixed amounts',async()=>{
  const page=await browser.newPage({viewport:{width:320,height:540}})
  const plans=[{name:'店 A',costs:[{label:'包间',basis:'fixed',amount:100},{label:'菜金',basis:'perUnit'}]},
@@ -396,7 +432,7 @@ it('fits a portable webpage at its current width and switches all board palettes
  const page=await browser.newPage({viewport:{width:1220,height:780}})
  const errors=[]
  page.on('pageerror',err=>errors.push(err.message))
- const documentHtml='<!doctype html><meta charset=utf-8><style>:root{--card:#fff;--ink:#0f172a;--a:#2563eb}*{box-sizing:border-box}body{margin:0;padding:18px;color:var(--ink)}main{background:var(--card)}.piece{height:360px}button{background:#fff;color:#0f172a}@media(max-width:680px){.piece{height:500px}}</style><main><input value="4" aria-label="人数"><button onclick="more.hidden=!more.hidden">展开行程</button><div class="piece">费用</div><div id="more" class="piece" hidden>更多行程</div><svg height="22"><path id="series" stroke="#2563eb" d="M0 10h35"/></svg><footer>正文末尾</footer></main>'
+ const documentHtml='<!doctype html><meta charset=utf-8><style>:root{--card:#fff;--ink:#0f172a;--a:#2563eb}*{box-sizing:border-box}body{margin:0;padding:18px;color:var(--ink)}main{background:var(--card)}.piece{height:360px}button{background:#fff;color:#0f172a}@media(max-width:680px){.piece{height:500px}}</style><main><input value="4" aria-label="人数"><button onclick="more.hidden=!more.hidden">展开行程</button><div id="records" style="height:72px;overflow:auto;overscroll-behavior:contain"><div style="height:240px">费用明细</div></div><div class="piece">费用</div><div id="more" class="piece" hidden>更多行程</div><svg height="22"><path id="series" stroke="#2563eb" d="M0 10h35"/></svg><footer>正文末尾</footer></main>'
  try{
   await page.route('https://auto-arrange.test/',route=>route.fulfill({contentType:'text/html',body:'<style>'+canvasCss+'\nhtml,body{margin:0}#host{width:1000px;height:700px}[data-research-canvas]{width:100%!important;height:100%!important}</style><div id="host"></div>'}))
   await page.route('https://preview.test/**',route=>route.fulfill({contentType:'text/html',headers:{'Content-Security-Policy':"sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-ancestors https://auto-arrange.test"},body:documentHtml+(new URL(route.request().url()).search==='?workbench'?workbenchWebpagePreviewSuffix:'')}))
@@ -439,6 +475,27 @@ it('fits a portable webpage at its current width and switches all board palettes
   const before=(await card.boundingBox()).height
   await child.getByText('展开行程').click();await settled()
   expect((await card.boundingBox()).height).toBeGreaterThan(before+320)
+  // A trusted wheel inside the selected opaque file frame must reach the
+  // real grid, while a nested list that still has room keeps the same gesture.
+  await card.locator('.ew-grid-header').click()
+  await expect.poll(()=>card.getAttribute('data-selected')).toBe('true')
+  const board=page.locator('[data-ework-grid]'),top=()=>board.evaluate(el=>el.scrollTop)
+  const records=child.locator('#records'),innerTop=()=>records.evaluate(el=>el.scrollTop)
+  await records.hover()
+  const initialTop=await top()
+  await page.mouse.wheel(0,45)
+  await expect.poll(innerTop).toBe(45)
+  expect(await top()).toBe(initialTop)
+  await records.evaluate(el=>el.scrollTop=el.scrollHeight)
+  await page.mouse.wheel(0,50)
+  await expect.poll(top).toBe(initialTop+50)
+  const plain=child.locator('.piece').first()
+  const point=await plain.boundingBox()
+  await page.mouse.move(point.x+20,point.y+100)
+  await page.mouse.wheel(0,-40)
+  await expect.poll(top).toBe(initialTop+10)
+  expect(await card.getAttribute('data-selected')).toBe('true')
+  expect(await child.getByLabel('人数').inputValue()).toBe('6')
   await child.getByText('展开行程').click();await settled()
   expect(Math.abs((await card.boundingBox()).height-before)).toBeLessThan(32)
   await page.evaluate(()=>document.querySelector('#host').style.width='515px');await settled()
