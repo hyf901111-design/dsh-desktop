@@ -9,73 +9,46 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "窄窗顶栏、页签项目与窗口拖动",
+        "featureName": "顶栏标签完整显示与三个点菜单",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "9a0d39ea0d748d9ac3f68d2340762bdaf92f92e4",
-        "tipCommit": "3b9310880d21d02c2c9b21c332dfcbb8ea66a105",
+        "baseCommit": "3b9310880d21d02c2c9b21c332dfcbb8ea66a105",
+        "tipCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
         "commits": [
           {
-            "commit": "e1a02e5b7a9dfee6f36bf8b7654655cc2a4e198a",
+            "commit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
             "parents": [
-              "9a0d39ea0d748d9ac3f68d2340762bdaf92f92e4"
+              "3b9310880d21d02c2c9b21c332dfcbb8ea66a105"
             ],
-            "subject": "修复窄窗顶栏溢出和网页页签项目串用"
-          },
-          {
-            "commit": "3b9310880d21d02c2c9b21c332dfcbb8ea66a105",
-            "parents": [
-              "e1a02e5b7a9dfee6f36bf8b7654655cc2a4e198a"
-            ],
-            "subject": "防止拖动客户端时误选知识库界面文字"
+            "subject": "修复顶栏溢出按钮被挤压并改为更多图标"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/right-project-drafts.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-panels.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/workspace.css"
-          },
-          {
-            "status": "M",
             "path": "src/preload/workspace-topbar.ts"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "src/preload/workspace-view-overflow.ts"
           },
           {
             "status": "M",
             "path": "test/browser-app-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation-rendered.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查",
+            "verifiedCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
+            "completedAt": "2026-11-19T23:41:11.139Z",
+            "timeoutMs": 90000
+          },
           {
             "argv": [
               "env",
@@ -84,34 +57,33 @@
               "npm",
               "test",
               "--",
+              "test/browser-app-rendered.test.js",
               "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "across the draggable knowledge header|edits a Markdown preview",
+              "keeps the shared switcher expanded|keeps workspace modes|opens workspace tabs on click|workspace width and opacity|sizes top-bar labels|keeps the full top-bar editor|across the draggable knowledge header",
               "--testTimeout",
-              "10000"
+              "20000"
             ],
             "outcome": "passed",
-            "summary": "知识库鼠标拖动防误选与 Markdown 编辑",
-            "verifiedCommit": "3b9310880d21d02c2c9b21c332dfcbb8ea66a105",
-            "completedAt": "2026-11-19T23:10:11.897Z",
+            "summary": "9 项工作区顶栏渲染验证",
+            "verifiedCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
+            "completedAt": "2026-11-19T23:41:11.139Z",
             "timeoutMs": 90000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "渲染环境验证知识库拖动期间界面文字不被选中，搜索框仍可选取文字。macOS 实包验收将在本地构建后执行。"
+          "summary": "临界宽度下标签完整显示，更多按钮两侧能点击打开菜单。 macOS 实包复测将在本地构建后执行。"
         },
         "acceptanceCriteria": [
-          "窄窗顶栏右侧下拉可切换同一会话的模式",
-          "新任务网页页签各自记住项目和草稿",
-          "研究右侧换项目不替换画布并提示新会话归属",
-          "左栏应用继承当前工作区",
-          "拖动客户端不误选知识库文字"
+          "原生研究顶栏在临界宽度下无半截标签",
+          "三个点按钮可正常打开更多菜单",
+          "菜单切换后原会话保持"
         ],
         "risks": [
-          "工作区项目无消息的测试使用已有测试目录，不发送模型请求。"
+          "实包复测前仅有渲染环境验证"
         ],
-        "generatedAt": "2026-11-19T23:10:11.897Z"
+        "generatedAt": "2026-11-19T23:41:11.139Z"
       }
     }
   ],
