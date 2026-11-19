@@ -82,11 +82,31 @@ function composerWorkspaceEdits() {
   const emptyConversationRow = '\n\t\t\tconst heroWorkspaceRow = subagentPanel || !(pendingConversation || conversationVacant) ? null :';
   const workspaceChip = '\n\t\t\t\t\t(0, react_jsx_runtime.jsx)(WorkspaceChip, {';
   const chipDefinition = '\n\t\tfunction WorkspaceChip(';
+  const oldDirectoryLock = `\n      const directoryLocked = (researchWorkspaceSnapshot2.files?.length ?? 0) > 0 || (sessionId !== void 0 && window.localStorage.getItem(directoryLockKey) === 'true');`;
+  const projectDirectoryLock = `\n      const projectWasEdited = react.useSyncExternalStore(react.useCallback(notify => {
+        const edited = event => { if (event.detail?.sessionId === sessionId) notify(); };
+        document.addEventListener('sherlock:workspace-project-edited', edited);
+        return () => document.removeEventListener('sherlock:workspace-project-edited', edited);
+      }, [sessionId]), () => sessionId !== void 0 && window.localStorage.getItem(directoryLockKey) === 'true');
+      const imageDraftHasCanvas = react.useSyncExternalStore(
+        imageFactoryActive && eworkImageFactory?.subscribe || (() => () => {}),
+        () => imageFactoryActive && sessionId === void 0 && eworkImageFactory?.getSnapshot().current === true
+      );
+      const researchHasEdits = (researchWorkspaceSnapshot2.files?.length ?? 0) > 0 ||
+        research && researchWorkspaceSnapshot2.artifacts?.some(artifact => artifact && artifact.containerSpec?.type !== 'board-tabs');
+      const directoryLocked = projectWasEdited || imageDraftHasCanvas || !!researchHasEdits;`;
+  const projectPickerOpen = '\n\t\t\t\t\t\topen: pickerOpen,\n\t\t\t\t\t\tanchorRef: pickerAnchor,';
+  const chipDisabled = "\n\t\t\t\tref: buttonRef, disabled, 'data-odyssey-directory-locked': disabled || undefined,";
   return [
     [workspaceRow + composerDock, composerDock],
     [endOfComposer, endOfComposer.replace('inputBar',
       `heroWorkspaceRow ? react_jsx_runtime.jsxs("div", { ${composerWorkspaceMarker}, children: [heroWorkspaceRow, inputBar] }) : inputBar`)],
     [restrictedRow, emptyConversationRow],
+    [oldDirectoryLock, projectDirectoryLock],
+    ["\n        if (directoryLocked && sessionId !== void 0) { window.localStorage.setItem(directoryLockKey, 'true'); setPickerOpen(false); }",
+      "\n        if (directoryLocked) { if (sessionId !== void 0) window.localStorage.setItem(directoryLockKey, 'true'); setPickerOpen(false); }"],
+    [projectPickerOpen, projectPickerOpen.replace('open: pickerOpen', 'open: pickerOpen && !directoryLocked')],
+    [chipDisabled, chipDisabled + "\n\t\t\t\ttitle: disabled ? (document.documentElement.dataset.odysseyLocale === 'en' ? 'Project locked after editing' : '工作区已有编辑，项目已锁定') : label,"],
     [rowClass, rowClass + '\n\t\t\t\t"data-odyssey-composer-workspace": "",'],
     [workspaceChip, '\n\t\t\t\t\treact_jsx_runtime.jsx(ComposerWorkLocation, {}),' + workspaceChip],
     [chipDefinition, '\n\t\t' + ComposerWorkLocation.toString() + chipDefinition],

@@ -1,4 +1,4 @@
-import {address,blankSheet,parseRange,safeFormula,sheetName,label,validatedChart,workbookChartKinds,workbookChartPalettes,DEFAULT_WORKBOOK_CHART_PALETTE,SHEET_ROW_HEADER_WIDTH,SHEET_COLUMN_HEADER_HEIGHT,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart,type WorkbookChartLayout,type WorkbookComponent,type WorkbookComponentPlacement} from '../../shared/spreadsheet/workbook'
+import {address,blankSheet,parseRange,safeFormula,sheetName,label,validatedChart,workbookHasContent,workbookChartKinds,workbookChartPalettes,DEFAULT_WORKBOOK_CHART_PALETTE,SHEET_ROW_HEADER_WIDTH,SHEET_COLUMN_HEADER_HEIGHT,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,type Workbook,type WorkbookChart,type WorkbookChartLayout,type WorkbookComponent,type WorkbookComponentPlacement} from '../../shared/spreadsheet/workbook'
 import {chartKindLabels,escapeSheetText as text,inferChartFields,spreadsheetChartData,spreadsheetChartSvg} from './chart'
 import type {WorkbookRecord} from '../../main/spreadsheet/store'
 import type {SheetContextCommand,SheetEngine} from './engine'
@@ -13,6 +13,7 @@ import type {ResearchCanvasExportRequest,ResearchCanvasExportResult} from '../..
 import {CASH_FLOW_GUIDE_ADJUSTMENTS,CASH_FLOW_GUIDE_ANALYSIS,CASH_FLOW_GUIDE_BOOK_PREFIX,CASH_FLOW_GUIDE_COMPONENT_ID,CASH_FLOW_GUIDE_TREND} from '../../shared/spreadsheet/cash-flow-guide'
 import {HOME_SPREADSHEET_GUIDE_FILE} from '../../../packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js'
 import type {HomeGuidePointerAction} from '../home-guide-pointer'
+import { markWorkspaceProjectEdited } from '../workspace-project-lock'
 import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
@@ -569,6 +570,7 @@ class SpreadsheetView{
   this.modeToken++;const token=this.modeToken
   this.engine?.dispose();this.engine=undefined;this.grid.replaceChildren()
   this.record=record;this.dirty=false;this.calculationDirty=false;this.formulaDirty=false
+  if(!this.sharedReadOnly&&workbookHasContent(record.workbook))markWorkspaceProjectEdited(this.doc,this.sessionId)
   this.selection=undefined;this.summary='';this.active='A1';this.formula='';this.zoom=100;this.count=1
   this.paint()
   this.renderChart()
@@ -660,7 +662,11 @@ class SpreadsheetView{
  private selectionCancel=()=>{this.pointerSelection=undefined}
  private changed(derived=false){
   if(this.disposed||!this.engine||!this.editable)return
-  if(derived)this.calculationDirty=true;else this.dirty=true
+  if(derived)this.calculationDirty=true
+  else {
+   this.dirty=true
+   markWorkspaceProjectEdited(this.doc,this.sessionId)
+  }
   this.refreshFields()
   this.win.clearTimeout(this.timer)
   this.timer=this.win.setTimeout(()=>void this.flush(false).catch(()=>{}),140)
@@ -722,6 +728,7 @@ class SpreadsheetView{
    if(action==='export'){this.say('已导出 '+row.name);return}
    await this.refreshRecent()
    if(this.disposed||row.revision<this.record.revision)return
+   if(row.revision>this.record.revision)markWorkspaceProjectEdited(this.doc,this.sessionId)
    if(['chart-layout','chart-rename','add-chart','update-chart','remove-chart'].includes(action)&&this.engine){
     this.record=row
     this.engine.syncCharts(row.workbook?.charts)

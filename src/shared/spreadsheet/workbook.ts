@@ -36,6 +36,13 @@ export const workbookComponentThemes=['light','dark','enterprise','openterminal'
 export type WorkbookComponentTheme=(typeof workbookComponentThemes)[number]
 export type WorkbookComponent = {componentId:string;sheetId:string;range:string;placement?:WorkbookComponentPlacement;theme?:WorkbookComponentTheme;node:{id:string;title:string;kind:string;containerSpec:Record<string,unknown>;[key:string]:unknown}}
 export type Workbook = { id: string; name: string; sheetOrder: string[]; sheets: Record<string, Sheet>; styles: Record<string, Record<string, any>>; charts?:WorkbookChart[]; components?:WorkbookComponent[]; [key:string]:unknown }
+
+export function workbookHasContent(workbook: Workbook | null): boolean {
+  return !!workbook && (!!workbook.charts?.length || !!workbook.components?.length ||
+    Object.values(workbook.sheets).some(sheet => Object.values(sheet.cellData).some(row =>
+      Object.values(row).some(cell => !!cell.f || typeof cell.v === 'number' || typeof cell.v === 'boolean' ||
+        typeof cell.v === 'string' && !!cell.v.trim()))))
+}
 export type Range = { r0:number; c0:number; r1:number; c1:number }
 export type InputCell = Scalar | {value:Scalar} | {formula:string}
 export type Operation =

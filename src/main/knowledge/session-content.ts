@@ -1,5 +1,5 @@
 import { noteText, type NoteContent } from '../../shared/workspace-notes'
-import type { Workbook } from '../../shared/spreadsheet/workbook'
+export { workbookHasContent } from '../../shared/spreadsheet/workbook'
 
 export function researchHasContent(canvas: { files: unknown[]; artifacts: unknown[] }): boolean {
   return canvas.files.length > 0 || canvas.artifacts.some(item => {
@@ -19,11 +19,4 @@ export function noteHasContent(note: NoteContent): boolean {
     return Array.isArray(block.children) && visit(block.children)
   })
   return !!note.title.trim() || visit(note.blocks)
-}
-
-export function workbookHasContent(workbook: Workbook | null): boolean {
-  return !!workbook && (!!workbook.charts?.length || !!workbook.components?.length ||
-    Object.values(workbook.sheets).some(sheet => Object.values(sheet.cellData).some(row =>
-      Object.values(row).some(cell => !!cell.f || typeof cell.v === 'number' || typeof cell.v === 'boolean' ||
-        typeof cell.v === 'string' && !!cell.v.trim()))))
 }

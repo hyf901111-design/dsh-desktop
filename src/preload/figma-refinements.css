@@ -145,6 +145,7 @@ body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspaceLabel { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace)>svg { flex:none; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace .pXSMma_chevron { display:none; }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:disabled { opacity:.52; cursor:default; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:not(:disabled)::after {
   content:'⋯'; flex:none; color:var(--dsw-alias-label-tertiary,var(--odyssey-text)); margin-inline-start:3px;
 }

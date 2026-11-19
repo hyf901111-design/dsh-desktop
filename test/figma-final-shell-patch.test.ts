@@ -96,6 +96,22 @@ describe('Figma shell patch installation', () => {
     expect(stripComposerWorkspaceBar(installed)).toBe(baseline)
   })
 
+  it('keeps the current project name visible when an existing work area locks its picker', () => {
+    const installed = patchComposerWorkspaceBar(stripComposerWorkspaceBar(source))
+    const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
+    const WorkspaceChip = runInNewContext(clientFunction(installed, 'WorkspaceChip') + '\nWorkspaceChip', {
+      document: { documentElement: { dataset: { odysseyLocale: 'zh' } } },
+      react_jsx_runtime: { jsx: element, jsxs: element },
+      HeroShell_module_css_default: { workspace: 'workspace' },
+      _deepseek_ai_dsh_client_ui_primitives: {}
+    })
+    const project = { label: '当前研究项目', t: (key: string) => key }
+    expect(WorkspaceChip(project).props.disabled).toBe(false)
+    const locked = WorkspaceChip({ ...project, disabled: true })
+    expect(locked.props).toMatchObject({ disabled: true, title: '工作区已有编辑，项目已锁定' })
+    expect(locked.props.children[1].props.children).toBe(project.label)
+  })
+
   it('commits the pointer-up position when a quick sidebar drag has no delivered move event', async () => {
     const layout = patchFigmaFinalLayout(await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8'))
     const moves: number[] = [], lifecycle: string[] = []

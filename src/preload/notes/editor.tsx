@@ -57,6 +57,7 @@ import {NoteReplacementPopover,NoteReplacementHighlights} from './replacement-re
 import {noteInlineAiTrigger,captureNoteInlineAnchor,noteInlineAnchorBlock,noteInlineBlockIdentity,insertNoteInlineBlocks} from './inline-ai'
 import {NoteInlineAiComposer,NoteAiProcessing,type NoteInlineAiDraft} from './inline-ai-composer'
 import {noteEditFingerprint,noteEditTimestamp,noteHasSavedContent,noteEditDate} from './edit-date'
+import { markWorkspaceProjectEdited } from '../workspace-project-lock'
 
 /** A local guide receives only document operations for its own isolated NotesApp. */
 export type NotesGuideEditorApi = {
@@ -457,7 +458,10 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     const fingerprint=noteEditFingerprint(titleRef.current,editor.document)
     if(fingerprint!==editFingerprint.current){
       editFingerprint.current=fingerprint
-      if(!systemMutation.current){const timestamp=Date.now();doc.getMap('note-metadata').set('editedAt',timestamp);setEditedAt(timestamp)}
+      if(!systemMutation.current){
+        if(!props.guide&&!props.sharedReadOnly)markWorkspaceProjectEdited(document,props.sessionId)
+        const timestamp=Date.now();doc.getMap('note-metadata').set('editedAt',timestamp);setEditedAt(timestamp)
+      }
     }
     if(!systemMutation.current)engage()
     const content = snapshot(); latest.current = content; setOutline(noteOutline(content.blocks)); setStatus('保存中…')
@@ -466,6 +470,8 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }
   useEffect(() => {
     editFingerprint.current=noteEditFingerprint(titleRef.current,editor.document)
+    if(!props.guide&&!props.sharedReadOnly&&(editedAt||noteHasSavedContent(props.initial)))
+      markWorkspaceProjectEdited(document,props.sessionId)
     lastWritten.current = JSON.stringify(snapshot()); setOutline(noteOutline(editor.document))
     const off = editor.onChange(changed), offSelection = editor.onSelectionChange(() => { const tiptap = editor._tiptapEditor, range = tiptap.state.selection; selection.current = { text: editor.getSelectedText(), from: range.from, to: range.to, cursor: editor.getTextCursorPosition().block.id } })
     const commentChanged = () => changed(); doc.getMap('threads').observeDeep(commentChanged)
