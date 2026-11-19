@@ -1,5 +1,6 @@
 import { navigationAppIcon } from './home-app-shortcuts'
 import { icons } from './scheduled/icons'
+import workspaceSettingsIcon from './browser/assets/settings.svg?inline'
 import workspaceIcon from './browser/assets/workspace.svg?inline'
 
 /** Workspace surfaces share the scheduled-page back control. */
@@ -70,16 +71,16 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
   content:"";display:block;width:var(--odyssey-app-title-icon-size);height:var(--odyssey-app-title-icon-size);flex:none;
   background:currentColor;mask:var(--workspace-title-icon) center/var(--workspace-title-art-size,contain) no-repeat;
 }
-.eb-workspace-controls{display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}
+.eb-workspace-controls{--workspace-switch-duration:340ms;--workspace-switch-ease:cubic-bezier(.22,.61,.36,1);display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-toggle{display:grid;place-items:center;width:32px;height:32px;padding:0;flex:none;color:var(--eb-muted,var(--knowledge-muted));-webkit-app-region:no-drag}
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-toggle[aria-expanded=true]{background:transparent}
-.eb-workspace-toggle>i{width:17px;height:17px;background:currentColor;mask:url('${workspaceIcon.replaceAll("'", '%27')}') center/contain no-repeat;transition:transform 200ms cubic-bezier(.2,.8,.2,1)}
+.eb-workspace-toggle>i{width:17px;height:17px;background:currentColor;mask:url('${workspaceIcon.replaceAll("'", '%27')}') center/contain no-repeat;transition:transform var(--workspace-switch-duration) var(--workspace-switch-ease)}
 .eb-workspace-toggle[aria-expanded=true]>i{transform:rotate(180deg)}
-.eb-workspace-tabs{display:flex;align-items:center;gap:4px;flex:0 0 clamp(220px,36cqw,364px);width:clamp(220px,36cqw,364px);min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-app-region:no-drag}
+.eb-workspace-tabs{display:flex;align-items:center;gap:4px;flex:0 0 clamp(220px,36cqw,364px);width:clamp(220px,36cqw,364px);min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-app-region:no-drag;transition:width var(--workspace-switch-duration) var(--workspace-switch-ease),flex-basis var(--workspace-switch-duration) var(--workspace-switch-ease),opacity var(--workspace-switch-duration) var(--workspace-switch-ease)}
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button{flex:1 0 auto;min-width:0;height:32px;padding:0 6px;font-size:14px;line-height:22px;white-space:nowrap}
-@container(max-width:480px){.eb-workspace-tabs{flex-basis:160px;width:160px;gap:2px}:is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button{padding:0 2px;font-size:13px}}
+@container(max-width:480px){.eb-workspace-tabs{flex-basis:128px;width:128px;gap:2px}:is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button{padding:0 2px;font-size:13px}}
 [data-session-workspace-controls]{order:2;flex:0 1 auto;min-width:32px}
-[data-session-workspace-controls] .eb-workspace-tabs{flex:0 1 auto}
+[data-session-workspace-controls] .eb-workspace-tabs{flex-shrink:1}
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-controls button{
   border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,var(--odyssey-muted,#888));
   cursor:pointer;-webkit-app-region:no-drag
@@ -89,6 +90,24 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
 }
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button:disabled{opacity:.4;cursor:default}
 .eb-workspace-tabs[aria-hidden=true]{width:0;flex-basis:0;opacity:0;pointer-events:none}
+body .eb-workspace-edit{display:grid;place-items:center;flex:none;width:32px;height:32px;padding:0!important;-webkit-app-region:no-drag}
+.eb-workspace-edit>i{width:16px;height:16px;background:currentColor;mask:url('${workspaceSettingsIcon.replaceAll("'", '%27')}') center/contain no-repeat}
+body .eb-workspace-edit[data-workspace-customize-home]{position:absolute;inset:6px auto auto 10px;z-index:10;pointer-events:auto;border:0;border-radius:8px;color:var(--odyssey-text,#222);background:var(--odyssey-header-icon-bg,#8882);cursor:pointer}
+body .eb-workspace-edit[data-workspace-customize-home]:is(:hover,:focus-visible){background:var(--odyssey-header-icon-hover,#8884)}
+.workspace-view-settings{
+  position:fixed;inset:var(--workspace-settings-top,50px) auto auto var(--workspace-settings-left,16px);margin:0;box-sizing:border-box;width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 32px);
+  padding:20px;border:1px solid var(--odyssey-menu-border,#8884);border-radius:14px;
+  color:var(--odyssey-text,#252525);background:var(--odyssey-menu,#fff);backdrop-filter:blur(32px)
+}
+.workspace-view-settings::backdrop{background:#0006}
+.workspace-view-settings form{display:grid;gap:12px}
+.workspace-view-settings h2,.workspace-view-settings p{margin:0}
+.workspace-view-settings h2{font:600 17px/24px var(--odyssey-font-ui,system-ui)}
+.workspace-view-settings p:empty{display:none}
+.workspace-view-settings label{display:grid;grid-template-columns:7em 1fr;align-items:center;gap:10px}
+.workspace-view-settings select,.workspace-view-settings button{font:inherit;border:1px solid var(--odyssey-menu-border,#8884);color:inherit;background:var(--odyssey-menu,#fff);padding:6px 9px;border-radius:7px}
+.workspace-view-settings footer{display:flex;justify-content:flex-end;gap:8px}
+.workspace-view-settings button[type=submit]{background:var(--odyssey-text,#252525);color:var(--odyssey-canvas,#fff)}
 .eb-app-divider{width:1px;height:16px;background:var(--eb-line);flex:none}.eb-tab-scroll{display:flex;gap:8px;min-width:0;overflow:auto;scrollbar-width:none}.eb-tab{height:32px;width:auto;min-width:80px;display:flex;align-items:center;gap:8px;padding:0 10px!important;color:var(--eb-muted)!important;font-size:13px!important}.eb-tab[aria-selected=true]{background:var(--eb-field);color:var(--eb-ink)!important}.eb-tab[data-pinned=true]{width:42px;min-width:42px}.eb-tab .eb-icon{width:14px;height:14px}.eb-tab-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}.eb-tab-close{width:20px;height:20px;display:grid;place-items:center;border-radius:4px}.eb-tab-close:hover{background:var(--eb-line)}.eb-tab-close .eb-icon{width:17px;height:17px}
 .eb-tab-scroll{position:relative;flex:1 1 0;max-width:var(--eb-tabs-max);overflow-x:auto;overflow-y:hidden}
 .eb-tab{position:relative;flex:1 1 0;min-width:32px;max-width:240px;overflow:hidden;cursor:pointer;border-radius:7px;line-height:17px}
@@ -124,7 +143,7 @@ body:has(.odyssey-workspace-search,.st-menu[data-sidebar-more],[data-browser-pag
  .workspace-app-topbar.eb-tabs>.eb-icon-button{width:28px;height:28px}
  .eb-tabs[data-crowded=true] .eb-tab[aria-selected=true]:not([data-pinned=true]){min-width:32px}
 }
-@media(prefers-reduced-motion:reduce){.eb-workspace-toggle>i{transition:none}}
+@media(prefers-reduced-motion:reduce){.eb-workspace-toggle>i,.eb-workspace-tabs{transition:none}}
 body :is(.st-root,.ig-root,.eb-root,.knowledge-workspace,.image-factory) .workspace-back-button{width:28px;min-width:28px;height:28px;display:grid;place-items:center;padding:6px!important;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary,var(--eb-muted,#777));cursor:pointer;pointer-events:auto;-webkit-app-region:no-drag;transition:background-color .12s ease,color .12s ease}
 body :is(.st-chrome,.ig-chrome) .workspace-back-button{position:static;flex:none}
 body :is(.st-root,.ig-root)[data-dark=true] .workspace-back-button{color:var(--dsw-alias-label-secondary,#aaa)}

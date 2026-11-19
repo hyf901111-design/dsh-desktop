@@ -5,6 +5,7 @@ import {
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
 import { navigationAppIcon } from './home-app-shortcuts'
 import styles from './navigation-shortcuts.css?raw'
+import { setWorkspaceViewPreferences, workspaceViewsChanged } from './workspace-view-shortcuts'
 
 const presentation = {
   browser: ['浏览器', 'Browser'],
@@ -210,14 +211,17 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     clearHover()
   }
   function update(next: NavigationShortcuts) {
-    if (next === value) return
+    if (next === value) return true
     if (!bridge.save(next)) {
       status.textContent = english() ? 'Could not save shortcuts' : '快捷入口保存失败'
-      return
+      return false
     }
+    const topChanged = next.top !== value.top
     value = next
     status.textContent = ''
     sync()
+    if (topChanged) doc.dispatchEvent(new win.Event(workspaceViewsChanged))
+    return true
   }
   function apply(button: HTMLButtonElement, app: NavigationShortcut | null) {
     update(replaceNavigationShortcut(value, 'side', Number(button.dataset.navigationSlot), app))
@@ -500,6 +504,11 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   const resize = win.ResizeObserver ? new win.ResizeObserver(sync) : undefined
   resize?.observe(rail)
   sync()
+  const connectWorkspaceViews = () => setWorkspaceViewPreferences(doc, {
+    get: () => value.top,
+    save: top => update({ ...value, top: normalizeNavigationShortcuts({ top }).top })
+  })
+  connectWorkspaceViews()
   const freeSlot = () => editableSlots.find(index => value.side[index] === null)
   return {
     sidebar: () => value.side,
@@ -517,9 +526,11 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       setEditing(false)
       value = normalizeNavigationShortcuts(bridge.read())
       sync()
+      connectWorkspaceViews()
     },
     dispose() {
       lifetime.abort()
+      setWorkspaceViewPreferences(doc, undefined)
       observer.disconnect()
       resize?.disconnect()
       hideTooltip()

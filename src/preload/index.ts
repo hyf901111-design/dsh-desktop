@@ -11,7 +11,7 @@ import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from './workspace-topbar'
-import { findWorkspaceSession, mountSessionWorkspaceViewShortcuts, sessionWorkspaceAppViews, sessionWorkspaceViewEvent, type SessionWorkspaceAppView } from './workspace-view-shortcuts'
+import { findWorkspaceSession, mountSessionWorkspaceViewShortcuts, mountWorkspaceViewCustomization, sessionWorkspaceAppViews, sessionWorkspaceViewEvent, type SessionWorkspaceAppView } from './workspace-view-shortcuts'
 import { noteBlocksFromFile } from './notes/editor'
 import { openKnowledgeSession } from './knowledge/session-directory'
 import type { FileEditorMode, FileEditorSource } from '../shared/file-editor.mjs'
@@ -304,10 +304,6 @@ function initializeUi(): void {
       if (workspaceSurfaceHost.current()) workspaceSurfaceHost.revealConversation()
     } catch (error) { throw Error(knowledgeRequestError(error)) }
   }
-  const workspacePointerInBar: import('./workspace-view-shortcuts').WorkspacePointerInBar | undefined =
-    process.platform === 'darwin' || process.platform === 'win32'
-      ? bounds => ipcRenderer.invoke('browser-app:request', 'workspace-pointer-in-bar', { bounds })
-      : undefined
   const knowledgeMemory: import('../shared/memory').MemoryBridge = {
     request: command => ipcRenderer.invoke('memory:request', command),
     subscribe: listener => { memoryListeners.add(listener); return () => memoryListeners.delete(listener) }
@@ -352,7 +348,6 @@ function initializeUi(): void {
   }
   const disposeKnowledge = mountKnowledgeWorkspace(document, workspaceSurfaceHost, {
     memory: knowledgeMemory,
-    workspacePointerInBar,
     openFileInEditor,
     openImageFactorySource,
     openImageFactoryCopy,
@@ -397,7 +392,7 @@ function initializeUi(): void {
     ipcRenderer.removeListener('knowledge:account-changed', knowledgeAccountChanged)
   }, { once: true })
   const browserApp=new BrowserAppView(document,{
-    question,subscribeQuestion,translationModel,workspacePointerInBar,
+    question,subscribeQuestion,translationModel,
     request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),
     subscribe:listener=>{const handle=(_event:unknown,value:import('../shared/browser-app').BrowserSnapshot)=>listener(value);ipcRenderer.on('browser-app:state',handle);return()=>ipcRenderer.removeListener('browser-app:state',handle)},
     source:(sessionId,source)=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-source-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve():reject(Error(d.message||'网页来源未能附加。'))};const timer=setTimeout(()=>{cleanup();reject(Error('对话输入尚未就绪。'))},5000);window.addEventListener('sherlock:browser-source-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-source-request',{detail:{requestId,sessionId,source:JSON.stringify(source)}}))})
@@ -477,7 +472,6 @@ function initializeUi(): void {
     pinApp: app => navigationShortcuts?.pinSidebar(app)})
   scheduledView.mount()
   const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
-    workspacePointerInBar,
     storage: {
       read: scope => ipcRenderer.invoke('image-factory:canvas-read', scope),
       write: value => ipcRenderer.invoke('image-factory:canvas-write', value),
@@ -490,7 +484,8 @@ function initializeUi(): void {
   window.addEventListener(imageFactoryOpenEvent, openImageFactory)
   mountWorkspaceTopbarStyles(document)
   const disposeSessionWorkspaceViews = mountSessionWorkspaceViewShortcuts(document,
-    () => workspaceSurfaceHost.revealConversation(), workspacePointerInBar)
+    () => workspaceSurfaceHost.revealConversation())
+  const disposeWorkspaceViewCustomization = mountWorkspaceViewCustomization(document)
   let workspaceViewRequest = 0
   const openSessionWorkspaceView = async (sessionId: string, view: SessionWorkspaceAppView) => {
     const request = ++workspaceViewRequest
@@ -558,7 +553,7 @@ function initializeUi(): void {
     open: openNavigationApp
   })
   window.addEventListener('unload', () => {
-    navigationShortcuts?.dispose(); disposeHomeAppShortcuts(); disposeSessionWorkspaceViews(); imageFactory.dispose()
+    navigationShortcuts?.dispose(); disposeHomeAppShortcuts(); disposeSessionWorkspaceViews(); disposeWorkspaceViewCustomization(); imageFactory.dispose()
     document.removeEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
     window.removeEventListener(imageFactoryOpenEvent, openImageFactory)
   }, { once: true })

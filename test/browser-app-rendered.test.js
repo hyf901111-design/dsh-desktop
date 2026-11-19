@@ -6,7 +6,7 @@ import {build} from 'esbuild'
 let browser,code
 const evidence=process.env.BROWSER_APP_EVIDENCE||'/tmp/browser-app-figma-20261109'
 beforeAll(async()=>{
- const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import {mountSessionWorkspaceViewShortcuts} from './src/preload/workspace-view-shortcuts';window.mountSessionWorkspaceViewShortcuts=mountSessionWorkspaceViewShortcuts;import homeShortcutStyles from './src/preload/home-app-shortcuts.css?raw';window.homeShortcutStyles=homeShortcutStyles;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
+ const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import {mountSessionWorkspaceViewShortcuts,mountWorkspaceViewCustomization,setWorkspaceViewPreferences} from './src/preload/workspace-view-shortcuts';window.mountSessionWorkspaceViewShortcuts=mountSessionWorkspaceViewShortcuts;window.mountWorkspaceViewCustomization=mountWorkspaceViewCustomization;window.setWorkspaceViewPreferences=setWorkspaceViewPreferences;import homeShortcutStyles from './src/preload/home-app-shortcuts.css?raw';window.homeShortcutStyles=homeShortcutStyles;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
 let listener;let n=0;const data={tabs:[{id:'tab0',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'tab0',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}};
 window.setBrowserState=value=>{Object.assign(data,value);listener(structuredClone(data))};window.browserCalls=[];window.snapshot=()=>structuredClone(data);window.update=()=>listener(structuredClone(data));
 const bridge={subscribe:f=>{listener=f;return()=>{}},source:async(...args)=>window.browserCalls.push(['source',...args]),request:async(method,input={})=>{if(method==='site')return{permissions:data.sitePermissions??{}};window.browserCalls.push([method,input]);const t=data.tabs.find(t=>t.id===data.activeId);if(method==='capture'){if(window.browserCapture)return await window.browserCapture();const c=document.createElement('canvas');c.width=20;c.height=20;return c.toDataURL()};if(method==='new'){const tab={...t,id:'tab'+(++n),title:input.url?'Example Domain':'新标签页',url:input.url??'',private:!!input.private};delete tab.page;data.tabs.push(tab);data.activeId=tab.id}if(method==='internal-page'){let page=data.tabs.find(tab=>tab.page===input.page);if(!page){page={...t,id:'tab'+(++n),url:'',page:input.page,title:input.page==='history'?'历史记录':'下载内容',private:false,loading:false,canBack:false,canForward:false};data.tabs.push(page)}data.activeId=page.id}if(method==='select')data.activeId=input.id;if(method==='reorder'){const tab=data.tabs.find(t=>t.id===input.id),before=data.tabs.find(t=>t.id===input.beforeId);if(tab&&tab!==before){data.tabs.splice(data.tabs.indexOf(tab),1);data.tabs.splice(before?data.tabs.indexOf(before):data.tabs.length,0,tab)}}if(method==='zoom')data.tabs.find(tab=>tab.id===input.id).zoom=input.value;if(method==='close'){const index=data.tabs.findIndex(t=>t.id===input.id);data.tabs.splice(index,1);if(data.activeId===input.id)data.activeId=data.tabs[Math.min(index,data.tabs.length-1)].id}if(method==='home'){delete t.page;t.url='';t.title='新标签页';t.canBack=false;t.canForward=false}if(method==='history-remove')data.history=data.history.filter(row=>row.id!==input.id);if(method==='navigate'){delete t.page;t.url=input.url;t.title='Example Domain';data.history.unshift({id:'h'+n,url:input.url,title:t.title,at:Date.now()})}if(method==='bookmark'){const old=data.bookmarks.find(b=>b.url===input.url);if(input.remove)data.bookmarks=data.bookmarks.filter(b=>b.url!==input.url);else if(old)Object.assign(old,{title:input.title,folder:input.folder});else data.bookmarks.push({id:'b'+n,url:input.url,title:input.title,folder:input.folder,at:Date.now()})}if(method==='bookmark-update')Object.assign(data.bookmarks.find(b=>b.id===input.id),input);if(method==='bookmarks-remove')data.bookmarks=data.bookmarks.filter(b=>!input.ids.includes(b.id));if(method==='folder')data.folders.push(input.name);if(method==='settings')Object.assign(data.settings,input);if(method==='clear'&&input.history)data.history=[];if(method==='find')t.find={matches:6,activeMatchOrdinal:1};return structuredClone(data)}};
@@ -383,11 +383,11 @@ it('keeps activity search and caret across parent snapshots, routes material own
 
 it('expands workspace shortcuts after the draggable title and gives their space back to web tabs',async()=>{
  const {page,errors}=await fixture(1440,900,true);try{
-  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:9},(_,i)=>({...base,id:'workspace-tab'+i,title:'Web '+i,url:'https://example.com/'+i})),activeId:'workspace-tab8'})});const strip=page.locator('.eb-tab-scroll'),before=await strip.boundingBox();const toggle=page.getByRole('button',{name:'展开工作区页签',exact:true});expect(await toggle.getAttribute('aria-expanded')).toBe('false');expect(await toggle.evaluate(el=>getComputedStyle(el).getPropertyValue('-webkit-app-region'))).not.toBe('drag');await toggle.hover();const nav=page.getByRole('navigation',{name:'工作区视图'});await expect.poll(()=>nav.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(150);expect(await nav.getByRole('button').count()).toBe(7);const after=await strip.boundingBox();expect(after.x-before.x).toBeGreaterThan(150);expect(before.width-after.width).toBeGreaterThan(150);expect(await page.locator('.eb-tab[aria-selected=true] .eb-tab-title').textContent()).toBe('Web 8');expect(await page.evaluate(()=>window.snapshot().activeId)).toBe('workspace-tab8');await page.locator('.eb-toolbar').hover();await expect.poll(()=>strip.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(before.width-1);expect(await nav.count()).toBe(0);expect(errors).toEqual([])
+  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:9},(_,i)=>({...base,id:'workspace-tab'+i,title:'Web '+i,url:'https://example.com/'+i})),activeId:'workspace-tab8'})});const strip=page.locator('.eb-tab-scroll'),before=await strip.boundingBox();const toggle=page.locator('.eb-workspace-toggle');expect(await toggle.getAttribute('aria-expanded')).toBe('false');expect(await toggle.evaluate(el=>getComputedStyle(el).getPropertyValue('-webkit-app-region'))).not.toBe('drag');await toggle.click();const nav=page.getByRole('navigation',{name:'工作区视图'});await expect.poll(()=>nav.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(150);expect(await nav.locator('[data-workspace-native-view]').count()).toBe(4);const after=await strip.boundingBox();expect(after.x-before.x).toBeGreaterThan(150);expect(before.width-after.width).toBeGreaterThan(150);expect(await page.locator('.eb-tab[aria-selected=true] .eb-tab-title').textContent()).toBe('Web 8');expect(await page.evaluate(()=>window.snapshot().activeId)).toBe('workspace-tab8');await toggle.click();await expect.poll(()=>strip.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(before.width-1);expect(await nav.count()).toBe(0);expect(errors).toEqual([])
  }finally{await page.close()}
 })
 
-it('exposes the shared hover switcher only on session views and carries the current owner through mode changes', async () => {
+it('exposes the shared switcher only on session views and carries the current owner through mode changes', async () => {
  const {page,errors}=await fixture(1280,830,true)
  try {
   await page.evaluate(() => {
@@ -422,8 +422,10 @@ it('exposes the shared hover switcher only on session views and carries the curr
   })
   for(const [view,label] of [['notes','笔记'],['spreadsheet','表格'],['chat','对话'],['browser','浏览器'],['image-factory','图像'],['knowledge','知识库']]) {
    const toggle=controls.getByRole('button',{name:'展开工作区页签',exact:true})
-   await page.locator('header').hover({position:{x:400,y:20}})
-   await toggle.hover()
+   if(view==='browser') await page.evaluate(()=>window.setWorkspaceViewPreferences(document,{
+    get:()=>['browser','image-factory','knowledge',null],save:()=>true
+   }))
+   await toggle.click()
    await controls.getByRole('button',{name:'切换到'+label,exact:true}).click()
    expect(await page.evaluate(()=>window.quickOwners.at(-1))).toEqual([view,'session-A'])
   }
@@ -445,7 +447,7 @@ it('uses the owner-matched native workspace tabs and preserves browser documents
  const {page,errors}=await fixture(1440,900,true);try{
   await page.evaluate(()=>{const state=window.snapshot();state.tabs[0].url='https://example.com/preserved';state.tabs[0].title='Preserved';window.setBrowserState(state);window.workspaceNativeActions=[];const wrap=document.createElement('div');wrap.className='wSkVaW_root';wrap.innerHTML='<header data-srb-session-header data-ework-notes-session="session-A"><div data-srb-tabs>'+['chat','research','notes','spreadsheet'].map(id=>'<button data-conversation-view-id="'+id+'">'+id+'</button>').join('')+'</div></header>';for(const button of wrap.querySelectorAll('button'))button.addEventListener('click',()=>window.workspaceNativeActions.push(button.dataset.conversationViewId));document.querySelector('.pI_x6G_centerCol').append(wrap)})
   const labels={chat:'对话',research:'研究',notes:'笔记',spreadsheet:'表格'};for(const view of ['chat','research','notes','spreadsheet']){await page.evaluate(()=>window.browserView.open('session-A'));if(await page.getByRole('button',{name:'展开工作区页签',exact:true}).count())await page.getByRole('button',{name:'展开工作区页签',exact:true}).click();await page.getByRole('button',{name:'切换到'+labels[view],exact:true}).click();expect(await page.locator('.eb-root').evaluate(el=>el.hidden)).toBe(true)}expect(await page.evaluate(()=>window.workspaceNativeActions)).toEqual(['chat','research','notes','spreadsheet']);expect(await page.evaluate(()=>window.workspaceReveals)).toBe(4);expect(await page.evaluate(()=>window.snapshot().tabs[0].url)).toBe('https://example.com/preserved');expect(await page.evaluate(()=>window.browserCalls.filter(c=>c[0]==='new'))).toEqual([])
-  await page.evaluate(()=>window.browserView.open(''));await page.getByRole('button',{name:'展开工作区页签',exact:true}).hover();expect(await page.getByRole('button',{name:'切换到研究',exact:true}).isDisabled()).toBe(true);expect(await page.getByRole('button',{name:'切换到笔记',exact:true}).isDisabled()).toBe(true);await page.getByRole('button',{name:'切换到对话',exact:true}).click();expect(await page.evaluate(()=>window.workspaceReveals)).toBe(5);expect(await page.evaluate(()=>window.workspaceNativeActions)).toHaveLength(4);expect(errors).toEqual([])
+  await page.evaluate(()=>window.browserView.open(''));await page.getByRole('button',{name:'展开工作区页签',exact:true}).click();expect(await page.getByRole('button',{name:'切换到研究',exact:true}).isDisabled()).toBe(true);expect(await page.getByRole('button',{name:'切换到笔记',exact:true}).isDisabled()).toBe(true);await page.getByRole('button',{name:'切换到对话',exact:true}).click();expect(await page.evaluate(()=>window.workspaceReveals)).toBe(5);expect(await page.evaluate(()=>window.workspaceNativeActions)).toHaveLength(4);expect(errors).toEqual([])
  }finally{await page.close()}
 })
 
@@ -455,7 +457,7 @@ it('keeps the new-tab button immediately after short tab rows and at the edge wh
   const measure=()=>page.evaluate(()=>{const root=document.querySelector('.eb-root').getBoundingClientRect(),last=[...document.querySelectorAll('.eb-tab')].at(-1).getBoundingClientRect(),add=document.querySelector('.eb-tabs [data-action=new]').getBoundingClientRect(),strip=document.querySelector('.eb-tab-scroll').getBoundingClientRect();return{gap:add.left-last.right,addRight:add.right,rootRight:root.right,stripRight:strip.right}})
   let m=await measure();expect(m.gap).toBeGreaterThanOrEqual(7);expect(m.gap).toBeLessThanOrEqual(9);expect(m.rootRight-m.addRight).toBeGreaterThan(150)
   await page.getByRole('button',{name:'新标签页',exact:true}).click();m=await measure();expect(m.gap).toBeGreaterThanOrEqual(7);expect(m.gap).toBeLessThanOrEqual(9)
-  await page.getByRole('button',{name:'展开工作区页签',exact:true}).hover();m=await measure();expect(m.gap).toBeGreaterThanOrEqual(7);expect(m.gap).toBeLessThanOrEqual(9)
+  await page.getByRole('button',{name:'展开工作区页签',exact:true}).click();m=await measure();expect(m.gap).toBeGreaterThanOrEqual(7);expect(m.gap).toBeLessThanOrEqual(9)
   await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:30},(_,i)=>({...base,id:'full'+i,title:'Full '+i})),activeId:'full29'})});await page.waitForTimeout(220);m=await measure();expect(m.rootRight-m.addRight).toBeLessThan(60);expect(m.addRight-m.stripRight).toBeGreaterThan(32);expect(errors).toEqual([])
  }finally{await page.close()}
 })
@@ -463,32 +465,35 @@ it('keeps the new-tab button immediately after short tab rows and at the edge wh
 
 it('keeps expanded workspace controls and a selectable web tab inside a narrow center column',async()=>{
  const {page,errors}=await fixture(394,700,false);try{
-  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:9},(_,i)=>({...base,id:'narrow'+i,title:'Web '+i})),activeId:'narrow8'})});await page.getByRole('button',{name:'展开工作区页签',exact:true}).hover();await page.waitForTimeout(220);const sizes=await page.locator('.eb-root').evaluate(root=>{const box=root.getBoundingClientRect(),controls=[...root.querySelectorAll('.eb-tabs button:not(.eb-workspace-tabs button),.eb-workspace-tabs,.eb-tab[aria-selected=true]')].map(el=>el.getBoundingClientRect());return{width:box.width,scroll:root.scrollWidth,maxRight:Math.max(...controls.map(r=>r.right))-box.left,minTab:root.querySelector('.eb-tab[aria-selected=true]').getBoundingClientRect().width}});expect(sizes.width).toBe(320);expect(sizes.scroll).toBeLessThanOrEqual(320);expect(sizes.maxRight).toBeLessThanOrEqual(320);expect(sizes.minTab).toBeGreaterThanOrEqual(30);await page.screenshot({path:evidence+'/workspace-expanded-narrow-light.png'});expect(errors).toEqual([])
+  await page.evaluate(()=>{const base=window.snapshot().tabs[0];window.setBrowserState({tabs:Array.from({length:9},(_,i)=>({...base,id:'narrow'+i,title:'Web '+i})),activeId:'narrow8'})});await page.getByRole('button',{name:'展开工作区页签',exact:true}).click();await page.waitForTimeout(370);const sizes=await page.locator('.eb-root').evaluate(root=>{const box=root.getBoundingClientRect(),controls=[...root.querySelectorAll('.eb-tabs button:not(.eb-workspace-tabs button),.eb-workspace-tabs,.eb-tab[aria-selected=true]')].map(el=>el.getBoundingClientRect());return{width:box.width,scroll:root.scrollWidth,maxRight:Math.max(...controls.map(r=>r.right))-box.left,minTab:root.querySelector('.eb-tab[aria-selected=true]').getBoundingClientRect().width}});expect(sizes.width).toBe(320);expect(sizes.scroll).toBeLessThanOrEqual(320);expect(sizes.maxRight).toBeLessThanOrEqual(320);expect(sizes.minTab).toBeGreaterThanOrEqual(30);await page.screenshot({path:evidence+'/workspace-expanded-narrow-light.png'});expect(errors).toEqual([])
  }finally{await page.close()}
 })
 
 
-it('opens workspace tabs only from the toggle and holds them anywhere in the browser tab bar',async()=>{
- const {page,errors}=await fixture(1440,900,true);try{
-  const toggle=page.locator('.eb-workspace-toggle');const title=await page.locator('.eb-app-label').boundingBox(),toggleBox=await toggle.boundingBox();expect(toggleBox.x-title.x-title.width).toBeLessThanOrEqual(8);expect(await toggle.locator('.eb-icon').getAttribute('style')).not.toBe(await page.locator('.eb-toolbar [data-action=forward] .eb-icon').getAttribute('style'));
-  const switcher=page.getByRole('button',{name:'已打开的页签',exact:true});expect(await switcher.count()).toBe(1);const placement=await switcher.evaluate(el=>{const box=el.getBoundingClientRect(),tab=document.querySelector('.eb-tab').getBoundingClientRect(),s=getComputedStyle(el);return{gap:tab.left-box.right,bg:s.backgroundColor,radius:parseFloat(s.borderRadius)}});expect(placement.gap).toBeGreaterThanOrEqual(4);expect(placement.gap).toBeLessThanOrEqual(9);expect(placement.bg).toMatch(/0\.04\)$/);expect(placement.radius).toBeGreaterThanOrEqual(6)
-  const nav=page.getByRole('navigation',{name:'工作区视图'}),label=page.locator('.eb-app-label'),tab=page.getByRole('tab',{name:'新标签页'}),add=page.getByRole('button',{name:'新标签页',exact:true}),bar=page.locator('.eb-tabs'),toolbar=page.locator('.eb-toolbar')
-  const hoverAndWait=async(locator,options)=>{await locator.hover(options);await page.waitForTimeout(230)}
-  await toolbar.hover();await toggle.click();expect(await toggle.getAttribute('aria-expanded')).toBe('true')
-  await toggle.click();expect(await toggle.getAttribute('aria-expanded')).toBe('false')
-  await hoverAndWait(label);expect(await nav.count()).toBe(0);await hoverAndWait(tab);expect(await nav.count()).toBe(0)
-  await toggle.hover();await nav.waitFor();expect(await nav.getByRole('button').allTextContents()).toEqual(['对话','研究','笔记','表格','浏览器','图像','知识库'])
+it('opens workspace tabs on click and keeps them expanded after the pointer leaves',async()=>{
+ const {page,errors}=await fixture(1440,900,true)
+ try {
+  const toggle=page.locator('.eb-workspace-toggle'), nav=page.getByRole('navigation',{name:'工作区视图'})
+  const toolbar=page.locator('.eb-toolbar')
+  await toggle.hover()
+  await page.waitForTimeout(360)
+  expect(await toggle.getAttribute('aria-expanded')).toBe('false')
+  await toggle.click()
+  expect(await toggle.getAttribute('aria-expanded')).toBe('true')
+  expect(await nav.locator('[data-workspace-native-view]').allTextContents()).toEqual(['对话','研究','笔记','表格'])
   expect(await toggle.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
-  expect(await label.evaluate(el=>getComputedStyle(el).getPropertyValue('-webkit-app-region'))).toBe('drag')
-  for(const control of [label,page.getByRole('button',{name:'切换到笔记',exact:true}),tab,add]){await hoverAndWait(control);expect(await nav.count()).toBe(1)}
-  const barBox=await bar.boundingBox();await hoverAndWait(bar,{position:{x:barBox.width-8,y:barBox.height/2}});expect(await nav.count()).toBe(1)
-  await add.click();await hoverAndWait(add);expect(await nav.count()).toBe(1)
-  await bar.screenshot({path:evidence+'/workspace-tab-bar-expanded.png'})
-  await toolbar.hover();await expect.poll(()=>nav.count()).toBe(0)
-  await hoverAndWait(add);expect(await nav.count()).toBe(0)
-  await toggle.focus();await toggle.press('Enter');expect(await page.getByRole('navigation',{name:'工作区视图'}).count()).toBe(1);await page.keyboard.press('Escape');expect(await page.getByRole('navigation',{name:'工作区视图'}).count()).toBe(0);expect(await toggle.evaluate(el=>el===document.activeElement)).toBe(true)
-  await switcher.click();const box=await switcher.boundingBox(),panel=await page.locator('[data-browser-panel=tab-list]').boundingBox();expect(Math.abs(panel.x-box.x)).toBeLessThan(1);expect(panel.y-box.y-box.height).toBeGreaterThanOrEqual(4);expect(errors).toEqual([])
- }finally{await page.close()}
+  await toolbar.hover()
+  await page.waitForTimeout(360)
+  expect(await toggle.getAttribute('aria-expanded')).toBe('true')
+  await toggle.click()
+  expect(await nav.count()).toBe(0)
+  await toggle.press('Enter')
+  await nav.waitFor()
+  await nav.getByRole('button',{name:'切换到研究',exact:true}).press('Escape')
+  expect(await nav.count()).toBe(0)
+  expect(await toggle.evaluate(el=>el===document.activeElement)).toBe(true)
+  expect(errors).toEqual([])
+ } finally { await page.close() }
 })
 
 it('drags the window from blank browser chrome and yields to interactive controls and open menus', async () => {
@@ -585,24 +590,72 @@ it('shares the unselected rail glyph color and emphasizes the selected browser i
 })
 
 
-it('animates workspace width and opacity on hover and respects reduced motion',async()=>{
+it('animates workspace width and opacity on click and respects reduced motion',async()=>{
  const {page,errors}=await fixture(1440,900,true);try{
-  await page.getByRole('button',{name:'展开工作区页签',exact:true}).hover();expect(await page.locator('.eb-workspace-tabs').evaluate(el=>el.getAnimations().some(a=>a.playState==='running'))).toBe(true);await page.waitForTimeout(240);expect(await page.locator('.eb-workspace-tabs').evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(150);await page.locator('.eb-toolbar').hover();await expect.poll(()=>page.locator('.eb-workspace-tabs').getAttribute('aria-hidden')).toBe('true');await expect.poll(()=>page.locator('.eb-workspace-tabs').evaluate(el=>el.getBoundingClientRect().width)).toBe(0)
-  await page.emulateMedia({reducedMotion:'reduce'});await page.getByRole('button',{name:'展开工作区页签',exact:true}).hover();expect(await page.locator('.eb-workspace-tabs').evaluate(el=>el.getAnimations().length)).toBe(0);expect(errors).toEqual([])
+  const toggle=page.locator('.eb-workspace-toggle'),nav=page.locator('.eb-workspace-tabs')
+  const width=()=>nav.evaluate(el=>el.getBoundingClientRect().width)
+  await toggle.click()
+  await expect.poll(()=>nav.evaluate(el=>el.getAnimations().some(a=>a.effect.getTiming().duration===340))).toBe(true)
+  await page.evaluate(()=>window.setBrowserState({history:[]}))
+  await expect.poll(width).toBeGreaterThan(150)
+  await toggle.click()
+  expect(await nav.getAttribute('inert')).not.toBeNull()
+  await expect.poll(width).toBe(0)
+  await page.emulateMedia({reducedMotion:'reduce'})
+  await toggle.click()
+  expect(await nav.evaluate(el=>el.getAnimations().length)).toBe(0)
+  expect(await width()).toBeGreaterThan(150)
+  expect(errors).toEqual([])
  }finally{await page.close()}
 })
 
-
-it('dismisses a browser popup before collapsing the hovered workspace shortcuts on Escape',async()=>{
+it('dismisses a browser popup before collapsing the workspace shortcuts on Escape',async()=>{
  const {page,errors}=await fixture(1440,900,false);try{
-  await page.getByRole('button',{name:'更多浏览器操作'}).click();await page.getByRole('menu',{name:'浏览器菜单',exact:true}).waitFor();await page.locator('.eb-workspace-toggle').hover();await expect.poll(()=>page.locator('.eb-workspace-tabs').getAttribute('aria-hidden')).toBe('false');await page.keyboard.press('Escape');expect(await page.locator('[data-browser-panel]').count()).toBe(0);expect(await page.locator('.eb-workspace-tabs').getAttribute('aria-hidden')).toBe('false');await page.locator('.eb-toolbar').hover();await page.keyboard.press('Escape');expect(await page.locator('.eb-workspace-tabs').getAttribute('aria-hidden')).toBe('true');expect(errors).toEqual([])
+  await page.locator('.eb-workspace-toggle').click()
+  await page.getByRole('button',{name:'更多浏览器操作'}).click()
+  await page.getByRole('menu',{name:'浏览器菜单',exact:true}).waitFor()
+  await page.keyboard.press('Escape')
+  expect(await page.locator('[data-browser-panel]').count()).toBe(0)
+  expect(await page.locator('.eb-workspace-tabs').getAttribute('aria-hidden')).toBe('false')
+  await page.keyboard.press('Escape')
+  expect(await page.locator('.eb-workspace-tabs').getAttribute('aria-hidden')).toBe('true')
+  expect(errors).toEqual([])
  }finally{await page.close()}
 })
 
-it('releases mouse-held workspace focus on pointer exit while retaining a visible keyboard focus',async()=>{
- const {page,errors}=await fixture(1440,900,false);try{
-  const toggle=page.locator('.eb-workspace-toggle'),nav=page.locator('.eb-workspace-tabs');await toggle.click();await page.locator('.eb-toolbar').hover();await toggle.hover();expect(await toggle.evaluate(el=>el===document.activeElement&&!el.matches(':focus-visible'))).toBe(true);await page.locator('.eb-toolbar').hover();await expect.poll(()=>nav.getAttribute('aria-hidden')).toBe('true')
-  await toggle.focus();await toggle.press('Enter');expect(await toggle.evaluate(el=>el.matches(':focus-visible'))).toBe(true);await toggle.hover();await page.locator('.eb-toolbar').hover();await page.waitForTimeout(220);expect(await nav.getAttribute('aria-hidden')).toBe('false');expect(errors).toEqual([])
+it('customizes four top-bar positions from the home page and shares them with the browser',async()=>{
+ const {page,errors}=await fixture(1440,900,false)
+ try {
+  page.setDefaultTimeout(2200)
+  await page.evaluate(()=>{
+   window.browserView.close()
+   document.body.removeAttribute('data-workspace-surface')
+   const center=document.querySelector('.pI_x6G_centerCol')
+   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header>对话首页</header></section>'
+   window.mountNavigationShortcuts(document,{
+    read:()=>({top:['research','note','spreadsheet',null]}),
+    save:value=>{window.savedTop=value.top;return true},
+    open:()=>{}
+   })
+   window.mountWorkspaceViewCustomization(document)
+  })
+  const home=page.locator('[data-workspace-customize-home]')
+  await home.click()
+  const dialog=page.getByRole('dialog',{name:'自定义顶栏'})
+  await dialog.getByText('1. 对话（固定）').waitFor()
+  expect(await dialog.getByRole('combobox').count()).toBe(4)
+  await dialog.getByRole('combobox',{name:'第 2 项'}).selectOption('note')
+  await dialog.getByRole('combobox',{name:'第 3 项'}).selectOption('image-factory')
+  await dialog.getByRole('combobox',{name:'第 5 项'}).selectOption('knowledge')
+  await dialog.getByRole('button',{name:'保存',exact:true}).click()
+  await dialog.waitFor({state:'hidden'})
+  expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','image-factory','spreadsheet','knowledge'])
+  await page.evaluate(()=>{document.body.dataset.workspaceSurface='browser';return window.browserView.open('session-A')})
+  await home.waitFor({state:'detached'})
+  await page.locator('.eb-workspace-toggle').click()
+  const views=page.locator('.eb-workspace-tabs [data-workspace-native-view]')
+  expect(await views.allTextContents()).toEqual(['对话','笔记','图像','表格','知识库'])
+  expect(errors).toEqual([])
  }finally{await page.close()}
 })
 

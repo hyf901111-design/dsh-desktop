@@ -1,5 +1,10 @@
 export const navigationApps = ['browser', 'knowledge', 'image-factory', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet'] as const
-const savedTopSlotCount = 4
+export const topShortcutCount = 4
+export const topNavigationApps = ['research', 'note', 'spreadsheet', 'browser', 'image-factory', 'knowledge'] as const
+export type TopNavigationApp = typeof topNavigationApps[number]
+export function isTopNavigationApp(value: unknown): value is TopNavigationApp {
+  return topNavigationApps.some(app => app === value)
+}
 export const sidebarShortcutCount = 6
 
 export type NavigationApp = typeof navigationApps[number]
@@ -32,7 +37,7 @@ export function normalizeNavigationShortcuts(value: unknown): NavigationShortcut
     const saved = record?.[region]
     if (!Array.isArray(saved)) return [...defaultNavigationShortcuts[region]]
     const used = new Set<NavigationShortcut>()
-    return Array.from({ length: region === 'side' ? sidebarShortcutCount : savedTopSlotCount }, (_, index) => {
+    return Array.from({ length: region === 'side' ? sidebarShortcutCount : topShortcutCount }, (_, index) => {
       const app: unknown = saved[index]
       if (!isNavigationShortcut(app) || (region === 'top' && !isNavigationApp(app)) || used.has(app)) return null
       used.add(app)
@@ -46,7 +51,7 @@ export function replaceNavigationShortcut(
   value: NavigationShortcuts, region: NavigationRegion, index: number, app: NavigationShortcut | null
 ): NavigationShortcuts {
   const slots = value[region]
-  if ((app !== null && region === 'top' && !isNavigationApp(app)) || !Number.isInteger(index) || index < 0 || index >= (region === 'side' ? sidebarShortcutCount : savedTopSlotCount) || slots[index] === app) return value
+  if ((app !== null && region === 'top' && !isNavigationApp(app)) || !Number.isInteger(index) || index < 0 || index >= (region === 'side' ? sidebarShortcutCount : topShortcutCount) || slots[index] === app) return value
   const next = [...slots]
   const current = app === null ? -1 : slots.indexOf(app)
   if (current >= 0) next[current] = slots[index] ?? null

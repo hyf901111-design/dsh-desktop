@@ -1,7 +1,7 @@
 import { fileEditorLabel, fileEditorMode, type FileEditorMode, type FileEditorSource } from '../../shared/file-editor.mjs'
 import { sharedKnowledgeSessionFile, knowledgeSessionLabels as sharedModeLabels } from '../../shared/knowledge-sessions'
 import { openSharedKnowledgeSession } from './session-directory'
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import {
@@ -12,7 +12,7 @@ import {
 import type { KnowledgeViewMessage, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
-import { findWorkspaceSession, navigateWorkspaceView, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
+import { findWorkspaceSession, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews } from '../workspace-view-shortcuts'
 import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
 import { knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
@@ -34,7 +34,6 @@ interface Bridge {
   openImageFactorySource?(sessionId: string): Promise<void>
   openImageFactoryCopy?(id: string): Promise<void>
   openImageProject?(id: string): Promise<void>
-  workspacePointerInBar?: WorkspacePointerInBar
   request(method: 'received', args?: { refresh?: boolean }): Promise<KnowledgeDocument[]>
   request(method: 'share' | 'unshare', args: { id: string; category?: string }): Promise<KnowledgeSnapshot>
   request(method: 'share-session' | 'unshare-session', args: { id: string; mode: KnowledgeSessionMode; title: string; category?: string }): Promise<KnowledgeSnapshot>
@@ -130,9 +129,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const sessionDirectories = useKnowledgeSessions(document, surfaceVisible && tab === 'files', evidenceFor)
   const sessions = sessionMode ? sessionDirectories[sessionMode] : undefined
   const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
-  const header = useRef<HTMLElement>(null)
+  const views = useSyncExternalStore(
+    listener => observeWorkspaceViews(document, listener), () => sessionWorkspaceViews(document))
   const workspaceToggle = useRef<HTMLButtonElement>(null)
-  const workspaceHover = useRef<WorkspaceViewHover>()
   const hasWorkspaceSession = workspaceExpanded && !!findWorkspaceSession(document)
   const [local, setSnapshot] = useState(empty)
   const [received, setReceived] = useState<KnowledgeDocument[]>([])
@@ -211,21 +210,15 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const previousResultScope = useRef(resultScope)
 
   useLayoutEffect(() => {
-    const bar = header.current
-    if (!bar) return
-    const hover = new WorkspaceViewHover(bar, () => bar, setWorkspaceExpanded, bridge.workspacePointerInBar)
-    workspaceHover.current = hover
     const syncSurface = () => {
       const visible = host.current()?.surface === 'knowledge'
       setSurfaceVisible(visible)
-      if (!visible) hover.setExpanded(false)
+      if (!visible) setWorkspaceExpanded(false)
     }
     syncSurface()
     document.addEventListener('sherlock:workspace-surface-change', syncSurface)
     return () => {
       document.removeEventListener('sherlock:workspace-surface-change', syncSurface)
-      hover.dispose()
-      workspaceHover.current = undefined
     }
   }, [bridge, document, host])
 
@@ -235,7 +228,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       if (view === 'chat') host.revealConversation()
       return
     }
-    if (view === 'knowledge') { workspaceHover.current?.setExpanded(false); return }
+    if (view === 'knowledge') { setWorkspaceExpanded(false); return }
     if (!navigateWorkspaceView(document, sessionId, view, () => host.revealConversation()))
       setNotice({ text: '此会话视图暂不可用，请先打开对应会话。', error: true })
   }
@@ -848,11 +841,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   return <>
-    <header ref={header} className="knowledge-header workspace-app-topbar" onKeyDown={event => {
+    <header className="knowledge-header workspace-app-topbar" onKeyDown={event => {
       if (event.key !== 'Escape' || !workspaceExpanded) return
       event.preventDefault()
       event.stopPropagation()
-      workspaceHover.current?.setExpanded(false)
+      setWorkspaceExpanded(false)
       workspaceToggle.current?.focus({ preventScroll: true })
     }}>
       <div className="knowledge-back" onClick={() => host.back()} dangerouslySetInnerHTML={{ __html: workspaceBackButton() }} />
@@ -865,12 +858,13 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           aria-label={`${workspaceExpanded ? '收起' : '展开'}工作区页签`}
           title={`${workspaceExpanded ? '收起' : '展开'}工作区页签`}
           aria-expanded={workspaceExpanded} aria-controls="knowledge-workspace-tabs"
-          onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true" /></button>
-        <nav id="knowledge-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label="工作区视图" aria-hidden={!workspaceExpanded}>
-          {workspaceViews.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'knowledge'} aria-label={`切换到${label}`}
+          onClick={() => setWorkspaceExpanded(value => !value)}><i aria-hidden="true" /></button>
+        <nav id="knowledge-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label="工作区视图" aria-hidden={!workspaceExpanded} ref={node => { if (node) node.inert = !workspaceExpanded }}>
+          {views.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'knowledge'} aria-label={`切换到${label}`}
             tabIndex={workspaceExpanded ? 0 : -1} disabled={!hasWorkspaceSession && view !== 'chat'}
             title={!hasWorkspaceSession && view !== 'chat' ? `选择会话后可打开${label}` : label}
             onClick={() => openWorkspaceView(view)}>{label}</button>)}
+          <button type="button" className="eb-workspace-edit" data-workspace-view-customize="" aria-label="自定义顶栏" title="自定义顶栏"><i aria-hidden="true" /></button>
         </nav>
       </div>
       <div className="knowledge-header-tabs">

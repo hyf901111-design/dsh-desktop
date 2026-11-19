@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
-import { findWorkspaceSession, navigateWorkspaceView, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
+import { findWorkspaceSession, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews } from '../workspace-view-shortcuts'
 import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, brandArtworkIds, type BrandArtworkId, type BrandOverlay, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu, type CanvasToolAction } from './actions-menu'
@@ -28,7 +28,6 @@ import styles from './style.css?raw'
 export const imageFactoryOpenEvent = 'sherlock:image-factory-open'
 type FactoryProject = { sceneId: string; scope: CanvasScope; epoch: number; data: Uint8Array }
 type Bridge = {
-  workspacePointerInBar?: WorkspacePointerInBar
   storage: CanvasStorage
   saveProject(value: FactoryProject): Promise<unknown>
   save(value: { action: 'download'; data: Uint8Array; name: string; format: 'png' | 'jpg' }): Promise<{ cancelled?: boolean }>
@@ -185,6 +184,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const galleryOpen = galleryScope === scope
   const setGalleryOpen = (value: boolean) => setGalleryScope(value ? scope : undefined)
   const [workspaceExpanded, setWorkspaceExpanded] = useState(false)
+  const views = useSyncExternalStore(
+    listener => observeWorkspaceViews(doc, listener), () => sessionWorkspaceViews(doc))
   const [tool, setTool] = useState<CanvasTool>()
   const marking = tool === 'region', placingText = tool === 'text'
   const [rubberband, setRubberband] = useState<Region>()
@@ -224,7 +225,6 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const imageFrame = useRef<HTMLDivElement>(null), commentBubble = useRef<HTMLDivElement>(null)
   const layersPanel = useRef<HTMLDivElement>(null)
   const header = useRef<HTMLElement>(null), workspaceToggle = useRef<HTMLButtonElement>(null)
-  const workspaceHover = useRef<WorkspaceViewHover>()
   const rectangleDrag = useRef<{ pointer: number; start: Point }>()
   const marqueeDrag = useRef<{ pointer: number; start: Point; additive: boolean; selection: string[]; moved: boolean }>()
   const suppressMarqueeClick = useRef(false)
@@ -362,14 +362,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     if (scene) doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-title', { detail: { scope, title: scene.title } }))
   }, [doc, scope, scene?.title])
   useLayoutEffect(() => {
-    const bar = header.current
-    if (!bar) return
-    const hover = new WorkspaceViewHover(bar, () => bar, setWorkspaceExpanded, bridge.workspacePointerInBar)
-    workspaceHover.current = hover
-    const closeWhenHidden = () => { if (doc.body.dataset.workspaceSurface !== 'image-factory') hover.setExpanded(false) }
+    const closeWhenHidden = () => { if (doc.body.dataset.workspaceSurface !== 'image-factory') setWorkspaceExpanded(false) }
     doc.addEventListener('sherlock:workspace-surface-change', closeWhenHidden)
-    return () => { doc.removeEventListener('sherlock:workspace-surface-change', closeWhenHidden); hover.dispose() }
-  }, [bridge, doc])
+    return () => doc.removeEventListener('sherlock:workspace-surface-change', closeWhenHidden)
+  }, [doc])
   useEffect(() => () => {
     mounted.current = false
     for (const job of active.current.values()) job.release()
@@ -1343,7 +1339,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   function openWorkspaceView(view: string) {
     const sessionId = findWorkspaceSession(doc)?.dataset.eworkNotesSession
     if (!sessionId) { if (view === 'chat') revealConversation(); return }
-    if (view === 'image-factory') { workspaceHover.current?.setExpanded(false); return }
+    if (view === 'image-factory') { setWorkspaceExpanded(false); return }
     if (!navigateWorkspaceView(doc, sessionId, view, revealConversation))
       setToast(t('此会话视图暂不可用。', 'This conversation view is unavailable.'))
   }
@@ -1473,18 +1469,19 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   }}>
     <header className="if-top eb-tabs workspace-app-topbar" data-crowded={!!tasks && tasks.tabs.length > 6} ref={header} onKeyDown={event => {
       if (event.key !== 'Escape' || !workspaceExpanded) return
-      event.preventDefault(); event.stopPropagation(); workspaceHover.current?.setExpanded(false); workspaceToggle.current?.focus()
+      event.preventDefault(); event.stopPropagation(); setWorkspaceExpanded(false); workspaceToggle.current?.focus()
     }}>
       <button type="button" className="workspace-back-button t8lSSG_toggleButton" aria-label={t('返回工作区', 'Back to workspace')}
         title={t('返回工作区', 'Back to workspace')} onClick={close}><i className="workspace-back-icon" aria-hidden="true"/></button>
       <div className="workspace-app-title"><Icon name="factory"/><span>{t('图像', 'Images')}</span></div>
       <div className="eb-workspace-controls">
         <button type="button" className="eb-workspace-toggle" ref={workspaceToggle} aria-label={tabsLabel} title={tabsLabel}
-          aria-expanded={workspaceExpanded} aria-controls="image-factory-workspace-tabs" onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true"/></button>
-        <nav id="image-factory-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label={t('工作区视图', 'Workspace views')} aria-hidden={!workspaceExpanded}>
-          {workspaceViews.map(([view, label, english]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'image-factory'} tabIndex={workspaceExpanded ? 0 : -1}
+          aria-expanded={workspaceExpanded} aria-controls="image-factory-workspace-tabs" onClick={() => setWorkspaceExpanded(value => !value)}><i aria-hidden="true"/></button>
+        <nav id="image-factory-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label={t('工作区视图', 'Workspace views')} aria-hidden={!workspaceExpanded} ref={node => { if (node) node.inert = !workspaceExpanded }}>
+          {views.map(([view, label, english]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'image-factory'} tabIndex={workspaceExpanded ? 0 : -1}
             aria-label={t('切换到', 'Switch to ') + t(label, english)}
             disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, english)}</button>)}
+          <button type="button" className="eb-workspace-edit" data-workspace-view-customize="" aria-label={t('自定义顶栏', 'Customize top bar')} title={t('自定义顶栏', 'Customize top bar')}><i aria-hidden="true" /></button>
         </nav>
       </div>
       {tasks?.tabs.length ? <ImageTaskTabs doc={doc} header={header} state={tasks} current={scope}
