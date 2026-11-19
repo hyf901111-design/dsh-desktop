@@ -27,7 +27,7 @@ export function workbenchCreationRequest(session) {
   return request && (request.target==='workbench' || latestClientModeForAuthority(session)==='research') ? request : null
 }
 
-export const WORKBENCH_EARLY_PLAN = '【工作台生成】先理解用户问题、范围与交互，再通过已有授权工具取得、解析或计算所需内容，最后调用 research_workbench_create 一次提交完整 panels。同批对象只取数一次，多卡复用 sharedDatasets+view；普通内容可提交 panel.content，已有完整组件保留 artifact，不逐卡重新取数。仅在用户明确允许模拟时使用 dataMode:"simulated"，显著标明模拟；缺完整模拟内容可沿 generationMode:"deferred" 与 sharedContext 路径继续。保留用户要求的数量和范围，按实际内容选择原生组件或自包含 HTML，不用固定行业样例替代。没有取得的事实保持缺失，不以占位或受理状态声称完成。'
+export const WORKBENCH_EARLY_PLAN = '【工作台生成】先理解用户问题、范围与交互，再通过已有授权工具取得、解析或计算所需内容，最后调用 research_workbench_create 一次提交完整 panels。需要把现有网页放到当前看板时读取那份文件，把原文交给 files 面板的 htmlFile；收到组件回执后再交付。同批对象只取数一次，多卡复用 sharedDatasets+view；普通内容可提交 panel.content，已有完整组件保留 artifact，不逐卡重新取数。仅在用户明确允许模拟时使用 dataMode:"simulated"，显著标明模拟；缺完整模拟内容可沿 generationMode:"deferred" 与 sharedContext 路径继续。保留用户要求的数量和范围，按实际内容选择原生组件或自包含 HTML，不用固定行业样例替代。没有取得的事实保持缺失，不以占位或受理状态声称完成。'
 const WORKBENCH_CONTENT_GUIDANCE = '新增1–30个独立面板，不替换已有卡；编辑用已有编辑工具。先理解需求，复用已经取得的记录与计算结果，再调用 research_workbench_create 提交 title 与完整 panels。普通内容用 panel.content:{title?,body?,rows?,columns?,visualization?,sources?,asOf?,note?}，rows 为对象数组，columns 为 {key,label} 数组，visualization 为 {kind,label?,values?}；保留真实来源、日期、单位和缺失。多卡共用完整 sharedDatasets+view，已有组件可交 artifact；需求匹配时也可使用 library/publicData/preset。保留原范围，按内容选择视图和尺寸，必要时自定义 HTML。requestId 重试保持一致；accepted 是受理，prepared 才是已准备好，incomplete 要说明真实缺口。'
 export const WORKBENCH_PLANNING_TOOL_GUIDANCE = WORKBENCH_CONTENT_GUIDANCE + '仅用户允许模拟时用 dataMode:"simulated"；缺完整模拟内容可用 generationMode:"deferred" 与 sharedContext。'
 
