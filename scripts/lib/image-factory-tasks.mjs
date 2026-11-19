@@ -58,6 +58,17 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     return scope ?? undefined
   }
   function reconcile(scope, reopen, entry) {
+    // App navigation resumes an image task rather than adopting the other app's session.
+    if (entry && !reopen) {
+      const available = tabs.filter(canOpen)
+      const previous = available.find(tab => tab.scope === active) ??
+        available.find(tab => tab.scope === scope) ?? available.at(-1)
+      if (previous && (previous.scope !== scope ||
+          (scope === null && sessions.list.getSnapshot().current !== draftSession))) {
+        select(previous.scope, false)
+        return previous.scope
+      }
+    }
     const closedTab = closed.find(tab => tab.scope === scope)
     const skipClosed = closedTab && !reopen
     // Keep image tabs when the SDK has no selection. Restore a tab's session
