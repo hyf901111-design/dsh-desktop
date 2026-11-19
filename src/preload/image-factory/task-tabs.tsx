@@ -192,15 +192,17 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
     action({ kind, scope: contextTab.scope })
   }
   return <>
-    <span className="eb-app-divider" aria-hidden="true"/>
-    <button ref={trigger} type="button" className="eb-icon-button eb-tab-switcher" aria-label={listLabel} title={listLabel}
-      aria-haspopup="menu" aria-expanded={!!popup && popup.scope === undefined}
-      onClick={() => popup && popup.scope === undefined ? closeList(true) : showPopup(trigger.current)}
-      onKeyDown={event => {
-        if (event.key === 'ArrowDown') { event.preventDefault(); showPopup(trigger.current, undefined, true) }
-        if (event.key === 'Escape' && popup) { event.stopPropagation(); closeList(true) }
-      }}><TabIcon name="chevron"/></button>
-    <div className="eb-tab-scroll" role="tablist" aria-label={t('图片任务', 'Image tasks')} aria-busy={busy} ref={strip}
+    {tabs.length > 0 && <>
+      <span className="eb-app-divider" aria-hidden="true"/>
+      <button ref={trigger} type="button" className="eb-icon-button eb-tab-switcher" aria-label={listLabel} title={listLabel}
+        aria-haspopup="menu" aria-expanded={!!popup && popup.scope === undefined}
+        onClick={() => popup && popup.scope === undefined ? closeList(true) : showPopup(trigger.current)}
+        onKeyDown={event => {
+          if (event.key === 'ArrowDown') { event.preventDefault(); showPopup(trigger.current, undefined, true) }
+          if (event.key === 'Escape' && popup) { event.stopPropagation(); closeList(true) }
+        }}><TabIcon name="chevron"/></button>
+    </>}
+    <div className="eb-tab-scroll" role="tablist" aria-hidden={tabs.length === 0 || undefined} aria-label={t('图片任务', 'Image tasks')} aria-busy={busy} ref={strip}
       style={{ '--eb-tab-count': tabs.length, '--eb-tabs-max': maxWidth + 'px' } as CSSProperties}
       onScroll={event => clipWorkspaceTabs(event.currentTarget)}
       onPointerDown={event => {
