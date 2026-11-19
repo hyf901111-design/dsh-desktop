@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { runInNewContext } from 'node:vm'
 import { createSourceFile, ScriptTarget, ScriptKind, forEachChild, isFunctionDeclaration } from 'typescript'
 import { Context, Service } from '@deepseek-ai/cordis'
-import { patchFigmaFinalConversation, patchFigmaFinalLayout } from '../scripts/lib/patch-figma-final-shell.mjs'
+import { patchComposerWorkspaceBar, patchFigmaFinalConversation, patchFigmaFinalLayout, stripComposerWorkspaceBar } from '../scripts/lib/patch-figma-final-shell.mjs'
 import {patchNotesActivity} from '../scripts/lib/notes-activity.mjs'
 
 const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
@@ -57,8 +57,9 @@ describe('Figma shell patch installation', () => {
     expect(patchFigmaFinalConversation(installed)).toBe(installed)
   })
 
-  it('shows project controls only before the first message in either conversation surface', () => {
-    const installed = patchFigmaFinalConversation(source)
+  it('docks project controls to the input on the home and regular conversation surfaces', () => {
+    const baseline = stripComposerWorkspaceBar(source)
+    const installed = patchComposerWorkspaceBar(baseline)
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const ComposerSurface = runInNewContext(clientFunction(installed, 'ComposerSurface') + '\nComposerSurface', {
       EditableSessionTitle: "button",
@@ -66,23 +67,49 @@ describe('Figma shell patch installation', () => {
       projectSkillText: (text: unknown) => text,
       react_jsx_runtime: { jsx: element, jsxs: element },
       clsx: (...names: unknown[]) => names.filter(Boolean).join(' '),
-      ConversationRoot_module_css_default: {}, HeroGlow: 'glow', HeroShell: 'headline'
+      ConversationRoot_module_css_default: {}, HeroGlow: 'glow', HeroShell: 'headline', HostedQuotaNotice: 'notice'
     })
     const row = element('button', { children: '选择工作区' })
     const input = element('textarea', {})
+    const root = clientFunction(installed, 'HomeGuideNativeOriginalConversationRoot')
+    const visibilityRule = root.match(/const heroWorkspaceRow = (.*?) \? null :/)?.[1]
+    expect(visibilityRule).toBeDefined()
+    const hide = runInNewContext(`({subagentPanel,pendingConversation,conversationVacant}) => ${visibilityRule}`)
     for (const state of [
-      { hero: true, research: false, researchEmpty: false, visible: true },
-      { hero: false, research: true, researchEmpty: true, visible: true },
-      { hero: false, research: true, researchEmpty: false, visible: false },
-      { hero: false, research: false, researchEmpty: false, visible: false }
+      { hero: true, pendingConversation: true, conversationVacant: false, visible: true },
+      { hero: false, research: true, researchEmpty: true, conversationVacant: true, visible: true },
+      { hero: false, research: true, conversationVacant: false, visible: false },
+      { hero: false, conversationVacant: true, visible: true },
+      { hero: false, conversationVacant: false, visible: false },
+      { hero: false, subagentPanel: true, conversationVacant: true, visible: false }
     ]) {
-      const tree = ComposerSurface({ ...state, heroWorkspaceRow: row, inputBar: input,
+      const tree = ComposerSurface({ ...state, heroWorkspaceRow: hide(state) ? null : row, inputBar: input,
         renderSlotChain: (_name: string, _context: unknown, options: { fallback: unknown }) => options.fallback })
       const children = tree.props.children.props.children
-      expect(children.includes(row)).toBe(state.visible)
-      expect(children.includes(input)).toBe(true)
+      const project = children.at(-1)
+      if (state.visible) {
+        expect(project.props['data-odyssey-composer-project']).toBe('')
+        expect(project.props.children).toEqual([row, input])
+      } else expect(project).toBe(input)
     }
-    expect(patchFigmaFinalConversation(installed)).toBe(installed)
+    expect(patchComposerWorkspaceBar(installed)).toBe(installed)
+    expect(stripComposerWorkspaceBar(installed)).toBe(baseline)
+  })
+
+  it('keeps the current project name visible when an existing work area locks its picker', () => {
+    const installed = patchComposerWorkspaceBar(stripComposerWorkspaceBar(source))
+    const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
+    const WorkspaceChip = runInNewContext(clientFunction(installed, 'WorkspaceChip') + '\nWorkspaceChip', {
+      document: { documentElement: { dataset: { odysseyLocale: 'zh' } } },
+      react_jsx_runtime: { jsx: element, jsxs: element },
+      HeroShell_module_css_default: { workspace: 'workspace' },
+      _deepseek_ai_dsh_client_ui_primitives: {}
+    })
+    const project = { label: '当前研究项目', t: (key: string) => key }
+    expect(WorkspaceChip(project).props.disabled).toBe(false)
+    const locked = WorkspaceChip({ ...project, disabled: true })
+    expect(locked.props).toMatchObject({ disabled: true, title: '工作区已有编辑，项目已锁定' })
+    expect(locked.props.children[1].props.children).toBe(project.label)
   })
 
   it('commits the pointer-up position when a quick sidebar drag has no delivered move event', async () => {

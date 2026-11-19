@@ -1,6 +1,7 @@
 import type { CanvasImageType, CanvasScope, CanvasStorage, StoredCanvas, StoredImageLayer } from '../../shared/image-factory-canvas'
 import { loadRaster, type Raster } from './raster'
 import type { ImageLayer, ImageScene } from './layers'
+import { markWorkspaceProjectEdited } from '../workspace-project-lock'
 
 type RestoreStatus = 'idle' | 'loading' | 'ready' | 'error'
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -93,6 +94,7 @@ export class CanvasWorkspace {
     }
     if (!editKey || editKey !== entry.coalescing) entry.beforeEdit ??= previous
     entry.scene = next
+    markWorkspaceProjectEdited(this.doc, scope)
     if (persist) {
       this.recordEdit(entry, editKey)
       this.save(scope, entry)
@@ -195,6 +197,7 @@ export class CanvasWorkspace {
       draft.scope = sessionId
       this.entries.set(sessionId, draft)
       this.entries.delete(null)
+      markWorkspaceProjectEdited(this.doc, sessionId)
       this.publish(this.scope)
       this.evict(sessionId)
     }
@@ -254,6 +257,7 @@ export class CanvasWorkspace {
         const layers = data.canvas.layers.map(layer => layer.kind === 'image' ? restored! : layer)
         const { version: _version, ...canvas } = data.canvas
         entry.scene = { ...canvas, layers }
+        markWorkspaceProjectEdited(this.doc, scope)
         entry.assetId = restored?.assetId
         this.collectRasters(entry)
         restored = undefined

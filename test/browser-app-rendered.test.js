@@ -639,7 +639,11 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   await expect.poll(() => page.locator('[data-sidebar-home]').getAttribute('aria-pressed')).toBe('true')
   const titleIcon = () => page.locator('.wSkVaW_crumbs').evaluate(node => {
    const style = getComputedStyle(node, '::before')
-   return [style.width, style.height, style.maskImage]
+   return [style.width, style.height, style.maskImage, style.maskSize]
+  })
+  const browserIconSize = await page.locator('.eb-app-label > .eb-icon').evaluate(node => {
+   const style = getComputedStyle(node)
+   return [style.width, style.height]
   })
   const modeIcons = []
   for (const mode of ['home', 'research', 'spreadsheet', 'notes']) {
@@ -649,9 +653,10 @@ it('shares editable shortcuts between the composer and sidebar with global top s
     const selected = resident.querySelector('[data-conversation-view-id=notes]')
     selected.setAttribute('aria-selected', String(mode === 'notes'))
    }, mode)
-   const [width, height, mask] = await titleIcon()
-   expect([width, height]).toEqual(['18px', '18px'])
+   const [width, height, mask, artwork] = await titleIcon()
+   expect([width, height]).toEqual(browserIconSize)
    expect(mask).not.toBe('none')
+   expect(artwork).toBe({ home: 'contain', research: 'auto 14px', spreadsheet: '14px', notes: 'auto 14px' }[mode])
    modeIcons.push(mask)
   }
   expect(new Set(modeIcons).size).toBe(4)

@@ -88,7 +88,7 @@ import { patchFigmaContainerMenu } from './lib/figma-container-menu.mjs'
 import { patchFigmaProviderMenu } from './lib/figma-provider-menu.mjs'
 import { patchFigmaMenuPlacement } from './lib/figma-menu-placement.mjs'
 import { patchFigmaRefinementPreset, patchFigmaRefinementConversation, patchFigmaRefinementSubagent, patchFigmaRefinementInputTrigger, patchFigmaNavigationTitles, patchFigmaContextDirectory } from './lib/figma-refinements-client.mjs'
-import { patchFigmaFinalLayout } from './lib/patch-figma-final-shell.mjs'
+import { patchComposerWorkspaceBar, patchFigmaFinalLayout, stripComposerWorkspaceBar } from './lib/patch-figma-final-shell.mjs'
 import { patchFigmaSettingsGeneral, patchFigmaSettingsModels, patchFigmaSettingsAppearance, patchFigmaSettingsPreset } from './lib/figma-settings-client.mjs'
 import { patchFigmaAboutUpdates, patchFigmaUpdateWorkspace } from './lib/figma-updates-client.mjs'
 import { patchFigmaInlineReferences } from './lib/figma-inline-references-client.mjs'
@@ -211,7 +211,7 @@ patchStyles(asset('.css'))
 
 // Restore just this patch before earlier passes update their exact anchors.
 const gridConversationPath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js')
-writeFileSync(gridConversationPath,stripKnowledgeSharedResearch(readFileSync(gridConversationPath,'utf8')))
+writeFileSync(gridConversationPath,stripKnowledgeSharedResearch(stripComposerWorkspaceBar(readFileSync(gridConversationPath,'utf8'))))
 // Unwind our outer action/restore records before lifecycle and grid refreshes.
 writeFileSync(gridConversationPath,stripKnowledgeConversation(stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(readFileSync(gridConversationPath,'utf8')))))))
 const unTabbedConversationSource=stripBoardTabsClient(stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(readFileSync(gridConversationPath,'utf8')))))
@@ -413,3 +413,4 @@ writeFileSync(historyRuntimeBundlePath,patchMessageEditRuntime(readFileSync(hist
 writeFileSync(noteHostPath,patchMessageEditHost(readFileSync(noteHostPath,'utf8')))
 
 writeFileSync(conversationPath,patchKnowledgeSharedResearch(patchSpreadsheetClient(patchConversationPermissionDefault(patchResearchBoardHeaderClient(patchBrowserAppNative(patchKnowledgeConversation(readFileSync(conversationPath,'utf8'))))))))
+writeFileSync(conversationPath,patchComposerWorkspaceBar(readFileSync(conversationPath,'utf8')))
