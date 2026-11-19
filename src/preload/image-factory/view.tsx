@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
-import { findWorkspaceSession, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews } from '../workspace-view-shortcuts'
+import { findWorkspaceSession, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews, takeWorkspaceViewsExpansion } from '../workspace-view-shortcuts'
 import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, brandArtworkIds, type BrandArtworkId, type BrandOverlay, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu, type CanvasToolAction } from './actions-menu'
@@ -362,9 +362,14 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     if (scene) doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-title', { detail: { scope, title: scene.title } }))
   }, [doc, scope, scene?.title])
   useLayoutEffect(() => {
-    const closeWhenHidden = () => { if (doc.body.dataset.workspaceSurface !== 'image-factory') setWorkspaceExpanded(false) }
-    doc.addEventListener('sherlock:workspace-surface-change', closeWhenHidden)
-    return () => doc.removeEventListener('sherlock:workspace-surface-change', closeWhenHidden)
+    const syncWorkspaceViews = () => {
+      if (doc.body.dataset.workspaceSurface !== 'image-factory') setWorkspaceExpanded(false)
+      else if (takeWorkspaceViewsExpansion(doc, findWorkspaceSession(doc)?.dataset.eworkNotesSession, 'image-factory'))
+        setWorkspaceExpanded(true)
+    }
+    syncWorkspaceViews()
+    doc.addEventListener('sherlock:workspace-surface-change', syncWorkspaceViews)
+    return () => doc.removeEventListener('sherlock:workspace-surface-change', syncWorkspaceViews)
   }, [doc])
   useEffect(() => () => {
     mounted.current = false
@@ -1339,7 +1344,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   function openWorkspaceView(view: string) {
     const sessionId = findWorkspaceSession(doc)?.dataset.eworkNotesSession
     if (!sessionId) { if (view === 'chat') revealConversation(); return }
-    if (view === 'image-factory') { setWorkspaceExpanded(false); return }
+    if (view === 'image-factory') return
     if (!navigateWorkspaceView(doc, sessionId, view, revealConversation))
       setToast(t('此会话视图暂不可用。', 'This conversation view is unavailable.'))
   }

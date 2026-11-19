@@ -6,7 +6,7 @@ import {build} from 'esbuild'
 let browser,code
 const evidence=process.env.BROWSER_APP_EVIDENCE||'/tmp/browser-app-figma-20261109'
 beforeAll(async()=>{
- const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import {mountSessionWorkspaceViewShortcuts,mountWorkspaceViewCustomization,setWorkspaceViewPreferences} from './src/preload/workspace-view-shortcuts';window.mountSessionWorkspaceViewShortcuts=mountSessionWorkspaceViewShortcuts;window.mountWorkspaceViewCustomization=mountWorkspaceViewCustomization;window.setWorkspaceViewPreferences=setWorkspaceViewPreferences;import homeShortcutStyles from './src/preload/home-app-shortcuts.css?raw';window.homeShortcutStyles=homeShortcutStyles;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
+ const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import {keepWorkspaceViewsExpanded,mountSessionWorkspaceViewShortcuts,mountWorkspaceViewCustomization,setWorkspaceViewPreferences} from './src/preload/workspace-view-shortcuts';window.mountSessionWorkspaceViewShortcuts=mountSessionWorkspaceViewShortcuts;window.keepWorkspaceViewsExpanded=keepWorkspaceViewsExpanded;window.mountWorkspaceViewCustomization=mountWorkspaceViewCustomization;window.setWorkspaceViewPreferences=setWorkspaceViewPreferences;import homeShortcutStyles from './src/preload/home-app-shortcuts.css?raw';window.homeShortcutStyles=homeShortcutStyles;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
 let listener;let n=0;const data={tabs:[{id:'tab0',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'tab0',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}};
 window.setBrowserState=value=>{Object.assign(data,value);listener(structuredClone(data))};window.browserCalls=[];window.snapshot=()=>structuredClone(data);window.update=()=>listener(structuredClone(data));
 const bridge={subscribe:f=>{listener=f;return()=>{}},source:async(...args)=>window.browserCalls.push(['source',...args]),request:async(method,input={})=>{if(method==='site')return{permissions:data.sitePermissions??{}};window.browserCalls.push([method,input]);const t=data.tabs.find(t=>t.id===data.activeId);if(method==='capture'){if(window.browserCapture)return await window.browserCapture();const c=document.createElement('canvas');c.width=20;c.height=20;return c.toDataURL()};if(method==='new'){const tab={...t,id:'tab'+(++n),title:input.url?'Example Domain':'新标签页',url:input.url??'',private:!!input.private};delete tab.page;data.tabs.push(tab);data.activeId=tab.id}if(method==='internal-page'){let page=data.tabs.find(tab=>tab.page===input.page);if(!page){page={...t,id:'tab'+(++n),url:'',page:input.page,title:input.page==='history'?'历史记录':'下载内容',private:false,loading:false,canBack:false,canForward:false};data.tabs.push(page)}data.activeId=page.id}if(method==='select')data.activeId=input.id;if(method==='reorder'){const tab=data.tabs.find(t=>t.id===input.id),before=data.tabs.find(t=>t.id===input.beforeId);if(tab&&tab!==before){data.tabs.splice(data.tabs.indexOf(tab),1);data.tabs.splice(before?data.tabs.indexOf(before):data.tabs.length,0,tab)}}if(method==='zoom')data.tabs.find(tab=>tab.id===input.id).zoom=input.value;if(method==='close'){const index=data.tabs.findIndex(t=>t.id===input.id);data.tabs.splice(index,1);if(data.activeId===input.id)data.activeId=data.tabs[Math.min(index,data.tabs.length-1)].id}if(method==='home'){delete t.page;t.url='';t.title='新标签页';t.canBack=false;t.canForward=false}if(method==='history-remove')data.history=data.history.filter(row=>row.id!==input.id);if(method==='navigate'){delete t.page;t.url=input.url;t.title='Example Domain';data.history.unshift({id:'h'+n,url:input.url,title:t.title,at:Date.now()})}if(method==='bookmark'){const old=data.bookmarks.find(b=>b.url===input.url);if(input.remove)data.bookmarks=data.bookmarks.filter(b=>b.url!==input.url);else if(old)Object.assign(old,{title:input.title,folder:input.folder});else data.bookmarks.push({id:'b'+n,url:input.url,title:input.title,folder:input.folder,at:Date.now()})}if(method==='bookmark-update')Object.assign(data.bookmarks.find(b=>b.id===input.id),input);if(method==='bookmarks-remove')data.bookmarks=data.bookmarks.filter(b=>!input.ids.includes(b.id));if(method==='folder')data.folders.push(input.name);if(method==='settings')Object.assign(data.settings,input);if(method==='clear'&&input.history)data.history=[];if(method==='find')t.find={matches:6,activeMatchOrdinal:1};return structuredClone(data)}};
@@ -387,7 +387,7 @@ it('expands workspace shortcuts after the draggable title and gives their space 
  }finally{await page.close()}
 })
 
-it('exposes the shared switcher only on session views and carries the current owner through mode changes', async () => {
+it('keeps the shared switcher expanded and carries the current session through mode changes', async () => {
  const {page,errors}=await fixture(1280,830,true)
  try {
   await page.evaluate(() => {
@@ -403,6 +403,7 @@ it('exposes the shared switcher only on session views and carries the current ow
     button.addEventListener('click',()=>{
      for(const tab of tabs.children)tab.setAttribute('aria-selected',String(tab===button))
      root.dataset.odysseyPage=view
+     delete document.body.dataset.workspaceSurface
      window.quickOwners.push([view,header.dataset.eworkNotesSession])
     })
     tabs.append(button)
@@ -410,7 +411,13 @@ it('exposes the shared switcher only on session views and carries the current ow
    window.mountSessionWorkspaceViewShortcuts(document,()=>{})
    document.addEventListener('sherlock:session-workspace-view',event=>{
     event.preventDefault()
-    window.quickOwners.push([event.detail.view,event.detail.sessionId])
+    const {view,sessionId}=event.detail
+    window.quickOwners.push([view,sessionId])
+    if(view==='browser'){
+     document.body.dataset.workspaceSurface='browser'
+     window.keepWorkspaceViewsExpanded(document,sessionId,view)
+     void window.browserView.open(sessionId)
+    }
    })
   })
   const controls=page.locator('[data-session-workspace-controls]')
@@ -420,18 +427,35 @@ it('exposes the shared switcher only on session views and carries the current ow
    root.querySelector('header').dataset.odysseyHomeHeader='false'
    root.querySelector('[data-conversation-view-id=research]').setAttribute('aria-selected','true')
   })
-  for(const [view,label] of [['notes','笔记'],['spreadsheet','表格'],['chat','对话'],['browser','浏览器'],['image-factory','图像'],['knowledge','知识库']]) {
-   const toggle=controls.getByRole('button',{name:'展开工作区页签',exact:true})
-   if(view==='browser') await page.evaluate(()=>window.setWorkspaceViewPreferences(document,{
+  const expanded=controls.getByRole('button',{name:'收起工作区页签',exact:true})
+  await controls.getByRole('button',{name:'展开工作区页签',exact:true}).click()
+  for(const [view,label] of [['notes','笔记'],['spreadsheet','表格'],['chat','对话']]) {
+   await controls.getByRole('button',{name:'切换到'+label,exact:true}).click()
+   expect(await page.evaluate(()=>window.quickOwners.at(-1))).toEqual([view,'session-A'])
+   await expanded.waitFor()
+  }
+  await page.evaluate(()=>window.setWorkspaceViewPreferences(document,{
     get:()=>['browser','image-factory','knowledge',null],replace:()=>true
-   }))
-   await toggle.click()
+  }))
+  for(const [view,label] of [['image-factory','图像'],['knowledge','知识库'],['browser','浏览器']]) {
    await controls.getByRole('button',{name:'切换到'+label,exact:true}).click()
    expect(await page.evaluate(()=>window.quickOwners.at(-1))).toEqual([view,'session-A'])
   }
-  await controls.getByRole('button',{name:'展开工作区页签',exact:true}).click()
+  const browserControls=page.locator('.eb-root .eb-workspace-controls')
+  await browserControls.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+  await browserControls.getByRole('button',{name:'切换到浏览器',exact:true}).click()
+  await browserControls.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+  await browserControls.getByRole('button',{name:'切换到对话',exact:true}).click()
+  await expanded.waitFor()
+  expect(await page.evaluate(()=>window.quickOwners.at(-1))).toEqual(['chat','session-A'])
+  await controls.getByRole('button',{name:'切换到对话',exact:true}).click()
+  await expanded.waitFor()
   await page.keyboard.press('Escape')
-  await controls.getByRole('button',{name:'展开工作区页签',exact:true}).waitFor()
+  const collapsed=controls.getByRole('button',{name:'展开工作区页签',exact:true})
+  await collapsed.waitFor()
+  await collapsed.click()
+  await page.locator('[data-srb-session-header]').evaluate(header=>{header.dataset.eworkNotesSession='session-B'})
+  await collapsed.waitFor()
   for(const surface of ['integrations','scheduled']) {
    await page.evaluate(surface=>{
     document.body.dataset.workspaceSurface=surface
@@ -623,7 +647,7 @@ it('dismisses a browser popup before collapsing the workspace shortcuts on Escap
  }finally{await page.close()}
 })
 
-it.each([true,false])('sizes top-bar labels and lets users drag app icons into the workspace switcher (dark=%s)',async dark=>{
+it.each([true,false])('sizes top-bar labels and lets users drag app labels into the workspace switcher (dark=%s)',async dark=>{
  const {page,errors}=await fixture(1440,900,dark)
  try {
   page.setDefaultTimeout(2200)
@@ -662,22 +686,34 @@ it.each([true,false])('sizes top-bar labels and lets users drag app icons into t
   expect(await dialog.getByText('对话',{exact:true}).getAttribute('title')).toBe('对话固定在第一位')
   expect(await slots.count()).toBe(4)
   expect(await dialog.getByRole('combobox').count()).toBe(0)
-  expect(await palette.getByRole('button').count()).toBe(6)
-  expect(await palette.locator('i').evaluateAll(icons=>icons.every(icon=>getComputedStyle(icon).maskImage.includes('data:image/svg+xml')))).toBe(true)
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','笔记','表格','浏览器','图像','知识库'])
+  expect(await slots.allTextContents()).toEqual(['','','',''])
+  expect(await slots.first().evaluate(slot=>({
+   border:getComputedStyle(slot,'::after').borderTopStyle,
+   fill:getComputedStyle(slot).backgroundColor
+  }))).toEqual({border:'dashed',fill:expect.not.stringMatching(/^rgba\(0, 0, 0, 0\)$/)})
   const paletteBox=await palette.boundingBox(), firstSlot=await slots.first().boundingBox()
   expect(paletteBox.y).toBeGreaterThan(firstSlot.y+firstSlot.height)
   expect(Math.abs(firstSlot.y-chatBox.y)).toBeLessThanOrEqual(2)
-  expect(await palette.locator('i').first().evaluate(icon=>getComputedStyle(icon).animationName)).toBe('navigation-shortcut-wiggle')
+  expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('navigation-shortcut-wiggle')
   await page.emulateMedia({reducedMotion:'reduce'})
-  expect(await palette.locator('i').first().evaluate(icon=>getComputedStyle(icon).animationName)).toBe('none')
+  expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('none')
   await page.emulateMedia({reducedMotion:'no-preference'})
   const dragApp=(name,index)=>palette.getByRole('button',{name,exact:true}).dragTo(slots.nth(index))
   await dragApp('笔记',0)
   await dragApp('图像',1)
   await dragApp('表格',2)
   await dragApp('知识库',3)
+  const researchBox=await palette.getByRole('button',{name:'研究',exact:true}).boundingBox()
+  await page.mouse.move(researchBox.x+researchBox.width/2,researchBox.y+researchBox.height/2)
+  await page.mouse.down()
+  await page.mouse.move(500,230,{steps:5})
+  expect(await dialog.locator('.workspace-view-drag-ghost').count()).toBe(1)
+  await page.mouse.up()
+  expect(await dialog.locator('.workspace-view-drag-ghost').count()).toBe(0)
+  expect(await dialog.isVisible()).toBe(true)
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','image-factory','spreadsheet','knowledge'])
-  await slots.nth(1).locator('[draggable=true]').dragTo(slots.nth(0))
+  await slots.nth(1).locator('[data-workspace-editor-app]').dragTo(slots.nth(0))
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','note','spreadsheet','knowledge'])
   await palette.getByRole('button',{name:'浏览器',exact:true}).press('Enter')
   await dialog.getByRole('button',{name:'第 3 项 · 笔记'}).press('Enter')
