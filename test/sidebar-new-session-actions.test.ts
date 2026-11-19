@@ -14,6 +14,7 @@ type BundleDescriptor = {
 }
 
 const requireModule = createRequire(import.meta.url)
+const { installInitialChatViewIntent, patchNewChatSessionRuntime } = requireModule('../scripts/lib/session-view-preferences.mjs')
 const { installImageFactoryContext } = requireModule('../scripts/lib/image-factory-native.mjs')
 const react = requireModule('react') as Record<string, unknown>
 const jsxRuntime = requireModule('react/jsx-runtime') as Record<string, unknown>
@@ -316,6 +317,42 @@ describe('normal new Note workspace flow',()=>{
  })
 })
 
+it('starts an unnamed Chat instead of reusing a titled blank session', async () => {
+  const w = new Window({ url: 'https://sherlock.local/' })
+  installBrowserGlobals(w)
+  const client = await loadClientBundle('dsh-client-runtime', w, [], patchNewChatSessionRuntime)
+  const WorkspaceRuntime = client.WorkspaceRuntime as new (...args: unknown[]) => any
+  const byId: Record<string, { id: string; cwd: string; blank: boolean; title?: string }> = {
+    sheet: { id: 'sheet', cwd: '/workspace', blank: true, title: '新表格' },
+    renamed: { id: 'renamed', cwd: '/workspace', blank: true, title: '手动标题' },
+    chat: { id: 'chat', cwd: '/workspace', blank: true },
+  }
+  const sessions = {
+    list: { subscribe: () => () => {}, getSnapshot: () => ({ ids: Object.keys(byId), byId }) },
+    create: vi.fn(async () => 'fresh-chat')
+  }
+  const install = runInNewContext('(' + installInitialChatViewIntent.toString() + ')', {
+    window: w,
+    sherlockBoardsAdapter: { getState: () => ({ account: { status: 'ready' } }), isBoardOnly: () => false }
+  })
+  const dispose = install({}, sessions)
+  try {
+    const policy = Reflect.get(w, Symbol.for('sherlock:initial-chat-reuse'))
+    const runtime = new WorkspaceRuntime({ reflect: { provide: vi.fn() } }, {}, sessions)
+    runtime.list.update((draft: any) => {
+      draft.items = [{ workspaceId: 'workspace-1', path: '/workspace', sessionIds: Object.keys(byId) }]
+    })
+    expect(await runtime.connectWorkspace('workspace-1', policy.canReuse)).toBe('chat')
+    expect(sessions.create).not.toHaveBeenCalled()
+    delete byId.chat
+    expect(await runtime.connectWorkspace('workspace-1', policy.canReuse)).toBe('fresh-chat')
+    expect(sessions.create).toHaveBeenCalledExactlyOnceWith({ workspaceId: 'workspace-1' })
+  } finally {
+    dispose()
+    w.happyDOM.close()
+  }
+})
+
 it('opens Home directly and keeps New Chat and New Research as separate actions', async () => {
   const w = new Window({ url: 'https://sherlock.local/' })
   installBrowserGlobals(w)
@@ -381,7 +418,7 @@ describe('Sherlock sidebar new-session actions', () => {
     const startSession = vi.fn()
     const startResearchSession = vi.fn()
     const labels: Record<string, string> = {
-      'session.new': '新对话',
+      'session.new': '新建对话',
       'session.new.label': '新建对话',
       'session.newResearch': '新研究',
       'session.newResearch.label': '新建研究'
@@ -402,7 +439,7 @@ describe('Sherlock sidebar new-session actions', () => {
 
       const chat = host.querySelector('button[aria-label="新建对话"]') as HTMLElement | null
       const research = host.querySelector('button[aria-label="新建研究"]') as HTMLElement | null
-      expect(chat?.textContent).toContain('新对话')
+      expect(chat?.textContent).toContain('新建对话')
       expect(research?.textContent).toContain('新研究')
       expect(chat?.querySelector('[data-test-icon="chat"]')).not.toBeNull()
       expect(research?.querySelector('[data-sherlock-research-icon]')).not.toBeNull()

@@ -13,7 +13,7 @@ import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from './workspace-topbar'
 import { mountWorkspaceContentIndicators } from './workspace-content-indicators'
 import {
-  clearWorkspaceViewsExpansion, findWorkspaceSession, keepWorkspaceViewsExpanded, mountSessionWorkspaceViewShortcuts,
+  clearWorkspaceViewsExpansion, findWorkspaceSession, keepWorkspaceViewsExpanded, mountSessionWorkspaceViewShortcuts, workspaceModeNavigationAttribute,
   mountWorkspaceViewCustomization, sessionWorkspaceAppViews, sessionWorkspaceViewEvent, type SessionWorkspaceAppView
 } from './workspace-view-shortcuts'
 import { noteBlocksFromFile } from './notes/editor'
@@ -512,7 +512,10 @@ function initializeUi(): void {
   document.addEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
   const openNavigationApp = async (app: NavigationShortcut, signal: AbortSignal, region?: NavigationRegion) => {
     workspaceViewRequest++
-    if (region !== 'top') clearWorkspaceViewsExpansion(document)
+    if (region !== 'top') {
+      document.documentElement.removeAttribute(workspaceModeNavigationAttribute)
+      clearWorkspaceViewsExpansion(document)
+    }
     delete document.body.dataset.sessionWorkspaceSwitch
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app

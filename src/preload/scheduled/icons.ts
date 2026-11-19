@@ -1,4 +1,4 @@
-import chatIcon from '../browser/assets/chat.svg?inline'
+import chatIcon from '../../../build/brand/odyssey-b-new-chat-20.svg?inline'
 import workspaceAddIcon from '../../../build/brand/odyssey-b-workspace-add-18.svg?inline'
 import knowledgeIcon from '../../../build/brand/odyssey-knowledge-base.svg?inline'
 import researchIcon from '../../../build/brand/odyssey-app-research.svg?inline'

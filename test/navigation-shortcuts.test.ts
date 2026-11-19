@@ -91,7 +91,7 @@ it('renders six editable sidebar positions and retains hidden top preferences', 
     manager.pinSidebar('note')
     expect(side.querySelector<HTMLButtonElement>('[data-navigation-app=note]')?.style.getPropertyValue('--navigation-glyph')).toBe(navigationAppIcon('note'))
     manager.pinSidebar('new-chat')
-    expect(pick('[data-navigation-app=new-chat]').getAttribute('aria-label')).toBe('对话')
+    expect(pick('[data-navigation-app=new-chat]').getAttribute('aria-label')).toBe('新建对话')
     manager.pinSidebar('scheduled')
     manager.pinSidebar('research')
     manager.pinSidebar('spreadsheet')

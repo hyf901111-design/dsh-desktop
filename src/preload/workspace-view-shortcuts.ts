@@ -12,6 +12,7 @@ export const sessionWorkspaceAppViews = [
 ] as const
 const workspaceViews = [...nativeViews, ...sessionWorkspaceAppViews] as const
 export const sessionWorkspaceViewEvent = 'sherlock:session-workspace-view'
+export const workspaceModeNavigationAttribute = 'data-workspace-mode-navigation'
 export type SessionWorkspaceAppView = typeof sessionWorkspaceAppViews[number][0]
 
 const sessionHeader = '.pI_x6G_centerCol .wSkVaW_root [data-srb-session-header][data-ework-notes-session]'
@@ -64,6 +65,7 @@ export function canNavigateGlobalWorkspace(document: Document) {
 
 export function navigateGlobalWorkspace(document: Document, view: string, reveal: () => void) {
   if (view === 'chat') {
+    document.documentElement.setAttribute(workspaceModeNavigationAttribute, '')
     keepWorkspaceViewsExpanded(document, null, view)
     reveal()
   } else globalWorkspaceNavigation.get(document)?.(view)
@@ -73,7 +75,9 @@ export function navigateWorkspaceView(document: Document, sessionId: string, vie
   const header = findWorkspaceSession(document, sessionId)
   if (!header?.querySelector('[data-srb-tabs]')) return false
   if (sessionWorkspaceAppViews.some(([id]) => id === view)) {
-    return !document.dispatchEvent(new CustomEvent(sessionWorkspaceViewEvent, { detail: { sessionId, view }, cancelable: true }))
+    const accepted = !document.dispatchEvent(new CustomEvent(sessionWorkspaceViewEvent, { detail: { sessionId, view }, cancelable: true }))
+    if (accepted) document.documentElement.setAttribute(workspaceModeNavigationAttribute, '')
+    return accepted
   }
   const tab = workspaceViewButton(document, sessionId, view)
   if (!tab?.isConnected || tab.disabled) return false
@@ -85,6 +89,7 @@ export function navigateWorkspaceView(document: Document, sessionId: string, vie
     clearWorkspaceViewsExpansion(document)
     return false
   }
+  document.documentElement.setAttribute(workspaceModeNavigationAttribute, '')
   current.click()
   return true
 }
@@ -165,6 +170,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     openingHome?.abort()
     const request = new win.AbortController()
     openingHome = request
+    document.documentElement.setAttribute(workspaceModeNavigationAttribute, '')
     keepWorkspaceViewsExpanded(document, null, view)
     void Promise.resolve().then(() => openHome(app, request.signal)).catch(() => {
       if (openingHome === request) clearWorkspaceViewsExpansion(document)

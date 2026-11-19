@@ -1,4 +1,4 @@
-import chatIcon from './browser/assets/chat.svg?inline'
+import { icons } from './scheduled/icons'
 import noteIcon from '../../build/brand/odyssey-app-note.svg?inline'
 import researchIcon from '../../build/brand/odyssey-app-research.svg?inline'
 import spreadsheetIcon from '../../build/brand/odyssey-app-spreadsheet.svg?inline'
@@ -17,7 +17,7 @@ const appIcons = {
   research: researchIcon,
   note: noteIcon,
   spreadsheet: spreadsheetIcon,
-  'new-chat': chatIcon,
+  'new-chat': icons.chat,
   'new-workspace': newWorkspaceIcon
 } satisfies Record<NavigationShortcut, string>
 

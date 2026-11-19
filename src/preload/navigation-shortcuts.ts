@@ -5,7 +5,7 @@ import {
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
 import { navigationAppIcon } from './home-app-shortcuts'
 import styles from './navigation-shortcuts.css?raw'
-import { setWorkspaceViewPreferences, workspaceViewsChanged } from './workspace-view-shortcuts'
+import { setWorkspaceViewPreferences, workspaceModeNavigationAttribute, workspaceViewsChanged } from './workspace-view-shortcuts'
 
 const presentation = {
   browser: ['浏览器', 'Browser'],
@@ -16,7 +16,7 @@ const presentation = {
   research: ['研究', 'Research'],
   note: ['笔记', 'Notes'],
   spreadsheet: ['表格', 'Spreadsheet'],
-  'new-chat': ['对话', 'Chat'],
+  'new-chat': ['新建对话', 'New chat'],
   'new-workspace': ['新建工作区', 'New workspace']
 } as const
 const groupSelector = '[data-dsh-sidebar-root] .hHd-Xa_newSessionGroup'
@@ -115,6 +115,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   }
 
   function currentShortcut(): NavigationShortcut | 'home' | undefined {
+    if (doc.documentElement.hasAttribute(workspaceModeNavigationAttribute)) return
     const surface = doc.body.dataset.workspaceSurface
     if (surface === 'integrations') return 'plugin'
     if (surface === 'notes') return 'note'
@@ -176,6 +177,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       if (home) setAttribute(home, 'aria-pressed', String(onHome))
       const chat = group.querySelector('[data-sidebar-chat-entry]')
       if (chat) {
+        setAttribute(chat, 'aria-label', label('new-chat'))
         setAttribute(chat, 'aria-pressed', String(active === 'home' || active === 'new-chat'))
       }
       const overflowActive = Boolean(active && active !== 'home' && !shown.includes(active) &&
@@ -432,6 +434,10 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       }
     }
     if (menu && !target.closest('[data-navigation-menu]')) closeMenu()
+    if (target.closest('[data-dsh-sidebar-root] :is([data-sidebar-chat-entry], [data-sidebar-home]), ' +
+      '[data-sidebar-more] button[role=menuitem]:not([data-st-menu-pin], :disabled)')) {
+      doc.documentElement.removeAttribute(workspaceModeNavigationAttribute)
+    }
     const button = targetAt(target)
     if (!button || button.hasAttribute('data-home-guide-entry-click')) return
     event.preventDefault()
@@ -445,6 +451,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     }
     const app = button.dataset.navigationApp
     if (!isNavigationShortcut(app)) return
+    doc.documentElement.removeAttribute(workspaceModeNavigationAttribute)
     pending?.abort()
     const controller = new AbortController()
     pending = controller
@@ -499,7 +506,8 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   observer.observe(doc.documentElement, {
     subtree: true, childList: true, attributes: true,
     attributeFilter: ['data-dsh-sidebar-wide', 'data-workspace-surface', 'data-odyssey-locale', 'data-odyssey-page',
-      'data-srb-selected-session', 'data-ework-notes-session', 'aria-selected', 'aria-hidden', 'hidden']
+      'data-srb-selected-session', 'data-ework-notes-session', 'aria-selected', 'aria-hidden', 'hidden',
+      workspaceModeNavigationAttribute]
   })
   const resize = win.ResizeObserver ? new win.ResizeObserver(sync) : undefined
   resize?.observe(rail)

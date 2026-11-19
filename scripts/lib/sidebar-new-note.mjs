@@ -189,12 +189,10 @@ export function patchSidebarNewNoteShell(input){
     },[startSession,startResearchSession]);
 `+root],
     [foot,'!wide && '+home+',\n'+foot],
-    ['"session.new": "新对话",','"session.new": "对话",'],
-    ['"session.new.label": "新建对话",','"session.new.label": "对话",'],
+    ['"session.new": "新对话",','"session.new": "新建对话",'],
     ['"session.newResearch": "新研究",','"session.newResearch": "研究",'],
     ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "研究",\n"sidebar.home.label":"主页",'],
-    ['"session.new": "New Chat",','"session.new": "Chat",'],
-    ['"session.new.label": "New chat",','"session.new.label": "Chat",'],
+    ['"session.new": "New Chat",','"session.new": "New chat",'],
     ['"session.newResearch": "New Research",','"session.newResearch": "Research",'],
     ['"session.newResearch.label": "New research",','"session.newResearch.label": "Research",\n"sidebar.home.label":"Home",'],
   ])
