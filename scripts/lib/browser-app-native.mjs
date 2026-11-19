@@ -82,7 +82,8 @@ export function installBrowserNative({sessions,getInput,getRightDraft,isBoardOnl
    if(!live||typeof d.sessionId!=='string'||d.sessionId!==sessions.list.getSnapshot().current||document.body.dataset.workspaceSurface!=='browser')throw Error('当前会话已变化，请重新发送网页来源。')
    const source=JSON.parse(d.source),url=new URL(source.url)
    if(!['http:','https:'].includes(url.protocol)||url.username||url.password||typeof source.title!=='string'||source.title.length>1024||!Number.isFinite(source.at))throw Error('网页来源无效。')
-   const shell=getInput(d.sessionId),before=shell?.snapshot
+   const detached=getRightDraft?.(d.sessionId)
+   const shell=detached?.shell??getInput(d.sessionId),before=shell?.snapshot
    if(!shell||shell.disposed||before.phase!=='plain'||before.researchContextPreparing)throw Error('当前输入不可编辑，原草稿已保留。')
    const input=detached?document.querySelector('#odyssey-right-workspace-panel textarea[data-pending-conversation-input]'):
     [...document.querySelectorAll('textarea[data-odyssey-file-reference-session]')].find(el=>el.dataset.odysseyFileReferenceSession===d.sessionId&&!el.closest('[data-odyssey-subagent-panel]'))

@@ -177,6 +177,25 @@ it('attaches the source to the current native shell without sending or replacing
  off();vi.unstubAllGlobals();await w.happyDOM.abort()
 })
 
+it('inserts a webpage source into the right project draft while retaining the browser owner', async () => {
+ const w=new Window()
+ vi.stubGlobal('window',w);vi.stubGlobal('document',w.document);vi.stubGlobal('CustomEvent',w.CustomEvent)
+ const original=vi.fn()
+ const right={snapshot:{phase:'plain',draft:'B 草稿',draftRev:3},insertReference:vi.fn(()=>true)}
+ const off=installBrowserNative({
+  sessions:{list:{getSnapshot:()=>({current:'A'})},subagentAddress:()=>undefined},getInput:original,
+  getRightDraft:id=>id==='A'?{shell:right}:undefined
+ })
+ try {
+  w.document.body.dataset.workspaceSurface='browser'
+  w.dispatchEvent(new w.CustomEvent('sherlock:browser-source-request',{detail:{sessionId:'A',source:JSON.stringify({
+   title:'网页参考',url:'https://example.com/',at:1
+  })}}))
+  expect(right.insertReference).toHaveBeenCalledWith(expect.objectContaining({label:'网页参考'}),{start:4,end:4,draftRev:3})
+  expect(original).not.toHaveBeenCalled()
+ } finally {off();vi.unstubAllGlobals();await w.happyDOM.abort()}
+});
+
 it('opens the standalone app with or without a conversation without creating or changing a session',async()=>{
  const w=new Window();vi.stubGlobal('window',w);vi.stubGlobal('document',w.document);vi.stubGlobal('CustomEvent',w.CustomEvent)
  const state={current:undefined},create=vi.fn(),open=vi.fn(),setView=vi.fn(),opens=[];let closes=0
