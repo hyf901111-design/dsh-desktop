@@ -664,18 +664,37 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    window.browserView.close()
    document.body.removeAttribute('data-workspace-surface')
    const center=document.querySelector('.pI_x6G_centerCol')
-   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header data-srb-session-header data-ework-notes-session="session-A" style="display:flex;align-items:center;height:44px"><span>新研究</span><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
+   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header data-srb-session-header style="display:flex;align-items:center;height:44px"><span>新研究</span><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
+   window.homeOpens=[]
    window.mountNavigationShortcuts(document,{
     read:()=>({top:[null,null,null,null]}),
     save:value=>{if(window.failTopSave)return false;window.savedTop=value.top;return true},
     open:()=>{}
    })
-   window.mountSessionWorkspaceViewShortcuts(document,()=>{})
+   window.mountSessionWorkspaceViewShortcuts(document,()=>{},app=>window.homeOpens.push(app))
    window.mountWorkspaceViewCustomization(document)
   })
   const gear=page.getByRole('button',{name:'自定义顶栏',exact:true})
+  const homeBar=page.locator('.workspace-home-topbar')
+  const homeTitle=homeBar.getByText('新对话',{exact:true})
+  const homeIcon=homeBar.locator('.workspace-app-title>i')
+  const homeToggle=homeBar.getByRole('button',{name:'展开工作区页签',exact:true})
+  await homeTitle.waitFor()
+  expect(await homeIcon.evaluate(icon=>getComputedStyle(icon).maskImage)).not.toBe('none')
+  const [iconBox,titleBox,toggleBox]=await Promise.all([homeIcon.boundingBox(),homeTitle.boundingBox(),homeToggle.boundingBox()])
+  expect(iconBox.x+iconBox.width).toBeLessThan(titleBox.x)
+  expect(titleBox.x+titleBox.width).toBeLessThan(toggleBox.x)
   expect(await gear.count()).toBe(0)
-  await page.locator('.wSkVaW_root').evaluate(root=>{root.dataset.odysseyPage='research'})
+  await homeToggle.click()
+  await gear.click()
+  await page.getByRole('dialog',{name:'自定义顶栏'}).waitFor()
+  await page.keyboard.press('Escape')
+  await page.getByRole('dialog',{name:'自定义顶栏'}).waitFor({state:'hidden'})
+  await page.locator('.wSkVaW_root').evaluate(root=>{
+   root.dataset.odysseyPage='research'
+   root.querySelector('header').dataset.eworkNotesSession='session-A'
+  })
+  await homeBar.waitFor({state:'detached'})
   const controls=page.locator('[data-session-workspace-controls]')
   await controls.locator('.eb-workspace-toggle').click()
   const nav=controls.locator('.eb-workspace-tabs')
@@ -769,6 +788,10 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await dialog.getByRole('button',{name:'完成编辑'}).click()
   await dialog.waitFor({state:'hidden'})
   await expect.poll(() => views.allTextContents()).toEqual(['对话','笔记','浏览器','图像','知识库'])
+  await page.locator('.wSkVaW_root').evaluate(root=>{root.dataset.odysseyPage='home'})
+  await homeBar.getByRole('button',{name:'展开工作区页签',exact:true}).click()
+  await homeBar.getByRole('button',{name:'切换到笔记',exact:true}).click()
+  expect(await page.evaluate(()=>window.homeOpens)).toEqual(['note'])
   await page.evaluate(()=>{
    document.body.dataset.workspaceSurface='browser'
    document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))

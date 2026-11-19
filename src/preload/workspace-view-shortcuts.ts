@@ -15,6 +15,7 @@ export const sessionWorkspaceViewEvent = 'sherlock:session-workspace-view'
 export type SessionWorkspaceAppView = typeof sessionWorkspaceAppViews[number][0]
 
 const sessionHeader = '.pI_x6G_centerCol .wSkVaW_root [data-srb-session-header][data-ework-notes-session]'
+const homeRoot = '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=home]:not([hidden], [aria-hidden=true], [data-odyssey-subagent-panel] *)'
 
 export function findWorkspaceSession(document: Document, sessionId?: string) {
   return [...document.querySelectorAll<HTMLElement>(sessionHeader)].find(header =>
@@ -117,8 +118,18 @@ export function setWorkspaceViewsExpanded(toggle: HTMLButtonElement, nav: HTMLEl
   nav.inert = !expanded
 }
 
-export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: () => void) {
+export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: () => void,
+  openHome?: (app: TopNavigationApp, signal: AbortSignal) => Promise<void> | void) {
   const win = document.defaultView!
+  const homeTopbar = document.createElement('div')
+  homeTopbar.className = 'workspace-app-topbar workspace-home-topbar'
+  const homeTitle = document.createElement('div')
+  homeTitle.className = 'workspace-app-title workspace-app-heading'
+  const homeIcon = document.createElement('i')
+  homeIcon.setAttribute('aria-hidden', 'true')
+  const homeLabel = document.createElement('span')
+  homeTitle.append(homeIcon, homeLabel)
+  homeTopbar.append(homeTitle)
   const controls = document.createElement('div')
   controls.className = 'eb-workspace-controls'
   controls.dataset.sessionWorkspaceControls = ''
@@ -134,21 +145,35 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   nav.className = 'eb-workspace-tabs'
   controls.append(toggle, nav)
   let owner: HTMLElement | undefined, ownerId: string | undefined, expanded = false, frame = 0
+  let openingHome: AbortController | undefined
   const english = () => document.documentElement.dataset.odysseyLocale === 'en'
   const buttons = workspaceViews.map(([view, zh, en]) => {
     const button = document.createElement('button')
     button.type = 'button'
     button.dataset.workspaceNativeView = view
     button.addEventListener('click', () => {
-      const id = owner?.dataset.eworkNotesSession
-      if (!id || activeHeader() !== owner) return
-      if (button.getAttribute('aria-current') !== 'true') navigateWorkspaceView(document, id, view, reveal)
+      if (!owner || activeHeader() !== owner || button.getAttribute('aria-current') === 'true') return
+      if (owner.matches(homeRoot)) {
+        const app = topNavigationApps.find(app => viewForApp[app] === view)
+        if (app && openHome) {
+          openingHome?.abort()
+          openingHome = new win.AbortController()
+          void Promise.resolve(openHome(app, openingHome.signal)).catch(() => {})
+        }
+        return
+      }
+      const id = owner.dataset.eworkNotesSession
+      if (id) navigateWorkspaceView(document, id, view, reveal)
     })
     return { view, zh, en, button }
   })
   function activeHeader() {
     const surface = document.body.dataset.workspaceSurface
     if (surface && surface !== 'notes') return undefined
+    if (!surface && openHome) {
+      const home = document.querySelector<HTMLElement>(homeRoot)
+      if (home) return home
+    }
     const header = findWorkspaceSession(document)
     if (!header || header.dataset.odysseyHomeHeader === 'true' ||
         header.getAttribute('aria-hidden') === 'true' ||
@@ -172,28 +197,33 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   const sync = () => {
     frame = 0
     const header = activeHeader()
-    const id = header?.dataset.eworkNotesSession
-    const selected = header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected=true]')?.dataset.conversationViewId
+    const onHome = header?.matches(homeRoot)
+    const id = onHome ? undefined : header?.dataset.eworkNotesSession
+    const selected = onHome ? 'chat' : header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected=true]')?.dataset.conversationViewId
     const transition = expandingView.get(document)
     const arrivingExpanded = takeWorkspaceViewsExpansion(document, id, selected)
     const enteringNativeView = transition?.sessionId === id && nativeViews.some(([view]) => view === transition?.view)
     if (header !== owner || id !== ownerId) {
       controls.remove()
+      homeTopbar.remove()
       owner = header
       ownerId = id
       expand(arrivingExpanded || enteringNativeView)
       updated = ''
     } else if (arrivingExpanded) expand(true)
     if (!header) return
-    if (!header.contains(controls)) header.append(controls)
+    if (onHome && homeTopbar.parentElement !== header) header.append(homeTopbar)
+    const container = onHome ? homeTopbar : header
+    if (controls.parentElement !== container) container.append(controls)
     const language = english() ? 'en' : 'zh'
     const native = header.querySelector('[data-srb-tabs]')
-    const availability = buttons.map(({ view }) => !!native && (
-      sessionWorkspaceAppViews.some(([id]) => id === view) || !!native.querySelector(`button[data-conversation-view-id="${view}"]:not(:disabled)`)))
+    const availability = buttons.map(({ view }) => Boolean(onHome || (native && (
+      sessionWorkspaceAppViews.some(([id]) => id === view) || !!native.querySelector(`button[data-conversation-view-id="${view}"]:not(:disabled)`)))))
     const views = sessionWorkspaceViews(document)
     const signature = [id, selected, language, ...availability, ...views.map(([view]) => view)].join(',')
     if (updated === signature) return
     updated = signature
+    if (onHome) homeLabel.textContent = language === 'en' ? 'New chat' : '新对话'
     expand(expanded)
     if (!edit.parentElement) nav.append(edit)
     for (const child of [...nav.children]) if (child !== edit) child.remove()
@@ -220,9 +250,11 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   return () => {
     observer.disconnect()
     win.cancelAnimationFrame(frame)
+    openingHome?.abort()
     document.removeEventListener('sherlock:workspace-surface-change', schedule)
     unobserve()
     controls.remove()
+    homeTopbar.remove()
   }
 }
 
