@@ -9,27 +9,62 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "应用栏快捷管理和侧栏四个固定位置",
+        "featureName": "六位侧栏快捷入口、选中状态与 Figma 图标",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "1a27399607a15f133afe9ba0c43debdfefe41783",
-        "tipCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
+        "baseCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
+        "tipCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
         "commits": [
           {
-            "commit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
+            "commit": "5629fae128919deb32a1b1573ff8034b8a740bf5",
             "parents": [
-              "1a27399607a15f133afe9ba0c43debdfefe41783"
+              "05d2d0b8175205757de4ba9ae89251eb71735bfc"
             ],
-            "subject": "统一快捷管理菜单并保留四个侧栏快捷位"
+            "subject": "将应用快捷入口集中到六位侧栏并同步选中状态"
+          },
+          {
+            "commit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+            "parents": [
+              "5629fae128919deb32a1b1573ff8034b8a740bf5"
+            ],
+            "subject": "放大侧栏应用图标并统一视觉尺寸"
           }
         ],
         "files": [
           {
+            "status": "A",
+            "path": "build/brand/odyssey-app-research.svg"
+          },
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-app-spreadsheet.svg"
+          },
+          {
             "status": "M",
-            "path": "src/main/context-menu-target.ts"
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-b-icons.css"
           },
           {
             "status": "M",
             "path": "src/preload/home-app-shortcuts.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-app-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-entry-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-explore-entry.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
@@ -41,6 +76,10 @@
           },
           {
             "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "M",
             "path": "src/preload/scheduled/style.ts"
           },
           {
@@ -49,11 +88,15 @@
           },
           {
             "status": "M",
+            "path": "src/shared/navigation-shortcuts.ts"
+          },
+          {
+            "status": "M",
             "path": "test/browser-app-rendered.test.js"
           },
           {
             "status": "M",
-            "path": "test/context-menu-home.test.js"
+            "path": "test/browser-sidebar-entry.test.ts"
           },
           {
             "status": "M",
@@ -73,8 +116,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
-            "completedAt": "2026-11-19T05:50:16.107Z",
+            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+            "completedAt": "2026-11-19T06:15:14.987Z",
             "timeoutMs": 60000
           },
           {
@@ -85,12 +128,29 @@
               "test/navigation-shortcuts.test.ts",
               "test/context-menu-home.test.js",
               "test/context-menu-target.test.js",
-              "test/context-menu.test.ts"
+              "test/context-menu.test.ts",
+              "test/browser-sidebar-entry.test.ts",
+              "test/home-guide-entry-native.test.ts"
             ],
             "outcome": "passed",
-            "summary": "31 项导航配置和原生菜单用例通过",
-            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
-            "completedAt": "2026-11-19T05:50:16.107Z",
+            "summary": "95 项导航、原生菜单和入口检查通过",
+            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+            "completedAt": "2026-11-19T06:15:14.987Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/sidebar-new-session-actions.test.ts",
+              "-t",
+              "opens Home directly|renders distinct New Chat"
+            ],
+            "outcome": "passed",
+            "summary": "2 项原生侧栏操作检查通过",
+            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+            "completedAt": "2026-11-19T06:15:14.987Z",
             "timeoutMs": 60000
           },
           {
@@ -103,9 +163,9 @@
               "offers pin actions|keeps More last|puts the real new-note action"
             ],
             "outcome": "passed",
-            "summary": "3 项置顶和侧栏菜单用例通过",
-            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
-            "completedAt": "2026-11-19T05:50:16.107Z",
+            "summary": "3 项侧栏菜单与置顶检查通过",
+            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+            "completedAt": "2026-11-19T06:15:14.987Z",
             "timeoutMs": 60000
           },
           {
@@ -118,82 +178,30 @@
               "--",
               "test/browser-app-rendered.test.js",
               "-t",
-              "shares editable shortcuts|keeps full-size shortcut labels"
+              "shares editable shortcuts"
             ],
             "outcome": "passed",
-            "summary": "实际指针右键覆盖应用图标、图标之间和行尾空白，四个侧栏框保留",
-            "verifiedCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
-            "completedAt": "2026-11-19T05:50:16.107Z",
+            "summary": "真实 Chromium 拖放第六位、高亮及浏览器工具栏测试通过，并确认图形尺寸与 36px 点击范围",
+            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+            "completedAt": "2026-11-19T06:15:14.987Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 界面实测右键命中范围和侧栏占位，macOS 测试包待复测。"
+          "summary": "聚焦渲染验证了六个位置、侧栏选中状态、应用快捷条隐藏和浏览器本身标签与后退控件；完成集成后构建并核验实际客户端。"
         },
         "acceptanceCriteria": [
-          "右键输入框下的应用栏任意位置显示唯一的快捷管理，选择后直接进入拖放编辑状态。",
-          "收起侧栏固定显示四个快捷位置，删除后的空位保留。",
-          "侧栏满四项时更多菜单的置顶按钮置灰，空出位置后恢复。"
+          "首页和应用顶栏隐藏全局快捷入口与应用返回工作区按钮。",
+          "收起侧栏固定显示六个位置，满位时禁用更多菜单的置顶按钮。",
+          "侧栏反映当前页面，对话、研究、表格使用 Figma 无加号图标。",
+          "收起侧栏应用图形实际主轴尺寸约 19 至 20px。"
         ],
-        "risks": [],
-        "generatedAt": "2026-11-19T05:50:16.107Z"
-      },
-      "merged": {
-        "mergeCommit": "d524e9d1dad836dcf0ef3c894813327e6e4937ad",
-        "verificationCommit": "d524e9d1dad836dcf0ef3c894813327e6e4937ad",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "d524e9d1dad836dcf0ef3c894813327e6e4937ad",
-            "completedAt": "2026-11-19T05:50:20.151Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "d524e9d1dad836dcf0ef3c894813327e6e4937ad",
-            "completedAt": "2026-11-19T05:50:20.151Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "d524e9d1dad836dcf0ef3c894813327e6e4937ad",
-            "completedAt": "2026-11-19T05:50:20.151Z",
-            "timeoutMs": 60000
-          }
+        "risks": [
+          "旧顶栏偏好继续保存在原配置，侧栏扩容沿用已有顺序。",
+          "旧基线可复现 sidebar-new-session-actions 的研究页签断言和 VM 缺失 setInterval，本次侧栏入口两项均通过。"
         ],
-        "recordedAt": "2026-11-19T05:50:20.151Z"
+        "generatedAt": "2026-11-19T06:15:14.987Z"
       }
     }
   ],
