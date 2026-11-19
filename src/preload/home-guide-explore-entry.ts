@@ -1,7 +1,7 @@
 import {homeGuideTargetPoint,type HomeGuidePointerAction} from './home-guide-pointer'
 import type {HomeOperationActionContext} from './home-operations'
 import type {HomeGuideKind} from './home-guides'
-import {homeGuideMode,isSidebarNewSessionEntry,isSidebarSpreadsheetMenuItem,sidebarMoreItemSelector,type HomeGuideEntryAction} from './home-guide-entry-native'
+import {homeGuideMode,isSidebarNewSessionEntry,isSidebarNewSpreadsheetEntry,sidebarMoreItemSelector,type HomeGuideEntryAction} from './home-guide-entry-native'
 type Options={homeEmpty?:boolean;context:HomeOperationActionContext;signal:AbortSignal;pointer:{perform(action:HomeGuidePointerAction):Promise<void>};assert():void;nativeClick(target:HTMLElement):void;activate(target:HTMLElement,action:HomeGuideEntryAction,beforeCommit:()=>Promise<void>):Promise<void>}
 /** Only visible native controls. The final click consumes one prepared-session lease. */
 export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuideKind,options:Options){
@@ -32,8 +32,11 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
   if(more.getAttribute('aria-expanded')!=='true')await click(more)
  }
  if(kind==='spreadsheet'){
-  await openMore()
-  const target=await wait(()=>unique([...document.querySelectorAll<HTMLButtonElement>(sidebarMoreItemSelector)].filter(isSidebarSpreadsheetMenuItem)))
+  let target=unique([...document.querySelectorAll<HTMLButtonElement>('[data-navigation-rail] button')].filter(isSidebarNewSpreadsheetEntry))
+  if(!target){
+   await openMore()
+   target=await wait(()=>unique([...document.querySelectorAll<HTMLButtonElement>(sidebarMoreItemSelector)].filter(isSidebarNewSpreadsheetEntry)))
+  }
   await activate(target,'new-spreadsheet')
   return
  }
@@ -80,7 +83,7 @@ export async function waitForHomeGuideNativeView(document:Document,sessionId:str
    if(header?.dataset.eworkNotesSession!==sessionId)return false
    try{
     homeGuideTargetPoint(document,resident)
-    if(tabs){if(tab?.getAttribute('aria-selected')!=='true')return false;homeGuideTargetPoint(document,tab);return true}
+    if(tabs){if(tab?.getAttribute('aria-selected')!=='true')return false;if(!tab.hasAttribute('data-navigation-unpinned'))homeGuideTargetPoint(document,tab);return true}
     // Dedicated Boards intentionally omit mode tabs. Their ordinary canvas is
     // also suppressed while the guide's transition owns the resident. Read the
     // actual React render's session/mode, not the absence of a tab or canvas.

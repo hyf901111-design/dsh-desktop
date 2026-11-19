@@ -495,3 +495,32 @@ it('puts the real new-note action first in the existing More menu and closes it 
  doc.querySelector<HTMLButtonElement>('.st-more')!.click();expect(doc.querySelector<HTMLButtonElement>('[role=menuitem]')!.disabled).toBe(true)
  finish();await Promise.resolve();await Promise.resolve()
 })
+
+it('offers pin actions only in collapsed More and removes a pinned app from that menu', async () => {
+  const w = new Window(); windows.push(w)
+  vi.stubGlobal('MutationObserver', w.MutationObserver); vi.stubGlobal('CustomEvent', w.CustomEvent)
+  const doc = w.document as unknown as Document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root data-dsh-sidebar-wide="false"><div class="hHd-Xa_newSessionGroup"></div></aside>'
+  const pinned: import('../src/shared/navigation-shortcuts').NavigationShortcut[] = []
+  const pinApp = vi.fn(app => pinned.push(app))
+  const view = new ScheduledTaskView(doc, { list: async () => [], workspaces: async () => [], save: vi.fn(), action: vi.fn() },
+    undefined, undefined, { newNote: vi.fn(), pinApp, pinnedApps: () => pinned })
+  view.mount()
+  const more = doc.querySelector<HTMLButtonElement>('.st-more')!
+  more.click()
+  const pin = doc.querySelector<HTMLButtonElement>('[data-st-menu-pin=note]')!
+  expect(pin.getAttribute('aria-label')).toBe('置顶新建笔记到侧栏')
+  expect(pin.previousElementSibling?.textContent).toBe('新建笔记')
+  pin.click()
+  expect(pinApp).toHaveBeenCalledExactlyOnceWith('note')
+  expect(doc.querySelector('.st-menu')).toBeNull()
+  more.click()
+  expect(doc.querySelector('.st-menu')?.textContent).not.toContain('新建笔记')
+  expect(doc.querySelector('[data-st-menu-pin=note]')).toBeNull()
+  doc.querySelector('[data-dsh-sidebar-root]')!.setAttribute('data-dsh-sidebar-wide', 'true')
+  await vi.waitFor(() => expect(doc.querySelector('.st-menu')).toBeNull())
+  more.click()
+  expect(doc.querySelector('.st-menu')?.textContent).toContain('新笔记')
+  expect(doc.querySelector('[data-st-menu-pin]')).toBeNull()
+  view.close()
+})

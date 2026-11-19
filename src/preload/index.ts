@@ -51,7 +51,7 @@ import { mountFigmaMotionController } from './figma-motion-controller'
 import { mountHomeFlow } from './home-flow'
 import { mountHomeAppShortcuts } from './home-app-shortcuts'
 import { mountNavigationShortcuts } from './navigation-shortcuts'
-import { defaultNavigationShortcuts, type NavigationApp } from '../shared/navigation-shortcuts'
+import { defaultNavigationShortcuts, type NavigationRegion, type NavigationShortcut } from '../shared/navigation-shortcuts'
 import { mountImageGenerationFlow } from './image-generation-flow'
 import { imageFactoryOpenEvent, mountImageFactory } from './image-factory/view'
 import { mountHomeThemes, getHomeThemeController } from './home-themes'
@@ -463,7 +463,8 @@ function initializeUi(): void {
     save: (input, id) => ipcRenderer.invoke('scheduled-tasks:request', 'save', { input, id }),
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
   }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create,newSpreadsheet:sidebarNewSpreadsheet.create,
-    pinnedApps: () => navigationShortcuts?.sidebar() ?? defaultNavigationShortcuts.side})
+    pinnedApps: () => navigationShortcuts?.sidebar() ?? defaultNavigationShortcuts.side,
+    pinApp: app => navigationShortcuts?.pinSidebar(app)})
   scheduledView.mount()
   const imageFactory = mountImageFactory(document, workspaceSurfaceHost, {
     workspacePointerInBar,
@@ -477,10 +478,20 @@ function initializeUi(): void {
   })
   const openImageFactory = () => { void flushBeforeCreate().then(imageFactory.open).catch(() => {}) }
   window.addEventListener(imageFactoryOpenEvent, openImageFactory)
-  const openNavigationApp = async (app: NavigationApp, signal: AbortSignal) => {
+  const openNavigationApp = async (app: NavigationShortcut, signal: AbortSignal, region?: NavigationRegion) => {
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app
     if (surface && surface === targetSurface) return
+    if (region === 'side' && app === 'note') { await sidebarNewNote.create(signal); return }
+    if (app === 'new-workspace' || app === 'new-chat' || (region === 'side' && app === 'research')) {
+      const sidebar = document.querySelector('[data-dsh-sidebar-root]')
+      if (app === 'new-workspace') sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')?.click()
+      else {
+        const event = app === 'research' ? 'sherlock:sidebar-new-research' : 'sherlock:sidebar-new-chat'
+        sidebar?.querySelector('.hHd-Xa_newSessionGroup')?.dispatchEvent(new CustomEvent(event, { bubbles: true }))
+      }
+      return
+    }
     if (app === 'image-factory') {
       await flushBeforeCreate()
       if (!signal.aborted) imageFactory.open()

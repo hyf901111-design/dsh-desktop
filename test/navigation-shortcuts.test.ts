@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { expect, it, vi } from 'vitest'
 import { Window } from 'happy-dom'
 import { defaultNavigationShortcuts, normalizeNavigationShortcuts, replaceNavigationShortcut } from '../src/shared/navigation-shortcuts'
+import { navigationAppIcon } from '../src/preload/home-app-shortcuts'
 import { mountNavigationShortcuts } from '../src/preload/navigation-shortcuts'
 import { registerNavigationShortcutPreferences } from '../src/main/navigation-shortcut-preferences'
 import type { TrustedWindowEvent } from '../src/main/ipc-trust'
@@ -18,6 +19,11 @@ it('keeps four positions per surface and de-duplicates within each surface', () 
   expect(replaceNavigationShortcut(defaultNavigationShortcuts, 'top', 0, 'research')).toBe(defaultNavigationShortcuts)
   expect(replaceNavigationShortcut(defaultNavigationShortcuts, 'top', 1, 'research').top).toEqual(['note', 'research', 'spreadsheet', null])
   expect(replaceNavigationShortcut(defaultNavigationShortcuts, 'top', 3, 'browser').top[3]).toBe('browser')
+  expect(normalizeNavigationShortcuts({ side: ['browser', null, 'knowledge', 'image-factory'] }).side)
+    .toEqual(['browser', 'knowledge', 'image-factory', null])
+  expect(normalizeNavigationShortcuts({ top: ['new-chat'], side: ['new-chat', 'new-workspace'] })).toEqual({
+    top: [null, null, null, null], side: ['new-chat', 'new-workspace', null, null]
+  })
 })
 
 it('projects the same positions into native and app tabs and supports editing both regions', async () => {
@@ -50,13 +56,23 @@ it('projects the same positions into native and app tabs and supports editing bo
     expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ top: ['research','note','spreadsheet','browser'] }))
     expect(app.querySelector('[data-navigation-slot="3"]')?.textContent).toBe('浏览器')
     app.querySelector<HTMLButtonElement>('[data-navigation-slot="3"]')!.click()
-    expect(open).toHaveBeenCalledWith('browser', expect.anything())
+    expect(open).toHaveBeenCalledWith('browser', expect.anything(), 'top')
 
     const side = pick('[data-navigation-rail]')
     event(side.querySelector('[data-navigation-slot="1"]')!, 'contextmenu')
     pick('[data-navigation-menu] [data-action=remove]').click()
-    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ side: ['browser', null, 'knowledge', null] }))
-    expect(side.querySelector('[data-navigation-slot="1"]')?.hasAttribute('data-empty')).toBe(true)
+    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ side: ['browser', 'knowledge', null, null] }))
+    expect(side.querySelector('[data-navigation-slot="1"]')?.getAttribute('data-navigation-app')).toBe('knowledge')
+    expect(side.querySelector('[data-navigation-slot="2"]')?.hasAttribute('data-empty')).toBe(true)
+
+    manager.pinSidebar('note')
+    expect(side.querySelector<HTMLButtonElement>('[data-navigation-app=note]')?.style.getPropertyValue('--navigation-glyph')).toBe(navigationAppIcon('note'))
+    manager.pinSidebar('new-chat')
+    expect(manager.sidebar()).toEqual(['browser', 'knowledge', 'note', 'new-chat'])
+    manager.pinSidebar('scheduled')
+    expect(doc.body.dataset.navigationEditingRegion).toBe('side')
+    pick('[data-navigation-rail] [data-navigation-slot="1"]').click()
+    expect(manager.sidebar()).toEqual(['browser', 'scheduled', 'note', 'new-chat'])
   } finally {
     manager.dispose()
     await win.happyDOM.abort()

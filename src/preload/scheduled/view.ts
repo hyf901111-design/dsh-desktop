@@ -1,4 +1,4 @@
-import type { NavigationApp } from '../../shared/navigation-shortcuts'
+import type { NavigationShortcut } from '../../shared/navigation-shortcuts'
 import type { IntegrationBridge, TaskCapabilitySummary } from '../../shared/integration-ui'
 import type { IntegrationBinding } from '../../shared/integrations'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
@@ -52,6 +52,15 @@ const upcomingRun = (time: number | null) => {
   if (remaining < 86_400_000) return `下次运行 ${Math.floor(remaining / 3_600_000)} 小时后`
   return `下次运行 ${Math.floor(remaining / 86_400_000)} 天后`
 }
+type MenuItem = {
+  label: string
+  icon?: keyof typeof icons
+  danger?: boolean
+  disabled?: boolean
+  app?: NavigationShortcut
+  run: () => void
+}
+
 export class ScheduledTaskView {
   private detail?: HTMLElement
   private root?: HTMLElement
@@ -92,7 +101,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
-    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationApp|null)[]},
+    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];pinApp?:(app:NavigationShortcut)=>void},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)
@@ -228,31 +237,35 @@ export class ScheduledTaskView {
       const sidebar = group.closest('[data-dsh-sidebar-root]')
       const wide = sidebar?.getAttribute('data-dsh-sidebar-wide') !== 'false'
       const pinned = this.sidebarActions?.pinnedApps?.()
-      const showApp = (app: NavigationApp) => wide || Boolean(pinned && !pinned.includes(app))
       const addWorkspace = sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')
       const english = this.document.documentElement.dataset.odysseyLocale === 'en'
-      this.showMenu(more, [
-            ...(!wide ? [
-              {label:english?'New workspace':'新建工作区',icon:'workspaceAdd' as const,disabled:!addWorkspace||addWorkspace.disabled,run:()=>addWorkspace?.click()},
-              {label:english?'New chat':'新建对话',icon:'chat' as const,run:()=>group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-chat',{bubbles:true}))},
-              {label:english?'New research':'新建研究',icon:'research' as const,run:()=>group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research',{bubbles:true}))}
-            ] : []),
-            ...(this.sidebarActions?[{
-              label:english?'New Note':wide?'新笔记':'新建笔记',icon:this.dark()?'noteDark' as const:'note' as const,
-              disabled:this.newDocumentBusy,run:()=>void this.createDocument('note')
-            }]:[]),
-            ...(this.sidebarActions?.newSpreadsheet?[{
-              label:english?'New spreadsheet':'新建表格',
-              icon:'spreadsheet' as const,disabled:this.newDocumentBusy,run:()=>void this.createDocument('spreadsheet')
-            }]:[]),
-            ...(showApp('browser')&&this.surfaceHost?[{label:english?'Browser':'浏览器',icon:'browser' as const,run:()=>this.openBrowser()}]:[]),
-            ...(showApp('knowledge')&&this.surfaceHost?[{label:english?'Knowledge Base':'知识库',icon:'knowledge' as const,run:()=>this.openKnowledge()}]:[]),
-            ...(showApp('image-factory')&&this.surfaceHost?[{label:english?'Images':'图像',icon:'factory' as const,run:()=>this.openImageFactory()}]:[]),
-            ...(this.surfaceHost ? [{ label: '插件', icon: 'plugin' as const, run: () => {
-              this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
-            } }] : []),
-            { label: '定时任务', icon: 'clock', run: () => void this.open() },
-          ])
+      const entries: MenuItem[] = []
+      if (!wide) entries.push(
+        { app: 'new-workspace', label: english ? 'New workspace' : '新建工作区', icon: 'workspaceAdd', disabled: !addWorkspace || addWorkspace.disabled, run: () => addWorkspace?.click() },
+        { app: 'new-chat', label: english ? 'New chat' : '新建对话', icon: 'chat', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-chat', { bubbles: true })) },
+        { app: 'research', label: english ? 'New research' : '新建研究', icon: 'research', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research', { bubbles: true })) }
+      )
+      if (this.sidebarActions) entries.push({
+        app: 'note', label: english ? 'New Note' : wide ? '新笔记' : '新建笔记', icon: this.dark() ? 'noteDark' : 'note',
+        disabled: this.newDocumentBusy, run: () => void this.createDocument('note')
+      })
+      if (this.sidebarActions?.newSpreadsheet) entries.push({
+        app: 'spreadsheet', label: english ? 'New spreadsheet' : '新建表格', icon: 'spreadsheet',
+        disabled: this.newDocumentBusy, run: () => void this.createDocument('spreadsheet')
+      })
+      if (this.surfaceHost) {
+        if (wide || pinned) entries.push(
+          { app: 'browser', label: english ? 'Browser' : '浏览器', icon: 'browser', run: () => this.openBrowser() },
+          { app: 'knowledge', label: english ? 'Knowledge Base' : '知识库', icon: 'knowledge', run: () => this.openKnowledge() },
+          { app: 'image-factory', label: english ? 'Images' : '图像', icon: 'factory', run: () => this.openImageFactory() }
+        )
+        entries.push({ app: 'plugin', label: english ? 'Plugins' : '插件', icon: 'plugin', run: () => {
+          this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
+        } })
+      }
+      entries.push({ app: 'scheduled', label: english ? 'Scheduled tasks' : '定时任务', icon: 'clock', run: () => void this.open() })
+      const available = entries.filter(item => wide || !item.app || !pinned?.includes(item.app))
+      this.showMenu(more, available, wide ? undefined : this.sidebarActions?.pinApp)
       const opened=this.menu as HTMLElement|undefined
       if(opened){opened.dataset.sidebarMore='true';opened.dataset.sidebarWide=String(wide)}
     }
@@ -947,16 +960,7 @@ export class ScheduledTaskView {
       { label: '删除任务', danger: true, run: () => this.confirmDelete(t) },
     ])
   }
-  private showMenu(
-    anchor: HTMLElement,
-    items: {
-      label: string
-      icon?: keyof typeof icons
-      danger?: boolean
-      disabled?: boolean
-      run: () => void
-    }[],
-  ) {
+  private showMenu(anchor: HTMLElement, items: MenuItem[], pinApp?: (app: NavigationShortcut) => void) {
     if (this.menu && this.menuAnchor === anchor) {
       this.closeMenu()
       anchor.focus()
@@ -973,12 +977,41 @@ export class ScheduledTaskView {
     menu.style.visibility = 'hidden'
     menu.dataset.dark = String(this.dark())
     menu.role = 'menu'
-    menu.innerHTML = items
-      .map(
-        (i) =>
-          `<button role="menuitem" ${i.disabled ? 'disabled' : ''} class="${i.danger ? 'st-danger' : ''}">${i.icon ? icon(i.icon) : ''}${i.label}</button>`,
-      )
-      .join('')
+    const english = this.document.documentElement.dataset.odysseyLocale === 'en'
+    for (const item of items) {
+      const action = this.document.createElement('button')
+      action.type = 'button'
+      action.role = 'menuitem'
+      action.disabled = Boolean(item.disabled)
+      action.classList.toggle('st-danger', Boolean(item.danger))
+      if (item.icon) action.innerHTML = icon(item.icon)
+      action.append(item.label)
+      action.onclick = event => {
+        this.closeMenu()
+        if (!event.defaultPrevented) item.run()
+      }
+      const app = item.app
+      if (!pinApp || !app) {
+        menu.append(action)
+        continue
+      }
+      const row = this.document.createElement('div')
+      row.className = 'st-menu-pin-row'
+      row.role = 'presentation'
+      const pin = this.document.createElement('button')
+      pin.type = 'button'
+      pin.role = 'menuitem'
+      pin.dataset.stMenuPin = app
+      pin.title = english ? 'Pin to sidebar' : '置顶到侧栏'
+      pin.setAttribute('aria-label', english ? 'Pin ' + item.label + ' to sidebar' : '置顶' + item.label + '到侧栏')
+      pin.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10.5 1.7 3.8 3.8-1.8.6-2.2 2.2.3 2.4-1.1 1.1-5.3-5.3 1.1-1.1 2.4.3 2.2-2.2.6-1.8ZM6.8 9.2 3 13"/></svg>'
+      pin.onclick = event => {
+        this.closeMenu()
+        if (!event.defaultPrevented) pinApp(app)
+      }
+      row.append(action, pin)
+      menu.append(row)
+    }
     this.document.body.append(menu)
     this.menu = menu
     const r = anchor.getBoundingClientRect()
@@ -996,13 +1029,6 @@ export class ScheduledTaskView {
         (this.document.defaultView?.innerHeight || 900) - menu.offsetHeight - 8,
       ) + 'px'
     if (anchor === this.more) this.more.setAttribute('aria-expanded', 'true')
-    menu.querySelectorAll<HTMLButtonElement>('button').forEach(
-      (b, i) =>
-        (b.onclick = event => {
-          this.closeMenu()
-          if (!event.defaultPrevented) items[i]!.run()
-        }),
-    )
     const present = () => {
       if (this.menu !== menu || !menu.isConnected) return
       menu.inert = false

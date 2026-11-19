@@ -13,6 +13,11 @@ export const scheduledStyles = `
 }
 .st-menu[data-sidebar-more] .st-icon{width:18px;height:18px}
 .st-menu[data-sidebar-more] button{gap:10px!important}
+.st-menu-pin-row{display:grid;grid-template-columns:minmax(0,1fr) 32px;align-items:center;gap:4px}
+body .st-menu[data-sidebar-more] .st-menu-pin-row > [data-st-menu-pin]{width:32px;height:30px;min-height:30px;padding:0;justify-content:center;color:var(--st-muted);-webkit-app-region:no-drag}
+body .st-menu[data-sidebar-more] .st-menu-pin-row > [data-st-menu-pin]:is(:hover,:focus-visible){color:var(--st-ink);background:var(--odyssey-menu-row,var(--st-field))}
+.st-menu-pin-row > [data-st-menu-pin] svg{width:16px;height:16px;flex:none}
+
 .st-new-note-error{padding:12px;font-size:13px;line-height:1.5}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup{flex-direction:column!important}
 [data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup .hHd-Xa_newSession{flex:none!important;width:32px!important}

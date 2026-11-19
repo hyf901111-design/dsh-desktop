@@ -646,3 +646,60 @@ it('shares editable shortcuts between the composer, the collapsed sidebar and th
   expect(errors).toEqual([])
  } finally { await page.close() }
 })
+
+it('keeps full-size shortcut labels and hover styles, and compacts the rail after a badge click', async () => {
+ const { page, errors } = await fixture(980, 720)
+ try {
+  await page.evaluate(() => {
+   document.querySelector('.pI_x6G_centerCol').insertAdjacentHTML('beforeend', `
+    <header class="wSkVaW_header"><div data-srb-tabs>
+     <button class="wSkVaW_tab" data-conversation-view-id="chat">对话</button>
+     <button class="wSkVaW_tab" data-conversation-view-id="research">研究</button>
+     <button class="wSkVaW_tab" data-conversation-view-id="notes">笔记</button>
+     <button class="wSkVaW_tab" data-conversation-view-id="spreadsheet">表格</button>
+    </div></header>`)
+   document.body.insertAdjacentHTML('beforeend', `
+    <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
+     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home>主页</button><span class="st-more-zone"></span></div>
+    </aside>`)
+   window.mountNavigationShortcuts(document, {
+    read: () => ({ top: ['research', 'knowledge', 'browser', 'scheduled'], side: ['browser', 'knowledge', 'image-factory'] }),
+    save: value => { window.savedShortcuts = value; return true },
+    open: () => {}
+   })
+   document.querySelector('.eb-root').hidden = true
+  })
+  const root = page.locator('[data-srb-tabs]')
+  const labelsFit = nav => nav.locator('button:not([data-navigation-unpinned])').evaluateAll(buttons =>
+   buttons.filter(button => button.getClientRects().length).every(button => button.scrollWidth <= button.clientWidth))
+  const style = label => root.getByText(label, { exact: true }).evaluate(button => {
+   const { fontSize, fontWeight, lineHeight, backgroundColor } = getComputedStyle(button)
+   return { fontSize, fontWeight, lineHeight, backgroundColor }
+  })
+  const original = await style('研究')
+  const idle = await style('定时任务')
+  expect(idle).toEqual(original)
+  expect(await labelsFit(root)).toBe(true)
+  await root.getByText('定时任务').hover()
+  const hovered = (await style('定时任务')).backgroundColor
+  expect(hovered).not.toBe(idle.backgroundColor)
+  await root.getByText('研究').hover()
+  expect((await style('研究')).backgroundColor).toBe(hovered)
+
+  await root.getByText('定时任务').click({ button: 'right' })
+  await page.getByRole('menuitem', { name: '编辑快捷入口' }).click()
+  const sidebar = page.locator('[data-navigation-rail]')
+  await page.locator('[data-navigation-delete][data-navigation-region=side][aria-label="删除知识库"]').click()
+  expect(await sidebar.locator('[data-navigation-slot="1"]').getAttribute('aria-label')).toBe('图像')
+  expect(await sidebar.locator('[data-navigation-slot="2"]').isVisible()).toBe(false)
+  expect(await page.evaluate(() => window.savedShortcuts.side)).toEqual(['browser', 'image-factory', null, null])
+
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => { document.querySelector('.eb-root').hidden = false })
+  await page.locator('.eb-workspace-toggle').hover()
+  const appTabs = page.locator('.eb-workspace-tabs[aria-hidden=false]')
+  await appTabs.getByText('定时任务').waitFor()
+  expect(await labelsFit(appTabs)).toBe(true)
+  expect(errors).toEqual([])
+ } finally { await page.close() }
+})
