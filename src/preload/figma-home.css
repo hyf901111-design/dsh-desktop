@@ -94,7 +94,7 @@ body:has([data-odyssey-panel-right="open"]) .wSkVaW_root[data-odyssey-page="home
   font:500 26px/36.5867px "Noto Sans SC",sans-serif;
   color:var(--odyssey-home-title);
   text-shadow:0 1px 8px rgb(18 41 33 / .14);
-  transform:translateY(-3px);
+  transform:translateY(-10px);
 }
 .wSkVaW_root[data-odyssey-page="home"] .pXSMma_previewBadge { display:none; }
 /* 121:2763 / 4385 are the visible, original outlined lettering. The hidden

@@ -1481,7 +1481,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     }}>
       <button type="button" className="workspace-back-button t8lSSG_toggleButton" aria-label={t('返回工作区', 'Back to workspace')}
         title={t('返回工作区', 'Back to workspace')} onClick={close}><i className="workspace-back-icon" aria-hidden="true"/></button>
-      <div className="workspace-app-title"><Icon name="factory" size={18}/><span>{t('图像', 'Images')}</span></div>
+      <div className="workspace-app-title"><Icon name="factory"/><span>{t('图像', 'Images')}</span></div>
       <div className="eb-workspace-controls">
         <button type="button" className="eb-workspace-toggle" ref={workspaceToggle} aria-label={tabsLabel} title={tabsLabel}
           aria-expanded={workspaceExpanded} aria-controls="image-factory-workspace-tabs" onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true"/></button>

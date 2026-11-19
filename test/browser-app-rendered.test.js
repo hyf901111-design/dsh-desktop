@@ -10,7 +10,7 @@ beforeAll(async()=>{
 let listener;let n=0;const data={tabs:[{id:'tab0',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'tab0',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}};
 window.setBrowserState=value=>{Object.assign(data,value);listener(structuredClone(data))};window.browserCalls=[];window.snapshot=()=>structuredClone(data);window.update=()=>listener(structuredClone(data));
 const bridge={subscribe:f=>{listener=f;return()=>{}},source:async(...args)=>window.browserCalls.push(['source',...args]),request:async(method,input={})=>{if(method==='site')return{permissions:data.sitePermissions??{}};window.browserCalls.push([method,input]);const t=data.tabs.find(t=>t.id===data.activeId);if(method==='capture'){if(window.browserCapture)return await window.browserCapture();const c=document.createElement('canvas');c.width=20;c.height=20;return c.toDataURL()};if(method==='new'){const tab={...t,id:'tab'+(++n),title:input.url?'Example Domain':'新标签页',url:input.url??'',private:!!input.private};delete tab.page;data.tabs.push(tab);data.activeId=tab.id}if(method==='internal-page'){let page=data.tabs.find(tab=>tab.page===input.page);if(!page){page={...t,id:'tab'+(++n),url:'',page:input.page,title:input.page==='history'?'历史记录':'下载内容',private:false,loading:false,canBack:false,canForward:false};data.tabs.push(page)}data.activeId=page.id}if(method==='select')data.activeId=input.id;if(method==='reorder'){const tab=data.tabs.find(t=>t.id===input.id),before=data.tabs.find(t=>t.id===input.beforeId);if(tab&&tab!==before){data.tabs.splice(data.tabs.indexOf(tab),1);data.tabs.splice(before?data.tabs.indexOf(before):data.tabs.length,0,tab)}}if(method==='zoom')data.tabs.find(tab=>tab.id===input.id).zoom=input.value;if(method==='close'){const index=data.tabs.findIndex(t=>t.id===input.id);data.tabs.splice(index,1);if(data.activeId===input.id)data.activeId=data.tabs[Math.min(index,data.tabs.length-1)].id}if(method==='home'){delete t.page;t.url='';t.title='新标签页';t.canBack=false;t.canForward=false}if(method==='history-remove')data.history=data.history.filter(row=>row.id!==input.id);if(method==='navigate'){delete t.page;t.url=input.url;t.title='Example Domain';data.history.unshift({id:'h'+n,url:input.url,title:t.title,at:Date.now()})}if(method==='bookmark'){const old=data.bookmarks.find(b=>b.url===input.url);if(input.remove)data.bookmarks=data.bookmarks.filter(b=>b.url!==input.url);else if(old)Object.assign(old,{title:input.title,folder:input.folder});else data.bookmarks.push({id:'b'+n,url:input.url,title:input.title,folder:input.folder,at:Date.now()})}if(method==='bookmark-update')Object.assign(data.bookmarks.find(b=>b.id===input.id),input);if(method==='bookmarks-remove')data.bookmarks=data.bookmarks.filter(b=>!input.ids.includes(b.id));if(method==='folder')data.folders.push(input.name);if(method==='settings')Object.assign(data.settings,input);if(method==='clear'&&input.history)data.history=[];if(method==='find')t.find={matches:6,activeMatchOrdinal:1};return structuredClone(data)}};
-let surface='browser';window.workspaceReveals=0;const host={register:(_name,el)=>document.body.append(el),open:()=>{surface='browser'},close:()=>{surface=undefined},revealConversation:()=>{surface=undefined;window.workspaceReveals++;document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))},current:()=>surface?{surface}:undefined};window.browserView=new BrowserAppView(document,bridge,host);window.browserView.open('session-A');`},bundle:true,write:false,format:'iife',platform:'browser',logLevel:'silent',plugins:[{name:'inline',setup(b){b.onResolve({filter:/\?(inline|raw)$/},async args=>{const r=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:r.path,namespace:'inline'}});b.onLoad({filter:/.*/,namespace:'inline'},async args=>({contents:JSON.stringify(args.path.endsWith('.svg')?'data:image/svg+xml,'+encodeURIComponent((await readFile(args.path,'utf8')).replaceAll(String.fromCharCode(34),String.fromCharCode(39))):await readFile(args.path,'utf8')),loader:'json'}))}}]});code=result.outputFiles[0].text
+let surface='browser';window.workspaceReveals=0;const back=()=>{surface=undefined;document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))};const host={register:(_name,el)=>document.body.append(el),open:()=>{surface='browser'},close:()=>{surface=undefined},back,revealConversation:()=>{window.workspaceReveals++;back()},current:()=>surface?{surface}:undefined};window.browserView=new BrowserAppView(document,bridge,host);window.browserView.open('session-A');`},bundle:true,write:false,format:'iife',platform:'browser',logLevel:'silent',plugins:[{name:'inline',setup(b){b.onResolve({filter:/\?(inline|raw)$/},async args=>{const r=await b.resolve(args.path.replace(/\?(inline|raw)$/,''),{resolveDir:args.resolveDir,kind:args.kind});return{path:r.path,namespace:'inline'}});b.onLoad({filter:/.*/,namespace:'inline'},async args=>({contents:JSON.stringify(args.path.endsWith('.svg')?'data:image/svg+xml,'+encodeURIComponent((await readFile(args.path,'utf8')).replaceAll(String.fromCharCode(34),String.fromCharCode(39))):await readFile(args.path,'utf8')),loader:'json'}))}}]});code=result.outputFiles[0].text
  const pw=process.env.PLAYWRIGHT_MODULE_PATH?await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE_PATH).href):await import('playwright');browser=await pw.chromium.launch({headless:true,...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}:{})});await mkdir(evidence,{recursive:true})
 },20000)
 afterAll(async()=>browser?.close())
@@ -476,13 +476,47 @@ it('drags the window from blank browser chrome and yields to interactive control
  }finally{await page.close()}
 })
 
+it.each([600, 1280])('aligns the browser title with native workspace titles at window width %s', async width => {
+ const { page } = await fixture(width, 800)
+ try {
+  const browserTitle = page.locator('.eb-app-label')
+  await page.evaluate(() => window.mountNavigationShortcuts(document, { read: () => undefined, save: () => true, open: () => {} }))
+  const browserLayout = await browserTitle.evaluate(title => {
+   const header = title.parentElement.getBoundingClientRect()
+   const [icon, label] = title.children
+   const a = icon.getBoundingClientRect(), b = label.getBoundingClientRect(), font = getComputedStyle(label)
+   return { iconX: a.left - header.left, iconY: a.top - header.top, size: a.width, titleX: b.left - header.left,
+    titleY: b.top - header.top, textSize: font.fontSize, leading: font.lineHeight, weight: font.fontWeight }
+  })
+  expect(browserLayout).toMatchObject({ iconX: 14, size: 17, textSize: '14px', leading: '20px' })
+  const layouts = await page.evaluate(() => {
+   const pane = document.querySelector('.pI_x6G_centerCol')
+   const root = document.createElement('div')
+   root.className = 'wSkVaW_root'
+   root.innerHTML = '<header class="wSkVaW_header" data-srb-session-header><div class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><span class="wSkVaW_crumb">工作区标题</span></span></div></header>'
+   pane.append(root)
+   const header = root.firstElementChild, group = header.firstElementChild, label = group.querySelector('.wSkVaW_crumb')
+   return ['home', 'conversation', 'research', 'notes', 'spreadsheet'].map(mode => {
+    root.dataset.odysseyPage = mode === 'notes' ? 'conversation' : mode
+    header.dataset.odysseyHeaderLayout = root.clientWidth < 650 ? 'narrow' : 'regular'
+    if (mode === 'notes') document.body.dataset.workspaceSurface = 'notes'
+    else delete document.body.dataset.workspaceSurface
+    const h = header.getBoundingClientRect(), a = group.getBoundingClientRect(), b = label.getBoundingClientRect()
+    const icon = getComputedStyle(group, '::before'), font = getComputedStyle(label)
+    const size = parseFloat(icon.width)
+    return { iconX: a.left - h.left, iconY: a.top - h.top + (a.height - size) / 2, size, titleX: b.left - h.left,
+     titleY: b.top - h.top, textSize: font.fontSize, leading: font.lineHeight, weight: font.fontWeight }
+   })
+  })
+  for (const layout of layouts) expect(layout).toEqual(browserLayout)
+ } finally { await page.close() }
+})
 it('places the shared workspace back button before the browser title and leaves the web tabs intact',async()=>{
  const {page,errors}=await fixture(1440,900,true);try{
   await liveWebsite(page)
   const back=page.getByRole('button',{name:'返回工作区',exact:true}),label=page.locator('.eb-app-label'),bar=page.locator('.eb-tabs')
   const backBox=await back.boundingBox(),labelBox=await label.boundingBox();expect(backBox.x+backBox.width).toBeLessThan(labelBox.x)
   await bar.screenshot({path:evidence+'/workspace-tab-bar-back.png'})
-  await page.evaluate(()=>window.addEventListener('sherlock:browser-request',event=>{if(event.detail?.close)document.dispatchEvent(new CustomEvent('sherlock:browser-close'))}))
   const tabs=await page.evaluate(()=>window.snapshot().tabs);await back.click();await page.locator('.eb-root').waitFor({state:'hidden'})
   expect(await page.evaluate(()=>window.snapshot().tabs)).toEqual(tabs)
   expect(await page.evaluate(()=>window.browserCalls.some(([method])=>method==='back'))).toBe(false);expect(errors).toEqual([])

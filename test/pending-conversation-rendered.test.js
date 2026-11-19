@@ -24,28 +24,49 @@ beforeAll(async()=>{
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>browser?.close())
-it('shows the local work location on home and right composers and keeps the folder picker independent', async () => {
+it.each([true, false])('shows the local work location on home and right composers and keeps the folder picker independent (dark: %s)', async dark => {
  const page = await browser.newPage({ viewport: { width: 1180, height: 800 } })
  try {
-  await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
-  await page.evaluate(value => { window.pendingInput = value; document.body.setAttribute('data-ds-dark-theme', '') }, input)
+  await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:'+ (dark ? 340 : 280) +'px}#right>.t8lSSG_workbench{height:100%}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
+  await page.evaluate(({ input, dark }) => { window.pendingInput = input; document.body.toggleAttribute('data-ds-dark-theme', dark) }, { input, dark })
   await page.addScriptTag({ content: script })
   for (const surface of ['home', 'right']) {
    if (surface === 'right') await page.evaluate(() => window.pendingFixture.openSurface('browser'))
    const bar = page.locator((surface === 'home' ? '#app' : '#right') + ' [data-odyssey-composer-workspace]')
    const location = bar.getByRole('button', { name: '此计算机' })
+   const folder = bar.locator('.pXSMma_workspace')
    await location.waitFor()
    const layout = await bar.evaluate(row => {
-    const a = row.getBoundingClientRect(), b = row.parentElement.querySelector('[data-composer-card]').getBoundingClientRect()
-    return { join: a.bottom - b.top, inset: a.left - b.left, blur: getComputedStyle(row).backdropFilter,
+    const card = row.parentElement.querySelector('[data-composer-card]')
+    const a = row.getBoundingClientRect(), b = card.getBoundingClientRect(), style = getComputedStyle(row)
+    return { height: a.height, join: a.bottom - b.top, inset: a.left - b.left, blur: style.backdropFilter,
+      barFill: style.backgroundColor, cardFill: getComputedStyle(card).backgroundColor,
       overflow: row.scrollWidth - row.clientWidth }
    })
+   expect(layout.height).toBe(42)
    expect(layout.join).toBeGreaterThanOrEqual(0)
    expect(layout.join).toBeLessThanOrEqual(7)
    expect(layout.inset).toBeCloseTo(7)
    expect(layout.overflow).toBe(0)
-   if (surface === 'home') expect(layout.blur).toContain('blur(14px)')
-   else expect(layout.blur).toBe('none')
+   if (surface === 'home') {
+    expect(layout.blur).toContain('blur(14px)')
+    const headline = page.locator('#app .pXSMma_headline')
+    expect(await headline.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m42)).toBe(-10)
+   } else {
+    expect(layout.blur).toBe('none')
+    expect(layout.barFill).toBe(dark ? 'rgb(29, 29, 29)' : 'rgb(232, 232, 232)')
+    expect(layout.barFill).not.toBe(layout.cardFill)
+   }
+   for (const [hovered, idle] of [[location, folder], [folder, location]]) {
+    await hovered.hover()
+    const style = await hovered.evaluate(button => {
+     const css = getComputedStyle(button)
+     return { height: css.height, radius: css.borderRadius, fill: css.backgroundColor }
+    })
+    expect(style).toMatchObject({ height: '30px', radius: '999px' })
+    expect(style.fill).not.toBe('rgba(0, 0, 0, 0)')
+    expect(await idle.evaluate(button => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+   }
    await location.focus()
    await page.keyboard.press('ArrowDown')
    const menu = page.locator('[role=menu]:has([data-odyssey-work-location-option])')
@@ -58,7 +79,7 @@ it('shows the local work location on home and right composers and keeps the fold
    await page.keyboard.press('Escape')
    await menu.waitFor({state:'detached'})
    expect(await location.evaluate(button => document.activeElement === button)).toBe(true)
-   await bar.locator('.pXSMma_workspace').click()
+   await folder.click()
    await page.getByRole('menuitem', { name: '研究项目 B', exact: true }).waitFor()
    await page.keyboard.press('Escape')
   }
