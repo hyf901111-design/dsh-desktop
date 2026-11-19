@@ -9,20 +9,28 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "紧凑顶栏标签和设置入口",
+        "featureName": "顶栏图标拖拽自定义",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "47aceff3846c1b69a9ca5c73ee968b9d5c0cd348",
-        "tipCommit": "d043a8610baf3c0d355618cad6cb9f8ec9f266ce",
+        "baseCommit": "d043a8610baf3c0d355618cad6cb9f8ec9f266ce",
+        "tipCommit": "94f1dc239e1470694f09606888ff3e81d42537c6",
         "commits": [
           {
-            "commit": "d043a8610baf3c0d355618cad6cb9f8ec9f266ce",
+            "commit": "94f1dc239e1470694f09606888ff3e81d42537c6",
             "parents": [
-              "47aceff3846c1b69a9ca5c73ee968b9d5c0cd348"
+              "d043a8610baf3c0d355618cad6cb9f8ec9f266ce"
             ],
-            "subject": "采用紧凑顶栏标签并移除对话首页设置按钮"
+            "subject": "将顶栏设置改为横排图标拖拽编辑"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "src/preload/home-app-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/navigation-shortcuts.ts"
+          },
           {
             "status": "M",
             "path": "src/preload/workspace-topbar.ts"
@@ -45,8 +53,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "d043a8610baf3c0d355618cad6cb9f8ec9f266ce",
-            "completedAt": "2026-11-19T12:53:36.299Z",
+            "verifiedCommit": "94f1dc239e1470694f09606888ff3e81d42537c6",
+            "completedAt": "2026-11-19T13:05:52.790Z",
             "timeoutMs": 60000
           },
           {
@@ -63,78 +71,36 @@
               "sizes top-bar labels|workspace width and opacity|expands workspace shortcuts|expanded workspace controls|workspace shortcuts open across|shares editable shortcuts|shared switcher|keeps the new-tab button|owner-matched native workspace tabs|hides the native add actions|opens workspace tabs on click"
             ],
             "outcome": "passed",
-            "summary": "11 项渲染定向回归通过",
-            "verifiedCommit": "d043a8610baf3c0d355618cad6cb9f8ec9f266ce",
-            "completedAt": "2026-11-19T12:53:36.299Z",
+            "summary": "12 项深浅色和应用切换渲染聚焦验证通过",
+            "verifiedCommit": "94f1dc239e1470694f09606888ff3e81d42537c6",
+            "completedAt": "2026-11-19T13:05:52.790Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/navigation-shortcuts.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "3 项快捷入口配置测试通过",
+            "verifiedCommit": "94f1dc239e1470694f09606888ff3e81d42537c6",
+            "completedAt": "2026-11-19T13:05:52.790Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 验证研究会话单个对话标签和齿轮按内容收紧，对话首页隐藏齿轮，浏览器同步设置，点击展收保持 340 毫秒。"
+          "summary": "Chromium 深浅色验证横排图标抖动、拖入添加、拖拽换位、选取替换、点击移除、自动保存、保存失败反馈、点击外部和 Escape 关闭、浏览器标签同步和网页恢复。"
         },
         "acceptanceCriteria": [
-          "顶栏按选项内容占位，设置按钮紧跟最后一项",
-          "对话首页删除设置入口，展开会话顶栏仍可配置"
+          "会话顶栏保持紧凑小标签，首页隐藏设置",
+          "齿轮打开四个编辑槽位和下方横排应用图标",
+          "对话固定首位，拖拽改动实时保存"
         ],
         "risks": [],
-        "generatedAt": "2026-11-19T12:53:36.299Z"
-      },
-      "merged": {
-        "mergeCommit": "a2f5beb85ab320e1d3c6c78f50fa33fcd072917d",
-        "verificationCommit": "a2f5beb85ab320e1d3c6c78f50fa33fcd072917d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a2f5beb85ab320e1d3c6c78f50fa33fcd072917d",
-            "completedAt": "2026-11-19T12:53:43.393Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "a2f5beb85ab320e1d3c6c78f50fa33fcd072917d",
-            "completedAt": "2026-11-19T12:53:43.393Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "a2f5beb85ab320e1d3c6c78f50fa33fcd072917d",
-            "completedAt": "2026-11-19T12:53:43.393Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T12:53:43.393Z"
+        "generatedAt": "2026-11-19T13:05:52.790Z"
       }
     }
   ],
