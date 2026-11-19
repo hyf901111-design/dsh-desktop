@@ -17,7 +17,19 @@ beforeAll(async () => {
       import { BrowserAppView } from './src/preload/browser/view'
       import { mountFloatingSurfaces } from './src/preload/floating-surfaces'
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
-      import { keepWorkspaceViewsExpanded } from './src/preload/workspace-view-shortcuts'
+      import { keepWorkspaceViewsExpanded, mountWorkspaceViewCustomization } from './src/preload/workspace-view-shortcuts'
+      import { mountNavigationShortcuts } from './src/preload/navigation-shortcuts'
+      import { mountDesktopShellStyles } from './src/preload/shell-style'
+      if (document.body.hasAttribute('data-test-topbar-editor')) {
+        mountDesktopShellStyles(document)
+        window.editorNavigation = { top: ['spreadsheet', 'image-factory', 'research', 'knowledge'] }
+        mountNavigationShortcuts(document, {
+          read: () => window.editorNavigation,
+          save: value => { window.editorNavigation = value; return true },
+          open: () => {}
+        })
+        mountWorkspaceViewCustomization(document)
+      }
       window.keepWorkspaceViewsExpanded = keepWorkspaceViewsExpanded
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
       import { installKnowledgeSidebar, installKnowledgeSourceNavigation } from './scripts/lib/knowledge-client.mjs'
@@ -908,6 +920,66 @@ it('floats Image Factory layers without moving or resizing the image viewport', 
       const image = el.parentElement.querySelector('.if-raster').getBoundingClientRect()
       return document.elementFromPoint(bounds.right - 20, Math.max(bounds.bottom + 100, image.top + 20))?.className
     })).toBe('if-raster')
+  } finally {
+    await page.close()
+  }
+})
+
+it.each([true, false])('keeps the full top-bar editor clear of the knowledge tabs (dark=%s)', async dark => {
+  const page = await browser.newPage({ viewport: { width: 1530, height: 844 } })
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent(`
+      <body data-test-topbar-editor ${dark ? 'data-ds-dark-theme' : ''}>
+        <main class="pI_x6G_centerCol" style="position:fixed;inset:10px 394px 10px 306px">
+          <div class="wSkVaW_root"><header data-srb-session-header data-ework-notes-session="selected"><div data-srb-tabs></div></header></div>
+        </main>
+      </body>`)
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    const header = library.locator('.knowledge-header')
+    const toggle = header.getByRole('button', { name: '展开工作区页签' })
+    const gear = header.locator('[data-workspace-view-customize]')
+    const files = header.locator('.knowledge-header-tabs button').first()
+    await toggle.click()
+    await expect.poll(() => gear.evaluate(button => button.parentElement.getAnimations().length)).toBe(0)
+    const filesBefore = await files.boundingBox()
+    await gear.click()
+    const dialog = page.getByRole('dialog', { name: '自定义顶栏' })
+    await dialog.waitFor()
+    const slots = dialog.locator('[data-workspace-editor-slot]')
+    const palette = dialog.getByRole('group')
+    expect(await slots.allTextContents()).toEqual(['表格', '图像', '研究', '知识库'])
+    expect(await palette.getByRole('button').allTextContents()).toEqual(['笔记', '浏览器'])
+    const headerBottom = (await header.boundingBox()).y + (await header.boundingBox()).height
+    expect((await dialog.boundingBox()).y).toBeGreaterThanOrEqual(headerBottom + 6)
+    expect(await files.boundingBox()).toEqual(filesBefore)
+    expect(await dialog.locator('[data-navigation-delete]').evaluateAll(buttons => buttons.every(button => {
+      const box = button.getBoundingClientRect()
+      return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2))
+    }))).toBe(true)
+    await page.locator('.pI_x6G_centerCol').evaluate(center => { center.style.width = '320px' })
+    await expect.poll(() => dialog.evaluate(editor => {
+      const panel = editor.getBoundingClientRect()
+      const header = document.querySelector('.knowledge-header').getBoundingClientRect()
+      return panel.left >= header.left && panel.right <= header.right
+    })).toBe(true)
+    expect((await slots.first().boundingBox()).width).toBeGreaterThanOrEqual(42)
+    const labels = await palette.getByRole('button').allTextContents()
+    expect(labels).toEqual(['笔记', '浏览器'])
+    await palette.getByRole('button', { name: '浏览器' }).dragTo(slots.nth(1))
+    expect(await slots.allTextContents()).toEqual(['表格', '浏览器', '图像', '研究'])
+    expect(await palette.getByRole('button').allTextContents()).toEqual(['笔记', '知识库'])
+    const currentFiles = await files.boundingBox()
+    await page.mouse.click(currentFiles.x + currentFiles.width / 2, currentFiles.y + currentFiles.height / 2)
+    await dialog.waitFor({ state: 'detached' })
+    expect(await gear.evaluate(button => button === document.activeElement)).toBe(true)
+    expect(await header.getByRole('button', { name: '收起工作区页签' }).getAttribute('aria-expanded')).toBe('true')
+    expect(await files.getAttribute('aria-current')).toBe('page')
+    expect(errors).toEqual([])
   } finally {
     await page.close()
   }

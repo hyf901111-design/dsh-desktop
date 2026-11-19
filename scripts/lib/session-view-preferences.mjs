@@ -1,3 +1,5 @@
+import { sidebarUsageSnapshot, sidebarUsageTimes, recordSidebarSessionUse } from './sidebar-session-recency.mjs'
+
 export function isSessionViewId(value) {
   return ['chat', 'research', 'notes', 'trajectory', 'spreadsheet'].includes(value)
 }
@@ -17,7 +19,7 @@ export function hasSessionViewPreference(sessionId, view) {
 
 // The workspace flow can reuse a blank scope which is not currently rendered.
 // Record the explicit intent before open; a component-local event alone loses it.
-export function installInitialChatViewIntent(chatStore, sessions, researchWorkspaces) {
+export function installInitialChatViewIntent(chatStore, sessions, researchWorkspaces, recordNewChatActivity) {
   const key = Symbol.for('sherlock:initial-chat-reuse')
   const policy = { canReuse: id => {
     const page = sherlockBoardsAdapter
@@ -38,6 +40,9 @@ export function installInitialChatViewIntent(chatStore, sessions, researchWorksp
     explicitHomeViewSessions.add(id)
     explicitResearchViewSessions.add(id)
     chatStore.create(id).actions.setView('chat')
+    // New Chat can reopen an unnamed draft. Its original creation time is
+    // older, so record this explicit action for the sidebar's local ordering.
+    recordNewChatActivity?.(id)
   }
   const research = event => {
     const id = event.detail?.sessionId
@@ -225,7 +230,8 @@ export function withSessionViewPreferences(handle) {
 export function patchSessionViewPreferences(source) {
   const begin = '/* ework:session-view-preferences:v1 */'
   const end = '/* ework:session-view-preferences:end */'
-  const helpers = `${begin}\n${isSessionViewId.toString()}\n${hasSessionViewPreference.toString()}\n${installInitialChatViewIntent.toString()}\n${useInitialChatSessionView.toString()}\n${withSessionViewPreferences.toString()}\nfunction createChatStore() { return withSessionViewPreferences(createNativeChatStore()); }\n${end}\n`
+  const sidebarActivity = [sidebarUsageSnapshot, sidebarUsageTimes, recordSidebarSessionUse].map(helper => helper.toString()).join('\n')
+  const helpers = `${begin}\nconst recordNewChatActivity = (() => {\n${sidebarActivity}\nreturn recordSidebarSessionUse;\n})();\n${isSessionViewId.toString()}\n${hasSessionViewPreference.toString()}\n${installInitialChatViewIntent.toString()}\n${useInitialChatSessionView.toString()}\n${withSessionViewPreferences.toString()}\nfunction createChatStore() { return withSessionViewPreferences(createNativeChatStore()); }\n${end}\n`
   if (source.includes(begin)) {
     const first = source.indexOf(begin), last = source.indexOf(end, first)
     if (last < 0) throw Error('Session view preference helper boundary missing')
@@ -246,8 +252,11 @@ export function patchSessionViewPreferences(source) {
   if (source.split(after).length !== 3) throw Error('Session view recovery anchors missing')
   const init = 'const chatStore = createChatStore();'
   const legacy = init + '\n/* ework:initial-chat-view-intent:v1 */\nctx.effect(() => installInitialChatViewIntent(chatStore, sessions), "ui-conversation: initial Chat view intent");'
-  const installed = legacy.replace('installInitialChatViewIntent(chatStore, sessions)', 'installInitialChatViewIntent(chatStore, sessions, researchWorkspaces)')
-  if (source.split(legacy).length === 2) source = source.replace(legacy, installed)
+  const previousIntent = legacy.replace('installInitialChatViewIntent(chatStore, sessions)', 'installInitialChatViewIntent(chatStore, sessions, researchWorkspaces)')
+  const installed = previousIntent.replace('sessions, researchWorkspaces)', 'sessions, researchWorkspaces, recordNewChatActivity)')
+  for (const previous of [legacy, previousIntent]) {
+    if (source.split(previous).length === 2) source = source.replace(previous, installed)
+  }
   if (source.includes('/* ework:initial-chat-view-intent:')) {
     if (source.split(installed).length !== 2 || source.split('/* ework:initial-chat-view-intent:').length !== 2) throw Error('Initial Chat view intent hook drifted')
   } else {

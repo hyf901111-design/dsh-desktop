@@ -42,7 +42,9 @@ export function mountWorkspaceContentIndicators(document: Document, read: (
     const header = findWorkspaceSession(document)
     const onHome = !document.body.dataset.workspaceSurface && header?.closest('.wSkVaW_root')?.getAttribute('data-odyssey-page') === 'home'
     const nextOwner = onHome ? null : header?.dataset.eworkNotesSession || null
-    const next = workspaceContentViews.filter(view => sessionWorkspaceViews(document).some(([id]) => id === view))
+    const next = nextOwner
+      ? workspaceContentViews.filter(view => sessionWorkspaceViews(document).some(([id]) => id === view))
+      : []
     const changed = nextOwner !== owner || next.join() !== requested.join()
     const expanded = !!document.querySelector('.eb-workspace-tabs[aria-hidden=false]')
     const opened = expanded && !open

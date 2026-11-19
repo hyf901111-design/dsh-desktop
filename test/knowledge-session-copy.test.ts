@@ -193,8 +193,10 @@ test('restores an archived editable project with its original layer identities a
     }
     const retain = vi.fn(async () => {})
     const result = await createKnowledgeSessionCopier({ ...stores, rpc, retain })('recipient',
-      { mode: 'image-factory', title: canvas.title, canvas, epoch: 5 }, undefined, () => {}, true)
+      { mode: 'image-factory', title: canvas.title, canvas: { ...canvas, editedInSession: true }, epoch: 5 },
+      undefined, () => {}, true)
     expect((await stores.canvases.read(result.id)).canvas).toEqual(canvas)
+    expect(await stores.canvases.hasEditedCanvas(result.id)).toBe(false)
     expect(retain).toHaveBeenCalledExactlyOnceWith(result.id, canvas.title, undefined, true)
   })
 })

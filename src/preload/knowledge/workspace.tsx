@@ -859,10 +859,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           aria-expanded={workspaceExpanded} aria-controls="knowledge-workspace-tabs"
           onClick={() => setWorkspaceExpanded(value => !value)}><i aria-hidden="true" /></button>
         <nav id="knowledge-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label="工作区视图" aria-hidden={!workspaceExpanded} ref={node => { if (node) node.inert = !workspaceExpanded }}>
-          {views.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'knowledge'} aria-label={`切换到${label}`}
-            tabIndex={workspaceExpanded ? 0 : -1} disabled={!hasWorkspaceSession && view !== 'chat'}
-            title={!hasWorkspaceSession && view !== 'chat' ? `选择会话后可打开${label}` : label}
-            onClick={() => openWorkspaceView(view)}>{label}</button>)}
+          <div className="eb-workspace-tab-list">
+            {views.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'knowledge'} aria-label={`切换到${label}`}
+              tabIndex={workspaceExpanded ? 0 : -1} disabled={!hasWorkspaceSession && view !== 'chat'}
+              title={!hasWorkspaceSession && view !== 'chat' ? `选择会话后可打开${label}` : label}
+              onClick={() => openWorkspaceView(view)}>{label}</button>)}
+          </div>
           <button type="button" className="eb-workspace-edit" data-workspace-view-customize="" aria-label="自定义顶栏" title="自定义顶栏"><i aria-hidden="true" /></button>
         </nav>
       </div>

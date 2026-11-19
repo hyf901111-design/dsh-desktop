@@ -33,9 +33,11 @@ it('restores the new selection and sends an in-flight result to its originating 
     resolveOriginal({ epoch: 1, canvas: records.get('original')! })
     await pending
     expect(workspace.getSnapshot()).toMatchObject({ scope: 'other', scene: { title: '另一个会话' } })
+    expect(store.write).not.toHaveBeenCalled()
     workspace.change('original', previous => previous && { ...previous, title: '后台任务结果' })
     release()
-    await vi.waitFor(() => expect(records.get('original')?.title).toBe('后台任务结果'))
+    await vi.waitFor(() => expect(records.get('original')).toMatchObject({ title: '后台任务结果', editedInSession: true }))
+    expect(records.get('other')?.editedInSession).toBeUndefined()
     expect(workspace.getSnapshot().scene?.title).toBe('另一个会话')
   } finally { workspace.dispose(); await win.happyDOM.abort() }
 })

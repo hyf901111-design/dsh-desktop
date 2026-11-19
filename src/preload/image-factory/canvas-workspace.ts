@@ -9,6 +9,7 @@ type Entry = {
   scope: CanvasScope; status: RestoreStatus; save: SaveStatus; epoch?: number; scene?: ImageScene
   reading?: Promise<void>; writing?: Promise<void>; assetId?: string; revision: number; retained: number; dirty?: boolean
   past: ImageScene[]; future: ImageScene[]; beforeEdit?: ImageScene; coalescing?: string; rasters: Set<Raster>
+  editedInSession?: true
 }
 
 const historyLimit = 50
@@ -100,6 +101,7 @@ export class CanvasWorkspace {
     }
     if (!editKey || editKey !== entry.coalescing) entry.beforeEdit ??= previous
     entry.scene = next
+    entry.editedInSession = true
     this.edited.add(scope)
     markWorkspaceProjectEdited(this.doc, scope)
     if (persist) {
@@ -264,8 +266,9 @@ export class CanvasWorkspace {
       if (storedImage && !restored) throw Error('画布的原图无法读取。')
       if (data.canvas) {
         const layers = data.canvas.layers.map(layer => layer.kind === 'image' ? restored! : layer)
-        const { version: _version, ...canvas } = data.canvas
+        const { version: _version, editedInSession, ...canvas } = data.canvas
         entry.scene = { ...canvas, layers }
+        entry.editedInSession = editedInSession
         this.edited.add(scope)
         markWorkspaceProjectEdited(this.doc, scope)
         entry.assetId = restored?.assetId
@@ -295,6 +298,7 @@ export class CanvasWorkspace {
     const canvas: StoredCanvas = {
       version: 1, id: scene.id, title: scene.title, width: scene.width, height: scene.height,
       ...(scene.aiWatermark && { aiWatermark: scene.aiWatermark }),
+      ...(entry.editedInSession && { editedInSession: entry.editedInSession }),
       layers: scene.layers.filter(layer => layer.kind !== 'text' || layer.text.trim()).map(layer => layer.kind === 'image' ? { kind: 'image', id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType } : layer),
     }
     entry.assetId = asset?.assetId
