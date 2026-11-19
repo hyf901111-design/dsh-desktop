@@ -836,6 +836,93 @@
         ],
         "recordedAt": "2026-11-19T03:34:02.690Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首页等待本地服务就绪并隔离预设列表的读取错误",
+        "branch": "codex/feat/home-preset-startup-20261119",
+        "baseCommit": "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a",
+        "tipCommit": "19647b7d5965c05e1cb4cf938ad5316968df6f5d",
+        "commits": [
+          {
+            "commit": "19647b7d5965c05e1cb4cf938ad5316968df6f5d",
+            "parents": [
+              "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a"
+            ],
+            "subject": "修复首页过早连接及预设读取失败阻塞首条消息"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-composer-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/runtime/harness-runtime.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-composer-preferences.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/runtime.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/standard-agent-preset.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/runtime.test.ts",
+              "test/pending-composer-preferences.test.js",
+              "test/standard-agent-preset.test.ts",
+              "test/pending-conversation.test.js",
+              "--maxWorkers",
+              "3",
+              "--testTimeout",
+              "30000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "67 项聚焦测试通过，覆盖首页和接口就绪、列表读取 404、显式选择被拒绝、重连重读及首次发送。",
+            "verifiedCommit": "19647b7d5965c05e1cb4cf938ad5316968df6f5d",
+            "completedAt": "2026-11-19T04:00:29.816Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "桌面项目与回归用例的类型检查通过。",
+            "verifiedCommit": "19647b7d5965c05e1cb4cf938ad5316968df6f5d",
+            "completedAt": "2026-11-19T04:00:29.817Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在当前签名客户端切到工作台实测项目复现红条，打开斜杠菜单成功。同一运行实例以带请求编号的只读调用验证 host.describe 与 agentPreset.list 成功。修复后的错误及切换路径另经回归验证。"
+        },
+        "acceptanceCriteria": [
+          "首页及本地只读 API 均可用时才打开真实主界面。",
+          "普通首条消息和斜杠操作可以在预设列表读取失败后继续，用户明确要求切换模式失败时保留反馈，重连重新读取列表。"
+        ],
+        "risks": [
+          "当前公开 1.6.7 已发布，本次修复供后续集成版验收。"
+        ],
+        "generatedAt": "2026-11-19T04:00:29.816Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -943,6 +1030,31 @@
         "--reporter=dot"
       ],
       "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/runtime.test.ts",
+        "test/pending-composer-preferences.test.js",
+        "test/standard-agent-preset.test.ts",
+        "test/pending-conversation.test.js",
+        "--maxWorkers",
+        "3",
+        "--testTimeout",
+        "30000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 600000
     }
   ],
   "mainSynchronizations": [
