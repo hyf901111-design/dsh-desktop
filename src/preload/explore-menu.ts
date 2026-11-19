@@ -39,9 +39,18 @@ export function mountExploreMenu(doc:Document,options:Options){
   let disposed=false,opened=false,closing:Promise<void>|undefined,caseIndex=0,tab:'quick'|'wallpapers'|'usage'='quick',category='all',searching=false,busy=false,appearanceBusy=false
   let accountOwner:string|null|undefined;let quota:ExploreQuota|undefined,quotaLoading=false;let focusBefore:HTMLElement|null=null,action:AbortController|undefined,requestId='',openRequest='',results:ExploreResult[]=[],activeResult=-1
   let outgoingTab:HTMLElement|undefined,tabAnimations:Animation[]=[],tabMotion=0,ownedDemoClose=false
-  let dragOrigin=false,dragRelease:number|undefined
-  const resetDrag=()=>{dragOrigin=false;if(dragRelease!==undefined){win.clearTimeout(dragRelease);dragRelease=undefined}}
-  const dragStart=(event:PointerEvent)=>{resetDrag();dragOrigin=opened&&event.button===0&&event.target===windowDrag}
+  let dragOrigin=false,dragRelease:number|undefined,backdropPressed=false
+  const foreground = 'button, input, a, .odyssey-explore-brand, .odyssey-operations-usecase, .odyssey-explore-search-control, ' +
+    '.odyssey-explore-results, .odyssey-explore-quota-card, .odyssey-explore-quota-status, .odyssey-explore-feedback, [data-explore-account-menu]'
+  const isBackdrop = (target:EventTarget|null) => target instanceof win.Element && dialog.contains(target) &&
+    target !== windowDrag && !target.closest(foreground)
+  const resetDrag=()=>{dragOrigin=false;backdropPressed=false;if(dragRelease!==undefined){win.clearTimeout(dragRelease);dragRelease=undefined}}
+  const dragStart=(event:PointerEvent)=>{
+    resetDrag()
+    if(!opened||event.button!==0)return
+    dragOrigin=event.target===windowDrag
+    backdropPressed=isBackdrop(event.target)
+  }
   const dragEnd=()=>{if(dragOrigin)dragRelease=win.setTimeout(resetDrag,0)}
   const language=()=>doc.documentElement.dataset.odysseyLocale==='en'?'en':'zh',copy=()=>HOME_OPERATIONS_COPY[language()],english=()=>language()==='en'
   const text=(zh:string,en:string)=>english()?en:zh
@@ -191,8 +200,22 @@ export function mountExploreMenu(doc:Document,options:Options){
   dialog.addEventListener('cancel',event=>{event.preventDefault();if(searching)setSearch(false);else void close()})
   // Electron handles the native drag without DOM pointer events. Keep the same
   // boundary for platforms that also synthesize a click after the gesture.
-  dialog.addEventListener('click',event=>{const fromDrag=dragOrigin;resetDrag();if(fromDrag||event.target===windowDrag){event.preventDefault();event.stopPropagation()}},true)
-  dialog.addEventListener('click',event=>{if(event.target===dialog||event.target===edge){if(searching)setSearch(false,false);else void close()}else if(searching&&!searchPanel.contains(event.target as Node)&&!searchWrap.contains(event.target as Node))setSearch(false,false)})
+  dialog.addEventListener('click',event=>{
+    if(!dragOrigin&&event.target!==windowDrag)return
+    resetDrag()
+    event.preventDefault()
+    event.stopPropagation()
+  },true)
+  dialog.addEventListener('click',event=>{
+    const fromBackdrop=backdropPressed
+    resetDrag()
+    if(isBackdrop(event.target)){
+      // Dragging from a card to the background may also dispatch a click on the dialog.
+      if(!fromBackdrop)return
+      if(searching)setSearch(false,false)
+      else void close()
+    }else if(searching&&!searchPanel.contains(event.target as Node)&&!searchWrap.contains(event.target as Node))setSearch(false,false)
+  })
   const openEvent=(event:Event)=>{
     if((event as CustomEvent).detail?.tab==='usage'&&accountOwner){
       if(opened)selectTab('usage')
