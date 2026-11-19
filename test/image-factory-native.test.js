@@ -141,6 +141,12 @@ it('restores the selected Images tab when returning from another app', async () 
       expect(scope).toBe(selected)
       expect(tasks).toMatchObject({ active: selected, tabs: expectedTabs })
     }
+    // A workspace owner can publish its native session after the app has resumed its canvas.
+    f.sessionsState.byId['late-workspace'] = { blank: true }
+    f.sessionCatalog.open('late-workspace')
+    expect(f.sessionsState.current).toBe(selected)
+    expect(scope).toBe(selected)
+    expect(tasks).toMatchObject({ active: selected, tabs: expectedTabs })
     expect(f.sessionCatalog.create).toHaveBeenCalledOnce()
     expect(saved.tabs).toEqual(expectedTabs)
 

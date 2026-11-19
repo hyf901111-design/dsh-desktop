@@ -15,7 +15,7 @@ body .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]) {
   --odyssey-header-action-end:var(--odyssey-header-action-inset);
   display:flex!important; flex-direction:row; align-items:center; gap:12px;
   height:var(--odyssey-workspace-header-height,44px)!important; min-height:var(--odyssey-workspace-header-height,44px)!important; flex:0 0 var(--odyssey-workspace-header-height,44px)!important;
-  padding:0 var(--odyssey-header-action-end) 0 20px; grid-template-rows:none!important; overflow:visible;
+  padding:0 var(--odyssey-header-action-end) 0 var(--odyssey-app-title-inset,14px); grid-template-rows:none!important; overflow:visible;
   background:transparent; backdrop-filter:blur(32px); border:0; box-shadow:none;
 }
 /* The compact workspace header floats over the research canvas. The
@@ -69,7 +69,7 @@ body[data-ds-dark-theme] .wSkVaW_root[data-odyssey-page="research"] .wSkVaW_head
 body .wSkVaW_header :is([data-srb-title-row],[data-srb-title-cluster]) { display:contents!important; }
 body .wSkVaW_header .wSkVaW_crumbs { order:1; flex:0 1 auto; min-width:0; max-width:200px; overflow:hidden; }
 body .wSkVaW_header .wSkVaW_crumbSeg { min-width:0; flex-shrink:1; }
-body .wSkVaW_header .wSkVaW_crumb { text-overflow:ellipsis; overflow:hidden; white-space:nowrap; font:500 14px/21px var(--odyssey-font-ui); }
+body .wSkVaW_header .wSkVaW_crumb { text-overflow:ellipsis; overflow:hidden; white-space:nowrap; font:var(--odyssey-app-title-font,500 14px/20px var(--odyssey-font-ui)); }
 body .wSkVaW_header [data-srb-tabs] { order:2; margin:0!important; padding:0; height:28px; min-height:28px; display:flex; flex:none; gap:4px; }
 body .wSkVaW_header .wSkVaW_tab { width:56px; min-width:56px; height:28px; padding:4px 8px; flex:none; }
 body .wSkVaW_header .wSkVaW_tab:not(.wSkVaW_tabActive) { color:var(--odyssey-header-tab-idle); }
@@ -94,7 +94,7 @@ body .wSkVaW_header .srb-actions :is(.srb-favorite-button,.srb-create-collaborat
 body .wSkVaW_header .srb-actions .srb-favorite-button[aria-pressed=true] { color:var(--odyssey-muted); }
 .srb-board-add-icon { display:block; width:16px; height:16px; background:currentColor; mask:var(--odyssey-board-add-icon) center/contain no-repeat; }
 body .wSkVaW_header[data-odyssey-header-layout=compact] .wSkVaW_crumbs { max-width:96px; }
-body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:12px!important; padding-left:16px!important; }
+body .wSkVaW_header[data-odyssey-header-layout=narrow] { gap:12px!important; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_headerActions { gap:8px; margin-right:-4px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_crumbs { flex:1 1 80px; max-width:80px; }
 body .wSkVaW_header[data-odyssey-header-layout=narrow] .wSkVaW_tab { min-width:48px; width:48px; }
@@ -107,18 +107,18 @@ body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header
    Keep the workspace selector available above the Research composer. */
 .sRp_composer .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
 .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
-body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat) { box-sizing:border-box; height:28px; min-height:28px; padding:0 8px; min-width:0; width:auto; gap:6px; border-radius:7px; transform:none; }
-body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat):hover { background:var(--odyssey-menu-row); }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow:not([data-odyssey-composer-workspace]) :is(.pXSMma_workspace,.cubgiG_seat) { box-sizing:border-box; height:28px; min-height:28px; padding:0 8px; min-width:0; width:auto; gap:6px; border-radius:7px; transform:none; }
+body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow:not([data-odyssey-composer-workspace]) :is(.pXSMma_workspace,.cubgiG_seat):hover { background:var(--odyssey-menu-row); }
 
 /* Dock the project path against the input without changing the input card's material. */
 body .wSkVaW_composerStack [data-odyssey-composer-project] { width:100%; min-width:0; }
 body .wSkVaW_composerStack .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] {
   --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 80%,#ddd);
   position:relative; display:flex; align-items:center; box-sizing:border-box;
-  height:34px; min-height:34px; min-width:0; width:auto; gap:4px;
+  height:42px; min-height:42px; min-width:0; width:auto; gap:4px;
   margin:0 calc(var(--dsh-composer-side-clearance, 0px) + 7px) -5px;
   padding:0 7px 5px;
-  border-radius:11px 11px 0 0; background:var(--odyssey-project-bar);
+  border-radius:13px 13px 0 0; background:var(--odyssey-project-bar);
 }
 body[data-ds-dark-theme] .wSkVaW_composerStack [data-odyssey-composer-workspace] {
   --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 72%,#101010);
@@ -129,16 +129,16 @@ body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=home] .wSkVaW_composerHero
   backdrop-filter:blur(14px) saturate(125%);
 }
 body .sRp_composer .wSkVaW_composerStack [data-odyssey-composer-workspace] {
-  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 85%,#ddd);
+  --odyssey-project-bar:#e8e8e8;
 }
 body[data-ds-dark-theme] .sRp_composer .wSkVaW_composerStack [data-odyssey-composer-workspace] {
-  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 82%,#111);
+  --odyssey-project-bar:#1d1d1d;
 }
 body .wSkVaW_composerStack [data-odyssey-composer-project] .uV2eYG_card { position:relative; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .odyssey-work-location { flex:none; display:inline-flex; min-width:0; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace) {
   display:inline-flex; align-items:center; min-width:0; max-width:100%; box-sizing:border-box;
-  height:24px; min-height:24px; padding:0 6px; gap:5px; border:0; border-radius:6px;
+  height:30px; min-height:30px; padding:0 8px; gap:5px; border:0; border-radius:999px;
   color:inherit; background:transparent; font:400 13px/18px var(--odyssey-font-ui);
   white-space:nowrap; transform:none;
 }
