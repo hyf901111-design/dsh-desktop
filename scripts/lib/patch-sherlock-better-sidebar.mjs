@@ -1219,6 +1219,8 @@ function patchScheduledGlobalPanel(source) {
 }
 
 export function patchBetterSidebarClient(source) {
+  if(source.includes('/* sherlock:native-knowledge-editor:v1 */'))
+    return patchSidebarPptxToolbar(patchPendingConversationPanel(patchResidentConversationTab(source)))
   source=stripPendingConversationPanel(source)
   source = patchSubagentAvatars(source, 'task-tree')
   source = patchSidebarPptxToolbar(source)
@@ -1458,8 +1460,7 @@ export async function patchBetterSidebarPackage(packageRoot) {
   if (serverPatched !== serverSource) await writeFile(serverPath, serverPatched, 'utf8')
   const clientPath = path.join(packageRoot, 'lib', 'client.js')
   const source = await readFile(clientPath, 'utf8')
-  const patched = patchSidebarKnowledgePreview(source.includes('/* sherlock:native-knowledge-editor:v1 */')
-    ? patchPendingConversationPanel(patchResidentConversationTab(source)) : patchBetterSidebarClient(source))
+  const patched = patchSidebarKnowledgePreview(patchBetterSidebarClient(source))
   if (patched !== source) await writeFile(clientPath, patched, 'utf8')
   const terminalPath = path.join(packageRoot, 'lib', 'client-terminal.js')
   const terminal = await readFile(terminalPath, 'utf8')

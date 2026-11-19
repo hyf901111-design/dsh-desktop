@@ -1090,7 +1090,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     onPasteCapture={props.sharedReadOnly ? event => { event.preventDefault(); event.stopPropagation() } : undefined}
     onDropCapture={props.sharedReadOnly ? event => { event.preventDefault(); event.stopPropagation() } : undefined}>
     <NotesOutline headings={outline} active={active} onLocate={locate} />
-    {!props.guide&&!props.sharedReadOnly&&props.active!==false?<NoteViewMode sessionId={props.sessionId} preview={viewPreview} disabled={!!props.recovery||writing||externalBusy||challenge.running||!!challenge.busyId||!!importing.current.size} onToggle={()=>{
+    {!props.guide&&!props.sharedReadOnly&&props.active!==false?<NoteViewMode sessionId={props.sessionId} preview={viewPreview} readOnly={!!props.recovery} disabled={writing||externalBusy||challenge.running||!!challenge.busyId||!!importing.current.size} onToggle={()=>{
       if(composing.current||request.current||settlingProposal.current||externalCapabilities.current?.pending()||noteResearchBlocks(editor.document).some(block=>inlineComponents.isGenerating(block.id)))return
       setViewPreview(value=>!value)
     }}/>:null}

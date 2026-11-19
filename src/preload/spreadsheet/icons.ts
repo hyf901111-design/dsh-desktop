@@ -1,3 +1,4 @@
+import headerEditLock from '../../shared/header-edit-lock.json'
 import { headerMoreIcon } from '../header-more-icon'
 
 const paths:Record<string,string>={
@@ -37,6 +38,10 @@ const paths:Record<string,string>={
  link:'M5 12h14m-5-5 5 5-5 5',check:'m5 12 4 4L19 6'
 }
 export function sheetIcon(name:string,size:number=headerMoreIcon.size){
+ if(name==='lock'||name==='lock-open'){
+  const {path}=name==='lock'?headerEditLock.locked:headerEditLock.unlocked
+  return '<svg aria-hidden="true" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="'+path+'"/></svg>'
+ }
  if(name==='more'){
   const {viewBox,centers,centerY,radius}=headerMoreIcon
   return '<svg aria-hidden="true" width="'+size+'" height="'+size+'" viewBox="'+viewBox+'" fill="currentColor">'+

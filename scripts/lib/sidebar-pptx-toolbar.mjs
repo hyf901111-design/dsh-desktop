@@ -1,3 +1,58 @@
+import editLock from '../../src/shared/header-edit-lock.json' with {type:'json'}
+
+const oldPptGlyph = `children: (0, react_jsx_runtime.jsx)("svg", {width:14,height:14,viewBox:"0 0 16 16",fill:"none",stroke:"currentColor",strokeWidth:1.4,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,children:(0,react_jsx_runtime.jsx)("path",{d:toolbar?.mode === "edit" ? "M1.5 8s2-4.5 6.5-4.5S14.5 8 14.5 8s-2 4.5-6.5 4.5S1.5 8 1.5 8ZM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" : "m10 2 4 4-7.5 7.5-4.5.5.5-4.5L10 2ZM8.5 3.5l4 4M2.5 9.5l4 4"})})`
+const oldPptLabel = 'if(kind==="edit")return toolbar?.mode==="edit"?(english?"Exit edit mode":"关闭编辑模式"):(english?"Edit presentation":"编辑演示文稿");'
+const fileModeTabs = `(0, react_jsx_runtime.jsxs)("div", {
+							className: sidebar_module_css_default.editorModeToggle,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: clsx(sidebar_module_css_default.editorModeButton, toolbar.mode === "preview" && sidebar_module_css_default.editorModeActive),
+								onClick: () => {
+									getToolbarControls()?.setMode("preview");
+								},
+								children: t("preview")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: clsx(sidebar_module_css_default.editorModeButton, toolbar.mode === "edit" && sidebar_module_css_default.editorModeActive),
+								onClick: () => {
+									getToolbarControls()?.setMode("edit");
+								},
+								children: t("edit")
+							})]
+						})`
+const fileLockDefinition = `/* sherlock:file-edit-lock:v1 */
+            const fileLock = () => toolbar?.mode === "edit" ? ${JSON.stringify(editLock.unlocked)} : ${JSON.stringify(editLock.locked)};
+            const fileLockLabel = () => {
+                const labels = isPptx && toolbar?.editable === false ? ${JSON.stringify(editLock.readOnly)} : fileLock();
+                return activeLocale().toLowerCase().startsWith("zh") ? labels.zh : labels.en;
+            };
+            const fileLockGlyph = () => react_jsx_runtime.jsx("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"currentColor","aria-hidden":true,
+                children:react_jsx_runtime.jsx("path",{fillRule:"evenodd",d:fileLock().path})});
+`
+const fileLockButton = `(0, react_jsx_runtime.jsx)(PptxToolbarAction, {
+                            hint:true,label:fileLockLabel(),type:"button",className:clsx(sidebar_module_css_default.iconButton,toolbar.mode !== "edit" && sidebar_module_css_default.editorTreeToggleActive),
+                            "data-odyssey-file-mode-toggle":true,"aria-pressed":toolbar.mode !== "edit",disabled:!!toolbar.modeBusy,
+                            onClick:()=>getToolbarControls()?.setMode(toolbar.mode === "edit" ? "preview" : "edit"),children:fileLockGlyph()
+                        })`
+const editLockChanges = [
+ [fileModeTabs,fileLockButton],
+ [oldPptLabel,'if(kind==="edit")return fileLockLabel();'],
+ [oldPptGlyph,'children: fileLockGlyph()'],
+ ['toolbar?.mode === "edit" && sidebar_module_css_default.editorTreeToggleActive','toolbar?.mode !== "edit" && sidebar_module_css_default.editorTreeToggleActive'],
+ ['"aria-pressed": toolbar?.mode === "edit",','"aria-pressed": toolbar?.mode !== "edit",']
+]
+function sidebarEditLocks(source, install) {
+ const marker='/* sherlock:file-edit-lock:',anchor='function EditorHost(props) {'
+ if(!install&&!source.includes(marker))return source
+ const replace=(before,after)=>{
+  if(source.split(before).length!==2)throw Error('Sidebar edit lock toolbar installation drifted')
+  source=source.replace(before,()=>after)
+ }
+ replace(install?anchor:anchor+'\n'+fileLockDefinition,install?anchor+'\n'+fileLockDefinition:anchor)
+ for(const [old,current] of editLockChanges)replace(install?old:current,install?current:old)
+ return source
+}
+
 // This presentation layer is stripped before the established mode/source guards.
 // Its component keeps the native anchor, refs, disabled state and callbacks.
 const hintsMarker='/* sherlock:pptx-toolbar-hints:v1 */'
@@ -10,7 +65,7 @@ const hintsDefinition=hintsMarker+String.raw`
                 const english=!activeLocale().toLowerCase().startsWith("zh");
                 if(kind==="download")return english?"Download":"下载";
                 if(kind==="folder")return english?"Open folder":"打开文件夹";
-                if(kind==="edit")return toolbar?.mode==="edit"?(english?"Exit edit mode":"关闭编辑模式"):(english?"Edit presentation":"编辑演示文稿");
+                ${oldPptLabel}
                 return toolbar?.annotationActive?(english?"Exit annotation mode":"关闭标注模式"):(english?"Annotate presentation":"标注演示文稿");
             };
 `+'/* sherlock:pptx-toolbar-hints:end */\n'
@@ -21,6 +76,7 @@ const hintsHooks=[
  ['(0,react_jsx_runtime.jsx)("button",{\n                            type:"button",className:clsx(sidebar_module_css_default.iconButton,toolbar.annotationActive&&sidebar_module_css_default.editorTreeToggleActive),','(0,react_jsx_runtime.jsx)(PptxToolbarAction,{hint:true,label:pptToolbarLabel("annotation"),\n                            type:"button",className:clsx(sidebar_module_css_default.iconButton,toolbar.annotationActive&&sidebar_module_css_default.editorTreeToggleActive),']
 ]
 export function stripSidebarPptxToolbarHints(source){
+ source=sidebarEditLocks(source,false)
  if(!source.includes('sherlock:pptx-toolbar-hints'))return source
  if(source.split(hintsDefinition).length!==2||hintsHooks.some(([,after])=>source.split(after).length!==2))throw Error('PPT toolbar hint installation drifted')
  source=source.replace('\n'+hintsDefinition,'')
@@ -96,7 +152,7 @@ function patchSidebarPptxToolbarMode(source) {
                             "aria-busy": pptModeBusy || void 0,
                             disabled: load.status !== "ready" || toolbar?.modes !== true || toolbar.editable !== true || pptModeBusy,
                             onClick: togglePptxMode,
-                            children: (0, react_jsx_runtime.jsx)("svg", {width:14,height:14,viewBox:"0 0 16 16",fill:"none",stroke:"currentColor",strokeWidth:1.4,strokeLinecap:"round",strokeLinejoin:"round","aria-hidden":true,children:(0,react_jsx_runtime.jsx)("path",{d:toolbar?.mode === "edit" ? "M1.5 8s2-4.5 6.5-4.5S14.5 8 14.5 8s-2 4.5-6.5 4.5S1.5 8 1.5 8ZM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" : "m10 2 4 4-7.5 7.5-4.5.5.5-4.5L10 2ZM8.5 3.5l4 4M2.5 9.5l4 4"})})
+                            ${oldPptGlyph}
                         })`
   const annotationState = `
             const [annotationPending,setAnnotationPending] = (0,react.useState)(null), annotationRequestRef=(0,react.useRef)(null);
@@ -155,6 +211,11 @@ export function sidebarPptxAnnotationProps(tab,scope){
 }
 export function patchSidebarPptxToolbar(source){
  source=stripSidebarPptxToolbarHints(source)
+ // A fully installed knowledge viewer already owns the file permissions and paths.
+ if(source.includes('/* sherlock:native-knowledge-editor:v1 */')){
+  if(source.split('"data-odyssey-pptx-mode-toggle": true,').length!==2)throw Error('Sidebar PPT toolbar installation drifted')
+  return sidebarEditLocks(patchSidebarPptxToolbarHints(source),true)
+ }
  const marker='/* sherlock:pptx-annotation-sidebar-source:v1 */'
  const before='const path = tab.path ?? "";',after=before+'\n'+marker+'\n'+sidebarPptxAnnotationProps.toString()+'\nconst annotationPreview=sidebarPptxAnnotationProps(tab,scope);'
  const props='path,\n\t\t\t\t\t\t\t\ttitle,\n\t\t\t\t\t\t\t\tviewerId: load.viewer.id,',installed='path: annotationPreview?.path ?? path,\n                                annotationSource: annotationPreview?.annotationSource,\n                                annotationCanonicalPath: annotationPreview?.annotationCanonicalPath,\n\t\t\t\t\t\t\t\ttitle,\n\t\t\t\t\t\t\t\tviewerId: load.viewer.id,'
@@ -165,5 +226,5 @@ export function patchSidebarPptxToolbar(source){
  source=patchSidebarPptxToolbarMode(source)
  const start=source.indexOf('function EditorHost(props) {'),end=source.indexOf('\n\t\t/**',start),host=source.slice(start,end)
  if(host.split(before).length!==2||host.split(props).length!==2)throw Error('PPT annotation sidebar source anchors drifted')
- return patchSidebarPptxToolbarHints(source.slice(0,start)+host.replace(before,after).replace(props,installed)+source.slice(end))
+ return sidebarEditLocks(patchSidebarPptxToolbarHints(source.slice(0,start)+host.replace(before,after).replace(props,installed)+source.slice(end)),true)
 }

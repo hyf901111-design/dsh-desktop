@@ -1,12 +1,13 @@
 import React, { useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { noteUiText as t } from '../../../packages/dsh-research-task-runtime/notes-locale.js'
+import headerEditLock from '../../shared/header-edit-lock.json'
 import { HeaderViewModeIcon } from '../header-view-mode-icon'
 
-export function NoteViewMode({ sessionId, preview, disabled, onToggle }: {
+export function NoteViewMode({ sessionId, preview, disabled, readOnly = false, onToggle }: {
   sessionId: string
   preview: boolean
   disabled: boolean
+  readOnly?: boolean
   onToggle(): void
 }) {
   const [host, setHost] = useState<HTMLElement | null>(null)
@@ -19,10 +20,12 @@ export function NoteViewMode({ sessionId, preview, disabled, onToggle }: {
     return () => observer.disconnect()
   }, [sessionId])
   if (!host) return null
-  const label = t(preview ? '切换到编辑模式' : '切换到预览模式')
+  const editingLocked = readOnly || preview
+  const lock = readOnly ? headerEditLock.readOnly : preview ? headerEditLock.locked : headerEditLock.unlocked
+  const label = host.ownerDocument.documentElement.dataset.odysseyLocale === 'en' ? lock.en : lock.zh
   return createPortal(
-    <button type="button" className="en-header-view-mode" title={label} aria-label={label} aria-pressed={preview} disabled={disabled} onClick={onToggle}>
-      <HeaderViewModeIcon preview={preview}/>
+    <button type="button" className="en-header-view-mode" title={label} aria-label={label} aria-pressed={editingLocked} disabled={disabled || readOnly} onClick={onToggle}>
+      <HeaderViewModeIcon preview={editingLocked}/>
     </button>,
     host
   )
