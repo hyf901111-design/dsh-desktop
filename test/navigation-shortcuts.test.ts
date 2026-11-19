@@ -10,6 +10,7 @@ import { registerNavigationShortcutPreferences } from '../src/main/navigation-sh
 import type { TrustedWindowEvent } from '../src/main/ipc-trust'
 
 it('normalizes six sidebar positions and retains legacy top preferences', () => {
+  expect(normalizeNavigationShortcuts(undefined).side).toEqual(['research', 'spreadsheet', 'browser', 'note', 'knowledge', 'image-factory'])
   expect(normalizeNavigationShortcuts({ top: ['browser', 'browser', null, 'chat', 'note'], side: ['browser'] })).toEqual({
     top: ['browser', null, null, null], side: ['browser', null, null, null, null, null]
   })
@@ -38,7 +39,7 @@ it('renders six editable sidebar positions and retains hidden top preferences', 
     <nav class="eb-workspace-tabs"><button data-workspace-native-view="chat">对话</button><button data-workspace-native-view="research">研究</button><button data-workspace-native-view="notes">笔记</button><button data-workspace-native-view="spreadsheet">表格</button></nav>
     <nav data-home-app-shortcuts><button data-home-app="browser">浏览器</button><button data-home-app="image-factory">图像</button></nav>`
   doc.querySelector('[data-workspace-native-view=notes]')!.addEventListener('click', native)
-  let persisted = defaultNavigationShortcuts
+  let persisted = normalizeNavigationShortcuts({ side: ['browser', 'image-factory', 'knowledge'] })
   const manager = mountNavigationShortcuts(doc, { read: () => persisted, save, open })
   const pick = (selector: string) => doc.querySelector<HTMLButtonElement>(selector)!
   const event = (target: Element, type: string) => target.dispatchEvent(new win.MouseEvent(type, { bubbles: true, cancelable: true }) as unknown as Event)
@@ -76,7 +77,7 @@ it('renders six editable sidebar positions and retains hidden top preferences', 
     manager.pinSidebar('note')
     expect(side.querySelector<HTMLButtonElement>('[data-navigation-app=note]')?.style.getPropertyValue('--navigation-glyph')).toBe(navigationAppIcon('note'))
     manager.pinSidebar('new-chat')
-    expect(pick('[data-navigation-app=new-chat]').title).toBe('对话')
+    expect(pick('[data-navigation-app=new-chat]').getAttribute('aria-label')).toBe('对话')
     manager.pinSidebar('scheduled')
     manager.pinSidebar('research')
     manager.pinSidebar('spreadsheet')

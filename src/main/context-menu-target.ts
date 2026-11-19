@@ -13,7 +13,7 @@ export function contextMenuTargetScript(x: number, y: number): string {
       const captured = window.__sherlockContextTarget;
       window.__sherlockContextTarget = undefined;
       const hit = document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
-      const trayMenu = '[data-home-app-shortcuts], [data-navigation-menu]';
+      const trayMenu = '[data-home-app-shortcuts], [data-navigation-menu], [data-navigation-rail] [data-navigation-slot]:not([data-empty]), [data-navigation-sidebar-only] [data-dsh-sidebar-wide=true] .hHd-Xa_newSessionGroup';
       if (hit?.closest(trayMenu)) return { values: [], suppressMenu: true };
       const origin = captured && performance.now() - captured.time < 2000 && captured.element?.isConnected
         ? captured.element : hit;

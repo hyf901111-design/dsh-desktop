@@ -1,3 +1,4 @@
+import { navigationAppIcon } from './home-app-shortcuts'
 import { icons } from './scheduled/icons'
 import workspaceIcon from './browser/assets/workspace.svg?inline'
 
@@ -5,6 +6,11 @@ import workspaceIcon from './browser/assets/workspace.svg?inline'
 export function workspaceBackButton(className = '', action: 'back' | 'exit' = 'back'): string {
   const classes = className.split(/\s+/).filter(value => /^[a-zA-Z0-9_-]+$/.test(value)).join(' ')
   return `<button type="button" class="workspace-back-button t8lSSG_toggleButton ${classes}" data-action="${action}" aria-label="返回工作区" title="返回工作区"><i class="workspace-back-icon" aria-hidden="true"></i></button>`
+}
+
+export function workspaceAppHeading(app: 'scheduled' | 'plugin') {
+  const title = app === 'scheduled' ? '定时任务' : '插件'
+  return `<h1 class="workspace-app-title workspace-app-heading" data-workspace-app="${app}"><i aria-hidden="true"></i><span>${title}</span></h1>`
 }
 
 export function reserveWorkspaceRightControl(header: HTMLElement) {
@@ -35,6 +41,9 @@ export function revealWorkspaceTab(list: HTMLElement) {
 }
 
 const controls = 'body :is(.workspace-back-button, :is([data-scheduled-panel],[data-workspace-panel=integrations]) [data-odyssey-panel-entry=right])'
+const sessionHeader = '[data-srb-session-header]:not([data-odyssey-subagent-panel] *)'
+const resident = '.pI_x6G_centerCol .wSkVaW_root'
+const workspaceSessionHeader = `${resident}[data-odyssey-page] ${sessionHeader}`
 const styles = `
 .workspace-app-topbar{display:flex;align-items:center;gap:8px;height:44px;flex:none;padding:0 12px}
 .workspace-app-title{display:flex;align-items:center;gap:7px;height:32px;padding:0 2px;font-weight:500;flex:none;white-space:nowrap}
@@ -42,6 +51,19 @@ const styles = `
 .workspace-app-title,.workspace-app-title *{-webkit-app-region:drag;user-select:none;cursor:default}
 @container(max-width:700px){.workspace-app-title{width:32px}.workspace-app-title>span{display:none}}
 @container(max-width:480px){.workspace-app-topbar{gap:4px;padding-left:8px}.workspace-app-title{width:28px;padding:0 4px}}
+h1.workspace-app-heading{margin:0;width:auto;font:500 14px/20px var(--odyssey-font-ui,system-ui)}
+h1.workspace-app-heading>span{display:inline}
+.workspace-app-heading[data-workspace-app=scheduled]>i{mask-image:${navigationAppIcon('scheduled')}}
+.workspace-app-heading[data-workspace-app=plugin]>i{mask-image:${navigationAppIcon('plugin')}}
+${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('new-chat')}}
+${resident}[data-odyssey-page="research"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('research')}}
+${resident}[data-odyssey-page="spreadsheet"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('spreadsheet')}}
+${workspaceSessionHeader}:has([data-conversation-view-id=notes][aria-selected=true]),
+body[data-workspace-surface=notes] ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('note')}}
+${workspaceSessionHeader} .wSkVaW_crumbs::before{
+  content:"";display:block;width:18px;height:18px;flex:none;margin-inline-end:3px;
+  background:currentColor;mask:var(--workspace-title-icon) center/contain no-repeat;
+}
 .eb-workspace-controls{display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}
 .workspace-app-topbar .eb-workspace-toggle{display:grid;place-items:center;width:32px;height:32px;padding:0;flex:none;color:var(--eb-muted,var(--knowledge-muted));-webkit-app-region:no-drag}
 .workspace-app-topbar .eb-workspace-toggle[aria-expanded=true]{background:transparent}
@@ -87,7 +109,7 @@ body:has(.odyssey-workspace-search,.st-menu[data-sidebar-more],[data-browser-pag
 }
 @media(prefers-reduced-motion:reduce){.eb-workspace-toggle>i{transition:none}}
 body :is(.st-root,.ig-root,.eb-root,.knowledge-workspace,.image-factory) .workspace-back-button{width:28px;min-width:28px;height:28px;display:grid;place-items:center;padding:6px!important;border:0;border-radius:7px;background:transparent;color:var(--dsw-alias-label-secondary,var(--eb-muted,#777));cursor:pointer;pointer-events:auto;-webkit-app-region:no-drag;transition:background-color .12s ease,color .12s ease}
-body :is(.st-root,.ig-root) .workspace-back-button{position:absolute;top:17px;left:19px}
+body :is(.st-chrome,.ig-chrome) .workspace-back-button{position:static;flex:none}
 body :is(.st-root,.ig-root)[data-dark=true] .workspace-back-button{color:var(--dsw-alias-label-secondary,#aaa)}
 .workspace-back-icon{display:block;width:16px;height:16px;background:currentColor;mask:url('${icons.back}') center/contain no-repeat}
 ${controls}:hover:not(:disabled):not([aria-busy=true]){background:var(--dsw-alias-interactive-bg-hover,color-mix(in srgb,currentColor 9%,transparent));color:var(--dsw-alias-label-primary,var(--ig-ink,var(--st-ink,var(--eb-ink,currentColor))))}

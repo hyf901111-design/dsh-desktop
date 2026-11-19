@@ -2,7 +2,7 @@ import { sidebarShortcutCount, type NavigationShortcut } from '../../shared/navi
 import type { IntegrationBridge, TaskCapabilitySummary } from '../../shared/integration-ui'
 import type { IntegrationBinding } from '../../shared/integrations'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
-import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
+import { mountWorkspaceTopbarStyles, workspaceBackButton, workspaceAppHeading } from '../workspace-topbar'
 import {
   nextRun,
   scheduleLabel,
@@ -101,7 +101,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
-    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];visibleApps?:()=>readonly NavigationShortcut[];pinApp?:(app:NavigationShortcut)=>void},
+    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];visibleApps?:()=>readonly NavigationShortcut[];sidebarFull?:()=>boolean;pinApp?:(app:NavigationShortcut)=>void},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)
@@ -222,7 +222,8 @@ export class ScheduledTaskView {
       if (this.menuAnchor === this.more) {
         const wide = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') !== 'false'
         if (this.menu?.dataset.sidebarWide !== String(wide) ||
-            this.menu?.dataset.sidebarVisibleApps !== this.sidebarActions?.visibleApps?.().join(',')) this.closeMenu()
+            this.menu?.dataset.sidebarVisibleApps !== this.sidebarActions?.visibleApps?.().join(',') ||
+            this.menu?.dataset.sidebarFull !== String(this.sidebarFull())) this.closeMenu()
       }
       this.placeMore(group, current); return
     }
@@ -244,14 +245,13 @@ export class ScheduledTaskView {
       const addWorkspace = sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')
       const english = this.document.documentElement.dataset.odysseyLocale === 'en'
       const entries: MenuItem[] = []
-      if (wide && pinned) entries.push(
-        { label: english ? 'Home' : '主页', icon: 'homeRail', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-open-home', { bubbles: true })) }
-      )
       if (!wide || pinned?.includes('new-workspace')) entries.push(
         { app: 'new-workspace', label: english ? 'New workspace' : '新建工作区', icon: 'workspaceAdd', disabled: !addWorkspace || addWorkspace.disabled, run: () => addWorkspace?.click() }
       )
+      if (!wide) entries.push(
+        { app: 'new-chat', label: english ? 'Chat' : '对话', icon: 'chat', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-chat', { bubbles: true })) }
+      )
       if (!wide || pinned) entries.push(
-        { app: 'new-chat', label: english ? 'Chat' : '对话', icon: 'chat', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-chat', { bubbles: true })) },
         { app: 'research', label: english ? 'Research' : '研究', icon: 'research', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research', { bubbles: true })) }
       )
       if (this.sidebarActions) entries.push({
@@ -276,21 +276,24 @@ export class ScheduledTaskView {
       const shown = this.sidebarActions?.visibleApps?.()
       const available = entries.filter(item => !item.app || !(shown ?? (wide ? undefined : pinned))?.includes(item.app))
       const pinApp = this.sidebarActions?.pinApp
-      const pins = !wide && pinApp ? {
-        add: pinApp,
-        full: pinned?.length === sidebarShortcutCount && !pinned.includes(null)
-      } : undefined
+      const full = this.sidebarFull()
+      const pins = pinApp ? { add: pinApp, full } : undefined
       this.showMenu(more, available, pins)
       const opened=this.menu as HTMLElement|undefined
       if (opened) {
         opened.dataset.sidebarMore = 'true'
         opened.dataset.sidebarWide = String(wide)
+        opened.dataset.sidebarFull = String(full)
         if (shown) opened.dataset.sidebarVisibleApps = shown.join(',')
       }
     }
     zone.append(more)
     this.placeMore(group, zone)
     this.more = more
+  }
+  private sidebarFull() {
+    const pinned = this.sidebarActions?.pinnedApps?.()
+    return this.sidebarActions?.sidebarFull?.() ?? (pinned?.length === sidebarShortcutCount && !pinned.includes(null))
   }
   private openBrowser(){
     this.document.defaultView?.dispatchEvent(new CustomEvent('sherlock:browser-request'))
@@ -664,7 +667,7 @@ export class ScheduledTaskView {
     if (!this.root) return
     this.listSignature = ''
     this.root.dataset.detail = String(this.detailOpen)
-    this.root.innerHTML = `<main class="st-center">${workspaceBackButton('st-back')}<h1>定时任务</h1><p class="st-subtitle">安排任务、定期跟踪，或在重要变化时收到提醒</p><label class="st-search">${icon('search')}<input aria-label="搜索已安排任务" placeholder="搜索已安排任务" value="${escape(this.query)}"></label><div class="st-toolbar" role="tablist" aria-label="任务状态">${[
+    this.root.innerHTML = `<main class="st-center"><header class="st-chrome workspace-app-topbar">${workspaceBackButton('st-back')}${workspaceAppHeading('scheduled')}</header><div class="st-page"><p class="st-subtitle">安排任务、定期跟踪，或在重要变化时收到提醒</p><label class="st-search">${icon('search')}<input aria-label="搜索已安排任务" placeholder="搜索已安排任务" value="${escape(this.query)}"></label><div class="st-toolbar" role="tablist" aria-label="任务状态">${[
       ['all', '全部'],
       ['enabled', '已开启'],
       ['paused', '已暂停'],
@@ -676,7 +679,7 @@ export class ScheduledTaskView {
       )
       .join(
         '',
-      )}<label class="st-type-filter"><select aria-label="任务类型"><option value="all">全部类型</option><option value="global">全局任务</option><option value="component">组件任务</option></select><span class="st-chevron" aria-hidden="true"></span></label><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></main>`
+      )}<label class="st-type-filter"><select aria-label="任务类型"><option value="all">全部类型</option><option value="global">全局任务</option><option value="component">组件任务</option></select><span class="st-chevron" aria-hidden="true"></span></label><button class="st-primary st-new">＋ 新建任务</button></div><div class="st-error" role="alert">${escape(this.error)}</div><div class="st-list"></div></div></main>`
     const type = this.root.querySelector<HTMLSelectElement>('.st-type-filter select')!
     type.value = this.typeFilter
     type.onchange = () => { this.typeFilter = type.value; this.renderList() }

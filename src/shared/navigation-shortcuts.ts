@@ -10,7 +10,7 @@ export type NavigationShortcuts = Record<NavigationRegion, readonly (NavigationS
 
 export const defaultNavigationShortcuts: NavigationShortcuts = {
   top: ['research', 'note', 'spreadsheet', null],
-  side: ['browser', 'image-factory', 'knowledge', null, null, null]
+  side: ['research', 'spreadsheet', 'browser', 'note', 'knowledge', 'image-factory']
 }
 
 export function isNavigationApp(value: unknown): value is NavigationApp {

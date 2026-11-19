@@ -53,6 +53,9 @@ it('provides only scheduled tasks in More, closes on Escape, and preserves the w
   )
   expect(doc.querySelector('.st-menu')).toBeNull()
   await view.open()
+  const heading = doc.querySelector('.workspace-app-title[data-workspace-app="scheduled"]')
+  expect(heading?.textContent).toBe('定时任务')
+  expect(heading?.querySelector('i[aria-hidden="true"]')).not.toBeNull()
   expect(doc.querySelector<HTMLElement>('.pI_x6G_centerCol')!.inert).toBe(true)
   doc.querySelector<HTMLButtonElement>('.st-new')!.click()
   const name = doc.querySelector<HTMLTextAreaElement>('.st-prompt')!
@@ -496,7 +499,7 @@ it('puts the real new-note action first in the existing More menu and closes it 
  finish();await Promise.resolve();await Promise.resolve()
 })
 
-it('offers pin actions only in collapsed More and removes a pinned app from that menu', async () => {
+it('offers pin actions in both sidebar modes and removes visible apps from More', async () => {
   const w = new Window(); windows.push(w)
   vi.stubGlobal('MutationObserver', w.MutationObserver); vi.stubGlobal('CustomEvent', w.CustomEvent)
   const doc = w.document as unknown as Document
@@ -539,6 +542,8 @@ it('offers pin actions only in collapsed More and removes a pinned app from that
   await vi.waitFor(() => expect(doc.querySelector('.st-menu')).toBeNull())
   more.click()
   expect(doc.querySelector('.st-menu')?.textContent).toContain('笔记')
-  expect(doc.querySelector('[data-st-menu-pin]')).toBeNull()
+  expect(doc.querySelector<HTMLButtonElement>('[data-st-menu-pin=scheduled]')?.disabled).toBe(false)
+  expect(doc.querySelector('[data-st-menu-pin=new-chat]')).toBeNull()
+  expect(doc.querySelector('.st-menu')?.textContent).not.toContain('主页')
   view.close()
 })
