@@ -5,11 +5,12 @@ import spreadsheetIcon from '../../build/brand/odyssey-app-spreadsheet.svg?inlin
 import newWorkspaceIcon from '../../build/brand/odyssey-b-workspace-add-18.svg?inline'
 import knowledgeApp from '../../build/brand/odyssey-knowledge-base.svg?inline'
 import factoryIcon from './image-factory/assets/factory.svg?inline'
+import browserIcon from '../../build/brand/odyssey-home-browser-28.svg?inline'
 import styles from './home-app-shortcuts.css?raw'
 import { navigationApps as apps, type NavigationApp, type NavigationShortcut } from '../shared/navigation-shortcuts'
 
 const appIcons = {
-  browser: '/odyssey-home-browser-28.svg',
+  browser: browserIcon,
   knowledge: knowledgeApp,
   'image-factory': factoryIcon,
   plugin: '/odyssey-home-plugin-28.svg',
