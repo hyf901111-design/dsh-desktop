@@ -219,6 +219,173 @@
         ],
         "recordedAt": "2026-11-19T00:26:01.957Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究网页回到原看板、规划状态同步与浏览器下载操作",
+        "branch": "codex/feat/browser-overlay-downloads-20261119",
+        "baseCommit": "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a",
+        "tipCommit": "da37e760e31abf8930d423d78c7d2f2e330025a9",
+        "commits": [
+          {
+            "commit": "0d48bdc5ee1ccc4c19aae4e2dda02fea378f79a6",
+            "parents": [
+              "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a"
+            ],
+            "subject": "修复浏览器浮层遮挡和下载文件操作"
+          },
+          {
+            "commit": "cb7fdd903ce3f720f5a66f77fe4361676ca21a0d",
+            "parents": [
+              "0d48bdc5ee1ccc4c19aae4e2dda02fea378f79a6"
+            ],
+            "subject": "将研究轮次已生成的网页交付到原看板并清理滞留规划卡"
+          },
+          {
+            "commit": "da37e760e31abf8930d423d78c7d2f2e330025a9",
+            "parents": [
+              "cb7fdd903ce3f720f5a66f77fe4361676ca21a0d"
+            ],
+            "subject": "按研究任务的更新频率和交互需求规划组件"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-webpage-delivery.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-creation-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/generation-core.md"
+          },
+          {
+            "status": "M",
+            "path": "src/main/browser/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/activity-page.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/download-details.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/native-menus.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/style.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/browser-app.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-actions-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-context-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-binding.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/research-creation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/research-creation-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-send-admission.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-webpage-file.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-webpage-file.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/component-source-binding.test.js",
+              "test/research-creation-progress.test.js",
+              "test/research-send-admission.test.js",
+              "test/browser-page-actions-service.test.ts",
+              "--testTimeout",
+              "30000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "运行时、发送、画布和下载的 404 项聚焦回归通过。",
+            "verifiedCommit": "da37e760e31abf8930d423d78c7d2f2e330025a9",
+            "completedAt": "2026-11-19T02:29:30.264Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "桌面端类型检查通过。",
+            "verifiedCommit": "da37e760e31abf8930d423d78c7d2f2e330025a9",
+            "completedAt": "2026-11-19T02:29:30.264Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "两次真实日历会话均恢复，重新打开每次各有一张组件，失败提示已清除。Chromium 验证菜单与提示共存，Electron 独立窗口验证原生浮层。"
+        },
+        "acceptanceCriteria": [
+          "研究轮次实际写入的最终网页回到发起看板，切换会话和重复确认时只生成一张。",
+          "规划暂留到组件交付或明确失败，已完成的本轮原生组件清理过期提示。",
+          "下载目录和加入工作材料给出实际状态，菜单与客户端提示同时可见。"
+        ],
+        "risks": [
+          "原始 CPI/PPI 场景生成的五张静态卡仍按静态交付记录。"
+        ],
+        "generatedAt": "2026-11-19T02:29:30.257Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -270,6 +437,24 @@
         "test/workbench-auto-arrange-browser.test.js",
         "-t",
         "fits a portable webpage|preserves compact webpage layout|flattens older"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-webpage-file.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/conversation-components-policy.test.js",
+        "test/component-source-binding.test.js",
+        "test/research-creation-progress.test.js",
+        "test/research-send-admission.test.js",
+        "test/browser-page-actions-service.test.ts",
+        "--testTimeout",
+        "30000",
+        "--reporter=dot"
       ],
       "timeoutMs": 240000
     }
