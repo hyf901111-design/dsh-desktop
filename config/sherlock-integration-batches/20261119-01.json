@@ -495,6 +495,203 @@
         ],
         "recordedAt": "2026-11-19T02:44:12.509Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究组件外点关闭与各编辑器顶栏锁定状态",
+        "branch": "codex/feat/workbench-menu-outside-20261119",
+        "baseCommit": "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a",
+        "tipCommit": "5abb812e7fa82d7aacbd6227ebf1e0ae9968575b",
+        "commits": [
+          {
+            "commit": "54a868790a36919a7e702df2b40c560381807cce",
+            "parents": [
+              "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a"
+            ],
+            "subject": "修复研究组件菜单在网页、标题栏和原生视图外点击时的关闭行为"
+          },
+          {
+            "commit": "5abb812e7fa82d7aacbd6227ebf1e0ae9968575b",
+            "parents": [
+              "54a868790a36919a7e702df2b40c560381807cce"
+            ],
+            "subject": "将研究、笔记、表格和文件编辑器顶栏统一为实心开锁与闭锁状态"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-webpage-preview.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-pptx-toolbar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/component-popup-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/native-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-panels.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/financial-ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/header-view-mode-icon.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/shared-session.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/view-mode.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/header-edit-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/sidebar-pptx-tooltip-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/header-mode-pill-theme-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-header.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-mode-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-pptx-toolbar.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-pptx-tooltip-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/spreadsheet-keyboard-reference.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-reading-sections-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-webpage-file.test.js",
+              "test/workbench-native-menu.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/component-popup-menu.test.ts",
+              "test/workbench-reading-sections-browser.test.js",
+              "test/research-preview-header.test.ts",
+              "test/header-mode-pill-theme-browser.test.ts",
+              "test/sidebar-pptx-toolbar.test.ts",
+              "test/sidebar-pptx-tooltip-install.test.js",
+              "test/sidebar-pptx-tooltip-browser.test.js",
+              "test/spreadsheet-keyboard-reference.test.js",
+              "--maxWorkers",
+              "3",
+              "--testTimeout",
+              "30000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "106 项聚焦测试通过，覆盖原生菜单、网页正文、子菜单、研究笔记表格和文件顶栏。",
+            "verifiedCommit": "5abb812e7fa82d7aacbd6227ebf1e0ae9968575b",
+            "completedAt": "2026-11-19T03:01:53.000Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "shows two matching icon tiles|defaults to edit and persists",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "四种看板主题与切换会话的 3 项真实界面回归通过。",
+            "verifiedCommit": "5abb812e7fa82d7aacbd6227ebf1e0ae9968575b",
+            "completedAt": "2026-11-19T03:01:53.000Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "桌面类型检查通过。",
+            "verifiedCommit": "5abb812e7fa82d7aacbd6227ebf1e0ae9968575b",
+            "completedAt": "2026-11-19T03:01:53.000Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在原客户端复现网页正文点击后菜单滞留。Chromium 已验证修复后的首击关闭且按钮生效、重复打开和键盘切换，另有 Electron 原生菜单事件覆盖。"
+        },
+        "acceptanceCriteria": [
+          "点击网页正文、源资料或画布空白能关闭组件根菜单和子菜单，保留被点控件的操作。",
+          "各应用已有的编辑模式开关以实心开锁或闭锁显示当前状态，中英文、只读权限和保存流程正确。"
+        ],
+        "risks": [
+          "正式公共 1.6.7 已发布，本功能面向后续本地集成验收。"
+        ],
+        "generatedAt": "2026-11-19T03:01:53.000Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -563,6 +760,42 @@
         "test/browser-page-actions-service.test.ts",
         "--testTimeout",
         "30000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-webpage-file.test.js",
+        "test/workbench-native-menu.test.js",
+        "test/notes-native-menu.test.ts",
+        "test/component-popup-menu.test.ts",
+        "test/workbench-reading-sections-browser.test.js",
+        "test/research-preview-header.test.ts",
+        "test/header-mode-pill-theme-browser.test.ts",
+        "test/sidebar-pptx-toolbar.test.ts",
+        "test/sidebar-pptx-tooltip-install.test.js",
+        "test/sidebar-pptx-tooltip-browser.test.js",
+        "test/spreadsheet-keyboard-reference.test.js",
+        "--maxWorkers",
+        "3",
+        "--testTimeout",
+        "30000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-preview-mode-browser.test.js",
+        "-t",
+        "shows two matching icon tiles|defaults to edit and persists",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
