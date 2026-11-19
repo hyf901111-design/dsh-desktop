@@ -26,7 +26,7 @@ it('restores original pixels and editable layers after restart and stores indepe
     const persistence = new ImageFactoryCanvases(root, identity)
     const first = persistence.write({ scope: 'studio-a', epoch: 5, canvas: original, image: png })
     const moved = { ...original.layers[1] as TextLayer, text: '移出画框的标题', x: -.8, y: 1.25 }
-    const revised: StoredCanvas = { ...original, layers: [moved, original.layers[0]!], aiWatermark: true }
+    const revised: StoredCanvas = { ...original, layers: [moved, original.layers[0]!], aiWatermark: true, editedInSession: true }
     const second = persistence.write({ scope: 'studio-a', epoch: 5, canvas: revised })
     const other = canvas()
     const third = persistence.write({ scope: 'studio-b', epoch: 5, canvas: other, image: png })
@@ -35,6 +35,9 @@ it('restores original pixels and editable layers after restart and stores indepe
     const reopened = new ImageFactoryCanvases(root, identity)
     expect(await reopened.read('studio-a')).toEqual({ epoch: 5, canvas: revised, image: { data: png, mediaType: 'image/png' } })
     expect((await reopened.read('studio-b')).canvas).toEqual(other)
+    expect(await reopened.hasEditedCanvas('studio-a')).toBe(true)
+    expect(await reopened.hasEditedCanvas('studio-b')).toBe(false)
+    expect(await reopened.hasEditedCanvas('blank-gallery')).toBe(false)
     expect((await reopened.read(null)).canvas).toBeUndefined()
     const [userDirectory] = await readdir(root)
     const subdirectories = await readdir(join(root, userDirectory!))
@@ -48,7 +51,7 @@ it('moves a standalone canvas on first send without replacing a conversation can
   const root = await mkdtemp(join(tmpdir(), 'odyssey-canvas-adopt-'))
   try {
     const persistence = new ImageFactoryCanvases(root, () => ({ owner: 'account-a', generation: 1 }))
-    const draft = canvas(), occupied = canvas()
+    const draft = { ...canvas(), editedInSession: true as const }, occupied = canvas()
     await Promise.all([
       persistence.write({ scope: null, epoch: 1, canvas: draft, image: png }),
       persistence.write({ scope: 'existing', epoch: 1, canvas: occupied, image: png }),
@@ -59,6 +62,8 @@ it('moves a standalone canvas on first send without replacing a conversation can
     expect((await persistence.read(null)).canvas).toBeUndefined()
     expect((await persistence.read('existing')).canvas).toEqual(occupied)
     expect(await persistence.read('new-conversation')).toMatchObject({ canvas: draft, image: { data: png } })
+    expect(await persistence.hasEditedCanvas('new-conversation')).toBe(true)
+    expect(await persistence.hasEditedCanvas('existing')).toBe(false)
   } finally { await rm(root, { force: true, recursive: true }) }
 })
 

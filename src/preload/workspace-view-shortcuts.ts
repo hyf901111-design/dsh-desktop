@@ -203,6 +203,9 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     return header
   }
   const edit = makeWorkspaceCustomizationButton(document)
+  const labels = document.createElement('div')
+  labels.className = 'eb-workspace-tab-list'
+  nav.append(labels, edit)
   const expand = (next: boolean) => {
     expanded = next
     setWorkspaceViewsExpanded(toggle, nav, next, english())
@@ -254,9 +257,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     updated = signature
     if (onHome) homeLabel.textContent = language === 'en' ? 'New chat' : '新对话'
     expand(expanded)
-    if (!edit.parentElement) nav.append(edit)
-    for (const child of [...nav.children]) if (child !== edit) child.remove()
-    edit.before(...views.map(([view]) => buttons.find(row => row.view === view)!.button))
+    labels.replaceChildren(...views.map(([view]) => buttons.find(row => row.view === view)!.button))
     labelWorkspaceCustomization(edit, english())
     nav.setAttribute('aria-label', language === 'en' ? 'Workspace views' : '工作区视图')
     buttons.forEach(({ view, zh, en, button }, index) => {
@@ -312,8 +313,9 @@ export function mountWorkspaceViewCustomization(document: Document) {
   const onClick = (event: MouseEvent) => {
     const anchor = (event.target as Element)?.closest<HTMLButtonElement>('[data-workspace-view-customize]')
     const nav = anchor?.closest<HTMLElement>('.eb-workspace-tabs')
+    const header = nav?.closest<HTMLElement>('.workspace-app-topbar,[data-srb-session-header]')
     const settings = preferences.get(document)
-    if (!anchor || !nav || nav.inert || !settings || closeEditor) return
+    if (!anchor || !nav || !header || nav.inert || !settings || closeEditor) return
 
     const en = document.documentElement.dataset.odysseyLocale === 'en'
     const panel = document.createElement('dialog')
@@ -341,7 +343,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
     status.className = 'workspace-view-settings-status'
     const appName = (app: TopNavigationApp) => workspaceViews.find(([view]) => view === viewForApp[app])![en ? 2 : 1]
     let picked: TopNavigationApp | undefined
-    let press: { id: number; app: TopNavigationApp; x: number; y: number } | undefined
+    let press: { id: number; app: TopNavigationApp; button: HTMLElement; x: number; y: number; offsetX: number; offsetY: number } | undefined
     let suppressClick = false
     const ghost = document.createElement('span')
     ghost.className = 'workspace-view-drag-ghost'
@@ -434,7 +436,8 @@ export function mountWorkspaceViewCustomization(document: Document) {
       strip.replaceChildren(fixed, ...slots, closeButton)
       pick()
     }
-    const apply = (index: number, app: TopNavigationApp | null, restoreFocus = false) => {
+    const apply = (index: number, app: TopNavigationApp | null, restoreFocus = false,
+      previous?: Map<TopNavigationApp, DOMRect>) => {
       if (preferences.get(document) !== settings) { panel.close(); return }
       if (!settings.replace(index, app)) {
         status.textContent = en ? 'Could not save top bar' : '顶栏设置保存失败'
@@ -443,10 +446,29 @@ export function mountWorkspaceViewCustomization(document: Document) {
       status.textContent = ''
       renderSlots()
       if (restoreFocus) slotButtons[index]?.focus({ preventScroll: true })
+      if (!previous || win.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      for (const button of slotButtons) {
+        const item = button.dataset.workspaceEditorApp
+        const before = isTopNavigationApp(item) ? previous.get(item) : undefined
+        if (!before) continue
+        const after = button.getBoundingClientRect()
+        const dx = before.left + (before.width - after.width) / 2 - after.left
+        const dy = before.top - after.top
+        if (Math.hypot(dx, dy) >= 1) button.animate([
+          { translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }
+        ], { duration: 180, easing: 'ease-out' })
+      }
     }
-    const slotAt = (event: PointerEvent) => document.elementFromPoint(event.clientX, event.clientY)
-      ?.closest<HTMLElement>('[data-workspace-editor-slot]') ?? undefined
+    const slotAt = ({ clientX: x, clientY: y }: PointerEvent) => {
+      const slots = slotButtons.map(button => button.parentElement!)
+      const bounds = slots.map(slot => slot.getBoundingClientRect())
+      const first = bounds[0], last = bounds.at(-1)
+      if (!first || !last || x < first.left || x > last.right || y < first.top || y > first.bottom) return
+      const index = bounds.findIndex((box, i) => x <= (box.right + (bounds[i + 1]?.left ?? box.right)) / 2)
+      return slots[index]
+    }
     const stopDrag = () => {
+      press?.button.removeAttribute('data-workspace-editor-source')
       press = undefined
       highlight()
       ghost.remove()
@@ -461,8 +483,10 @@ export function mountWorkspaceViewCustomization(document: Document) {
       suppressClick = false
       const button = (event.target as Element).closest<HTMLElement>('[data-workspace-editor-app]')
       const app = button?.dataset.workspaceEditorApp
-      if (event.button !== 0 || !event.isPrimary || !isTopNavigationApp(app)) return
-      press = { id: event.pointerId, app, x: event.clientX, y: event.clientY }
+      if (!button || event.button !== 0 || !event.isPrimary || !isTopNavigationApp(app)) return
+      const bounds = button.getBoundingClientRect()
+      press = { id: event.pointerId, app, button, x: event.clientX, y: event.clientY,
+        offsetX: event.clientX - bounds.left, offsetY: event.clientY - bounds.top }
     })
     panel.addEventListener('pointermove', event => {
       if (!press || press.id !== event.pointerId) return
@@ -471,12 +495,14 @@ export function mountWorkspaceViewCustomization(document: Document) {
         panel.setPointerCapture(event.pointerId)
         pick()
         ghost.textContent = appName(press.app)
+        ghost.style.width = press.button.offsetWidth + 'px'
+        press.button.setAttribute('data-workspace-editor-source', '')
         panel.append(ghost)
         panel.setAttribute('data-dragging', '')
         previewMove(undefined, press.app)
         suppressClick = true
       }
-      ghost.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`
+      ghost.style.transform = `translate(${event.clientX - press.offsetX}px, ${event.clientY - press.offsetY}px)`
       const slot = slotAt(event)
       if (target !== slot) {
         highlight(slot)
@@ -487,8 +513,15 @@ export function mountWorkspaceViewCustomization(document: Document) {
       if (!press || press.id !== event.pointerId) return
       const slot = ghost.isConnected ? slotAt(event) : undefined
       const { app } = press
+      if (!slot) { stopDrag(); return }
+      const previous = new Map<TopNavigationApp, DOMRect>()
+      for (const button of slotButtons) {
+        const item = button.dataset.workspaceEditorApp
+        if (isTopNavigationApp(item)) previous.set(item, button.getBoundingClientRect())
+      }
+      previous.set(app, ghost.getBoundingClientRect())
       stopDrag()
-      if (slot) apply(Number(slot.dataset.workspaceEditorSlot), app)
+      apply(Number(slot.dataset.workspaceEditorSlot), app, false, previous)
     })
     panel.addEventListener('pointercancel', stopDrag)
     panel.addEventListener('lostpointercapture', stopDrag)
@@ -500,12 +533,17 @@ export function mountWorkspaceViewCustomization(document: Document) {
     }, true)
     const position = () => {
       const bounds = nav.getBoundingClientRect()
-      if (!nav.isConnected || bounds.height === 0) { panel.close(); return }
+      const bar = header.getBoundingClientRect()
+      if (!anchor.isConnected || bounds.height === 0 || bar.width === 0) { panel.close(); return }
+      const leftEdge = Math.max(8, bar.left + 8)
+      const rightEdge = Math.min(win.innerWidth - 8, bar.right - 8)
+      panel.style.maxWidth = Math.max(0, rightEdge - leftEdge) + 'px'
       const inset = parseFloat(win.getComputedStyle(strip).paddingLeft)
-      const left = Math.max(8, Math.min(bounds.left - inset, win.innerWidth - panel.offsetWidth - 8))
+      const left = Math.max(leftEdge, Math.min(bounds.left - inset, rightEdge - panel.offsetWidth))
       panel.style.left = left + 'px'
-      panel.style.top = bounds.top + 'px'
+      panel.style.top = Math.max(bar.bottom, bounds.bottom) + 8 + 'px'
     }
+    const resize = new win.ResizeObserver(position)
     const close = () => panel.close()
     closeEditor = close
     panel.addEventListener('click', event => {
@@ -518,6 +556,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
     })
     panel.addEventListener('close', () => {
       unobserve()
+      resize.disconnect()
       win.removeEventListener('resize', position)
       document.removeEventListener('sherlock:workspace-surface-change', close)
       panel.remove()
@@ -531,6 +570,8 @@ export function mountWorkspaceViewCustomization(document: Document) {
     document.body.append(panel)
     panel.showModal()
     position()
+    resize.observe(header)
+    resize.observe(nav)
     void prepareBrowserOverlay(document, panel)
   }
   document.addEventListener('click', onClick)

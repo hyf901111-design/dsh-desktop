@@ -1,6 +1,6 @@
 export const navigationApps = ['browser', 'knowledge', 'image-factory', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet'] as const
 export const topShortcutCount = 4
-export const workspaceContentViews = ['research', 'notes', 'spreadsheet', 'image-factory', 'browser', 'knowledge'] as const
+export const workspaceContentViews = ['research', 'notes', 'spreadsheet', 'image-factory'] as const
 export type WorkspaceContentView = typeof workspaceContentViews[number]
 export const topNavigationApps = ['research', 'note', 'spreadsheet', 'image-factory', 'browser', 'knowledge'] as const
 export type TopNavigationApp = typeof topNavigationApps[number]

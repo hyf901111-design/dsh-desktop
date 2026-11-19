@@ -1483,9 +1483,11 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         <button type="button" className="eb-workspace-toggle" ref={workspaceToggle} aria-label={tabsLabel} title={tabsLabel}
           aria-expanded={workspaceExpanded} aria-controls="image-factory-workspace-tabs" onClick={() => setWorkspaceExpanded(value => !value)}><i aria-hidden="true"/></button>
         <nav id="image-factory-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label={t('工作区视图', 'Workspace views')} aria-hidden={!workspaceExpanded} ref={node => { if (node) node.inert = !workspaceExpanded }}>
-          {views.map(([view, label, english]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'image-factory'} tabIndex={workspaceExpanded ? 0 : -1}
-            aria-label={t('切换到', 'Switch to ') + t(label, english)}
-            disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, english)}</button>)}
+          <div className="eb-workspace-tab-list">
+            {views.map(([view, label, english]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'image-factory'} tabIndex={workspaceExpanded ? 0 : -1}
+              aria-label={t('切换到', 'Switch to ') + t(label, english)}
+              disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, english)}</button>)}
+          </div>
           <button type="button" className="eb-workspace-edit" data-workspace-view-customize="" aria-label={t('自定义顶栏', 'Customize top bar')} title={t('自定义顶栏', 'Customize top bar')}><i aria-hidden="true" /></button>
         </nav>
       </div>

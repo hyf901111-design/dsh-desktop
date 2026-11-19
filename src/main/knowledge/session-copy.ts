@@ -125,7 +125,8 @@ export function createKnowledgeSessionCopier(options: {
           const { image, epoch } = source
           undo.push(() => canvases.discardStaged(sessionId, epoch))
           if ('canvas' in source) {
-            await canvases.write({ scope: sessionId, epoch, image, canvas: { ...source.canvas, title } })
+            const { editedInSession: _sourceEdit, ...canvas } = source.canvas
+            await canvases.write({ scope: sessionId, epoch, image, canvas: { ...canvas, title } })
           } else {
             const id = randomUUID()
             await canvases.write({ scope: sessionId, epoch, image, canvas: {

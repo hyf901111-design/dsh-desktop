@@ -1633,9 +1633,9 @@ async function bootstrap(): Promise<void> {
       views.some(view => !workspaceContentViews.includes(view))) throw Error('应用内容状态请求无效。')
     const identity = knowledgeIdentity()
     const populated = await Promise.all(workspaceContentViews.filter(view => views.includes(view)).map(async view => {
-      if (view === 'browser') return browserApp.snapshot().tabs.some(tab => /^https?:/i.test(tab.url)) ? view : undefined
-      if (view === 'knowledge') return await knowledge.hasDocuments().catch(() => false) ? view : undefined
-      if (view === 'image-factory') return await factoryCanvases.hasCanvas(scope).catch(() => false) ? view : undefined
+      if (view === 'image-factory') {
+        return scope && await factoryCanvases.hasEditedCanvas(scope).catch(() => false) ? view : undefined
+      }
       return scope && knowledgeSessionEvidence(identity.owner, scope, view).hasContent ? view : undefined
     }))
     if (knowledgeIdentity().generation !== identity.generation) return []
