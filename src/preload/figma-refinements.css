@@ -109,6 +109,56 @@ body .wSkVaW_header:is([data-odyssey-header-layout=compact],[data-odyssey-header
 .wSkVaW_root[data-odyssey-page=conversation] .wSkVaW_heroWorkspaceRow .cubgiG_seat { display:none; }
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat) { box-sizing:border-box; height:28px; min-height:28px; padding:0 8px; min-width:0; width:auto; gap:6px; border-radius:7px; transform:none; }
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat):hover { background:var(--odyssey-menu-row); }
+
+/* Dock the project path against the input without changing the input card's material. */
+body .wSkVaW_composerStack [data-odyssey-composer-project] { width:100%; min-width:0; }
+body .wSkVaW_composerStack .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] {
+  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 80%,#ddd);
+  position:relative; display:flex; align-items:center; box-sizing:border-box;
+  height:34px; min-height:34px; min-width:0; width:auto; gap:4px;
+  margin:0 calc(var(--dsh-composer-side-clearance, 0px) + 7px) -5px;
+  padding:0 7px 5px;
+  border-radius:11px 11px 0 0; background:var(--odyssey-project-bar);
+}
+body[data-ds-dark-theme] .wSkVaW_composerStack [data-odyssey-composer-workspace] {
+  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 72%,#101010);
+}
+body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=home] .wSkVaW_composerHero [data-odyssey-composer-workspace]:not([data-odyssey-subagent-panel] *, .sRp_composer *) {
+  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-home-input) 55%,transparent);
+  align-items:center; gap:5px; padding-left:7px;
+  backdrop-filter:blur(14px) saturate(125%);
+}
+body .sRp_composer .wSkVaW_composerStack [data-odyssey-composer-workspace] {
+  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 85%,#ddd);
+}
+body[data-ds-dark-theme] .sRp_composer .wSkVaW_composerStack [data-odyssey-composer-workspace] {
+  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 82%,#111);
+}
+body .wSkVaW_composerStack [data-odyssey-composer-project] .uV2eYG_card { position:relative; }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .odyssey-work-location { flex:none; display:inline-flex; min-width:0; }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace) {
+  display:inline-flex; align-items:center; min-width:0; max-width:100%; box-sizing:border-box;
+  height:24px; min-height:24px; padding:0 6px; gap:5px; border:0; border-radius:6px;
+  color:inherit; background:transparent; font:400 13px/18px var(--odyssey-font-ui);
+  white-space:nowrap; transform:none;
+}
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspaceLabel { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace)>svg { flex:none; }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace .pXSMma_chevron { display:none; }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:not(:disabled)::after {
+  content:'⋯'; flex:none; color:var(--dsw-alias-label-tertiary,var(--odyssey-text)); margin-inline-start:3px;
+}
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace):not(:disabled):is(:hover,[aria-expanded=true]) {
+  background:var(--odyssey-menu-row);
+}
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace):focus-visible {
+  outline:1px solid currentColor; outline-offset:-1px;
+}
+body [role=menu]:has([data-odyssey-work-location-option]) { width:196px; min-width:0; padding:5px; }
+body [role=menu]:has([data-odyssey-work-location-option]) > [role=presentation] { padding:0; }
+body [role=menu]:has([data-odyssey-work-location-option]) [role=menuitem] { width:100%; height:32px; }
+body [role=menu] [role=menuitem]:has([data-odyssey-work-location-option=local]) { background:var(--odyssey-menu-row); }
+body [role=menu] [role=menuitem]:has([data-odyssey-work-location-option=cloud]) { opacity:.48; cursor:default; }
 /* Shared menu material. Specialized menus retain their semantic rows and actions. */
 body [role=menu]:not(.rScV5Q_contextMenu,.srb-header-menu), body .h8S2Va_menu {
   box-sizing:border-box; max-width:calc(100vw - 24px); border:1px solid var(--odyssey-menu-border);

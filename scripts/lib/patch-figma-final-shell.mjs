@@ -21,6 +21,96 @@ function exact(source, from, to) {
   if (source.split(from).length !== 2) throw Error('Figma final shell anchor drifted: ' + from.slice(0, 90))
   return source.replace(from, to)
 }
+
+function ComposerWorkLocation() {
+  const [open, setOpen] = react.useState(false);
+  const anchor = react.useRef(null);
+  const selected = react.useRef(null);
+  const keyboard = react.useRef(false);
+  const english = document.documentElement.dataset.odysseyLocale === 'en';
+  const local = english ? 'This computer' : '此计算机';
+  const cloud = english ? 'Cloud business system' : '云端业务系统';
+  const icon = path => react_jsx_runtime.jsx('svg', {
+    width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': true,
+    children: react_jsx_runtime.jsx('path', {
+      d: path, stroke: 'currentColor', strokeWidth: 1.15, strokeLinecap: 'round', strokeLinejoin: 'round',
+    }),
+  });
+  const computer = icon('M2.5 10V4a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v6m-11 0h11l1.2 2.1a.6.6 0 0 1-.5.9H1.8a.6.6 0 0 1-.5-.9L2.5 10Z');
+  const cloudIcon = icon('M4.3 12.5h7a2.7 2.7 0 0 0 .4-5.4 3.8 3.8 0 0 0-7.3-1.2 3.3 3.3 0 0 0-.1 6.6Z');
+  react.useLayoutEffect(() => {
+    if (!open || !keyboard.current) return;
+    const frame = requestAnimationFrame(() => selected.current?.closest('button')?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+  const close = () => {
+    if (selected.current?.closest('button')?.contains(document.activeElement)) anchor.current?.focus({ preventScroll: true });
+    setOpen(false);
+  };
+  return react_jsx_runtime.jsx(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+    className: 'odyssey-work-location', open, portal: true, side: 'top',
+    anchor: react_jsx_runtime.jsxs('button', {
+      ref: anchor, type: 'button', 'data-odyssey-work-location': '', 'aria-haspopup': 'menu', 'aria-expanded': open,
+      onClick: event => { keyboard.current = event.detail === 0; setOpen(!open); },
+      onKeyDown: event => {
+        if (event.key !== 'ArrowDown') return;
+        event.preventDefault();
+        keyboard.current = true;
+        setOpen(true);
+      },
+      children: [computer, react_jsx_runtime.jsx('span', { children: local })],
+    }),
+    items: [
+      { id: 'local', icon: computer, label: react_jsx_runtime.jsx('span', {
+        ref: selected, 'data-odyssey-work-location-option': 'local', children: local,
+      }) },
+      { id: 'cloud', icon: cloudIcon, disabled: true, label: react_jsx_runtime.jsx('span', {
+        'data-odyssey-work-location-option': 'cloud', children: cloud,
+      }) },
+    ],
+    selectedId: 'local', onSelect: close, onClose: close,
+  });
+}
+
+const composerWorkspaceMarker = '"data-odyssey-composer-project": ""';
+function composerWorkspaceEdits() {
+  const workspaceRow = '\n\t\t\t\t\t(hero || researchEmpty) && heroWorkspaceRow,';
+  const composerDock = '\n\t\t\t\t\tzone !== void 0 && renderSlot("conversation.input.dock", zone),';
+  const endOfComposer = '\n\t\t\t\t\tinputBar\n\t\t\t\t]\n\t\t\t});\n\t\t\tconst composer = renderSlotChain("conversation.composer", {';
+  const rowClass = '\n\t\t\t\tclassName: ConversationRoot_module_css_default.heroWorkspaceRow,';
+  const restrictedRow = '\n\t\t\tconst heroWorkspaceRow = (research && (!browserAppActive || directoryLocked)) || (sherlockShared(sessionId) && ((sherlockBoardsAdapter?.getView(sessionId)?.history?.length ?? 0)+(sherlockBoardsAdapter?.getView(sessionId)?.messages?.length ?? 0))>0) ? null :';
+  const emptyConversationRow = '\n\t\t\tconst heroWorkspaceRow = subagentPanel || !(pendingConversation || conversationVacant) ? null :';
+  const workspaceChip = '\n\t\t\t\t\t(0, react_jsx_runtime.jsx)(WorkspaceChip, {';
+  const chipDefinition = '\n\t\tfunction WorkspaceChip(';
+  return [
+    [workspaceRow + composerDock, composerDock],
+    [endOfComposer, endOfComposer.replace('inputBar',
+      `heroWorkspaceRow ? react_jsx_runtime.jsxs("div", { ${composerWorkspaceMarker}, children: [heroWorkspaceRow, inputBar] }) : inputBar`)],
+    [restrictedRow, emptyConversationRow],
+    [rowClass, rowClass + '\n\t\t\t\t"data-odyssey-composer-workspace": "",'],
+    [workspaceChip, '\n\t\t\t\t\treact_jsx_runtime.jsx(ComposerWorkLocation, {}),' + workspaceChip],
+    [chipDefinition, '\n\t\t' + ComposerWorkLocation.toString() + chipDefinition],
+  ];
+}
+
+export function patchComposerWorkspaceBar(source) {
+  if (source.includes(composerWorkspaceMarker)) return source;
+  for (const [before, after] of composerWorkspaceEdits()) {
+    if (source.split(before).length !== 2) throw Error('Composer project bar anchor drifted: ' + before.trim().slice(0, 85));
+    source = source.replace(before, () => after);
+  }
+  return source;
+}
+
+export function stripComposerWorkspaceBar(source) {
+  if (!source.includes(composerWorkspaceMarker)) return source;
+  for (const [before, after] of composerWorkspaceEdits().reverse()) {
+    if (source.split(after).length !== 2) throw Error('Composer project bar restore anchor drifted: ' + after.trim().slice(0, 85));
+    source = source.replace(after, () => before);
+  }
+  return source;
+}
+
 export function patchFigmaFinalConversation(source) {
   // Own the controller in the same fiber as its slots. Slot subscribers can
   // render during registration on HMR, before Cordis publishes that fiber's
