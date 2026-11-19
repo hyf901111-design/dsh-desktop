@@ -57,7 +57,10 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
         if(!valid(ticket))throw abort()
         sessions.retainSpreadsheetSession(id)
       }
-      chatStore.create(id).actions.setView(spreadsheet?'spreadsheet':'notes')
+      const view=spreadsheet?'spreadsheet':'notes'
+      chatStore.create(id).actions.setView(view)
+      // Release the overlay before the selection update reaches its subscribers.
+      document.dispatchEvent(new CustomEvent('sherlock:sidebar-document-will-open',{detail:{view}}))
       sessions.open(id)
       return {sessionId:id}
     }finally{creating=false;drop(detail.token)}
