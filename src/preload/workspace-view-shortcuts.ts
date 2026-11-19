@@ -303,6 +303,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
       button.dataset.workspaceEditorApp = app
       const label = document.createElement('span')
       label.textContent = appName(app)
+      button.title = label.textContent
       button.append(label)
       button.addEventListener('click', () => pick(picked === app ? undefined : app))
       return button
@@ -325,13 +326,15 @@ export function mountWorkspaceViewCustomization(document: Document) {
         slotButtons[index] = button
         if (isTopNavigationApp(app)) {
           button.dataset.workspaceEditorApp = app
-          button.textContent = button.title
+          const label = document.createElement('span')
+          label.textContent = button.title
+          button.append(label)
           const remove = document.createElement('button')
           remove.type = 'button'
           remove.className = 'workspace-view-remove'
+          remove.dataset.navigationDelete = ''
           remove.title = (en ? 'Remove ' : '移除') + appName(app)
           remove.setAttribute('aria-label', remove.title)
-          remove.textContent = '×'
           remove.addEventListener('click', () => apply(index, null, true))
           slot.append(button, remove)
         } else {
@@ -404,7 +407,8 @@ export function mountWorkspaceViewCustomization(document: Document) {
     const position = () => {
       const bounds = nav.getBoundingClientRect()
       if (!nav.isConnected || bounds.height === 0) { panel.close(); return }
-      const left = Math.max(8, Math.min(bounds.left, win.innerWidth - panel.offsetWidth - 8))
+      const inset = parseFloat(win.getComputedStyle(strip).paddingLeft)
+      const left = Math.max(8, Math.min(bounds.left - inset, win.innerWidth - panel.offsetWidth - 8))
       panel.style.left = left + 'px'
       panel.style.top = bounds.top + 'px'
     }

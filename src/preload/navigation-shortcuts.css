@@ -131,12 +131,13 @@ html[data-navigation-sidebar-only] body [data-dsh-sidebar-root][data-dsh-sidebar
 }
 body[data-ds-dark-theme] [data-navigation-tooltip] { background: #43444a }
 
-body[data-navigation-editing] {
+:is(body[data-navigation-editing], .workspace-view-settings) {
   --navigation-slot-fill: rgb(118 118 128 / 13%);
   --navigation-slot-border: rgb(98 98 107 / 68%);
   --navigation-slot-target: rgb(118 118 128 / 30%);
 }
-body[data-ds-dark-theme][data-navigation-editing] {
+body[data-ds-dark-theme][data-navigation-editing],
+body[data-ds-dark-theme] .workspace-view-settings {
   --navigation-slot-fill: rgb(197 197 209 / 11%);
   --navigation-slot-border: rgb(200 201 212 / 55%);
   --navigation-slot-target: rgb(215 215 226 / 24%);
