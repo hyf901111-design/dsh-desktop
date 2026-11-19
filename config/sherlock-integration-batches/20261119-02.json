@@ -12,7 +12,7 @@
         "featureName": "独立管理右侧项目草稿与跨应用项目选择",
         "branch": "codex/feat/navigation-shortcuts-20261119",
         "baseCommit": "1e5c72eadf45485ddd61aa759e5877ca10779c72",
-        "tipCommit": "e1d60145720e4209df5b9b3c92c70768a6e584fe",
+        "tipCommit": "a46219ecfde37f49e2c27ea92832c83721f1a95c",
         "commits": [
           {
             "commit": "e1d60145720e4209df5b9b3c92c70768a6e584fe",
@@ -20,6 +20,13 @@
               "1e5c72eadf45485ddd61aa759e5877ca10779c72"
             ],
             "subject": "右侧切换项目使用独立草稿并保留跨应用项目选择"
+          },
+          {
+            "commit": "a46219ecfde37f49e2c27ea92832c83721f1a95c",
+            "parents": [
+              "e1d60145720e4209df5b9b3c92c70768a6e584fe"
+            ],
+            "subject": "让浏览器网页来源跟随右侧独立项目草稿"
           }
         ],
         "files": [
@@ -65,6 +72,10 @@
           },
           {
             "status": "M",
+            "path": "test/browser-app-native.test.js"
+          },
+          {
+            "status": "M",
             "path": "test/fixtures/pending-conversation-browser.tsx"
           },
           {
@@ -89,8 +100,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "e1d60145720e4209df5b9b3c92c70768a6e584fe",
-            "completedAt": "2026-11-19T10:43:47.584Z",
+            "verifiedCommit": "a46219ecfde37f49e2c27ea92832c83721f1a95c",
+            "completedAt": "2026-11-19T10:45:57.217Z",
             "timeoutMs": 60000
           },
           {
@@ -107,8 +118,8 @@
             ],
             "outcome": "passed",
             "summary": "相关渲染与应用导航检查通过",
-            "verifiedCommit": "e1d60145720e4209df5b9b3c92c70768a6e584fe",
-            "completedAt": "2026-11-19T10:43:47.584Z",
+            "verifiedCommit": "a46219ecfde37f49e2c27ea92832c83721f1a95c",
+            "completedAt": "2026-11-19T10:45:57.217Z",
             "timeoutMs": 60000
           },
           {
@@ -122,8 +133,23 @@
             ],
             "outcome": "passed",
             "summary": "笔记与表格新会话项目和侧栏入口回归通过",
-            "verifiedCommit": "e1d60145720e4209df5b9b3c92c70768a6e584fe",
-            "completedAt": "2026-11-19T10:43:47.584Z",
+            "verifiedCommit": "a46219ecfde37f49e2c27ea92832c83721f1a95c",
+            "completedAt": "2026-11-19T10:45:57.217Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/browser-app-native.test.js",
+              "-t",
+              "attaches the source|inserts a webpage source|opens the standalone app"
+            ],
+            "outcome": "passed",
+            "summary": "浏览器网页来源与独立项目草稿通过",
+            "verifiedCommit": "a46219ecfde37f49e2c27ea92832c83721f1a95c",
+            "completedAt": "2026-11-19T10:45:57.217Z",
             "timeoutMs": 60000
           }
         ],
@@ -136,10 +162,8 @@
           "空草稿离开即回收，已有输入可找回",
           "首页和各应用新任务使用最后手动选择的项目，含不在项目中工作"
         ],
-        "risks": [
-          "直接从完全 patched 客户端包单独逆转 Browser 原生 patch 的四条现有测试在基线亦失败。"
-        ],
-        "generatedAt": "2026-11-19T10:43:47.584Z"
+        "risks": [],
+        "generatedAt": "2026-11-19T10:45:57.217Z"
       }
     }
   ],
