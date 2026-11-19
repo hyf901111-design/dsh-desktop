@@ -1,3 +1,4 @@
+import {createRightProjectDrafts} from '../../scripts/lib/right-project-drafts.mjs'
 import React from 'react'
 import * as jsx from 'react/jsx-runtime'
 import {createRoot} from 'react-dom/client'
@@ -12,15 +13,21 @@ declare global{interface Window{pendingInput:any;pendingFixture:any;__ModuleLoad
 const data=window.pendingInput,fake:any=new Proxy(function(){},{get:(_target,key)=>key===Symbol.toPrimitive?()=> 'unused':fake,apply:()=>fake,construct:()=>({})});let runtime:any
 function load(source:string){let result:any;window.__ModuleLoader__={load:({factory}:any)=>{result=factory((name:string)=>name==='react'?React:name==='react/jsx-runtime'?jsx:name==='react-dom'?{createPortal}:name==='@deepseek-ai/dsh-client-runtime/client'?runtime:name==='@deepseek-ai/dsh-client-ui-primitives'?primitives:name==='@deepseek-ai/cordis'?new Proxy({Context:{filter:Symbol('filter')}},{get:(target,key)=>Reflect.get(target,key)??fake}):fake)}};new Function(source)();return result}
 runtime=load(data.runtime);const native=load(data.conversation),workspace=load(data.workspace),panel=load(data.panel),triggers=load(data.triggers)
-let failCreate=false;const events:any[]=[],projects={phase:'ready',items:[{workspaceId:'A',title:'研究项目 A',path:'/tmp/a',sessionIds:[]},{workspaceId:'B',title:'研究项目 B',path:'/tmp/b',sessionIds:[]}],recentWorkspaceId:data.recentWorkspaceId,archivedSessionIds:[]},current={current:undefined as string|undefined}
+let failCreate=false;const events:any[]=[],projects={phase:'ready',items:[{workspaceId:'A',title:'研究项目 A',path:'/tmp/a',sessionIds:data.verifyRightProject?['existing-canvas']:[]},{workspaceId:'B',title:'研究项目 B',path:'/tmp/b',sessionIds:[]}],recentWorkspaceId:data.recentWorkspaceId,archivedSessionIds:[]},current={current:undefined as string|undefined}
 const active=runtime.createSnapshotStore(undefined),ready=runtime.createSnapshotStore(false)
 const source={name:'command',trigger:'/',order:0,candidates:async()=>[{name:'model',description:'切换模型'}],onPick:()=> 'handled'}
 const controller=new triggers.InputTriggerController({sessionId:'new-session',roster:{all:()=>[source],sources:()=>[source]}})
 const real=new native.__testSessionInputShell({actx:{get:()=>undefined},inputTriggers:()=>controller,defaultSink:(text:string,images:string[])=>events.push({type:'send',text,images})})
-const record=createPendingConversation({makeShell:(deps:any)=>new native.__testSessionInputShell({...deps,actx:{},inputTriggers:()=>undefined}),sessions:{list:{getSnapshot:()=>current,subscribe:active.subscribe},create:async(value:any)=>{events.push({type:'create',...value});if(failCreate){failCreate=false;throw Error('测试创建失败，输入保留')}return 'new-session'},open:(id:string)=>{current.current=id;events.push({type:'open',id});active.set(id)}},workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated:()=>{},prepareContext:async()=>undefined,
+const options={makeShell:(deps:any)=>new native.__testSessionInputShell({...deps,actx:{},inputTriggers:()=>undefined}),sessions:{list:{getSnapshot:()=>current,subscribe:active.subscribe},create:async(value:any)=>{events.push({type:'create',...value});if(failCreate){failCreate=false;throw Error('测试创建失败，输入保留')}return 'new-session'},open:(id:string)=>{current.current=id;events.push({type:'open',id});active.set(id)}},workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated:()=>{},prepareContext:async()=>undefined,
  currentSurface:()=>document.body.dataset.workspaceSurface,
  standaloneDirectory:async()=>'/tmp/standalone/outputs',
- setView:(id:string,view:string)=>events.push({type:'view',id,view})})
+ setView:(id:string,view:string)=>events.push({type:'view',id,view})}
+const record=createPendingConversation(options)
+const right=createRightProjectDrafts({globalDraft:record,makeDraft:(entry:any,ownership:any)=>createPendingConversation({
+ ...options,initialWorkspace:entry.workspaceId,detached:{...ownership,sessionId:entry.sessionId,mode:'chat'}
+})})
+if(data.verifyRightProject){current.current='existing-canvas';active.set('existing-canvas');native.__testSetRightProjects(right)}
+
 record.views={subscribe:()=>()=>{},version:()=>1,list:()=>[{id:'chat',label:'对话'},{id:'research',label:'研究'},{id:'notes',label:'笔记'},{id:'spreadsheet',label:'表格'}]}
 record.preferences=createPendingComposerPreferences({api:{llm:{models:async()=>({result:{ok:true,value:{groups:[],failures:[]}}})},settings:{describe:async()=>({result:{ok:true,value:{namespaces:[]}}})}}});native.__testSetPending(record)
 const NativePendingBar=new Function('eworkPendingConversation','react','react_jsx_runtime','InputBar','EWorkSharedInputBar','conversationController','return ('+data.wrapper+')')(record,React,jsx,native.__testInputBar,native.__testInputBar,{draftImages:()=>[],createDraftImages:()=>[],releaseDraftImage:()=>{},releaseDraftImages:()=>{}})
@@ -30,10 +37,12 @@ const useWorkspaces=(select:any)=>select(projects)
 const renderSlot=(name:string,props:any)=>name==='conversation.composer.bar'?<NativePendingBar {...hooks} {...props} renderSlot={()=>null}/>:name==='conversation.hero.workspace'?<workspace.__testWorkspacePicker {...props} useWorkspaces={useWorkspaces} useDirectoryFlow={(select:any)=>select({status:'idle'})} createWorkspace={async()=>{throw Error('not used')}} renderSlot={()=>null} t={t}/>:null
 mountDesktopShellStyles(document)
 const coordinator=new native.ResearchSidebarCoordinator(),registry=new native.ResearchWorkspaceRegistry(),sidebarStore=new panel.__testSidebarStore();sidebarStore.reduce((s:any)=>({...s,panelOpen:true}));
-function NativeRight(){const snapshot=React.useSyncExternalStore((fn:any)=>sidebarStore.subscribe(fn),()=>sidebarStore.getSnapshot()),state=snapshot.state;return <panel.__testWorkbench state={state} pendingSession={snapshot.sessionId===undefined} newTabOptions={[]} actions={{activateTab:(_pane:string,id:string)=>sidebarStore.reduce((s:any)=>({...s,splits:{...s.splits,active:id}})),closeTab:()=>{},focusPane:()=>{},moveTabToEdge:()=>{},moveTabBefore:()=>{},resizeSplit:()=>{}}} onNewTab={()=>{}} renderTab={(tab:any,active:boolean)=>tab.type==='sherlock-research-conversation'?<native.__testResearchSidebarConversationTab scope={{sessionId:undefined}} visible={active} coordinator={coordinator}/>:<div>项目文件</div>} getTabIcon={()=>null} getTabBadge={()=>null}/>}
-const emptySessions={current:undefined,byId:{},subagentsByParent:{}},view={view:'chat',selection:null,inspect:null},actions={setResearchRightTab(){},setResearchConversationUnread(){},select(){}};
+function NativeRight(){React.useSyncExternalStore(active.subscribe,active.getSnapshot);const snapshot=React.useSyncExternalStore((fn:any)=>sidebarStore.subscribe(fn),()=>sidebarStore.getSnapshot()),state=snapshot.state;return <panel.__testWorkbench state={state} pendingSession={snapshot.sessionId===undefined} newTabOptions={[]} actions={{activateTab:(_pane:string,id:string)=>sidebarStore.reduce((s:any)=>({...s,splits:{...s.splits,active:id}})),closeTab:()=>{},focusPane:()=>{},moveTabToEdge:()=>{},moveTabBefore:()=>{},resizeSplit:()=>{}}} onNewTab={()=>{}} renderTab={(tab:any,active:boolean)=>tab.type==='sherlock-research-conversation'?<native.__testResearchSidebarConversationTab scope={{sessionId:data.verifyRightProject?current.current:undefined}} visible={active} coordinator={coordinator}/>:<div>项目文件</div>} getTabIcon={()=>null} getTabBadge={()=>null}/>}
+const emptySessions={current:undefined,byId:data.verifyRightProject?{'existing-canvas':{cwd:'/tmp/a',blank:true}}:{},subagentsByParent:{}},view={view:'chat',selection:null,inspect:null},actions={setResearchRightTab(){},setResearchConversationUnread(){},select(){}};
 document.body.dataset.odysseyGlobalRightOpen='true';
-coordinator.service={getSnapshot:()=>sidebarStore.getSnapshot(),subscribeState:(fn:any)=>sidebarStore.subscribe(fn)};coordinator.sessions={list:{subscribe:()=>()=>{},getSnapshot:()=>emptySessions}};coordinator.sourceWorkspaces={list:{subscribe:()=>()=>{},getSnapshot:()=>projects}};
+coordinator.service={getSnapshot:()=>sidebarStore.getSnapshot(),subscribeState:(fn:any)=>sidebarStore.subscribe(fn),
+ openTab(){},updateTab(){},closeTab(){},activateTab(){},
+ setPanelState({open}:{open:boolean}){sidebarStore.reduce((value:any)=>({...value,panelOpen:open}))}};coordinator.sessions={list:{subscribe:()=>()=>{},getSnapshot:()=>emptySessions}};coordinator.sourceWorkspaces={list:{subscribe:()=>()=>{},getSnapshot:()=>projects}};
 const nativeRenderSlot=(name:string,props:any)=>name==='conversation.composer.bar'?<NativePendingBar {...hooks} {...props} renderSlot={()=>null}/>:renderSlot(name,props);
 function ProjectComposer({sessionId}:{sessionId:string}){
  const opened=React.useSyncExternalStore(ready.subscribe,ready.getSnapshot)
@@ -48,8 +57,8 @@ function ProjectComposer({sessionId}:{sessionId:string}){
 }
 function Home(){
  const sessionId=React.useSyncExternalStore(active.subscribe,active.getSnapshot)
- if(data.verifyHandoff&&sessionId)return <ProjectComposer sessionId={sessionId}/>
- return <native.__testHomeGuideNativeOriginalConversationRoot sessionId={undefined} useSession={()=>undefined} useSessions={(select:any)=>select(emptySessions)} useWorkspaces={useWorkspaces} useInput={()=>undefined} useComposerBlock={()=>undefined} useStore={(select:any)=>select(view)} actions={actions} researchSidebar={coordinator} researchWorkspaces={registry} useProjection={()=>undefined} renderSlot={nativeRenderSlot} renderSlotChain={(_name:any,_props:any,{fallback}:any)=>fallback} selectWorkspace={async(id:string)=>record.selectWorkspace(id)} t={t}/>
+ if((data.verifyHandoff||data.verifyRightProject)&&sessionId==='new-session')return <ProjectComposer sessionId={sessionId}/>
+ return <native.__testHomeGuideNativeOriginalConversationRoot sessionId={data.verifyRightProject?sessionId:undefined} useSession={()=>undefined} useSessions={(select:any)=>select(emptySessions)} useWorkspaces={useWorkspaces} useInput={()=>undefined} useComposerBlock={()=>undefined} useStore={(select:any)=>select(view)} actions={actions} researchSidebar={coordinator} researchWorkspaces={registry} useProjection={()=>undefined} renderSlot={nativeRenderSlot} renderSlotChain={(_name:any,_props:any,{fallback}:any)=>fallback} selectWorkspace={async(id:string)=>record.selectWorkspace(id)} t={t}/>
 }
 createRoot(document.getElementById('app')!).render(<Home/>);
 createRoot(document.getElementById('right-body')!).render(<NativeRight/>);
@@ -60,7 +69,9 @@ for (const name of ['browser','image-factory','knowledge'] as const) {
  surface.firstElementChild!.addEventListener('click',()=>surfaces.back())
  surfaces.register(name,surface)
 }
-window.pendingFixture={openSurface:(name:'browser'|'image-factory'|'knowledge')=>surfaces.open(name),events,record,real,controller,readySession:()=>ready.set(true),current,failOnce:()=>{failCreate=true},setPaneOpen(open:boolean){
+window.pendingFixture={openSurface:(name:'browser'|'image-factory'|'knowledge')=>surfaces.open(name),events,record,right,real,controller,openExisting(id:string){current.current=id;active.set(id)},
+ goHome(){document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));current.current=undefined;active.set(undefined)},
+ readySession:()=>ready.set(true),current,failOnce:()=>{failCreate=true},setPaneOpen(open:boolean){
  sidebarStore.reduce((s:any)=>({...s,panelOpen:open}))
  document.getElementById('right')!.hidden=!open
  document.body.dataset.odysseyGlobalRightOpen=String(open)

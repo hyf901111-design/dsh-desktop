@@ -44,7 +44,9 @@ return true;\n                    },`)
       ${navigationMarker}
       if (typeof workspaces !== "undefined") ctx.effect(() => {
         if (window.top !== window) return;
-        return sherlockBoardsPage.installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks,chatStore});
+        return sherlockBoardsPage.installHomeOperationsNavigation({sessions,workspaces,inputHub,composerBlocks,chatStore,
+          preferredWorkspace:()=>window[Symbol.for('sherlock:pending-conversation')]?.getManualWorkspace(),
+          standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory()});
       }, "Sherlock home operations navigation");`)
   }
   const marker = '/* sherlock:integration-skill-composer:v2 */'

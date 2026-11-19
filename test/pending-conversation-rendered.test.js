@@ -17,7 +17,7 @@ const base='node_modules/@deepseek-ai/',expose=(source,names)=>source.replace('e
 beforeAll(async()=>{
  const installed=stripComposerWorkspaceBar(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8'))
  const baseConversation=stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(installed))))
- const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;')
+ const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;exports.__testSetRightProjects=value=>eworkRightProjects=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(patchBoardDirectoryWorkspace(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspacePicker'])}
  input.triggers=expose(await readFile(base+'dsh-client-ui-input-trigger/lib/client.js','utf8'),['MenuView'])
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
@@ -267,3 +267,54 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   expect(errors).toEqual([]);
  } finally { await page.close() }
 },15000)
+
+it('changes only the right project, drops an empty draft, and opens the new workspace on first send', async () => {
+ const page=await browser.newPage({viewport:{width:1180,height:800}}), errors=[];
+ page.setDefaultTimeout(5000);
+ page.on('pageerror',error=>errors.push(error.message));
+ try {
+  await page.route('http://127.0.0.1/right-project',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><body></body>'}));
+  await page.goto('http://127.0.0.1/right-project');
+  await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>');
+  await page.evaluate(value=>{window.pendingInput={...value,recentWorkspaceId:'A',verifyRightProject:true}},input);
+  await page.addScriptTag({content:script});
+  const composer=page.locator('#right [data-odyssey-composer-project]');
+  const picker=composer.locator('.pXSMma_workspace');
+  await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
+  await picker.getByText('研究项目 A',{exact:true}).waitFor().catch(async error=>{
+   throw Error(JSON.stringify({errors,center:(await page.locator('#app').innerText()).slice(0,500),right:(await page.locator('#right').innerText()).slice(0,500)}),{cause:error})
+  });
+  await page.evaluate(()=>{window.existingCanvas=document.querySelector('section[data-workspace-surface="image-factory"]')});
+  const selection=()=>page.evaluate(()=>window.pendingFixture.current.current);
+  const events=()=>page.evaluate(()=>window.pendingFixture.events);
+  await picker.click();
+  await page.getByText('研究项目 B',{exact:true}).click();
+  await picker.getByText('研究项目 B',{exact:true}).waitFor();
+  expect(await selection()).toBe('existing-canvas');
+  expect(await page.evaluate(()=>window.existingCanvas===document.querySelector('section[data-workspace-surface="image-factory"]'))).toBe(true);
+  await page.evaluate(()=>{window.originalProjectDraft=window.pendingFixture.right.getSnapshot()});
+  expect(await events()).toEqual([]);
+
+  await page.evaluate(()=>window.pendingFixture.goHome());
+  const home=page.locator('#app [data-odyssey-page=home]');
+  await home.getByText('研究项目 B',{exact:true}).waitFor();
+  expect(await page.evaluate(()=>window.pendingFixture.right.getSnapshot())).toBeUndefined();
+  expect(await events()).toEqual([]);
+
+  await page.evaluate(()=>window.pendingFixture.openExisting('existing-canvas'));
+  await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
+  await picker.getByText('研究项目 B',{exact:true}).waitFor();
+  expect(await page.evaluate(()=>window.originalProjectDraft!==window.pendingFixture.right.getSnapshot())).toBe(true);
+  await composer.locator('textarea').fill('为项目 B 创建新任务');
+  await page.evaluate(()=>window.pendingFixture.goHome());
+  await page.evaluate(()=>window.pendingFixture.openExisting('existing-canvas'));
+  await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
+  await expect.poll(()=>composer.locator('textarea').inputValue()).toBe('为项目 B 创建新任务');
+  await composer.getByRole('button',{name:'发送消息',exact:true}).click();
+  await expect.poll(events).toEqual([
+   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},
+   {type:'open',id:'new-session'},{type:'send',text:'为项目 B 创建新任务',images:[]}
+  ]);
+  expect(errors).toEqual([]);
+ } finally { await page.close() }
+},16000);

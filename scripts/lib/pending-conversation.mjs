@@ -1,13 +1,13 @@
 /** Keep project selection and drafts local until an action actually needs a session. */
-export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,prepareContext,prepareSession,releaseImages,setView,currentSurface,standaloneDirectory}){
- const listeners=new Set();let disposed=false,explicit=false,projectRevision=0,state={workspaceId:undefined,busy:false,activating:false,rightSession:undefined};
+export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,prepareContext,prepareSession,releaseImages,setView,currentSurface,standaloneDirectory,initialWorkspace,detached}){
+ const listeners=new Set();let disposed=false,explicit=initialWorkspace!==undefined,projectRevision=0,state={workspaceId:initialWorkspace,busy:false,activating:false,rightSession:undefined};
  const publish=patch=>{
   if('workspaceId' in patch&&patch.workspaceId!==state.workspaceId)projectRevision++;
   state={...state,...patch};for(const fn of listeners)fn();
  };
  const target=()=>workspaces.list.getSnapshot().items.find(item=>item.workspaceId===state.workspaceId);
  const chooseDefault=()=>{
-  if(disposed||explicit&&(state.workspaceId===null||target()))return;
+  if(disposed||detached||explicit&&(state.workspaceId===null||target()))return;
   const snapshot=workspaces.list.getSnapshot();
   if(snapshot.phase==='pending')return;
   explicit=false;
@@ -23,9 +23,9 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
   const draft=admission??shell.snapshot,project=target(),standalone=state.workspaceId===null,before=sessions.list.getSnapshot().current;
   if(!external&&!control&&!draft.draft.trim()&&!draft.imageIds?.length)return;
   if(!project&&!standalone){if(external)throw Error('项目尚未加载，请稍后重试。');shell.notify('error','项目尚未加载，请稍后重试。');return}
-  if(before!==undefined){if(external)throw Error('当前会话已变化，请重试。');shell.notify('error','当前会话已变化，输入已保留。');return}
+  if(detached ? !detached.isActive()||before!==detached.sessionId : before!==undefined){if(external)throw Error('当前会话已变化，请重试。');shell.notify('error','当前会话已变化，输入已保留。');return}
   const surface=currentSurface?.(),revision=projectRevision;
-  const ownsProject=()=>!disposed&&projectRevision===revision&&(standalone||target()?.path===project?.path)&&currentSurface?.()===surface;
+  const ownsProject=()=>!disposed&&(!detached||detached.isActive())&&projectRevision===revision&&(standalone||target()?.path===project?.path)&&currentSurface?.()===surface;
   publish(control?{activating:true}:{busy:true});
   if(!control)shell.setResearchContextPreparing(true);
   let handedOff;
@@ -35,19 +35,20 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    const options=standalone?{cwd:await standaloneDirectory()}:{workspaceId:project.workspaceId};
    if(!ownsProject()||sessions.list.getSnapshot().current!==before||(!control&&shell.snapshot.draftRev!==draft.draftRev))throw Error('输入或项目已变化，请重试。');
    const id=await sessions.create(options);
-   if(!ownsProject()||![undefined,id].includes(sessions.list.getSnapshot().current))throw Error('当前会话已变化，输入已保留。');
+   if(!ownsProject()||![before,id].includes(sessions.list.getSnapshot().current))throw Error('当前会话已变化，输入已保留。');
    // A control can take time to connect. Carry edits made while the user was typing.
    const transfer=control?shell.snapshot:draft;
    const command=control?.selection&&{sessionId:id,surface,draft:transfer.draft,selection:{...control.selection},typed:control.typed===true};
-   const real=getInput(id);
+   const real=getInput(id,detached?.mode);
    if(!real||real.disposed||real.snapshot.draft||real.snapshot.imageIds?.length)throw Error('新会话输入尚未就绪，原输入已保留。');
    if(transfer.imageIds?.length&&!real.addImages([...transfer.imageIds]))throw Error('图片未能加入新会话，原输入已保留。');
    real.restoreDraftState(transfer);
    handedOff=real;if(!control)real.setResearchContextPreparing?.(true);
-   explicit=false;publish({rightSession:id});
-   const handoff=onCreated(id,context);
-   if(control?.view)setView(id,control.view);
-   sessions.open(id);
+   publish({rightSession:id});
+   const handoff=detached?onCreated(id,context,detached):onCreated(id,context);
+   const view=control?.view??detached?.mode;
+   if(view)setView(id,view);
+   if(detached?.open)detached.open(id);else sessions.open(id);
    shell.commitSend([...(transfer.imageIds??[])],transfer.draft);
    const transferredRevision=real.snapshot.draftRev;
    await handoff;
@@ -62,7 +63,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    real.setResearchContextPreparing?.(false);
    if(external)await external(id);else real.submit(mode);
   }catch(error){if(external)throw error;(handedOff??shell).notify?.('error',error?.message||'会话未能创建，输入已保留。')}
-  finally{if(!control){handedOff?.setResearchContextPreparing?.(false);shell.setResearchContextPreparing(false)}publish(control?{activating:false}:{busy:false})}
+  finally{if(!control){handedOff?.setResearchContextPreparing?.(false);shell.setResearchContextPreparing(false)}publish(control?{activating:false}:{busy:false});detached?.settled?.()}
  };
  const shell=makeShell({defaultSink:send});
  let typedSelection;
@@ -73,7 +74,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
   shell.track=(text,caret,inputType)=>{
    track(text,caret,inputType);
    typedSelection={start:caret,end:caret};
-   if(state.workspaceId!==undefined&&inputType?.startsWith('insert')&&/(?:^|\s)\/[^\s/]*$/u.test(text.slice(0,caret)))void activate(typedCommand);
+   if(!detached&&state.workspaceId!==undefined&&inputType?.startsWith('insert')&&/(?:^|\s)\/[^\s/]*$/u.test(text.slice(0,caret)))void activate(typedCommand);
   };
  }
  // Keep raw occurrences until a real session supplies its registered codecs.
@@ -89,6 +90,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    // Mounting the real Chat draft advances draftRev even for unchanged empty text.
    return !disposed&&sessions.list.getSnapshot().current===sessionId&&currentSurface?.()===command.surface&&getInput(sessionId)===keyboard&&keyboard.snapshot.draft===command.draft;
   },
+  getManualWorkspace:()=>explicit?state.workspaceId:undefined,
   selectWorkspace(id){if(state.busy)throw Error('正在发送，请稍候。');if(id!==null&&!workspaces.list.getSnapshot().items.some(item=>item.workspaceId===id))throw Error('项目已不可用。');explicit=true;if(state.workspaceId!==id)publish({workspaceId:id})},
   dispose(){disposed=true;off?.();offSession?.();releaseImages?.(shell.snapshot.imageIds??[]);shell.dispose();listeners.clear()}}
 }
@@ -105,7 +107,7 @@ export function EWorkPendingHomeHeader({pending,busy}){
 /** Same native InputBar as ordinary chat, supplied by the pending draft. */
 export function EWorkPendingInputBar(props){
  if(!props.subagentPanel&&['browser','image-factory'].includes(document.body.dataset.workspaceSurface))props={...props,eworkNotes:false,researchCanvasWorkspace:undefined,researchFileReferences:[],researchArtifactReferences:[]};
- const pending=eworkPendingConversation;
+ const pending=props.rightProjectDraft?.pending??eworkPendingConversation;
  const input=react.useSyncExternalStore(pending?.shell.state.subscribe||(()=>()=>{}),pending?.shell.state.getSnapshot||(()=>undefined));
  const notice=react.useSyncExternalStore(pending?.shell.notices.subscribe||(()=>()=>{}),pending?.shell.notices.getSnapshot||(()=>null));
  const preferences=react.useSyncExternalStore(pending?.preferences?.model.store.subscribe||(()=>()=>{}),pending?.preferences?.model.store.getSnapshot||(()=>undefined));
@@ -126,7 +128,8 @@ export function EWorkPendingInputBar(props){
  const shell=pending.shell;
  const disabled=props.disabled||state.workspaceId===undefined||state.busy;
  return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,disabled,
-  toggleCommandMenu:!disabled&&!state.activating?selection=>pending.activate({selection}):undefined,
+  ...(props.rightProjectDraft?{useSession:select=>props.useSession(()=>select({})),stop:undefined}:{}),
+  toggleCommandMenu:!props.rightProjectDraft&&!disabled&&!state.activating?selection=>pending.activate({selection}):undefined,
   command:async line=>{
    const match=/^\/permission ([^\s]+)$/.exec(line);
    if(!match)return false;

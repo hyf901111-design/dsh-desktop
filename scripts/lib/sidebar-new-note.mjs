@@ -18,11 +18,15 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
   }
   const workspace=()=>{
     const state=workspaces.list.getSnapshot(),sessionState=sessions.list.getSnapshot()
+    const pending=getPending?.()
+    const manual=pending?.getManualWorkspace?.()
+    if(manual===null)return {workspaceId:null}
+    if(manual!==undefined)return state.items.find(item=>item.workspaceId===manual)
     const current=sessionState.current,cwd=sessionState.byId[current]?.cwd
     const currentWorkspace=state.items.find(item=>item.sessionIds.includes(current)) ??
       (cwd ? state.items.find(item=>item.path===cwd) : undefined)
     if(currentWorkspace)return currentWorkspace
-    const pendingId=current===undefined?getPending?.()?.getSnapshot().workspaceId:undefined
+    const pendingId=current===undefined?pending?.getSnapshot().workspaceId:undefined
     if(pendingId===null)return {workspaceId:null}
     return state.items.find(item=>item.workspaceId===(pendingId??state.recentWorkspaceId))
   }
@@ -139,16 +143,38 @@ export function patchSidebarNewNoteShell(input){
   return apply(source,'shell',[
     [group,'wide && newSessionControls'],
     [props,props.replace('startSession,','openHome, startSession,')],
-    [inject,inject+`
+    [inject,`
+            const manualProject = () => window[Symbol.for("sherlock:pending-conversation")]?.getManualWorkspace();
+            const startWithoutProject = async view => {
+                const before = ctx.sessions.list.getSnapshot().current;
+                try {
+                    const cwd = await window.dshDesktop.standaloneConversationDirectory();
+                    if (ctx.sessions.list.getSnapshot().current !== before || manualProject() !== null) return;
+                    const sessionId = await ctx.sessions.create({ cwd });
+                    if (ctx.sessions.list.getSnapshot().current !== before || manualProject() !== null) return;
+                    if (view === "research") {
+                        try { window.sessionStorage.setItem("sherlock.conversation.initial-research-session.v1", sessionId); } catch {}
+                    }
+                    window.dispatchEvent(new CustomEvent("sherlock:conversation-initial-" + view, { detail: { sessionId, newResearch: view === "research" } }));
+                    ctx.sessions.open(sessionId);
+                } catch (error) { console.warn("new standalone session failed:", error); }
+            };
+            `+inject+`
                 openHome: () => {
                     // Hide workspace apps before notifying their session-selection listeners.
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
                     ctx.sessions.clear();
                 },`],
     ['startSession: (workspaceId) => {', `startSession: (workspaceId) => {
-                    document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));`],
+                    document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
+                    const manual = manualProject();
+                    if (workspaceId === undefined && manual === null) { void startWithoutProject('chat'); return; }
+                    workspaceId ??= manual;`],
     ['startResearchSession: (workspaceId) => {', `startResearchSession: (workspaceId) => {
-                    document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));`],
+                    document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
+                    const manual = manualProject();
+                    if (workspaceId === undefined && manual === null) { void startWithoutProject('research'); return; }
+                    workspaceId ??= manual;`],
     [root,'\t\t\tconst newSessionControls = '+controls+';\n'+`
     react.useEffect(()=>{
       const rail=column.current;

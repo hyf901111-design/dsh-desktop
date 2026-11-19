@@ -4,7 +4,7 @@ export function installSidebarNewNote(deps:{
   chatStore:any
   inputHub:any
   getInput:(id:string)=>any
-  getPending:()=>{getSnapshot:()=>{workspaceId:string|null|undefined}}|undefined
+  getPending:()=>{getManualWorkspace?:()=>string|null|undefined;getSnapshot:()=>{workspaceId:string|null|undefined}}|undefined
   standaloneDirectory:()=>Promise<string>
 }):()=>void
 export function patchSidebarNewNoteConversation(source:string):string

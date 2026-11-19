@@ -164,7 +164,7 @@ async function researchRuntimeFixture(options: {
 
 const flushResearchEffects = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
-async function newNoteFixture(pendingWorkspace?: string | null){
+async function newNoteFixture(pendingWorkspace?: string | null, manualWorkspace?: string | null){
  const w=new Window({url:'https://sherlock.local/'});installBrowserGlobals(w);vi.stubGlobal('CustomEvent',w.CustomEvent)
  let sequence=0
  const api:any={
@@ -182,7 +182,7 @@ async function newNoteFixture(pendingWorkspace?: string | null){
  const shell={snapshot:{draft:'原有完整要求😀',draftRev:4,imageIds:['existing-image'],occurrences:[{id:1,source:'skill',offset:2,ref:'original'}]}}
  const stop=installSidebarNewNote({
   sessions,workspaces,chatStore,inputHub:{},getInput:()=>shell,
-  getPending:()=>({getSnapshot:()=>({workspaceId:pendingWorkspace})}),
+  getPending:()=>({getSnapshot:()=>({workspaceId:pendingWorkspace}),getManualWorkspace:()=>manualWorkspace}),
   standaloneDirectory:async()=>'/standalone/outputs'
  })
  const action=createSidebarNewNoteAction(w.document as unknown as Document,async()=>{})
@@ -247,6 +247,17 @@ describe('normal new Note workspace flow',()=>{
    await f.action.create()
    expect(f.api.sessions.create).toHaveBeenLastCalledWith(options)
    expect(f.chatStore.create(f.sessions.list.getSnapshot().current).getSnapshot().view).toBe('notes')
+  } finally {f.stop()}
+ })
+ it.each([
+  {manual:'recent',options:{workspaceId:'recent'}},
+  {manual:null,options:{cwd:'/standalone/outputs'}}
+ ])('creates a new app session in the manual project $manual when an older session is open',async ({manual,options})=>{
+  const f=await newNoteFixture('active',manual)
+  try {
+   expect(f.sessions.list.getSnapshot().current).toBe('old')
+   await f.action.create()
+   expect(f.api.sessions.create).toHaveBeenLastCalledWith(options)
   } finally {f.stop()}
  })
  it('uses the real SDK fresh create/current workspace and persists Notes without consuming the old draft',async()=>{
