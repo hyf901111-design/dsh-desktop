@@ -1,6 +1,21 @@
 import { patchCanvasSessionActivity } from './sidebar-session-recency.mjs'
 import { patchNotesChallengeClient } from './notes-challenge-client.mjs'
 import { patchNotesExportMenu } from './notes-export-menu.mjs'
+export function patchWorkspaceChatContent(source) {
+  if (source.includes('"data-workspace-chat-content":')) return source
+  const signature = 'function ConversationSessionHeader('
+  const start = source.indexOf(signature)
+  const end = source.indexOf('function ConversationSession(', start)
+  if (start < 0 || end < 0) throw Error('无法定位对话顶栏内容状态。')
+  const header = source.slice(start, end)
+  const blank = 'const blank = useSession((s) => s.blank);'
+  const marker = '"data-ework-notes-session":sessionId,'
+  if (!header.includes(blank) || !header.includes(marker)) throw Error('无法定位对话内容状态绑定。')
+  const patched = header.replace(blank, blank + '\nconst workspaceChatHasContent = useSession((s) => !!s.chat?.order?.some(key => isHomeConversationContentNode(s.chat.nodes.get(key))));')
+    .replace(marker, marker + ' "data-workspace-chat-content":workspaceChatHasContent ? "" : void 0,')
+  return source.slice(0, start) + patched + source.slice(end)
+}
+
 /** Bind notes to the native session/view ledger, keeping one resident header. */
 export function patchNotesClient(source) {
   if (!source.includes('"data-ework-notes-session":sessionId')) {
@@ -8,6 +23,7 @@ export function patchNotesClient(source) {
     if ([...source.matchAll(marker)].length !== 1) throw Error('笔记入口无法定位原生会话头部。')
     source = source.replace(marker, '$1 "data-ework-notes-session":sessionId,')
   }
+  source = patchWorkspaceChatContent(source)
   if (!source.includes('ework:notes-header-presentation:v1')) {
     const home = 'const homeHeader = blank && composerPhase === "blank" && active?.id === "chat";'
     if (source.split(home).length !== 2) throw Error('笔记无法定位共享顶栏布局。')

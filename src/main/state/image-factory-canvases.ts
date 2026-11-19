@@ -135,6 +135,14 @@ export class ImageFactoryCanvases {
     })
   }
 
+  hasCanvas(scope: CanvasScope) {
+    return this.run(async (owner, _epoch, current) => {
+      const canvas = await this.readCanvas(this.directory(owner, scope))
+      current()
+      return !!canvas
+    })
+  }
+
   readTabs() {
     return this.run(async (owner, epoch, current) => {
       let tabs: ImageFactoryTaskTab[] = []

@@ -8,6 +8,7 @@ import { KnowledgeStore } from './knowledge/store'
 import { installKnowledgeIpc } from './knowledge/ipc'
 import { scanKnowledgeHistory } from './knowledge/history-backfill'
 import { researchHasContent } from './knowledge/session-content'
+import { workspaceContentViews } from '../shared/navigation-shortcuts'
 import { createKnowledgeSessionCopier, knowledgeCopyRetention, retainExistingKnowledgeCopies } from './knowledge/session-copy'
 import type { KnowledgeSessionMode } from '../shared/knowledge-sessions'
 import { createKnowledgeSessionSnapshot } from './knowledge/session-share'
@@ -1627,6 +1628,19 @@ async function bootstrap(): Promise<void> {
     } catch { /* Unavailable or corrupt sessions stay out of the directory. */ }
     return { id, hasContent }
   }
+  registerTrustedMainWindowHandler(ipcMain, 'workspace-views:content', () => mainWindow, async (_event, scope, views) => {
+    if (!validCanvasScope(scope) || !Array.isArray(views) || views.length > workspaceContentViews.length ||
+      views.some(view => !workspaceContentViews.includes(view))) throw Error('应用内容状态请求无效。')
+    const identity = knowledgeIdentity()
+    const populated = await Promise.all(workspaceContentViews.filter(view => views.includes(view)).map(async view => {
+      if (view === 'browser') return browserApp.snapshot().tabs.some(tab => /^https?:/i.test(tab.url)) ? view : undefined
+      if (view === 'knowledge') return await knowledge.hasDocuments().catch(() => false) ? view : undefined
+      if (view === 'image-factory') return await factoryCanvases.hasCanvas(scope).catch(() => false) ? view : undefined
+      return scope && knowledgeSessionEvidence(identity.owner, scope, view).hasContent ? view : undefined
+    }))
+    if (knowledgeIdentity().generation !== identity.generation) return []
+    return populated.filter(view => view !== undefined)
+  })
   const recoverKnowledgeCopies = async (url: string) => {
     const { owner, generation } = knowledgeIdentity()
     await retainExistingKnowledgeCopies({

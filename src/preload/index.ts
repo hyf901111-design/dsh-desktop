@@ -11,6 +11,7 @@ import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from './workspace-topbar'
+import { mountWorkspaceContentIndicators } from './workspace-content-indicators'
 import {
   clearWorkspaceViewsExpansion, findWorkspaceSession, keepWorkspaceViewsExpanded, mountSessionWorkspaceViewShortcuts,
   mountWorkspaceViewCustomization, sessionWorkspaceAppViews, sessionWorkspaceViewEvent, type SessionWorkspaceAppView
@@ -546,6 +547,8 @@ function initializeUi(): void {
   const disposeSessionWorkspaceViews = mountSessionWorkspaceViewShortcuts(document,
     () => workspaceSurfaceHost.revealConversation(), openNavigationApp)
   const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, openNavigationApp)
+  const disposeWorkspaceContent = mountWorkspaceContentIndicators(document,
+    (sessionId, views) => ipcRenderer.invoke('workspace-views:content', sessionId, views))
   let shortcutProfile: string | undefined
   navigationShortcuts = mountNavigationShortcuts(document, {
     read: () => {
@@ -558,7 +561,7 @@ function initializeUi(): void {
     open: openNavigationApp
   })
   window.addEventListener('unload', () => {
-    navigationShortcuts?.dispose(); disposeHomeAppShortcuts(); disposeSessionWorkspaceViews(); disposeWorkspaceViewCustomization(); imageFactory.dispose()
+    navigationShortcuts?.dispose(); disposeHomeAppShortcuts(); disposeSessionWorkspaceViews(); disposeWorkspaceViewCustomization(); disposeWorkspaceContent(); imageFactory.dispose()
     document.removeEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
     window.removeEventListener(imageFactoryOpenEvent, openImageFactory)
   }, { once: true })
