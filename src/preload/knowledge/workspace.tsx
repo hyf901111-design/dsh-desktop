@@ -12,7 +12,7 @@ import {
 import type { KnowledgeViewMessage, KnowledgeViewResult } from '../../main/knowledge/view-bridge'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles, workspaceBackButton } from '../workspace-topbar'
-import { findWorkspaceSession, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews, takeWorkspaceViewsExpansion } from '../workspace-view-shortcuts'
+import { canNavigateGlobalWorkspace, findWorkspaceSession, navigateGlobalWorkspace, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews, takeWorkspaceViewsExpansion } from '../workspace-view-shortcuts'
 import { icons } from '../scheduled/icons'
 import type { MemoryBridge } from '../../shared/memory'
 import { knowledgeSessionShareKey, type KnowledgeSessionEntry, type KnowledgeSessionEvidence,
@@ -132,7 +132,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const views = useSyncExternalStore(
     listener => observeWorkspaceViews(document, listener), () => sessionWorkspaceViews(document))
   const workspaceToggle = useRef<HTMLButtonElement>(null)
-  const hasWorkspaceSession = workspaceExpanded && !!findWorkspaceSession(document)
+  const hasWorkspaceSession = workspaceExpanded && (!!findWorkspaceSession(document) || canNavigateGlobalWorkspace(document))
   const [local, setSnapshot] = useState(empty)
   const [received, setReceived] = useState<KnowledgeDocument[]>([])
   const [receivedStatus, setReceivedStatus] = useState<{ loading: boolean; error?: string }>({ loading: false })
@@ -226,11 +226,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
 
   function openWorkspaceView(view: string) {
     const sessionId = findWorkspaceSession(document)?.dataset.eworkNotesSession
-    if (!sessionId) {
-      if (view === 'chat') host.revealConversation()
-      return
-    }
     if (view === 'knowledge') return
+    if (!sessionId) { navigateGlobalWorkspace(document, view, () => host.revealConversation()); return }
     if (!navigateWorkspaceView(document, sessionId, view, () => host.revealConversation()))
       setNotice({ text: '此会话视图暂不可用，请先打开对应会话。', error: true })
   }

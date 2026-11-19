@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
-import { findWorkspaceSession, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews, takeWorkspaceViewsExpansion } from '../workspace-view-shortcuts'
+import { canNavigateGlobalWorkspace, findWorkspaceSession, navigateGlobalWorkspace, navigateWorkspaceView, sessionWorkspaceViews, observeWorkspaceViews, takeWorkspaceViewsExpansion } from '../workspace-view-shortcuts'
 import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, brandArtworkIds, type BrandArtworkId, type BrandOverlay, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu, type CanvasToolAction } from './actions-menu'
@@ -1343,14 +1343,14 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   }
   function openWorkspaceView(view: string) {
     const sessionId = findWorkspaceSession(doc)?.dataset.eworkNotesSession
-    if (!sessionId) { if (view === 'chat') revealConversation(); return }
     if (view === 'image-factory') return
+    if (!sessionId) { navigateGlobalWorkspace(doc, view, revealConversation); return }
     if (!navigateWorkspaceView(doc, sessionId, view, revealConversation))
       setToast(t('此会话视图暂不可用。', 'This conversation view is unavailable.'))
   }
 
   const rectangle = rubberband ?? area
-  const hasWorkspaceSession = workspaceExpanded && !!findWorkspaceSession(doc)
+  const hasWorkspaceSession = workspaceExpanded && (!!findWorkspaceSession(doc) || canNavigateGlobalWorkspace(doc))
   const tabsLabel = workspaceExpanded ? t('收起工作区页签', 'Collapse workspace tabs') : t('展开工作区页签', 'Expand workspace tabs')
   const watermark = current?.aiWatermark ? aiWatermarkLayout(current, displayScale) : undefined
   function renderLayerRows(canvas: ImageScene) {

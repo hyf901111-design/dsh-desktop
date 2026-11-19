@@ -684,7 +684,16 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
     save:value=>{if(window.failTopSave)return false;window.savedTop=value.top;return true},
     open:()=>{}
    })
-   window.mountSessionWorkspaceViewShortcuts(document,()=>{},app=>window.homeOpens.push(app))
+   window.mountSessionWorkspaceViewShortcuts(document,()=>{},app=>{
+    window.homeOpens.push(app)
+    if(app==='browser'){
+     document.body.dataset.workspaceSurface='browser'
+     return window.browserView.open('')
+    }
+   })
+   document.addEventListener('sherlock:workspace-surface-change',()=>{
+    if(window.browserView.root.hidden) delete document.body.dataset.workspaceSurface
+   })
    window.mountWorkspaceViewCustomization(document)
   })
   const gear=page.getByRole('button',{name:'自定义顶栏',exact:true})
@@ -731,8 +740,10 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   expect(await dialog.locator('.workspace-view-slots,.workspace-view-palette').evaluateAll(rows=>rows.map(row=>{
    const style=getComputedStyle(row)
    return [style.backgroundColor,style.borderTopWidth,style.boxShadow]
-  }))).toEqual(Array.from({length:2},()=>['rgba(0, 0, 0, 0)','0px','none']))
+  }))).toEqual([['rgba(0, 0, 0, 0)','0px','none'],[expect.not.stringMatching(/^rgba\(0, 0, 0, 0\)$/),'0px','none']])
   expect(await slots.allTextContents()).toEqual(['','','',''])
+  expect(await slots.first().getByRole('button').evaluate(button=>['::before','::after'].map(side=>getComputedStyle(button,side).content)))
+   .toEqual(['none','none'])
   expect(await slots.first().evaluate(slot=>({
    border:getComputedStyle(slot,'::after').borderTopStyle,
    fill:getComputedStyle(slot).backgroundColor
@@ -762,6 +773,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await dragApp('表格',3)
   await dragApp('知识库',3)
   expect(await slots.locator('[data-workspace-editor-app]').allTextContents()).toEqual(['图像','笔记','表格','知识库'])
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','浏览器'])
   expect(await slotGeometry()).toEqual(emptyGeometry)
   const deleteButtons=dialog.locator('[data-navigation-delete]')
   expect(await deleteButtons.count()).toBe(4)
@@ -779,7 +791,14 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   expect(await dialog.locator('.workspace-view-drag-ghost').count()).toBe(0)
   expect(await dialog.isVisible()).toBe(true)
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','note','spreadsheet','knowledge'])
-  await slots.nth(0).locator('[data-workspace-editor-app]').dragTo(slots.nth(2))
+  const [sourceBox,targetBox]=await Promise.all([slots.nth(0).boundingBox(),slots.nth(2).boundingBox()])
+  await page.mouse.move(sourceBox.x+sourceBox.width/2,sourceBox.y+sourceBox.height/2)
+  await page.mouse.down()
+  await page.mouse.move(targetBox.x+targetBox.width/2,targetBox.y+targetBox.height/2,{steps:8})
+  expect(await slots.nth(1).evaluate(slot=>slot.style.getPropertyValue('--workspace-slot-shift'))).toBe('-62px')
+  expect(await slots.nth(1).getByRole('button',{name:'第 3 项 · 笔记'}).evaluate(tab=>getComputedStyle(tab).transitionProperty)).toContain('translate')
+  expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','note','spreadsheet','knowledge'])
+  await page.mouse.up()
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','spreadsheet','image-factory','knowledge'])
   await palette.getByRole('button',{name:'浏览器',exact:true}).press('Enter')
   await dialog.getByRole('button',{name:'第 3 项 · 表格'}).press('Enter')
@@ -792,6 +811,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await dialog.getByRole('button',{name:'移除表格'}).click()
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','browser','image-factory',null])
   expect(await deleteButtons.count()).toBe(3)
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','表格','知识库'])
   expect(await slotGeometry()).toEqual(emptyGeometry)
   await dragApp('知识库',3)
   await page.mouse.move(500,230)
@@ -803,15 +823,26 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await expect.poll(() => views.allTextContents()).toEqual(['对话','笔记','浏览器','图像','知识库'])
   await page.locator('.wSkVaW_root').evaluate(root=>{root.dataset.odysseyPage='home'})
   await homeBar.getByRole('button',{name:'展开工作区页签',exact:true}).click()
-  await homeBar.getByRole('button',{name:'切换到笔记',exact:true}).click()
-  expect(await page.evaluate(()=>window.homeOpens)).toEqual(['note'])
-  await page.evaluate(()=>{
-   document.body.dataset.workspaceSurface='browser'
-   document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
-   return window.browserView.open('session-A')
-  })
+  const center=page.locator('.pI_x6G_centerCol')
+  await center.evaluate(el=>{el.style.containerType='inline-size';el.style.width='340px'})
+  await expect.poll(()=>homeBar.locator('.eb-workspace-tabs').evaluate(nav=>{
+   const pane=nav.closest('.pI_x6G_centerCol').getBoundingClientRect()
+   return [...nav.querySelectorAll('button')].every(button=>{
+    const hit=button.getBoundingClientRect()
+    const visible=document.elementFromPoint(hit.x+hit.width/2,hit.y+hit.height/2)
+    return hit.left>=pane.left&&hit.right<=pane.right&&button.contains(visible)
+   })
+  })).toBe(true)
+  await center.evaluate(el=>{el.style.containerType='';el.style.width='auto'})
+  await homeBar.getByRole('button',{name:'切换到浏览器',exact:true}).click()
+  expect(await page.evaluate(()=>window.homeOpens)).toEqual(['browser'])
   const browserControls=page.locator('.eb-root .eb-workspace-controls')
-  await browserControls.locator('.eb-workspace-toggle').click()
+  await browserControls.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+  await browserControls.getByRole('button',{name:'切换到对话',exact:true}).click()
+  await homeBar.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+  await homeBar.getByRole('button',{name:'切换到浏览器',exact:true}).click()
+  await browserControls.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+
   expect(await browserControls.locator('[data-workspace-native-view]').allTextContents()).toEqual(['对话','笔记','浏览器','图像','知识库'])
   await liveWebsite(page)
   await browserControls.getByRole('button',{name:'自定义顶栏'}).click()
