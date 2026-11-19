@@ -53,16 +53,17 @@ const styles = `
 @container(max-width:480px){.workspace-app-topbar{gap:4px;padding-left:8px}.workspace-app-title{width:28px;padding:0 4px}}
 h1.workspace-app-heading{margin:0;width:auto;font:500 14px/20px var(--odyssey-font-ui,system-ui)}
 h1.workspace-app-heading>span{display:inline}
+.workspace-app-heading>i{width:17px;height:17px}
 .workspace-app-heading[data-workspace-app=scheduled]>i{mask-image:${navigationAppIcon('scheduled')}}
-.workspace-app-heading[data-workspace-app=plugin]>i{mask-image:${navigationAppIcon('plugin')}}
+.workspace-app-heading[data-workspace-app=plugin]>i{mask-image:${navigationAppIcon('plugin')};mask-size:16px}
 ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('new-chat')}}
-${resident}[data-odyssey-page="research"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('research')}}
-${resident}[data-odyssey-page="spreadsheet"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('spreadsheet')}}
+${resident}[data-odyssey-page="research"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('research')};--workspace-title-art-size:auto 14px}
+${resident}[data-odyssey-page="spreadsheet"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('spreadsheet')};--workspace-title-art-size:14px auto}
 ${workspaceSessionHeader}:has([data-conversation-view-id=notes][aria-selected=true]),
-body[data-workspace-surface=notes] ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('note')}}
+body[data-workspace-surface=notes] ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('note')};--workspace-title-art-size:auto 14px}
 ${workspaceSessionHeader} .wSkVaW_crumbs::before{
-  content:"";display:block;width:18px;height:18px;flex:none;margin-inline-end:3px;
-  background:currentColor;mask:var(--workspace-title-icon) center/contain no-repeat;
+  content:"";display:block;width:17px;height:17px;flex:none;margin-inline-end:3px;
+  background:currentColor;mask:var(--workspace-title-icon) center/var(--workspace-title-art-size,contain) no-repeat;
 }
 .eb-workspace-controls{display:flex;align-items:center;gap:4px;flex:none;margin-left:-4px;-webkit-app-region:no-drag}
 .workspace-app-topbar .eb-workspace-toggle{display:grid;place-items:center;width:32px;height:32px;padding:0;flex:none;color:var(--eb-muted,var(--knowledge-muted));-webkit-app-region:no-drag}

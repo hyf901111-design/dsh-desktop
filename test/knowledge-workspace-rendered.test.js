@@ -941,6 +941,10 @@ it('keeps the four workspace shortcuts open across the draggable knowledge heade
     expect(await title.evaluate(region)).toBe('drag')
     expect(await toggle.evaluate(region)).toBe('no-drag')
     expect(await files.evaluate(region)).toBe('no-drag')
+    expect(await header.locator('.knowledge-header-tabs button').evaluateAll(buttons => buttons.map(button => {
+      const style = getComputedStyle(button)
+      return [style.fontSize, style.height, style.paddingInline]
+    }))).toEqual([['13px', '28px', '8px'], ['13px', '28px', '8px']])
     await title.hover()
     expect(await shortcuts.count()).toBe(0)
     await toggle.click()
