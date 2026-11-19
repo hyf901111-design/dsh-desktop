@@ -143,7 +143,7 @@ body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey
   white-space:nowrap; transform:none;
 }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspaceLabel { min-width:0; overflow:hidden; text-overflow:ellipsis; }
-body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace)>svg { flex:none; }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace)>svg:not(.pXSMma_chevron) { flex:none; width:16px; height:16px; color:var(--odyssey-text); }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace .pXSMma_chevron { display:none; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:disabled { opacity:.52; cursor:default; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace[data-odyssey-project-selected]:not(:disabled)::after {
@@ -152,6 +152,7 @@ body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:not([data-odyssey-project-selected]) {
   color:color-mix(in srgb,currentColor 70%,transparent);
 }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:not([data-odyssey-project-selected]) > .pXSMma_folder { color:inherit; }
 .odyssey-project-picker { position:relative; display:inline-flex; min-width:0; }
 .odyssey-project-clear {
   position:absolute; inset-inline-start:3px; top:50%; transform:translateY(-50%);
@@ -160,9 +161,10 @@ body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace
   cursor:pointer; opacity:0; pointer-events:none;
 }
 .odyssey-project-clear > svg {
-  width:14px; height:14px; padding:2px; box-sizing:border-box; border-radius:50%;
-  background:var(--odyssey-text); color:var(--odyssey-canvas);
+  width:16px; height:16px; padding:3px; box-sizing:border-box; border-radius:50%;
+  background:color-mix(in srgb,var(--odyssey-text) 18%,transparent); color:var(--odyssey-text);
 }
+.odyssey-project-clear:is(:hover,:focus-visible) > svg { background:var(--odyssey-text); color:var(--odyssey-canvas); }
 .odyssey-project-picker:is(:hover,:focus-within) .odyssey-project-clear { opacity:1; pointer-events:auto; }
 .odyssey-project-picker:has(.odyssey-project-clear):is(:hover,:focus-within) .pXSMma_workspace > .pXSMma_folder { opacity:0; }
 .odyssey-project-clear:focus-visible { outline:1px solid currentColor; outline-offset:-2px; }

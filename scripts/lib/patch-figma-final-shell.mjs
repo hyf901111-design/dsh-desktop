@@ -155,10 +155,30 @@ function projectlessWorkspaceEdits() {
   ]
 }
 
+const outlineFolderMarker = '/* odyssey:composer-outline-folder:v1 */'
+function outlineFolderEdits() {
+  const nativeIcons = `label === void 0 ? (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderClose16, {
+						className: HeroShell_module_css_default.folder,
+						size: 16
+					}) : (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpen16, {
+						className: HeroShell_module_css_default.folder,
+						size: 16
+					})`
+  const folderGlyph = `${outlineFolderMarker} react_jsx_runtime.jsx('svg', {
+    className: HeroShell_module_css_default.folder, width: 16, height: 16, viewBox: '0 0 16 16',
+    fill: 'none', 'aria-hidden': true, children: react_jsx_runtime.jsx('path', {
+      d: 'M1.75 11.75V4.5A1.25 1.25 0 0 1 3 3.25h3l1.5 1.5H13A1.25 1.25 0 0 1 14.25 6v5.75A1.25 1.25 0 0 1 13 13H3a1.25 1.25 0 0 1-1.25-1.25Z',
+      stroke: 'currentColor', strokeWidth: 1.15, strokeLinecap: 'round', strokeLinejoin: 'round',
+    }),
+  })`
+  return [nativeIcons, folderGlyph]
+}
+
 export function patchComposerWorkspaceBar(source) {
-  if (source.includes(projectlessPickerMarker)) return source;
+  if (source.includes(outlineFolderMarker)) return source;
   const edits = source.includes(composerWorkspaceMarker) ? [] : composerWorkspaceEdits();
-  for (const [before, after] of [...edits, ...projectlessWorkspaceEdits()]) {
+  const projectless = source.includes(projectlessPickerMarker) ? [] : projectlessWorkspaceEdits();
+  for (const [before, after] of [...edits, ...projectless, outlineFolderEdits()]) {
     if (source.split(before).length !== 2) throw Error('Composer project bar anchor drifted: ' + before.trim().slice(0, 85));
     source = source.replace(before, () => after);
   }
@@ -176,6 +196,7 @@ export function stripComposerWorkspaceBar(source) {
     source = source.slice(0, start) + source.slice(end);
   }
   const edits = projectless ? [...composerWorkspaceEdits(), ...projectlessWorkspaceEdits().slice(1)] : composerWorkspaceEdits();
+  if (source.includes(outlineFolderMarker)) edits.push(outlineFolderEdits());
   for (const [before, after] of edits.reverse()) {
     if (source.split(after).length !== 2) throw Error('Composer project bar restore anchor drifted: ' + after.trim().slice(0, 85));
     source = source.replace(after, () => before);

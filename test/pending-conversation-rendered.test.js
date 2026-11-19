@@ -29,7 +29,7 @@ it.each([true, false])('shows the local work location on home and right composer
  const page = await browser.newPage({ viewport: { width: 1180, height: 800 } })
  try {
   await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:'+ (dark ? 340 : 280) +'px}#right>.t8lSSG_workbench{height:100%}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
-  await page.evaluate(({ input, dark }) => { window.pendingInput = input; document.body.toggleAttribute('data-ds-dark-theme', dark) }, { input, dark })
+  await page.evaluate(({ input, dark }) => { window.pendingInput = {...input,recentWorkspaceId:'A'}; document.body.toggleAttribute('data-ds-dark-theme', dark) }, { input, dark })
   await page.addScriptTag({ content: script })
   for (const surface of ['home', 'right']) {
    if (surface === 'right') await page.evaluate(() => window.pendingFixture.openSurface('browser'))
@@ -80,6 +80,23 @@ it.each([true, false])('shows the local work location on home and right composer
     expect(style.fill).not.toBe('rgba(0, 0, 0, 0)')
     expect(await idle.evaluate(button => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
    }
+   const glyphShape = locator => locator.evaluate(svg => {
+    const {width,height} = svg.getBoundingClientRect()
+    const style = getComputedStyle(svg.querySelector('path'))
+    return {width,height,fill:style.fill,stroke:style.stroke,strokeWidth:style.strokeWidth}
+   })
+   const computerIcon = await glyphShape(location.locator(':scope > svg'))
+   expect(computerIcon).toMatchObject({width:16,height:16,fill:'none',strokeWidth:'1.15px'})
+   expect(await glyphShape(folder.locator(':scope > svg.pXSMma_folder'))).toEqual(computerIcon)
+   const clear = bar.getByRole('button',{name:'不在项目中工作',exact:true})
+   const fill = () => clear.locator('svg').evaluate(svg => getComputedStyle(svg).backgroundColor)
+   await folder.getByText('研究项目 A',{exact:true}).hover()
+   expect(await clear.evaluate(el => getComputedStyle(el).opacity)).toBe('1')
+   const restingFill = await fill()
+   await clear.hover()
+   expect(await fill()).not.toBe(restingFill)
+   await location.hover()
+   expect(await clear.evaluate(el => getComputedStyle(el).opacity)).toBe('0')
    await location.focus()
    await page.keyboard.press('ArrowDown')
    const menu = page.locator('[role=menu]:has([data-odyssey-work-location-option])')
