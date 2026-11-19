@@ -1,0 +1,191 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261119-02",
+  "branch": "codex/integration/20261119-02",
+  "baseMainCommit": "572a1b16b7c6d6b2e8cb72821f390cf218e68010",
+  "expectedMainCommit": "572a1b16b7c6d6b2e8cb72821f390cf218e68010",
+  "createdAt": "2026-11-19T04:55:13.826Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "自定义顶栏和收起侧栏的应用快捷入口",
+        "branch": "codex/feat/navigation-shortcuts-20261119",
+        "baseCommit": "572a1b16b7c6d6b2e8cb72821f390cf218e68010",
+        "tipCommit": "11d6e5f2086da5b309b2f628395aaf7dc5c4ed12",
+        "commits": [
+          {
+            "commit": "11d6e5f2086da5b309b2f628395aaf7dc5c4ed12",
+            "parents": [
+              "572a1b16b7c6d6b2e8cb72821f390cf218e68010"
+            ],
+            "subject": "功能：自定义顶栏和收起侧栏的应用快捷入口"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/navigation-shortcut-preferences.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-app-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/navigation-shortcuts.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/navigation-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/navigation-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/navigation-shortcuts.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过",
+            "verifiedCommit": "11d6e5f2086da5b309b2f628395aaf7dc5c4ed12",
+            "completedAt": "2026-11-19T04:49:47.194Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/navigation-shortcuts.test.ts",
+              "test/browser-app-native.test.js",
+              "test/image-factory.test.js",
+              "test/image-factory-native.test.js",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/workspace-surface-host.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "76 项快捷配置、浏览器、图像和工作区相关用例通过",
+            "verifiedCommit": "11d6e5f2086da5b309b2f628395aaf7dc5c4ed12",
+            "completedAt": "2026-11-19T04:49:47.194Z",
+            "timeoutMs": 60000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "npm",
+              "test",
+              "--",
+              "test/browser-app-rendered.test.js",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
+            ],
+            "outcome": "passed",
+            "summary": "4 项 Chromium 渲染验证通过，覆盖真实指针长按、拖放、菜单尺寸、浏览器重绘和持久配置重载",
+            "verifiedCommit": "11d6e5f2086da5b309b2f628395aaf7dc5c4ed12",
+            "completedAt": "2026-11-19T04:49:47.194Z",
+            "timeoutMs": 60000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 渲染夹具通过交互检查。共享 macOS 客户端实机验收待集成批次完成。"
+        },
+        "acceptanceCriteria": [
+          "顶栏固定对话页签并有四个可配置位置，首页、浏览器、图像和知识库共用配置。",
+          "长按输入框下方的图标进入编辑，显示抖动、半透明灰色虚线插槽及圆形删除按钮。拖入顶栏或收起侧栏后可替换，按 Esc 或点击空白退出。",
+          "已固定的快捷入口支持右键编辑和删除。设置重启后保留并按账号隔离。"
+        ],
+        "risks": [
+          "第四个顶栏插槽默认留空，当前正式产品基线没有可复用的演示应用入口。",
+          "知识库文件分类和定时任务草稿各一项既有回归用例在原基线上也失败。"
+        ],
+        "generatedAt": "2026-11-19T04:49:47.194Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/navigation-shortcuts.test.ts",
+        "test/browser-app-native.test.js",
+        "test/image-factory.test.js",
+        "test/image-factory-native.test.js",
+        "test/image-factory-canvas-workspace.test.ts",
+        "test/workspace-surface-host.test.ts"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "argv": [
+        "env",
+        "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+        "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+        "npm",
+        "test",
+        "--",
+        "test/browser-app-rendered.test.js",
+        "test/knowledge-workspace-rendered.test.js",
+        "-t",
+        "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
+      ],
+      "timeoutMs": 60000
+    }
+  ],
+  "mainSynchronizations": []
+}
