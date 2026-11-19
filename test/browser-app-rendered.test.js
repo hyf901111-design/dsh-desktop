@@ -563,18 +563,18 @@ it.each([true,false])('samples the gutter at the actual bottom corners after a t
  }finally{await page.close()}
 })
 
-it('shares editable shortcuts between the composer, the collapsed sidebar and the browser workspace tabs', async () => {
+it('shares editable shortcuts between the composer and sidebar with global top shortcuts hidden', async () => {
  const { page, errors } = await fixture(1440, 900)
  try {
   await page.evaluate(() => {
    const center = document.querySelector('.pI_x6G_centerCol')
    center.insertAdjacentHTML('beforeend', `
-    <div data-srb-tabs style="display:flex;gap:4px">
+    <div class="wSkVaW_root" data-odyssey-page="home"><header class="wSkVaW_header"><button id="session-title">新会话</button><div data-srb-tabs style="display:flex;gap:4px">
      <button data-conversation-view-id="chat">对话</button>
      <button data-conversation-view-id="research">研究</button>
      <button data-conversation-view-id="notes">笔记</button>
      <button data-conversation-view-id="spreadsheet">表格</button>
-    </div>`)
+    </div></header></div>`)
    const style = document.createElement('style')
    style.textContent = window.homeShortcutStyles
    document.head.append(style)
@@ -588,17 +588,17 @@ it('shares editable shortcuts between the composer, the collapsed sidebar and th
     </nav>`)
    window.shortcutOpens = []
    window.shortcutManager = window.mountNavigationShortcuts(document, {
-    read: () => window.savedShortcuts,
+    read: () => window.savedShortcuts ?? { top: ['research', 'knowledge', 'browser', 'scheduled'], side: ['browser', 'image-factory', 'knowledge', 'note', 'scheduled'] },
     save: value => { window.savedShortcuts = value; return true },
     open: app => window.shortcutOpens.push(app)
    })
   })
   const source = page.locator('[data-home-app=image-factory]')
   const homeTabs = page.locator('[data-srb-tabs]')
-  const browserTabs = page.locator('.eb-workspace-tabs')
+  const browserControls = page.locator('.eb-workspace-controls')
   const sidebar = page.locator('[data-navigation-rail]')
-  const drag = async (destination, triggerEdit) => {
-   const from = await source.boundingBox()
+  const drag = async (destination, triggerEdit, origin = source) => {
+   const from = await origin.boundingBox()
    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
    await page.mouse.down()
    if (triggerEdit) {
@@ -610,9 +610,28 @@ it('shares editable shortcuts between the composer, the collapsed sidebar and th
    await expect.poll(() => destination.getAttribute('data-drop-target')).toBe('')
    await page.mouse.up()
   }
-  const toggle = page.locator('.eb-workspace-toggle')
-  await toggle.hover()
-  await browserTabs.locator('[data-workspace-native-view=chat]').waitFor()
+  expect(await browserControls.count()).toBe(1)
+  expect(await browserControls.isVisible()).toBe(false)
+  expect(await page.locator('.eb-tab-switcher').isVisible()).toBe(true)
+  expect(await page.locator('.eb-tab').first().isVisible()).toBe(true)
+  expect(await page.locator('.workspace-back-button').isVisible()).toBe(false)
+  expect(await page.locator('.eb-toolbar [data-action=back]').isVisible()).toBe(true)
+  expect(await homeTabs.isVisible()).toBe(false)
+  const maskGeometry = button => button.evaluate(element => {
+   const icon = getComputedStyle(element, '::before')
+   return [element.getBoundingClientRect().width, icon.width, icon.maskSize]
+  })
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '浏览器' }))).toEqual([36, '28px', '24px'])
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '知识库' }))).toEqual([36, '28px', '27px'])
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '笔记' }))).toEqual([36, '28px', '23px'])
+  const activeRail = () => sidebar.locator('[aria-pressed=true]').getAttribute('data-navigation-app')
+  for (const [surface, app] of [['browser', 'browser'], ['image-factory', 'image-factory'], ['notes', 'note'], ['scheduled', 'scheduled']]) {
+   await page.evaluate(next => { document.body.dataset.workspaceSurface = next }, surface)
+   await expect.poll(activeRail).toBe(app)
+   expect(await page.locator('[data-sidebar-home]').getAttribute('aria-pressed')).toBe('false')
+  }
+  await page.evaluate(() => { delete document.body.dataset.workspaceSurface })
+  await expect.poll(() => page.locator('[data-sidebar-home]').getAttribute('aria-pressed')).toBe('true')
   await drag(sidebar.locator('[data-navigation-slot="2"]'), true)
   expect(await sidebar.locator('[data-navigation-slot="2"]').getAttribute('data-navigation-app')).toBe('image-factory')
   expect(await page.evaluate(() => window.shortcutOpens)).toEqual([])
@@ -633,91 +652,32 @@ it('shares editable shortcuts between the composer, the collapsed sidebar and th
   await menu.getByRole('menuitem', { name: '快捷管理' }).click()
   await page.locator('body[data-navigation-editing]').waitFor()
   expect(await source.locator('span').evaluate(node => getComputedStyle(node).animationName)).toBe('navigation-shortcut-wiggle')
-  await drag(homeTabs.locator('[data-navigation-slot="3"]'), false)
-  expect(await homeTabs.locator('[data-navigation-slot="3"]').textContent()).toBe('图像')
+  expect(await page.locator('#session-title').isVisible()).toBe(true)
+  expect(await homeTabs.isVisible()).toBe(false)
+  await drag(sidebar.locator('[data-navigation-slot="5"]'), false, page.locator('[data-home-app=plugin]'))
   await page.keyboard.press('Escape')
-  await page.evaluate(() => {
-   window.shortcutManager.reload()
-   document.querySelector('.eb-root').hidden = false
-  })
-  await toggle.hover()
-  const saved = browserTabs.locator('[data-navigation-slot="3"]')
-  await saved.waitFor()
-  expect(await saved.textContent()).toBe('图像')
-  expect(await browserTabs.locator('[data-navigation-slot]').count()).toBe(4)
+  await page.evaluate(() => window.shortcutManager.reload())
+  const saved = sidebar.getByRole('button', { name: '图像' })
+  expect(await saved.getAttribute('data-navigation-slot')).toBe('2')
+  expect(await sidebar.locator('[data-navigation-slot="5"]').getAttribute('aria-label')).toBe('插件')
+  expect(await page.evaluate(() => window.savedShortcuts.top)).toEqual(['research', 'knowledge', 'browser', 'scheduled'])
+  expect(await sidebar.locator('button:visible').count()).toBe(6)
   await saved.click()
   expect(await page.evaluate(() => window.shortcutOpens)).toEqual(['image-factory'])
   await saved.click({ button: 'right' })
   await menu.waitFor()
   const box = await menu.boundingBox()
   expect([box.width, box.height]).toEqual([128, 64])
-  await page.evaluate(() => window.update())
   await menu.getByRole('menuitem', { name: '编辑快捷入口' }).click()
-  await page.locator('[data-navigation-delete][aria-label="删除图像"]').first().waitFor()
+  await page.locator('[data-navigation-delete][aria-label="删除图像"]').click()
+  expect(await sidebar.locator('button:visible').count()).toBe(6)
+  expect(await sidebar.locator('[data-empty]:visible').count()).toBe(1)
+  expect(await sidebar.locator('[data-navigation-slot="2"]').getAttribute('aria-label')).toBe('笔记')
+  expect(await homeTabs.isVisible()).toBe(false)
   await page.keyboard.press('Escape')
-  await saved.click({ button: 'right' })
-  await menu.getByRole('menuitem', { name: '删除快捷入口' }).click()
-  expect(await homeTabs.locator('[data-navigation-slot="3"]').getAttribute('data-empty')).toBe('')
-  expect(await saved.isVisible()).toBe(false)
-  expect(errors).toEqual([])
- } finally { await page.close() }
-})
-
-it('keeps full-size shortcut labels and hover styles, and compacts the rail after a badge click', async () => {
- const { page, errors } = await fixture(980, 720)
- try {
-  await page.evaluate(() => {
-   document.querySelector('.pI_x6G_centerCol').insertAdjacentHTML('beforeend', `
-    <header class="wSkVaW_header"><div data-srb-tabs>
-     <button class="wSkVaW_tab" data-conversation-view-id="chat">对话</button>
-     <button class="wSkVaW_tab" data-conversation-view-id="research">研究</button>
-     <button class="wSkVaW_tab" data-conversation-view-id="notes">笔记</button>
-     <button class="wSkVaW_tab" data-conversation-view-id="spreadsheet">表格</button>
-    </div></header>`)
-   document.body.insertAdjacentHTML('beforeend', `
-    <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
-     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home>主页</button><span class="st-more-zone"></span></div>
-    </aside>`)
-   window.mountNavigationShortcuts(document, {
-    read: () => ({ top: ['research', 'knowledge', 'browser', 'scheduled'], side: ['browser', 'knowledge', 'image-factory'] }),
-    save: value => { window.savedShortcuts = value; return true },
-    open: () => {}
-   })
-   document.querySelector('.eb-root').hidden = true
-  })
-  const root = page.locator('[data-srb-tabs]')
-  const labelsFit = nav => nav.locator('button:not([data-navigation-unpinned])').evaluateAll(buttons =>
-   buttons.filter(button => button.getClientRects().length).every(button => button.scrollWidth <= button.clientWidth))
-  const style = label => root.getByText(label, { exact: true }).evaluate(button => {
-   const { fontSize, fontWeight, lineHeight, backgroundColor } = getComputedStyle(button)
-   return { fontSize, fontWeight, lineHeight, backgroundColor }
-  })
-  const original = await style('研究')
-  const idle = await style('定时任务')
-  expect(idle).toEqual(original)
-  expect(await labelsFit(root)).toBe(true)
-  await root.getByText('定时任务').hover()
-  const hovered = (await style('定时任务')).backgroundColor
-  expect(hovered).not.toBe(idle.backgroundColor)
-  await root.getByText('研究').hover()
-  expect((await style('研究')).backgroundColor).toBe(hovered)
-
-  await root.getByText('定时任务').click({ button: 'right' })
-  await page.getByRole('menuitem', { name: '编辑快捷入口' }).click()
-  const sidebar = page.locator('[data-navigation-rail]')
-  await page.locator('[data-navigation-delete][data-navigation-region=side][aria-label="删除知识库"]').click()
-  expect(await sidebar.locator('[data-navigation-slot="1"]').getAttribute('aria-label')).toBe('图像')
-  expect(await sidebar.locator('button:visible').count()).toBe(4)
-  expect(await sidebar.locator('[data-empty]:visible').count()).toBe(2)
-  expect(await page.evaluate(() => window.savedShortcuts.side)).toEqual(['browser', 'image-factory', null, null])
-
-  await page.keyboard.press('Escape')
-  expect(await sidebar.locator('button:visible').count()).toBe(4)
+  expect(await sidebar.locator('button:visible').count()).toBe(6)
   await page.evaluate(() => { document.querySelector('.eb-root').hidden = false })
-  await page.locator('.eb-workspace-toggle').hover()
-  const appTabs = page.locator('.eb-workspace-tabs[aria-hidden=false]')
-  await appTabs.getByText('定时任务').waitFor()
-  expect(await labelsFit(appTabs)).toBe(true)
+  expect(await browserControls.isVisible()).toBe(false)
   expect(errors).toEqual([])
  } finally { await page.close() }
 })

@@ -39,7 +39,7 @@
   width:28px;
   height:28px;
   background:currentColor;
-  mask:var(--home-app-icon) center/contain no-repeat;
+  mask:var(--home-app-icon) var(--navigation-icon-position, center)/var(--navigation-icon-size, contain) no-repeat;
   opacity:.6;
   transition:transform 160ms ease,opacity 160ms ease;
 }

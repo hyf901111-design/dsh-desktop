@@ -83,7 +83,7 @@ export async function waitForHomeGuideNativeView(document:Document,sessionId:str
    if(header?.dataset.eworkNotesSession!==sessionId)return false
    try{
     homeGuideTargetPoint(document,resident)
-    if(tabs){if(tab?.getAttribute('aria-selected')!=='true')return false;if(!tab.hasAttribute('data-navigation-unpinned'))homeGuideTargetPoint(document,tab);return true}
+    if(tabs){if(tab?.getAttribute('aria-selected')!=='true')return false;if(!document.documentElement.hasAttribute('data-navigation-sidebar-only'))homeGuideTargetPoint(document,tab);return true}
     // Dedicated Boards intentionally omit mode tabs. Their ordinary canvas is
     // also suppressed while the guide's transition owns the resident. Read the
     // actual React render's session/mode, not the absence of a tab or canvas.

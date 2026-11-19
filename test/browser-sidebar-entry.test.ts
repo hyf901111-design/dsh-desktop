@@ -1,7 +1,8 @@
 import {Window,HTMLButtonElement as TestButton} from 'happy-dom'
 import {it,expect,vi} from 'vitest'
-import filledResearchIcon from '../build/brand/odyssey-b-research-18.svg?inline'
-import filledChatIcon from '../build/brand/odyssey-b-new-chat-18.svg?inline'
+import filledResearchIcon from '../build/brand/odyssey-app-research.svg?inline'
+import filledChatIcon from '../src/preload/browser/assets/chat.svg?inline'
+import spreadsheetIcon from '../build/brand/odyssey-app-spreadsheet.svg?inline'
 import workspaceAddIcon from '../build/brand/odyssey-b-workspace-add-18.svg?inline'
 import {ScheduledTaskView} from '../src/preload/scheduled/view'
 import {createHomeGuideEntryClient,installHomeGuideEntryNative} from '../src/preload/home-guide-entry-native'
@@ -14,7 +15,7 @@ const fixture=(wide:boolean)=>{
 }
 it('places browser after New Note in expanded More and uses the same open action',async()=>{
  const {w}=fixture(true),open=vi.fn();w.addEventListener('sherlock:browser-request',open)
- try{(w.document.querySelector('.st-more')as any).click();const rows=[...w.document.querySelectorAll<TestButton>('[role=menuitem]')];expect(rows.map(x=>x.textContent)).toEqual(['新笔记','新建表格','浏览器','知识库','图像','插件','定时任务']);rows[2]!.click();expect(open).toHaveBeenCalledOnce()}finally{await w.happyDOM.abort();vi.unstubAllGlobals()}
+ try{(w.document.querySelector('.st-more')as any).click();const rows=[...w.document.querySelectorAll<TestButton>('[role=menuitem]')];expect(rows.map(x=>x.textContent)).toEqual(['新笔记','表格','浏览器','知识库','图像','插件','定时任务']);rows[2]!.click();expect(open).toHaveBeenCalledOnce()}finally{await w.happyDOM.abort();vi.unstubAllGlobals()}
 })
 it('opens Image Factory from expanded More and dismisses the menu', async () => {
  const { w } = fixture(true)
@@ -46,7 +47,7 @@ it('dismisses expanded More even when the canvas stops pointer bubbling', async 
 })
 it('provides a persistent collapsed browser button and keeps collapsed More focused on other actions',async()=>{
  const {w,view}=fixture(false),open=vi.fn(),openKnowledge=vi.fn();w.addEventListener('sherlock:browser-request',open);w.addEventListener('sherlock:knowledge-open',openKnowledge)
- try{const button=w.document.querySelector<TestButton>('[data-sidebar-browser]');expect(button).not.toBeNull();expect(button!.getAttribute('aria-label')).toBe('浏览器');const group=w.document.querySelector('.hHd-Xa_newSessionGroup')!;expect(group.querySelector('[data-sidebar-app-separator]')).toBeNull();expect(button!.previousElementSibling).toBe(group.querySelector('[data-sidebar-home]'));const knowledge=group.querySelector<TestButton>('[data-sidebar-knowledge]')!;const factory=group.querySelector<TestButton>('[data-sidebar-image-factory]')!;expect(button!.nextElementSibling).toBe(factory);expect(factory.nextElementSibling).toBe(knowledge);const openFactory=vi.fn();w.addEventListener('sherlock:image-factory-open',openFactory);factory.click();expect(openFactory).toHaveBeenCalledOnce();expect(knowledge.nextElementSibling).toBe(group.querySelector('.st-more-zone'));button!.click();expect(open).toHaveBeenCalledOnce();w.document.body.dataset.workspaceSurface='browser';w.document.dispatchEvent(new w.CustomEvent('sherlock:workspace-surface-change'));expect(button!.getAttribute('aria-pressed')).toBe('true');button!.dispatchEvent(new w.MouseEvent('mouseleave'));button!.click();expect(open).toHaveBeenCalledTimes(2);expect(button!.getAttribute('aria-pressed')).toBe('true');knowledge.click();expect(openKnowledge).toHaveBeenCalledOnce();w.document.body.dataset.workspaceSurface='knowledge';w.document.dispatchEvent(new w.CustomEvent('sherlock:workspace-surface-change'));expect(knowledge.getAttribute('aria-pressed')).toBe('true');expect(button!.getAttribute('aria-pressed')).toBe('false');(w.document.querySelector('.st-more')as any).click();expect([...w.document.querySelectorAll('[role=menuitem]')].map(x=>x.textContent)).toEqual(['新建工作区','新建对话','新建研究','新建笔记','新建表格','插件','定时任务']);w.document.querySelector('aside')!.setAttribute('data-dsh-sidebar-wide','true');(view as any).mountMore();expect(w.document.querySelector('[data-sidebar-browser]')).toBeNull();expect(w.document.querySelector('[data-sidebar-app-separator]')).toBeNull()}finally{await w.happyDOM.abort();vi.unstubAllGlobals()}
+ try{const button=w.document.querySelector<TestButton>('[data-sidebar-browser]');expect(button).not.toBeNull();expect(button!.getAttribute('aria-label')).toBe('浏览器');const group=w.document.querySelector('.hHd-Xa_newSessionGroup')!;expect(group.querySelector('[data-sidebar-app-separator]')).toBeNull();expect(button!.previousElementSibling).toBe(group.querySelector('[data-sidebar-home]'));const knowledge=group.querySelector<TestButton>('[data-sidebar-knowledge]')!;const factory=group.querySelector<TestButton>('[data-sidebar-image-factory]')!;expect(button!.nextElementSibling).toBe(factory);expect(factory.nextElementSibling).toBe(knowledge);const openFactory=vi.fn();w.addEventListener('sherlock:image-factory-open',openFactory);factory.click();expect(openFactory).toHaveBeenCalledOnce();expect(knowledge.nextElementSibling).toBe(group.querySelector('.st-more-zone'));button!.click();expect(open).toHaveBeenCalledOnce();w.document.body.dataset.workspaceSurface='browser';w.document.dispatchEvent(new w.CustomEvent('sherlock:workspace-surface-change'));expect(button!.getAttribute('aria-pressed')).toBe('true');button!.dispatchEvent(new w.MouseEvent('mouseleave'));button!.click();expect(open).toHaveBeenCalledTimes(2);expect(button!.getAttribute('aria-pressed')).toBe('true');knowledge.click();expect(openKnowledge).toHaveBeenCalledOnce();w.document.body.dataset.workspaceSurface='knowledge';w.document.dispatchEvent(new w.CustomEvent('sherlock:workspace-surface-change'));expect(knowledge.getAttribute('aria-pressed')).toBe('true');expect(button!.getAttribute('aria-pressed')).toBe('false');(w.document.querySelector('.st-more')as any).click();expect([...w.document.querySelectorAll('[role=menuitem]')].map(x=>x.textContent)).toEqual(['新建工作区','对话','研究','新建笔记','表格','插件','定时任务']);w.document.querySelector('aside')!.setAttribute('data-dsh-sidebar-wide','true');(view as any).mountMore();expect(w.document.querySelector('[data-sidebar-browser]')).toBeNull();expect(w.document.querySelector('[data-sidebar-app-separator]')).toBeNull()}finally{await w.happyDOM.abort();vi.unstubAllGlobals()}
 })
 it('reuses one collapsed browser entry between quick creation and More across sidebar modes',async()=>{
  const {w,view}=fixture(false),open=vi.fn();w.addEventListener('sherlock:browser-request',open)
@@ -73,8 +74,8 @@ it('routes the five collapsed creation entries with the filled sidebar icons', a
  const more=w.document.querySelector<TestButton>('.st-more')!
  try {
   for (const [label,callback,expectedIcon] of [
-   ['新建工作区',workspace,workspaceAddIcon],['新建对话',chat,filledChatIcon],['新建研究',research,filledResearchIcon],
-   ['新建笔记',actions.newNote,undefined],['新建表格',actions.newSpreadsheet,undefined]
+   ['新建工作区',workspace,workspaceAddIcon],['对话',chat,filledChatIcon],['研究',research,filledResearchIcon],
+   ['新建笔记',actions.newNote,undefined],['表格',actions.newSpreadsheet,spreadsheetIcon]
   ] as const) {
    more.click()
    const item=[...w.document.querySelectorAll<TestButton>('[role=menuitem]')].find(entry=>entry.textContent===label)
@@ -116,7 +117,7 @@ it('closes More as soon as the spreadsheet demo clicks New Spreadsheet',async()=
   more.click()
   expect(more.getAttribute('aria-expanded')).toBe('true')
   const menu=document.querySelector('[data-sidebar-more]')!
-  const target=[...menu.querySelectorAll('button')].find(button=>button.textContent==='新建表格')!
+  const target=[...menu.querySelectorAll('button')].find(button=>button.textContent==='表格')!
   target.getBoundingClientRect=()=>new w.DOMRect(10,10,100,35) as unknown as DOMRect
   await client.prepare(target,'new-spreadsheet')
   pending=client.commit(target)
@@ -141,7 +142,7 @@ it('closes More as soon as the spreadsheet demo clicks New Spreadsheet',async()=
  }
 })
 
-it.each([['board','新建研究','new-research'],['workbench','新建研究','new-research'],['ppt','新建对话','new-chat'],['report','新建对话','new-chat']] as const)('closes More and opens only the prepared %s through its matching action',async(kind,label,action)=>{
+it.each([['board','研究','new-research'],['workbench','研究','new-research'],['ppt','对话','new-chat'],['report','对话','new-chat']] as const)('closes More and opens only the prepared %s through its matching action',async(kind,label,action)=>{
  const {w}=fixture(false),document=w.document as unknown as Document
  const more=document.querySelector<HTMLButtonElement>('.st-more')!
  const home=document.querySelector<HTMLButtonElement>('[data-sidebar-home]')!
