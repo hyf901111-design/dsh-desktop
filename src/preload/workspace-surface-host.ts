@@ -27,6 +27,7 @@ export class WorkspaceSurfaceHost {
             document.head.append(style);
         }
         document.addEventListener('sherlock:search-session-opened', this.onSessionOpened);
+        document.addEventListener('sherlock:sidebar-document-will-open', this.onSidebarDocumentWillOpen);
         document.addEventListener('sherlock:sidebar-home-opened', this.closeAll);
         document.addEventListener('click', this.onNavigate, true);
         document.defaultView?.addEventListener('resize', this.schedulePosition);
@@ -195,6 +196,12 @@ export class WorkspaceSurfaceHost {
     // The native notes view owns its lifecycle. Opening the same session does
     // not unmount it and must not hide its content behind a selected tab.
     private onSessionOpened = () => { if (this.current()?.surface !== 'notes') this.closeAll(); };
+    private onSidebarDocumentWillOpen = (event: Event) => {
+        const view = (event as CustomEvent<{ view: 'notes' | 'spreadsheet' }>).detail?.view;
+        const surface = this.current()?.surface;
+        if (surface && (view === 'spreadsheet' || (view === 'notes' && surface !== 'notes')))
+            this.closeAll();
+    };
     private onNavigate = (event: Event) => {
         if (!this.current())
             return;
@@ -214,6 +221,7 @@ export class WorkspaceSurfaceHost {
         this.observer?.disconnect();
         this.resizeObserver?.disconnect();
         this.document.removeEventListener('sherlock:search-session-opened', this.onSessionOpened);
+        this.document.removeEventListener('sherlock:sidebar-document-will-open', this.onSidebarDocumentWillOpen);
         this.document.removeEventListener('sherlock:sidebar-home-opened', this.closeAll);
         this.document.removeEventListener('click', this.onNavigate, true);
         this.document.defaultView?.removeEventListener('resize', this.schedulePosition);

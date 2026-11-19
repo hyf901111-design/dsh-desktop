@@ -459,7 +459,8 @@ function initializeUi(): void {
   const openSidebarDocument = async (app: 'note' | 'spreadsheet', signal?: AbortSignal) => {
     const previousSurface = workspaceSurfaceHost.current()?.surface
     await (app === 'note' ? sidebarNewNote : sidebarNewSpreadsheet).create(signal)
-    if (previousSurface && !(app === 'note' && previousSurface === 'notes')) workspaceSurfaceHost.close(previousSurface)
+    if (previousSurface && workspaceSurfaceHost.current()?.surface === previousSurface &&
+        !(app === 'note' && previousSurface === 'notes')) workspaceSurfaceHost.close(previousSurface)
   }
   let navigationShortcuts: ReturnType<typeof mountNavigationShortcuts> | undefined
   const scheduledView = new ScheduledTaskView(document, {

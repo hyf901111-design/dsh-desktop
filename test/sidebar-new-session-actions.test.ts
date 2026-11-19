@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm'
 import { Window } from 'happy-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { patchSessionViewPreferences } from '../scripts/lib/session-view-preferences.mjs'
+import { WorkspaceSurfaceHost } from '../src/preload/workspace-surface-host'
 
 type ClientBundle = Record<string, unknown>
 type BundleDescriptor = {
@@ -13,6 +14,7 @@ type BundleDescriptor = {
 }
 
 const requireModule = createRequire(import.meta.url)
+const { installImageFactoryContext } = requireModule('../scripts/lib/image-factory-native.mjs')
 const react = requireModule('react') as Record<string, unknown>
 const jsxRuntime = requireModule('react/jsx-runtime') as Record<string, unknown>
 const { createElement } = react as {
@@ -184,6 +186,31 @@ async function newNoteFixture(){
 }
 
 describe('normal new Note workspace flow',()=>{
+ it.each(['note','spreadsheet'] as const)('hands off Images before opening a new %s session',async kind=>{
+  const f=await newNoteFixture()
+  const doc=f.w.document as unknown as Document
+  const host=new WorkspaceSurfaceHost(doc)
+  const images=installImageFactoryContext({sessions:f.sessions,doc,win:f.w})
+  const action=createSidebarNewNoteAction(doc,async()=>{},kind)
+  vi.stubGlobal('fetch',vi.fn(async()=>Response.json({ok:true})))
+  try {
+   host.register('image-factory',doc.createElement('section'))
+   host.open('image-factory')
+   let scopes:unknown[]=[]
+   doc.addEventListener('sherlock:image-factory-task-state',event=>{scopes=(event as CustomEvent).detail.tabs.map((tab:{scope:unknown})=>tab.scope)})
+   doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session',{detail:{entry:true}}))
+   expect(scopes).toEqual(['old'])
+   f.api.sessions.create.mockRejectedValueOnce(Error('host offline'))
+   await expect(action.create()).rejects.toThrow('host offline')
+   expect(host.current()?.surface).toBe('image-factory')
+   await action.create()
+   const id=f.sessions.list.getSnapshot().current
+   expect(id).toBe('new-note-1')
+   expect(host.current()).toBeUndefined()
+   expect(f.chatStore.create(id).getSnapshot().view).toBe(kind==='note'?'notes':'spreadsheet')
+   expect(scopes).toEqual(['old'])
+  } finally {action.dispose();images.dispose();host.dispose();f.stop()}
+ })
  it.each(['note','spreadsheet'] as const)('opens a new %s session without reusing the research board session',async kind=>{
   const f=await newNoteFixture()
   const doc=f.w.document as unknown as Document
