@@ -149,6 +149,14 @@ body[data-navigation-editing] [data-navigation-rail] > [data-navigation-slot] {
   cursor: default;
 }
 body[data-navigation-picking] [data-navigation-slot] { cursor: copy }
+body[data-navigation-editing] [data-navigation-rail] > [data-navigation-slot]:not([data-empty]) {
+  touch-action: none;
+  -webkit-app-region: no-drag;
+}
+body[data-navigation-editing]:not([data-navigation-picking]) [data-navigation-rail] > [data-navigation-slot]:not([data-empty]) {
+  cursor: grab;
+}
+body[data-navigation-editing] [data-navigation-slot][data-navigation-drag-source]::before { opacity: .35 }
 body[data-navigation-editing] [data-navigation-slot][data-drop-target] {
   background: var(--navigation-slot-target) !important;
   outline-color: currentColor;

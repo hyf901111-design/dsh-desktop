@@ -34,7 +34,7 @@ type Bridge = {
 }
 
 type PointerHold = {
-  id: number; x: number; y: number; app: NavigationApp
+  id: number; x: number; y: number; app: NavigationShortcut; slot?: HTMLButtonElement
   timer?: number; armed: boolean; moving: boolean
 }
 
@@ -193,11 +193,18 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     hovering?.removeAttribute('data-drop-target')
     hovering = null
   }
-  function canDrop(button: HTMLButtonElement, app: NavigationApp) {
+  function canDrop(button: HTMLButtonElement, app: NavigationShortcut) {
     return button.dataset.navigationApp !== app
+  }
+  function dropTarget(event: PointerEvent, hold: PointerHold) {
+    const slot = targetAt(doc.elementFromPoint(event.clientX, event.clientY))
+    if (!slot || !canDrop(slot, hold.app)) return null
+    if (hold.slot && (slot.hasAttribute('data-empty') || hold.slot.dataset.navigationApp !== hold.app)) return null
+    return slot
   }
   function stopPointer() {
     if (pointer?.timer !== undefined) win.clearTimeout(pointer.timer)
+    pointer?.slot?.removeAttribute('data-navigation-drag-source')
     pointer = undefined
     ghost.remove()
     clearHover()
@@ -356,19 +363,22 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     const target = event.target as Element
     if (!target.closest('[data-navigation-menu]')) closeMenu()
     const source = target.closest<HTMLButtonElement>(sourceSelector)
-    const app = source?.dataset.homeApp
-    if (!source || !isNavigationApp(app)) {
+    const homeApp = source?.dataset.homeApp
+    const slot = editing ? targetAt(target) : null
+    const app = isNavigationApp(homeApp) ? homeApp : slot?.dataset.navigationApp
+    if (!isNavigationShortcut(app)) {
       if (!target.closest(slotSelector + ',[data-navigation-menu],[data-navigation-delete],.st-more-zone,.st-menu[data-sidebar-more]')) setEditing(false)
       return
     }
     stopPointer()
-    const hold: PointerHold = { id: event.pointerId, x: event.clientX, y: event.clientY, app, armed: editing, moving: false }
+    const hold: PointerHold = { id: event.pointerId, x: event.clientX, y: event.clientY, app, slot: slot ?? undefined, armed: editing, moving: false }
     pointer = hold
-    if (editing) setEditing(true, app)
+    if (!isNavigationApp(homeApp)) return
+    if (editing) setEditing(true, homeApp)
     else hold.timer = win.setTimeout(() => {
-      if (pointer !== hold || !source.isConnected) return
+      if (pointer !== hold || !source?.isConnected) return
       hold.armed = true
-      setEditing(true, app)
+      setEditing(true, homeApp)
     }, holdTime)
   }
   function onPointerMove(event: PointerEvent) {
@@ -382,14 +392,14 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     if (!hold.moving && distance <= 6) return
     hold.moving = true
     if (!ghost.isConnected) {
+      hold.slot?.setAttribute('data-navigation-drag-source', '')
       ghost.dataset.navigationApp = hold.app
       ghost.style.setProperty('--navigation-glyph', navigationAppIcon(hold.app))
       doc.body.append(ghost)
     }
     ghost.style.left = event.clientX + 'px'
     ghost.style.top = event.clientY + 'px'
-    const slot = targetAt(doc.elementFromPoint(event.clientX, event.clientY))
-    const next = slot && picked && canDrop(slot, picked) ? slot : null
+    const next = dropTarget(event, hold)
     if (hovering !== next) {
       clearHover()
       hovering = next
@@ -399,9 +409,9 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   function onPointerUp(event: PointerEvent) {
     const hold = pointer
     if (!hold || hold.id !== event.pointerId) return
-    consumeClick = hold.armed
-    const slot = hold.moving ? targetAt(doc.elementFromPoint(event.clientX, event.clientY)) : null
-    if (slot && picked && canDrop(slot, picked)) {
+    consumeClick = hold.slot ? hold.moving : hold.armed
+    const slot = hold.moving ? dropTarget(event, hold) : null
+    if (slot) {
       apply(slot, hold.app)
       setEditing(true)
     }
@@ -463,7 +473,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     }
   }
   function onDragStart(event: DragEvent) {
-    if ((event.target as Element)?.closest(sourceSelector)) event.preventDefault()
+    if ((event.target as Element)?.closest(sourceSelector + ',' + slotSelector)) event.preventDefault()
   }
 
   const lifetime = new win.AbortController()
@@ -471,14 +481,13 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   for (const type of ['pointerover', 'pointerout', 'focusin', 'focusout'] as const) {
     doc.addEventListener(type, hoverTooltip, options)
   }
-  win.addEventListener('blur', hideTooltip, options)
+  win.addEventListener('blur', () => { hideTooltip(); stopPointer() }, { signal: lifetime.signal })
   win.addEventListener('resize', hideTooltip, options)
   win.addEventListener('contextmenu', onContext, options)
   win.addEventListener('pointerdown', onPointerDown, options)
   win.addEventListener('pointermove', onPointerMove, options)
   win.addEventListener('pointerup', onPointerUp, options)
   win.addEventListener('pointercancel', stopPointer, options)
-  win.addEventListener('blur', stopPointer, options)
   win.addEventListener('click', onClick, options)
   win.addEventListener('keydown', onKey, options)
   win.addEventListener('dragstart', onDragStart, options)
