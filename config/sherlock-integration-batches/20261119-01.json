@@ -1,0 +1,224 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261119-01",
+  "branch": "codex/integration/20261119-01",
+  "baseMainCommit": "f0c8724d85faf1b7260725fc145aefab019873de",
+  "expectedMainCommit": "f0c8724d85faf1b7260725fc145aefab019873de",
+  "createdAt": "2026-11-19T00:16:22.806Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究看板组件滚动交接、易方达网页滑轨和信息块样式",
+        "branch": "codex/feat/research-board-wheel-20261119",
+        "baseCommit": "f0c8724d85faf1b7260725fc145aefab019873de",
+        "tipCommit": "c41710f3386b72589e1ad960dd4f56bd6f902337",
+        "commits": [
+          {
+            "commit": "c41710f3386b72589e1ad960dd4f56bd6f902337",
+            "parents": [
+              "f0c8724d85faf1b7260725fc145aefab019873de"
+            ],
+            "subject": "修复选中组件后的看板滚动并统一网页滑轨与色块样式"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-frame-wheel.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-webpage-compact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-webpage-preview.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/_meta.json"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/adaptation-and-acceptance.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/generation-core.md"
+          },
+          {
+            "status": "M",
+            "path": "test/research-html-theme.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-auto-arrange-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "生产渲染器补丁编译",
+            "verifiedCommit": "c41710f3386b72589e1ad960dd4f56bd6f902337",
+            "completedAt": "2026-11-19T00:15:45.276915+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "客户端类型检查",
+            "verifiedCommit": "c41710f3386b72589e1ad960dd4f56bd6f902337",
+            "completedAt": "2026-11-19T00:15:59.429650+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "--maxWorkers=3",
+              "test/workbench-execution-policy.test.js",
+              "test/attachment-template.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/research-file-preview.test.ts",
+              "test/component-wheel-zoom.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/workbench-webpage-file.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "验证生成策略、工作台网页、组件滚动和权限绑定",
+            "verifiedCommit": "c41710f3386b72589e1ad960dd4f56bd6f902337",
+            "completedAt": "2026-11-19T00:15:55.336777+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "wheel|工作台选择状态"
+            ],
+            "outcome": "passed",
+            "summary": "组件框架的滚轮传递和选择状态",
+            "verifiedCommit": "c41710f3386b72589e1ad960dd4f56bd6f902337",
+            "completedAt": "2026-11-19T00:15:47.465954+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-auto-arrange-browser.test.js",
+              "-t",
+              "fits a portable webpage|preserves compact webpage layout|flattens older"
+            ],
+            "outcome": "passed",
+            "summary": "在 Chromium 中检验嵌套滚动、看板滚动、主题像素和键盘交互",
+            "verifiedCommit": "c41710f3386b72589e1ad960dd4f56bd6f902337",
+            "completedAt": "2026-11-19T00:16:04.830979+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 已用真实滚轮验证包含嵌套明细的选中网页与看板交接，并取样验证实际轨道像素及键盘焦点。"
+        },
+        "acceptanceCriteria": [
+          "当前方向还有可滚内容时组件先滚，短内容和内部边缘能上下滚动看板且保留选中。",
+          "易方达滑轨浅灰，已选段和滑块跟随系列蓝或青，信息块采用无描边直角。",
+          "已保存的工作台网页打开即应用，生成指令与新建文件符合相同约定。"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-19T00:16:04.831275+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "--maxWorkers=3",
+        "test/workbench-execution-policy.test.js",
+        "test/attachment-template.test.js",
+        "test/bundled-component-skill.test.js",
+        "test/bundled-skill-parity.test.ts",
+        "test/research-file-preview.test.ts",
+        "test/component-wheel-zoom.test.js",
+        "test/research-canvas-wheel-pass-through.test.js",
+        "test/workbench-webpage-file.test.js"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/research-html-theme.test.js",
+        "-t",
+        "wheel|工作台选择状态"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "./node_modules/.bin/vitest",
+        "run",
+        "test/workbench-auto-arrange-browser.test.js",
+        "-t",
+        "fits a portable webpage|preserves compact webpage layout|flattens older"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
