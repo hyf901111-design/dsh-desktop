@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest'
 import { installImageFactoryContext } from '../scripts/lib/image-factory-native.mjs'
 import { readImageFactoryContext } from '../packages/dsh-research-task-runtime/image-factory-context.js'
 
-function fixture(taskStorage, removeProvisionalReference, workspace = () => 'test-workspace') {
+function fixture(taskStorage, removeProvisionalReference, workspace = () => 'test-workspace', options = {}) {
   const win = new Window(), doc = win.document
   if (vi.isFakeTimers()) {
     win.setTimeout = (fn, ms) => setTimeout(fn, ms)
@@ -48,7 +48,7 @@ function fixture(taskStorage, removeProvisionalReference, workspace = () => 'tes
     getInput: id => shells.get(id),
     getPending: () => ({ shell, submitExternal: async submit => { handoff(); await submit(session.sessionId) } }),
     send: (...args) => binding.prompt(...args), doc, win, taskStorage, removeProvisionalReference,
-    getTaskWorkspace: workspace, standaloneDirectory: async () => '/tmp/standalone/outputs', setTaskView: setView,
+    getTaskWorkspace: workspace, standaloneDirectory: async () => '/tmp/standalone/outputs', setTaskView: setView, ...options,
   })
   const respond = (error) => doc.addEventListener('sherlock:image-factory-prepare', ({ detail }) => {
     events('prepared', { id: detail.id, ...(error ? { error } : {
@@ -182,7 +182,7 @@ it('restores the selected Images tab when returning from another app', async () 
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
-it('keeps the newly selected workspace when Images resumes an older project tab', async () => {
+it('opens a fresh image gallery in the new default while preserving the previous edited tab', async () => {
   const projects = new Map([['native-session', 'original-workspace'], ['new-workspace-chat', 'new-workspace']])
   let pendingProject
   const f = fixture(undefined, undefined, (id = f.sessionsState.current) => id == null ? pendingProject : projects.get(id))
@@ -197,18 +197,19 @@ it('keeps the newly selected workspace when Images resumes an older project tab'
     expect(tasks.active).toBe('native-session')
 
     f.doc.body.dataset.workspaceSurface = 'browser'
+    pendingProject = 'new-workspace'
     f.sessionsState.byId['new-workspace-chat'] = { blank: true }
     f.sessionCatalog.open('new-workspace-chat')
     showImages()
-    expect(f.sessionsState.current).toBe('new-workspace-chat')
-    expect(tasks.tabs.map(tab => tab.scope)).toEqual(['native-session', 'new-workspace-chat'])
+    expect(f.sessionsState.current).toBeUndefined()
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual(['native-session', null])
 
     f.doc.body.dataset.workspaceSurface = 'notes'
     projects.set('new-workspace-note', 'new-workspace')
     f.sessionsState.byId['new-workspace-note'] = { blank: true }
     f.sessionCatalog.open('new-workspace-note')
     showImages()
-    expect(f.sessionsState.current).toBe('new-workspace-chat')
+    expect(f.sessionsState.current).toBeUndefined()
     expect(tasks.tabs).toHaveLength(2)
 
     f.doc.body.dataset.workspaceSurface = 'browser'
@@ -218,6 +219,64 @@ it('keeps the newly selected workspace when Images resumes an older project tab'
     expect(f.sessionsState.current).toBeUndefined()
     expect(tasks.active).toBeNull()
     expect(f.sessionCatalog.create).not.toHaveBeenCalled()
+  } finally {
+    f.binding.dispose()
+    await f.win.happyDOM.abort()
+  }
+})
+
+it.each(['new-workspace', null])('drops untouched image tabs on return after selecting %s elsewhere', async project => {
+  const original = 'original-workspace'
+  let preferred = original
+  const empty = 'native-session'
+  const draft = 'typed-draft'
+  const scopes = [empty, 'saved-canvas', 'working-canvas', 'running-image', draft, 'right-project-draft']
+  const storage = {
+    read: async () => ({ epoch: 4, tabs: scopes.map(scope => ({ scope })), canvasScopes: ['saved-canvas'] }),
+    write: vi.fn(async () => {}),
+  }
+  const f = fixture(storage, undefined, () => original, {
+    getDefaultWorkspace: () => preferred,
+    hasProjectDraftActivity: id => id === 'right-project-draft',
+  })
+  let tasks, canvasScope
+  const show = () => {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { entry: true })
+  }
+  try {
+    for (const id of scopes) f.sessionsState.byId[id] = { blank: true, running: id === 'running-image' }
+    f.shells.get(empty).snapshot.draft = ''
+    f.shells.set(draft, { snapshot: { draft: '未发送的海报要求' } })
+    f.doc.addEventListener('sherlock:image-factory-inspect-tab', event => {
+      if (event.detail?.scope === 'working-canvas') event.preventDefault()
+    })
+    f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    f.doc.addEventListener('sherlock:image-factory-session', event => { canvasScope = event.detail.sessionId })
+    show()
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: empty, busy: false }))
+    // Changing the right project leaves the image tab in place, with an empty canvas and draft.
+    preferred = 'picked-in-images'
+    f.events('project-selected', preferred)
+    expect(tasks.active).toBe(empty)
+    f.doc.body.dataset.workspaceSurface = 'browser'
+    preferred = project
+    if (project === null) {
+      f.doc.body.dataset.workspaceSurface = 'image-factory'
+      f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change', { detail: { back: true } }))
+    } else show()
+
+    const expected = [...scopes.slice(1), null]
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual(expected)
+    expect(tasks).toMatchObject({ active: null, canRestore: false })
+    expect(canvasScope).toBeNull()
+    expect(f.sessionsState.current).toBeUndefined()
+    expect(f.sessionCatalog.create).not.toHaveBeenCalled()
+    expect(storage.write.mock.lastCall[0].tabs.map(tab => tab.scope)).toEqual(expected)
+
+    f.events('task-action', { kind: 'select', scope: 'saved-canvas' })
+    expect(tasks.active).toBe('saved-canvas')
+    expect(canvasScope).toBe('saved-canvas')
   } finally {
     f.binding.dispose()
     await f.win.happyDOM.abort()

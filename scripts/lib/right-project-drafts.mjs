@@ -13,12 +13,16 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
     const { draft, imageIds, occurrences } = pending.shell.snapshot
     return Boolean(draft.trim() || imageIds?.length || occurrences?.length)
   }
+  const hasActivity = entry => {
+    const { busy, activating } = entry.pending.getSnapshot()
+    return busy || activating || hasContent(entry)
+  }
   const discard = entry => {
     drafts.delete(entry.id)
     entry.pending.dispose()
   }
   const leave = () => {
-    if (active && !hasContent(active) && !active.pending.getSnapshot().busy && !active.pending.getSnapshot().activating) discard(active)
+    if (active && !hasActivity(active)) discard(active)
     publish(undefined)
   }
   const open = workspaceId => {
@@ -40,6 +44,10 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
   return {
     subscribe(notify) { listeners.add(notify); return () => listeners.delete(notify) },
     getSnapshot: () => active,
+    hasActivityFor(context) {
+      const owner = key(context)
+      return [...drafts.values()].some(entry => entry.key === owner && hasActivity(entry))
+    },
     show(context) {
       if (visible?.key === (context && key(context))) return
       const previousMode = visible?.mode

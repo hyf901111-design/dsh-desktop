@@ -1,6 +1,7 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
-export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, getDefaultWorkspace = getWorkspace, standaloneDirectory, setView, storage, isBoardOnly = () => false }) {
+export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, getDefaultWorkspace = getWorkspace, standaloneDirectory, setView, storage, hasTabActivity, isBoardOnly = () => false }) {
   let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
+  let entryProject, savedCanvasScopes = new Set()
   const validScope = value => value === null ||
     typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
   const canOpen = tab => {
@@ -33,6 +34,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     void storage.read().then(value => {
       if (loading !== token) return
       epoch = value.epoch
+      savedCanvasScopes = new Set(Array.isArray(value.canvasScopes) ? value.canvasScopes.filter(validScope) : [])
       closed = Array.isArray(value.closed) ? value.closed.filter(tab => validScope(tab?.scope)) : []
       const closedScopes = new Set(closed.map(tab => tab.scope))
       const restored = Array.isArray(value.tabs) ? value.tabs.filter(tab => validScope(tab?.scope) && !closedScopes.has(tab.scope)) : []
@@ -61,7 +63,50 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     publish()
     return scope ?? undefined
   }
+  function afterProjectChange(project) {
+    // Project selection and pinning don't give a gallery content of its own.
+    const available = tabs.filter(tab => tab.title || savedCanvasScopes.has(tab.scope) || hasTabActivity(tab.scope))
+    if (available.length !== tabs.length) {
+      tabs = available
+      if (!tabs.some(tab => tab.scope === null)) draftSession = undefined
+      if (!tabs.some(tab => tab.scope === lastCreated)) lastCreated = undefined
+      save()
+    }
+    const matches = tab => canOpen(tab) && getWorkspace(tab.scope ?? draftSession ?? null) === project
+    // Keep a legacy standalone drawing accessible, and keep all edited tabs if the strip is full.
+    const next = tabs.find(tab => tab.scope === active && matches(tab)) ?? tabs.findLast(matches) ??
+      tabs.find(tab => tab.scope === null) ?? (tabs.length >= 32 ? tabs.findLast(canOpen) : undefined)
+    if (next) {
+      active = next.scope
+      select(next.scope, false)
+      publish()
+      return next.scope
+    }
+    if (tabs.length >= 32) {
+      publish()
+      return undefined
+    }
+    if (closed.some(tab => tab.scope === null)) {
+      if (!openToken) void action({ kind: 'new' })
+      return undefined
+    }
+    active = null
+    tabs = [...tabs, { scope: null }]
+    save()
+    select(null, false)
+    publish()
+    return null
+  }
+  function projectSelected(project) {
+    if (isActive()) entryProject = project
+  }
   function reconcile(scope, reopen, entry) {
+    if (entry) {
+      const project = getDefaultWorkspace?.()
+      const changed = entryProject !== undefined && project !== undefined && project !== entryProject
+      if (project !== undefined) entryProject = project
+      if (changed && !reopen) return afterProjectChange(project)
+    }
     const known = tabs.find(tab => tab.scope === scope)
     const closedTab = closed.find(tab => tab.scope === scope)
     const project = entry ? getWorkspace?.() : undefined
@@ -123,6 +168,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     const draft = tabs.find(tab => tab.scope === null)
     if (!draft) return
     tabs = tabs.filter(tab => tab.scope !== sessionId).map(tab => tab === draft ? { ...tab, scope: sessionId } : tab)
+    if (savedCanvasScopes.delete(null)) savedCanvasScopes.add(sessionId)
     save()
     publish()
   }
@@ -244,8 +290,9 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   function reset() {
     tabs = []
     closed = []
-    active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = undefined
+    active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = entryProject = undefined
+    savedCanvasScopes.clear()
     publish()
   }
-  return { sync, action, setTitle, bindDraft, replaceActive, publish, reset, isCreating: () => !!openToken }
+  return { sync, action, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
 }

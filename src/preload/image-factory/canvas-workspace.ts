@@ -22,6 +22,7 @@ const imageLayer = (scene?: ImageScene) => scene?.layers.find((layer): layer is 
 
 export class CanvasWorkspace {
   private readonly entries = new Map<CanvasScope, Entry>()
+  private readonly edited = new Set<CanvasScope>()
   private readonly listeners = new Set<() => void>()
   private readonly adoptions = new Map<string, Promise<void>>()
   private scope: CanvasScope = null
@@ -72,6 +73,11 @@ export class CanvasWorkspace {
     return () => { entry.retained--; this.evict(entry.scope) }
   }
 
+  hasTabActivity(scope: CanvasScope) {
+    const entry = this.entries.get(scope)
+    return this.edited.has(scope) || !!entry?.retained || entry?.status === 'error'
+  }
+
   epoch(scope: CanvasScope) { return this.entries.get(scope)?.epoch }
 
   async flush(scope: CanvasScope, scene: ImageScene) {
@@ -94,6 +100,7 @@ export class CanvasWorkspace {
     }
     if (!editKey || editKey !== entry.coalescing) entry.beforeEdit ??= previous
     entry.scene = next
+    this.edited.add(scope)
     markWorkspaceProjectEdited(this.doc, scope)
     if (persist) {
       this.recordEdit(entry, editKey)
@@ -197,6 +204,8 @@ export class CanvasWorkspace {
       draft.scope = sessionId
       this.entries.set(sessionId, draft)
       this.entries.delete(null)
+      this.edited.delete(null)
+      this.edited.add(sessionId)
       markWorkspaceProjectEdited(this.doc, sessionId)
       this.publish(this.scope)
       this.evict(sessionId)
@@ -257,6 +266,7 @@ export class CanvasWorkspace {
         const layers = data.canvas.layers.map(layer => layer.kind === 'image' ? restored! : layer)
         const { version: _version, ...canvas } = data.canvas
         entry.scene = { ...canvas, layers }
+        this.edited.add(scope)
         markWorkspaceProjectEdited(this.doc, scope)
         entry.assetId = restored?.assetId
         this.collectRasters(entry)

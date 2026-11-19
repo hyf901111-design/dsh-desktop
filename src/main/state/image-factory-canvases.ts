@@ -151,8 +151,13 @@ export class ImageFactoryCanvases {
         const draft = await this.readCanvas(draftDirectory).catch(() => undefined)
         if (draft) closed = [{ scope: null, title: draft.title }, ...closed.slice(0, 31)]
       }
+      const canvasScopes = (await Promise.all(tabs.filter(tab => !tab.title).map(async ({ scope }) => {
+        // Preserve historical canvases even if their tab title was never synced.
+        const exists = await lstat(join(this.directory(owner, scope), metadataName)).then(() => true, error => !missing(error))
+        return exists ? [scope] : []
+      }))).flat()
       current()
-      return { epoch, tabs, ...(closed.length && { closed }) }
+      return { epoch, tabs, ...(closed.length && { closed }), ...(canvasScopes.length && { canvasScopes }) }
     })
   }
 

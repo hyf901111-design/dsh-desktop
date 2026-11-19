@@ -231,6 +231,8 @@ ctx.effect(()=>{
  const factory=(${installImageFactoryContext.toString()})({
    sessions,removeProvisionalReference:deleteProvisionalResearchReferenceOccurrence,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
    getTaskWorkspace,
+   getExistingInput:id=>inputHub.shells.get(id),
+   hasProjectDraftActivity:sessionId=>eworkRightProjects?.hasActivityFor({sessionId,mode:'image-factory'}),
    getProjectDraft:()=>{
      const draft=eworkRightProjects?.getSnapshot();
      if(draft?.mode==='image-factory'&&draft.sessionId===sessions.list.getSnapshot().current)return draft.pending;
@@ -418,6 +420,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
   try{
    if(sessionId===undefined||workspaceId===rightWorkspaceId)eworkPendingConversation?.selectWorkspace(workspaceId);
    else eworkRightProjects?.select(rightProjectContext,workspaceId);
+   if(imageFactoryActive)document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-selected',{detail:workspaceId}));
   }catch(error){sherlockBoardsAdapter?.showError(error)}
  };
  const rightWorkspaceRow=sidebarMode&&rightProjectContext?react_jsx_runtime.jsxs('div',{
