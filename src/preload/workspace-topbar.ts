@@ -2,7 +2,10 @@ import { workspaceContentViews } from '../shared/navigation-shortcuts'
 import { navigationAppIcon } from './home-app-shortcuts'
 import { icons } from './scheduled/icons'
 import workspaceSettingsIcon from './browser/assets/settings.svg?inline'
+import chatIcon from './browser/assets/chat.svg?inline'
 import workspaceIcon from './browser/assets/workspace.svg?inline'
+
+const chatTitleIcon = 'url("' + chatIcon.replaceAll('"', '%22') + '")'
 
 /** Workspace surfaces share the scheduled-page back control. */
 export function workspaceBackButton(className = '', action: 'back' | 'exit' = 'back'): string {
@@ -75,10 +78,10 @@ body{
 }
 
 .workspace-home-topbar :is(.workspace-app-title,.eb-workspace-controls){pointer-events:auto}
-.workspace-home-topbar .workspace-app-title>i{mask-image:${navigationAppIcon('new-chat')}}
+.workspace-home-topbar .workspace-app-title>i{mask-image:${chatTitleIcon}}
 .workspace-app-heading[data-workspace-app=scheduled]>i{mask-image:${navigationAppIcon('scheduled')}}
 .workspace-app-heading[data-workspace-app=plugin]>i{mask-image:${navigationAppIcon('plugin')};mask-size:16px}
-${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('new-chat')}}
+${workspaceSessionHeader}{--workspace-title-icon:${chatTitleIcon}}
 ${resident}[data-odyssey-page="research"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('research')};--workspace-title-art-size:auto 14px}
 ${resident}[data-odyssey-page="spreadsheet"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('spreadsheet')};--workspace-title-art-size:14px auto}
 ${workspaceSessionHeader}:has([data-conversation-view-id=notes][aria-selected=true]),

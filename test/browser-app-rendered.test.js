@@ -678,6 +678,10 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    document.body.removeAttribute('data-workspace-surface')
    const center=document.querySelector('.pI_x6G_centerCol')
    center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header data-srb-session-header style="display:flex;align-items:center;height:44px"><span>新研究</span><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
+   document.body.insertAdjacentHTML('beforeend', `
+    <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
+     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home aria-label="主页">主页</button></div>
+    </aside>`)
    window.homeOpens=[]
    window.mountNavigationShortcuts(document,{
     read:()=>({top:[null,null,null,null]}),
@@ -834,14 +838,23 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    })
   })).toBe(true)
   await center.evaluate(el=>{el.style.containerType='';el.style.width='auto'})
+  const sideHome=page.locator('[data-sidebar-home]')
+  const sideBrowser=page.locator('[data-navigation-rail] [data-navigation-app=browser]')
+  const selectedSidebar=page.locator('[data-dsh-sidebar-root] :is([aria-pressed=true],[data-navigation-overflow-active])')
+  await expect.poll(()=>sideHome.getAttribute('aria-pressed')).toBe('true')
   await homeBar.getByRole('button',{name:'切换到浏览器',exact:true}).click()
   expect(await page.evaluate(()=>window.homeOpens)).toEqual(['browser'])
   const browserControls=page.locator('.eb-root .eb-workspace-controls')
   await browserControls.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+  await expect.poll(()=>selectedSidebar.count()).toBe(0)
+  expect(await browserControls.locator('[data-workspace-native-view=browser]').getAttribute('aria-current')).toBe('true')
   await browserControls.getByRole('button',{name:'切换到对话',exact:true}).click()
   await homeBar.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+  await expect.poll(()=>selectedSidebar.count()).toBe(0)
   await homeBar.getByRole('button',{name:'切换到浏览器',exact:true}).click()
   await browserControls.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
+  await sideBrowser.click()
+  await expect.poll(()=>sideBrowser.getAttribute('aria-pressed')).toBe('true')
 
   expect(await browserControls.locator('[data-workspace-native-view]').allTextContents()).toEqual(['对话','笔记','浏览器','图像','知识库'])
   await liveWebsite(page)
@@ -1100,6 +1113,7 @@ it('shares editable shortcuts between the composer and sidebar while keeping the
   await expect.poll(visibleApps).toEqual(['browser', 'knowledge'])
   const chat = page.locator('[data-sidebar-chat-entry]')
   expect(await chat.isVisible()).toBe(true)
+  expect(await chat.getAttribute('aria-label')).toBe('新建对话')
   expect(await chat.locator('span').isVisible()).toBe(false)
   expect((await chat.boundingBox()).x).toBeLessThan((await sidebar.boundingBox()).x)
   expect(await chat.getAttribute('aria-pressed')).toBe('true')
