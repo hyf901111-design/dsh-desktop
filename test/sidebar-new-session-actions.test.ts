@@ -353,6 +353,39 @@ it('starts an unnamed Chat instead of reusing a titled blank session', async () 
   }
 })
 
+it('promotes an unnamed draft to the first project row only on an explicit New Chat action', async () => {
+  const w = new Window({ url: 'https://sherlock.local/' })
+  installBrowserGlobals(w)
+  const conversation = await loadClientBundle('dsh-client-ui-conversation', w, ['installInitialChatViewIntent', 'recordNewChatActivity'])
+  const sidebar = await loadClientBundle('dsh-client-ui-workspace', w, ['nextSessionOrderAccount'])
+  const sort = sidebar.__testnextSessionOrderAccount as (value: unknown) => { order: string[] }
+  const install = conversation.__testinstallInitialChatViewIntent as (chatStore: unknown, sessions: unknown, research: unknown, record: unknown) => () => void
+  const ids = ['sheet', 'draft', 'last']
+  const byId = { sheet: { updatedAt: 3 }, draft: { updatedAt: 2 }, last: { updatedAt: 1 } }
+  const setView = vi.fn()
+  const dispose = install({ create: () => ({ actions: { setView } }) }, {
+    list: { getSnapshot: () => ({ ids, byId, current: 'draft' }) },
+    binding: () => ({ state: 'live', kind: 'root' })
+  }, undefined, conversation.__testrecordNewChatActivity)
+  const previousUpdatedAt = { sheet: 3, draft: 2, last: 1 }
+  const order = () => {
+    const times = JSON.parse(w.localStorage.getItem('sherlock.sidebar.activity.v2') ?? '{}')
+    return sort({
+      sessionIds: ids, previousOrder: ids, previousUpdatedAt, orderBy: 'manual',
+      list: { byId: { ...byId, draft: { updatedAt: Math.max(byId.draft.updatedAt, times.draft ?? 0) } } }
+    }).order
+  }
+  try {
+    expect(order()).toEqual(ids)
+    w.dispatchEvent(new w.CustomEvent('sherlock:conversation-initial-chat', { detail: { sessionId: 'draft' } }))
+    expect(setView).toHaveBeenCalledWith('chat')
+    expect(order()).toEqual(['draft', 'sheet', 'last'])
+  } finally {
+    dispose()
+    w.happyDOM.close()
+  }
+})
+
 it('opens Home directly and keeps New Chat and New Research as separate actions', async () => {
   const w = new Window({ url: 'https://sherlock.local/' })
   installBrowserGlobals(w)
