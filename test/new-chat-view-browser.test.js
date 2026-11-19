@@ -46,7 +46,7 @@ it('retains the Chat intent while the desktop preference write is awaiting ackno
 })
 it('keeps New Research explicit and restores another saved Notes session on ordinary navigation',async()=>{
  const {page,errors}=await fixture({warm:true});try{
-  await page.evaluate(()=>window.newChatFixture.storeFor('target').actions.setView('chat'));await page.getByRole('button',{name:'新建研究',exact:true}).click();await expect.poll(()=>page.locator('.wSkVaW_root[data-odyssey-page=research]').count()).toBe(1)
+  await page.evaluate(()=>window.newChatFixture.storeFor('target').actions.setView('chat'));await page.getByRole('button',{name:'研究',exact:true}).click();await expect.poll(()=>page.locator('.wSkVaW_root[data-odyssey-page=research]').count()).toBe(1)
   expect(await page.evaluate(()=>window.newChatFixture.storeFor('target').getSnapshot().view)).toBe('research')
   await page.evaluate(()=>window.newChatFixture.open('elsewhere'));await expect.poll(()=>page.locator('[data-conversation-view-id="notes"][aria-selected=true]').count()).toBe(1);expect(await page.evaluate(()=>window.newChatFixture.storeFor('elsewhere').getSnapshot().view)).toBe('notes');expect(errors).toEqual([])
  }finally{await page.close()}
