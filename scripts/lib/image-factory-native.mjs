@@ -6,7 +6,7 @@ import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
 export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
-  getTaskWorkspace, getDefaultWorkspace, getProjectDraft, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
+  getTaskWorkspace, getDefaultWorkspace, getProjectDraft, hasProjectDraftActivity, getExistingInput = getInput, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false }
@@ -22,9 +22,25 @@ export function installImageFactoryContext({
     if (isActive() && typeof detail?.sessionId === 'string') draftOwner = detail.sessionId
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
-  const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
+  const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable: name === 'inspect-tab' }))
+  function hasTabActivity(scope) {
+    const catalog = sessions.list.getSnapshot()
+    const summary = scope !== null && catalog.byId[scope]
+    // Only recycle sessions the Host confirms are empty.
+    if (scope !== null && (summary?.blank !== true || summary.running)) return true
+    if (!signal('inspect-tab', { scope })) return true
+    if ([...jobs.values()].some(job => job.sessionId === scope || scope === null && job.draft)) return true
+    if (hasProjectDraftActivity?.(scope ?? undefined)) return true
+    const pending = scope === null ? getPending() : undefined
+    const pendingState = pending?.getSnapshot?.()
+    if (pendingState?.busy || pendingState?.activating) return true
+    const session = scope === null ? undefined : sessions.binding(scope)?.session?.getSnapshot()
+    if (session?.blank === false || session?.running || session?.queue?.length || session?.pending?.length || session?.subagent) return true
+    const input = (scope === null ? pending?.shell : getExistingInput(scope))?.snapshot
+    return Boolean(input?.draft?.trim() || input?.imageIds?.length || input?.occurrences?.length)
+  }
   const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, getDefaultWorkspace, standaloneDirectory,
-    setView: setTaskView, storage: taskStorage, isBoardOnly,
+    setView: setTaskView, storage: taskStorage, hasTabActivity, isBoardOnly,
     signal(name, detail) {
       if (name === 'task-state') publishState()
       signal(name, detail)
@@ -339,6 +355,7 @@ export function installImageFactoryContext({
     'focus-chat': focus, reset,
     'canvas-intent': event => { intendedCanvas = event.detail },
     'canvas-intent-ended': event => { if (event.detail === intendedCanvas) intendedCanvas = undefined },
+    'project-selected': event => tasks.projectSelected(event.detail),
     'project-changed': event => { if (event.detail?.previous === currentId()) tasks.replaceActive(event.detail.previous, event.detail.next) },
     'task-action': event => {
       const detail = event.detail
@@ -349,7 +366,11 @@ export function installImageFactoryContext({
     }, 'task-title': event => tasks.setTitle(event.detail),
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
-  doc.addEventListener('sherlock:workspace-surface-change', syncLayerPreview)
+  const surfaceChange = event => {
+    if (isActive() && event.detail?.back) syncSession(true, undefined, true)
+    syncLayerPreview()
+  }
+  doc.addEventListener('sherlock:workspace-surface-change', surfaceChange)
   doc.addEventListener('keydown', cancelPreview, true)
   win.addEventListener('sherlock:pending-conversation-created', pendingCreated)
   signal('request-state', {})
@@ -359,7 +380,7 @@ export function installImageFactoryContext({
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
       offSession?.()
-      doc.removeEventListener('sherlock:workspace-surface-change', syncLayerPreview)
+      doc.removeEventListener('sherlock:workspace-surface-change', surfaceChange)
       doc.removeEventListener('keydown', cancelPreview, true)
       win.removeEventListener('sherlock:pending-conversation-created', pendingCreated)
       reset()

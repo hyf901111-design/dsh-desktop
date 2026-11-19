@@ -1795,6 +1795,11 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
     }))
     void workspace.adopt(id).then(() => reply(), reply)
   }
+  const inspectTab = (event: Event) => {
+    const scope = (event as CustomEvent).detail?.scope
+    if (validCanvasScope(scope) && workspace.hasTabActivity(scope)) event.preventDefault()
+  }
+  doc.addEventListener('sherlock:image-factory-inspect-tab', inspectTab)
   doc.addEventListener('sherlock:image-factory-session', select)
   doc.addEventListener('sherlock:image-factory-adopt', adopt)
   let english = doc.documentElement.dataset.odysseyLocale === 'en'
@@ -1846,6 +1851,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
       doc.dispatchEvent(new Event('sherlock:image-factory-reset')); render()
     },
     dispose() {
+      doc.removeEventListener('sherlock:image-factory-inspect-tab', inspectTab)
       doc.removeEventListener('sherlock:image-factory-session', select)
       doc.removeEventListener('sherlock:image-factory-adopt', adopt)
       language.disconnect(); react.unmount(); workspace.dispose(); root.remove(); style.remove()
