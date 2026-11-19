@@ -209,22 +209,8 @@ function makeWorkspaceCustomizationButton(document: Document) {
 
 export function mountWorkspaceViewCustomization(document: Document) {
   const win = document.defaultView!
-  const rootSelector = '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([hidden], [aria-hidden=true], [data-odyssey-subagent-panel] *)'
-  const home = makeWorkspaceCustomizationButton(document)
-  home.dataset.workspaceCustomizeHome = ''
-  let dialog: HTMLDialogElement | undefined, editing: WorkspaceViewPreferences | undefined, frame = 0
+  let dialog: HTMLDialogElement | undefined, editing: WorkspaceViewPreferences | undefined
   const english = () => document.documentElement.dataset.odysseyLocale === 'en'
-  const update = () => {
-    frame = 0
-    const root = !document.body.dataset.workspaceSurface ? document.querySelector(rootSelector) : null
-    if (!root) { home.remove(); return }
-    if (home.parentElement !== root) root.append(home)
-    labelWorkspaceCustomization(home, english())
-  }
-  const schedule = () => { if (!frame) frame = win.requestAnimationFrame(update) }
-  const observer = new win.MutationObserver(schedule)
-  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true,
-    attributeFilter: ['data-workspace-surface', 'data-odyssey-page', 'data-odyssey-locale'] })
   const onClick = (event: MouseEvent) => {
     const anchor = (event.target as Element)?.closest<HTMLButtonElement>('[data-workspace-view-customize]')
     const settings = preferences.get(document)
@@ -304,13 +290,9 @@ export function mountWorkspaceViewCustomization(document: Document) {
   const unobserve = observeWorkspaceViews(document, () => {
     if (editing && preferences.get(document) !== editing) dialog?.close()
   })
-  update()
   return () => {
-    observer.disconnect()
-    win.cancelAnimationFrame(frame)
     document.removeEventListener('click', onClick)
     unobserve()
     dialog?.close()
-    home.remove()
   }
 }

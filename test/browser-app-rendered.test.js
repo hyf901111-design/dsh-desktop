@@ -595,7 +595,7 @@ it('animates workspace width and opacity on click and respects reduced motion',a
   const toggle=page.locator('.eb-workspace-toggle'),nav=page.locator('.eb-workspace-tabs')
   const width=()=>nav.evaluate(el=>el.getBoundingClientRect().width)
   await toggle.click()
-  await expect.poll(()=>nav.evaluate(el=>el.getAnimations().some(a=>a.effect.getTiming().duration===340))).toBe(true)
+  await expect.poll(()=>nav.evaluate(el=>el.getAnimations().some(a=>a.transitionProperty==='width'&&a.effect.getTiming().duration===340))).toBe(true)
   await page.evaluate(()=>window.setBrowserState({history:[]}))
   await expect.poll(width).toBeGreaterThan(150)
   await toggle.click()
@@ -623,7 +623,7 @@ it('dismisses a browser popup before collapsing the workspace shortcuts on Escap
  }finally{await page.close()}
 })
 
-it('customizes four top-bar positions from the home page and shares them with the browser',async()=>{
+it('sizes top-bar labels around their content and keeps customization in the expanded switcher',async()=>{
  const {page,errors}=await fixture(1440,900,false)
  try {
   page.setDefaultTimeout(2200)
@@ -631,30 +631,49 @@ it('customizes four top-bar positions from the home page and shares them with th
    window.browserView.close()
    document.body.removeAttribute('data-workspace-surface')
    const center=document.querySelector('.pI_x6G_centerCol')
-   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header>对话首页</header></section>'
+   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header data-srb-session-header data-ework-notes-session="session-A" style="display:flex;align-items:center;height:44px"><span>新研究</span><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
    window.mountNavigationShortcuts(document,{
-    read:()=>({top:['research','note','spreadsheet',null]}),
+    read:()=>({top:[null,null,null,null]}),
     save:value=>{window.savedTop=value.top;return true},
     open:()=>{}
    })
+   window.mountSessionWorkspaceViewShortcuts(document,()=>{})
    window.mountWorkspaceViewCustomization(document)
   })
-  const home=page.locator('[data-workspace-customize-home]')
-  await home.click()
+  const gear=page.getByRole('button',{name:'自定义顶栏',exact:true})
+  expect(await gear.count()).toBe(0)
+  await page.locator('.wSkVaW_root').evaluate(root=>{root.dataset.odysseyPage='research'})
+  const controls=page.locator('[data-session-workspace-controls]')
+  await controls.locator('.eb-workspace-toggle').click()
+  const nav=controls.locator('.eb-workspace-tabs')
+  const views=nav.locator('[data-workspace-native-view]')
+  expect(await views.allTextContents()).toEqual(['对话'])
+  await expect.poll(()=>nav.evaluate(el=>Math.abs(el.getBoundingClientRect().width-el.scrollWidth))).toBeLessThan(1)
+  const chatBox=await views.first().boundingBox(), gearBox=await gear.boundingBox()
+  expect(chatBox.width).toBeLessThan(60)
+  expect(chatBox.height).toBe(28)
+  expect(gearBox.x-chatBox.x-chatBox.width).toBeLessThanOrEqual(5)
+  expect(await nav.evaluate(el=>el.getBoundingClientRect().width)).toBeLessThan(90)
+  await gear.click()
   const dialog=page.getByRole('dialog',{name:'自定义顶栏'})
   await dialog.getByText('1. 对话（固定）').waitFor()
   expect(await dialog.getByRole('combobox').count()).toBe(4)
   await dialog.getByRole('combobox',{name:'第 2 项'}).selectOption('note')
   await dialog.getByRole('combobox',{name:'第 3 项'}).selectOption('image-factory')
+  await dialog.getByRole('combobox',{name:'第 4 项'}).selectOption('spreadsheet')
   await dialog.getByRole('combobox',{name:'第 5 项'}).selectOption('knowledge')
   await dialog.getByRole('button',{name:'保存',exact:true}).click()
   await dialog.waitFor({state:'hidden'})
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','image-factory','spreadsheet','knowledge'])
-  await page.evaluate(()=>{document.body.dataset.workspaceSurface='browser';return window.browserView.open('session-A')})
-  await home.waitFor({state:'detached'})
-  await page.locator('.eb-workspace-toggle').click()
-  const views=page.locator('.eb-workspace-tabs [data-workspace-native-view]')
-  expect(await views.allTextContents()).toEqual(['对话','笔记','图像','表格','知识库'])
+  await expect.poll(() => views.allTextContents()).toEqual(['对话','笔记','图像','表格','知识库'])
+  await page.evaluate(()=>{
+   document.body.dataset.workspaceSurface='browser'
+   document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
+   return window.browserView.open('session-A')
+  })
+  const browserControls=page.locator('.eb-root .eb-workspace-controls')
+  await browserControls.locator('.eb-workspace-toggle').click()
+  expect(await browserControls.locator('[data-workspace-native-view]').allTextContents()).toEqual(['对话','笔记','图像','表格','知识库'])
   expect(errors).toEqual([])
  }finally{await page.close()}
 })
