@@ -35,6 +35,61 @@ it('keeps Explore and its search open after a top-origin drag releases over the 
   await f.page.mouse.click(8,400);await uiExpect(dialog).not.toBeVisible();expect(await f.page.getByRole('textbox',{name:'保留的原输入框'}).inputValue()).toBe('原草稿必须保留');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+it.each(['快速开始', '管理用量'])('dismisses Explore from visible backdrop gaps in %s', async tab => {
+ const now = Math.floor(Date.now()/1000)
+ const quota = {fiveHour:{limit:100,used:10,remaining:90,resetAt:now+3600},week:{limit:100,used:20,remaining:80,resetAt:now+36000},paused:false}
+ const f = await fixture({width:1380,height:900,quotaFixture:quota})
+ try {
+  const dialog = f.page.getByRole('dialog',{name:'探索',exact:true})
+  const openTab = async () => {
+   await open(f.page)
+   await f.page.getByRole('tab',{name:tab,exact:true}).click()
+   if (tab === '管理用量') await uiExpect(dialog.locator('.odyssey-explore-quota-card')).toBeVisible()
+  }
+  await openTab()
+  const points = await dialog.evaluate((node:HTMLElement) => {
+   const box = (selector:string) => node.querySelector(selector)!.getBoundingClientRect()
+   const header = box('.odyssey-explore-header'), nav = box('.odyssey-explore-navigation')
+   const viewport = box('.odyssey-explore-viewport')
+   const points = [
+    {area:'header gap',x:header.left+header.width/2,y:header.top+header.height/2},
+    {area:'tab row gap',x:nav.right-10,y:nav.top+nav.height/2},
+    {area:'right side',x:viewport.right+16,y:viewport.top+viewport.height/2},
+    {area:'bottom',x:viewport.left+viewport.width/2,y:viewport.bottom+24},
+   ]
+   if (node.querySelector('.odyssey-explore-quota-card')) {
+    const card = box('.odyssey-explore-quota-card')
+    points.push(
+     {area:'above usage card',x:card.left+card.width/2,y:(viewport.top+card.top)/2},
+     {area:'beside usage card',x:(viewport.left+card.left)/2,y:card.top+card.height/2},
+     {area:'below usage card',x:card.left+card.width/2,y:(card.bottom+viewport.bottom)/2},
+    )
+   } else {
+    const showcase = box('.odyssey-explore-showcase'), card = box('[data-explore-card="board"]')
+    points.push({area:'between quick-start cards',x:(showcase.right+card.left)/2,y:card.top+card.height/2})
+   }
+   return points
+  })
+  if (tab === '管理用量') {
+   const plan = await dialog.locator('.odyssey-explore-quota-plan strong').boundingBox()
+   expect(plan).not.toBeNull()
+   await f.page.mouse.click(plan.x+plan.width/2,plan.y+plan.height/2)
+   await uiExpect(dialog).toBeVisible()
+   await f.page.mouse.move(plan.x+plan.width/2,plan.y+plan.height/2)
+   await f.page.mouse.down()
+   await f.page.mouse.move(points[0].x,points[0].y,{steps:6})
+   await f.page.mouse.up()
+   await uiExpect(dialog).toBeVisible()
+  }
+  for (const [index, {area,x,y}] of points.entries()) {
+   if (index > 0) await openTab()
+   await f.page.mouse.click(x,y)
+   await uiExpect(dialog, area).not.toBeVisible({timeout:900})
+  }
+  expect(await f.page.getByRole('textbox',{name:'保留的原输入框'}).inputValue()).toBe('原草稿必须保留')
+  expect(f.errors).toEqual([])
+ } finally { await f.close() }
+}, 20000)
 it.each(['pointercancel','blur','remount'])('releases the Explore drag-origin guard after %s without blocking subsequent clicks',async boundary=>{
  const f=await fixture();try{
   await open(f.page);await f.page.mouse.move(16,24);await f.page.mouse.down()
