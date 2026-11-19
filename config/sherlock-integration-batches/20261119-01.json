@@ -3,7 +3,7 @@
   "batchId": "20261119-01",
   "branch": "codex/integration/20261119-01",
   "baseMainCommit": "f0c8724d85faf1b7260725fc145aefab019873de",
-  "expectedMainCommit": "f0c8724d85faf1b7260725fc145aefab019873de",
+  "expectedMainCommit": "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a",
   "createdAt": "2026-11-19T00:16:22.806Z",
   "features": [
     {
@@ -274,5 +274,86 @@
       "timeoutMs": 240000
     }
   ],
-  "mainSynchronizations": []
+  "mainSynchronizations": [
+    {
+      "previousMainCommit": "f0c8724d85faf1b7260725fc145aefab019873de",
+      "mainCommit": "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a",
+      "mergeCommit": "37954fb3bb097a3099f3b76534dd03e13e4617a6",
+      "verificationCommit": "37954fb3bb097a3099f3b76534dd03e13e4617a6",
+      "checks": [
+        {
+          "argv": [
+            "node",
+            "scripts/patch-web-frontend-loading.mjs"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+          "verifiedCommit": "37954fb3bb097a3099f3b76534dd03e13e4617a6",
+          "completedAt": "2026-11-19T02:30:28.060Z",
+          "timeoutMs": 240000
+        },
+        {
+          "argv": [
+            "npm",
+            "run",
+            "typecheck"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：npm run typecheck",
+          "verifiedCommit": "37954fb3bb097a3099f3b76534dd03e13e4617a6",
+          "completedAt": "2026-11-19T02:30:28.060Z",
+          "timeoutMs": 240000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "--maxWorkers=3",
+            "test/workbench-execution-policy.test.js",
+            "test/attachment-template.test.js",
+            "test/bundled-component-skill.test.js",
+            "test/bundled-skill-parity.test.ts",
+            "test/research-file-preview.test.ts",
+            "test/component-wheel-zoom.test.js",
+            "test/research-canvas-wheel-pass-through.test.js",
+            "test/workbench-webpage-file.test.js"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run --maxWorkers=3 test/workbench-execution-policy.test.js test/attachment-template.test.js test/bundled-component-skill.test.js test/bundled-skill-parity.test.ts test/research-file-preview.test.ts test/component-wheel-zoom.test.js test/research-canvas-wheel-pass-through.test.js test/workbench-webpage-file.test.js",
+          "verifiedCommit": "37954fb3bb097a3099f3b76534dd03e13e4617a6",
+          "completedAt": "2026-11-19T02:30:28.060Z",
+          "timeoutMs": 240000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/research-html-theme.test.js",
+            "-t",
+            "wheel|工作台选择状态"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-html-theme.test.js -t wheel|工作台选择状态",
+          "verifiedCommit": "37954fb3bb097a3099f3b76534dd03e13e4617a6",
+          "completedAt": "2026-11-19T02:30:28.060Z",
+          "timeoutMs": 240000
+        },
+        {
+          "argv": [
+            "./node_modules/.bin/vitest",
+            "run",
+            "test/workbench-auto-arrange-browser.test.js",
+            "-t",
+            "fits a portable webpage|preserves compact webpage layout|flattens older"
+          ],
+          "outcome": "passed",
+          "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-auto-arrange-browser.test.js -t fits a portable webpage|preserves compact webpage layout|flattens older",
+          "verifiedCommit": "37954fb3bb097a3099f3b76534dd03e13e4617a6",
+          "completedAt": "2026-11-19T02:30:28.060Z",
+          "timeoutMs": 240000
+        }
+      ],
+      "recordedAt": "2026-11-19T02:30:28.060Z"
+    }
+  ]
 }
