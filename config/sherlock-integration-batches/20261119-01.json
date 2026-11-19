@@ -922,6 +922,183 @@
           "当前公开 1.6.7 已发布，本次修复供后续集成版验收。"
         ],
         "generatedAt": "2026-11-19T04:00:29.816Z"
+      },
+      "merged": {
+        "mergeCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+        "verificationCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "--maxWorkers=3",
+              "test/workbench-execution-policy.test.js",
+              "test/attachment-template.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/research-file-preview.test.ts",
+              "test/component-wheel-zoom.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/workbench-webpage-file.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run --maxWorkers=3 test/workbench-execution-policy.test.js test/attachment-template.test.js test/bundled-component-skill.test.js test/bundled-skill-parity.test.ts test/research-file-preview.test.ts test/component-wheel-zoom.test.js test/research-canvas-wheel-pass-through.test.js test/workbench-webpage-file.test.js",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "wheel|工作台选择状态"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-html-theme.test.js -t wheel|工作台选择状态",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-auto-arrange-browser.test.js",
+              "-t",
+              "fits a portable webpage|preserves compact webpage layout|flattens older"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-auto-arrange-browser.test.js -t fits a portable webpage|preserves compact webpage layout|flattens older",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-webpage-file.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/component-source-binding.test.js",
+              "test/research-creation-progress.test.js",
+              "test/research-send-admission.test.js",
+              "test/browser-page-actions-service.test.ts",
+              "--testTimeout",
+              "30000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-webpage-file.test.js test/workbench-execution-policy.test.js test/conversation-components-policy.test.js test/component-source-binding.test.js test/research-creation-progress.test.js test/research-send-admission.test.js test/browser-page-actions-service.test.ts --testTimeout 30000 --reporter=dot",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-webpage-file.test.js",
+              "test/workbench-native-menu.test.js",
+              "test/notes-native-menu.test.ts",
+              "test/component-popup-menu.test.ts",
+              "test/workbench-reading-sections-browser.test.js",
+              "test/research-preview-header.test.ts",
+              "test/header-mode-pill-theme-browser.test.ts",
+              "test/sidebar-pptx-toolbar.test.ts",
+              "test/sidebar-pptx-tooltip-install.test.js",
+              "test/sidebar-pptx-tooltip-browser.test.js",
+              "test/spreadsheet-keyboard-reference.test.js",
+              "--maxWorkers",
+              "3",
+              "--testTimeout",
+              "30000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-webpage-file.test.js test/workbench-native-menu.test.js test/notes-native-menu.test.ts test/component-popup-menu.test.ts test/workbench-reading-sections-browser.test.js test/research-preview-header.test.ts test/header-mode-pill-theme-browser.test.ts test/sidebar-pptx-toolbar.test.ts test/sidebar-pptx-tooltip-install.test.js test/sidebar-pptx-tooltip-browser.test.js test/spreadsheet-keyboard-reference.test.js --maxWorkers 3 --testTimeout 30000 --reporter=dot",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "shows two matching icon tiles|defaults to edit and persists",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-preview-mode-browser.test.js -t shows two matching icon tiles|defaults to edit and persists --reporter=dot",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/runtime.test.ts",
+              "test/pending-composer-preferences.test.js",
+              "test/standard-agent-preset.test.ts",
+              "test/pending-conversation.test.js",
+              "--maxWorkers",
+              "3",
+              "--testTimeout",
+              "30000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/runtime.test.ts test/pending-composer-preferences.test.js test/standard-agent-preset.test.ts test/pending-conversation.test.js --maxWorkers 3 --testTimeout 30000 --reporter=dot",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 600000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "af4955909851ed50ea8c58443e5b2baabee7d6a7",
+            "completedAt": "2026-11-19T04:00:58.159Z",
+            "timeoutMs": 600000
+          }
+        ],
+        "recordedAt": "2026-11-19T04:00:58.159Z"
       }
     }
   ],
