@@ -504,10 +504,13 @@ it('offers pin actions only in collapsed More and removes a pinned app from that
   const pinned: import('../src/shared/navigation-shortcuts').NavigationShortcut[] = []
   const pinApp = vi.fn(app => pinned.push(app))
   const view = new ScheduledTaskView(doc, { list: async () => [], workspaces: async () => [], save: vi.fn(), action: vi.fn() },
-    undefined, undefined, { newNote: vi.fn(), pinApp, pinnedApps: () => pinned })
+    undefined, undefined, { newNote: vi.fn(), newSpreadsheet: vi.fn(), pinApp, pinnedApps: () => pinned })
   view.mount()
   const more = doc.querySelector<HTMLButtonElement>('.st-more')!
   more.click()
+  for (const [app, label] of [['new-chat', '对话'], ['research', '研究'], ['spreadsheet', '表格']]) {
+    expect(doc.querySelector('[data-st-menu-pin=' + app + ']')?.previousElementSibling?.textContent).toBe(label)
+  }
   const pin = doc.querySelector<HTMLButtonElement>('[data-st-menu-pin=note]')!
   expect(pin.getAttribute('aria-label')).toBe('置顶新建笔记到侧栏')
   expect(pin.previousElementSibling?.textContent).toBe('新建笔记')
@@ -519,7 +522,7 @@ it('offers pin actions only in collapsed More and removes a pinned app from that
   expect(doc.querySelector('[data-st-menu-pin=note]')).toBeNull()
 
   more.click()
-  pinned.push('browser', 'knowledge', 'image-factory')
+  pinned.push('browser', 'knowledge', 'image-factory', 'research', 'spreadsheet')
   more.click()
   const full = [...doc.querySelectorAll<HTMLButtonElement>('[data-st-menu-pin]')]
   expect(full.length).toBeGreaterThan(0)

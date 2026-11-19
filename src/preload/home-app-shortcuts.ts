@@ -1,7 +1,8 @@
-import newChatIcon from '../../build/brand/odyssey-b-new-chat-18.svg?inline'
+import chatIcon from './browser/assets/chat.svg?inline'
+import researchIcon from '../../build/brand/odyssey-app-research.svg?inline'
+import spreadsheetIcon from '../../build/brand/odyssey-app-spreadsheet.svg?inline'
 import newWorkspaceIcon from '../../build/brand/odyssey-b-workspace-add-18.svg?inline'
 import knowledgeApp from '../../build/brand/odyssey-knowledge-base.svg?inline'
-import spreadsheetAdd from './spreadsheet/assets-grid-add.svg?inline'
 import factoryIcon from './image-factory/assets/factory.svg?inline'
 import styles from './home-app-shortcuts.css?raw'
 import { navigationApps as apps, type NavigationApp, type NavigationShortcut } from '../shared/navigation-shortcuts'
@@ -12,10 +13,10 @@ const appIcons = {
   'image-factory': factoryIcon,
   plugin: '/odyssey-home-plugin-28.svg',
   scheduled: '/odyssey-home-scheduled-28.svg',
-  research: '/odyssey-home-research-28.svg',
+  research: researchIcon,
   note: '/odyssey-home-note-28.svg',
-  spreadsheet: spreadsheetAdd,
-  'new-chat': newChatIcon,
+  spreadsheet: spreadsheetIcon,
+  'new-chat': chatIcon,
   'new-workspace': newWorkspaceIcon
 } satisfies Record<NavigationShortcut, string>
 

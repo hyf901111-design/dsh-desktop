@@ -1,4 +1,4 @@
-import { navigationSlotCount, type NavigationShortcut } from '../../shared/navigation-shortcuts'
+import { sidebarShortcutCount, type NavigationShortcut } from '../../shared/navigation-shortcuts'
 import type { IntegrationBridge, TaskCapabilitySummary } from '../../shared/integration-ui'
 import type { IntegrationBinding } from '../../shared/integrations'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
@@ -242,15 +242,15 @@ export class ScheduledTaskView {
       const entries: MenuItem[] = []
       if (!wide) entries.push(
         { app: 'new-workspace', label: english ? 'New workspace' : '新建工作区', icon: 'workspaceAdd', disabled: !addWorkspace || addWorkspace.disabled, run: () => addWorkspace?.click() },
-        { app: 'new-chat', label: english ? 'New chat' : '新建对话', icon: 'chat', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-chat', { bubbles: true })) },
-        { app: 'research', label: english ? 'New research' : '新建研究', icon: 'research', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research', { bubbles: true })) }
+        { app: 'new-chat', label: english ? 'Chat' : '对话', icon: 'chat', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-chat', { bubbles: true })) },
+        { app: 'research', label: english ? 'Research' : '研究', icon: 'research', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research', { bubbles: true })) }
       )
       if (this.sidebarActions) entries.push({
         app: 'note', label: english ? 'New Note' : wide ? '新笔记' : '新建笔记', icon: this.dark() ? 'noteDark' : 'note',
         disabled: this.newDocumentBusy, run: () => void this.createDocument('note')
       })
       if (this.sidebarActions?.newSpreadsheet) entries.push({
-        app: 'spreadsheet', label: english ? 'New spreadsheet' : '新建表格', icon: 'spreadsheet',
+        app: 'spreadsheet', label: english ? 'Spreadsheet' : '表格', icon: 'spreadsheet',
         disabled: this.newDocumentBusy, run: () => void this.createDocument('spreadsheet')
       })
       if (this.surfaceHost) {
@@ -268,7 +268,7 @@ export class ScheduledTaskView {
       const pinApp = this.sidebarActions?.pinApp
       const pins = !wide && pinApp ? {
         add: pinApp,
-        full: pinned?.length === navigationSlotCount && !pinned.includes(null)
+        full: pinned?.length === sidebarShortcutCount && !pinned.includes(null)
       } : undefined
       this.showMenu(more, available, pins)
       const opened=this.menu as HTMLElement|undefined
@@ -291,7 +291,7 @@ export class ScheduledTaskView {
     const collapsed = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') === 'false'
     const surface = this.document.body.dataset.workspaceSurface
     const home = group.querySelector<HTMLButtonElement>('[data-sidebar-home]')
-    if (collapsed && home) {
+    if (collapsed && home && !this.sidebarActions?.pinnedApps) {
       const homePage = !surface && this.document.querySelector(
         '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]:not([hidden], [hidden] *, [data-odyssey-subagent-panel] *)'
       )

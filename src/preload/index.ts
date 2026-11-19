@@ -456,13 +456,18 @@ function initializeUi(): void {
     mountSpreadsheet: async (doc, _host, options) => mountCashFlowGuide(doc, options, spreadsheetView!) })
   const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, { themeController: getHomeThemeController(document)!, onBeforeOpen:()=>{void homeGuides.reset(false)}, onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample:(kind, context)=>playHomeGuideFromExplore(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
+  const openSidebarDocument = async (app: 'note' | 'spreadsheet', signal?: AbortSignal) => {
+    const previousSurface = workspaceSurfaceHost.current()?.surface
+    await (app === 'note' ? sidebarNewNote : sidebarNewSpreadsheet).create(signal)
+    if (previousSurface && !(app === 'note' && previousSurface === 'notes')) workspaceSurfaceHost.close(previousSurface)
+  }
   let navigationShortcuts: ReturnType<typeof mountNavigationShortcuts> | undefined
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
     workspaces: () => ipcRenderer.invoke('scheduled-tasks:request', 'workspaces'),
     save: (input, id) => ipcRenderer.invoke('scheduled-tasks:request', 'save', { input, id }),
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
-  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote:sidebarNewNote.create,newSpreadsheet:sidebarNewSpreadsheet.create,
+  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote: () => openSidebarDocument('note'), newSpreadsheet: () => openSidebarDocument('spreadsheet'),
     pinnedApps: () => navigationShortcuts?.sidebar() ?? defaultNavigationShortcuts.side,
     pinApp: app => navigationShortcuts?.pinSidebar(app)})
   scheduledView.mount()
@@ -482,7 +487,7 @@ function initializeUi(): void {
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app
     if (surface && surface === targetSurface) return
-    if (region === 'side' && app === 'note') { await sidebarNewNote.create(signal); return }
+    if (region === 'side' && app === 'note') { await openSidebarDocument('note', signal); return }
     if (app === 'new-workspace' || app === 'new-chat' || (region === 'side' && app === 'research')) {
       const sidebar = document.querySelector('[data-dsh-sidebar-root]')
       if (app === 'new-workspace') sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')?.click()
@@ -497,7 +502,7 @@ function initializeUi(): void {
       if (!signal.aborted) imageFactory.open()
       return
     }
-    if (app === 'spreadsheet') { await sidebarNewSpreadsheet.create(signal); return }
+    if (app === 'spreadsheet') { await openSidebarDocument('spreadsheet', signal); return }
     if (app === 'research' || app === 'note') {
       await homeActions.run(app === 'research' ? 'board' : 'note', { signal, revealComposer: async () => {} })
       return

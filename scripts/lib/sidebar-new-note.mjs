@@ -110,6 +110,10 @@ export function patchSidebarNewNoteShell(input){
   const start=source.indexOf(begin),stop=source.indexOf(',\n\t\t\t\t\t(0,react_jsx_runtime.jsxs)("div",{"data-srb-navigation-scroll"',start)
   if(start<0||stop<0)throw Error('Native Sidebar New Session group drift')
   const group=source.slice(start,stop)
+  const controls=exact(
+    exact(group,'"aria-label": t("session.new.label"),','"aria-label": t("session.new.label"), "data-sidebar-chat-entry": "",'),
+    '"aria-label": t("session.newResearch.label"),','"aria-label": t("session.newResearch.label"), "data-sidebar-research-entry": "",'
+  )
 
   const home='(0,react_jsx_runtime.jsx)("div",{className:SidebarRoot_module_css_default.newSessionGroup,children:(0,react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tooltip,{label:t("sidebar.home.label"),delayMs:500,children:(0,react_jsx_runtime.jsx)("button",{type:"button",className:SidebarRoot_module_css_default.newSession,"data-sidebar-home":"","aria-label":t("sidebar.home.label"),onClick:openHome})})})'
   const props='function SidebarRoot({ collapsed, width, startSession, startResearchSession, toggleSidebar, t, renderSlot })'
@@ -127,7 +131,9 @@ export function patchSidebarNewNoteShell(input){
                 },`],
     ['startSession: (workspaceId) => {', `startSession: (workspaceId) => {
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));`],
-    [root,'\t\t\tconst newSessionControls = '+group+';\n'+`
+    ['startResearchSession: (workspaceId) => {', `startResearchSession: (workspaceId) => {
+                    document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));`],
+    [root,'\t\t\tconst newSessionControls = '+controls+';\n'+`
     react.useEffect(()=>{
       if(wide)return;
       const rail=column.current;
@@ -142,7 +148,13 @@ export function patchSidebarNewNoteShell(input){
     },[wide,startSession,startResearchSession]);
 `+root],
     [foot,'!wide && '+home+',\n'+foot],
-    ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "新建研究",\n"sidebar.home.label":"主页",'],
-    ['"session.newResearch.label": "New research",','"session.newResearch.label": "New research",\n"sidebar.home.label":"Home",'],
+    ['"session.new": "新对话",','"session.new": "对话",'],
+    ['"session.new.label": "新建对话",','"session.new.label": "对话",'],
+    ['"session.newResearch": "新研究",','"session.newResearch": "研究",'],
+    ['"session.newResearch.label": "新建研究",','"session.newResearch.label": "研究",\n"sidebar.home.label":"主页",'],
+    ['"session.new": "New Chat",','"session.new": "Chat",'],
+    ['"session.new.label": "New chat",','"session.new.label": "Chat",'],
+    ['"session.newResearch": "New Research",','"session.newResearch": "Research",'],
+    ['"session.newResearch.label": "New research",','"session.newResearch.label": "Research",\n"sidebar.home.label":"Home",'],
   ])
 }

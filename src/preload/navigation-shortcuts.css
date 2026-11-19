@@ -1,33 +1,8 @@
-[data-navigation-slot="0"] { order: 1 }
-[data-navigation-slot="1"] { order: 2 }
-[data-navigation-slot="2"] { order: 3 }
-[data-navigation-slot="3"] { order: 4 }
-
-body [data-navigation-tabs] > [data-navigation-unpinned],
-body [data-navigation-tabs] > [data-empty] { display: none !important }
-
-body [data-navigation-tabs] > button { -webkit-app-region: no-drag }
-body .wSkVaW_header [data-navigation-tabs] > .wSkVaW_tab[data-navigation-owned] {
-  width: max-content;
-  white-space: nowrap;
+html[data-navigation-sidebar-only] body .pI_x6G_centerCol [data-srb-tabs]:not([data-odyssey-subagent-panel] *),
+html[data-navigation-sidebar-only] body .workspace-app-topbar .eb-workspace-controls,
+html[data-navigation-sidebar-only] body :is(.workspace-back-button, .knowledge-back) {
+  display: none !important;
 }
-body [data-navigation-tabs] > button[data-navigation-slot]:not([data-empty],:disabled) { cursor: pointer }
-body:not([data-navigation-editing]) [data-navigation-tabs] > button:is(:hover,:focus-visible):not(:disabled,.wSkVaW_tabActive) {
-  background-color: var(--odyssey-menu-row, rgb(127 127 127 / 18%));
-}
-.workspace-app-topbar .eb-workspace-tabs[data-navigation-tabs][aria-hidden=false] {
-  width: max-content;
-  flex-basis: auto;
-  max-width: max(112px, calc(100cqw - 144px));
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.workspace-app-topbar .eb-workspace-tabs[data-navigation-tabs] > button {
-  flex: none;
-  min-width: max-content;
-  border-radius: 7px;
-}
-.workspace-app-topbar .eb-workspace-tabs[data-navigation-tabs] > [data-empty] { width: 40px }
 
 [data-navigation-rail] {
   display: flex;
@@ -44,8 +19,20 @@ body:not([data-navigation-editing]) [data-navigation-tabs] > button:is(:hover,:f
   flex: none;
 }
 body[data-ds-dark-theme] [data-navigation-rail] > button { color: #aaa }
-[data-navigation-rail] > button:not([data-empty]):is(:hover,:focus-visible,[aria-pressed=true]) {
+[data-navigation-rail] > button:not([data-empty]):is(:hover,:focus-visible,:active,[aria-pressed=true]) {
   background-color: color-mix(in srgb, currentColor 13%, transparent);
+}
+body [data-dsh-sidebar-root] .hHd-Xa_newSession[aria-pressed=true],
+body [data-dsh-sidebar-root] .st-more[data-navigation-overflow-active] {
+  background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, currentColor 13%, transparent)) !important;
+}
+body [data-navigation-rail] > button[aria-pressed=true],
+body [data-dsh-sidebar-root] :is(.hHd-Xa_newSession[aria-pressed=true], .st-more[data-navigation-overflow-active]) {
+  color: var(--dsw-alias-label-primary, #292b2e) !important;
+}
+body[data-ds-dark-theme] [data-navigation-rail] > button[aria-pressed=true],
+body[data-ds-dark-theme] [data-dsh-sidebar-root] :is(.hHd-Xa_newSession[aria-pressed=true], .st-more[data-navigation-overflow-active]) {
+  color: var(--dsw-alias-label-primary, #eee) !important;
 }
 [data-navigation-rail] > button[data-empty] {
   background: color-mix(in srgb, currentColor 5%, transparent);
@@ -60,7 +47,16 @@ body[data-ds-dark-theme] [data-navigation-rail] > button { color: #aaa }
   height: 18px;
   flex: none;
   background: currentColor;
-  mask: var(--navigation-glyph) center / contain no-repeat;
+  mask: var(--navigation-glyph) var(--navigation-icon-position, center) / var(--navigation-icon-size, contain) no-repeat;
+}
+
+/* Figma exports these two groups within 28px square source components. */
+:is([data-navigation-app=research], [data-home-app=research], [data-sidebar-research-entry], .st-menu[data-sidebar-more] [data-odyssey-icon=research]) {
+  --navigation-icon-size: 75% auto;
+  --navigation-icon-position: center 57.2%;
+}
+:is([data-navigation-app=spreadsheet], [data-home-app=spreadsheet], .st-menu[data-sidebar-more] [data-odyssey-icon=spreadsheet]) {
+  --navigation-icon-size: 78.57% auto;
 }
 
 [data-navigation-rail] > [data-navigation-app=knowledge]::before { width: 24px; height: 24px }
@@ -75,11 +71,7 @@ body[data-ds-dark-theme][data-navigation-editing] {
   --navigation-slot-border: rgb(200 201 212 / 55%);
   --navigation-slot-target: rgb(215 215 226 / 24%);
 }
-body[data-navigation-editing]:not([data-navigation-editing-region=side]) [data-navigation-tabs] > [data-empty] {
-  display: block !important;
-}
-body[data-navigation-editing]:not([data-navigation-editing-region=side]) [data-navigation-tabs] > [data-navigation-slot],
-body[data-navigation-editing]:not([data-navigation-editing-region=top]) [data-navigation-rail] > [data-navigation-slot] {
+body[data-navigation-editing] [data-navigation-rail] > [data-navigation-slot] {
   background: var(--navigation-slot-fill) !important;
   outline: 1px dashed var(--navigation-slot-border);
   outline-offset: -1px;
@@ -102,10 +94,6 @@ body[data-navigation-editing] button:nth-of-type(3n) > .home-app-shortcut-icon {
 
 [data-navigation-deletes], [data-navigation-ghost], [data-navigation-menu] { position: fixed; z-index: 2147483000 }
 [data-navigation-deletes] { inset: 0; pointer-events: none }
-/* Electron's draggable window chrome otherwise consumes clicks above the tab. */
-body[data-navigation-editing] :is(.wSkVaW_header, .wSkVaW_titleRow, .workspace-app-topbar, .workspace-app-title, .workspace-app-title *) {
-  -webkit-app-region: no-drag;
-}
 [data-navigation-delete] {
   position: fixed;
   box-sizing: border-box;

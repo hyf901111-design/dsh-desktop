@@ -1,6 +1,6 @@
 import {
-  isNavigationApp, isNavigationShortcut, navigationSlotCount, normalizeNavigationShortcuts, replaceNavigationShortcut,
-  type NavigationApp, type NavigationShortcut, type NavigationRegion, type NavigationShortcuts
+  isNavigationApp, isNavigationShortcut, sidebarShortcutCount, normalizeNavigationShortcuts, replaceNavigationShortcut,
+  type NavigationApp, type NavigationShortcut, type NavigationShortcuts
 } from '../shared/navigation-shortcuts'
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
 import { navigationAppIcon } from './home-app-shortcuts'
@@ -15,24 +15,22 @@ const presentation = {
   research: ['研究', 'Research'],
   note: ['笔记', 'Notes'],
   spreadsheet: ['表格', 'Spreadsheet'],
-  'new-chat': ['新建对话', 'New chat'],
+  'new-chat': ['对话', 'Chat'],
   'new-workspace': ['新建工作区', 'New workspace']
 } as const
-const nativeApps = { research: 'research', notes: 'note', spreadsheet: 'spreadsheet' } as const
-const tabsSelector = '.pI_x6G_centerCol [data-srb-tabs], .eb-workspace-tabs'
-const groupSelector = '[data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup'
+const groupSelector = '[data-dsh-sidebar-root] .hHd-Xa_newSessionGroup'
+const residentSelector = '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page]:not([hidden], [hidden] *, [aria-hidden=true], [aria-hidden=true] *, [data-odyssey-subagent-panel] *)'
 const traySelector = '[data-home-app-shortcuts]'
 const sourceSelector = traySelector + ' button[data-home-app]'
-const slotSelector = '[data-navigation-slot]'
+const slotSelector = '[data-navigation-rail] > [data-navigation-slot]'
 const holdTime = 360
 
 type Bridge = {
   read(): unknown
   save(value: NavigationShortcuts): boolean
-  open(app: NavigationShortcut, signal: AbortSignal, region: NavigationRegion): Promise<void> | void
+  open(app: NavigationShortcut, signal: AbortSignal, region: 'side'): Promise<void> | void
 }
 
-type PickedApp = { app: NavigationShortcut; region?: NavigationRegion }
 type PointerHold = {
   id: number; x: number; y: number; app: NavigationApp
   timer?: number; armed: boolean; moving: boolean
@@ -44,6 +42,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   const style = doc.createElement('style')
   style.textContent = styles
   doc.head.append(style)
+  doc.documentElement.setAttribute('data-navigation-sidebar-only', '')
   const rail = doc.createElement('div')
   rail.dataset.navigationRail = ''
   const deletes = doc.createElement('div')
@@ -57,7 +56,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   doc.body.append(status)
 
   let editing = false
-  let picked: PickedApp | undefined
+  let picked: NavigationApp | undefined
   let pointer: PointerHold | undefined
   let consumeClick = false
   let hovering: HTMLButtonElement | null = null
@@ -72,75 +71,61 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     if (element.getAttribute(name) !== next) element.setAttribute(name, next)
   }
 
-  function project(container: Element, region: NavigationRegion) {
-    const children = Array.from(container.children) as HTMLButtonElement[]
-    const native = new Map<NavigationApp, HTMLButtonElement>()
-    for (const child of children) {
-      const id = child.dataset.conversationViewId ?? child.dataset.workspaceNativeView
-      if (!id || !Object.hasOwn(nativeApps, id)) continue
-      const app = nativeApps[id as keyof typeof nativeApps]
-      native.set(app, child)
-      const unpinned = !value[region].includes(app)
-      child.toggleAttribute('data-navigation-unpinned', unpinned)
-      if (unpinned) child.removeAttribute('data-navigation-slot')
-    }
-    for (let index = 0; index < navigationSlotCount; index++) {
-      const app = value[region][index] ?? null
-      const existing = children.find(child => child.hasAttribute('data-navigation-owned') && child.dataset.navigationSlot === String(index))
-      const original = isNavigationApp(app) ? native.get(app) : undefined
-      const button = original ?? existing ?? doc.createElement('button')
-      setAttribute(button, 'data-navigation-slot', String(index))
-      setAttribute(button, 'data-navigation-region', region)
-      setAttribute(button, 'data-navigation-app', app ?? '')
-      button.toggleAttribute('data-empty', !app)
-      if (original) {
-        existing?.remove()
-        continue
-      }
-      setAttribute(button, 'type', 'button')
-      button.toggleAttribute('data-navigation-owned', true)
-      const name = app ? label(app) : english() ? 'Empty shortcut slot' : '空快捷位'
-      setAttribute(button, 'aria-label', name)
-      setAttribute(button, 'title', name)
-      if (region === 'side') {
-        const mask = app ? navigationAppIcon(app) : ''
-        if (button.style.getPropertyValue('--navigation-glyph') !== mask) button.style.setProperty('--navigation-glyph', mask)
-        const surface = app === 'plugin' ? 'integrations' : app === 'note' ? 'notes' : app
-        if (app) setAttribute(button, 'aria-pressed', String(doc.body.dataset.workspaceSurface === surface))
-        else button.removeAttribute('aria-pressed')
-        setAttribute(button, 'tabindex', app ? '0' : '-1')
-      } else {
-        if (container.hasAttribute('data-srb-tabs') && !button.classList.contains('wSkVaW_tab')) button.classList.add('wSkVaW_tab')
-        if (button.textContent !== (app ? name : '')) button.textContent = app ? name : ''
-        setAttribute(button, 'tabindex', container.getAttribute('aria-hidden') === 'true' ? '-1' : '0')
-      }
-      if (!existing) container.append(button)
-    }
+  function currentShortcut(): NavigationShortcut | 'home' | undefined {
+    const surface = doc.body.dataset.workspaceSurface
+    if (surface === 'integrations') return 'plugin'
+    if (surface === 'notes') return 'note'
+    if (surface === 'shared-session') return 'knowledge'
+    if (surface) return isNavigationApp(surface) ? surface : undefined
+    const resident = doc.querySelector<HTMLElement>(residentSelector)
+    if (!resident) return
+    const mode = resident.querySelector<HTMLElement>('[data-srb-tabs] [aria-selected=true]')?.dataset.conversationViewId
+    if (mode === 'notes') return 'note'
+    if (mode === 'spreadsheet' || resident.dataset.odysseyPage === 'spreadsheet') return 'spreadsheet'
+    if (mode === 'research' || resident.dataset.odysseyPage === 'research') return 'research'
+    const selectedSession = doc.documentElement.dataset.srbSelectedSession ||
+      resident.querySelector<HTMLElement>('[data-srb-session-header]')?.dataset.eworkNotesSession
+    return resident.dataset.odysseyPage === 'home' && !selectedSession ? 'home' : 'new-chat'
   }
 
   function sync() {
-    for (const tabs of doc.querySelectorAll(tabsSelector)) {
-      if (tabs.closest('[data-odyssey-subagent-panel]')) continue
-      tabs.toggleAttribute('data-navigation-tabs', true)
-      project(tabs, 'top')
-    }
     const group = doc.querySelector(groupSelector)
     if (group) {
+      const active = currentShortcut()
+      const collapsed = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') === 'false'
+      group.querySelectorAll('[data-sidebar-chat-entry],[data-sidebar-research-entry]').forEach(button => {
+        const app = button.hasAttribute('data-sidebar-chat-entry') ? 'new-chat' : 'research'
+        setAttribute(button, 'aria-pressed', String(app === active))
+      })
+      const home = group.querySelector('[data-sidebar-home]')
+      const chatOnHome = active === 'new-chat' && !value.side.includes('new-chat')
+      if (home) setAttribute(home, 'aria-pressed', String(active === 'home' || chatOnHome))
       const more = group.querySelector('.st-more-zone')
-      if (rail.parentElement !== group || (more && rail.nextElementSibling !== more)) group.insertBefore(rail, more)
-      project(rail, 'side')
-    } else rail.remove()
-    if (menu && menuAnchor && !menuAnchor.isConnected && menuAnchor.closest('#eb-workspace-tabs')) {
-      // Browser rebuilds its toolbar when tab state changes, including during a download.
-      const shortcut = menuAnchor.dataset
-      const replacement = doc.querySelector<HTMLButtonElement>(
-        `#eb-workspace-tabs [data-navigation-slot="${shortcut.navigationSlot}"]`)
-      if (replacement && replacement.dataset.navigationApp === shortcut.navigationApp) {
-        menuAnchor = replacement
-        replacement.closest('.eb-workspace-tabs')?.setAttribute('data-navigation-retain', '')
-        positionMenu(replacement, menu)
+      more?.querySelector('button.st-more')?.toggleAttribute('data-navigation-overflow-active',
+        Boolean(collapsed && active && active !== 'home' && !chatOnHome && !value.side.includes(active)))
+      if (!collapsed) rail.remove()
+      else {
+        if (rail.parentElement !== group || (more && rail.nextElementSibling !== more)) group.insertBefore(rail, more)
+        for (let index = 0; index < sidebarShortcutCount; index++) {
+          const app = value.side[index] ?? null
+          const existing = rail.children.item(index) as HTMLButtonElement | null
+          const button = existing ?? doc.createElement('button')
+          setAttribute(button, 'data-navigation-slot', String(index))
+          setAttribute(button, 'data-navigation-app', app ?? '')
+          setAttribute(button, 'type', 'button')
+          button.toggleAttribute('data-empty', !app)
+          const name = app ? label(app) : english() ? 'Empty shortcut slot' : '空快捷位'
+          setAttribute(button, 'aria-label', name)
+          setAttribute(button, 'title', name)
+          const mask = app ? navigationAppIcon(app) : ''
+          if (button.style.getPropertyValue('--navigation-glyph') !== mask) button.style.setProperty('--navigation-glyph', mask)
+          if (app) setAttribute(button, 'aria-pressed', String(app === active))
+          else button.removeAttribute('aria-pressed')
+          setAttribute(button, 'tabindex', app ? '0' : '-1')
+          if (!existing) rail.append(button)
+        }
       }
-    }
+    } else rail.remove()
     if (menuAnchor && (!menuAnchor.isConnected || menuAnchor.closest('[aria-hidden=true],[hidden]'))) closeMenu()
   }
 
@@ -151,9 +136,8 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     hovering?.removeAttribute('data-drop-target')
     hovering = null
   }
-  function canDrop(button: HTMLButtonElement, selection: PickedApp) {
-    const region = button.dataset.navigationRegion as NavigationRegion
-    return (!selection.region || region === selection.region) && button.dataset.navigationApp !== selection.app
+  function canDrop(button: HTMLButtonElement, app: NavigationApp) {
+    return button.dataset.navigationApp !== app
   }
   function stopPointer() {
     if (pointer?.timer !== undefined) win.clearTimeout(pointer.timer)
@@ -172,16 +156,13 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     sync()
   }
   function apply(button: HTMLButtonElement, app: NavigationShortcut | null) {
-    const region = button.dataset.navigationRegion as NavigationRegion
-    update(replaceNavigationShortcut(value, region, Number(button.dataset.navigationSlot), app))
+    update(replaceNavigationShortcut(value, 'side', Number(button.dataset.navigationSlot), app))
   }
-  function setEditing(active: boolean, selection?: PickedApp) {
+  function setEditing(active: boolean, selection?: NavigationApp) {
     editing = active
     picked = selection
     doc.body.toggleAttribute('data-navigation-editing', active)
     doc.body.toggleAttribute('data-navigation-picking', Boolean(selection))
-    if (selection?.region) doc.body.dataset.navigationEditingRegion = selection.region
-    else delete doc.body.dataset.navigationEditingRegion
     if (active && !frame) frame = win.requestAnimationFrame(positionDeletes)
     if (!active) {
       win.cancelAnimationFrame(frame)
@@ -196,9 +177,8 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     frame = 0
     if (!editing) return
     const visible = new Set<HTMLButtonElement>()
-    const scope = picked?.region
     for (const slot of doc.querySelectorAll<HTMLButtonElement>(slotSelector + ':not([data-empty])')) {
-      if ((scope && slot.dataset.navigationRegion !== scope) || slot.closest('[aria-hidden=true],[hidden]') || !slot.checkVisibility({ visibilityProperty: true })) continue
+      if (slot.closest('[aria-hidden=true],[hidden]') || !slot.checkVisibility({ visibilityProperty: true })) continue
       const rect = slot.getBoundingClientRect()
       visible.add(slot)
       let button = deleteButtons.get(slot)
@@ -206,7 +186,6 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
         button = doc.createElement('button')
         button.type = 'button'
         button.dataset.navigationDelete = ''
-        button.dataset.navigationRegion = slot.dataset.navigationRegion
         button.addEventListener('click', () => apply(slot, null))
         deleteButtons.set(slot, button)
         deletes.append(button)
@@ -230,7 +209,6 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   function closeMenu(restoreFocus = false) {
     menu?.remove()
     menu = undefined
-    menuAnchor?.closest('.eb-workspace-tabs')?.removeAttribute('data-navigation-retain')
     if (restoreFocus && menuAnchor?.isConnected) menuAnchor.focus({ preventScroll: true })
     menuAnchor = undefined
   }
@@ -240,7 +218,6 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   function showMenu(anchor: HTMLElement, items: MenuItem[], keyboard: boolean, point?: MenuPoint) {
     closeMenu()
     menuAnchor = anchor
-    anchor.closest('.eb-workspace-tabs')?.setAttribute('data-navigation-retain', '')
     menu = doc.createElement('div')
     menu.dataset.navigationMenu = ''
     menu.setAttribute('role', 'menu')
@@ -278,10 +255,9 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     const anchorBox = anchor.getBoundingClientRect()
     const width = popup.offsetWidth
     const height = popup.offsetHeight
-    const side = anchor.dataset.navigationRegion === 'side'
-    const source = anchor.closest(traySelector)
+    const side = anchor.matches(slotSelector)
     const x = point?.x ?? (side ? anchorBox.right + 8 : anchorBox.left)
-    const y = point ? point.y + 4 : side ? anchorBox.top : source ? anchorBox.top - height - 8 : anchorBox.bottom + 8
+    const y = point ? point.y + 4 : side ? anchorBox.top : anchorBox.top - height - 8
     popup.style.left = Math.max(8, Math.min(x, win.innerWidth - width - 8)) + 'px'
     popup.style.top = Math.max(8, Math.min(y, win.innerHeight - height - 8)) + 'px'
   }
@@ -322,11 +298,11 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     stopPointer()
     const hold: PointerHold = { id: event.pointerId, x: event.clientX, y: event.clientY, app, armed: editing, moving: false }
     pointer = hold
-    if (editing) setEditing(true, { app })
+    if (editing) setEditing(true, app)
     else hold.timer = win.setTimeout(() => {
       if (pointer !== hold || !source.isConnected) return
       hold.armed = true
-      setEditing(true, { app })
+      setEditing(true, app)
     }, holdTime)
   }
   function onPointerMove(event: PointerEvent) {
@@ -340,6 +316,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     if (!hold.moving && distance <= 6) return
     hold.moving = true
     if (!ghost.isConnected) {
+      ghost.dataset.navigationApp = hold.app
       ghost.style.setProperty('--navigation-glyph', navigationAppIcon(hold.app))
       doc.body.append(ghost)
     }
@@ -377,20 +354,17 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     if (menu && !target.closest('[data-navigation-menu]')) closeMenu()
     const button = targetAt(target)
     if (!button || button.hasAttribute('data-home-guide-entry-click')) return
-    if (editing || button.hasAttribute('data-navigation-owned')) {
-      event.preventDefault()
-      event.stopImmediatePropagation()
-    }
+    event.preventDefault()
+    event.stopImmediatePropagation()
     if (editing) {
       if (picked && canDrop(button, picked)) {
-        apply(button, picked.app)
+        apply(button, picked)
         setEditing(false)
       }
       return
     }
     const app = button.dataset.navigationApp
-    const region = button.dataset.navigationRegion as NavigationRegion
-    if (!button.hasAttribute('data-navigation-owned') || !isNavigationShortcut(app) || (button.dataset.navigationRegion === 'side' && button.getAttribute('aria-pressed') === 'true')) return
+    if (!isNavigationShortcut(app)) return
     pending?.abort()
     const controller = new AbortController()
     pending = controller
@@ -398,7 +372,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     const report = () => {
       if (!controller.signal.aborted) status.textContent = english() ? 'Could not open app' : '应用打开失败'
     }
-    try { void Promise.resolve(bridge.open(app, controller.signal, region)).catch(report) } catch { report() }
+    try { void Promise.resolve(bridge.open(app, controller.signal, 'side')).catch(report) } catch { report() }
   }
   function onKey(event: KeyboardEvent) {
     if (event.key === 'Escape' && (menu || editing)) {
@@ -439,7 +413,8 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   const observer = new win.MutationObserver(sync)
   observer.observe(doc.documentElement, {
     subtree: true, childList: true, attributes: true,
-    attributeFilter: ['data-dsh-sidebar-wide', 'data-workspace-surface', 'data-odyssey-locale', 'aria-hidden', 'hidden']
+    attributeFilter: ['data-dsh-sidebar-wide', 'data-workspace-surface', 'data-odyssey-locale', 'data-odyssey-page',
+      'data-srb-selected-session', 'data-ework-notes-session', 'aria-selected', 'aria-hidden', 'hidden']
   })
   sync()
   return {
@@ -467,12 +442,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       rail.remove()
       status.remove()
       style.remove()
-      doc.querySelectorAll('[data-navigation-owned]').forEach(node => node.remove())
-      doc.querySelectorAll('[data-navigation-tabs],[data-navigation-unpinned],' + slotSelector).forEach(node => {
-        for (const attribute of ['data-navigation-tabs', 'data-navigation-unpinned', 'data-navigation-slot', 'data-navigation-region', 'data-navigation-app']) {
-          node.removeAttribute(attribute)
-        }
-      })
+      doc.documentElement.removeAttribute('data-navigation-sidebar-only')
     }
   }
 }

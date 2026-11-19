@@ -19,7 +19,7 @@ export const sidebarMoreItemSelector='.st-menu[data-sidebar-more="true"] button[
 export function isSidebarNewSpreadsheetEntry(target:HTMLElement){
  if(target.matches('[data-navigation-rail] [data-navigation-app=spreadsheet]'))return true
  const label=target.getAttribute('aria-label')||target.textContent?.trim()||''
- return target.matches(sidebarMoreItemSelector)&&['新建表格','New spreadsheet','New Spreadsheet'].includes(label)
+ return target.matches(sidebarMoreItemSelector)&&['表格','Spreadsheet','新建表格','New spreadsheet','New Spreadsheet'].includes(label)
 }
 export function isSidebarNewSessionEntry(target:HTMLElement,action:SidebarNewSessionAction){
  if(!target.matches('[data-dsh-sidebar-root] button,'+sidebarMoreItemSelector))return false
@@ -27,7 +27,7 @@ export function isSidebarNewSessionEntry(target:HTMLElement,action:SidebarNewSes
  if(target.matches('[data-navigation-rail] [data-navigation-app="'+app+'"]'))return true
  if(action==='new-note'&&target.hasAttribute('data-sidebar-new-note'))return true
  const label=target.getAttribute('aria-label')||target.textContent?.trim()||''
- const names=action==='new-note'?['新笔记','新建笔记','New note','New Note']:action==='new-research'?['新建研究','新研究','New research','New Research']:['新建对话','新对话','New chat','New Chat']
+ const names=action==='new-note'?['新笔记','新建笔记','New note','New Note']:action==='new-research'?['研究','Research','新建研究','新研究','New research','New Research']:['对话','Chat','新建对话','新对话','New chat','New Chat']
  return names.includes(label)
 }
 const cancelled=()=>new DOMException('演示入口已取消，请重新打开探索。','AbortError')

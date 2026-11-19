@@ -1,5 +1,6 @@
 export const navigationApps = ['browser', 'knowledge', 'image-factory', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet'] as const
-export const navigationSlotCount = 4
+const savedTopSlotCount = 4
+export const sidebarShortcutCount = 6
 
 export type NavigationApp = typeof navigationApps[number]
 const sidebarActions = ['new-workspace', 'new-chat'] as const
@@ -9,7 +10,7 @@ export type NavigationShortcuts = Record<NavigationRegion, readonly (NavigationS
 
 export const defaultNavigationShortcuts: NavigationShortcuts = {
   top: ['research', 'note', 'spreadsheet', null],
-  side: ['browser', 'image-factory', 'knowledge', null]
+  side: ['browser', 'image-factory', 'knowledge', null, null, null]
 }
 
 export function isNavigationApp(value: unknown): value is NavigationApp {
@@ -22,7 +23,7 @@ export function isNavigationShortcut(value: unknown): value is NavigationShortcu
 
 function compactSidebar(slots: readonly (NavigationShortcut | null)[]) {
   const occupied = slots.filter(app => app !== null)
-  return Array.from({ length: navigationSlotCount }, (_, index) => occupied[index] ?? null)
+  return Array.from({ length: sidebarShortcutCount }, (_, index) => occupied[index] ?? null)
 }
 
 export function normalizeNavigationShortcuts(value: unknown): NavigationShortcuts {
@@ -31,7 +32,7 @@ export function normalizeNavigationShortcuts(value: unknown): NavigationShortcut
     const saved = record?.[region]
     if (!Array.isArray(saved)) return [...defaultNavigationShortcuts[region]]
     const used = new Set<NavigationShortcut>()
-    return Array.from({ length: navigationSlotCount }, (_, index) => {
+    return Array.from({ length: region === 'side' ? sidebarShortcutCount : savedTopSlotCount }, (_, index) => {
       const app: unknown = saved[index]
       if (!isNavigationShortcut(app) || (region === 'top' && !isNavigationApp(app)) || used.has(app)) return null
       used.add(app)
@@ -45,7 +46,7 @@ export function replaceNavigationShortcut(
   value: NavigationShortcuts, region: NavigationRegion, index: number, app: NavigationShortcut | null
 ): NavigationShortcuts {
   const slots = value[region]
-  if ((app !== null && region === 'top' && !isNavigationApp(app)) || !Number.isInteger(index) || index < 0 || index >= navigationSlotCount || slots[index] === app) return value
+  if ((app !== null && region === 'top' && !isNavigationApp(app)) || !Number.isInteger(index) || index < 0 || index >= (region === 'side' ? sidebarShortcutCount : savedTopSlotCount) || slots[index] === app) return value
   const next = [...slots]
   const current = app === null ? -1 : slots.indexOf(app)
   if (current >= 0) next[current] = slots[index] ?? null
