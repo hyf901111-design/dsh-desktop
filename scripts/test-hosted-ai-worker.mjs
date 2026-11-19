@@ -61,8 +61,12 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     assert.equal(request.headers.get('authorization'), 'Bearer ' + key)
     const input = await request.json()
     if (request.url === ARK_PLAN_BASE + '/images/generations') {
-      if (input.model === 'doubao-seedream-5-0-pro') assert.equal(input.image.length, 2)
-      else assert.equal(input.model, 'doubao-seedream-5.0-flash')
+      assert.equal(input.model, 'doubao-seedream-5.5')
+      if (input.prompt === '合成两张参考图') assert.deepEqual(input.image, Array(2).fill('data:image/png;base64,' + pngFixture))
+      else assert.equal(input.image, undefined)
+      assert.equal(input.size, '1K')
+      assert.equal(input.output_format, 'png')
+      assert.equal(input.background, 'opaque')
       assert.equal(input.response_format, 'url')
       assert.equal(input.watermark, false)
       assert.equal(Object.hasOwn(input, 'sequential_image_generation'), false)
@@ -180,7 +184,7 @@ try {
   const png = await send('images',token,{ model: 'doubao-seedream-5.0-flash', prompt: '测试', size: 'auto' },'three')
   assert.equal(png.status,200)
   assert.match((await png.json()).data,/^iVBOR/)
-  assert.equal((await (await send('quota',token)).json()).quota.fiveHour.used,40.0015)
+  assert.equal((await (await send('quota',token)).json()).quota.fiveHour.used,43.3015)
   const pro = await send('images', token, {
     model: 'doubao-seedream-5-0-pro', prompt: '合成两张参考图', size: 'auto',
     references: Array(2).fill('data:image/png;base64,' + pngFixture)
@@ -189,7 +193,7 @@ try {
   await pro.json()
   const afterPro = (await (await send('quota', token)).json()).quota
   for (const period of [afterPro.fiveHour, afterPro.week]) {
-    assert.equal(period.used, 146.5015)
+    assert.equal(period.used, 119.8015)
     assert.equal(period.reserved, 0)
   }
   assert.equal(downloads, 2)
@@ -316,16 +320,16 @@ try {
   assert.equal(downloads - beforeDownloads, 2)
   const afterDelivery = (await (await send('quota',token)).json()).quota.fiveHour
   assert.equal(afterDelivery.used, beforeDelivery.used)
-  assert.equal(afterDelivery.reserved - beforeDelivery.reserved, 120)
+  assert.equal(afterDelivery.reserved - beforeDelivery.reserved, 129.9)
   const beforeRetry = calls
-  const recovered = await send('images', token, { model: 'doubao-seedream-5.0-flash', prompt: '下载暂时不可用', size: 'auto' }, 'image-download-retry')
+  const recovered = await send('images', token, { model: 'doubao-seedream-5.5', prompt: '下载暂时不可用', size: 'auto' }, 'image-download-retry')
   assert.equal(recovered.status, 200)
   assert.equal(recovered.headers.get('x-ework-request-id'), 'image-download-retry')
   assert.equal((await recovered.json()).data, pngFixture)
   assert.equal(retryDownloads, 2)
   assert.equal(calls - beforeRetry, 1)
   assert.deepEqual(await db.prepare('SELECT held_units,billed_units FROM ai_quota_requests WHERE request_id=?')
-    .bind('image-download-retry').first(), { held_units: 40_000_000, billed_units: 40_000_000 })
+    .bind('image-download-retry').first(), { held_units: 43_300_000, billed_units: 43_300_000 })
   await db.prepare('UPDATE ai_quota_pool SET monthly_limit_units=? WHERE id=1').bind(0).run()
   assert.equal((await admin.user('alice')).fiveHour.remaining,0)
   await assert.rejects(admin.reserve({userId:'alice',requestId:'month-hard-limit',amountUnits:1}),{code:'AI_QUOTA_MONTH'})

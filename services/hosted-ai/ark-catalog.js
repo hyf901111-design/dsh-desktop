@@ -14,8 +14,4 @@ export const ARK_TEXT_MODELS = [
   ['glm-5.3-flash', 'GLM 5.3 Flash', M, 50, true],
   ['deepseek-v4-pro', 'DeepSeek V4 Pro', M, 550]
 ].map(([id, name, contextWindow, unitsPerToken, supportsImageInput = false]) => ({ id, name, contextWindow, unitsPerToken, supportsImageInput }))
-export const ARK_IMAGE_MODELS = new Map([
-  ['doubao-seedream-5.0-flash', { units: 40_000_000 }],
-  ['doubao-seedream-5-0-pro', { units: 100_000_000 }]
-])
 export const ARK_PLAN_BASE = 'https://ark.cn-beijing.volces.com/api/plan/v3'

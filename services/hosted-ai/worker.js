@@ -2,8 +2,9 @@ import { authenticate } from '../accounts/auth.js'
 import { Buffer } from 'node:buffer'
 import { AiQuotaError, AiQuotaLedger } from '../accounts/ai-quota.js'
 import { openVikingKey, vikingMemory } from './openviking.js'
-import { ARK_TEXT_MODELS, ARK_IMAGE_MODELS, ARK_PLAN_BASE } from './ark-catalog.js'
+import { ARK_TEXT_MODELS, ARK_PLAN_BASE } from './ark-catalog.js'
 import { hostedChatUpstreamTimeoutMs } from '../../packages/dsh-research-task-runtime/hosted-ai-timeouts.js'
+import { hostedImageModel, legacyHostedImageModels } from '../../packages/dsh-research-task-runtime/hosted-image-model.js'
 
 const ROOT = '/v1/hosted-ai/'
 const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
@@ -149,18 +150,18 @@ function chatInput(input) {
 }
 
 function imageInput(input) {
-  if (!object(input) || !ARK_IMAGE_MODELS.has(input.model) || !nonempty(input.prompt) || input.prompt.length > 16000 ||
+  if (!object(input) || (input.model !== hostedImageModel && !legacyHostedImageModels.has(input.model)) ||
+      !nonempty(input.prompt) || input.prompt.length > 16000 ||
       !['auto', '1024x1024', '1024x1536', '1536x1024'].includes(input.size)) throw Error('input')
   const refs = input.references ?? []
   if (!Array.isArray(refs) || refs.length > 4 || !refs.every(ref => typeof ref === 'string' && inlineImage.test(ref))) throw Error('reference')
-  const { units } = ARK_IMAGE_MODELS.get(input.model)
-  const refUnits = input.model === 'doubao-seedream-5-0-pro' ? Math.max(0, refs.length - 1) * 6_500_000 : 0
-  return { wire: JSON.stringify({ model: input.model, prompt: input.prompt + ({'1024x1024':'\n画面比例：1:1。','1024x1536':'\n画面比例：2:3。','1536x1024':'\n画面比例：3:2。'}[input.size] ?? ''),
-    size: '1K', output_format: 'png', response_format: 'url',
-    // Seedream 5.0 Pro and Flash generate a single image by default.
+  // Enterprise seat AFP for one 1K output (≤ 2.61 MP) plus every reference image.
+  const amountUnits = 43_300_000 + refs.length * 16_600_000
+  return { wire: JSON.stringify({ model: hostedImageModel, prompt: input.prompt + ({'1024x1024':'\n画面比例：1:1。','1024x1536':'\n画面比例：2:3。','1536x1024':'\n画面比例：3:2。'}[input.size] ?? ''),
+    size: '1K', background: 'opaque', output_format: 'png', response_format: 'url',
     stream: false, watermark: false,
     ...(refs.length ? { image: refs.length === 1 ? refs[0] : refs } : {})
-  }), amountUnits: units + refUnits }
+  }), amountUnits }
 }
 
 const trustedUsage = usage => object(usage) && validCount(usage.prompt_tokens) && validCount(usage.completion_tokens) &&

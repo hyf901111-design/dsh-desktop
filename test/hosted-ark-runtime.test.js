@@ -201,11 +201,15 @@ test('a Seedream response completed after the account changes is discarded', asy
   })
   try {
     await service.refresh()
-    const pending = service.image.capture()({ model: 'doubao-seedream-5.0-flash', references: [] }, {
+    expect(service.image.models.map(model => model.id)).toEqual(['doubao-seedream-5.5'])
+    expect(service.image.resolveModel('doubao-seedream-5.0-flash')).toBe('doubao-seedream-5.5')
+    expect(service.image.resolveModel('doubao-seedream-5-0-pro')).toBe('doubao-seedream-5.5')
+    const pending = service.image.capture()({ model: service.image.models[0].id, references: [] }, {
       signal: new AbortController().signal, maxBytes: 100, requestId: 'f'.repeat(64)
     })
     const rejected = expect(pending).rejects.toThrow('账号已切换')
     await vi.waitFor(() => expect(response.body.locked).toBe(true))
+    expect(JSON.parse(request.mock.lastCall[1].body).model).toBe('doubao-seedream-5.5')
     expect(request.mock.lastCall[1].headers).toMatchObject({ 'x-ework-request-id': 'f'.repeat(64) })
     generation++
     await service.refresh()

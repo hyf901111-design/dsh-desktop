@@ -211,13 +211,14 @@ it('preserves the requested factory aspect ratio when the hosted gateway maps fi
 it('uses Seedream for stale OpenAI model arguments when hosted image generation is available',async()=>{
  const generate=vi.fn(async()=>({data:png,mediaType:'image/png'}))
  let available=true
- const hosted={available:()=>available,models:[{id:'seedream-flash',name:'Seedream Flash'},{id:'seedream-pro',name:'Seedream Pro'}],generate}
+ const hosted={available:()=>available,models:[{id:'doubao-seedream-5.5',name:'Seedream 5.5'}],generate,
+  resolveModel:id=>id==='doubao-seedream-5-0-pro'?'doubao-seedream-5.5':id}
  const f=fixture({uploaded:true,hosted})
  const result=await f.call({model:'gpt-image-2.6-sunburst'})
- expect(result.model).toBe('seedream-flash')
+ expect(result.model).toBe('doubao-seedream-5.5')
  expect(await f.call()).toEqual(result)
- expect(generate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({model:'seedream-flash',references:[expect.objectContaining({data:png})]}),expect.objectContaining({requestId:expect.stringMatching(/^[0-9a-f]{64}$/)}))
- expect((await f.call({model:'seedream-pro'})).model).toBe('seedream-pro')
+ expect(await f.call({model:'doubao-seedream-5-0-pro'})).toEqual(result)
+ expect(generate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({model:'doubao-seedream-5.5',references:[expect.objectContaining({data:png})]}),expect.objectContaining({requestId:expect.stringMatching(/^[0-9a-f]{64}$/)}))
  expect(f.prompts[0].text({agent:f.agent})).not.toContain('gpt-image')
  expect(f.credentials.resolve).not.toHaveBeenCalled()
  expect(f.request).not.toHaveBeenCalled()
