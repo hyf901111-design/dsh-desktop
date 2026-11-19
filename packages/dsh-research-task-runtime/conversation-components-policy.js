@@ -1,4 +1,5 @@
 import {classifyResearchCreationRequest} from './component-delivery-intent.js'
+import {isAdmittedResearchMessage} from './workbench-webpage-delivery.js'
 import {canvasHumanRequest} from './canvas-task-routing.js'
 import {COMPONENT_SURFACE_STYLE_RULES,PANEL_COLOR_INSTRUCTION} from './design-policy.js'
 import {TRUSTED_TYPES_COMPONENT_INSTRUCTION} from './html-trusted-types-validation.js'
@@ -27,7 +28,7 @@ export function componentCreationRequest(session) {
   if (session?.header?.origin === 'subagent' || (session?.header?.delegationDepth ?? 0) > 0) return null
   const human = planningHumanRequest(session)
   const intent = classifyResearchCreationRequest(human?.text)
-  if(intent)return {...human, target:intent.kind}
+  if(intent)return {...human, target:isAdmittedResearchMessage(session,human.messageId)?'workbench':intent.kind}
   // A short steering correction retains this active turn's deliverable. It
   // cannot revive completed rounds, override cancellation or authorize writes.
   const events=session?.events??[],start=events.findLastIndex(event=>event.type==='turn/start')

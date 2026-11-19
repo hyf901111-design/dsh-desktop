@@ -17,15 +17,21 @@ async function host(mode='workspace-write'){
   const root=await mkdtemp(join(tmpdir(),'odyssey-page-'))
   cleanups.push(()=>rm(root,{recursive:true,force:true}))
   const session={id:'trip',header:{cwd:root}},agent={id:'trip',session},prepared=[]
-  let tool
+  let tool, route, onEvent
   const ctx={
-    agents:{get:()=>agent},tools:{register:t=>{if(t.name==='research_workbench_create')tool=t;return()=>{}}},webServer:{register:()=>()=>{}},
+    agents:{get:()=>agent},tools:{register:t=>{if(t.name==='research_workbench_create')tool=t;return()=>{}}},webServer:{register:spec=>{route=spec.handler;return()=>{}}},
+    on:(_,listener)=>{onEvent=listener;return()=>{}},
     workspaceRegistry:{resolveByPath:async()=>({id:'project',path:root})},
     get:key=>key==='sandboxPolicy'?{resolve:async()=>({mode,workspaceRoot:root,sessionId:'trip'})}:undefined
   }
-  const runtime={startPreparedBatch:async({panels})=>{prepared.push(...panels);return panels.map(p=>({taskId:p.canvasNodeId}))}}
-  cleanups.push(await registerWorkbench(ctx,runtime,{filePath:join(root,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async()=>({})}))
-  return {root,prepared,create:args=>tool.execute(args,{agent})}
+  const runtime={inspect:()=>({finalOutput:prepared[0]?.artifact}),startPreparedBatch:async({panels})=>{prepared.push(...panels);return panels.map(p=>({taskId:p.canvasNodeId}))}}
+  cleanups.push(await registerWorkbench(ctx,runtime,{filePath:join(root,'plans.json'),isTrustedRequest:()=>true,readJsonBody:async req=>req.body}))
+  async function list(body) {
+    let value
+    await route({method:'POST',body:{parentSessionId:session.id,...body}},{writeHead(){},end(json){value=JSON.parse(json)}})
+    return value
+  }
+  return {root,session,prepared,list,event:e=>{session.events.push(e);onEvent(session,e)},create:args=>tool.execute(args,{agent})}
 }
 
 it('saves a portable file before reporting its inline panel prepared and reuses it on retry',async()=>{
@@ -119,4 +125,56 @@ it('counts the options in a portable budget when its workbench receipt checks th
     expect(receipt.state).toBe('completed')
     expect(receipt.deliveryStatus).not.toBe('partial')
   }finally{await runtime.dispose()}
+})
+
+it('delivers a finished webpage to the board that sent the prompt, including after a tab switch and reopening',async()=>{
+  const app=await host()
+  const request='做个美联储议息日历，我只想看接下来三次会议，能点到官网。'
+  const delivery={request,startedAt:Date.now()}
+  let time=delivery.startedAt
+  const event=(type,data)=>app.event({type,data,time:++time})
+  app.session.events=[]
+  expect((await app.list({delivery})).deliveryStatus).toBe('pending')
+  event('turn/start',{turn:1})
+  event('user/message',{id:'author',source:{kind:'user'},content:[{type:'text',text:request}]})
+  event('tool/call',{turn:1,callId:'file',name:'write',arguments:{file_path:'日历.html',content:html}})
+  event('tool/result',{turn:1,message:{source:{kind:'tool',callId:'file'},content:[{type:'tool-result',toolCallId:'file',isError:false}]}})
+  event('assistant/message',{turn:1,message:{content:[{type:'text',text:'已完成：日历.html'}]}})
+  event('turn/end',{turn:1,reason:{kind:'completed'}})
+  // No renderer is polling this board while the other tab is visible.
+  await expect.poll(()=>app.prepared.length,{timeout:5000}).toBe(1)
+  const [a,b]=await Promise.all([app.list({delivery}),app.list({delivery})])
+  expect(a.deliveryStatus).toBe('accepted')
+  expect(b.plans[0].id).toBe(a.plans[0].id)
+  expect(app.prepared[0].artifact.presentation).toBe('webpage')
+  expect(await readFile(join(app.root,app.prepared[0].artifact.items[0].relativePath),'utf8')).toBe(html)
+  await app.list({acknowledged:[a.plans[0].id]})
+  expect(await app.list({delivery})).toMatchObject({plans:[],deliveryStatus:'mounted'})
+  expect(app.prepared).toHaveLength(1)
+})
+
+it('replays a confirmed edit to the original turn-specific HTML after a same-name file conflict',async()=>{
+  const {completedResearchWebpages}=await import('../packages/dsh-research-task-runtime/workbench-webpage-delivery.js')
+  const cwd='/research', file_path='/research/日历.html'
+  const events=[]
+  function tool(name,callId,arguments_,isError,content=[]) {
+    events.push({type:'tool/call',data:{turn:1,name,callId,arguments:arguments_}},
+      {type:'tool/result',data:{turn:1,message:{source:{kind:'tool',callId},content:[{type:'tool-result',toolCallId:callId,isError,content}]}}})
+  }
+  const envelope=[{type:'text',text:'Error: write blocked\n<path>'+file_path+'</path>\n<type>file</type>\n<content>\n1: <html>原稿</html>\n\n(End of file - total 1 lines)\n</content>'}]
+  tool('write','blocked',{file_path,content:'错误草稿'},true,envelope)
+  tool('edit','changed',{file_path,old_string:'原稿',new_string:'已修订'},false)
+  tool('write','outside',{file_path:'../其他.html',content:'外部文件'},false)
+  tool('read','readonly',{file_path:'/research/材料.html'},false,[{type:'text',text:envelope[0].text.replace(file_path,'/research/材料.html')}])
+  const final={type:'assistant/message',data:{turn:1,message:{content:[{type:'text',text:'日历.html。材料.html 和 其他.html 是参考文件。'}]}}}
+  const end={type:'turn/end',data:{turn:1,reason:{kind:'completed'}}}
+  const pages=list=>completedResearchWebpages({turn:1,cwd,events:list})
+  expect(pages([...events,final])).toBeUndefined()
+  expect(pages([...events,final,end]).map(p=>p.htmlFile)).toEqual([{name:'日历.html',html:'<html>已修订</html>'}])
+  const receipt=text=>({...final,data:{turn:1,message:{content:[{type:'text',text}]}}})
+  expect(pages([...events,receipt('议息日历已生成。'),end])).toHaveLength(1)
+  expect(pages([...events,receipt('请打开 '+encodeURI(file_path)),end])).toHaveLength(1)
+  expect(pages([...events,receipt('将继续查阅资料。'),end])).toEqual([])
+  expect(pages([...events,end])).toEqual([])
+  expect(pages([...events,final,{...end,data:{turn:1,reason:{kind:'cancelled'}}}])).toEqual([])
 })

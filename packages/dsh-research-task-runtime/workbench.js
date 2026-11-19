@@ -1,3 +1,4 @@
+import {admittedResearchTurn, completedResearchWebpages} from './workbench-webpage-delivery.js'
 import {workbenchRequestedStyle} from './workbench-request-style.js';
 import {WORKBENCH_LIBRARY_GUIDANCE,WORKBENCH_LIBRARY_IDS,bindWorkbenchLibraryLinks,consolidateDailyNewsFeeds,includeFuturesInformationSources} from './workbench-library.js';
 import {workbenchExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js';
@@ -184,16 +185,16 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         await writeFile(tmp, JSON.stringify(plans), 'utf8');
         await rename(tmp, filePath);
     };
-    const create = (args, exec) => {
+    const create = (args, exec, planningSession = exec.agent?.session) => {
         args = normalizePanelNotes(useArtifactPanelTitles(args));
         // Snapshot the current authored creation before queueing or canvas mounting.
         // A later status question and unrelated chat memory cannot replace this scope.
-        const originalHumanRequest = workbenchCreationRequest(exec.agent?.session);
-        const originalRequest = originalHumanRequest && workbenchSourceText(exec.agent.session, originalHumanRequest);
+        const originalHumanRequest = workbenchCreationRequest(planningSession);
+        const originalRequest = originalHumanRequest && workbenchSourceText(planningSession, originalHumanRequest);
         if(!originalHumanRequest&&args.sharedDatasets?.some?.(dataset=>dataset?.pastedTable!==undefined))
             throw Error('原始表格只能引用本轮用户消息。');
         const comparisonReferenceTime = new Date();
-        const originalImageMessageId = originalHumanRequest?.messageId && workbenchRequestImages(exec.agent?.session, originalHumanRequest.messageId).length ? originalHumanRequest.messageId : undefined;
+        const originalImageMessageId = originalHumanRequest?.messageId && workbenchRequestImages(planningSession, originalHumanRequest.messageId).length ? originalHumanRequest.messageId : undefined;
         if (originalRequest && planningDataIntent(originalRequest).sourceOnly && args?.dataMode === 'simulated')
             throw Error('用户要求真实数据，不能降级为模拟模式。保持dataMode:"source"；省略未取得的artifact及不匹配的publicData，只提交原需求的title/prompt/type/size，由独立面板真实取数，缺失如实标注。');
         if (originalRequest) args = { ...args, originalRequest };
@@ -207,7 +208,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         const getDocuments=()=>{
             if(!documentPaths||typeof readDocumentEvidence!=='function')
                 throw Error('原文校验服务不可用；附件表格必须来自本轮附件。');
-            return documentEvidence??=readDocumentEvidence(exec.agent.session,documentPaths,exec.signal);
+            return documentEvidence??=readDocumentEvidence(planningSession,documentPaths,exec.signal);
         };
         const resolveSourceTables=async value=>{
             if(!Array.isArray(value.sharedDatasets))return value;
@@ -239,7 +240,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         const sourceSchemas=captureSources ? ctx.tools.schemas?.(exec.agent)??[] : [];
         const tushareDirectory=workbenchTushareDirectory(ctx.tools,exec.agent,sourceSchemas);
         const observedSources=captureSources?captureWorkbenchObservedSources({
-            session:exec.agent.session,messageId:originalHumanRequest.messageId,schemas:sourceSchemas,tushareDirectory,
+            session:planningSession,messageId:originalHumanRequest.messageId,schemas:sourceSchemas,tushareDirectory,
             onRejected:reason=>sourceCaptureWarnings.add(reason)
         }):undefined;
         const sourceViewReferences=new Map();
@@ -249,7 +250,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 if (panel?.sourceView === undefined) return panel;
                 const {sourceView, ...rest} = panel;
                 const scope = '/panels/' + index + '/sourceView';
-                if (!originalRequest || documentExclusive || args.dataMode === 'simulated' || sharedPlans.has(exec.agent?.session?.id))
+                if (!originalRequest || documentExclusive || args.dataMode === 'simulated' || sharedPlans.has(planningSession?.id))
                     throw Error(scope + ' 仅用于当前私有研究请求的结构化来源，可独立提交图表或明细。');
                 const conflict = ['content','artifact','view','publicData','profile','requests','library'].find(key => Object.hasOwn(rest,key));
                 if (conflict) throw Error(scope + ' 使用 sourceView 时请删除同一面板的 ' + conflict + ' 字段，沿用本轮实际来源编号。');
@@ -265,7 +266,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 }
             })};
         }
-        const observedDatasetInput=resolveObservedWorkbenchDatasets(args,sharedPlans.has(exec.agent?.session?.id)?undefined:observedSources);
+        const observedDatasetInput=resolveObservedWorkbenchDatasets(args,sharedPlans.has(planningSession?.id)?undefined:observedSources);
         args=observedDatasetInput.plan;
         for(const panel of args.panels??[]){
             const ref=observedDatasetInput.references.get(panel?.view?.dataset)?.sourceRef;
@@ -311,12 +312,12 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             }
             return issues;
         };
-        args = preserveWorkbenchRefreshPreference(args, canvasHumanRequest(exec.agent?.session)?.text);
+        args = preserveWorkbenchRefreshPreference(args, canvasHumanRequest(planningSession)?.text);
         if (args?.requestId === undefined) {
-            const messageId = canvasHumanRequest(exec.agent?.session)?.messageId;
+            const messageId = canvasHumanRequest(planningSession)?.messageId;
             if (messageId) args = { ...args, requestId: `auto-${createHash('sha256').update(messageId).digest('hex')}` };
         }
-        const capture = sharedPlans.get(exec.agent?.session?.id);
+        const capture = sharedPlans.get(planningSession?.id);
         if (capture) {
             if (args.panels?.some(panel => panel?.htmlFile || panel?.artifact?.presentation === 'webpage'))
                 throw Error('此网页保存在个人项目内。共享画板请使用可共同读取的原生组件。');
@@ -333,7 +334,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
         const run = async () => {
             const fundCount = !originalImageMessageId && fundComparisonCount(originalRequest);
             const validationOptions = {recoverPreparedArtifacts:Boolean(documentPaths || observedSources?.length)};
-            const parentSessionId = exec.agent?.session?.id;
+            const parentSessionId = planningSession?.id;
             if (!str(parentSessionId, 256) || !ctx.agents.get(parentSessionId))
                 throw Error('研究会话不可用');
             exec.signal?.throwIfAborted();
@@ -432,7 +433,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             const direct = input.panels.filter(p => p.publicData);
             const usesPublicSource=direct.length||args.panels?.some(p=>p?.publicData||p?.profile!==undefined||p?.requests!==undefined);
             if (usesPublicSource && (!ctx.tools.schemas?.(exec.agent)?.some(t => t.name === 'public_data_query') ||
-                workbenchOfflineRequest(canvasHumanRequest(exec.agent?.session)?.text)))
+                workbenchOfflineRequest(canvasHumanRequest(planningSession)?.text)))
                 throw Error('当前任务未授权内置免费来源取数；请使用已有资料或正常面板流程。');
             if (direct.length && typeof runtime.startPublicDataBatch !== 'function') throw Error('免费源组件直通服务不可用。');
             if (input.generationMode === 'deferred' && input.panels.some(p=>!p.artifact) && typeof runtime.startBatch !== 'function') throw Error('延后模拟面板生成服务不可用。');
@@ -466,7 +467,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 return { ...refreshReceipt(), planId: old.id, tabs: old.tabs?.map(t=>t.name)??[], panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? incompleteWorkbench(old) ? 'incomplete' : (old.sharedComparisonPrepared || preparedWorkbench(old)) && old.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' : 'preparing', ...workbenchReceiptDetail(old) };
             }
             const id = randomUUID();
-            const plan = { ...input, input:recoveredDraftHash?input:submitted, id, parentSessionId, createdAt: Date.now(), ready: false,...(scopeDeficits.length?{scopeDeficits}:{}),...(recoveredDraftHash ? {recoveredDraftHash} : {}),...(sourceCaptureWarnings.size ? {sourceCaptureWarning:[...sourceCaptureWarnings].join('\n')} : {}),
+            const plan = { ...input, input:recoveredDraftHash?input:submitted, id, parentSessionId, ...(originalHumanRequest?.messageId ? {sourceMessageId:originalHumanRequest.messageId} : {}), createdAt: Date.now(), ready: false,...(scopeDeficits.length?{scopeDeficits}:{}),...(recoveredDraftHash ? {recoveredDraftHash} : {}),...(sourceCaptureWarnings.size ? {sourceCaptureWarning:[...sourceCaptureWarnings].join('\n')} : {}),
                 panels: bindWorkbenchLibraryLinks(layoutWorkbench(input.panels,undefined,input.tabs).map((p, i) => ({ ...p, nodeId: `${id}-${i}` })),input.links) };
             if (plans.length >= 200)
                 plans = plans.filter(p => !p.applied || p.createdAt > Date.now() - 30 * 86400000);
@@ -615,6 +616,56 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             return receipt;
         }
     }));
+    const recoverDelivery = async (parentSessionId, delivery) => {
+        const agent = ctx.agents.get(parentSessionId) ?? await ctx.typert?.lookups?.get('agent')?.resolve(parentSessionId);
+        if (!agent || ctx.agents.get(parentSessionId) !== agent) return 'pending';
+        const session = agent.session;
+        const round = admittedResearchTurn(session, delivery);
+        if (!round) return session.events?.some(event => event.time >= delivery.startedAt && event.type === 'turn/end')
+            ? 'unavailable' : 'pending';
+        // Avoid replaying a turn already accepted with a model-supplied requestId.
+        const end = round.events.find(e => e.type === 'turn/end' && e.data?.turn === round.turn);
+        const existing = plans.find(plan => plan.parentSessionId === parentSessionId &&
+            (plan.sourceMessageId ? plan.sourceMessageId === round.human.messageId : plan.createdAt >= round.start && plan.createdAt <= (end?.time ?? Infinity)));
+        if (existing) return existing.applied ? 'mounted' : 'accepted';
+        if (!end) return 'pending';
+        if (['cancelled','canceled','aborted','interrupted'].includes(end.data.reason?.kind)) return 'stopped';
+        const panels = completedResearchWebpages(round);
+        if (!panels?.length) return 'unavailable';
+        const requestId = 'auto-' + createHash('sha256').update(round.human.messageId).digest('hex');
+        const receipt = await create({requestId, title:panels[0].title, panels}, {agent}, {id:parentSessionId, header:session.header, events:round.events});
+        return receipt?.planId ? 'accepted' : 'unavailable';
+    };
+    // Admission arrives on the originating Research surface. Finish preparing
+    // that session's plan even when the renderer is showing another project.
+    const pendingDeliveries = new Map();
+    const reconcileDelivery = (sessionId, delivery) => {
+        const key = sessionId + ':' + delivery.startedAt;
+        let entry = pendingDeliveries.get(key);
+        if (entry && entry.delivery.request !== delivery.request) throw Error('本次看板请求与已接收的需求不符。');
+        if (!entry) {
+            entry = {sessionId, delivery};
+            pendingDeliveries.set(key, entry);
+        }
+        if (!entry.running) entry.running = recoverDelivery(sessionId, delivery).then(status => {
+            if (status !== 'pending') pendingDeliveries.delete(key);
+            return status;
+        }).catch(error => {
+            pendingDeliveries.delete(key);
+            throw error;
+        }).finally(() => { delete entry.running; });
+        return entry.running;
+    };
+    const disposeEvents = ctx.on?.('session/event', (session, event) => {
+        if (!['turn/end','user/message','agent/inbox/spliced'].includes(event.type)) return;
+        for (const entry of pendingDeliveries.values()) if (entry.sessionId === session.id) {
+            if (event.type === 'turn/end') {
+                // A polling request may be finishing against the preceding event.
+                void Promise.resolve(entry.running).catch(() => {}).then(() =>
+                    reconcileDelivery(session.id,entry.delivery)).catch(() => {});
+            } else admittedResearchTurn(session,entry.delivery);
+        }
+    });
     const disposeRoute = ctx.webServer.register({ kind: 'exact', path: WORKBENCH_PATH, handler: async (req, res) => {
             const send = (status, data) => { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(data)); };
             if (req.method !== 'POST')
@@ -622,7 +673,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             if (!isTrustedRequest(req, true))
                 return send(403, { error: 'Request rejected' });
             try {
-                const { parentSessionId, acknowledged = [], mounted = [] } = await readJsonBody(req);
+                const { parentSessionId, acknowledged = [], mounted = [], delivery } = await readJsonBody(req);
                 await assertPrivateResearchSession(parentSessionId);
                 if (!str(parentSessionId, 256))
                     return send(400, { error: '会话无效' });
@@ -639,7 +690,13 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     chain = pending.catch(() => { });
                     await pending;
                 }
-                send(200, { plans: plans.filter(p => p.parentSessionId === parentSessionId && !p.applied).map(p => ({ id: p.id, title: p.title, createdAt: p.createdAt, ready: p.ready, ...(workbenchRequestedStyle(p.originalRequest)?{requestedStyle:workbenchRequestedStyle(p.originalRequest)}:{}), ...(p.tabs?{tabs:p.tabs}:{}), panels: p.panels.map(({ artifact, ...panel }) => ({
+                let deliveryStatus;
+                if (delivery && !acknowledged.length && !mounted.length) {
+                    if (!str(delivery.request, 32000) || !Number.isSafeInteger(delivery.startedAt)) return send(400, {error:'画布任务无效'});
+                    try { deliveryStatus = await reconcileDelivery(parentSessionId, delivery); }
+                    catch (error) { return send(200, {plans:[], deliveryStatus:'error', detail:error.message}); }
+                }
+                send(200, { ...(deliveryStatus ? {deliveryStatus} : {}), plans: plans.filter(p => p.parentSessionId === parentSessionId && !p.applied).map(p => ({ id: p.id, title: p.title, createdAt: p.createdAt, ready: p.ready, ...(workbenchRequestedStyle(p.originalRequest)?{requestedStyle:workbenchRequestedStyle(p.originalRequest)}:{}), ...(p.tabs?{tabs:p.tabs}:{}), panels: p.panels.map(({ artifact, ...panel }) => ({
                     ...panel,
                     ...(!p.ready && !panel.taskId && !panel.error ? { pending: true } : {}),
                     // A completed prepared plan can also be mounted after the
@@ -651,5 +708,5 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                 send(400, { error: '工作台读取失败' });
             }
         } });
-    return async () => { disposeSourceTool(); disposeTool(); disposeRoute(); if (runtime.inspectPendingGeneration === inspectPendingGeneration) delete runtime.inspectPendingGeneration; await chain; };
+    return async () => { disposeEvents?.(); pendingDeliveries.clear(); disposeSourceTool(); disposeTool(); disposeRoute(); if (runtime.inspectPendingGeneration === inspectPendingGeneration) delete runtime.inspectPendingGeneration; await chain; };
 }
