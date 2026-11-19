@@ -5,7 +5,7 @@ import {BrowserActivityPage} from './activity-page'
 import {downloadDetails,downloadIndicator} from './download-details'
 import type {WorkspaceSurfaceHost} from '../workspace-surface-host'
 import {clipWorkspaceTabs,mountWorkspaceTopbarStyles,reserveWorkspaceRightControl,revealWorkspaceTab,workspaceBackButton} from '../workspace-topbar'
-import {sessionWorkspaceViews, navigateWorkspaceView, observeWorkspaceViews, setWorkspaceViewsExpanded} from '../workspace-view-shortcuts'
+import {sessionWorkspaceViews, navigateWorkspaceView, observeWorkspaceViews, setWorkspaceViewsExpanded, takeWorkspaceViewsExpansion} from '../workspace-view-shortcuts'
 import {browserIcons} from './icons'
 import css from './style.css?inline'
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
@@ -53,6 +53,7 @@ export class BrowserAppView {
   this.closePageContextMenu();this.sessionId=sessionId;const epoch=++this.epoch
   this.host.open('browser')
   this.root.hidden=false
+  if(takeWorkspaceViewsExpansion(this.document,sessionId,'browser'))this.setWorkspaceExpanded(true)
   this.render();this.schedule()
   let snapshot: BrowserSnapshot
   try{snapshot=await this.bridge.request('snapshot')}
@@ -241,7 +242,7 @@ export class BrowserAppView {
  private navigateWorkspace(view:string){
   if(!sessionWorkspaceViews(this.document).some(([id])=>id===view))return
   if(!this.sessionId){if(view==='chat')this.host.revealConversation();return}
-  if (view === 'browser') { this.setWorkspaceExpanded(false); return }
+  if (view === 'browser') return
   if (!navigateWorkspaceView(this.document, this.sessionId, view, () => this.host.revealConversation()))
     this.toast('此会话视图暂不可用，请先打开对应会话。', true)
  }

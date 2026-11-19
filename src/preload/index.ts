@@ -11,7 +11,10 @@ import {createClientCapabilitiesBridge} from './client-capabilities'
 import {createConversationComponentsBridge} from './conversation-components'
 import { WorkspaceSurfaceHost } from './workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from './workspace-topbar'
-import { findWorkspaceSession, mountSessionWorkspaceViewShortcuts, mountWorkspaceViewCustomization, sessionWorkspaceAppViews, sessionWorkspaceViewEvent, type SessionWorkspaceAppView } from './workspace-view-shortcuts'
+import {
+  clearWorkspaceViewsExpansion, findWorkspaceSession, keepWorkspaceViewsExpanded, mountSessionWorkspaceViewShortcuts,
+  mountWorkspaceViewCustomization, sessionWorkspaceAppViews, sessionWorkspaceViewEvent, type SessionWorkspaceAppView
+} from './workspace-view-shortcuts'
 import { noteBlocksFromFile } from './notes/editor'
 import { openKnowledgeSession } from './knowledge/session-directory'
 import type { FileEditorMode, FileEditorSource } from '../shared/file-editor.mjs'
@@ -495,6 +498,7 @@ function initializeUi(): void {
         findWorkspaceSession(document)?.dataset.eworkNotesSession !== sessionId ||
         !findWorkspaceSession(document, sessionId)?.querySelector('[data-srb-tabs]')) return
     document.body.dataset.sessionWorkspaceSwitch = sessionId
+    keepWorkspaceViewsExpanded(document, sessionId, view)
     if (view === 'browser') await browserApp.open(sessionId)
     if (view === 'image-factory') imageFactory.openInSession(sessionId)
     if (view === 'knowledge') window.dispatchEvent(new CustomEvent(knowledgeOpenEvent))
@@ -509,6 +513,7 @@ function initializeUi(): void {
   document.addEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
   const openNavigationApp = async (app: NavigationShortcut, signal: AbortSignal, region?: NavigationRegion) => {
     workspaceViewRequest++
+    clearWorkspaceViewsExpansion(document)
     delete document.body.dataset.sessionWorkspaceSwitch
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app

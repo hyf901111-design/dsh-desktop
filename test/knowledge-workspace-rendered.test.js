@@ -17,6 +17,8 @@ beforeAll(async () => {
       import { BrowserAppView } from './src/preload/browser/view'
       import { mountFloatingSurfaces } from './src/preload/floating-surfaces'
       import { mountKnowledgeWorkspace } from './src/preload/knowledge/workspace'
+      import { keepWorkspaceViewsExpanded } from './src/preload/workspace-view-shortcuts'
+      window.keepWorkspaceViewsExpanded = keepWorkspaceViewsExpanded
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
       import { installKnowledgeSidebar, installKnowledgeSourceNavigation } from './scripts/lib/knowledge-client.mjs'
       import React from 'react'
@@ -976,6 +978,16 @@ it('keeps the workspace shortcuts open across the draggable knowledge header', a
     await shortcuts.getByRole('button', { name: '切换到笔记' }).click()
     expect(await page.locator('body').getAttribute('data-selected-view')).toBe('notes')
     expect(await library.isVisible()).toBe(false)
+    await page.evaluate(() => {
+      window.keepWorkspaceViewsExpanded(document, 'selected', 'knowledge')
+      window.dispatchEvent(new Event('sherlock:knowledge-open'))
+    })
+    await shortcuts.waitFor()
+    expect(await toggle.getAttribute('aria-expanded')).toBe('true')
+    await shortcuts.getByRole('button', { name: '切换到笔记' }).click()
+    await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
+    await toggle.waitFor()
+    expect(await toggle.getAttribute('aria-expanded')).toBe('false')
   } finally {
     await page.close()
   }

@@ -28,6 +28,24 @@ export function workspaceViewButton(document: Document, sessionId: string, view:
     ?.querySelector<HTMLButtonElement>(`[data-srb-tabs] button[data-conversation-view-id="${view}"]`)
 }
 
+// Transfer the open switcher only to the requested view in the same session.
+const expandingView = new WeakMap<Document, { sessionId: string; view: string }>()
+
+export function keepWorkspaceViewsExpanded(document: Document, sessionId: string, view: string) {
+  expandingView.set(document, { sessionId, view })
+}
+
+export function clearWorkspaceViewsExpansion(document: Document) {
+  expandingView.delete(document)
+}
+
+export function takeWorkspaceViewsExpansion(document: Document, sessionId: string | undefined, view: string | undefined) {
+  const next = expandingView.get(document)
+  if (!next || next.sessionId !== sessionId || next.view !== view) return false
+  clearWorkspaceViewsExpansion(document)
+  return true
+}
+
 export function navigateWorkspaceView(document: Document, sessionId: string, view: string, reveal: () => void) {
   const header = findWorkspaceSession(document, sessionId)
   if (!header?.querySelector('[data-srb-tabs]')) return false
@@ -40,6 +58,7 @@ export function navigateWorkspaceView(document: Document, sessionId: string, vie
   reveal()
   const current = workspaceViewButton(document, sessionId, view)
   if (!current?.isConnected || current.disabled) return false
+  keepWorkspaceViewsExpanded(document, sessionId, view)
   current.click()
   return true
 }
@@ -102,7 +121,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   nav.id = 'odyssey-session-workspace-views'
   nav.className = 'eb-workspace-tabs'
   controls.append(toggle, nav)
-  let owner: HTMLElement | undefined, expanded = false, frame = 0
+  let owner: HTMLElement | undefined, ownerId: string | undefined, expanded = false, frame = 0
   const english = () => document.documentElement.dataset.odysseyLocale === 'en'
   const buttons = workspaceViews.map(([view, zh, en]) => {
     const button = document.createElement('button')
@@ -111,9 +130,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     button.addEventListener('click', () => {
       const id = owner?.dataset.eworkNotesSession
       if (!id || activeHeader() !== owner) return
-      const selected = button.getAttribute('aria-current') === 'true'
-      expand(false)
-      if (!selected) navigateWorkspaceView(document, id, view, reveal)
+      if (button.getAttribute('aria-current') !== 'true') navigateWorkspaceView(document, id, view, reveal)
     })
     return { view, zh, en, button }
   })
@@ -143,16 +160,18 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   const sync = () => {
     frame = 0
     const header = activeHeader()
-    if (header !== owner) {
+    const id = header?.dataset.eworkNotesSession
+    const selected = header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected=true]')?.dataset.conversationViewId
+    const arrivingExpanded = takeWorkspaceViewsExpansion(document, id, selected)
+    if (header !== owner || id !== ownerId) {
       controls.remove()
       owner = header
-      expand(false)
+      ownerId = id
+      expand(arrivingExpanded)
       updated = ''
-    }
+    } else if (arrivingExpanded) expand(true)
     if (!header) return
     if (!header.contains(controls)) header.append(controls)
-    const selected = header.querySelector('[data-conversation-view-id][aria-selected=true]')?.getAttribute('data-conversation-view-id')
-    const id = header.dataset.eworkNotesSession!
     const language = english() ? 'en' : 'zh'
     const native = header.querySelector('[data-srb-tabs]')
     const availability = buttons.map(({ view }) => !!native && (
