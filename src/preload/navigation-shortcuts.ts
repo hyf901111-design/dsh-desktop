@@ -55,6 +55,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   status.setAttribute('role', 'status')
   doc.body.append(status)
 
+  let shown: NavigationShortcut[] = []
   let editing = false
   let picked: NavigationApp | undefined
   let pointer: PointerHold | undefined
@@ -90,42 +91,50 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
 
   function sync() {
     const group = doc.querySelector(groupSelector)
-    if (group) {
+    if (!group) {
+      rail.remove()
+      shown = []
+    } else {
       const active = currentShortcut()
       const collapsed = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') === 'false'
-      group.querySelectorAll('[data-sidebar-chat-entry],[data-sidebar-research-entry]').forEach(button => {
-        const app = button.hasAttribute('data-sidebar-chat-entry') ? 'new-chat' : 'research'
-        setAttribute(button, 'aria-pressed', String(app === active))
-      })
-      const home = group.querySelector('[data-sidebar-home]')
-      const chatOnHome = active === 'new-chat' && !value.side.includes('new-chat')
-      if (home) setAttribute(home, 'aria-pressed', String(active === 'home' || chatOnHome))
       const more = group.querySelector('.st-more-zone')
-      more?.querySelector('button.st-more')?.toggleAttribute('data-navigation-overflow-active',
-        Boolean(collapsed && active && active !== 'home' && !chatOnHome && !value.side.includes(active)))
-      if (!collapsed) rail.remove()
-      else {
-        if (rail.parentElement !== group || (more && rail.nextElementSibling !== more)) group.insertBefore(rail, more)
-        for (let index = 0; index < sidebarShortcutCount; index++) {
-          const app = value.side[index] ?? null
-          const existing = rail.children.item(index) as HTMLButtonElement | null
-          const button = existing ?? doc.createElement('button')
-          setAttribute(button, 'data-navigation-slot', String(index))
-          setAttribute(button, 'data-navigation-app', app ?? '')
-          setAttribute(button, 'type', 'button')
-          button.toggleAttribute('data-empty', !app)
-          const name = app ? label(app) : english() ? 'Empty shortcut slot' : '空快捷位'
-          setAttribute(button, 'aria-label', name)
-          setAttribute(button, 'title', name)
-          const mask = app ? navigationAppIcon(app) : ''
-          if (button.style.getPropertyValue('--navigation-glyph') !== mask) button.style.setProperty('--navigation-glyph', mask)
-          if (app) setAttribute(button, 'aria-pressed', String(app === active))
-          else button.removeAttribute('aria-pressed')
-          setAttribute(button, 'tabindex', app ? '0' : '-1')
-          if (!existing) rail.append(button)
-        }
+      if (rail.parentElement !== group || (more && rail.nextElementSibling !== more)) group.insertBefore(rail, more)
+      for (let index = 0; index < sidebarShortcutCount; index++) {
+        const app = value.side[index] ?? null
+        const existing = rail.children.item(index) as HTMLButtonElement | null
+        const button = existing ?? doc.createElement('button')
+        setAttribute(button, 'data-navigation-slot', String(index))
+        setAttribute(button, 'data-navigation-app', app ?? '')
+        setAttribute(button, 'type', 'button')
+        button.toggleAttribute('data-empty', !app)
+        const name = app ? label(app) : english() ? 'Empty shortcut slot' : '空快捷位'
+        setAttribute(button, 'aria-label', name)
+        setAttribute(button, 'title', name)
+        const mask = app ? navigationAppIcon(app) : ''
+        if (button.style.getPropertyValue('--navigation-glyph') !== mask) button.style.setProperty('--navigation-glyph', mask)
+        if (app) setAttribute(button, 'aria-pressed', String(app === active))
+        else button.removeAttribute('aria-pressed')
+        setAttribute(button, 'tabindex', app ? '0' : '-1')
+        if (!existing) rail.append(button)
       }
-    } else rail.remove()
+
+      let capacity = sidebarShortcutCount
+      if (!collapsed) {
+        const layout = win.getComputedStyle(rail)
+        const gap = parseFloat(layout.columnGap) || 0
+        const size = parseFloat(layout.getPropertyValue('--navigation-shortcut-size')) || 36
+        capacity = Math.min(capacity, Math.floor((rail.clientWidth + gap) / (size + gap)))
+      }
+      Array.from(rail.children).forEach((button, index) => button.toggleAttribute('hidden', !collapsed && index >= capacity))
+      shown = value.side.slice(0, capacity).filter(isNavigationShortcut)
+
+      const home = group.querySelector('[data-sidebar-home]')
+      const onHome = active === 'home' || (active === 'new-chat' && !value.side.includes('new-chat'))
+      if (home) setAttribute(home, 'aria-pressed', String(onHome))
+      const overflowActive = active === 'home' ? !collapsed :
+        Boolean(active && !shown.includes(active) && !(collapsed && onHome))
+      more?.querySelector('button.st-more')?.toggleAttribute('data-navigation-overflow-active', overflowActive)
+    }
     if (menuAnchor && (!menuAnchor.isConnected || menuAnchor.closest('[aria-hidden=true],[hidden]'))) closeMenu()
   }
 
@@ -159,6 +168,9 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     update(replaceNavigationShortcut(value, 'side', Number(button.dataset.navigationSlot), app))
   }
   function setEditing(active: boolean, selection?: NavigationApp) {
+    if (active && !editing) {
+      doc.querySelector<HTMLButtonElement>('[data-dsh-sidebar-root][data-dsh-sidebar-wide=true] .hHd-Xa_toggle')?.click()
+    }
     editing = active
     picked = selection
     doc.body.toggleAttribute('data-navigation-editing', active)
@@ -416,9 +428,12 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     attributeFilter: ['data-dsh-sidebar-wide', 'data-workspace-surface', 'data-odyssey-locale', 'data-odyssey-page',
       'data-srb-selected-session', 'data-ework-notes-session', 'aria-selected', 'aria-hidden', 'hidden']
   })
+  const resize = win.ResizeObserver ? new win.ResizeObserver(sync) : undefined
+  resize?.observe(rail)
   sync()
   return {
     sidebar: () => value.side,
+    visibleSidebar: () => shown,
     pinSidebar(app: NavigationShortcut) {
       if (value.side.includes(app)) return
       const index = value.side.indexOf(null)
@@ -435,6 +450,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     dispose() {
       lifetime.abort()
       observer.disconnect()
+      resize?.disconnect()
       pending?.abort()
       stopPointer()
       closeMenu()

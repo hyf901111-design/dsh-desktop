@@ -101,7 +101,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
-    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];pinApp?:(app:NavigationShortcut)=>void},
+    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];visibleApps?:()=>readonly NavigationShortcut[];pinApp?:(app:NavigationShortcut)=>void},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)
@@ -219,7 +219,11 @@ export class ScheduledTaskView {
     this.mountCollapsedApps(group)
     const current = this.more?.closest<HTMLElement>('.st-more-zone')
     if (current?.isConnected) {
-      if(this.menuAnchor===this.more&&this.menu?.dataset.sidebarWide!==String(group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide')!=='false'))this.closeMenu()
+      if (this.menuAnchor === this.more) {
+        const wide = group.closest('[data-dsh-sidebar-root]')?.getAttribute('data-dsh-sidebar-wide') !== 'false'
+        if (this.menu?.dataset.sidebarWide !== String(wide) ||
+            this.menu?.dataset.sidebarVisibleApps !== this.sidebarActions?.visibleApps?.().join(',')) this.closeMenu()
+      }
       this.placeMore(group, current); return
     }
     if(this.menuAnchor===this.more)this.closeMenu()
@@ -240,8 +244,13 @@ export class ScheduledTaskView {
       const addWorkspace = sidebar?.querySelector<HTMLButtonElement>('[data-sidebar-add-workspace]')
       const english = this.document.documentElement.dataset.odysseyLocale === 'en'
       const entries: MenuItem[] = []
-      if (!wide) entries.push(
-        { app: 'new-workspace', label: english ? 'New workspace' : '新建工作区', icon: 'workspaceAdd', disabled: !addWorkspace || addWorkspace.disabled, run: () => addWorkspace?.click() },
+      if (wide && pinned) entries.push(
+        { label: english ? 'Home' : '主页', icon: 'homeRail', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-open-home', { bubbles: true })) }
+      )
+      if (!wide || pinned?.includes('new-workspace')) entries.push(
+        { app: 'new-workspace', label: english ? 'New workspace' : '新建工作区', icon: 'workspaceAdd', disabled: !addWorkspace || addWorkspace.disabled, run: () => addWorkspace?.click() }
+      )
+      if (!wide || pinned) entries.push(
         { app: 'new-chat', label: english ? 'Chat' : '对话', icon: 'chat', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-chat', { bubbles: true })) },
         { app: 'research', label: english ? 'Research' : '研究', icon: 'research', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research', { bubbles: true })) }
       )
@@ -264,7 +273,8 @@ export class ScheduledTaskView {
         } })
       }
       entries.push({ app: 'scheduled', label: english ? 'Scheduled tasks' : '定时任务', icon: 'clock', run: () => void this.open() })
-      const available = entries.filter(item => wide || !item.app || !pinned?.includes(item.app))
+      const shown = this.sidebarActions?.visibleApps?.()
+      const available = entries.filter(item => !item.app || !(shown ?? (wide ? undefined : pinned))?.includes(item.app))
       const pinApp = this.sidebarActions?.pinApp
       const pins = !wide && pinApp ? {
         add: pinApp,
@@ -272,7 +282,11 @@ export class ScheduledTaskView {
       } : undefined
       this.showMenu(more, available, pins)
       const opened=this.menu as HTMLElement|undefined
-      if(opened){opened.dataset.sidebarMore='true';opened.dataset.sidebarWide=String(wide)}
+      if (opened) {
+        opened.dataset.sidebarMore = 'true'
+        opened.dataset.sidebarWide = String(wide)
+        if (shown) opened.dataset.sidebarVisibleApps = shown.join(',')
+      }
     }
     zone.append(more)
     this.placeMore(group, zone)

@@ -1,22 +1,43 @@
 html[data-navigation-sidebar-only] body .pI_x6G_centerCol [data-srb-tabs]:not([data-odyssey-subagent-panel] *),
 html[data-navigation-sidebar-only] body .workspace-app-topbar .eb-workspace-controls,
-html[data-navigation-sidebar-only] body :is(.workspace-back-button, .knowledge-back) {
+html[data-navigation-sidebar-only] body :is(.workspace-back-button, .knowledge-back),
+html[data-navigation-sidebar-only] body [data-dsh-sidebar-root] :is([data-sidebar-chat-entry], [data-sidebar-research-entry]) {
   display: none !important;
 }
 
 [data-navigation-rail] {
+  --navigation-shortcut-size: 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 [data-navigation-rail] > button {
-  width: 36px;
-  height: 36px;
+  display: grid;
+  place-items: center;
+  width: var(--navigation-shortcut-size);
+  height: var(--navigation-shortcut-size);
+  padding: 0;
+  border-radius: 8px;
   border: 0;
   color: #626262;
   background: transparent;
   flex: none;
+}
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] .hHd-Xa_newSessionGroup:has(> [data-navigation-rail]) {
+  box-sizing: border-box;
+  width: 100%;
+}
+[data-dsh-sidebar-wide=true] [data-navigation-rail] {
+  flex: 1 1 0%;
+  min-width: 0;
+  flex-direction: row;
+  gap: 6px;
+  overflow: hidden;
+}
+[data-navigation-rail] > [hidden],
+[data-dsh-sidebar-wide=true] [data-navigation-rail] > [data-empty] {
+  display: none !important;
 }
 body[data-ds-dark-theme] [data-navigation-rail] > button { color: #aaa }
 [data-navigation-rail] > button:not([data-empty]):is(:hover,:focus-visible,:active,[aria-pressed=true]) {
