@@ -603,6 +603,7 @@ it('shares editable shortcuts between the composer and sidebar with global top s
    await page.mouse.down()
    if (triggerEdit) {
     await page.locator('body[data-navigation-editing]').waitFor()
+    expect(await sidebar.locator('button:visible').count()).toBe(6)
     expect(await source.locator('span').evaluate(node => getComputedStyle(node).animationName)).toBe('navigation-shortcut-wiggle')
    }
    const to = await destination.boundingBox()
@@ -617,13 +618,17 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   expect(await page.locator('.workspace-back-button').isVisible()).toBe(false)
   expect(await page.locator('.eb-toolbar [data-action=back]').isVisible()).toBe(true)
   expect(await homeTabs.isVisible()).toBe(false)
+  expect(await sidebar.locator('button:visible').count()).toBe(5)
+  expect(await sidebar.locator('[data-empty]:visible').count()).toBe(0)
+  const moreY = () => page.locator('.st-more-zone').evaluate(node => node.getBoundingClientRect().top)
+  const moreBeforeEdit = await moreY()
   const maskGeometry = button => button.evaluate(element => {
    const icon = getComputedStyle(element, '::before')
    return [element.getBoundingClientRect().width, icon.width, icon.maskSize]
   })
-  expect(await maskGeometry(sidebar.getByRole('button', { name: '浏览器' }))).toEqual([36, '28px', '24px'])
-  expect(await maskGeometry(sidebar.getByRole('button', { name: '知识库' }))).toEqual([36, '28px', '27px'])
-  expect(await maskGeometry(sidebar.getByRole('button', { name: '笔记' }))).toEqual([36, '28px', '23px'])
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '浏览器' }))).toEqual([36, '28px', '22px'])
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '知识库' }))).toEqual([36, '28px', '25px'])
+  expect(await maskGeometry(sidebar.getByRole('button', { name: '笔记' }))).toEqual([36, '28px', 'auto 18.5px'])
   const activeRail = () => sidebar.locator('[aria-pressed=true]').getAttribute('data-navigation-app')
   for (const [surface, app] of [['browser', 'browser'], ['image-factory', 'image-factory'], ['notes', 'note'], ['scheduled', 'scheduled']]) {
    await page.evaluate(next => { document.body.dataset.workspaceSurface = next }, surface)
@@ -651,6 +656,8 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   }
   await menu.getByRole('menuitem', { name: '快捷管理' }).click()
   await page.locator('body[data-navigation-editing]').waitFor()
+  expect(await sidebar.locator('[data-empty]:visible').count()).toBe(1)
+  expect(await moreY()).toBeGreaterThan(moreBeforeEdit)
   expect(await source.locator('span').evaluate(node => getComputedStyle(node).animationName)).toBe('navigation-shortcut-wiggle')
   expect(await page.locator('#session-title').isVisible()).toBe(true)
   expect(await homeTabs.isVisible()).toBe(false)
@@ -675,7 +682,9 @@ it('shares editable shortcuts between the composer and sidebar with global top s
   expect(await sidebar.locator('[data-navigation-slot="2"]').getAttribute('aria-label')).toBe('笔记')
   expect(await homeTabs.isVisible()).toBe(false)
   await page.keyboard.press('Escape')
-  expect(await sidebar.locator('button:visible').count()).toBe(6)
+  expect(await sidebar.locator('button:visible').count()).toBe(5)
+  expect(await sidebar.locator('[data-empty]:visible').count()).toBe(0)
+  expect(await moreY()).toBe(moreBeforeEdit)
   await page.evaluate(() => { document.querySelector('.eb-root').hidden = false })
   expect(await browserControls.isVisible()).toBe(false)
   expect(errors).toEqual([])

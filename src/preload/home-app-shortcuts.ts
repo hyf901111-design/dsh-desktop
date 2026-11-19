@@ -1,4 +1,5 @@
 import chatIcon from './browser/assets/chat.svg?inline'
+import noteIcon from '../../build/brand/odyssey-app-note.svg?inline'
 import researchIcon from '../../build/brand/odyssey-app-research.svg?inline'
 import spreadsheetIcon from '../../build/brand/odyssey-app-spreadsheet.svg?inline'
 import newWorkspaceIcon from '../../build/brand/odyssey-b-workspace-add-18.svg?inline'
@@ -14,7 +15,7 @@ const appIcons = {
   plugin: '/odyssey-home-plugin-28.svg',
   scheduled: '/odyssey-home-scheduled-28.svg',
   research: researchIcon,
-  note: '/odyssey-home-note-28.svg',
+  note: noteIcon,
   spreadsheet: spreadsheetIcon,
   'new-chat': chatIcon,
   'new-workspace': newWorkspaceIcon

@@ -7,7 +7,7 @@ export const scheduledStyles = `
 [data-dsh-sidebar-root] .hHd-Xa_newSessionGroup .hHd-Xa_newSession>svg,[data-dsh-sidebar-root] .hHd-Xa_researchIcon{display:none!important}
 [data-dsh-sidebar-root] .hHd-Xa_newSession::before{content:'';width:18px;height:18px;flex:none;background:currentColor;mask:url('${icons.chat.replaceAll("'",'%27')}') center/contain no-repeat}
 [data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-research-entry]::before{mask:url('${icons.research.replaceAll("'",'%27')}') var(--navigation-icon-position)/var(--navigation-icon-size) no-repeat}
-[data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{mask-image:url('${icons.note.replaceAll("'",'%27')}')}
+[data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{mask:url('${icons.note.replaceAll("'",'%27')}') center/var(--navigation-icon-size,contain) no-repeat}
 @media(max-height:740px){
  body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] :is(.hHd-Xa_logoRow,.hHd-Xa_newSessionGroup,.qDHVXG_rail){gap:4px!important}
 }

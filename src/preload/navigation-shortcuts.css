@@ -34,6 +34,10 @@ body[data-ds-dark-theme] [data-navigation-rail] > button[aria-pressed=true],
 body[data-ds-dark-theme] [data-dsh-sidebar-root] :is(.hHd-Xa_newSession[aria-pressed=true], .st-more[data-navigation-overflow-active]) {
   color: var(--dsw-alias-label-primary, #eee) !important;
 }
+body:not([data-navigation-editing]) [data-navigation-rail] > [data-empty],
+body:not([data-navigation-editing]) [data-navigation-rail]:not(:has(> :not([data-empty]))) {
+  display: none !important;
+}
 [data-navigation-rail] > button[data-empty] {
   background: color-mix(in srgb, currentColor 5%, transparent);
   outline: 1px dashed color-mix(in srgb, currentColor 36%, transparent);
@@ -47,10 +51,10 @@ body[data-ds-dark-theme] [data-dsh-sidebar-root] :is(.hHd-Xa_newSession[aria-pre
   height: 28px;
   flex: none;
   background: currentColor;
-  mask: var(--navigation-glyph) var(--navigation-rail-mask-position, center) / var(--navigation-rail-mask-size, 24px) no-repeat;
+  mask: var(--navigation-glyph) center / var(--navigation-rail-mask-size, 22px) no-repeat;
 }
 
-/* Figma exports these two groups within 28px square source components. */
+/* Figma exports these groups within 28px square source components. */
 :is([data-navigation-app=research], [data-home-app=research], [data-sidebar-research-entry], .st-menu[data-sidebar-more] [data-odyssey-icon=research]) {
   --navigation-icon-size: 75% auto;
   --navigation-icon-position: center 57.2%;
@@ -59,21 +63,22 @@ body[data-ds-dark-theme] [data-dsh-sidebar-root] :is(.hHd-Xa_newSession[aria-pre
   --navigation-icon-size: 78.57% auto;
 }
 
-/* Scale the artwork within the same 36px hit area, correcting for SVG padding. */
-:is([data-navigation-app=scheduled], [data-navigation-app=new-chat], [data-navigation-app=new-workspace]) {
-  --navigation-rail-mask-size: 23px;
-}
-[data-navigation-app=knowledge] { --navigation-rail-mask-size: 27px }
-[data-navigation-app=research] { --navigation-rail-mask-size: 19px auto }
-[data-navigation-app=spreadsheet] { --navigation-rail-mask-size: 20px auto }
-[data-navigation-app=note] {
-  --navigation-rail-mask-size: 23px;
-  --navigation-rail-mask-position: 70% 70%;
+:is([data-home-app=note], [data-sidebar-new-note], .st-menu[data-sidebar-more] [data-odyssey-icon=note]) {
+  --navigation-icon-size: 67.86% auto;
 }
 
+/* Scale the artwork within the same 36px hit area, correcting for SVG padding. */
+:is([data-navigation-app=scheduled], [data-navigation-app=new-chat], [data-navigation-app=new-workspace]) {
+  --navigation-rail-mask-size: 21.5px;
+}
+[data-navigation-app=knowledge] { --navigation-rail-mask-size: 25px }
+[data-navigation-app=research] { --navigation-rail-mask-size: 18px auto }
+[data-navigation-app=spreadsheet] { --navigation-rail-mask-size: 18.5px auto }
+[data-navigation-app=note] { --navigation-rail-mask-size: auto 18.5px }
+
 html[data-navigation-sidebar-only] body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false] .hHd-Xa_newSessionGroup button[data-sidebar-home]::before {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
 }
 
 body[data-navigation-editing] {

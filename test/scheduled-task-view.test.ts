@@ -490,7 +490,7 @@ it('puts the real new-note action first in the existing More menu and closes it 
  const view=new ScheduledTaskView(doc,{list:async()=>[],workspaces:async()=>[],save:vi.fn(),action:vi.fn()},undefined,undefined,{newNote:create});view.mount()
  doc.querySelector<HTMLButtonElement>('.st-more')!.click()
  const item=doc.querySelector<HTMLButtonElement>('[role=menuitem]')!
- expect(item.textContent).toBe('新笔记');expect(item.querySelector('.st-icon')).not.toBeNull()
+ expect(item.textContent).toBe('笔记');expect(item.querySelector('.st-icon')).not.toBeNull()
  item.click();item.click();expect(doc.querySelector('.st-menu')).toBeNull();expect(create).toHaveBeenCalledTimes(1)
  doc.querySelector<HTMLButtonElement>('.st-more')!.click();expect(doc.querySelector<HTMLButtonElement>('[role=menuitem]')!.disabled).toBe(true)
  finish();await Promise.resolve();await Promise.resolve()
@@ -512,13 +512,13 @@ it('offers pin actions only in collapsed More and removes a pinned app from that
     expect(doc.querySelector('[data-st-menu-pin=' + app + ']')?.previousElementSibling?.textContent).toBe(label)
   }
   const pin = doc.querySelector<HTMLButtonElement>('[data-st-menu-pin=note]')!
-  expect(pin.getAttribute('aria-label')).toBe('置顶新建笔记到侧栏')
-  expect(pin.previousElementSibling?.textContent).toBe('新建笔记')
+  expect(pin.getAttribute('aria-label')).toBe('置顶笔记到侧栏')
+  expect(pin.previousElementSibling?.textContent).toBe('笔记')
   pin.click()
   expect(pinApp).toHaveBeenCalledExactlyOnceWith('note')
   expect(doc.querySelector('.st-menu')).toBeNull()
   more.click()
-  expect(doc.querySelector('.st-menu')?.textContent).not.toContain('新建笔记')
+  expect(doc.querySelector('.st-menu')?.textContent).not.toContain('笔记')
   expect(doc.querySelector('[data-st-menu-pin=note]')).toBeNull()
 
   more.click()
@@ -538,7 +538,7 @@ it('offers pin actions only in collapsed More and removes a pinned app from that
   doc.querySelector('[data-dsh-sidebar-root]')!.setAttribute('data-dsh-sidebar-wide', 'true')
   await vi.waitFor(() => expect(doc.querySelector('.st-menu')).toBeNull())
   more.click()
-  expect(doc.querySelector('.st-menu')?.textContent).toContain('新笔记')
+  expect(doc.querySelector('.st-menu')?.textContent).toContain('笔记')
   expect(doc.querySelector('[data-st-menu-pin]')).toBeNull()
   view.close()
 })
