@@ -19,6 +19,7 @@ const controller=new triggers.InputTriggerController({sessionId:'new-session',ro
 const real=new native.__testSessionInputShell({actx:{get:()=>undefined},inputTriggers:()=>controller,defaultSink:(text:string,images:string[])=>events.push({type:'send',text,images})})
 const record=createPendingConversation({makeShell:(deps:any)=>new native.__testSessionInputShell({...deps,actx:{},inputTriggers:()=>undefined}),sessions:{list:{getSnapshot:()=>current,subscribe:active.subscribe},create:async(value:any)=>{events.push({type:'create',...value});if(failCreate){failCreate=false;throw Error('测试创建失败，输入保留')}return 'new-session'},open:(id:string)=>{current.current=id;events.push({type:'open',id});active.set(id)}},workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated:()=>{},prepareContext:async()=>undefined,
  currentSurface:()=>document.body.dataset.workspaceSurface,
+ standaloneDirectory:async()=>'/tmp/standalone/outputs',
  setView:(id:string,view:string)=>events.push({type:'view',id,view})})
 record.views={subscribe:()=>()=>{},version:()=>1,list:()=>[{id:'chat',label:'对话'},{id:'research',label:'研究'},{id:'notes',label:'笔记'},{id:'spreadsheet',label:'表格'}]}
 record.preferences=createPendingComposerPreferences({api:{llm:{models:async()=>({result:{ok:true,value:{groups:[],failures:[]}}})},settings:{describe:async()=>({result:{ok:true,value:{namespaces:[]}}})}}});native.__testSetPending(record)

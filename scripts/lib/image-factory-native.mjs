@@ -6,7 +6,7 @@ import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
 export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
-  getTaskWorkspace, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
+  getTaskWorkspace, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false }
@@ -23,7 +23,7 @@ export function installImageFactoryContext({
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
-  const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace,
+  const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, standaloneDirectory,
     setView: setTaskView, storage: taskStorage, isBoardOnly,
     signal(name, detail) {
       if (name === 'task-state') publishState()
@@ -339,6 +339,7 @@ export function installImageFactoryContext({
     'focus-chat': focus, reset,
     'canvas-intent': event => { intendedCanvas = event.detail },
     'canvas-intent-ended': event => { if (event.detail === intendedCanvas) intendedCanvas = undefined },
+    'project-changed': event => { if (event.detail?.previous === currentId()) tasks.replaceActive(event.detail.previous, event.detail.next) },
     'task-action': event => {
       const detail = event.detail
       const pending = tasks.action(detail)

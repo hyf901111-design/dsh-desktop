@@ -25,14 +25,30 @@ export function patchBoardDirectoryConversation(source) {
 export function patchBoardDirectoryWorkspace(source) {
   source = source.replace("items.unshift({id:'::board-directory'", "items.splice(items.findIndex(item=>item.id==='workspace-search')+1,0,{id:'::board-directory'")
   source = source.replaceAll("'当前看板目录'", "'新建看板目录'")
-  if (source.includes('/* BOARD_DIRECTORY_WORKSPACE_V1 */')) return source
-  source = change(source, 'function WorkspacePickFlow({ t, open,', 'function WorkspacePickFlow({ boardDirectoryPath, t, open,')
-  source = change(source, 'function WorkspacePicker({ open,', 'function WorkspacePicker({ boardDirectoryPath, open,')
-  source = change(source, 'return (0, react_jsx_runtime.jsx)(WorkspacePickFlow, {', 'return (0, react_jsx_runtime.jsx)(WorkspacePickFlow, { boardDirectoryPath,')
-  source = change(source, 'const menuIsEmpty = items.length === 0;', `if (boardDirectoryPath) items.splice(items.findIndex(item=>item.id==='workspace-search')+1,0,{id:'::board-directory',label:chinese ? '新建看板目录' : 'Current board directory',disabled:flowBusy});
+  if (!source.includes('/* BOARD_DIRECTORY_WORKSPACE_V1 */')) {
+    source = change(source, 'function WorkspacePickFlow({ t, open,', 'function WorkspacePickFlow({ boardDirectoryPath, t, open,')
+    source = change(source, 'function WorkspacePicker({ open,', 'function WorkspacePicker({ boardDirectoryPath, open,')
+    source = change(source, 'return (0, react_jsx_runtime.jsx)(WorkspacePickFlow, {', 'return (0, react_jsx_runtime.jsx)(WorkspacePickFlow, { boardDirectoryPath,')
+    source = change(source, 'const menuIsEmpty = items.length === 0;', `if (boardDirectoryPath) items.splice(items.findIndex(item=>item.id==='workspace-search')+1,0,{id:'::board-directory',label:chinese ? '新建看板目录' : 'Current board directory',disabled:flowBusy});
       const menuIsEmpty = items.length === 0;`)
-  source = change(source, 'const addIsTheOnlyEntry = !pinAdd &&', 'const addIsTheOnlyEntry = !boardDirectoryPath && !pinAdd &&')
-  return source + '\n/* BOARD_DIRECTORY_WORKSPACE_V1 */'
+    source = change(source, 'const addIsTheOnlyEntry = !pinAdd &&', 'const addIsTheOnlyEntry = !boardDirectoryPath && !pinAdd &&')
+    source += '\n/* BOARD_DIRECTORY_WORKSPACE_V1 */'
+  }
+  if (source.includes('/* ODYSSEY_PROJECTLESS_PICKER_V1 */')) return source
+  source = change(source, 'function WorkspacePickFlow({ boardDirectoryPath,', 'function WorkspacePickFlow({ boardDirectoryPath, allowStandalone = false,')
+  source = change(source, 'function WorkspacePicker({ boardDirectoryPath,', 'function WorkspacePicker({ boardDirectoryPath, allowStandalone,')
+  source = change(source, 'jsx)(WorkspacePickFlow, { boardDirectoryPath,', 'jsx)(WorkspacePickFlow, { boardDirectoryPath, allowStandalone,')
+  source = change(source, 'const menuIsEmpty = items.length === 0;', `const noProjectId = '::no-project';
+      const standaloneEntry = {
+        id: noProjectId, disabled: flowBusy,
+        label: document.documentElement.dataset.odysseyLocale === 'en' ? 'Work without a project' : '不在项目中工作',
+        icon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutline16, {size:16})
+      };
+      const menuIsEmpty = items.length === 0 && !allowStandalone;`)
+  source = change(source, 'const addIsTheOnlyEntry = !boardDirectoryPath &&', 'const addIsTheOnlyEntry = !allowStandalone && !boardDirectoryPath &&')
+  source = change(source, 'const handleSelect = (id) => {\n\t\t\t\tif (id === ADD_WORKSPACE)', 'const handleSelect = (id) => {\n\t\t\t\tif (allowStandalone && id === noProjectId) { onPick(null); return; }\n\t\t\t\tif (id === ADD_WORKSPACE)')
+  source = change(source, '...pinAdd ? { footer: addEntries } : {},\n\t\t\t\t\tselectedId,', 'footer: [...(pinAdd ? addEntries : []), ...(allowStandalone ? [standaloneEntry] : [])],\n\t\t\t\t\tselectedId: selectedId ?? (allowStandalone ? noProjectId : undefined),')
+  return source + '\n/* ODYSSEY_PROJECTLESS_PICKER_V1 */'
 }
 
 export function patchBoardFileOwnership(source) {

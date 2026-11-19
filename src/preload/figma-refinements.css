@@ -146,9 +146,28 @@ body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace)>svg { flex:none; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace .pXSMma_chevron { display:none; }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:disabled { opacity:.52; cursor:default; }
-body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:not(:disabled)::after {
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace[data-odyssey-project-selected]:not(:disabled)::after {
   content:'⋯'; flex:none; color:var(--dsw-alias-label-tertiary,var(--odyssey-text)); margin-inline-start:3px;
 }
+body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] .pXSMma_workspace:not([data-odyssey-project-selected]) {
+  color:color-mix(in srgb,currentColor 70%,transparent);
+}
+.odyssey-project-picker { position:relative; display:inline-flex; min-width:0; }
+.odyssey-project-clear {
+  position:absolute; inset-inline-start:3px; top:50%; transform:translateY(-50%);
+  display:grid; place-items:center; width:26px; height:26px; padding:0;
+  border:0; border-radius:50%; color:inherit; background:none;
+  cursor:pointer; opacity:0; pointer-events:none;
+}
+.odyssey-project-clear > svg {
+  width:14px; height:14px; padding:2px; box-sizing:border-box; border-radius:50%;
+  background:var(--odyssey-text); color:var(--odyssey-canvas);
+}
+.odyssey-project-picker:is(:hover,:focus-within) .odyssey-project-clear { opacity:1; pointer-events:auto; }
+.odyssey-project-picker:has(.odyssey-project-clear):is(:hover,:focus-within) .pXSMma_workspace > .pXSMma_folder { opacity:0; }
+.odyssey-project-clear:focus-visible { outline:1px solid currentColor; outline-offset:-2px; }
+[role=tooltip]:has([data-odyssey-project-clear-hint]) { pointer-events:none; }
+body .odyssey-project-picker:has(.odyssey-project-clear:hover) .pXSMma_workspace { background:var(--odyssey-menu-row); }
 body .wSkVaW_heroWorkspaceRow[data-odyssey-composer-workspace] :is([data-odyssey-work-location],.pXSMma_workspace):not(:disabled):is(:hover,[aria-expanded=true]) {
   background:var(--odyssey-menu-row);
 }
@@ -607,12 +626,8 @@ body .hHd-Xa_root:not(.hHd-Xa_collapsed) .hHd-Xa_newSession:disabled { opacity:.
 
 /* Empty Research uses the same live preset selector as the conversation home. */
 .sRp_composer .wSkVaW_heroWorkspaceRow[data-research-empty-workspace-row] .cubgiG_seat { display:flex; }
-/* One rounded outline: the previous SVG mask retained its old 22px radius. */
-body .uV2eYG_cardWorkspaceTrigger::after {
-  inset:0; box-sizing:border-box; border-radius:inherit; border:1px dashed var(--dsw-alias-border-l4);
-  background:none; mask:none; -webkit-mask:none; transition:border-color .1s;
-}
-body .uV2eYG_cardWorkspaceTrigger:hover::after { background:none; border-color:var(--dsw-alias-state-business-primary); }
+/* The workspace picker still opens from the disabled card while it loads. */
+body .uV2eYG_cardWorkspaceTrigger::after { content:none; }
 /* An expanded dropdown stays active when the pointer leaves its trigger. */
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat)[aria-expanded=true],
 body :is(.wSkVaW_root[data-odyssey-page],.sRp_composer) .wSkVaW_heroWorkspaceRow :is(.pXSMma_workspace,.cubgiG_seat)[aria-expanded=true]:hover {

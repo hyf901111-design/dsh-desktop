@@ -113,9 +113,52 @@ function composerWorkspaceEdits() {
   ];
 }
 
+function ComposerProjectPicker({ onClear, ...props }) {
+  const h = react_jsx_runtime.jsx
+  const label = document.documentElement.dataset.odysseyLocale === 'en' ? 'Work without a project' : '不在项目中工作'
+  return react_jsx_runtime.jsxs('span', { className: 'odyssey-project-picker', children: [
+    h(WorkspaceChip, props),
+    onClear && h(_deepseek_ai_dsh_client_ui_primitives.Tooltip, {
+      label: h('span', { 'data-odyssey-project-clear-hint': '', children: label }),
+      side: 'top', children:
+      h('button', { type: 'button', className: 'odyssey-project-clear', 'aria-label': label, onClick: onClear, children:
+        h(_deepseek_ai_dsh_client_ui_primitives.IconCloseOutline16, { size: 10 }) })
+    }),
+  ] })
+}
+
+const projectlessPickerMarker = '/* odyssey:composer-projectless-picker:v1 */'
+function projectlessWorkspaceEdits() {
+  const chipDefinition = '\n\t\tfunction WorkspaceChip('
+  const picker = '\n\t\t\tconst heroWorkspaceRow = subagentPanel || !(pendingConversation || conversationVacant) ? null :'
+  const chip = '(0, react_jsx_runtime.jsx)(WorkspaceChip, {\n\t\t\t\t\t\tbuttonRef: pickerAnchor, disabled: directoryLocked,'
+  const props = '\n\t\t\t\t\t\tboardDirectoryPath: boardDirectory?.path,'
+  const ref = 'ref: buttonRef, disabled, \'data-odyssey-directory-locked\': disabled || undefined,'
+  const onPick = '\n\t\t\t\t\t\tonPick: (workspaceId) => {'
+  return [
+    [chipDefinition, '\n\t\t' + projectlessPickerMarker + '\n' + ComposerProjectPicker.toString() + chipDefinition],
+    [picker, `
+      const allowStandalone = !directoryLocked && !boardDirectory && !sherlockShared(sessionId) &&
+        (pendingConversation || sessionId !== undefined);
+      const clearProject = () => {
+        setPickerOpen(false);
+        setPendingWorkspaceId(undefined);
+        pickerAnchor.current?.focus({ preventScroll: true });
+        if (pendingConversation ? pendingChatState?.workspaceId === null : !sessionWorkspace) return;
+        selectWorkspace(null).catch(error => sherlockBoardsAdapter?.showError(error));
+      };` + picker],
+    [chip, chip.replace('WorkspaceChip', 'ComposerProjectPicker') +
+      '\n\t\t\t\t\t\tonClear: allowStandalone && (pendingWorkspace || sessionWorkspace) ? clearProject : undefined,'],
+    [props, props + '\n\t\t\t\t\t\tallowStandalone,'],
+    [ref, ref + " 'data-odyssey-project-selected': label !== undefined || undefined,"],
+    [onPick, onPick + '\n\t\t\t\t\t\t\tif (workspaceId === null) { if (allowStandalone) clearProject(); return; }'],
+  ]
+}
+
 export function patchComposerWorkspaceBar(source) {
-  if (source.includes(composerWorkspaceMarker)) return source;
-  for (const [before, after] of composerWorkspaceEdits()) {
+  if (source.includes(projectlessPickerMarker)) return source;
+  const edits = source.includes(composerWorkspaceMarker) ? [] : composerWorkspaceEdits();
+  for (const [before, after] of [...edits, ...projectlessWorkspaceEdits()]) {
     if (source.split(before).length !== 2) throw Error('Composer project bar anchor drifted: ' + before.trim().slice(0, 85));
     source = source.replace(before, () => after);
   }
@@ -124,7 +167,16 @@ export function patchComposerWorkspaceBar(source) {
 
 export function stripComposerWorkspaceBar(source) {
   if (!source.includes(composerWorkspaceMarker)) return source;
-  for (const [before, after] of composerWorkspaceEdits().reverse()) {
+  const projectless = source.includes(projectlessPickerMarker);
+  if (projectless) {
+    const start = source.indexOf('\n\t\t' + projectlessPickerMarker);
+    const end = source.indexOf('\n\t\tfunction WorkspaceChip(', start);
+    if (start < 0 || end < 0 || source.indexOf(projectlessPickerMarker, end) !== -1)
+      throw Error('Composer project picker restore markers drifted');
+    source = source.slice(0, start) + source.slice(end);
+  }
+  const edits = projectless ? [...composerWorkspaceEdits(), ...projectlessWorkspaceEdits().slice(1)] : composerWorkspaceEdits();
+  for (const [before, after] of edits.reverse()) {
     if (source.split(after).length !== 2) throw Error('Composer project bar restore anchor drifted: ' + after.trim().slice(0, 85));
     source = source.replace(after, () => before);
   }

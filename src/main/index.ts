@@ -88,7 +88,7 @@ import { localAcceptanceOrigin } from './local-acceptance-services'
 import { dirname, isAbsolute, join, normalize, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
-import { mkdtemp, rm, stat } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, stat } from 'node:fs/promises'
 import { parse } from 'yaml'
 import {
   app,
@@ -794,6 +794,16 @@ let scheduledRunner: TaskRunner | undefined
 let flushResearchNativeWeb:(()=>Promise<void>)|undefined
 function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): void {
   registerHomeThemePreferences(ipcMain, () => mainWindow, app.getPath('userData'))
+  ipcMain.removeHandler('conversation:standalone-directory')
+  registerTrustedMainWindowHandler(ipcMain, 'conversation:standalone-directory', () => mainWindow, async () => {
+    const today = new Date()
+    const date = [today.getFullYear(), today.getMonth() + 1, today.getDate()].map(part => String(part).padStart(2, '0')).join('-')
+    const day = join(app.getPath('documents'), 'EWork Odyssey', date)
+    await mkdir(day, { recursive: true })
+    const output = join(await mkdtemp(join(day, '对话-')), 'outputs')
+    await mkdir(output)
+    return output
+  })
   registerNavigationShortcutPreferences(ipcMain, () => mainWindow, app.getPath('userData'),
     () => accountService?.authenticated ? accountService.accountId ?? null : 'local')
   ipcMain.removeHandler('harness:restart')

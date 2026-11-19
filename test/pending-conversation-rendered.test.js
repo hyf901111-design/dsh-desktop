@@ -6,6 +6,7 @@ import {pathToFileURL} from 'node:url'
 import {EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
 import {patchPendingConversationPanel} from '../scripts/lib/pending-conversation-panel.mjs'
 import {patchBrowserAppNative} from '../scripts/lib/browser-app-native.mjs'
+import {patchBoardDirectoryWorkspace} from '../scripts/lib/board-directory-picker.mjs'
 import {patchComposerWorkspaceBar,stripComposerWorkspaceBar} from '../scripts/lib/patch-figma-final-shell.mjs'
 import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
 import {patchSpreadsheetClient,stripSpreadsheetClient} from '../scripts/lib/spreadsheet-client.mjs'
@@ -17,7 +18,7 @@ beforeAll(async()=>{
  const installed=stripComposerWorkspaceBar(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8'))
  const baseConversation=stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(installed))))
  const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;')
- input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8'),['WorkspacePicker'])}
+ input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(patchBoardDirectoryWorkspace(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspacePicker'])}
  input.triggers=expose(await readFile(base+'dsh-client-ui-input-trigger/lib/client.js','utf8'),['MenuView'])
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
  const result=await build({entryPoints:['test/fixtures/pending-conversation-browser.tsx'],bundle:true,platform:'browser',format:'iife',outfile:'pending.js',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl','.ttf':'dataurl'},plugins:[{name:'raw',setup(b){b.onResolve({filter:/\?raw$/},async args=>({path:(await b.resolve(args.path.slice(0,-4),{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css+='\n'+(result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')
@@ -47,7 +48,7 @@ it.each([true, false])('shows the local work location on home and right composer
     pixel.fillRect(0, 0, 1, 1)
     return { height: a.height, join: a.bottom - b.top, inset: a.left - b.left, blur: style.backdropFilter,
       barFill: style.backgroundColor, barOpacity: pixel.getImageData(0, 0, 1, 1).data[3] / 255,
-      cardFill: cardStyle.backgroundColor, cardOutline: cardStyle.boxShadow,
+      cardFill: cardStyle.backgroundColor, cardOutline: cardStyle.boxShadow, borderWidth: cardStyle.borderTopWidth,
       overflow: row.scrollWidth - row.clientWidth }
    })
    expect(layout.height).toBe(42)
@@ -55,6 +56,8 @@ it.each([true, false])('shows the local work location on home and right composer
    expect(layout.join).toBeLessThanOrEqual(7)
    expect(layout.inset).toBeCloseTo(7)
    expect(layout.overflow).toBe(0)
+   expect(layout.cardOutline).toBe('none')
+   expect(layout.borderWidth).toBe('0px')
    if (surface === 'home') {
     expect(layout.blur).toContain('blur(14px)')
     expect(layout.barOpacity).toBeCloseTo(0.343)
@@ -66,7 +69,6 @@ it.each([true, false])('shows the local work location on home and right composer
     expect(layout.blur).toBe('none')
     expect(layout.barFill).toBe(dark ? 'rgb(29, 29, 29)' : 'rgb(232, 232, 232)')
     expect(layout.cardFill).toBe(dark ? 'rgb(54, 54, 54)' : 'rgb(255, 255, 255)')
-    expect(layout.cardOutline).toContain('1px inset')
    }
    for (const [hovered, idle] of [[location, folder], [folder, location]]) {
     await hovered.hover()
@@ -96,6 +98,55 @@ it.each([true, false])('shows the local work location on home and right composer
   }
  } finally { await page.close() }
 }, 15000)
+it('provides a home drag region before the session header is mounted', async () => {
+ const page = await browser.newPage()
+ try {
+  const homeCss = await readFile('src/preload/figma-home.css', 'utf8')
+  await page.setContent('<style>'+homeCss+'</style><main class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="home"></div></main>')
+  const home = page.locator('[data-odyssey-page=home]')
+  const drag = () => home.evaluate(el => {
+   const style = getComputedStyle(el, '::before')
+   return { content: style.content, height: style.height, region: style.getPropertyValue('-webkit-app-region') }
+  })
+  expect(await drag()).toEqual({ content: '""', height: '44px', region: 'drag' })
+  await home.evaluate(el => el.insertAdjacentHTML('afterbegin', '<header class="wSkVaW_header"></header>'))
+  expect((await drag()).content).toBe('none')
+ } finally { await page.close() }
+})
+it.each(['home','right'])('works without a project through the %s composer', async surface => {
+ const page=await browser.newPage({viewport:{width:1180,height:800}})
+ page.setDefaultTimeout(4000)
+ try {
+  await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
+  await page.evaluate(value=>window.pendingInput={...value,recentWorkspaceId:'A'},input)
+  await page.addScriptTag({content:script})
+  if(surface==='right')await page.evaluate(()=>window.pendingFixture.openSurface('browser'))
+  const bar=page.locator((surface==='home'?'#app':'#right')+' [data-odyssey-composer-workspace]')
+  const field=bar.locator('..').locator('textarea')
+  const folder=bar.locator('.pXSMma_workspace')
+  const clear=bar.getByRole('button',{name:'不在项目中工作',exact:true})
+  await folder.getByText('研究项目 A',{exact:true}).waitFor()
+  await field.fill('保留草稿并在新目录工作')
+  if(surface==='home'){
+   expect(await clear.evaluate(button=>getComputedStyle(button).opacity)).toBe('0')
+   await folder.hover()
+   expect(await clear.evaluate(button=>getComputedStyle(button).opacity)).toBe('1')
+   await clear.hover()
+   await page.getByRole('tooltip').filter({hasText:'不在项目中工作'}).waitFor()
+   await clear.click()
+  }else{
+   await folder.click()
+   await page.getByRole('menuitem',{name:'不在项目中工作',exact:true}).click()
+  }
+  await folder.getByText('选择项目',{exact:true}).waitFor()
+  expect(await field.isEnabled()).toBe(true)
+  expect(await field.inputValue()).toBe('保留草稿并在新目录工作')
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  await bar.locator('..').getByRole('button',{name:'发送消息',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'create',cwd:'/tmp/standalone/outputs'})
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'send',text:'保留草稿并在新目录工作',images:[]})
+ } finally {await page.close()}
+},15000)
 it.each(['empty button','button with draft','typed slash','research tab'])('hands the first home %s to the mounted project without submitting',async action=>{
  const page=await browser.newPage({viewport:{width:1200,height:760}});
  page.setDefaultTimeout(4500);

@@ -2,6 +2,21 @@ import {expect,it,vi} from 'vitest'
 import {createPendingConversation,browserPromptReference,EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
 function fixture(extra={}){let sink;const original={draft:'请总结当前网页',draftRev:3,imageIds:[],occurrences:[]},shell={snapshot:{...original},notify:vi.fn(),setResearchContextPreparing:vi.fn(),commitSend:vi.fn(),dispose:vi.fn()},real={snapshot:{draft:'',imageIds:[]},restoreDraftState:vi.fn(),submit:vi.fn(),addImages:vi.fn(()=>true)},session={current:undefined},projects={items:[{workspaceId:'A',title:'A项目',path:'/a'},{workspaceId:'B',title:'B项目',path:'/b'}],recentWorkspaceId:'A'},sessions={list:{getSnapshot:()=>session},create:vi.fn(async()=> 'new'),open:vi.fn(id=>{session.current=id})},onCreated=vi.fn();const pending=createPendingConversation({makeShell:deps=>{sink=deps.defaultSink;return shell},sessions,workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated,prepareContext:async()=>({title:'当前页',text:'真实正文'}),...extra});return{session,pending,shell,real,sessions,onCreated,send:()=>sink(original.draft,[],'queue',original)}}
 it('selects a project and opens no session until the first nonempty send',async()=>{const f=fixture();f.pending.selectWorkspace('B');expect(f.sessions.create).not.toHaveBeenCalled();await f.send();expect(f.sessions.create).toHaveBeenCalledExactlyOnceWith({workspaceId:'B'});expect(f.real.restoreDraftState).toHaveBeenCalledWith(expect.objectContaining({draft:'请总结当前网页',draftRev:3}));expect(f.real.submit).toHaveBeenCalledExactlyOnceWith('queue');expect(f.onCreated).toHaveBeenCalledWith('new',expect.objectContaining({text:'真实正文'}));expect(f.shell.commitSend).toHaveBeenCalled()})
+it('does not allocate an output folder until a first send, and keeps an explicit no-project choice through a list refresh', async () => {
+ let refresh
+ const list = { phase:'ready', recentWorkspaceId:'A', items:[{workspaceId:'A',path:'/a'}] }
+ const standaloneDirectory = vi.fn(async ()=>'/standalone/outputs')
+ const f = fixture({standaloneDirectory,workspaces:{list:{getSnapshot:()=>list,subscribe:listener=>{refresh=listener}}}})
+ f.pending.selectWorkspace(null)
+ refresh()
+ expect(f.pending.getSnapshot().workspaceId).toBeNull()
+ expect(standaloneDirectory).not.toHaveBeenCalled()
+ expect(f.sessions.create).not.toHaveBeenCalled()
+ await f.send()
+ expect(standaloneDirectory).toHaveBeenCalledOnce()
+ expect(f.sessions.create).toHaveBeenCalledExactlyOnceWith({cwd:'/standalone/outputs'})
+ expect(f.real.submit).toHaveBeenCalledExactlyOnceWith('queue')
+})
 it('deduplicates concurrent first sends and preserves the draft when creation fails',async()=>{const f=fixture();let release;f.sessions.create.mockImplementation(()=>new Promise((_,reject)=>{release=()=>reject(Error('创建失败'))}));const first=f.send();await Promise.resolve();await f.send();expect(f.sessions.create).toHaveBeenCalledTimes(1);release();await first;expect(f.shell.commitSend).not.toHaveBeenCalled();expect(f.shell.notify).toHaveBeenCalledWith('error','创建失败');expect(f.pending.getSnapshot().busy).toBe(false)})
 
 it('waits for the standalone canvas to enter the session before submitting the first prompt', async () => {

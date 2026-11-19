@@ -101,7 +101,7 @@ export function installBrowserQuestionNative({sessions,getInput,getPending,getCo
  const pending=()=>getPending?.()??win[Symbol.for('sherlock:pending-conversation')];
  const shellFor=owner=>owner===null?pending()?.shell:getInput(owner);
  const locked=b=>b.shell.disposed||['adjudicating','submitting'].includes(b.shell.snapshot.phase)||b.shell.snapshot.researchContextPreparing===true||b.pending?.getSnapshot().busy===true;
- const snapshot=b=>{const s=b.shell.snapshot,p=b.pending?.getSnapshot();return{ticket:b.ticket,ownerSessionId:b.owner,draft:s.draft,draftRev:s.draftRev,imageIds:[...(s.imageIds??[])],regionImageIds:[...b.images],phase:s.phase,busy:!!b.sending||locked(b),active:b.active,canSend:b.active&&!locked(b)&&(!b.pending||!!p?.workspaceId)&&!!(s.draft.trim()||s.imageIds?.length),sequence:b.sequence,syncVersion:b.syncVersion,...(b.sent?{sent:true}:{}),...(b.error?{error:b.error}:{})}};
+ const snapshot=b=>{const s=b.shell.snapshot,p=b.pending?.getSnapshot();return{ticket:b.ticket,ownerSessionId:b.owner,draft:s.draft,draftRev:s.draftRev,imageIds:[...(s.imageIds??[])],regionImageIds:[...b.images],phase:s.phase,busy:!!b.sending||locked(b),active:b.active,canSend:b.active&&!locked(b)&&(!b.pending||p?.workspaceId!==undefined)&&!!(s.draft.trim()||s.imageIds?.length),sequence:b.sequence,syncVersion:b.syncVersion,...(b.sent?{sent:true}:{}),...(b.error?{error:b.error}:{})}};
  const publish=b=>{const state=snapshot(b);win.dispatchEvent(new win.CustomEvent('sherlock:browser-question-state',{detail:{ticket:b.ticket,state:JSON.stringify(state)}}));return state};
  const unwatch=b=>{for(const off of b.off.splice(0))off?.()};
  const close=b=>{b.active=false;unwatch(b);bindings.delete(b.ticket);if(binding===b)binding=undefined;return publish(b)};
@@ -164,7 +164,7 @@ export function installBrowserQuestionNative({sessions,getInput,getPending,getCo
   }
   if(command.kind==='send'){
    if(command.draftRev!==undefined&&command.draftRev!==b.shell.snapshot.draftRev){b.error='草稿已变化，请确认后重新发送。';return publish(b)}
-   if(!snapshot(b).canSend){b.error=b.pending&&!b.pending.getSnapshot().workspaceId?'请先在右侧选择项目。':'请输入询问内容。';return publish(b)}
+   if(!snapshot(b).canSend){b.error=b.pending&&b.pending.getSnapshot().workspaceId===undefined?'项目尚未加载，请稍后重试。':'请输入询问内容。';return publish(b)}
    b.error=undefined;b.sending={draft:b.shell.snapshot.draft,imageIds:[...(b.shell.snapshot.imageIds??[])]};publish(b);
    try{b.shell.actions.submit()}catch(error){b.sending=undefined;b.error=error?.message||'发送失败，草稿已保留。';publish(b)}
    return snapshot(b)
@@ -215,8 +215,13 @@ export function patchBrowserAppNative(input){
 ctx.effect(()=>{
  const factory=(${installImageFactoryContext.toString()})({
    sessions,removeProvisionalReference:deleteProvisionalResearchReferenceOccurrence,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
-   getTaskWorkspace:()=>{const state=workspaces.list.getSnapshot(), current=sessions.list.getSnapshot().current;
-     return state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??eworkPendingConversation?.getSnapshot().workspaceId??state.recentWorkspaceId},
+   getTaskWorkspace:()=>{
+     const state=workspaces.list.getSnapshot(), current=sessions.list.getSnapshot().current;
+     if(current!==undefined&&state.phase==='ready')return state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??null;
+     const selected=eworkPendingConversation?.getSnapshot().workspaceId;
+     return selected===undefined?state.recentWorkspaceId:selected;
+   },
+   standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),
    setTaskView:id=>slots.resolveStore(chatStore,id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
    send:(session,content,mode,action)=>factory.prompt(session,content,mode,action)
  });
@@ -264,6 +269,7 @@ ctx.effect(()=>{
  const pending=(${createPendingConversation.toString()})({
   makeShell:deps=>new SessionInputShell({...deps,actx:ctx,inputTriggers:()=>undefined,imageConversation:()=>conversationController}),
   sessions,workspaces,getInput:id=>inputHub.shell(id),
+  standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),
   currentSurface:()=>document.body.dataset.workspaceSurface,
   setView:(id,view)=>chatStore.create(id).actions.setView(view),
   onCreated:(id,context)=>{window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));chatStore.create(id).actions.setView('chat');if(context!==undefined)eworkPreparedBrowserContexts.set(id,context)},
@@ -322,16 +328,50 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('if (sessionId === void 0) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {','if (subagentPanel) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {')
  replace('if (sessionId !== void 0) researchSidebar.publish(sessionId, null);','researchSidebar.publish(sessionId, null);')
  replace('const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);','const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === (pendingConversation?pendingChatState?.workspaceId:pendingWorkspaceId));')
- replace('renderSlot("conversation.session.header", {})','pendingConversation && !composerApp && pendingWorkspace ? react.createElement(EWorkPendingHomeHeader,{pending:eworkPendingConversation,busy:pendingChatState.busy||pendingChatState.activating}) : renderSlot("conversation.session.header", {})')
+ replace('renderSlot("conversation.session.header", {})','pendingConversation && !composerApp && pendingChatState?.workspaceId !== undefined ? react.createElement(EWorkPendingHomeHeader,{pending:eworkPendingConversation,busy:pendingChatState.busy||pendingChatState.activating}) : renderSlot("conversation.session.header", {})')
  replace('pendingWorkspaceId ?? sessionWorkspace?.workspaceId,','(pendingConversation ? pendingWorkspace?.workspaceId : pendingWorkspaceId) ?? sessionWorkspace?.workspaceId,')
  replace('const hero = (activeView == null || activeView === "chat")', 'const hero = !pendingRight && !browserAppActive && (activeView == null || activeView === "chat")')
  replace('const researchEmpty = research && sessionId !== void 0 && conversationVacant;', 'const researchEmpty = pendingRight || browserAppActive && conversationVacant || research && sessionId !== void 0 && conversationVacant;')
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)
- replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = imageTaskCreating || (sessionId === undefined ? !pendingConversation || pendingWorkspace === undefined : hero && chipTitle === undefined);')
+ replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = imageTaskCreating || (sessionId === undefined ? !pendingConversation || pendingChatState?.workspaceId === undefined : hero && chipTitle === undefined && !cwd);')
  replace('const inputBar = renderSlot("conversation.composer.bar", {','const inputBar = renderSlot("conversation.composer.bar", {\n pendingConversation,eworkImageFactory:imageFactoryActive,')
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
- replace('selectWorkspace: async (workspaceId) => {','selectWorkspace: async (workspaceId) => {\n if(sessionId===undefined&&eworkPendingConversation){eworkPendingConversation.selectWorkspace(workspaceId);return;}')
+ replace('selectWorkspace: async (workspaceId) => {',`selectWorkspace: async (workspaceId) => {
+ if(sessionId===undefined&&eworkPendingConversation){eworkPendingConversation.selectWorkspace(workspaceId);return;}
+ if(workspaceId===null){
+  const surface=document.body.dataset.workspaceSurface;
+  const previous=slots.resolveStore(chatStore,sessionId).getSnapshot().view;
+  const ordinary=inputHub.shell(sessionId);
+  const from=eworkActiveInput(sessionId,ordinary);
+  const draft=from?.snapshot;
+  const valid=()=>sessions.list.getSnapshot().current===sessionId&&document.body.dataset.workspaceSurface===surface&&
+    slots.resolveStore(chatStore,sessionId).getSnapshot().view===previous&&
+    !from?.disposed&&from?.snapshot.draftRev===draft?.draftRev&&
+    localStorage.getItem('sherlock.research.directory-locked.v1:'+sessionId)!=='true';
+  if(!valid())throw Error('当前会话已变化，请重试。');
+  const cwd=await window.dshDesktop.standaloneConversationDirectory();
+  if(!valid())throw Error('当前会话已变化，请重试。');
+  const nextId=await sessions.create({cwd});
+  if(!valid())throw Error('当前会话已变化，请重试。');
+  const nextInput=inputHub.shell(nextId);
+  if(!nextInput||nextInput.disposed)throw Error('新会话输入尚未就绪，原输入已保留。');
+  const next=from!==ordinary?eworkNotesInput(nextId,nextInput,conversationController).shell:nextInput;
+  if(draft){
+   if(draft.imageIds?.length&&!next.addImages([...draft.imageIds]))throw Error('图片未能加入新会话，原输入已保留。');
+   next.restoreDraftState(draft);
+  }
+  slots.resolveStore(chatStore,nextId).actions.setView(previous||'chat');
+  if(surface==='image-factory')document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-changed',{detail:{previous:sessionId,next:nextId}}));
+  sessions.open(nextId);
+  if(draft)from.commitSend([...(draft.imageIds??[])],draft.draft);
+  return;
+ }`)
+ const openProject='sessions.open(nextId);\n            if (boardNext && nextId !== sessionId)';
+ replace(openProject,`if (sessionId !== undefined && document.body.dataset.workspaceSurface === 'image-factory') {
+              document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-changed', {detail:{previous:sessionId,next:nextId}}));
+            }
+            `+openProject);
  {const start=source.indexOf('function ResearchConversationPanel('),end=source.indexOf('\n\t\t//#endregion',start),before=source.slice(start,end);replace(before,exact(before,'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);','const workspace = (0, react.useMemo)(() => sessionId===undefined?{...ABSENT_RESEARCH_WORKSPACE,getSnapshot:()=>ABSENT_PENDING_RESEARCH_SNAPSHOT,setAssistantActionsActive:()=>{},clearPendingMessageJump:()=>{}}:researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'))}
  for(const name of ['conversation.input.left']){
   const pattern='"'+name+'": {',start=source.indexOf(pattern),end=source.indexOf('}',start),before=source.slice(start,end);if(start<0||!before.includes('scope: "session"'))throw Error('Pending native slot scope missing '+name);replace(before,before.replace('scope: "session"','scope: "session-maybe"'))

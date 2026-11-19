@@ -624,6 +624,7 @@ contextBridge.exposeInMainWorld(
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
     imageAction: (input: unknown) => ipcRenderer.invoke('conversation:image-action', input),
+    standaloneConversationDirectory: (): Promise<string> => ipcRenderer.invoke('conversation:standalone-directory'),
     imageFactoryTasks: Object.freeze({
       read: () => ipcRenderer.invoke('image-factory:tabs-read'),
       write: (value: unknown) => ipcRenderer.invoke('image-factory:tabs-write', value),
