@@ -11,12 +11,10 @@ body [data-dsh-sidebar-root] .YDXeBa_folder>svg>*{visibility:hidden}
 body [data-dsh-sidebar-root] [data-srb-board-group]>.YDXeBa_projectRow .YDXeBa_folder>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-board-folder-closed-18.svg) center/contain no-repeat}
 body [data-dsh-sidebar-root] [data-srb-board-group]>.YDXeBa_projectRow[aria-expanded=true] .YDXeBa_folder>svg{mask-image:url(/odyssey-board-folder-open-18.svg)}
 body [data-dsh-sidebar-root] [data-srb-board-group]>.YDXeBa_projectRow .YDXeBa_folder>svg>*{visibility:hidden}
-body [data-dsh-sidebar-root] .hHd-Xa_newSession[data-sidebar-new-note]::before{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-note-add-18.svg)!important}
 body [data-dsh-sidebar-root] .st-more .st-icon{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-more-18.svg)!important}
 body [data-dsh-sidebar-root] .srb-bell-icon{width:20px!important;height:20px!important;mask-image:url(/odyssey-b-notifications-20.svg)}
 body [data-dsh-sidebar-root] .srb-row-status .srb-people-icon{width:18px!important;height:18px!important;mask-image:url(/odyssey-b-shared-session-18.svg)}
 .st-menu[data-sidebar-more] [data-odyssey-icon="clock"]{mask-image:url(/odyssey-b-scheduled-18.svg)!important}
-.st-menu[data-sidebar-more] :is([data-odyssey-icon="note"],[data-odyssey-icon="noteDark"]){mask-image:url(/odyssey-b-note-add-18.svg)!important}
 /* Keep the existing 80px layout reservation. The 36px hit areas sit on one
    center line. The requested compact rail uses an 8px gap / 44px center step. */
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide=false]{align-items:center!important;gap:8px!important;padding-inline:12px!important}

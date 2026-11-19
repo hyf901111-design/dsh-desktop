@@ -246,7 +246,7 @@ export class ScheduledTaskView {
         { app: 'research', label: english ? 'Research' : '研究', icon: 'research', run: () => group.dispatchEvent(new CustomEvent('sherlock:sidebar-new-research', { bubbles: true })) }
       )
       if (this.sidebarActions) entries.push({
-        app: 'note', label: english ? 'New Note' : wide ? '新笔记' : '新建笔记', icon: this.dark() ? 'noteDark' : 'note',
+        app: 'note', label: english ? 'Notes' : '笔记', icon: 'note',
         disabled: this.newDocumentBusy, run: () => void this.createDocument('note')
       })
       if (this.sidebarActions?.newSpreadsheet) entries.push({

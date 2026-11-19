@@ -7,12 +7,11 @@ import homeRail from './assets/home-rail.svg?inline'
 import browserIcon from '../browser/assets/globe.svg?inline'
 import factoryIcon from '../image-factory/assets/factory.svg?inline'
 import spreadsheetIcon from '../../../build/brand/odyssey-app-spreadsheet.svg?inline'
-import newNoteLight from './assets/new-note-light.svg?inline'
-import newNoteDark from './assets/new-note-dark.svg?inline'
+import noteIcon from '../../../build/brand/odyssey-app-note.svg?inline'
 // Exact Figma page 25 exports; retain the exported vectors unchanged.
 export const icons = {
   browser:browserIcon,browserRail,homeRail,knowledge:knowledgeIcon,factory:factoryIcon,
-  note:newNoteLight,noteDark:newNoteDark,spreadsheet:spreadsheetIcon,
+  note:noteIcon,spreadsheet:spreadsheetIcon,
   // Same Figma plug silhouette as the home shortcut.
   plugin: '/odyssey-home-plugin-28.svg',
   chat: chatIcon,
