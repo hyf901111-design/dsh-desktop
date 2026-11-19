@@ -1,6 +1,6 @@
 // Serialized into the native conversation plugin. The preload first reserves
 // this exact owner, flushes its Note, then commits the same ticket.
-export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,getInput}) {
+export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,getInput,getPending,standaloneDirectory}) {
   const tickets=new Map(),requests=new Map();let disposed=false,epoch=0,creating=false
   const abort=()=>new DOMException('当前会话已变化，请重新新建。','AbortError')
   const fingerprint=shell=>{const s=shell?.snapshot;return s?JSON.stringify([s.draft,s.draftRev,s.imageIds,s.occurrences,s.phase,s.researchContextPreparing,s.composing,s.isComposing,s.compositionActive]):null}
@@ -16,7 +16,16 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
     if(valid(saved)||saved==='')return saved||null
     try{return JSON.parse(window.localStorage.getItem('dsh.conversation.chat.'+id)||'null')?.view??null}catch{return null}
   }
-  const workspace=()=>{const state=workspaces.list.getSnapshot(),current=sessions.list.getSnapshot().current;const id=state.items.find(item=>item.sessionIds.includes(current))?.workspaceId??state.items.find(item=>item.path===sessions.list.getSnapshot().byId[current]?.cwd)?.workspaceId??state.recentWorkspaceId;return state.items.find(item=>item.workspaceId===id)}
+  const workspace=()=>{
+    const state=workspaces.list.getSnapshot(),sessionState=sessions.list.getSnapshot()
+    const current=sessionState.current,cwd=sessionState.byId[current]?.cwd
+    const currentWorkspace=state.items.find(item=>item.sessionIds.includes(current)) ??
+      (cwd ? state.items.find(item=>item.path===cwd) : undefined)
+    if(currentWorkspace)return currentWorkspace
+    const pendingId=current===undefined?getPending?.()?.getSnapshot().workspaceId:undefined
+    if(pendingId===null)return {workspaceId:null}
+    return state.items.find(item=>item.workspaceId===(pendingId??state.recentWorkspaceId))
+  }
   const valid=ticket=>!disposed&&!ticket.cancelled&&ticket.epoch===epoch&&sessions.list.getSnapshot().current===ticket.current&&workspace()?.workspaceId===ticket.workspaceId&&workspace()?.path===ticket.path&&document.body.dataset.workspaceSurface===ticket.surface&&(!ticket.current||getInput(ticket.current)===ticket.shell)&&!ticket.shell?.disposed&&view(ticket.current)===ticket.view&&fingerprint(ticket.shell)===ticket.fingerprint&&Date.now()<ticket.expires
   const drop=token=>{const ticket=tickets.get(token);if(ticket)ticket.cancelled=true;tickets.delete(token)}
   const invalidate=()=>{epoch++;for(const token of tickets.keys())drop(token)}
@@ -42,7 +51,11 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
     creating=true
     try{
       // Create a separate session so an existing draft remains with its owner.
-      const id=await sessions.create({workspaceId:ticket.workspaceId})
+      const options=ticket.workspaceId===null
+        ? {cwd:await standaloneDirectory()}
+        : {workspaceId:ticket.workspaceId}
+      if(!valid(ticket))throw abort()
+      const id=await sessions.create(options)
       if(!valid(ticket))throw abort()
       if(typeof id!=='string'||!id||ticket.ids.has(id)||!sessions.list.getSnapshot().ids.includes(id))throw Error('新'+noun+'会话未能创建。')
       const binding=sessions.binding(id)
@@ -103,7 +116,7 @@ export const stripSidebarNewNoteShell=source=>restore(source,'shell')
 export function patchSidebarNewNoteConversation(input){
   const source=stripSidebarNewNoteConversation(input),anchor='const composerBlocks = new ComposerBlockRegistry();'
   if(source.includes('Sherlock sidebar new note'))throw Error('Orphan Sidebar New Note action')
-  const code='\nctx.effect(()=>{if(window.top!==window)return;return ('+installSidebarNewNote.toString()+')({sessions,workspaces,chatStore,inputHub,getInput:id=>eworkActiveInput(id,inputHub.shell(id))});},"Sherlock sidebar new note");'
+  const code='\nctx.effect(()=>{if(window.top!==window)return;return ('+installSidebarNewNote.toString()+')({sessions,workspaces,chatStore,inputHub,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for("sherlock:pending-conversation")],standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory()});},"Sherlock sidebar new note");'
   return apply(source,'conversation',[[anchor,anchor+code]])
 }
 export function patchSidebarNewNoteShell(input){

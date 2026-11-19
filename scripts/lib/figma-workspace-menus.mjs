@@ -34,10 +34,13 @@ export function patchFigmaWorkspaceMenus(source) {
 function patchNewChatWorkspaceIntent(source) {
   const marker = '/* odyssey:workspace-new-chat-intent:v1 */'
   const before = 'ctx.workspaces.startSession(workspaceId);'
-  const after = marker + '\nctx.workspaces.startSession(workspaceId, Object.assign((sessionId) => {\nwindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId } }));\n}, { canReuse: id => window[Symbol.for("sherlock:initial-chat-reuse")]?.canReuse(id) === true }));'
+  const legacy = marker + '\nctx.workspaces.startSession(workspaceId, Object.assign((sessionId) => {\nwindow.dispatchEvent(new CustomEvent("sherlock:conversation-initial-chat", { detail: { sessionId } }));\n}, { canReuse: id => window[Symbol.for("sherlock:initial-chat-reuse")]?.canReuse(id) === true }));'
+  const after = legacy.replace('window.dispatchEvent', 'document.dispatchEvent(new CustomEvent("sherlock:sidebar-home-opened"));\nwindow.dispatchEvent')
   if (source.includes('/* odyssey:workspace-new-chat-intent:')) {
-    if (source.split(marker).length !== 2 || source.split(after).length !== 2) throw Error('Workspace New Chat intent hook drifted')
-    return source
+    if (source.split(marker).length !== 2) throw Error('Workspace New Chat intent hook drifted')
+    if (source.split(after).length === 2) return source
+    if (source.split(legacy).length === 2) return source.replace(legacy, after)
+    throw Error('Workspace New Chat intent hook drifted')
   }
   if (source.split(before).length !== 2) throw Error('Workspace New Chat intent anchor drifted')
   return source.replace(before, after)
