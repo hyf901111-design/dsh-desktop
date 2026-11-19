@@ -32,11 +32,15 @@ export function downloadDetails(row: BrowserDownload) {
   const total = size(row.total)
   const received = size(row.received)
   const percent = total ? Math.min(100, Math.floor(received / total * 100)) : undefined
-  const status = statuses[row.state] ?? '状态未知'
+  const missing = row.state === 'completed' && row.fileMissing === true
+  const status = missing ? '文件已移动或删除' : statuses[row.state] ?? '状态未知'
   const detail = active
     ? `${status}${percent === undefined ? '' : ` · ${percent}%`} · ${formatBytes(received)}${total ? ` / ${formatBytes(total)}` : ' · 大小未知'}`
     : `${status} · ${formatBytes(received)}`
-  return { active, total, received, percent, detail, commands: commands[row.state] ?? [] }
+  const available: readonly DownloadCommand[] = missing
+    ? [['reveal', '打开下载文件夹', 'folder'], ...(/^https?:\/\//i.test(row.url) ? [['retry', '重新下载', 'refresh'] as const] : []), ['remove', '移除记录', 'trash']]
+    : commands[row.state] ?? []
+  return { active, total, received, percent, detail, commands: available }
 }
 
 /** Unknown totals cannot produce a reliable aggregate percentage. */

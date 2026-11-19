@@ -147,7 +147,8 @@ export class BrowserActivityPage {
    const result=await this.options.request(method,input)
    if(this.disposed)return
    if(result&&Array.isArray(result.history)&&Array.isArray(result.downloads))this.update(result)
-   if(method==='download'&&input.action==='material')this.options.notify('下载文件已加入工作材料。')
+   if(result?.notice)this.options.notify(result.notice,!!result.unavailable)
+   else if(method==='download'&&input.action==='material')this.options.notify('已复制到当前项目的「浏览器工作材料」文件夹。')
   }catch(error){if(!this.disposed)this.options.notify(error instanceof Error?error.message:'操作失败，请重试。',true)}
   finally{this.busy.delete(key);if(!this.disposed){this.preserve();this.render()}}
  }

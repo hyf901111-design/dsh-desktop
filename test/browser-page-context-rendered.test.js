@@ -164,3 +164,30 @@ it.each([false, true])('projects the complete composer flyout over a live webpag
   expect(result.scroll).toBeGreaterThan(0)
  }finally{await page.close()}
 })
+
+it('projects a download menu and its simultaneous toast above the native page independently',async()=>{
+ const {page}=await fixture({width:1200})
+ try{
+  await page.evaluate(()=>{
+   window.startProjection()
+   const menu=document.createElement('div')
+   menu.setAttribute('role','menu')
+   menu.style.cssText='position:fixed;left:400px;top:140px;width:250px;height:140px'
+   menu.innerHTML='<button role="menuitem">加入工作材料</button>'
+   const toast=document.createElement('div')
+   toast.className='eb-toast'
+   toast.setAttribute('role','status')
+   toast.style.cssText='position:fixed;left:100px;top:100px;width:440px;height:70px;pointer-events:none'
+   toast.textContent='原文件已移动或删除，已打开下载文件夹。'
+   document.body.append(menu,toast)
+  })
+  const surfaces=()=>page.evaluate(()=>window.calls.filter(([method])=>method==='menu').map(([,state])=>({id:state.id,passive:state.passive,text:state.html})))
+  await expect.poll(async()=> (await surfaces()).some(s=>s.passive&&s.text.includes('原文件已移动'))).toBe(true)
+  const active=(await surfaces()).find(s=>!s.passive&&s.text.includes('加入工作材料'))
+  expect(active).toBeTruthy()
+  await page.evaluate(()=>document.querySelector('.eb-toast').remove())
+  await expect.poll(()=>page.evaluate(()=>window.calls.some(([method,arg])=>method==='menu-hide'&&arg.passive))).toBe(true)
+  expect(await page.locator('[role=menu][data-browser-projected]').count()).toBe(1)
+  expect(await page.evaluate(id=>window.calls.some(([method,arg])=>method==='menu-hide'&&arg.id===id),active.id)).toBe(false)
+ }finally{await page.close()}
+})
