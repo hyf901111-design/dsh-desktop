@@ -12,7 +12,7 @@
         "featureName": "顶栏保持同一会话并切换视图，回收空画廊",
         "branch": "codex/feat/navigation-shortcuts-20261119",
         "baseCommit": "5b698e9b8a84586eac35448f79ac6ffe91d4f739",
-        "tipCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
+        "tipCommit": "31f7b77649da7e537646f6d7c8ffa1b8abc0f58e",
         "commits": [
           {
             "commit": "4adf9fbf7fc01f71c89e7c3d67427de536f64222",
@@ -27,6 +27,13 @@
               "4adf9fbf7fc01f71c89e7c3d67427de536f64222"
             ],
             "subject": "恢复同一会话在顶栏悬停切换应用视图"
+          },
+          {
+            "commit": "31f7b77649da7e537646f6d7c8ffa1b8abc0f58e",
+            "parents": [
+              "497c4211c069bea38f1674de42109b3c797e2a6d"
+            ],
+            "subject": "验证编辑侧栏快捷入口时顶栏切换仍可用"
           }
         ],
         "files": [
@@ -100,8 +107,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查通过",
-            "verifiedCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
-            "completedAt": "2026-11-19T11:52:20.750Z",
+            "verifiedCommit": "31f7b77649da7e537646f6d7c8ffa1b8abc0f58e",
+            "completedAt": "2026-11-19T11:55:52.384Z",
             "timeoutMs": 60000
           },
           {
@@ -120,8 +127,8 @@
             ],
             "outcome": "passed",
             "summary": "103 项与导航、图像页签及项目上下文直接相关的检查通过",
-            "verifiedCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
-            "completedAt": "2026-11-19T11:52:20.750Z",
+            "verifiedCommit": "31f7b77649da7e537646f6d7c8ffa1b8abc0f58e",
+            "completedAt": "2026-11-19T11:55:52.384Z",
             "timeoutMs": 60000
           },
           {
@@ -135,12 +142,12 @@
               "test/browser-app-rendered.test.js",
               "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "shared hover switcher|expands workspace shortcuts|owner-matched native workspace tabs|expanded workspace controls|opens workspace tabs only|hides the native add actions|workspace shortcuts open across"
+              "shares editable shortcuts|shared hover switcher|expands workspace shortcuts|owner-matched native workspace tabs|expanded workspace controls|opens workspace tabs only|hides the native add actions|workspace shortcuts open across"
             ],
             "outcome": "passed",
             "summary": "Chromium 中检查七种模式选项、会话归属、窄栏布局和排除页面",
-            "verifiedCommit": "497c4211c069bea38f1674de42109b3c797e2a6d",
-            "completedAt": "2026-11-19T11:52:20.750Z",
+            "verifiedCommit": "31f7b77649da7e537646f6d7c8ffa1b8abc0f58e",
+            "completedAt": "2026-11-19T11:55:52.384Z",
             "timeoutMs": 60000
           }
         ],
@@ -156,7 +163,7 @@
         "risks": [
           "只支持研究视图的专用看板沿用原有会话能力限制"
         ],
-        "generatedAt": "2026-11-19T11:52:20.750Z"
+        "generatedAt": "2026-11-19T11:55:52.384Z"
       }
     }
   ],
