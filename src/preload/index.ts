@@ -486,8 +486,6 @@ function initializeUi(): void {
   const openImageFactory = () => { void flushBeforeCreate().then(imageFactory.open).catch(() => {}) }
   window.addEventListener(imageFactoryOpenEvent, openImageFactory)
   mountWorkspaceTopbarStyles(document)
-  const disposeSessionWorkspaceViews = mountSessionWorkspaceViewShortcuts(document,
-    () => workspaceSurfaceHost.revealConversation())
   const disposeWorkspaceViewCustomization = mountWorkspaceViewCustomization(document)
   let workspaceViewRequest = 0
   const openSessionWorkspaceView = async (sessionId: string, view: SessionWorkspaceAppView) => {
@@ -545,6 +543,8 @@ function initializeUi(): void {
     else if (app === 'plugin') window.dispatchEvent(new CustomEvent('sherlock:integrations-open'))
     else await scheduledView.open()
   }
+  const disposeSessionWorkspaceViews = mountSessionWorkspaceViewShortcuts(document,
+    () => workspaceSurfaceHost.revealConversation(), openNavigationApp)
   const disposeHomeAppShortcuts = mountHomeAppShortcuts(document, openNavigationApp)
   let shortcutProfile: string | undefined
   navigationShortcuts = mountNavigationShortcuts(document, {

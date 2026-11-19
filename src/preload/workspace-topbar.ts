@@ -58,6 +58,9 @@ body{
 .workspace-app-title,.workspace-app-title *{-webkit-app-region:drag;user-select:none;cursor:default}
 @container(max-width:700px){html:not([data-navigation-sidebar-only]) .workspace-app-title:not(.workspace-app-heading)>span{display:none}}
 @container(max-width:480px){.workspace-app-topbar{gap:4px}}
+.workspace-home-topbar{position:absolute;inset:0 auto auto 0;z-index:10;pointer-events:none}
+.workspace-home-topbar :is(.workspace-app-title,.eb-workspace-controls){pointer-events:auto}
+.workspace-home-topbar .workspace-app-title>i{mask-image:${navigationAppIcon('new-chat')}}
 .workspace-app-heading[data-workspace-app=scheduled]>i{mask-image:${navigationAppIcon('scheduled')}}
 .workspace-app-heading[data-workspace-app=plugin]>i{mask-image:${navigationAppIcon('plugin')};mask-size:16px}
 ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('new-chat')}}
