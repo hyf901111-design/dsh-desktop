@@ -140,6 +140,84 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-19T00:25:46.530437+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c0ddf6dc0e0e4ea0e2792470e3cc34a20ff5cc46",
+        "verificationCommit": "c0ddf6dc0e0e4ea0e2792470e3cc34a20ff5cc46",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "c0ddf6dc0e0e4ea0e2792470e3cc34a20ff5cc46",
+            "completedAt": "2026-11-19T00:26:01.957Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c0ddf6dc0e0e4ea0e2792470e3cc34a20ff5cc46",
+            "completedAt": "2026-11-19T00:26:01.957Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "--maxWorkers=3",
+              "test/workbench-execution-policy.test.js",
+              "test/attachment-template.test.js",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-skill-parity.test.ts",
+              "test/research-file-preview.test.ts",
+              "test/component-wheel-zoom.test.js",
+              "test/research-canvas-wheel-pass-through.test.js",
+              "test/workbench-webpage-file.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run --maxWorkers=3 test/workbench-execution-policy.test.js test/attachment-template.test.js test/bundled-component-skill.test.js test/bundled-skill-parity.test.ts test/research-file-preview.test.ts test/component-wheel-zoom.test.js test/research-canvas-wheel-pass-through.test.js test/workbench-webpage-file.test.js",
+            "verifiedCommit": "c0ddf6dc0e0e4ea0e2792470e3cc34a20ff5cc46",
+            "completedAt": "2026-11-19T00:26:01.957Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/research-html-theme.test.js",
+              "-t",
+              "wheel|工作台选择状态"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/research-html-theme.test.js -t wheel|工作台选择状态",
+            "verifiedCommit": "c0ddf6dc0e0e4ea0e2792470e3cc34a20ff5cc46",
+            "completedAt": "2026-11-19T00:26:01.957Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "./node_modules/.bin/vitest",
+              "run",
+              "test/workbench-auto-arrange-browser.test.js",
+              "-t",
+              "fits a portable webpage|preserves compact webpage layout|flattens older"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/.bin/vitest run test/workbench-auto-arrange-browser.test.js -t fits a portable webpage|preserves compact webpage layout|flattens older",
+            "verifiedCommit": "c0ddf6dc0e0e4ea0e2792470e3cc34a20ff5cc46",
+            "completedAt": "2026-11-19T00:26:01.957Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-19T00:26:01.957Z"
       }
     }
   ],
