@@ -1,12 +1,14 @@
 import {afterAll,beforeAll,expect,it} from 'vitest'
 import {mkdir,readFile,writeFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
+import {createHash} from 'node:crypto'
 import {execFileSync} from 'node:child_process'
 import {join} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {build} from 'esbuild'
 import {canvasCss} from '../scripts/lib/figma-canvas-client.mjs'
 import {prepareWorkbenchWebpages} from '../packages/dsh-research-task-runtime/workbench-webpage.js'
+import {boardFileWheelScript,boardFileWheelSuffix} from '../packages/dsh-research-task-runtime/workbench-frame-wheel.js'
 import {workbenchWebpagePreviewSuffix} from '../packages/dsh-research-task-runtime/workbench-webpage-preview.js'
 
 const require=createRequire(import.meta.url)
@@ -426,6 +428,44 @@ it('warns above the toolbar only when auto arrange overrides a committed manual 
   expect(await notice.count()).toBe(0)
  }finally{await page.close()}
 },15000)
+
+it('passes wheel input from a selected ordinary HTML file only when the document has no room',async()=>{
+ const page=await browser.newPage({viewport:{width:900,height:540}})
+ try {
+  const digest=createHash('sha256').update(boardFileWheelScript).digest('base64')
+  await page.route('https://auto-arrange.test/',route=>route.fulfill({contentType:'text/html',body:'<style>'+canvasCss+' html,body{margin:0}#host{width:850px;height:295px}[data-research-canvas]{width:100%!important;height:100%!important}</style><div id="host"></div>'}))
+  await page.route('https://preview.test/**',route=>route.fulfill({contentType:'text/html',
+   headers:{'Content-Security-Policy':"default-src 'none'; script-src 'sha256-"+digest+"'; frame-ancestors https://auto-arrange.test"},
+   body:'<!doctype html><meta charset=utf-8><p>本地参考页</p><script>window.unapprovedRan=true</script>'+(new URL(route.request().url()).search==='?board-scroll'?boardFileWheelSuffix:'')}))
+  await page.goto('https://auto-arrange.test/');await page.addScriptTag({content:script})
+  await page.waitForSelector('[data-ework-grid]')
+  await page.evaluate(()=>{
+   const descriptor={name:'reference.html',authorizationId:'raw',capabilityToken:'sample',url:'https://preview.test/'}
+   window.dshDesktop.researchPreview={restore:async()=>descriptor,release:()=>{}}
+   const files=['first','second','third','fourth'].map((id,i)=>({id,name:descriptor.name,path:id+'/'+descriptor.name,source:'computer',contentType:'text/html',authorizationId:'raw',previewEligible:true,x:0,y:i*360,width:650,height:351}))
+   fixture.workspace.setFiles(files)
+  })
+  const card=page.locator('[data-research-node-id="first"]'),frame=card.locator('iframe')
+  await frame.waitFor()
+  const child=await (await frame.elementHandle()).contentFrame()
+  const content=child.getByText('本地参考页'),board=page.locator('[data-ework-grid]')
+  await content.waitFor();expect(child.url()).toMatch(/\?board-scroll$/)
+  expect(await child.evaluate(()=>window.unapprovedRan)).toBeUndefined()
+  await card.locator('.ew-grid-header').click()
+  await expect.poll(()=>card.getAttribute('data-selected')).toBe('true')
+  const top=()=>board.evaluate(e=>e.scrollTop)
+  await content.hover()
+  const start=await top()
+  await page.mouse.wheel(0,60)
+  await expect.poll(top).toBe(start+60)
+  await child.evaluate(()=>document.body.append(...Array.from({length:60},()=>{const p=document.createElement('p');p.textContent='明细';return p})))
+  const inside=await frame.boundingBox()
+  await page.mouse.move(inside.x+35,Math.max(60,inside.y+85))
+  await page.mouse.wheel(0,45)
+  await expect.poll(()=>child.evaluate(()=>scrollY)).toBe(45)
+  expect(await top()).toBe(start+60)
+ }finally{await page.close()}
+},20000)
 
 it('fits a portable webpage at its current width and switches all board palettes without reloading its form',async()=>{
  const {workbenchStylePalette}=require('../packages/dsh-research-task-runtime/workbench-style.js')

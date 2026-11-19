@@ -36,3 +36,25 @@ export function researchFrameWheelMessage(event, interactive) {
     ...(zoom ? {ctrlKey: event.ctrlKey} : {})
   }
 }
+
+// Used only in the board representation of a local file. A file shown in a
+// separate viewer keeps its native scrolling until a board supplies selection.
+function installBoardFileWheel(frameWheel) {
+  if (parent === window) return
+  let selected = null
+  addEventListener('message', event => {
+    const data = event.data
+    if (event.source === parent && data?.type === 'sherlock-workbench-selection' &&
+        Object.keys(data).length === 2 && typeof data.selected === 'boolean') selected = data.selected
+  })
+  document.addEventListener('wheel', event => {
+    if (selected === null || event.metaKey || event.ctrlKey || event.altKey) return
+    const message = frameWheel(event, selected)
+    if (!message) return
+    event.preventDefault()
+    parent.postMessage(message, '*')
+  }, {passive: false})
+}
+
+export const boardFileWheelScript = '(' + installBoardFileWheel.toString() + ')(' + researchFrameWheelMessage.toString() + ')'
+export const boardFileWheelSuffix = '\n<script>' + boardFileWheelScript + '</script>'

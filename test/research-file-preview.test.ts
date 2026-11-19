@@ -12,6 +12,7 @@ import {
   symlink,
   writeFile
 } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -1308,6 +1309,23 @@ describe('sherlock-preview protocol responses', () => {
     const regular = await registry.admitSidebar({sessionId:'session-1',nodeId:'raw',relativePath:'regular.html'})
     expectDescriptor(regular)
     expect((await registry.handle(new Request(regular.url+'?workbench'),origin)).status).toBe(403)
+    const raw = await registry.handle(new Request(regular.url),origin)
+    expect(await raw.text()).toBe(source)
+    const fileView = regular.url+'?board-scroll'
+    const embedded = await registry.handle(new Request(fileView),origin)
+    const bytes = Buffer.from(await embedded.arrayBuffer())
+    const suffix = bytes.subarray(Buffer.byteLength(source)).toString()
+    const script = suffix.match(/^\s*<script>([\s\S]+)<\/script>$/)?.[1]
+    expect(script).toContain('sherlock-content-pan')
+    const digest = createHash('sha256').update(script!).digest('base64')
+    expect(embedded.headers.get('Content-Security-Policy')).toBe(raw.headers.get('Content-Security-Policy')!.replace(/(script-src [^;]+)/, "$1 'sha256-"+digest+"'"))
+    expect((await registry.handle(new Request(fileView))).status).toBe(403)
+    const start = Buffer.byteLength(source)-3
+    const partial = await registry.handle(new Request(fileView,{headers:{Range:'bytes='+start+'-'}}),origin)
+    expect(partial.status).toBe(206)
+    expect(Buffer.from(await partial.arrayBuffer())).toEqual(bytes.subarray(start))
+    expect((await registry.handle(new Request(descriptors[0]!.url+'?board-scroll'),origin)).status).toBe(403)
+
   })
 
   it('serves HTML capability-origin modules and practical local resources inside one realpath-fenced root', async () => {
