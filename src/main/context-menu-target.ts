@@ -12,10 +12,13 @@ export function contextMenuTargetScript(x: number, y: number): string {
   return `(() => {
       const captured = window.__sherlockContextTarget;
       window.__sherlockContextTarget = undefined;
+      const hit = document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
+      const trayMenu = '[data-home-app-shortcuts], [data-navigation-menu]';
+      if (hit?.closest(trayMenu)) return { values: [], suppressMenu: true };
       const origin = captured && performance.now() - captured.time < 2000 && captured.element?.isConnected
-        ? captured.element : document.elementFromPoint(${JSON.stringify(x)}, ${JSON.stringify(y)});
+        ? captured.element : hit;
       if (!(origin instanceof Element)) return { values: [] };
-      if (origin.closest('[data-knowledge-file-context-menu], [data-image-factory-layer-menu]')) return { values: [], suppressMenu: true };
+      if (origin.closest(trayMenu + ', [data-knowledge-file-context-menu], [data-image-factory-layer-menu]')) return { values: [], suppressMenu: true };
       // The atmospheric background is a sibling of the home page and ignores
       // pointer events, so blank clicks can land on either the page or its column.
       const page = origin.closest('[data-odyssey-page]');

@@ -38,7 +38,8 @@ it('projects the same positions into native and app tabs and supports editing bo
     <nav class="eb-workspace-tabs"><button data-workspace-native-view="chat">对话</button><button data-workspace-native-view="research">研究</button><button data-workspace-native-view="notes">笔记</button><button data-workspace-native-view="spreadsheet">表格</button></nav>
     <nav data-home-app-shortcuts><button data-home-app="browser">浏览器</button><button data-home-app="image-factory">图像</button></nav>`
   doc.querySelector('[data-workspace-native-view=notes]')!.addEventListener('click', native)
-  const manager = mountNavigationShortcuts(doc, { read: () => defaultNavigationShortcuts, save, open })
+  let persisted = defaultNavigationShortcuts
+  const manager = mountNavigationShortcuts(doc, { read: () => persisted, save, open })
   const pick = (selector: string) => doc.querySelector<HTMLButtonElement>(selector)!
   const event = (target: Element, type: string) => target.dispatchEvent(new win.MouseEvent(type, { bubbles: true, cancelable: true }) as unknown as Event)
   try {
@@ -50,10 +51,16 @@ it('projects the same positions into native and app tabs and supports editing bo
     app.querySelector<HTMLButtonElement>('[data-workspace-native-view=notes]')!.click()
     expect(native).toHaveBeenCalledOnce()
 
-    event(pick('[data-home-app=browser]'), 'contextmenu')
-    pick('[data-navigation-menu] [data-action=top]').click()
-    pick('[data-srb-tabs] [data-navigation-slot="3"]').click()
-    expect(save).toHaveBeenLastCalledWith(expect.objectContaining({ top: ['research','note','spreadsheet','browser'] }))
+    for (const hit of ['[data-home-app=browser]', '[data-home-app-shortcuts]']) {
+      expect(event(pick(hit), 'contextmenu')).toBe(false)
+      expect([...doc.querySelectorAll('[data-navigation-menu] [role=menuitem]')].map(item => item.textContent)).toEqual(['快捷管理'])
+    }
+    pick('[data-navigation-menu] [data-action=manage]').click()
+    expect(doc.body.hasAttribute('data-navigation-editing')).toBe(true)
+    expect(doc.body.hasAttribute('data-navigation-picking')).toBe(false)
+    expect(save).not.toHaveBeenCalled()
+    persisted = replaceNavigationShortcut(persisted, 'top', 3, 'browser')
+    manager.reload()
     expect(app.querySelector('[data-navigation-slot="3"]')?.textContent).toBe('浏览器')
     app.querySelector<HTMLButtonElement>('[data-navigation-slot="3"]')!.click()
     expect(open).toHaveBeenCalledWith('browser', expect.anything(), 'top')
@@ -70,9 +77,8 @@ it('projects the same positions into native and app tabs and supports editing bo
     manager.pinSidebar('new-chat')
     expect(manager.sidebar()).toEqual(['browser', 'knowledge', 'note', 'new-chat'])
     manager.pinSidebar('scheduled')
-    expect(doc.body.dataset.navigationEditingRegion).toBe('side')
-    pick('[data-navigation-rail] [data-navigation-slot="1"]').click()
-    expect(manager.sidebar()).toEqual(['browser', 'scheduled', 'note', 'new-chat'])
+    expect(doc.body.hasAttribute('data-navigation-editing')).toBe(false)
+    expect(manager.sidebar()).toEqual(['browser', 'knowledge', 'note', 'new-chat'])
   } finally {
     manager.dispose()
     await win.happyDOM.abort()

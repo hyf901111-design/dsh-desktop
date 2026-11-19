@@ -6,7 +6,7 @@ import {build} from 'esbuild'
 let browser,code
 const evidence=process.env.BROWSER_APP_EVIDENCE||'/tmp/browser-app-figma-20261109'
 beforeAll(async()=>{
- const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
+ const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import homeShortcutStyles from './src/preload/home-app-shortcuts.css?raw';window.homeShortcutStyles=homeShortcutStyles;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
 let listener;let n=0;const data={tabs:[{id:'tab0',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'tab0',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}};
 window.setBrowserState=value=>{Object.assign(data,value);listener(structuredClone(data))};window.browserCalls=[];window.snapshot=()=>structuredClone(data);window.update=()=>listener(structuredClone(data));
 const bridge={subscribe:f=>{listener=f;return()=>{}},source:async(...args)=>window.browserCalls.push(['source',...args]),request:async(method,input={})=>{if(method==='site')return{permissions:data.sitePermissions??{}};window.browserCalls.push([method,input]);const t=data.tabs.find(t=>t.id===data.activeId);if(method==='capture'){if(window.browserCapture)return await window.browserCapture();const c=document.createElement('canvas');c.width=20;c.height=20;return c.toDataURL()};if(method==='new'){const tab={...t,id:'tab'+(++n),title:input.url?'Example Domain':'新标签页',url:input.url??'',private:!!input.private};delete tab.page;data.tabs.push(tab);data.activeId=tab.id}if(method==='internal-page'){let page=data.tabs.find(tab=>tab.page===input.page);if(!page){page={...t,id:'tab'+(++n),url:'',page:input.page,title:input.page==='history'?'历史记录':'下载内容',private:false,loading:false,canBack:false,canForward:false};data.tabs.push(page)}data.activeId=page.id}if(method==='select')data.activeId=input.id;if(method==='reorder'){const tab=data.tabs.find(t=>t.id===input.id),before=data.tabs.find(t=>t.id===input.beforeId);if(tab&&tab!==before){data.tabs.splice(data.tabs.indexOf(tab),1);data.tabs.splice(before?data.tabs.indexOf(before):data.tabs.length,0,tab)}}if(method==='zoom')data.tabs.find(tab=>tab.id===input.id).zoom=input.value;if(method==='close'){const index=data.tabs.findIndex(t=>t.id===input.id);data.tabs.splice(index,1);if(data.activeId===input.id)data.activeId=data.tabs[Math.min(index,data.tabs.length-1)].id}if(method==='home'){delete t.page;t.url='';t.title='新标签页';t.canBack=false;t.canForward=false}if(method==='history-remove')data.history=data.history.filter(row=>row.id!==input.id);if(method==='navigate'){delete t.page;t.url=input.url;t.title='Example Domain';data.history.unshift({id:'h'+n,url:input.url,title:t.title,at:Date.now()})}if(method==='bookmark'){const old=data.bookmarks.find(b=>b.url===input.url);if(input.remove)data.bookmarks=data.bookmarks.filter(b=>b.url!==input.url);else if(old)Object.assign(old,{title:input.title,folder:input.folder});else data.bookmarks.push({id:'b'+n,url:input.url,title:input.title,folder:input.folder,at:Date.now()})}if(method==='bookmark-update')Object.assign(data.bookmarks.find(b=>b.id===input.id),input);if(method==='bookmarks-remove')data.bookmarks=data.bookmarks.filter(b=>!input.ids.includes(b.id));if(method==='folder')data.folders.push(input.name);if(method==='settings')Object.assign(data.settings,input);if(method==='clear'&&input.history)data.history=[];if(method==='find')t.find={matches:6,activeMatchOrdinal:1};return structuredClone(data)}};
@@ -575,12 +575,16 @@ it('shares editable shortcuts between the composer, the collapsed sidebar and th
      <button data-conversation-view-id="notes">笔记</button>
      <button data-conversation-view-id="spreadsheet">表格</button>
     </div>`)
+   const style = document.createElement('style')
+   style.textContent = window.homeShortcutStyles
+   document.head.append(style)
    document.body.insertAdjacentHTML('beforeend', `
     <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
      <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home>主页</button><span class="st-more-zone"></span></div>
     </aside>
-    <nav data-home-app-shortcuts style="position:fixed;left:480px;bottom:130px;z-index:3000">
+    <nav data-home-app-shortcuts style="position:fixed;inset:auto 240px 130px 480px;z-index:3000">
      <button data-home-app="image-factory"><span class="home-app-shortcut-icon" style="display:block">图像</span></button>
+     <button data-home-app="plugin">插件</button>
     </nav>`)
    window.shortcutOpens = []
    window.shortcutManager = window.mountNavigationShortcuts(document, {
@@ -616,7 +620,20 @@ it('shares editable shortcuts between the composer, the collapsed sidebar and th
   await page.locator('body[data-navigation-editing]').waitFor({ state: 'detached' })
 
   await page.evaluate(() => { document.querySelector('.eb-root').hidden = true })
-  await drag(homeTabs.locator('[data-navigation-slot="3"]'), true)
+  const sourceBox = await source.boundingBox()
+  const neighbor = await page.locator('[data-home-app=plugin]').boundingBox()
+  const tray = await page.locator('[data-home-app-shortcuts]').boundingBox()
+  const menu = page.locator('[data-navigation-menu]')
+  for (const x of [sourceBox.x + sourceBox.width / 2, (sourceBox.x + sourceBox.width + neighbor.x) / 2, tray.x + tray.width - 10]) {
+   await page.mouse.click(x, sourceBox.y + sourceBox.height / 2, { button: 'right' })
+   await menu.getByRole('menuitem', { name: '快捷管理', exact: true }).waitFor()
+   expect(await menu.getByRole('menuitem').allTextContents()).toEqual(['快捷管理'])
+   expect(await page.locator('body[data-navigation-editing]').count()).toBe(0)
+  }
+  await menu.getByRole('menuitem', { name: '快捷管理' }).click()
+  await page.locator('body[data-navigation-editing]').waitFor()
+  expect(await source.locator('span').evaluate(node => getComputedStyle(node).animationName)).toBe('navigation-shortcut-wiggle')
+  await drag(homeTabs.locator('[data-navigation-slot="3"]'), false)
   expect(await homeTabs.locator('[data-navigation-slot="3"]').textContent()).toBe('图像')
   await page.keyboard.press('Escape')
   await page.evaluate(() => {
@@ -631,7 +648,6 @@ it('shares editable shortcuts between the composer, the collapsed sidebar and th
   await saved.click()
   expect(await page.evaluate(() => window.shortcutOpens)).toEqual(['image-factory'])
   await saved.click({ button: 'right' })
-  const menu = page.locator('[data-navigation-menu]')
   await menu.waitFor()
   const box = await menu.boundingBox()
   expect([box.width, box.height]).toEqual([128, 64])
@@ -691,10 +707,12 @@ it('keeps full-size shortcut labels and hover styles, and compacts the rail afte
   const sidebar = page.locator('[data-navigation-rail]')
   await page.locator('[data-navigation-delete][data-navigation-region=side][aria-label="删除知识库"]').click()
   expect(await sidebar.locator('[data-navigation-slot="1"]').getAttribute('aria-label')).toBe('图像')
-  expect(await sidebar.locator('[data-navigation-slot="2"]').isVisible()).toBe(false)
+  expect(await sidebar.locator('button:visible').count()).toBe(4)
+  expect(await sidebar.locator('[data-empty]:visible').count()).toBe(2)
   expect(await page.evaluate(() => window.savedShortcuts.side)).toEqual(['browser', 'image-factory', null, null])
 
   await page.keyboard.press('Escape')
+  expect(await sidebar.locator('button:visible').count()).toBe(4)
   await page.evaluate(() => { document.querySelector('.eb-root').hidden = false })
   await page.locator('.eb-workspace-toggle').hover()
   const appTabs = page.locator('.eb-workspace-tabs[aria-hidden=false]')
