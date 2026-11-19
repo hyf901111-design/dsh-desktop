@@ -51,6 +51,7 @@ export class BrowserAppView {
  }
  async open(sessionId='',url?:string){
   this.closePageContextMenu();this.sessionId=sessionId;const epoch=++this.epoch
+  delete this.document.body.dataset.browserActiveTab
   this.host.open('browser')
   this.root.hidden=false
   if(takeWorkspaceViewsExpansion(this.document,sessionId,'browser'))this.setWorkspaceExpanded(true)
@@ -215,12 +216,17 @@ export class BrowserAppView {
   }
   this.schedule()
  }
+ private workspaceButtonMarkup=''
  private updateMarkup(html:string){
   const bar=this.root.querySelector<HTMLElement>('.eb-tabs')
   const controls=bar?.querySelector<HTMLElement>('.eb-workspace-controls')
   const previousStrip=bar?.querySelector('.eb-tab-scroll')
   if(previousStrip)this.resize?.unobserve(previousStrip)
-  if(!bar||!controls){this.root.innerHTML=html;return}
+  if(!bar||!controls){
+   this.root.innerHTML=html
+   this.workspaceButtonMarkup=this.root.querySelector('.eb-workspace-tab-list')?.innerHTML??''
+   return
+  }
   // Keep the transition and focused control alive while browser snapshots refresh the chrome.
   const template=this.document.createElement('template')
   template.innerHTML=html
@@ -230,7 +236,10 @@ export class BrowserAppView {
   const proposedNav=proposed.querySelector('.eb-workspace-tabs')!
   const labels=nav.querySelector('.eb-workspace-tab-list')!
   const proposedLabels=proposedNav.querySelector('.eb-workspace-tab-list')!
-  if(labels.innerHTML!==proposedLabels.innerHTML)labels.replaceChildren(...proposedLabels.children)
+  if(this.workspaceButtonMarkup!==proposedLabels.innerHTML){
+   this.workspaceButtonMarkup=proposedLabels.innerHTML
+   labels.replaceChildren(...proposedLabels.children)
+  }
   bar.dataset.crowded=incoming.dataset.crowded
   const children=[...incoming.children], split=children.indexOf(proposed)
   for(const child of [...bar.children])if(child!==controls)child.remove()
@@ -248,7 +257,19 @@ export class BrowserAppView {
     this.toast('此会话视图暂不可用，请先打开对应会话。', true)
  }
  private row(row:BrowserLink,action='open-url',history=false){return `<button type="button" class="eb-list-row" data-action="${action}" data-url="${esc(row.url)}" data-row-id="${esc(row.id)}">${icon('globe')}<span class="eb-row-text"><strong>${esc(row.title)}</strong><small>${history?esc(new Date(row.at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))+' · '+esc(hostname(row.url)):esc(hostname(row.url))+(row.at?' · '+esc(new Date(row.at).toLocaleDateString()):'')}</small></span></button>`}
+ private publishActiveTab(){
+  const body=this.document.body, id=this.state?.activeId
+  if(!id||this.root.hidden||this.host.current()?.surface!=='browser')return
+  const openIds=this.state!.tabs.map(tab=>tab.id)
+  const signature=JSON.stringify([id,openIds])
+  if(body.dataset.browserActiveTab===id&&this.publishedTabSignature===signature)return
+  this.publishedTabSignature=signature
+  body.dataset.browserActiveTab=id
+  this.document.dispatchEvent(new CustomEvent('sherlock:browser-active-tab-change',{detail:{tabIds:openIds}}))
+ }
+ private publishedTabSignature=''
  private render(){
+  this.publishActiveTab()
   if(this.pageContext&&!this.pageContextValid(this.pageContext))this.closePageContextMenu()
   if(this.draggingTab)return;
   if(!this.state||this.disposed||this.composing||this.closingTab)return

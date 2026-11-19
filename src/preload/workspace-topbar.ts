@@ -1,3 +1,4 @@
+import { installWorkspaceViewOverflow } from './workspace-view-overflow'
 import { workspaceContentViews } from '../shared/navigation-shortcuts'
 import { navigationAppIcon } from './home-app-shortcuts'
 import { icons } from './scheduled/icons'
@@ -47,7 +48,7 @@ export function revealWorkspaceTab(list: HTMLElement) {
 
 const controls = 'body :is(.workspace-back-button, :is([data-scheduled-panel],[data-workspace-panel=integrations]) [data-odyssey-panel-entry=right])'
 const workspaceDotSelectors = (['chat', ...workspaceContentViews]).map(view =>
-  `html[data-workspace-view-content~="${view}"] .eb-workspace-tabs button[data-workspace-native-view="${view}"]:not([aria-current=true])::after`
+  `html[data-workspace-view-content~="${view}"] :is(.eb-workspace-tabs,.workspace-view-overflow-menu) button[data-workspace-native-view="${view}"]:not([aria-current=true])::after`
 ).join(',')
 const sessionHeader = '[data-srb-session-header]:not([data-odyssey-subagent-panel] *)'
 const resident = '.pI_x6G_centerCol .wSkVaW_root'
@@ -81,6 +82,7 @@ ${workspaceSessionHeader}:has([data-conversation-view-id=notes][aria-selected=tr
 body[data-workspace-surface=notes] ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('note')};--workspace-title-art-size:auto 14px}
 ${workspaceSessionHeader} .wSkVaW_crumbs{display:flex;align-items:center;gap:var(--odyssey-app-title-gap)}
 ${workspaceSessionHeader} .wSkVaW_crumb{display:block}
+body ${workspaceSessionHeader}:has([data-session-workspace-controls]) .wSkVaW_crumbs{min-width:min(68px,25%)}
 ${workspaceSessionHeader} .wSkVaW_crumbs::before{
   content:"";display:block;width:var(--odyssey-app-title-icon-size);height:var(--odyssey-app-title-icon-size);flex:none;
   background:currentColor;mask:var(--workspace-title-icon) center/var(--workspace-title-art-size,contain) no-repeat;
@@ -92,7 +94,7 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
 .eb-workspace-toggle[aria-expanded=true]>i{transform:rotate(180deg)}
 .eb-workspace-tabs{
   display:flex;align-items:center;gap:4px;flex:0 1 auto;
-  min-width:0;width:max-content;
+  min-width:0;width:var(--workspace-view-width,max-content);
   interpolate-size:allow-keywords;overflow:hidden;-webkit-app-region:no-drag;
   transition:width var(--workspace-switch-duration) var(--workspace-switch-ease),opacity var(--workspace-switch-duration) var(--workspace-switch-ease);
 }
@@ -101,8 +103,24 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
   overflow-x:auto;overflow-y:hidden;scrollbar-width:none;
 }
 .eb-workspace-tabs[data-customizing]>.eb-workspace-tab-list{display:none}
-.eb-workspace-tabs[data-customizing]{transition:none}
+.eb-workspace-tabs[data-customizing]{width:max-content;transition:none}
+.eb-workspace-tabs[data-workspace-measuring]{transition:none}
 .eb-workspace-tabs[aria-hidden=false]{min-width:28px}
+.eb-workspace-tabs:has(>.eb-workspace-overflow:not([hidden]))[aria-hidden=false]{min-width:calc(56px + var(--workspace-menu-gap,4px))}
+@container(max-width:480px){.eb-workspace-tabs{--workspace-menu-gap:2px}}
+.eb-workspace-tab-list{position:relative;overflow:hidden}
+.eb-workspace-tab-list>button[data-workspace-overflowed]{position:absolute;visibility:hidden;pointer-events:none}
+.eb-workspace-tab-list:not(:has(>button:not([data-workspace-overflowed]))){position:absolute}
+body .eb-workspace-overflow{position:relative;flex:none;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#888);cursor:pointer;-webkit-app-region:no-drag}
+body .eb-workspace-overflow:is(:hover,:focus-visible,[aria-expanded=true]){background:var(--dsw-alias-interactive-bg-hover,#8882);color:var(--dsw-alias-label-primary,currentColor)}
+.eb-workspace-overflow>i{width:7px;height:7px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg)}
+.eb-workspace-overflow[data-has-content]::after{content:'';position:absolute;inset:4px 3px auto auto;width:5px;height:5px;border-radius:50%;background:#168bff}
+body .eb-workspace-overflow[hidden],.eb-workspace-tabs[data-customizing]>.eb-workspace-overflow{display:none}
+.workspace-view-overflow-menu{position:fixed;inset:0 auto auto 0;margin:0;z-index:2147483000;box-sizing:border-box;min-width:128px;max-width:calc(100vw - 16px);padding:4px;border:1px solid var(--dsw-alias-border-l2,#8884);border-radius:8px;background:var(--workspace-editor-surface);color:var(--dsw-alias-label-primary,var(--odyssey-text,#252525));box-shadow:0 8px 22px #0003;-webkit-app-region:no-drag}
+.workspace-view-overflow-menu>button{position:relative;display:block;width:100%;min-height:30px;padding:0 18px 0 9px;border:0;border-radius:5px;background:transparent;color:inherit;text-align:left;font:13px/20px var(--odyssey-font-ui,system-ui);white-space:nowrap;cursor:pointer}
+.workspace-view-overflow-menu>button:is(:hover,:focus-visible,[aria-current=true]):not(:disabled){background:var(--dsw-alias-interactive-bg-hover,#8882)}
+.workspace-view-overflow-menu>button:disabled{opacity:.45;cursor:default}
+
 
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button[data-workspace-native-view]{
   position:relative;flex:0 0 auto;height:28px;padding:0 8px;font-size:14px;line-height:20px;white-space:nowrap;
@@ -261,4 +279,5 @@ export function mountWorkspaceTopbarStyles(document: Document): void {
   style.id = 'sherlock-workspace-topbar-style'
   style.textContent = styles
   document.head.append(style)
+  installWorkspaceViewOverflow(document)
 }
