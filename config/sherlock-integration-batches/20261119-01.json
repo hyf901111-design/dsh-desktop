@@ -226,7 +226,7 @@
         "featureName": "研究网页回到原看板、规划状态同步与浏览器下载操作",
         "branch": "codex/feat/browser-overlay-downloads-20261119",
         "baseCommit": "fd2964c1482fede5dae0fcb91c8a60a3ae71e34a",
-        "tipCommit": "da37e760e31abf8930d423d78c7d2f2e330025a9",
+        "tipCommit": "9f8976ada8400809fd230dff799ecdfbb6f9e7ec",
         "commits": [
           {
             "commit": "0d48bdc5ee1ccc4c19aae4e2dda02fea378f79a6",
@@ -248,6 +248,13 @@
               "cb7fdd903ce3f720f5a66f77fe4361676ca21a0d"
             ],
             "subject": "按研究任务的更新频率和交互需求规划组件"
+          },
+          {
+            "commit": "9f8976ada8400809fd230dff799ecdfbb6f9e7ec",
+            "parents": [
+              "da37e760e31abf8930d423d78c7d2f2e330025a9"
+            ],
+            "subject": "精简组件生成提示并保留研究交互与主题规则"
           }
         ],
         "files": [
@@ -349,14 +356,16 @@
               "test/research-creation-progress.test.js",
               "test/research-send-admission.test.js",
               "test/browser-page-actions-service.test.ts",
+              "test/bundled-component-skill.test.js",
+              "test/bundled-skill-parity.test.ts",
               "--testTimeout",
               "30000",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "运行时、发送、画布和下载的 404 项聚焦回归通过。",
-            "verifiedCommit": "da37e760e31abf8930d423d78c7d2f2e330025a9",
-            "completedAt": "2026-11-19T02:29:30.264Z",
+            "summary": "运行时、画布、浏览器下载、组件策略的 420 项聚焦回归通过。",
+            "verifiedCommit": "9f8976ada8400809fd230dff799ecdfbb6f9e7ec",
+            "completedAt": "2026-11-19T02:35:21.343Z",
             "timeoutMs": 240000
           },
           {
@@ -367,8 +376,8 @@
             ],
             "outcome": "passed",
             "summary": "桌面端类型检查通过。",
-            "verifiedCommit": "da37e760e31abf8930d423d78c7d2f2e330025a9",
-            "completedAt": "2026-11-19T02:29:30.264Z",
+            "verifiedCommit": "9f8976ada8400809fd230dff799ecdfbb6f9e7ec",
+            "completedAt": "2026-11-19T02:35:21.343Z",
             "timeoutMs": 240000
           }
         ],
@@ -384,7 +393,7 @@
         "risks": [
           "原始 CPI/PPI 场景生成的五张静态卡仍按静态交付记录。"
         ],
-        "generatedAt": "2026-11-19T02:29:30.257Z"
+        "generatedAt": "2026-11-19T02:35:21.343Z"
       }
     }
   ],
