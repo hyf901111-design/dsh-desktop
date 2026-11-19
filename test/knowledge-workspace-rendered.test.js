@@ -981,6 +981,17 @@ it.each([true, false])('keeps the full top-bar editor clear of the knowledge tab
     expect(await gear.getAttribute('aria-pressed')).toBeNull()
     expect(await header.getByRole('button', { name: '收起工作区页签' }).getAttribute('aria-expanded')).toBe('true')
     expect(await files.getAttribute('aria-current')).toBe('page')
+    const more = header.getByRole('button', { name: '更多工作区页签' })
+    await more.waitFor()
+    const centerOffset = await more.evaluate(button => {
+      const bounds = button.getBoundingClientRect()
+      const icon = button.querySelector('i').getBoundingClientRect()
+      return {
+        horizontal: icon.x + icon.width / 2 - (bounds.x + bounds.width / 2),
+        vertical: icon.y + icon.height / 2 - (bounds.y + bounds.height / 2)
+      }
+    })
+    expect(centerOffset).toEqual({ horizontal: 0, vertical: 0 })
     expect(errors).toEqual([])
   } finally {
     await page.close()
