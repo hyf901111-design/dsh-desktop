@@ -166,6 +166,8 @@ describe('workbench planning continuation', () => {
     const run = await planningRun('做个出游预算看板，改人数就能比较两套方案，整页还能带走。')
     try {
       expect(run.wire.system).toContain('border-radius: 0')
+      expect(run.wire.system).toContain('不叠加外描边')
+      expect(run.wire.system).toContain('未选滑轨用浅灰')
       expect(run.wire.system).toContain('省去摘要侧边色条、分区顶部色带和胶囊外框')
       expect(run.wire.system).toContain('可见的键盘焦点')
       expect(run.wire.system).toContain('htmlFile.stylePreset="compact-v1"')

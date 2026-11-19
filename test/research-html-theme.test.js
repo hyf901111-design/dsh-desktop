@@ -469,7 +469,7 @@ it('工作台选择状态只接受宿主消息并在iframe重新载入后恢复'
  const content=inner.window.document.body;content.style.overflowY='auto'
  Object.defineProperty(content,'scrollHeight',{value:800});Object.defineProperty(content,'clientHeight',{value:100})
  content.scrollTop=50
- const wheel=()=>({isTrusted:true,target:content,deltaX:0,deltaY:60,deltaMode:0,clientX:0,clientY:0,preventDefault:vi.fn(),stopImmediatePropagation:vi.fn()})
+ const wheel=()=>({isTrusted:true,cancelable:true,composedPath:()=>[content,content.parentElement],target:content,deltaX:0,deltaY:60,deltaMode:0,clientX:0,clientY:0,preventDefault:vi.fn(),stopImmediatePropagation:vi.fn()})
  const unselected=wheel();inner.window.testWheel(unselected);expect(unselected.preventDefault).toHaveBeenCalled()
  inner.send(selection);const selected=wheel();inner.window.testWheel(selected);expect(selected.preventDefault).not.toHaveBeenCalled()
  inner.send({...selection,selected:false});const again=wheel();inner.window.testWheel(again);expect(again.preventDefault).toHaveBeenCalled()

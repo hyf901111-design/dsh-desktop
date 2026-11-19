@@ -30,12 +30,13 @@ import { applyWorkbenchPresentation, WORKBENCH_PRESENTATION_CSS } from '../../pa
 import { installWorkbenchScrollbars, isWorkbenchScrollbarMessage } from '../../packages/dsh-research-task-runtime/workbench-scrollbars.js'
 import { installWorkbenchTableColumns } from '../../packages/dsh-research-task-runtime/workbench-table-columns.js'
 import { installWorkbenchNaturalCharts } from '../../packages/dsh-research-task-runtime/workbench-natural-charts.js'
+import { researchFrameWheelMessage } from '../../packages/dsh-research-task-runtime/workbench-frame-wheel.js'
 import { installWorkbenchStructureReading } from '../../packages/dsh-research-task-runtime/workbench-structure-reading.js'
 const root = fileURLToPath(new URL('../..', import.meta.url))
 const componentThemeSource = (await readFile(join(root, 'packages/dsh-research-task-runtime/html-artifact.js'), 'utf8'))
   .match(/\/\/ RESEARCH_COMPONENT_THEME_START[\s\S]*?\/\/ RESEARCH_COMPONENT_THEME_END/)[0]
   .replace(/^export /gm, '')
-  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, prefix => prefix+'const NOTE_TOOLBAR_GEOMETRY_CSS='+JSON.stringify(NOTE_TOOLBAR_GEOMETRY_CSS)+';\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+validWorkbenchLocaleMessage.toString()+'\n'+installWorkbenchLocaleMessages.toString()+'\n'+validWorkbenchStyleMessage.toString()+'\n'+installWorkbenchStyleMessages.toString()+'\nconst researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n'+isWorkbenchScrollbarMessage.toString()+'\n'+installWorkbenchScrollbars.toString()+'\n'+installWorkbenchTableColumns.toString()+'\n'+installWorkbenchNaturalCharts.toString()+'\n'+installWorkbenchStructureReading.toString()+'\n')
+  .replace(/(\/\/ RESEARCH_COMPONENT_THEME_START[^\n]*\n)/, prefix => prefix+'const NOTE_TOOLBAR_GEOMETRY_CSS='+JSON.stringify(NOTE_TOOLBAR_GEOMETRY_CSS)+';\nconst WORKBENCH_ENGLISH='+JSON.stringify(WORKBENCH_ENGLISH)+';\n'+validWorkbenchLocaleMessage.toString()+'\n'+installWorkbenchLocaleMessages.toString()+'\n'+validWorkbenchStyleMessage.toString()+'\n'+installWorkbenchStyleMessages.toString()+'\nconst researchNotoFontCss = '+JSON.stringify(researchNotoFontCss)+';\n'+sharedComponentRuntime.toString()+'\n'+isWorkbenchScrollbarMessage.toString()+'\n'+installWorkbenchScrollbars.toString()+'\n'+installWorkbenchTableColumns.toString()+'\n'+installWorkbenchNaturalCharts.toString()+'\n'+installWorkbenchStructureReading.toString()+'\n'+researchFrameWheelMessage.toString()+'\n')
   .replace(/\bparseResearchHtmlArtifact\(/g, 'parseResearchContainerSpec(')
   .replace(/\bWORKBENCH_ENGLISH\b/g, 'RESEARCH_WORKBENCH_ENGLISH')
 const START = '/* SHERLOCK_RESEARCH_BOARDS_PAGE_BEGIN */',

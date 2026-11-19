@@ -373,7 +373,7 @@ export function WorkbenchChromeLayer({rootRef,workspace,sessionId,snapshot,readO
   react.useEffect(()=>{
     const root=rootRef.current;if(!root)return
     const reconcile=()=>{const nodes=[...snapshot.files,...snapshot.artifacts],next=[]
-    for(const node of nodes){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card)continue;let host=card.querySelector(':scope > .ew-grid-chrome-host');if(!host){host=document.createElement('div');host.className='ew-grid-chrome-host';card.appendChild(host)}for(const frame of card.querySelectorAll('iframe[data-research-html-artifact]'))frame.contentWindow?.postMessage({type:'sherlock-workbench-selection',selected:card.hasAttribute('open')||snapshot.selection.selectedNodeIds.includes(node.id)},'*');next.push({node,host,expanded:card.hasAttribute('open'),blocked:card.hasAttribute('data-research-geometry-blocked')})}
+    for(const node of nodes){const card=root.querySelector('[data-research-node-id="'+CSS.escape(node.id)+'"]');if(!card)continue;let host=card.querySelector(':scope > .ew-grid-chrome-host');if(!host){host=document.createElement('div');host.className='ew-grid-chrome-host';card.appendChild(host)}for(const frame of card.querySelectorAll('iframe[data-research-html-artifact],iframe[data-research-workbench-webpage]'))frame.contentWindow?.postMessage({type:'sherlock-workbench-selection',selected:card.hasAttribute('open')||snapshot.selection.selectedNodeIds.includes(node.id)},'*');next.push({node,host,expanded:card.hasAttribute('open'),blocked:card.hasAttribute('data-research-geometry-blocked')})}
     setHosts(previous=>previous.length===next.length&&next.every((n,i)=>previous[i].host===n.host&&previous[i].node===n.node&&previous[i].expanded===n.expanded&&previous[i].blocked===n.blocked)?previous:next)
     };reconcile();root.addEventListener('load',reconcile,true);const observer=new MutationObserver(reconcile);observer.observe(root,{childList:true,subtree:true,attributes:true,attributeFilter:['open','data-research-geometry-blocked']});return()=>{observer.disconnect();root.removeEventListener('load',reconcile,true)}
   },[snapshot.files,snapshot.artifacts,snapshot.selection,rootRef])
@@ -390,7 +390,8 @@ export function WorkbenchResizeControls({nodes,width,bottom=Infinity,corner=fals
 }
 export function handleWorkbenchWheel(root,workspace,event) {
   if(event.target?.closest?.('[role=menu],[role=dialog][open],.ew-calendar-editor,.ew-grid-menu,[data-research-create-popover],[data-research-global-toolbar]'))return
-  const card=event.target?.closest?.('[data-research-node-id]'),preview=event.target?.closest?.('[data-research-preview-interactive],[data-calendar-tool]')
+  const card=event.target?.closest?.('[data-research-node-id]')
+  const preview=event.target?.closest?.('[data-research-preview-body]') ?? event.target?.closest?.('[data-research-preview-interactive],[data-calendar-tool]')
   const selected=card&&workspace.getSnapshot().selection.selectedNodeIds.includes(card.getAttribute('data-research-node-id'))
   if(!event.__sherlockCanvasPan&&selected&&event.target?.closest?.('[data-financial-chart]'))return
   if(!event.__sherlockCanvasPan&&selected&&preview&&!event.metaKey&&!event.ctrlKey){
@@ -1028,6 +1029,18 @@ export function useWorkbenchGrid({rootRef,workspace,sessionId,snapshot,toolRef,s
     const contentMeasurements=new Map();root.__eworkContentMeasurements=contentMeasurements
     const contentSize=event=>{
       const data=event.data
+      if(data?.type==='sherlock-content-pan'){
+        if(event.origin!=='null')return
+        const frame=[...root.querySelectorAll('iframe[data-research-workbench-webpage]')].find(el=>el.contentWindow===event.source)
+        const card=frame?.closest('[data-research-node-id]')
+        if(!card||card.hasAttribute('open')||frame.closest('dialog[open]'))return
+        const init=componentWheelPan(data,frame.getBoundingClientRect())
+        if(!init)return
+        const wheel=new WheelEvent('wheel',init)
+        Object.defineProperty(wheel,'__sherlockCanvasPan',{value:true})
+        frame.dispatchEvent(wheel)
+        return
+      }
       if(data?.type==='sherlock-kpi-refresh-request'){
         const frame=[...root.querySelectorAll('iframe[data-research-html-artifact]')].find(f=>f.contentWindow===event.source)
         const id=frame?.closest('[data-research-node-id]')?.getAttribute('data-research-node-id'),node=workspace.getSnapshot().artifacts.find(n=>n.id===id)
