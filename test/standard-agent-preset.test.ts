@@ -71,7 +71,56 @@ const roster = {
 }
 
 describe('Sherlock standard agent preset policy', () => {
-  it('keeps the hero mode aligned when loading and moving between sessions', async () => {
+  it('keeps a roster 404 out of the first send and preserves errors for explicit choices', async () => {
+    let current = 'first'
+    let reset: () => void = () => {}
+    let dispose: () => void = () => {}
+    const off = vi.fn()
+    const win: Record<symbol, (id: string) => Promise<void>> = {}
+    const key = Symbol.for('sherlock:pending-preset-flush')
+    const scope = {
+      sessions: { list: { getSnapshot: () => ({ current }) } },
+      effect: (fn: () => () => void) => { dispose = fn() },
+      on: (name: string, fn: () => void) => { expect(name).toBe('connection/reset'); reset = fn; return off }
+    }
+    const completeRoster = { presets: [{ id: 'standard', trust: 'system', isDefault: true }, { id: 'build', trust: 'system', isDefault: false }] }
+    const list = vi.fn().mockRejectedValueOnce(Error('transport failure for /api/agentPreset.list: HTTP 404'))
+      .mockResolvedValue({ result: { ok: true, value: completeRoster } })
+    const select = vi.fn().mockResolvedValueOnce({ result: { ok: false, error: { message: '无法切换模式' } } })
+      .mockRejectedValueOnce(Error('连接中断')).mockResolvedValue({ result: { ok: true, value: { agentPreset: 'build' } } })
+    const client = await loadAgentPresetClient()
+    const Seat = client.AgentPresetSeatController as new (...args: unknown[]) => {
+      load(): Promise<void>; select(id: string): Promise<void>; store: SnapshotStore<Record<string, unknown>>
+    }
+    const seat = new Seat({ agentPresets: { list, select } }, () => ({ id: current, agentPreset: 'standard' }))
+    const source = await readFile('node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js', 'utf8')
+    const start = source.indexOf('/* native-pending-preset-flush:v2 */')
+    expect(start).toBeGreaterThan(-1)
+    runInNewContext(source.slice(start, source.indexOf('const seatInjected', start)), { seat, scope, window: win })
+    const flush = win[key]
+    if (!flush) throw Error('The preset picker did not register its send bridge')
+    await seat.load()
+    expect(seat.store.getSnapshot().error).toMatch(/HTTP 404/)
+    await flush(current)
+    expect(select).not.toHaveBeenCalled()
+    reset()
+    await vi.waitFor(() => expect(seat.store.getSnapshot().error).toBeNull())
+    await seat.select('build')
+    await expect(flush(current)).rejects.toThrow('无法切换模式')
+    current = 'second'
+    await expect(flush('first')).rejects.toThrow('当前会话已变化')
+    await flush(current)
+    await seat.select('build')
+    await expect(flush(current)).rejects.toThrow('连接中断')
+    await seat.select('build')
+    await flush(current)
+    expect(select).toHaveBeenCalledTimes(3)
+    dispose()
+    expect(off).toHaveBeenCalledOnce()
+    expect(win[key]).toBeUndefined()
+  })
+
+  it('shows the available Standard preset when moving between current and legacy Build sessions', async () => {
     const client = await loadAgentPresetClient()
     let session: { id: string; agentPreset: string } | undefined = { id: 'canvas', agentPreset: 'build' }
     const Seat = client.AgentPresetSeatController as new (...args: unknown[]) => {
@@ -81,13 +130,15 @@ describe('Sherlock standard agent preset policy', () => {
       presets: [{ id: 'standard', trust: 'system', isDefault: true }, { id: 'build', trust: 'system', isDefault: false }]
     } } }) } }, () => session)
     await seat.load()
-    expect(seat.store.getSnapshot().current).toBe('build')
+    expect(seat.store.getSnapshot().current).toBe('standard')
+    expect(session.agentPreset).toBe('build')
     session = { id: 'chat', agentPreset: 'standard' }
     await seat.apply()
     expect(seat.store.getSnapshot().current).toBe('standard')
     session = { id: 'canvas', agentPreset: 'build' }
     await seat.apply()
-    expect(seat.store.getSnapshot().current).toBe('build')
+    expect(seat.store.getSnapshot().current).toBe('standard')
+    expect(session.agentPreset).toBe('build')
     session = undefined
     await seat.apply()
     expect(seat.store.getSnapshot().current).toBe('standard')
