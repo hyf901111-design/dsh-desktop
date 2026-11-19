@@ -701,9 +701,20 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    border:getComputedStyle(slot,'::after').borderTopStyle,
    fill:getComputedStyle(slot).backgroundColor
   }))).toEqual({border:'dashed',fill:expect.not.stringMatching(/^rgba\(0, 0, 0, 0\)$/)})
-  const paletteBox=await palette.boundingBox(), firstSlot=await slots.first().boundingBox()
-  expect(paletteBox.y).toBeGreaterThan(firstSlot.y+firstSlot.height)
-  expect(Math.abs(firstSlot.y-chatBox.y)).toBeLessThanOrEqual(2)
+  const slotGeometry=()=>slots.evaluateAll(elements=>elements.map(el=>{
+   const {x,y,width,height}=el.getBoundingClientRect()
+   return {x,y,width,height}
+  }))
+  const emptyGeometry=await slotGeometry()
+  const paletteBox=await palette.boundingBox(), stripBox=await dialog.locator('.workspace-view-slots').boundingBox()
+  expect(paletteBox.x).toBe(stripBox.x)
+  expect(paletteBox.width).toBe(stripBox.width)
+  expect(paletteBox.y-stripBox.y-stripBox.height).toBe(8)
+  expect(emptyGeometry).toEqual(emptyGeometry.map((slot,index)=>({
+   x:emptyGeometry[0].x+index*62,y:emptyGeometry[0].y,width:56,height:28
+  })))
+  expect(Math.abs(emptyGeometry[0].y-chatBox.y)).toBeLessThanOrEqual(2)
+  expect(await dialog.locator('[data-navigation-delete]').count()).toBe(0)
   expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('workspace-view-label-wiggle')
   await page.emulateMedia({reducedMotion:'reduce'})
   expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('none')
@@ -715,6 +726,13 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await dragApp('表格',3)
   await dragApp('知识库',3)
   expect(await slots.locator('[data-workspace-editor-app]').allTextContents()).toEqual(['图像','笔记','表格','知识库'])
+  expect(await slotGeometry()).toEqual(emptyGeometry)
+  const deleteButtons=dialog.locator('[data-navigation-delete]')
+  expect(await deleteButtons.count()).toBe(4)
+  expect(await deleteButtons.evaluateAll(buttons=>buttons.map(button=>{
+   const slot=button.parentElement.getBoundingClientRect(), hit=button.getBoundingClientRect()
+   return [hit.x-slot.right,hit.y-slot.y,hit.width,hit.height,getComputedStyle(button,'::after').width]
+  }))).toEqual(Array.from({length:4},()=>[-12,-7,20,20,'6px']))
   expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationDuration)).toBe('0.24s')
   const researchBox=await palette.getByRole('button',{name:'研究',exact:true}).boundingBox()
   await page.mouse.move(researchBox.x+researchBox.width/2,researchBox.y+researchBox.height/2)
@@ -735,12 +753,15 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   expect(await dialog.getByRole('status').textContent()).toBe('顶栏设置保存失败')
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','browser','spreadsheet','image-factory'])
   await page.evaluate(()=>{window.failTopSave=false})
-  await slots.nth(2).hover()
   await dialog.getByRole('button',{name:'移除表格'}).click()
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','browser','image-factory',null])
+  expect(await deleteButtons.count()).toBe(3)
+  expect(await slotGeometry()).toEqual(emptyGeometry)
   await dragApp('知识库',3)
   await page.mouse.move(500,230)
-  await dialog.screenshot({path:evidence+'/workspace-shortcut-editor-'+(dark?'dark':'light')+'.png',animations:'disabled'})
+  const editorBox=await dialog.boundingBox()
+  await page.screenshot({path:evidence+'/workspace-shortcut-editor-'+(dark?'dark':'light')+'.png',animations:'disabled',
+   clip:{x:editorBox.x-2,y:editorBox.y-8,width:editorBox.width+4,height:editorBox.height+10}})
   await dialog.getByRole('button',{name:'完成编辑'}).click()
   await dialog.waitFor({state:'hidden'})
   await expect.poll(() => views.allTextContents()).toEqual(['对话','笔记','浏览器','图像','知识库'])
