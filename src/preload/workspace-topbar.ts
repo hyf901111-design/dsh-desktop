@@ -111,7 +111,7 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
 @container(max-width:480px){.eb-workspace-tabs{--workspace-menu-gap:2px}}
 .eb-workspace-tab-list{position:relative;flex:none;overflow:hidden}
 .eb-workspace-tab-list:not(:has(>button:not([data-workspace-overflowed]))){position:absolute}
-body .eb-workspace-overflow{position:relative;flex:none;display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#888);cursor:pointer;-webkit-app-region:no-drag}
+body button.eb-workspace-overflow{position:relative;flex:none;display:grid;place-items:center;box-sizing:border-box;width:28px;height:28px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#888);cursor:pointer;-webkit-app-region:no-drag}
 body .eb-workspace-overflow:is(:hover,:focus-visible,[aria-expanded=true]){background:var(--dsw-alias-interactive-bg-hover,#8882);color:var(--dsw-alias-label-primary,currentColor)}
 .eb-workspace-overflow>i{width:16px;height:16px;background:currentColor;mask:url('${moreIcon.replaceAll("'", '%27')}') center/contain no-repeat;pointer-events:none}
 .eb-workspace-overflow[data-has-content]::after{content:'';position:absolute;inset:4px 3px auto auto;width:5px;height:5px;border-radius:50%;background:#168bff}
