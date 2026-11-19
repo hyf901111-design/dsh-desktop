@@ -5,10 +5,10 @@ import { createProvider } from '@earendil-works/pi-ai'
 import { openAICompletionsApi } from '@earendil-works/pi-ai/api/openai-completions.lazy'
 import { boundedImageJson, ImageGenerationError, validateGeneratedImage } from './image-generation-provider.js'
 import { hostedChatIdleTimeoutMs } from './hosted-ai-timeouts.js'
+import { hostedImageModel, legacyHostedImageModels } from './hosted-image-model.js'
 
 export const HOSTED_ARK_PROVIDER = 'ework-ark'
 const displayName = 'EWork'
-const defaultImage = 'doubao-seedream-5.0-flash'
 const hostedRequestBytes = 12_000_000
 const retryPolicy = resolveRetryPolicy({ mode: 'normal', maxRetries: 0 }, HOSTED_ARK_PROVIDER)
 
@@ -176,10 +176,8 @@ export function registerHostedAi(ctx, { request = globalThis.fetch, bridge = pro
   const timer = setInterval(() => void refresh(), pollMs)
   timer.unref?.()
   const image = {
-    models: [
-      { id: defaultImage, name: 'Seedream 5.0 Flash', description: '快速生图与改图' },
-      { id: 'doubao-seedream-5-0-pro', name: 'Seedream 5.0 Pro', description: '复杂构图与精细生成' }
-    ],
+    models: [{ id: hostedImageModel, name: 'Seedream 5.5', description: '文生图、参考图生成与编辑' }],
+    resolveModel: id => legacyHostedImageModels.has(id) ? hostedImageModel : id,
     available: () => state?.image === true,
     ready: () => pending,
     unavailable: () => catalogUnavailable,

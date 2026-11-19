@@ -3,7 +3,7 @@
 桌面将已登录用户的会话发往固定的 Cloudflare 账号网关。运行时只持有随登录代际撤销的 loopback 凭据。火山推理 Key 与 OpenViking User Key 由独立 Worker Secret 注入，从不进入客户端、配置、目录响应或日志。游客的现有自配模型和搜索路径保留，托管路由要求有效会话，停用、退出和会话失效都会阻断后续调用。
 
 - 目录包含图 1 的 11 个语言模型（不含 Kimi K2.7 Code），由服务端提供；图像不进入语言模型目录。支持图片输入的模型按企业版能力清单显示「视觉」，图片以内嵌附件发送。选择器按 Doubao、Kimi、DeepSeek、GLM 分组。
-- Seedream 5.0 Flash 和 Pro 复用原生 `image_generate`、会话进度及 PNG 附件。仅 Agent 判断用户需要生成或修改图片时调用。未开启视频。
+- Seedream 5.5 通过原生 `image_generate` 生成和修改图片，并在会话或图像应用中交付 PNG。网关将旧客户端发送的 Seedream 5.0 Flash 和 Pro 模型名映射到 5.5。
 - 「探索 → 管理用量」读取管理后台同一张 D1 账本的 5 小时及周剩余百分比与重置时间。单位沿用后台 AFP；模型按上游返回的输入/输出 token 结算，并未把 AFP 误标成 token 数。5 小时从首条获准扣费请求开始；悬停从 12 点顺时针长到剩余比例，低于 10% 显示红色，0% 只保留底环；无数据隐藏，减少动态效果立即显示最终值。
 - EWork 的周池和 5 小时池分别按后台配置的上限分配，月总池单独校验，个人上限继续生效。席位控制台展示上游整席位用量；方舟将 Seedream 记入日与月限额，EWork 同时将托管生图计入个人使用预算。
 - 托管模型请求结束后，客户端立即重新读取该账号的账本。用量页在前台打开时每 60 秒刷新，接收后台调整和其他设备产生的用量。
@@ -25,7 +25,7 @@
 
 上线推理前，核对项目席位范围、关闭超额后付费、当前 AFP 系数、图片大小计费、D1 池限额和供应商账单。缺少可信完成用量或上游执行结果不明时保留预留，未自动重试；对账后由后台处理。模型接入及费用依据：[企业版兼容接口](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-other-tools?lang=zh)、[企业版抵扣规则](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-afp-credits-billing-rules?lang=zh)、[订阅套餐条款](https://docs.volcengine.com/docs/ark/subscription-package-service-terms-conditions?lang=zh)、[Seedream 接口](https://docs.volcengine.com/docs/ark/agent-plan-enterprise-visual-models?lang=zh)、[OpenViking 用户隔离](https://docs.volcengine.com/docs/vector_database_vikingdb/Databasesspaceandusers?lang=en)。
 
-Seedream Pro 从第二张参考图起的扣减按企业版专门计费页的 6.5 AFP/张执行。视觉模型能力页另列 6.6 AFP/张，待供应商账单可见时核对。
+Seedream 5.5 固定生成单张 1K 图片，按企业版席位档位预留并结算 43.3 AFP/张输出图与 16.6 AFP/张输入参考图。
 
 聚焦验证：`node scripts/test-hosted-ai-worker.mjs` 运行本地 workerd + D1，模拟方舟与 OpenViking。客户端浏览器夹具加载现有探索模块并模拟 5 小时、周用量，签名客户端和真实供应商调用另行验收。
 

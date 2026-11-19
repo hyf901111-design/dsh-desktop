@@ -85,9 +85,9 @@ export function registerImageGenerationTool(ctx,options={}){
     fail('请填写消息中被引用的图片图层编号。')
    if(!target&&requestedTarget!==undefined)fail('当前图片请求没有可用的图层编号。')
    // A model ID copied from an older turn cannot switch the account's image provider.
-   const routed=hosted&&models.has(providerArgs.model)&&models.get(providerArgs.model).provider!==hosted
-     ? {...providerArgs,model:undefined}
-     : providerArgs
+   const requestedModel=hosted?.resolveModel?.(providerArgs.model)??providerArgs.model
+   const routed={...providerArgs,model:hosted&&models.has(requestedModel)&&models.get(requestedModel).provider!==hosted
+    ? undefined : requestedModel}
    const cutout=factory?.operation==='cutout'
    const canvasReference=factory?.internalReference ? turnImages.at(-1) : undefined
    if(factory?.internalReference&&!canvasReference)fail('当前画布未能作为图片参考，请重试。')
