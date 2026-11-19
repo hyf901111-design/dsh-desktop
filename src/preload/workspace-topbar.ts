@@ -76,9 +76,21 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-toggle[aria-expanded=true]{background:transparent}
 .eb-workspace-toggle>i{width:17px;height:17px;background:currentColor;mask:url('${workspaceIcon.replaceAll("'", '%27')}') center/contain no-repeat;transition:transform var(--workspace-switch-duration) var(--workspace-switch-ease)}
 .eb-workspace-toggle[aria-expanded=true]>i{transform:rotate(180deg)}
-.eb-workspace-tabs{display:flex;align-items:center;gap:4px;flex:0 0 clamp(220px,36cqw,364px);width:clamp(220px,36cqw,364px);min-width:0;overflow-x:auto;scrollbar-width:none;-webkit-app-region:no-drag;transition:width var(--workspace-switch-duration) var(--workspace-switch-ease),flex-basis var(--workspace-switch-duration) var(--workspace-switch-ease),opacity var(--workspace-switch-duration) var(--workspace-switch-ease)}
-:is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button{flex:1 0 auto;min-width:0;height:32px;padding:0 6px;font-size:14px;line-height:22px;white-space:nowrap}
-@container(max-width:480px){.eb-workspace-tabs{flex-basis:128px;width:128px;gap:2px}:is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button{padding:0 2px;font-size:13px}}
+.eb-workspace-tabs{
+  --workspace-tab-limit:clamp(220px,36cqw,364px);
+  display:flex;align-items:center;gap:4px;flex:0 0 auto;
+  min-width:0;width:max-content;max-width:var(--workspace-tab-limit);
+  width:calc-size(max-content,min(size,var(--workspace-tab-limit)));
+  interpolate-size:allow-keywords;overflow-x:auto;scrollbar-width:none;-webkit-app-region:no-drag;
+  transition:width var(--workspace-switch-duration) var(--workspace-switch-ease),opacity var(--workspace-switch-duration) var(--workspace-switch-ease);
+}
+:is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button[data-workspace-native-view]{
+  flex:0 0 auto;height:28px;padding:0 8px;font-size:14px;line-height:20px;white-space:nowrap;
+}
+@container(max-width:480px){
+ .eb-workspace-tabs{--workspace-tab-limit:128px;gap:2px}
+ :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button[data-workspace-native-view]{padding:0 6px;font-size:13px}
+}
 [data-session-workspace-controls]{order:2;flex:0 1 auto;min-width:32px}
 [data-session-workspace-controls] .eb-workspace-tabs{flex-shrink:1}
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-controls button{
@@ -89,11 +101,9 @@ ${workspaceSessionHeader} .wSkVaW_crumbs::before{
   color:var(--dsw-alias-label-primary,var(--odyssey-text,currentColor));background:var(--odyssey-menu-row,color-mix(in srgb,currentColor 9%,transparent))
 }
 :is(.workspace-app-topbar,[data-srb-session-header]) .eb-workspace-tabs button:disabled{opacity:.4;cursor:default}
-.eb-workspace-tabs[aria-hidden=true]{width:0;flex-basis:0;opacity:0;pointer-events:none}
-body .eb-workspace-edit{display:grid;place-items:center;flex:none;width:32px;height:32px;padding:0!important;-webkit-app-region:no-drag}
+.eb-workspace-tabs[aria-hidden=true]{width:0;opacity:0;pointer-events:none}
+body .eb-workspace-edit{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0!important;-webkit-app-region:no-drag}
 .eb-workspace-edit>i{width:16px;height:16px;background:currentColor;mask:url('${workspaceSettingsIcon.replaceAll("'", '%27')}') center/contain no-repeat}
-body .eb-workspace-edit[data-workspace-customize-home]{position:absolute;inset:6px auto auto 10px;z-index:10;pointer-events:auto;border:0;border-radius:8px;color:var(--odyssey-text,#222);background:var(--odyssey-header-icon-bg,#8882);cursor:pointer}
-body .eb-workspace-edit[data-workspace-customize-home]:is(:hover,:focus-visible){background:var(--odyssey-header-icon-hover,#8884)}
 .workspace-view-settings{
   position:fixed;inset:var(--workspace-settings-top,50px) auto auto var(--workspace-settings-left,16px);margin:0;box-sizing:border-box;width:min(360px,calc(100vw - 32px));max-height:calc(100vh - 32px);
   padding:20px;border:1px solid var(--odyssey-menu-border,#8884);border-radius:14px;
