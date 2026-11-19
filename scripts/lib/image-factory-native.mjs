@@ -9,7 +9,7 @@ export function imageFactoryNeedsCanvas(text, targeted = false) {
   const artwork = /图(?:片|像|标|形|画)?|照片|海报|插画|封面|配图|壁纸|背景|效果图|banner/iu
   const visualOutput = /\b(?:image|photo|picture|poster|illustration|banner|cover|icon|logo|background)s?\b/iu
   return clauses.some(clause => {
-    const request = clause.trim().replace(/^(?:(?:请(?:你)?|麻烦(?:你)?|能否|能不能|可不可以|可以|帮我|给我|替我|直接|先|再)\s*)+/u, '')
+    const request = clause.trim().replace(/^(?:(?:请(?:你)?|麻烦(?:你)?|能否|能不能|可不可以|可以|我(?:想要?|需要|希望你|要)|帮我|给我|替我|直接|先|再)\s*)+/u, '')
       .replace(/^(?:(?:please|(?:can|could|would) you|help me|let's)\s+)+/iu, '')
     const output = request.split(/(?:并且?|然后|\b(?:and|then)\b)/iu, 1)[0]
     if (/(?:提示词|文案|教程|方案|思路|建议|步骤|如何|怎么|怎样)|\b(?:prompt|copy|tutorial|ideas?|suggestions?|instructions?|how to)\b/iu.test(output)) return false
