@@ -393,22 +393,23 @@ it('keeps the shared switcher expanded and carries the current session through m
   await page.evaluate(() => {
    window.browserView.close()
    const center=document.querySelector('.pI_x6G_centerCol')
-   center.innerHTML='<div class="wSkVaW_root" data-odyssey-page="home"><header data-srb-session-header data-odyssey-home-header="true" data-ework-notes-session="session-A" style="display:flex;align-items:center;height:44px"><span>原会话</span><div data-srb-tabs hidden></div></header></div>'
+   center.innerHTML='<div class="wSkVaW_root" data-odyssey-page="conversation"><header data-srb-session-header data-odyssey-home-header="true" data-ework-notes-session="session-A" style="display:flex;align-items:center;height:44px"><span>原会话</span><div data-srb-tabs hidden></div></header></div>'
    const root=center.firstElementChild, header=root.firstElementChild, tabs=header.querySelector('[data-srb-tabs]')
    window.quickOwners=[]
+   window.unscopedOpens=[]
    for(const view of ['chat','research','notes','spreadsheet']) {
     const button=document.createElement('button')
     button.dataset.conversationViewId=view
     button.setAttribute('aria-selected','false')
     button.addEventListener('click',()=>{
      for(const tab of tabs.children)tab.setAttribute('aria-selected',String(tab===button))
-     root.dataset.odysseyPage=view
+     root.dataset.odysseyPage=view==='chat'?'home':view
      delete document.body.dataset.workspaceSurface
      window.quickOwners.push([view,header.dataset.eworkNotesSession])
     })
     tabs.append(button)
    }
-   window.mountSessionWorkspaceViewShortcuts(document,()=>{})
+   window.mountSessionWorkspaceViewShortcuts(document,()=>{},app=>window.unscopedOpens.push(app))
    header.setAttribute('data-workspace-chat-content','')
    window.contentRequests=[]
    window.mountWorkspaceContentIndicators(document,async(id,views)=>{
@@ -452,6 +453,12 @@ it('keeps the shared switcher expanded and carries the current session through m
    await expanded.waitFor()
    await expect.poll(()=>hasDot(noteTab)).toBe(view!=='notes')
   }
+  const emptyChatBar=page.locator('.workspace-home-topbar')
+  await emptyChatBar.getByText('新对话',{exact:true}).waitFor()
+  expect(await hasDot(emptyChatBar.getByRole('button',{name:'切换到笔记',exact:true}))).toBe(true)
+  await emptyChatBar.getByRole('button',{name:'切换到笔记',exact:true}).click()
+  expect(await page.evaluate(()=>window.quickOwners.at(-1))).toEqual(['notes','session-A'])
+  await expect.poll(()=>hasDot(noteTab)).toBe(false)
   await page.evaluate(()=>window.setWorkspaceViewPreferences(document,{
     get:()=>['browser','image-factory','knowledge',null],replace:()=>true
   }))
@@ -485,7 +492,9 @@ it('keeps the shared switcher expanded and carries the current session through m
   await collapsed.waitFor()
   await collapsed.click()
   await expect.poll(()=>hasDot(controls.getByRole('button',{name:'切换到图像',exact:true}))).toBe(false)
+  expect(await page.evaluate(()=>window.unscopedOpens)).toEqual([])
   await page.locator('[data-srb-session-header]').evaluate(header=>{
+   header.closest('.wSkVaW_root').dataset.odysseyPage='conversation'
    header.classList.add('wSkVaW_header')
    header.dataset.odysseyHeaderLayout='narrow'
    header.closest('.pI_x6G_centerCol').style.width='335px'
@@ -558,7 +567,16 @@ it('fits every workspace label next to crowded browser tabs at three widths',asy
    await expect.poll(()=>browser.evaluate(el=>el.getBoundingClientRect().width)).toBe(width-74)
    await expect.poll(()=>nav.evaluate(el=>el.getAnimations().length)).toBe(0)
    for (const button of await nav.getByRole('button').all()) expect(await button.evaluate(hitTest)).toBe(true)
-   if(width===394)await page.screenshot({path:evidence+'/workspace-expanded-narrow-light.png'})
+   if(width===394){
+    await page.screenshot({path:evidence+'/workspace-expanded-narrow-light.png'})
+    await browser.getByRole('combobox',{name:'搜索或输入网址'}).fill('example')
+    const suggestions=browser.getByRole('listbox',{name:'网址建议'})
+    await suggestions.waitFor()
+    const toolbar=await browser.locator('.eb-toolbar').boundingBox()
+    expect((await suggestions.boundingBox()).y).toBeGreaterThanOrEqual(toolbar.y+toolbar.height)
+    await page.keyboard.press('Escape')
+    await suggestions.waitFor({state:'detached'})
+   }
   }
   expect(errors).toEqual([])
  }finally{await page.close()}
@@ -883,7 +901,10 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await dialog.getByRole('button',{name:'完成编辑'}).click()
   await dialog.waitFor({state:'hidden'})
   await expect.poll(() => views.allTextContents()).toEqual(['对话','笔记','浏览器','图像','知识库'])
-  await page.locator('.wSkVaW_root').evaluate(root=>{root.dataset.odysseyPage='home'})
+  await page.locator('.wSkVaW_root').evaluate(root=>{
+   root.dataset.odysseyPage='home'
+   root.querySelector('[data-srb-session-header]').removeAttribute('data-ework-notes-session')
+  })
   await homeBar.getByRole('button',{name:'展开工作区页签',exact:true}).click()
   const center=page.locator('.pI_x6G_centerCol')
   await center.evaluate(el=>{el.style.containerType='inline-size';el.style.width='340px'})

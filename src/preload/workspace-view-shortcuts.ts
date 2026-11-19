@@ -15,12 +15,17 @@ export const sessionWorkspaceViewEvent = 'sherlock:session-workspace-view'
 export const workspaceModeNavigationAttribute = 'data-workspace-mode-navigation'
 export type SessionWorkspaceAppView = typeof sessionWorkspaceAppViews[number][0]
 
-const sessionHeader = '.pI_x6G_centerCol .wSkVaW_root [data-srb-session-header][data-ework-notes-session]'
+const sessionHeading = '[data-srb-session-header][data-ework-notes-session]:not([data-odyssey-subagent-panel] *)'
+const sessionHeader = '.pI_x6G_centerCol .wSkVaW_root ' + sessionHeading
 const homeRoot = '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=home]:not([hidden], [aria-hidden=true], [data-odyssey-subagent-panel] *)'
 
 export function findWorkspaceSession(document: Document, sessionId?: string) {
+  if (!sessionId && !document.body.dataset.workspaceSurface) {
+    const home = document.querySelector(homeRoot)
+    if (home) return home.querySelector<HTMLElement>(sessionHeading) ?? undefined
+  }
   return [...document.querySelectorAll<HTMLElement>(sessionHeader)].find(header =>
-    (!sessionId || header.dataset.eworkNotesSession === sessionId) && !header.closest('[data-odyssey-subagent-panel]'))
+    !sessionId || header.dataset.eworkNotesSession === sessionId)
 }
 
 export function workspaceViewButton(document: Document, sessionId: string, view: string) {
@@ -183,9 +188,10 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     button.dataset.workspaceNativeView = view
     button.addEventListener('click', () => {
       if (!owner || activeHeader() !== owner || button.getAttribute('aria-current') === 'true') return
-      if (owner.matches(homeRoot)) { navigateGlobalWorkspace(document, view, reveal); return }
-      const id = owner.dataset.eworkNotesSession
+      const session = ownerOnHome ? owner.querySelector<HTMLElement>(sessionHeading) : owner
+      const id = session?.dataset.eworkNotesSession
       if (id) navigateWorkspaceView(document, id, view, reveal)
+      else if (ownerOnHome) navigateGlobalWorkspace(document, view, reveal)
     })
     return { view, zh, en, button }
   })
@@ -224,17 +230,17 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     const header = activeHeader()
     const onHome = !!header?.matches(homeRoot)
     const transition = expandingView.get(document)
-    const id = onHome
-      ? header?.querySelector<HTMLElement>('[data-srb-session-header][data-ework-notes-session]')?.dataset.eworkNotesSession ??
-        (transition?.view === 'chat' ? transition.sessionId ?? undefined : undefined)
-      : header?.dataset.eworkNotesSession
+    const session = onHome ? header?.querySelector<HTMLElement>(sessionHeading) : header
+    const id = session?.dataset.eworkNotesSession ??
+      (onHome && transition?.view === 'chat' ? transition.sessionId ?? undefined : undefined)
     const selected = onHome ? 'chat' : header?.querySelector<HTMLElement>('[data-conversation-view-id][aria-selected=true]')?.dataset.conversationViewId
-    const nextOwnerId = onHome ? undefined : id
+    const nextOwnerId = id
     const arrivingExpanded = takeWorkspaceViewsExpansion(document, id, selected)
     const enteringNativeView = !!transition && (transition.sessionId === null || transition.sessionId === id) &&
       nativeViews.some(([view]) => view === transition.view)
     if (header !== owner || nextOwnerId !== ownerId || onHome !== ownerOnHome) {
-      const sameViewOwner = !!header && !!owner && nextOwnerId === ownerId && onHome === ownerOnHome
+      const sameViewOwner = !!header && !!owner && nextOwnerId === ownerId &&
+        (nextOwnerId !== undefined || onHome === ownerOnHome)
       controls.remove()
       homeTopbar.remove()
       owner = header
@@ -248,9 +254,9 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     const container = onHome ? homeTopbar : header
     if (controls.parentElement !== container) container.append(controls)
     const language = english() ? 'en' : 'zh'
-    const native = header.querySelector('[data-srb-tabs]')
-    const availability = buttons.map(({ view }) => Boolean(onHome || (native && (
-      sessionWorkspaceAppViews.some(([id]) => id === view) || !!native.querySelector(`button[data-conversation-view-id="${view}"]:not(:disabled)`)))))
+    const native = session?.querySelector('[data-srb-tabs]')
+    const availability = buttons.map(({ view }) => Boolean(onHome && !id || (native && (
+      sessionWorkspaceAppViews.some(([appView]) => appView === view) || !!native.querySelector(`button[data-conversation-view-id="${view}"]:not(:disabled)`)))))
     const views = sessionWorkspaceViews(document)
     const signature = [id, selected, language, ...availability, ...views.map(([view]) => view)].join(',')
     if (updated === signature) return

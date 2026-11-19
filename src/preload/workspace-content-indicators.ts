@@ -40,8 +40,7 @@ export function mountWorkspaceContentIndicators(document: Document, read: (
   const sync = () => {
     frame = 0
     const header = findWorkspaceSession(document)
-    const onHome = !document.body.dataset.workspaceSurface && header?.closest('.wSkVaW_root')?.getAttribute('data-odyssey-page') === 'home'
-    const nextOwner = onHome ? null : header?.dataset.eworkNotesSession || null
+    const nextOwner = header?.dataset.eworkNotesSession || null
     const next = nextOwner
       ? workspaceContentViews.filter(view => sessionWorkspaceViews(document).some(([id]) => id === view))
       : []
