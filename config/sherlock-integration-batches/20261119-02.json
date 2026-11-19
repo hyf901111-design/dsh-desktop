@@ -9,46 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "六位侧栏快捷入口、选中状态与 Figma 图标",
+        "featureName": "仅编辑时显示空快捷位和新版笔记入口",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "05d2d0b8175205757de4ba9ae89251eb71735bfc",
-        "tipCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+        "baseCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
+        "tipCommit": "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12",
         "commits": [
           {
-            "commit": "5629fae128919deb32a1b1573ff8034b8a740bf5",
+            "commit": "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12",
             "parents": [
-              "05d2d0b8175205757de4ba9ae89251eb71735bfc"
+              "83f23bc640437b8bb372fd08cfec1894a586db8e"
             ],
-            "subject": "将应用快捷入口集中到六位侧栏并同步选中状态"
-          },
-          {
-            "commit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
-            "parents": [
-              "5629fae128919deb32a1b1573ff8034b8a740bf5"
-            ],
-            "subject": "放大侧栏应用图标并统一视觉尺寸"
+            "subject": "仅编辑时显示空快捷位并调整图标与笔记入口"
           }
         ],
         "files": [
           {
             "status": "A",
-            "path": "build/brand/odyssey-app-research.svg"
-          },
-          {
-            "status": "A",
-            "path": "build/brand/odyssey-app-spreadsheet.svg"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
+            "path": "build/brand/odyssey-app-note.svg"
           },
           {
             "status": "M",
             "path": "src/preload/figma-b-icons.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/home-app-shortcuts.css"
           },
           {
             "status": "M",
@@ -60,19 +41,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-explore-entry.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/navigation-shortcuts.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/navigation-shortcuts.ts"
           },
           {
             "status": "M",
@@ -88,19 +57,11 @@
           },
           {
             "status": "M",
-            "path": "src/shared/navigation-shortcuts.ts"
-          },
-          {
-            "status": "M",
             "path": "test/browser-app-rendered.test.js"
           },
           {
             "status": "M",
             "path": "test/browser-sidebar-entry.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/navigation-shortcuts.test.ts"
           },
           {
             "status": "M",
@@ -116,8 +77,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
-            "completedAt": "2026-11-19T06:15:14.987Z",
+            "verifiedCommit": "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12",
+            "completedAt": "2026-11-19T06:29:38.516Z",
             "timeoutMs": 60000
           },
           {
@@ -134,23 +95,8 @@
             ],
             "outcome": "passed",
             "summary": "95 项导航、原生菜单和入口检查通过",
-            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
-            "completedAt": "2026-11-19T06:15:14.987Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens Home directly|renders distinct New Chat"
-            ],
-            "outcome": "passed",
-            "summary": "2 项原生侧栏操作检查通过",
-            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
-            "completedAt": "2026-11-19T06:15:14.987Z",
+            "verifiedCommit": "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12",
+            "completedAt": "2026-11-19T06:29:38.516Z",
             "timeoutMs": 60000
           },
           {
@@ -164,8 +110,8 @@
             ],
             "outcome": "passed",
             "summary": "3 项侧栏菜单与置顶检查通过",
-            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
-            "completedAt": "2026-11-19T06:15:14.987Z",
+            "verifiedCommit": "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12",
+            "completedAt": "2026-11-19T06:29:38.516Z",
             "timeoutMs": 60000
           },
           {
@@ -181,83 +127,26 @@
               "shares editable shortcuts"
             ],
             "outcome": "passed",
-            "summary": "真实 Chromium 拖放第六位、高亮及浏览器工具栏测试通过，并确认图形尺寸与 36px 点击范围",
-            "verifiedCommit": "83f23bc640437b8bb372fd08cfec1894a586db8e",
-            "completedAt": "2026-11-19T06:15:14.987Z",
+            "summary": "真实 Chromium 验证编辑时显示六个位置，退出后空位折叠，以及图标尺寸与 36px 点击范围",
+            "verifiedCommit": "0d5df6718ed5254adc7b87c4ee794c5b9e8eae12",
+            "completedAt": "2026-11-19T06:29:38.516Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "聚焦渲染验证了六个位置、侧栏选中状态、应用快捷条隐藏和浏览器本身标签与后退控件；完成集成后构建并核验实际客户端。"
+          "summary": "渲染测试核对空位布局、缩小图标与实际点击、拖放；原生菜单测试核对笔记新名称及 Figma 矢量。"
         },
         "acceptanceCriteria": [
-          "首页和应用顶栏隐藏全局快捷入口与应用返回工作区按钮。",
-          "收起侧栏固定显示六个位置，满位时禁用更多菜单的置顶按钮。",
-          "侧栏反映当前页面，对话、研究、表格使用 Figma 无加号图标。",
-          "收起侧栏应用图形实际主轴尺寸约 19 至 20px。"
+          "常态隐藏空快捷框，无空档；编辑状态固定显示六个位置。",
+          "侧栏图标在同一点击区域内缩小约一成。",
+          "首页应用栏、更多和固定侧栏使用联动的笔记图标。"
         ],
         "risks": [
           "旧顶栏偏好继续保存在原配置，侧栏扩容沿用已有顺序。",
           "旧基线可复现 sidebar-new-session-actions 的研究页签断言和 VM 缺失 setInterval，本次侧栏入口两项均通过。"
         ],
-        "generatedAt": "2026-11-19T06:15:14.987Z"
-      },
-      "merged": {
-        "mergeCommit": "de2bcb325d8024fd853c3128f3a20df1ff2d0735",
-        "verificationCommit": "de2bcb325d8024fd853c3128f3a20df1ff2d0735",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "de2bcb325d8024fd853c3128f3a20df1ff2d0735",
-            "completedAt": "2026-11-19T06:15:34.477Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "de2bcb325d8024fd853c3128f3a20df1ff2d0735",
-            "completedAt": "2026-11-19T06:15:34.477Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "de2bcb325d8024fd853c3128f3a20df1ff2d0735",
-            "completedAt": "2026-11-19T06:15:34.477Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T06:15:34.477Z"
+        "generatedAt": "2026-11-19T06:29:38.516Z"
       }
     }
   ],
