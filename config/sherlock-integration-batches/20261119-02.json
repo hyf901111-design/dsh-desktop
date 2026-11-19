@@ -9,51 +9,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "展开侧栏快捷管理与标题统一并修复图像页签",
+        "featureName": "支持侧栏快捷图标拖动交换",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "a48dd078872f6adb2014e705a3793e2a2ad7f032",
-        "tipCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+        "baseCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
+        "tipCommit": "bb0406971fdf103400de225412a35ef5e84953ae",
         "commits": [
           {
-            "commit": "077dbe99c1f9fbdc54671ae15363e84d1e23b50d",
+            "commit": "bb0406971fdf103400de225412a35ef5e84953ae",
             "parents": [
-              "a48dd078872f6adb2014e705a3793e2a2ad7f032"
+              "601cc8c63a3686da91e9b720d4484372d549aec5"
             ],
-            "subject": "修复切回图像时重复添加任务页签"
-          },
-          {
-            "commit": "601cc8c63a3686da91e9b720d4484372d549aec5",
-            "parents": [
-              "077dbe99c1f9fbdc54671ae15363e84d1e23b50d"
-            ],
-            "subject": "完善展开侧栏快捷管理并统一气泡和应用标题"
+            "subject": "支持编辑侧栏时拖动交换快捷图标"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "scripts/lib/image-factory-tasks.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/context-menu-target.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/integrations/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/integrations/view.ts"
-          },
           {
             "status": "M",
             "path": "src/preload/navigation-shortcuts.css"
@@ -64,43 +33,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/scheduled/style.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/scheduled/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-topbar.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/navigation-shortcuts.ts"
-          },
-          {
-            "status": "M",
             "path": "test/browser-app-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-view.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/navigation-shortcuts.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/scheduled-task-view.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-session-actions.test.ts"
           }
         ],
         "checks": [
@@ -112,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
-            "completedAt": "2026-11-19T07:11:27.102Z",
+            "verifiedCommit": "bb0406971fdf103400de225412a35ef5e84953ae",
+            "completedAt": "2026-11-19T07:18:17.428Z",
             "timeoutMs": 60000
           },
           {
@@ -122,15 +55,13 @@
               "test",
               "--",
               "test/navigation-shortcuts.test.ts",
-              "test/context-menu-home.test.js",
-              "test/context-menu-target.test.js",
-              "test/browser-sidebar-entry.test.ts",
-              "test/home-guide-entry-native.test.ts"
+              "test/image-factory-native.test.js",
+              "test/image-factory-canvas-workspace.test.ts"
             ],
             "outcome": "passed",
-            "summary": "87 项侧栏配置、菜单和入口检查通过",
-            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
-            "completedAt": "2026-11-19T07:11:27.102Z",
+            "summary": "29 项侧栏配置及图像恢复、主动新建、画布检查通过",
+            "verifiedCommit": "bb0406971fdf103400de225412a35ef5e84953ae",
+            "completedAt": "2026-11-19T07:18:17.428Z",
             "timeoutMs": 60000
           },
           {
@@ -146,126 +77,25 @@
               "shares editable shortcuts"
             ],
             "outcome": "passed",
-            "summary": "Chromium 验证两种侧栏形态、宽度变化、快捷管理和标题图标",
-            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
-            "completedAt": "2026-11-19T07:11:27.102Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens Home directly|renders distinct New Chat"
-            ],
-            "outcome": "passed",
-            "summary": "2 项原生主页、对话和研究入口检查通过",
-            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
-            "completedAt": "2026-11-19T07:11:27.102Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/scheduled-task-view.test.ts",
-              "test/integration-view.test.ts",
-              "-t",
-              "offers pin actions|keeps More last|puts the real new-note action|provides only scheduled tasks in More|follows native sidebar resizing|renders compact text rows"
-            ],
-            "outcome": "passed",
-            "summary": "6 项更多菜单、定时任务及插件标题检查通过",
-            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
-            "completedAt": "2026-11-19T07:11:27.102Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "26 项图像原生会话和画布检查通过，包含反复切回、旧页签恢复和主动新建",
-            "verifiedCommit": "601cc8c63a3686da91e9b720d4484372d549aec5",
-            "completedAt": "2026-11-19T07:11:27.102Z",
+            "summary": "Chromium 验证收起和展开状态拖动交换已固定应用、保存顺序、固定对话不参与拖放",
+            "verifiedCommit": "bb0406971fdf103400de225412a35ef5e84953ae",
+            "completedAt": "2026-11-19T07:18:17.428Z",
             "timeoutMs": 60000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际 Chromium 检查固定对话、按宽度溢出、编辑与置顶、统一悬浮气泡、原生会话标题图标。已安排原生桌面构建验证。"
+          "summary": "实际 Chromium 检查两种侧栏形态下拖动交换已固定图标、保留编辑状态和保存后的顺序。"
         },
         "acceptanceCriteria": [
-          "展开侧栏首位固定对话，插槽按宽度提供，溢出进入更多。",
-          "侧栏快捷入口使用同一提示样式，定时任务和插件与会话标题显示对应图标。",
-          "反复切换到图像复用当前任务页签，可主动新增。"
+          "在展开和收起侧栏的快捷编辑中，拖动一个已固定应用到另一个已固定应用时交换位置。",
+          "展开侧栏固定的对话按钮不属于自定义插槽。",
+          "拖动交换沿用本地快捷偏好保存。"
         ],
         "risks": [
-          "沿用旧用户快捷配置和已打开图像任务，未使用新默认覆盖已有偏好。"
+          "验证鼠标操作与两种侧栏形态。"
         ],
-        "generatedAt": "2026-11-19T07:11:27.102Z"
-      },
-      "merged": {
-        "mergeCommit": "b3c99677b1e448ddbd12afc9807f93bffa7e103e",
-        "verificationCommit": "b3c99677b1e448ddbd12afc9807f93bffa7e103e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "b3c99677b1e448ddbd12afc9807f93bffa7e103e",
-            "completedAt": "2026-11-19T07:11:32.292Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "b3c99677b1e448ddbd12afc9807f93bffa7e103e",
-            "completedAt": "2026-11-19T07:11:32.292Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
-              "npm",
-              "test",
-              "--",
-              "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
-              "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "b3c99677b1e448ddbd12afc9807f93bffa7e103e",
-            "completedAt": "2026-11-19T07:11:32.292Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "recordedAt": "2026-11-19T07:11:32.292Z"
+        "generatedAt": "2026-11-19T07:18:17.428Z"
       }
     }
   ],
