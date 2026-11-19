@@ -12,6 +12,7 @@ export function installImageFactoryContext({
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false }
   let galleryDrafts = new WeakMap(), draftOwner
   const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
+  let wasActive = isActive()
   const currentId = () => sessions.list.getSnapshot().current
   const canvasScope = () => {
     const id = currentId()
@@ -25,19 +26,26 @@ export function installImageFactoryContext({
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable: name === 'inspect-tab' }))
   function hasTabActivity(scope) {
     const catalog = sessions.list.getSnapshot()
-    const summary = scope !== null && catalog.byId[scope]
-    // Only recycle sessions the Host confirms are empty.
-    if (scope !== null && (summary?.blank !== true || summary.running)) return true
+    const summary = scope !== null && catalog.byId?.[scope]
+    if (summary?.running) return true
     if (!signal('inspect-tab', { scope })) return true
     if ([...jobs.values()].some(job => job.sessionId === scope || scope === null && job.draft)) return true
     if (hasProjectDraftActivity?.(scope ?? undefined)) return true
-    const pending = scope === null ? getPending() : undefined
+    const pending = scope === null ? getPending?.() : undefined
     const pendingState = pending?.getSnapshot?.()
     if (pendingState?.busy || pendingState?.activating) return true
-    const session = scope === null ? undefined : sessions.binding(scope)?.session?.getSnapshot()
-    if (session?.blank === false || session?.running || session?.queue?.length || session?.pending?.length || session?.subagent) return true
-    const input = (scope === null ? pending?.shell : getExistingInput(scope))?.snapshot
-    return Boolean(input?.draft?.trim() || input?.imageIds?.length || input?.occurrences?.length)
+    const session = scope === null ? undefined : sessions.binding(scope)?.session?.getSnapshot?.()
+    if (session?.running || session?.queue?.length || session?.pending?.length || session?.subagent) return true
+    const input = (scope === null ? pending?.shell : getExistingInput?.(scope))?.snapshot
+    if (input?.draft?.trim() || input?.imageIds?.length || input?.occurrences?.length) return true
+    // A session may also contain work from another mode. Look for image requests specifically.
+    const chat = session?.chat
+    return chat?.order?.some(key => {
+      const row = chat.nodes.get(key)
+      const content = row?.data?.content
+      return (row?.kind === 'user' || row?.kind === 'steering') && Array.isArray(content) &&
+        content.some(part => part.type === 'text' && readImageFactoryContext(part.text))
+    }) ?? false
   }
   const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, getDefaultWorkspace, standaloneDirectory,
     setView: setTaskView, storage: taskStorage, hasTabActivity, isBoardOnly,
@@ -335,6 +343,7 @@ export function installImageFactoryContext({
   }
   let publishedScope, intendedCanvas
   function syncSession(force = false, reopen, entry = false) {
+    if (isActive()) wasActive = true
     const scope = canvasScope()
     const sessionId = tasks.sync(scope, scope !== null && (scope === reopen || scope === intendedCanvas), entry)
     if (!force && sessionId === publishedScope) return
@@ -367,7 +376,10 @@ export function installImageFactoryContext({
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   const surfaceChange = event => {
-    if (isActive() && event.detail?.back) syncSession(true, undefined, true)
+    const active = isActive()
+    if (wasActive && !active) tasks.leave()
+    wasActive = active
+    if (active && event.detail?.back) syncSession(true, undefined, true)
     syncLayerPreview()
   }
   doc.addEventListener('sherlock:workspace-surface-change', surfaceChange)

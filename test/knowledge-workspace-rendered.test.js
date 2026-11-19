@@ -912,7 +912,7 @@ it('floats Image Factory layers without moving or resizing the image viewport', 
   }
 })
 
-it('keeps the four workspace shortcuts open across the draggable knowledge header', async () => {
+it('keeps the workspace shortcuts open across the draggable knowledge header', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
@@ -955,7 +955,7 @@ it('keeps the four workspace shortcuts open across the draggable knowledge heade
     await title.hover()
     await toggle.hover()
     await shortcuts.waitFor()
-    expect(await shortcuts.getByRole('button').allTextContents()).toEqual(['对话', '研究', '笔记', '表格'])
+    expect(await shortcuts.getByRole('button').allTextContents()).toEqual(['对话', '研究', '笔记', '表格', '浏览器', '图像', '知识库'])
     expect(await shortcuts.getByRole('button', { name: '切换到笔记' }).evaluate(region)).toBe('no-drag')
     await title.hover()
     await files.hover()

@@ -48,7 +48,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       pendingSync = undefined
       if (isActive()) {
         if (epoch !== undefined) syncSession(true, requested?.reopen ? requested.scope : undefined, requested?.entry)
-        else if (requested) reconcile(requested.scope, requested.reopen, requested.entry)
+        else if (requested) reconcileEntry(requested.scope, requested.reopen, requested.entry)
       }
       save()
       publish()
@@ -57,21 +57,38 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   function sync(scope, reopen = false, entry = false) {
     if (!isActive()) return scope
     load()
-    if (!loading) return reconcile(scope, reopen, entry)
+    if (!loading) return reconcileEntry(scope, reopen, entry)
     pendingSync = { scope, reopen: reopen || (pendingSync?.scope === scope && pendingSync.reopen),
       entry: entry || pendingSync?.entry }
     publish()
     return scope ?? undefined
   }
-  function afterProjectChange(project) {
+  function pruneEmptyTabs(keep) {
     // Project selection and pinning don't give a gallery content of its own.
-    const available = tabs.filter(tab => tab.title || savedCanvasScopes.has(tab.scope) || hasTabActivity(tab.scope))
-    if (available.length !== tabs.length) {
-      tabs = available
-      if (!tabs.some(tab => tab.scope === null)) draftSession = undefined
-      if (!tabs.some(tab => tab.scope === lastCreated)) lastCreated = undefined
-      save()
+    const remaining = tabs.filter(tab => tab.scope === keep || tab.title ||
+      savedCanvasScopes.has(tab.scope) || hasTabActivity(tab.scope))
+    if (remaining.length === tabs.length) return
+    tabs = remaining
+    if (!tabs.some(tab => tab.scope === null)) draftSession = undefined
+    if (!tabs.some(tab => tab.scope === lastCreated)) lastCreated = undefined
+    save()
+  }
+  function leave() {
+    if (loading) return
+    pruneEmptyTabs()
+    if (!tabs.some(tab => tab.scope === active)) active = undefined
+    publish()
+  }
+  function reconcileEntry(scope, reopen, entry) {
+    const selected = reconcile(scope, reopen, entry)
+    if (entry && !openToken) {
+      pruneEmptyTabs(selected)
+      publish()
     }
+    return selected
+  }
+  function afterProjectChange(project) {
+    pruneEmptyTabs()
     const matches = tab => canOpen(tab) && getWorkspace(tab.scope ?? draftSession ?? null) === project
     // Keep a legacy standalone drawing accessible, and keep all edited tabs if the strip is full.
     const next = tabs.find(tab => tab.scope === active && matches(tab)) ?? tabs.findLast(matches) ??
@@ -197,7 +214,12 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       sessions.open(sessionId)
     } else if (scope === null) sessions.clear()
     else throw Error('该图片任务的会话已不可用。')
-    if (sync) syncSession(true)
+    if (!sync) return
+    syncSession(true)
+    if (!openToken) {
+      pruneEmptyTabs(scope)
+      publish()
+    }
   }
   async function create(replacedTab) {
     const replacing = replacedTab?.scope
@@ -224,7 +246,13 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       if (isActive() && sessions.list.getSnapshot().current === before) select(id)
       return id
     } finally {
-      if (openToken === token) { openToken = undefined; publish() }
+      if (openToken === token) {
+        openToken = undefined
+        if (isActive()) {
+          pruneEmptyTabs(active)
+          publish()
+        } else leave()
+      }
     }
   }
   function rememberClosed(removed) {
@@ -294,5 +322,5 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     savedCanvasScopes.clear()
     publish()
   }
-  return { sync, action, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
+  return { sync, action, setTitle, bindDraft, replaceActive, projectSelected, leave, publish, reset, isCreating: () => !!openToken }
 }

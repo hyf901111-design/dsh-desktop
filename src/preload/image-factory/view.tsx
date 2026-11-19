@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExter
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
 import { mountWorkspaceTopbarStyles } from '../workspace-topbar'
-import { findWorkspaceSession, workspaceViewButton, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
+import { findWorkspaceSession, navigateWorkspaceView, workspaceViews, WorkspaceViewHover, type WorkspacePointerInBar } from '../workspace-view-shortcuts'
 import { canvasImageTypes, maximumCanvasLayers, validCanvasScope, brandArtworkIds, type BrandArtworkId, type BrandOverlay, type CanvasImageType, type CanvasScope, type CanvasStorage } from '../../shared/image-factory-canvas'
 import { CanvasWorkspace, createImageLayer } from './canvas-workspace'
 import { CanvasActionsMenu, type CanvasToolAction } from './actions-menu'
@@ -47,7 +47,6 @@ type LayerDrag = { pointer: number; start: Point; moved: boolean } & (
   { kind: 'group'; layers: EditableLayer[]; bounds: Region; handle: CornerHandle } |
   { kind: 'layer'; layer: EditableLayer; moving?: EditableLayer[]; height: number; handle?: TextResizeHandle }
 )
-const workspaceEnglishLabels = { chat: 'Chat', research: 'Research', notes: 'Notes', spreadsheet: 'Spreadsheet' }
 const textResizeLabels: Record<TextResizeHandle, [string, string]> = {
   nw: ['左上角缩放文字', 'Scale text from top left'], ne: ['右上角缩放文字', 'Scale text from top right'],
   w: ['调整文字框左边', 'Resize left text edge'], e: ['调整文字框右边', 'Resize right text edge'],
@@ -1344,12 +1343,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   function openWorkspaceView(view: string) {
     const sessionId = findWorkspaceSession(doc)?.dataset.eworkNotesSession
     if (!sessionId) { if (view === 'chat') revealConversation(); return }
-    const button = workspaceViewButton(doc, sessionId, view)
-    if (!button?.isConnected || button.disabled) {
-      setToast(t('此会话视图暂不可用。', 'This conversation view is unavailable.')); return
-    }
-    revealConversation()
-    workspaceViewButton(doc, sessionId, view)?.click()
+    if (view === 'image-factory') { workspaceHover.current?.setExpanded(false); return }
+    if (!navigateWorkspaceView(doc, sessionId, view, revealConversation))
+      setToast(t('此会话视图暂不可用。', 'This conversation view is unavailable.'))
   }
 
   const rectangle = rubberband ?? area
@@ -1486,9 +1482,9 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         <button type="button" className="eb-workspace-toggle" ref={workspaceToggle} aria-label={tabsLabel} title={tabsLabel}
           aria-expanded={workspaceExpanded} aria-controls="image-factory-workspace-tabs" onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true"/></button>
         <nav id="image-factory-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label={t('工作区视图', 'Workspace views')} aria-hidden={!workspaceExpanded}>
-          {workspaceViews.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} tabIndex={workspaceExpanded ? 0 : -1}
-            aria-label={t('切换到', 'Switch to ') + t(label, workspaceEnglishLabels[view])}
-            disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, workspaceEnglishLabels[view])}</button>)}
+          {workspaceViews.map(([view, label, english]) => <button key={view} type="button" data-workspace-native-view={view} aria-current={view === 'image-factory'} tabIndex={workspaceExpanded ? 0 : -1}
+            aria-label={t('切换到', 'Switch to ') + t(label, english)}
+            disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, english)}</button>)}
         </nav>
       </div>
       {tasks?.tabs.length ? <ImageTaskTabs doc={doc} header={header} state={tasks} current={scope}
@@ -1821,6 +1817,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
   render()
   return {
     open: () => open(),
+    openInSession: (id: string) => open(id),
     async openSessionCanvas(id: string, activateSession: () => Promise<boolean>, expectedCanvasId?: string) {
       if (!validCanvasScope(id)) throw Error('来源会话已不可用。')
       const origin = host.current()

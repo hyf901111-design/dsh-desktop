@@ -395,10 +395,11 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  const sessionProject='const sessionWorkspace = sessionId === void 0 ? void 0 : workspaces.items.find((workspace) => workspace.sessionIds.includes(sessionId));';
  replace(sessionProject,sessionProject+`
  const rightProjectMode=browserAppActive?composerApp:activeView??'chat';
+ const sessionScopedWorkspace=sessionId!==undefined&&document.body.dataset.sessionWorkspaceSwitch===sessionId;
  const rightProjectContext=react.useMemo(()=>sidebarMode&&!subagentPanel?{
-  sessionId,mode:rightProjectMode,followDefault:browserAppActive&&sessionId!==undefined,
+  sessionId,mode:rightProjectMode,followDefault:browserAppActive&&sessionId!==undefined&&!sessionScopedWorkspace,
   workspaceId:sessionId===undefined?pendingChatState?.workspaceId:sessionWorkspace?.workspaceId??workspaces.items.find(item=>cwd&&item.path===cwd)?.workspaceId??null
- }:undefined,[sidebarMode,subagentPanel,sessionId,rightProjectMode,browserAppActive,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
+ }:undefined,[sidebarMode,subagentPanel,sessionId,rightProjectMode,browserAppActive,sessionScopedWorkspace,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
  const rightDraft=react.useSyncExternalStore(eworkRightProjects?.subscribe||(()=>()=>{}),eworkRightProjects?.getSnapshot||(()=>undefined));
  const rightProjectDraft=rightProjectContext&&rightDraft?.sessionId===sessionId&&rightDraft?.mode===rightProjectMode?rightDraft:undefined;
  react.useLayoutEffect(()=>{if(!subagentPanel)eworkRightProjects?.show(rightProjectContext)},[subagentPanel,rightProjectContext]);
