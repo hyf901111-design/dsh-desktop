@@ -3,8 +3,7 @@ import spreadsheetAdd from './spreadsheet/assets-grid-add.svg?inline'
 import factoryIcon from './image-factory/assets/factory.svg?inline'
 import styles from './home-app-shortcuts.css?raw'
 
-export type HomeAppShortcut = 'browser' | 'knowledge' | 'image-factory' | 'plugin' | 'scheduled' | 'research' | 'note' | 'spreadsheet'
-const apps: readonly HomeAppShortcut[] = ['browser', 'knowledge', 'image-factory', 'plugin', 'scheduled', 'research', 'note', 'spreadsheet']
+import { navigationApps as apps, type NavigationApp } from '../shared/navigation-shortcuts'
 const labels = {
   zh: ['浏览器', '知识库', '图像', '插件', '定时任务', '研究看板', '笔记', '表格'],
   en: ['Browser', 'Knowledge Base', 'Images', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet']
@@ -12,7 +11,7 @@ const labels = {
 const mounted = new WeakMap<Document, () => void>()
 
 /** A projection of existing app navigation; the composer and its draft stay native. */
-export function mountHomeAppShortcuts(doc: Document, open: (app: HomeAppShortcut, signal: AbortSignal) => Promise<void> | void): () => void {
+export function mountHomeAppShortcuts(doc: Document, open: (app: NavigationApp, signal: AbortSignal) => Promise<void> | void): () => void {
   const existing = mounted.get(doc)
   if (existing) return existing
   const win = doc.defaultView
@@ -75,7 +74,7 @@ export function mountHomeAppShortcuts(doc: Document, open: (app: HomeAppShortcut
     pending = { controller, button: target }
     target.setAttribute('aria-busy', 'true')
     void Promise.resolve().then(() => {
-      if (!controller.signal.aborted) return open(target.dataset.homeApp as HomeAppShortcut, controller.signal)
+      if (!controller.signal.aborted) return open(target.dataset.homeApp as NavigationApp, controller.signal)
     }).catch(error => {
       if (!controller.signal.aborted) status.textContent = error instanceof Error ? error.message : String(error)
     }).finally(() => {

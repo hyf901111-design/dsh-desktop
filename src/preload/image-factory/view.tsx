@@ -1485,8 +1485,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       <div className="eb-workspace-controls">
         <button type="button" className="eb-workspace-toggle" ref={workspaceToggle} aria-label={tabsLabel} title={tabsLabel}
           aria-expanded={workspaceExpanded} aria-controls="image-factory-workspace-tabs" onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true"/></button>
-        <nav id="image-factory-workspace-tabs" className="eb-workspace-tabs" aria-label={t('工作区视图', 'Workspace views')} aria-hidden={!workspaceExpanded}>
-          {workspaceViews.map(([view, label]) => <button key={view} type="button" tabIndex={workspaceExpanded ? 0 : -1}
+        <nav id="image-factory-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label={t('工作区视图', 'Workspace views')} aria-hidden={!workspaceExpanded}>
+          {workspaceViews.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} tabIndex={workspaceExpanded ? 0 : -1}
             aria-label={t('切换到', 'Switch to ') + t(label, workspaceEnglishLabels[view])}
             disabled={!hasWorkspaceSession && view !== 'chat'} onClick={() => openWorkspaceView(view)}>{t(label, workspaceEnglishLabels[view])}</button>)}
         </nav>

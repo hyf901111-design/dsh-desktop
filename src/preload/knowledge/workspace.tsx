@@ -868,11 +868,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       <div className="eb-workspace-controls">
         <button type="button" className="eb-workspace-toggle" ref={workspaceToggle}
           aria-label={`${workspaceExpanded ? '收起' : '展开'}工作区页签`}
-          title={`${workspaceExpanded ? '收起' : '展开'}工作区页签：对话、研究、笔记、表格`}
+          title={`${workspaceExpanded ? '收起' : '展开'}工作区页签`}
           aria-expanded={workspaceExpanded} aria-controls="knowledge-workspace-tabs"
           onClick={() => workspaceHover.current?.setExpanded(!workspaceExpanded)}><i aria-hidden="true" /></button>
-        <nav id="knowledge-workspace-tabs" className="eb-workspace-tabs" aria-label="工作区视图" aria-hidden={!workspaceExpanded}>
-          {workspaceViews.map(([view, label]) => <button key={view} type="button" aria-label={`切换到${label}`}
+        <nav id="knowledge-workspace-tabs" className="eb-workspace-tabs" data-navigation-tabs="" aria-label="工作区视图" aria-hidden={!workspaceExpanded}>
+          {workspaceViews.map(([view, label]) => <button key={view} type="button" data-workspace-native-view={view} aria-label={`切换到${label}`}
             tabIndex={workspaceExpanded ? 0 : -1} disabled={!hasWorkspaceSession && view !== 'chat'}
             title={!hasWorkspaceSession && view !== 'chat' ? `选择会话后可打开${label}` : label}
             onClick={() => openWorkspaceView(view)}>{label}</button>)}

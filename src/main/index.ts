@@ -161,6 +161,7 @@ import {
   type LocalSearchRuntime
 } from './search/local-search-runtime'
 import { ResearchCanvasStorage } from './state/research-canvas-storage'
+import { registerNavigationShortcutPreferences } from './navigation-shortcut-preferences'
 import { initializeFirstLaunchAppearance, registerHomeThemePreferences } from './home-theme-preferences'
 import {PowerPreferenceStore, PowerSettingsController} from './power/controller'
 import {MacOSLidGuard} from './power/macos-lid-guard'
@@ -793,6 +794,8 @@ let scheduledRunner: TaskRunner | undefined
 let flushResearchNativeWeb:(()=>Promise<void>)|undefined
 function registerHarnessHandlers(researchCanvasStorage: ResearchCanvasStorage): void {
   registerHomeThemePreferences(ipcMain, () => mainWindow, app.getPath('userData'))
+  registerNavigationShortcutPreferences(ipcMain, () => mainWindow, app.getPath('userData'),
+    () => accountService?.authenticated ? accountService.accountId ?? null : 'local')
   ipcMain.removeHandler('harness:restart')
   ipcMain.handle('harness:restart', async (event) => {
     assertTrustedMainWindowEvent(event, mainWindow)

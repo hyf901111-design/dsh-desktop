@@ -6,7 +6,7 @@ import {build} from 'esbuild'
 let browser,code
 const evidence=process.env.BROWSER_APP_EVIDENCE||'/tmp/browser-app-figma-20261109'
 beforeAll(async()=>{
- const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
+ const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
 let listener;let n=0;const data={tabs:[{id:'tab0',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'tab0',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}};
 window.setBrowserState=value=>{Object.assign(data,value);listener(structuredClone(data))};window.browserCalls=[];window.snapshot=()=>structuredClone(data);window.update=()=>listener(structuredClone(data));
 const bridge={subscribe:f=>{listener=f;return()=>{}},source:async(...args)=>window.browserCalls.push(['source',...args]),request:async(method,input={})=>{if(method==='site')return{permissions:data.sitePermissions??{}};window.browserCalls.push([method,input]);const t=data.tabs.find(t=>t.id===data.activeId);if(method==='capture'){if(window.browserCapture)return await window.browserCapture();const c=document.createElement('canvas');c.width=20;c.height=20;return c.toDataURL()};if(method==='new'){const tab={...t,id:'tab'+(++n),title:input.url?'Example Domain':'新标签页',url:input.url??'',private:!!input.private};delete tab.page;data.tabs.push(tab);data.activeId=tab.id}if(method==='internal-page'){let page=data.tabs.find(tab=>tab.page===input.page);if(!page){page={...t,id:'tab'+(++n),url:'',page:input.page,title:input.page==='history'?'历史记录':'下载内容',private:false,loading:false,canBack:false,canForward:false};data.tabs.push(page)}data.activeId=page.id}if(method==='select')data.activeId=input.id;if(method==='reorder'){const tab=data.tabs.find(t=>t.id===input.id),before=data.tabs.find(t=>t.id===input.beforeId);if(tab&&tab!==before){data.tabs.splice(data.tabs.indexOf(tab),1);data.tabs.splice(before?data.tabs.indexOf(before):data.tabs.length,0,tab)}}if(method==='zoom')data.tabs.find(tab=>tab.id===input.id).zoom=input.value;if(method==='close'){const index=data.tabs.findIndex(t=>t.id===input.id);data.tabs.splice(index,1);if(data.activeId===input.id)data.activeId=data.tabs[Math.min(index,data.tabs.length-1)].id}if(method==='home'){delete t.page;t.url='';t.title='新标签页';t.canBack=false;t.canForward=false}if(method==='history-remove')data.history=data.history.filter(row=>row.id!==input.id);if(method==='navigate'){delete t.page;t.url=input.url;t.title='Example Domain';data.history.unshift({id:'h'+n,url:input.url,title:t.title,at:Date.now()})}if(method==='bookmark'){const old=data.bookmarks.find(b=>b.url===input.url);if(input.remove)data.bookmarks=data.bookmarks.filter(b=>b.url!==input.url);else if(old)Object.assign(old,{title:input.title,folder:input.folder});else data.bookmarks.push({id:'b'+n,url:input.url,title:input.title,folder:input.folder,at:Date.now()})}if(method==='bookmark-update')Object.assign(data.bookmarks.find(b=>b.id===input.id),input);if(method==='bookmarks-remove')data.bookmarks=data.bookmarks.filter(b=>!input.ids.includes(b.id));if(method==='folder')data.folders.push(input.name);if(method==='settings')Object.assign(data.settings,input);if(method==='clear'&&input.history)data.history=[];if(method==='find')t.find={matches:6,activeMatchOrdinal:1};return structuredClone(data)}};
@@ -561,4 +561,88 @@ it.each([true,false])('samples the gutter at the actual bottom corners after a t
   await page.evaluate(dark=>{document.body.style.background=dark?'#1e1e1e':'#fff';const shell=document.createElement('section');shell.id='corner-gutter-shell';shell.style.cssText='position:fixed;inset:0 0 10px;background:'+(dark?'#111':'#eee');const center=document.querySelector('.pI_x6G_centerCol');center.dataset.workspaceSurfaceHidden='true';center.style.visibility='hidden';shell.append(center);document.body.prepend(shell);return window.browserView.layout()},dark);expect(await page.evaluate(()=>window.browserCalls.filter(c=>c[0]==='layout').at(-1)[1].cornerColor)).toEqual(expected)
   await page.evaluate(()=>{document.querySelector('.pI_x6G_centerCol').style.bottom='-40px';return window.browserView.layout()});expect(await page.evaluate(()=>window.browserCalls.filter(c=>c[0]==='layout').at(-1)[1].cornerColor)).toEqual(expected);expect(await page.locator('.eb-root').evaluate(el=>el.getBoundingClientRect().bottom)).toBe(890);await page.setViewportSize({width:1100,height:720});await page.evaluate(()=>window.browserView.layout());expect(await page.evaluate(()=>window.browserCalls.filter(c=>c[0]==='layout').at(-1)[1].cornerColor)).toEqual(expected);expect(await page.locator('.eb-root').evaluate(el=>el.getBoundingClientRect().bottom)).toBe(710);expect(await page.locator('.eb-root').evaluate(el=>{const r=el.getBoundingClientRect();return[r.left+.5,r.right-.5].map(x=>document.elementsFromPoint(x,r.bottom-.5).filter(node=>!el.contains(node)).find(node=>getComputedStyle(node).backgroundColor!=='rgba(0, 0, 0, 0)')?.id)})).toEqual(['corner-gutter-shell','corner-gutter-shell'])
  }finally{await page.close()}
+})
+
+it('shares editable shortcuts between the composer, the collapsed sidebar and the browser workspace tabs', async () => {
+ const { page, errors } = await fixture(1440, 900)
+ try {
+  await page.evaluate(() => {
+   const center = document.querySelector('.pI_x6G_centerCol')
+   center.insertAdjacentHTML('beforeend', `
+    <div data-srb-tabs style="display:flex;gap:4px">
+     <button data-conversation-view-id="chat">对话</button>
+     <button data-conversation-view-id="research">研究</button>
+     <button data-conversation-view-id="notes">笔记</button>
+     <button data-conversation-view-id="spreadsheet">表格</button>
+    </div>`)
+   document.body.insertAdjacentHTML('beforeend', `
+    <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
+     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home>主页</button><span class="st-more-zone"></span></div>
+    </aside>
+    <nav data-home-app-shortcuts style="position:fixed;left:480px;bottom:130px;z-index:3000">
+     <button data-home-app="image-factory"><span class="home-app-shortcut-icon" style="display:block">图像</span></button>
+    </nav>`)
+   window.shortcutOpens = []
+   window.shortcutManager = window.mountNavigationShortcuts(document, {
+    read: () => window.savedShortcuts,
+    save: value => { window.savedShortcuts = value; return true },
+    open: app => window.shortcutOpens.push(app)
+   })
+  })
+  const source = page.locator('[data-home-app=image-factory]')
+  const homeTabs = page.locator('[data-srb-tabs]')
+  const browserTabs = page.locator('.eb-workspace-tabs')
+  const sidebar = page.locator('[data-navigation-rail]')
+  const drag = async (destination, triggerEdit) => {
+   const from = await source.boundingBox()
+   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+   await page.mouse.down()
+   if (triggerEdit) {
+    await page.locator('body[data-navigation-editing]').waitFor()
+    expect(await source.locator('span').evaluate(node => getComputedStyle(node).animationName)).toBe('navigation-shortcut-wiggle')
+   }
+   const to = await destination.boundingBox()
+   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 6 })
+   await expect.poll(() => destination.getAttribute('data-drop-target')).toBe('')
+   await page.mouse.up()
+  }
+  const toggle = page.locator('.eb-workspace-toggle')
+  await toggle.hover()
+  await browserTabs.locator('[data-workspace-native-view=chat]').waitFor()
+  await drag(sidebar.locator('[data-navigation-slot="2"]'), true)
+  expect(await sidebar.locator('[data-navigation-slot="2"]').getAttribute('data-navigation-app')).toBe('image-factory')
+  expect(await page.evaluate(() => window.shortcutOpens)).toEqual([])
+  await page.keyboard.press('Escape')
+  await page.locator('body[data-navigation-editing]').waitFor({ state: 'detached' })
+
+  await page.evaluate(() => { document.querySelector('.eb-root').hidden = true })
+  await drag(homeTabs.locator('[data-navigation-slot="3"]'), true)
+  expect(await homeTabs.locator('[data-navigation-slot="3"]').textContent()).toBe('图像')
+  await page.keyboard.press('Escape')
+  await page.evaluate(() => {
+   window.shortcutManager.reload()
+   document.querySelector('.eb-root').hidden = false
+  })
+  await toggle.hover()
+  const saved = browserTabs.locator('[data-navigation-slot="3"]')
+  await saved.waitFor()
+  expect(await saved.textContent()).toBe('图像')
+  expect(await browserTabs.locator('[data-navigation-slot]').count()).toBe(4)
+  await saved.click()
+  expect(await page.evaluate(() => window.shortcutOpens)).toEqual(['image-factory'])
+  await saved.click({ button: 'right' })
+  const menu = page.locator('[data-navigation-menu]')
+  await menu.waitFor()
+  const box = await menu.boundingBox()
+  expect([box.width, box.height]).toEqual([128, 64])
+  await page.evaluate(() => window.update())
+  await menu.getByRole('menuitem', { name: '编辑快捷入口' }).click()
+  await page.locator('[data-navigation-delete][aria-label="删除图像"]').first().waitFor()
+  await page.keyboard.press('Escape')
+  await saved.click({ button: 'right' })
+  await menu.getByRole('menuitem', { name: '删除快捷入口' }).click()
+  expect(await homeTabs.locator('[data-navigation-slot="3"]').getAttribute('data-empty')).toBe('')
+  expect(await saved.isVisible()).toBe(false)
+  expect(errors).toEqual([])
+ } finally { await page.close() }
 })
