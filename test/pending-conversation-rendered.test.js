@@ -38,9 +38,16 @@ it.each([true, false])('shows the local work location on home and right composer
    await location.waitFor()
    const layout = await bar.evaluate(row => {
     const card = row.parentElement.querySelector('[data-composer-card]')
-    const a = row.getBoundingClientRect(), b = card.getBoundingClientRect(), style = getComputedStyle(row)
+    const a = row.getBoundingClientRect(), b = card.getBoundingClientRect()
+    const style = getComputedStyle(row), cardStyle = getComputedStyle(card)
+    // Chromium can serialize a mixed color in color(srgb) syntax. Sample its
+    // effective opacity without depending on that serialization.
+    const pixel = new OffscreenCanvas(1, 1).getContext('2d')
+    pixel.fillStyle = style.backgroundColor
+    pixel.fillRect(0, 0, 1, 1)
     return { height: a.height, join: a.bottom - b.top, inset: a.left - b.left, blur: style.backdropFilter,
-      barFill: style.backgroundColor, cardFill: getComputedStyle(card).backgroundColor,
+      barFill: style.backgroundColor, barOpacity: pixel.getImageData(0, 0, 1, 1).data[3] / 255,
+      cardFill: cardStyle.backgroundColor, cardOutline: cardStyle.boxShadow,
       overflow: row.scrollWidth - row.clientWidth }
    })
    expect(layout.height).toBe(42)
@@ -50,12 +57,15 @@ it.each([true, false])('shows the local work location on home and right composer
    expect(layout.overflow).toBe(0)
    if (surface === 'home') {
     expect(layout.blur).toContain('blur(14px)')
+    expect(layout.barOpacity).toBeCloseTo(0.343)
+    expect(layout.cardFill).toBe(dark ? 'rgba(0, 0, 0, 0.49)' : 'rgba(255, 255, 255, 0.49)')
     const headline = page.locator('#app .pXSMma_headline')
     expect(await headline.evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m42)).toBe(-10)
    } else {
     expect(layout.blur).toBe('none')
     expect(layout.barFill).toBe(dark ? 'rgb(29, 29, 29)' : 'rgb(232, 232, 232)')
-    expect(layout.barFill).not.toBe(layout.cardFill)
+    expect(layout.cardFill).toBe(dark ? 'rgb(54, 54, 54)' : 'rgb(255, 255, 255)')
+    expect(layout.cardOutline).toContain('1px inset')
    }
    for (const [hovered, idle] of [[location, folder], [folder, location]]) {
     await hovered.hover()

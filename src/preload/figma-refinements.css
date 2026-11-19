@@ -124,7 +124,7 @@ body[data-ds-dark-theme] .wSkVaW_composerStack [data-odyssey-composer-workspace]
   --odyssey-project-bar:color-mix(in srgb,var(--odyssey-composer-solid) 72%,#101010);
 }
 body .pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=home] .wSkVaW_composerHero [data-odyssey-composer-workspace]:not([data-odyssey-subagent-panel] *, .sRp_composer *) {
-  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-home-input) 55%,transparent);
+  --odyssey-project-bar:color-mix(in srgb,var(--odyssey-home-input) 70%,transparent);
   align-items:center; gap:5px; padding-left:7px;
   backdrop-filter:blur(14px) saturate(125%);
 }
