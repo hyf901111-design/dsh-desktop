@@ -9,6 +9,7 @@ import {
   extractOffendingPlugins,
   extractPluginFailureReferences,
   formatExitCode,
+  probeHarnessReady,
   updateReadyStability
 } from '../src/main/runtime/harness-runtime'
 
@@ -23,6 +24,32 @@ import {
 } from '../src/main/window-navigation'
 
 describe('Harness launch contract', () => {
+  it('waits for the home page and an answer from the RPC dispatcher on cold startup', async () => {
+    const url = 'http://127.0.0.1:43127'
+    const html = () => new Response('<!doctype html>', { headers: { 'content-type': 'text/html; charset=utf-8' } })
+    for (const status of [302, 403, 404, 503]) {
+      const request = async (input: Parameters<typeof fetch>[0]) => {
+        expect(input).toBe(url)
+        return new Response(null, { status })
+      }
+      expect(await probeHarnessReady(url, request)).toBe(false)
+    }
+    for (const answer of ['404', 'fallback', 'wrong-id', 'rpc-error', 'ready']) {
+      const request: typeof fetch = async (input, init) => {
+        if (String(input) === url) return html()
+        expect(String(input)).toBe(url + '/api/host.describe')
+        expect(init?.method).toBe('POST')
+        const envelope = JSON.parse(String(init?.body))
+        expect(envelope).toMatchObject({ type: 'client-request', method: 'host.describe', payload: {} })
+        if (answer === '404') return new Response(null, { status: 404 })
+        if (answer === 'fallback') return html()
+        return Response.json({ type: 'server-response', rpcId: answer === 'wrong-id' ? 'other' : envelope.rpcId,
+          result: { ok: answer !== 'rpc-error', value: { version: '0.0.1' } } })
+      }
+      expect(await probeHarnessReady(url, request)).toBe(answer === 'ready')
+    }
+  })
+
   it('does not treat a briefly reachable port as a completed Harness startup', () => {
     const firstProbe = updateReadyStability(undefined, true, 1_000)
     expect(firstProbe).toEqual({ readySince: 1_000, ready: false })

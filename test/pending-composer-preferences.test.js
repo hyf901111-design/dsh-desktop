@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {createPendingComposerPreferences,patchPendingPresetClient} from '../scripts/lib/pending-composer-preferences.mjs'
+import {createPendingComposerPreferences,installPendingPresetFlush,patchPendingPresetClient} from '../scripts/lib/pending-composer-preferences.mjs'
 import {readFileSync} from 'node:fs'
 it('loads the native model catalog and defaults without a session, stages choices, and applies only after creation',async()=>{
  const models=vi.fn(async()=>({result:{ok:true,value:{groups:[{id:'p',name:'模型服务',models:[{id:'m',name:'模型'}]}],failures:[]}}})),describe=vi.fn(async()=>({result:{ok:true,value:{namespaces:[{ns:'agent-default-model',value:{provider:'p',model:'m'}}]}}})),selectModel=vi.fn(async()=>({result:{ok:true}})),api={llm:{models},settings:{describe},sessions:{selectModel}};
@@ -20,6 +20,25 @@ it('persists the pending composer permission without needing a session and surfa
  await p.apply('new')
  expect(savePermission).toHaveBeenCalledTimes(2)
 })
-it('awaits the native preset singleflight even when a sessionless list notification ran first',async()=>{
- const raw=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js','utf8'),patched=patchPendingPresetClient(raw);expect(patchPendingPresetClient(patched)).toBe(patched);expect(()=>new Function(patched)).not.toThrow();const from=patched.indexOf('const nativeApply=seat.apply.bind(seat)'),to=patched.indexOf('const seatInjected',from),window={},current={id:undefined},apply=vi.fn(async()=>{if(current.id)seat.staged=undefined}),seat={apply,staged:'preset',store:{getSnapshot:()=>({error:null})}},scope={sessions:{list:{getSnapshot:()=>({current:current.id})}},effect:fn=>fn()};new Function('seat','scope','window',patched.slice(from,to))(seat,scope,window);seat.apply();current.id='created';await window[Symbol.for('sherlock:pending-preset-flush')]('created');expect(seat.staged).toBeUndefined();expect(apply).toHaveBeenCalledTimes(2);
+it('upgrades the shipped preset bridge idempotently', () => {
+ const raw = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js', 'utf8')
+ const patched = patchPendingPresetClient(raw)
+ expect(patchPendingPresetClient(patched)).toBe(patched)
+ expect(patched).not.toContain('native-pending-preset-flush:v1')
+ expect(patched).toContain('native-pending-preset-flush:v2')
+ expect(() => new Function(patched)).not.toThrow()
+})
+it('awaits a pending preset even when a sessionless notification applied first', async () => {
+ let current
+ const apply = vi.fn(async () => { if (current) seat.staged = undefined })
+ const seat = { apply, staged: 'build' }
+ const scope = { sessions: { list: { getSnapshot: () => ({ current }) } }, effect: fn => fn(), on: () => () => {} }
+ const win = {}
+ installPendingPresetFlush(seat, scope, win)
+ const sessionless = seat.apply()
+ current = 'created'
+ await win[Symbol.for('sherlock:pending-preset-flush')](current)
+ await sessionless
+ expect(seat.staged).toBeUndefined()
+ expect(apply).toHaveBeenCalledTimes(2)
 })

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio } from 'node:child_process'
 import { createWriteStream, existsSync, type WriteStream } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
@@ -530,6 +531,31 @@ async function reservePort(): Promise<number> {
   })
 }
 
+// The web server listens before the frontend and RPC routes are registered.
+export async function probeHarnessReady(url: string, request: typeof fetch = fetch): Promise<boolean> {
+  const signal = AbortSignal.timeout(2_000)
+  const page = await request(url, { redirect: 'manual', signal })
+  await page.body?.cancel()
+  if (!page.ok || !/^text\/html\b/i.test(page.headers.get('content-type') ?? '')) return false
+
+  const method = 'host.describe'
+  const rpcId = randomUUID()
+  const response = await request(new URL('/api/' + method, url), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ type: 'client-request', rpcId, method, payload: {} }),
+    redirect: 'manual',
+    signal
+  })
+  if (!response.ok || !/^application\/json\b/i.test(response.headers.get('content-type') ?? '')) {
+    await response.body?.cancel()
+    return false
+  }
+  const reply = await response.json()
+  return reply?.type === 'server-response' && reply.rpcId === rpcId &&
+    reply.result?.ok === true && typeof reply.result.value?.version === 'string'
+}
+
 async function waitUntilReady(
   url: string,
   isAlive: () => boolean,
@@ -540,10 +566,9 @@ async function waitUntilReady(
   let readySince: number | undefined
   while (Date.now() < deadline && isAlive()) {
     try {
-      const response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(1_000) })
       const stability = updateReadyStability(
         readySince,
-        response.status >= 200 && response.status < 500,
+        await probeHarnessReady(url),
         Date.now(),
         stabilityWindowMs
       )
