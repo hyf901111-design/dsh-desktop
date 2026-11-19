@@ -9,39 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复图像切笔记抢占会话并保留输入区样式修订",
+        "featureName": "隐藏对话首页新会话标题，包含输入区与笔记修复",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "390d257dd91882607de556bad314a9306c42322e",
-        "tipCommit": "33d886a30735fe58d146a17244b7db99c52eee13",
+        "baseCommit": "33d886a30735fe58d146a17244b7db99c52eee13",
+        "tipCommit": "33f5bb38e15215a0f5ac7df4e8b63811c3d042d5",
         "commits": [
           {
-            "commit": "33d886a30735fe58d146a17244b7db99c52eee13",
+            "commit": "33f5bb38e15215a0f5ac7df4e8b63811c3d042d5",
             "parents": [
-              "390d257dd91882607de556bad314a9306c42322e"
+              "33d886a30735fe58d146a17244b7db99c52eee13"
             ],
-            "subject": "修复从图像切换到笔记时回到对话首页"
+            "subject": "隐藏对话首页左上角的新会话标题和图标"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
+            "path": "src/preload/figma-home.css"
           },
           {
             "status": "M",
-            "path": "src/preload/index.ts"
+            "path": "test/browser-app-rendered.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-surface-host.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-note-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-new-session-actions.test.ts"
+            "path": "test/pending-conversation-rendered.test.js"
           }
         ],
         "checks": [
@@ -53,8 +45,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查通过",
-            "verifiedCommit": "33d886a30735fe58d146a17244b7db99c52eee13",
-            "completedAt": "2026-11-19T08:39:49.600Z",
+            "verifiedCommit": "33f5bb38e15215a0f5ac7df4e8b63811c3d042d5",
+            "completedAt": "2026-11-19T08:45:28.328Z",
             "timeoutMs": 60000
           },
           {
@@ -62,100 +54,46 @@
               "npm",
               "test",
               "--",
-              "test/sidebar-new-session-actions.test.ts",
-              "test/image-factory-native.test.js",
-              "test/workspace-surface-host.test.ts",
+              "test/pending-conversation-rendered.test.js",
               "-t",
-              "normal new Note|restores the selected Images tab|workspace|application|settings|Notes|homepage"
+              "shows the local work location|restores the conversation homepage|renders native welcome/project picker"
             ],
             "outcome": "passed",
-            "summary": "实际会话 SDK 的图像切笔记和表格回归通过，失败时保留原图像页签",
-            "verifiedCommit": "33d886a30735fe58d146a17244b7db99c52eee13",
-            "completedAt": "2026-11-19T08:39:49.600Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/sidebar-new-note-browser.test.js",
-              "-t",
-              "creates normal native Notes|opens a fresh spreadsheet"
-            ],
-            "outcome": "passed",
-            "summary": "展开菜单的笔记和表格单项打开与笔记旧稿保存通过",
-            "verifiedCommit": "33d886a30735fe58d146a17244b7db99c52eee13",
-            "completedAt": "2026-11-19T08:39:49.600Z",
-            "timeoutMs": 60000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "旧客户端实测从图像进入笔记回到首页，修复后会话 SDK 回归与 Chromium 原生菜单验证通过"
-        },
-        "acceptanceCriteria": [
-          "图像切笔记打开新笔记，切回图像维持页签",
-          "首页工作区栏底色略实，右侧输入框边界清晰"
-        ],
-        "risks": [],
-        "generatedAt": "2026-11-19T08:39:49.600Z"
-      },
-      "merged": {
-        "mergeCommit": "dec11cb7f15a7614a2b75b2fa30d8b222f4cb2a2",
-        "verificationCommit": "dec11cb7f15a7614a2b75b2fa30d8b222f4cb2a2",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "dec11cb7f15a7614a2b75b2fa30d8b222f4cb2a2",
-            "completedAt": "2026-11-19T08:39:55.267Z",
-            "timeoutMs": 60000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/navigation-shortcuts.test.ts",
-              "test/browser-app-native.test.js",
-              "test/image-factory.test.js",
-              "test/image-factory-native.test.js",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/workspace-surface-host.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/navigation-shortcuts.test.ts test/browser-app-native.test.js test/image-factory.test.js test/image-factory-native.test.js test/image-factory-canvas-workspace.test.ts test/workspace-surface-host.test.ts",
-            "verifiedCommit": "dec11cb7f15a7614a2b75b2fa30d8b222f4cb2a2",
-            "completedAt": "2026-11-19T08:39:55.267Z",
+            "summary": "首页标题隐藏、深浅主题项目栏、右侧输入框与返回首页通过",
+            "verifiedCommit": "33f5bb38e15215a0f5ac7df4e8b63811c3d042d5",
+            "completedAt": "2026-11-19T08:45:28.328Z",
             "timeoutMs": 60000
           },
           {
             "argv": [
               "env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
               "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
               "test/browser-app-rendered.test.js",
-              "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser"
+              "aligns the browser title|shares editable shortcuts"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell npm test -- test/browser-app-rendered.test.js test/knowledge-workspace-rendered.test.js -t shares editable shortcuts|uses the owner-matched native workspace tabs|opens workspace tabs only|hides the native add actions on Images and Browser",
-            "verifiedCommit": "dec11cb7f15a7614a2b75b2fa30d8b222f4cb2a2",
-            "completedAt": "2026-11-19T08:39:55.267Z",
+            "summary": "其他应用保持标题基线，首页左侧快捷入口保留",
+            "verifiedCommit": "33f5bb38e15215a0f5ac7df4e8b63811c3d042d5",
+            "completedAt": "2026-11-19T08:45:28.328Z",
             "timeoutMs": 60000
           }
         ],
-        "recordedAt": "2026-11-19T08:39:55.267Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 核验首页标题、右侧面板与项目选择的深浅样式，其他模式标题继续显示"
+        },
+        "acceptanceCriteria": [
+          "首页图标和新会话标题隐藏，其他应用标题和面板按钮可见",
+          "图像切笔记显示新笔记，返回图像复用原页签",
+          "首页项目栏底色加深，右侧输入框易于识别"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-19T08:45:28.328Z"
       }
     }
   ],
