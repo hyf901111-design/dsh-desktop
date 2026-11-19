@@ -246,7 +246,11 @@ export function mountWorkspaceViewCustomization(document: Document) {
     status.className = 'workspace-view-settings-status'
     const appName = (app: TopNavigationApp) => workspaceViews.find(([view]) => view === viewForApp[app])![en ? 2 : 1]
     let picked: TopNavigationApp | undefined
-    let dragging: TopNavigationApp | undefined
+    let press: { id: number; app: TopNavigationApp; x: number; y: number } | undefined
+    let suppressClick = false
+    const ghost = document.createElement('i')
+    ghost.className = 'workspace-view-drag-ghost'
+    ghost.setAttribute('aria-hidden', 'true')
     let target: HTMLElement | undefined
     const highlight = (slot?: HTMLElement) => {
       target?.removeAttribute('data-drop-target')
@@ -261,31 +265,19 @@ export function mountWorkspaceViewCustomization(document: Document) {
       }
     }
     const addAppIcon = (button: HTMLButtonElement, app: TopNavigationApp) => {
-      button.dataset.workspaceEditorApp = app
-      button.draggable = true
       const icon = document.createElement('i')
       icon.style.setProperty('--workspace-editor-icon', navigationAppIcon(app))
       icon.setAttribute('aria-hidden', 'true')
       button.append(icon)
-      button.addEventListener('dragstart', event => {
-        if (!event.dataTransfer) return
-        pick()
-        dragging = app
-        event.dataTransfer.effectAllowed = 'move'
-        event.dataTransfer.setData('application/x-ework-workspace-view', app)
-      })
-      button.addEventListener('dragend', () => {
-        dragging = undefined
-        highlight()
-      })
     }
     const choices = topNavigationApps.map(app => {
       const button = document.createElement('button')
       button.type = 'button'
-      button.title = appName(app)
-      button.setAttribute('aria-label', button.title)
+      button.dataset.workspaceEditorApp = app
+      const label = document.createElement('span')
+      label.textContent = appName(app)
+      button.append(label)
       button.addEventListener('click', () => pick(picked === app ? undefined : app))
-      addAppIcon(button, app)
       return button
     })
     palette.append(...choices)
@@ -305,6 +297,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
         button.setAttribute('aria-label', `${position} · ${button.title}`)
         slotButtons[index] = button
         if (isTopNavigationApp(app)) {
+          button.dataset.workspaceEditorApp = app
           addAppIcon(button, app)
           const remove = document.createElement('button')
           remove.type = 'button'
@@ -316,31 +309,12 @@ export function mountWorkspaceViewCustomization(document: Document) {
           slot.append(button, remove)
         } else {
           slot.setAttribute('data-empty', '')
-          button.textContent = '+'
           slot.append(button)
         }
         button.addEventListener('click', () => {
           if (picked) apply(index, picked, true)
           else if (isTopNavigationApp(app)) pick(app)
           else choices[0]?.focus()
-        })
-        slot.addEventListener('dragover', event => {
-          if (!dragging || !event.dataTransfer) return
-          event.preventDefault()
-          event.dataTransfer.dropEffect = 'move'
-          if (target !== slot) highlight(slot)
-        })
-        slot.addEventListener('dragleave', event => {
-          if (target === slot && !slot.contains(event.relatedTarget as Node | null)) highlight()
-        })
-        slot.addEventListener('drop', event => {
-          if (!dragging) return
-          event.preventDefault()
-          event.stopPropagation()
-          const app = dragging
-          dragging = undefined
-          highlight()
-          apply(index, app)
         })
         return slot
       })
@@ -357,6 +331,49 @@ export function mountWorkspaceViewCustomization(document: Document) {
       renderSlots()
       if (restoreFocus) slotButtons[index]?.focus({ preventScroll: true })
     }
+    const slotAt = (event: PointerEvent) => document.elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-workspace-editor-slot]') ?? undefined
+    const stopDrag = () => {
+      press = undefined
+      highlight()
+      ghost.remove()
+    }
+    panel.addEventListener('pointerdown', event => {
+      suppressClick = false
+      const button = (event.target as Element).closest<HTMLElement>('[data-workspace-editor-app]')
+      const app = button?.dataset.workspaceEditorApp
+      if (event.button !== 0 || !event.isPrimary || !isTopNavigationApp(app)) return
+      press = { id: event.pointerId, app, x: event.clientX, y: event.clientY }
+    })
+    panel.addEventListener('pointermove', event => {
+      if (!press || press.id !== event.pointerId) return
+      if (!ghost.isConnected) {
+        if (Math.hypot(press.x - event.clientX, press.y - event.clientY) < 5) return
+        panel.setPointerCapture(event.pointerId)
+        pick()
+        ghost.style.setProperty('--workspace-editor-icon', navigationAppIcon(press.app))
+        panel.append(ghost)
+        suppressClick = true
+      }
+      ghost.style.transform = `translate(${event.clientX - 15}px, ${event.clientY - 15}px)`
+      const slot = slotAt(event)
+      if (target !== slot) highlight(slot)
+    })
+    panel.addEventListener('pointerup', event => {
+      if (!press || press.id !== event.pointerId) return
+      const slot = ghost.isConnected ? slotAt(event) : undefined
+      const { app } = press
+      stopDrag()
+      if (slot) apply(Number(slot.dataset.workspaceEditorSlot), app)
+    })
+    panel.addEventListener('pointercancel', stopDrag)
+    panel.addEventListener('lostpointercapture', stopDrag)
+    panel.addEventListener('click', event => {
+      if (!suppressClick || event.detail === 0) return
+      suppressClick = false
+      event.stopImmediatePropagation()
+      event.preventDefault()
+    }, true)
     const position = () => {
       const bounds = nav.getBoundingClientRect()
       if (!nav.isConnected || bounds.height === 0) { panel.close(); return }

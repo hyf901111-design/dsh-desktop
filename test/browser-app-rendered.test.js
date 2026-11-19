@@ -623,7 +623,7 @@ it('dismisses a browser popup before collapsing the workspace shortcuts on Escap
  }finally{await page.close()}
 })
 
-it.each([true,false])('sizes top-bar labels and lets users drag app icons into the workspace switcher (dark=%s)',async dark=>{
+it.each([true,false])('sizes top-bar labels and lets users drag app labels into the workspace switcher (dark=%s)',async dark=>{
  const {page,errors}=await fixture(1440,900,dark)
  try {
   page.setDefaultTimeout(2200)
@@ -662,22 +662,34 @@ it.each([true,false])('sizes top-bar labels and lets users drag app icons into t
   expect(await dialog.getByText('对话',{exact:true}).getAttribute('title')).toBe('对话固定在第一位')
   expect(await slots.count()).toBe(4)
   expect(await dialog.getByRole('combobox').count()).toBe(0)
-  expect(await palette.getByRole('button').count()).toBe(6)
-  expect(await palette.locator('i').evaluateAll(icons=>icons.every(icon=>getComputedStyle(icon).maskImage.includes('data:image/svg+xml')))).toBe(true)
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','笔记','表格','浏览器','图像','知识库'])
+  expect(await slots.allTextContents()).toEqual(['','','',''])
+  expect(await slots.first().evaluate(slot=>({
+   border:getComputedStyle(slot,'::after').borderTopStyle,
+   fill:getComputedStyle(slot).backgroundColor
+  }))).toEqual({border:'dashed',fill:expect.not.stringMatching(/^rgba\(0, 0, 0, 0\)$/)})
   const paletteBox=await palette.boundingBox(), firstSlot=await slots.first().boundingBox()
   expect(paletteBox.y).toBeGreaterThan(firstSlot.y+firstSlot.height)
   expect(Math.abs(firstSlot.y-chatBox.y)).toBeLessThanOrEqual(2)
-  expect(await palette.locator('i').first().evaluate(icon=>getComputedStyle(icon).animationName)).toBe('navigation-shortcut-wiggle')
+  expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('navigation-shortcut-wiggle')
   await page.emulateMedia({reducedMotion:'reduce'})
-  expect(await palette.locator('i').first().evaluate(icon=>getComputedStyle(icon).animationName)).toBe('none')
+  expect(await palette.locator('button>span').first().evaluate(label=>getComputedStyle(label).animationName)).toBe('none')
   await page.emulateMedia({reducedMotion:'no-preference'})
   const dragApp=(name,index)=>palette.getByRole('button',{name,exact:true}).dragTo(slots.nth(index))
   await dragApp('笔记',0)
   await dragApp('图像',1)
   await dragApp('表格',2)
   await dragApp('知识库',3)
+  const researchBox=await palette.getByRole('button',{name:'研究',exact:true}).boundingBox()
+  await page.mouse.move(researchBox.x+researchBox.width/2,researchBox.y+researchBox.height/2)
+  await page.mouse.down()
+  await page.mouse.move(500,230,{steps:5})
+  expect(await dialog.locator('.workspace-view-drag-ghost').count()).toBe(1)
+  await page.mouse.up()
+  expect(await dialog.locator('.workspace-view-drag-ghost').count()).toBe(0)
+  expect(await dialog.isVisible()).toBe(true)
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','image-factory','spreadsheet','knowledge'])
-  await slots.nth(1).locator('[draggable=true]').dragTo(slots.nth(0))
+  await slots.nth(1).locator('[data-workspace-editor-app]').dragTo(slots.nth(0))
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['image-factory','note','spreadsheet','knowledge'])
   await palette.getByRole('button',{name:'浏览器',exact:true}).press('Enter')
   await dialog.getByRole('button',{name:'第 3 项 · 笔记'}).press('Enter')
