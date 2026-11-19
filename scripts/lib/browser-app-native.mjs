@@ -1,5 +1,5 @@
 import {installImageFactoryContext,imageFactoryNativeSource} from './image-factory-native.mjs'
-import {createRightProjectDrafts} from './right-project-drafts.mjs'
+import {createRightProjectDrafts,installSidebarWorkspaceHandoff} from './right-project-drafts.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
 import {createPendingConversation,EWorkPendingInputBar,EWorkPendingHomeHeader,browserPromptReference} from './pending-conversation.mjs'
 /** Keep the native session and view underneath a sequence of workspace apps. */
@@ -213,7 +213,7 @@ export function patchBrowserAppNative(input){
  const canvasAction=source.includes(splitCanvasAction)?splitCanvasAction:'"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),';
  replace(canvasAction,'"data-browser-canvas-action": "",\n'+canvasAction);
  const root='function HomeGuideNativeOriginalConversationRoot('
- replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null,eworkRightProjects=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkPendingHomeHeader.toString()}\n${imageFactoryNativeSource}\n`+root)
+ replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null,eworkRightProjects=null,eworkSidebarWorkspace=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkPendingHomeHeader.toString()}\n${imageFactoryNativeSource}\n`+root)
  const controller='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
  replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n
 ctx.effect(()=>{
@@ -238,8 +238,8 @@ ctx.effect(()=>{
      if(draft?.mode==='image-factory'&&draft.sessionId===sessions.list.getSnapshot().current)return draft.pending;
    },
    getDefaultWorkspace:()=>{
-     const manual=eworkPendingConversation?.getManualWorkspace();
-     return manual===undefined?getTaskWorkspace():manual;
+     const selected=eworkSidebarWorkspace?.current();
+     return selected===undefined?getTaskWorkspace():selected;
    },
    standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),
    setTaskView:id=>slots.resolveStore(chatStore,id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
@@ -340,12 +340,15 @@ ctx.effect(()=>{
    return draft;
  }});
  eworkRightProjects=right;
+ const sidebarWorkspace=(${installSidebarWorkspaceHandoff.toString()})({sessions,workspaces,pending,right});
+ eworkSidebarWorkspace=sidebarWorkspace;
+ pending.getCurrentWorkspace=sidebarWorkspace.current;
  const resetRightProjects=()=>right.reset();
  document.addEventListener('sherlock:knowledge-identity-changed',resetRightProjects);
  const refresh=()=>preferences.model.load().catch(()=>{});
  const offSettings=ctx.get('remote').$on('settings/document-updated',ns=>{if(ns==='permission')void refresh()});
  void refresh();pending.preferences=preferences;pending.views=views;eworkPendingConversation=pending;window[Symbol.for('sherlock:pending-conversation')]=pending;
- return()=>{offSettings();document.removeEventListener('sherlock:knowledge-identity-changed',resetRightProjects);right.reset();if(eworkRightProjects===right)eworkRightProjects=null;if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}
+ return()=>{offSettings();sidebarWorkspace.dispose();if(eworkSidebarWorkspace===sidebarWorkspace)eworkSidebarWorkspace=null;document.removeEventListener('sherlock:knowledge-identity-changed',resetRightProjects);right.reset();if(eworkRightProjects===right)eworkRightProjects=null;if(eworkPendingConversation===pending)eworkPendingConversation=null;if(window[Symbol.for('sherlock:pending-conversation')]===pending)delete window[Symbol.for('sherlock:pending-conversation')];pending.dispose()}
 },'Pending first-message conversation');
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${browserSourceCodec.toString()})()),'Browser source codec'));
 ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource(imageLayerReferenceCodec()),'Image factory layer codec'));`)
@@ -392,18 +395,6 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('sessionId === void 0 ? ABSENT_RESEARCH_SIDEBAR_STORE : researchSidebar.storeFor(sessionId)', 'researchSidebar.storeFor(sessionId)')
  replace('if (sessionId === void 0) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {','if (subagentPanel) return;\n\t\t\t\tresearchSidebar.publish(sessionId, {')
  replace('if (sessionId !== void 0) researchSidebar.publish(sessionId, null);','researchSidebar.publish(sessionId, null);')
- const sessionProject='const sessionWorkspace = sessionId === void 0 ? void 0 : workspaces.items.find((workspace) => workspace.sessionIds.includes(sessionId));';
- replace(sessionProject,sessionProject+`
- const rightProjectMode=browserAppActive?composerApp:activeView??'chat';
- const sessionScopedWorkspace=sessionId!==undefined&&document.body.dataset.sessionWorkspaceSwitch===sessionId;
- const rightProjectContext=react.useMemo(()=>sidebarMode&&!subagentPanel?{
-  sessionId,mode:rightProjectMode,followDefault:browserAppActive&&sessionId!==undefined&&!sessionScopedWorkspace,
-  workspaceId:sessionId===undefined?pendingChatState?.workspaceId:sessionWorkspace?.workspaceId??workspaces.items.find(item=>cwd&&item.path===cwd)?.workspaceId??null
- }:undefined,[sidebarMode,subagentPanel,sessionId,rightProjectMode,browserAppActive,sessionScopedWorkspace,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
- const rightDraft=react.useSyncExternalStore(eworkRightProjects?.subscribe||(()=>()=>{}),eworkRightProjects?.getSnapshot||(()=>undefined));
- const rightProjectDraft=rightProjectContext&&rightDraft?.sessionId===sessionId&&rightDraft?.mode===rightProjectMode?rightDraft:undefined;
- react.useLayoutEffect(()=>{if(!subagentPanel)eworkRightProjects?.show(rightProjectContext)},[subagentPanel,rightProjectContext]);
- `);
  replace('const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === pendingWorkspaceId);','const pendingWorkspace = workspaces.items.find((workspace) => workspace.workspaceId === (pendingConversation?pendingChatState?.workspaceId:pendingWorkspaceId));')
  replace('renderSlot("conversation.session.header", {})','pendingConversation && !composerApp && pendingChatState?.workspaceId !== undefined ? react.createElement(EWorkPendingHomeHeader,{pending:eworkPendingConversation,busy:pendingChatState.busy||pendingChatState.activating}) : renderSlot("conversation.session.header", {})')
  replace('pendingWorkspaceId ?? sessionWorkspace?.workspaceId,','(pendingConversation ? pendingWorkspace?.workspaceId : pendingWorkspaceId) ?? sessionWorkspace?.workspaceId,')
@@ -412,7 +403,18 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)
  replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = imageTaskCreating || (sessionId === undefined ? !pendingConversation || pendingChatState?.workspaceId === undefined : hero && chipTitle === undefined && !cwd);')
  const inputRow='const inputBar = renderSlot("conversation.composer.bar", {';
- replace(inputRow,`const rightWorkspaceId=rightProjectDraft?rightProjectDraft.workspaceId:rightProjectContext?.workspaceId;
+ replace(inputRow,`const canChooseRightProject=sidebarMode&&!subagentPanel&&(pendingConversation||conversationVacant);
+ const rightProjectMode=browserAppActive?composerApp:activeView??'chat';
+ const sessionScopedWorkspace=sessionId!==undefined&&document.body.dataset.sessionWorkspaceSwitch===sessionId;
+ const launchWorkspaceId=eworkSidebarWorkspace?.forSurface(rightProjectMode,sessionId);
+ const rightProjectContext=react.useMemo(()=>canChooseRightProject?{
+  sessionId,mode:rightProjectMode,launchWorkspaceId,followDefault:browserAppActive&&sessionId!==undefined&&!sessionScopedWorkspace,
+  workspaceId:sessionId===undefined?pendingChatState?.workspaceId:sessionWorkspace?.workspaceId??workspaces.items.find(item=>cwd&&item.path===cwd)?.workspaceId??null
+ }:undefined,[canChooseRightProject,sessionId,rightProjectMode,launchWorkspaceId,browserAppActive,sessionScopedWorkspace,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
+ const rightDraft=react.useSyncExternalStore(eworkRightProjects?.subscribe||(()=>()=>{}),eworkRightProjects?.getSnapshot||(()=>undefined));
+ const rightProjectDraft=rightProjectContext&&rightDraft?.sessionId===sessionId&&rightDraft?.mode===rightProjectMode?rightDraft:undefined;
+ react.useLayoutEffect(()=>{if(!subagentPanel)eworkRightProjects?.show(rightProjectContext)},[subagentPanel,rightProjectContext]);
+ const rightWorkspaceId=rightProjectDraft?rightProjectDraft.workspaceId:rightProjectContext?.workspaceId;
  const rightWorkspaceLabel=rightProjectDraft?workspaces.items.find(item=>item.workspaceId===rightWorkspaceId)?.title:chipTitle;
  const pickRightWorkspace=workspaceId=>{
   setPickerOpen(false);
@@ -440,7 +442,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace(composerSession,composerSession.replace('pending,','pending:rightProjectDraft?[]:pending,').replace('session,','session:rightProjectDraft?undefined:session,'));
  const composerProps='\n\t\t\t\tzone,\n\t\t\t\thero,\n\t\t\t\tresearchEmpty,';
  replace(composerProps,composerProps.replace('zone,','zone:rightProjectDraft?undefined:zone,'));
- replace('\n\t\t\t\theroWorkspaceRow,\n\t\t\t\trenderSlot,','\n\t\t\t\theroWorkspaceRow:sidebarMode&&rightWorkspaceRow?rightWorkspaceRow:heroWorkspaceRow,\n\t\t\t\trenderSlot,');
+ replace('\n\t\t\t\theroWorkspaceRow,\n\t\t\t\trenderSlot,','\n\t\t\t\theroWorkspaceRow:sidebarMode?rightWorkspaceRow:heroWorkspaceRow,\n\t\t\t\trenderSlot,');
  replace(inputRow,inputRow+`
  pendingConversation:pendingConversation||!!rightProjectDraft,rightProjectDraft,eworkImageFactory:imageFactoryActive,`)
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')

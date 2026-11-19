@@ -19,9 +19,9 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
   const workspace=()=>{
     const state=workspaces.list.getSnapshot(),sessionState=sessions.list.getSnapshot()
     const pending=getPending?.()
-    const manual=pending?.getManualWorkspace?.()
-    if(manual===null)return {workspaceId:null}
-    if(manual!==undefined)return state.items.find(item=>item.workspaceId===manual)
+    const selected=pending?.getCurrentWorkspace ? pending.getCurrentWorkspace() : pending?.getManualWorkspace?.()
+    if(selected===null)return {workspaceId:null}
+    if(selected!==undefined)return state.items.find(item=>item.workspaceId===selected)
     const current=sessionState.current,cwd=sessionState.byId[current]?.cwd
     const currentWorkspace=state.items.find(item=>item.sessionIds.includes(current)) ??
       (cwd ? state.items.find(item=>item.path===cwd) : undefined)
@@ -144,14 +144,20 @@ export function patchSidebarNewNoteShell(input){
     [group,'wide && newSessionControls'],
     [props,props.replace('startSession,','openHome, startSession,')],
     [inject,`
-            const manualProject = () => window[Symbol.for("sherlock:pending-conversation")]?.getManualWorkspace();
+            const currentProject = () => {
+                const pending = window[Symbol.for("sherlock:pending-conversation")];
+                return pending?.getCurrentWorkspace ? pending.getCurrentWorkspace() : pending?.getManualWorkspace();
+            };
             const startWithoutProject = async view => {
+                const pending = window[Symbol.for("sherlock:pending-conversation")];
                 const before = ctx.sessions.list.getSnapshot().current;
+                const project = pending?.getSnapshot?.().workspaceId;
+                const sameOwner = () => ctx.sessions.list.getSnapshot().current === before && pending?.getSnapshot?.().workspaceId === project;
                 try {
                     const cwd = await window.dshDesktop.standaloneConversationDirectory();
-                    if (ctx.sessions.list.getSnapshot().current !== before || manualProject() !== null) return;
+                    if (!sameOwner()) return;
                     const sessionId = await ctx.sessions.create({ cwd });
-                    if (ctx.sessions.list.getSnapshot().current !== before || manualProject() !== null) return;
+                    if (!sameOwner()) return;
                     if (view === "research") {
                         try { window.sessionStorage.setItem("sherlock.conversation.initial-research-session.v1", sessionId); } catch {}
                     }
@@ -166,15 +172,15 @@ export function patchSidebarNewNoteShell(input){
                     ctx.sessions.clear();
                 },`],
     ['startSession: (workspaceId) => {', `startSession: (workspaceId) => {
+                    const selected = workspaceId === undefined ? currentProject() : workspaceId;
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
-                    const manual = manualProject();
-                    if (workspaceId === undefined && manual === null) { void startWithoutProject('chat'); return; }
-                    workspaceId ??= manual;`],
+                    if (selected === null) { void startWithoutProject('chat'); return; }
+                    workspaceId = selected;`],
     ['startResearchSession: (workspaceId) => {', `startResearchSession: (workspaceId) => {
+                    const selected = workspaceId === undefined ? currentProject() : workspaceId;
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
-                    const manual = manualProject();
-                    if (workspaceId === undefined && manual === null) { void startWithoutProject('research'); return; }
-                    workspaceId ??= manual;`],
+                    if (selected === null) { void startWithoutProject('research'); return; }
+                    workspaceId = selected;`],
     [root,'\t\t\tconst newSessionControls = '+controls+';\n'+`
     react.useEffect(()=>{
       const rail=column.current;

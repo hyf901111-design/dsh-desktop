@@ -17,7 +17,7 @@ const base='node_modules/@deepseek-ai/',expose=(source,names)=>source.replace('e
 beforeAll(async()=>{
  const installed=stripComposerWorkspaceBar(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8'))
  const baseConversation=stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(installed))))
- const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;exports.__testSetRightProjects=value=>eworkRightProjects=value;')
+ const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;exports.__testSetRightProjects=value=>eworkRightProjects=value;exports.__testSetSidebarWorkspace=value=>eworkSidebarWorkspace=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(patchBoardDirectoryWorkspace(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspacePicker'])}
  input.triggers=expose(await readFile(base+'dsh-client-ui-input-trigger/lib/client.js','utf8'),['MenuView'])
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
@@ -348,6 +348,59 @@ it('retains the session project for top-bar mode changes and still follows the m
   })
   await chip.getByText('研究项目 B',{exact:true}).waitFor()
   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  expect(errors).toEqual([])
+ } finally { await page.close() }
+},15000)
+
+it('inherits the visible workspace from the app rail even when the last manual project differs', async () => {
+ const page=await browser.newPage({viewport:{width:1380,height:900}})
+ try {
+  await page.route('http://127.0.0.1/sidebar-project',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset=utf-8>'}))
+  await page.goto('http://127.0.0.1/sidebar-project')
+  await page.setContent('<style>'+css+'#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
+  await page.evaluate(input=>{
+   window.pendingInput={...input,recentWorkspaceId:'B',verifyRightProject:true}
+  },input)
+  await page.addScriptTag({content:script})
+  await page.evaluate(()=>window.pendingFixture.record.selectWorkspace('B'))
+  expect(await page.evaluate(()=>window.pendingFixture.sidebarWorkspace.current())).toBe('A')
+  const picker=page.locator('#right .pXSMma_workspace')
+  await page.evaluate(()=>window.pendingFixture.openViaRail('browser'))
+  await picker.getByText('研究项目 A',{exact:true}).waitFor()
+  await picker.click()
+  await page.getByText('研究项目 B',{exact:true}).click()
+  await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  await page.evaluate(()=>window.pendingFixture.openViaRail('image-factory'))
+  await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+ } finally { await page.close() }
+},15000)
+
+it.each(['research','browser'])('continues the saved right-hand conversation in %s without a project selector', async mode => {
+ const page=await browser.newPage({viewport:{width:1380,height:900}}),errors=[]
+ page.setDefaultTimeout(3500)
+ page.on('pageerror',error=>errors.push(error.message))
+ try {
+  await page.route('http://127.0.0.1/right-history',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><meta charset=utf-8>'}))
+  await page.goto('http://127.0.0.1/right-history')
+  await page.setContent('<style>'+css+'#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>')
+  await page.evaluate(({input,mode})=>{window.pendingInput={...input,recentWorkspaceId:'B',verifyRightProject:true,verifyHistory:true,initialView:mode==='browser'?'chat':mode}}, {input,mode})
+  await page.addScriptTag({content:script})
+  if(mode==='browser') await page.evaluate(()=>window.pendingFixture.openSurface('browser'))
+  const right=page.locator('#right')
+  const composer=right.locator('textarea')
+  await composer.waitFor().catch(async error=>{
+   throw Error(JSON.stringify({errors,center:(await page.locator('#app').innerText()).slice(0,500),right:(await right.innerText()).slice(0,500)}),{cause:error})
+  })
+  expect(await right.locator('[data-odyssey-composer-workspace]').count()).toBe(0)
+  expect(await page.evaluate(()=>window.pendingFixture.right.getSnapshot())).toBeUndefined()
+  await composer.fill('继续补充之前的内容')
+  await right.getByRole('button',{name:'发送消息',exact:true}).click()
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   {type:'continue',id:'existing-canvas',text:'继续补充之前的内容'}
+  ])
+  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
   expect(errors).toEqual([])
  } finally { await page.close() }
 },15000)
