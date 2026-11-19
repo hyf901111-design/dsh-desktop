@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "顶栏标签完整显示与三个点菜单",
+        "featureName": "顶栏更多按钮图标居中",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "3b9310880d21d02c2c9b21c332dfcbb8ea66a105",
-        "tipCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
+        "baseCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
+        "tipCommit": "8029ccd00df0b551557f6547caa107fdfe648db4",
         "commits": [
           {
-            "commit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
+            "commit": "8029ccd00df0b551557f6547caa107fdfe648db4",
             "parents": [
-              "3b9310880d21d02c2c9b21c332dfcbb8ea66a105"
+              "cb789e3fced87d78ac9a11b7da02aba446b68ac8"
             ],
-            "subject": "修复顶栏溢出按钮被挤压并改为更多图标"
+            "subject": "修复顶栏更多按钮内的图标偏移"
           }
         ],
         "files": [
@@ -29,11 +29,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/workspace-view-overflow.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/browser-app-rendered.test.js"
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -45,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
-            "completedAt": "2026-11-19T23:41:11.139Z",
+            "verifiedCommit": "8029ccd00df0b551557f6547caa107fdfe648db4",
+            "completedAt": "2026-11-19T23:56:02.892Z",
             "timeoutMs": 90000
           },
           {
@@ -66,24 +62,24 @@
             ],
             "outcome": "passed",
             "summary": "9 项工作区顶栏渲染验证",
-            "verifiedCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
-            "completedAt": "2026-11-19T23:41:11.139Z",
+            "verifiedCommit": "8029ccd00df0b551557f6547caa107fdfe648db4",
+            "completedAt": "2026-11-19T23:56:02.892Z",
             "timeoutMs": 90000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "临界宽度下标签完整显示，更多按钮两侧能点击打开菜单。 macOS 实包复测将在本地构建后执行。"
+          "summary": "窄版知识库明暗主题均验证三个点在按钮内水平、垂直居中，顶栏专项检查通过。"
         },
         "acceptanceCriteria": [
-          "原生研究顶栏在临界宽度下无半截标签",
-          "三个点按钮可正常打开更多菜单",
-          "菜单切换后原会话保持"
+          "窄版知识库的三个点图标居中",
+          "更多菜单可点击打开",
+          "内联标签完整显示"
         ],
         "risks": [
-          "实包复测前仅有渲染环境验证"
+          "本地构建后复测 macOS 界面"
         ],
-        "generatedAt": "2026-11-19T23:41:11.139Z"
+        "generatedAt": "2026-11-19T23:56:02.892Z"
       }
     }
   ],
