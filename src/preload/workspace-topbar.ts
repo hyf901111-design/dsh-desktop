@@ -160,6 +160,7 @@ html[data-workspace-tabs-switching] :is(.eb-workspace-tabs,.eb-workspace-toggle>
 body .eb-workspace-edit{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0!important;-webkit-app-region:no-drag}
 .eb-workspace-edit>i{width:16px;height:16px;background:currentColor;mask:url('${workspaceSettingsIcon.replaceAll("'", '%27')}') center/contain no-repeat}
 body:has(>.workspace-view-settings[open]){--odyssey-popup-window-drag:no-drag}
+body:has(>.workspace-view-settings[open]) > #dsh-desktop-drag-region{display:none}
 body:has(>.workspace-view-settings[open]) :is(.wSkVaW_header,.wSkVaW_titleRow,.workspace-app-topbar,.workspace-app-title,.workspace-app-title *){
   -webkit-app-region:no-drag;
 }
