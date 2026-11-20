@@ -1,4 +1,8 @@
-/** Forward the macOS window's resize borders and the home header's blank drag area. */
+export const sessionWindowMoveHeader = '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page]:not([data-odyssey-page=home]) .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true],[data-odyssey-subagent-panel] *)'
+const windowMoveArea = `[data-odyssey-window-move],${sessionWindowMoveHeader}`
+const headerInteraction = 'button,input,select,textarea,a,summary,[role=button],[role=tab],[role=menu],[role=listbox],[contenteditable]:not([contenteditable=false]),[draggable=true],[aria-haspopup],[tabindex]:not([tabindex="-1"])'
+
+/** Forward the macOS window's resize borders and blank workspace header areas. */
 export function mountWindowResize(doc: Document, send: (gesture: string | { dx: number; dy: number } | null) => void): () => void {
   const win = doc.defaultView
   if (!win) return () => {}
@@ -42,8 +46,10 @@ export function mountWindowResize(doc: Document, send: (gesture: string | { dx: 
   win.addEventListener('pointercancel', stop, true)
   win.addEventListener('blur', stop)
   const move = (event: PointerEvent) => {
-    const target = event.target instanceof win.Element ? event.target.closest<HTMLElement>('[data-odyssey-window-move]') : undefined
+    if (!(event.target instanceof win.Element)) return
+    const target = event.target.closest<HTMLElement>(windowMoveArea)
     if (!target || win.getComputedStyle(target).getPropertyValue('--odyssey-popup-window-drag').trim() === 'no-drag') return
+    if (target.contains(event.target.closest(headerInteraction))) return
     start(target, 'move', event)
   }
   doc.documentElement.setAttribute('data-odyssey-native-window-move', '')

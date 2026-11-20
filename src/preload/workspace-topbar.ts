@@ -1,4 +1,5 @@
 import { installWorkspaceViewOverflow } from './workspace-view-overflow'
+import { sessionWindowMoveHeader } from './window-resize'
 import { workspaceContentViews } from '../shared/navigation-shortcuts'
 import { navigationAppIcon } from './home-app-shortcuts'
 import { icons } from './scheduled/icons'
@@ -76,6 +77,7 @@ body{
 .workspace-home-topbar .eb-workspace-controls button{-webkit-app-region:no-drag}
 .workspace-home-topbar [data-odyssey-window-move]{flex:1 0 0;align-self:stretch;min-width:0}
 html[data-odyssey-native-window-move] [data-odyssey-window-move]{-webkit-app-region:no-drag;touch-action:none}
+html[data-odyssey-native-window-move] :is(${sessionWindowMoveHeader},${sessionWindowMoveHeader} .wSkVaW_titleRow){-webkit-app-region:no-drag}
 .workspace-home-topbar .workspace-app-title{flex:0 1 auto;min-width:24px}
 .workspace-home-topbar .workspace-app-title>span{overflow:hidden;text-overflow:ellipsis}
 .workspace-home-topbar .workspace-app-title>i{mask-image:${chatTitleIcon}}
