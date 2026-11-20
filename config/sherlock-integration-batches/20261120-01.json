@@ -9,67 +9,54 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "右侧切换工作区时立即新建对应应用会话",
+        "featureName": "修复浏览器对话过程图片的大图预览",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
-        "tipCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
+        "baseCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
+        "tipCommit": "6cf5dcfb46aa2cc11fd66a6f1d1b4c065d5458d4",
         "commits": [
           {
-            "commit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
+            "commit": "6cf5dcfb46aa2cc11fd66a6f1d1b4c065d5458d4",
             "parents": [
-              "18f77f9e460c90127c62c131a01590e14956dc30"
+              "1e75d81db4cd7f988d41f0273f4a00b729bfb25a"
             ],
-            "subject": "右侧切换工作区时立即新建对应应用会话"
+            "subject": "修复浏览器对话过程图片的大图预览"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/browser-app-native.mjs"
+            "path": "src/preload/browser/native-menus.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/pending-conversation.mjs"
+            "path": "src/preload/browser/overlay-preflight.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/right-project-drafts.mjs"
+            "path": "src/preload/browser/view.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/sidebar-new-note.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/pending-conversation-browser.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/sidebar-new-note-browser.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation-rendered.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/pending-conversation.test.js"
+            "path": "test/browser-app-rendered.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npx",
               "vitest",
               "run",
-              "test/pending-conversation-rendered.test.js",
+              "test/browser-app-rendered.test.js",
               "-t",
-              "native command menu|hides the right project picker|opens the selected right project|creating a session from the picker fails|without leaving the image canvas|restores the chosen project and unsent text|retains the session project|inherits the visible workspace|keeps the research welcome|changing or clearing the right project"
+              "conversation image previews|live webpage visible|live page visible|presents every browser popup"
             ],
             "outcome": "passed",
-            "summary": "右侧选择即新建、模式保留、草稿保留、命令菜单及编辑锁定",
-            "verifiedCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
-            "completedAt": "2026-11-20T05:50:25.685Z",
+            "summary": "验证原生网页上的会话截图可用大图打开，关闭后恢复当前页，普通菜单行为保持",
+            "verifiedCommit": "6cf5dcfb46aa2cc11fd66a6f1d1b4c065d5458d4",
+            "completedAt": "2026-11-20T05:56:08.475Z",
             "timeoutMs": 120000
           },
           {
@@ -77,79 +64,28 @@
               "npx",
               "vitest",
               "run",
-              "test/pending-conversation.test.js",
-              "test/pending-conversation-panel.test.js"
+              "test/image-preview-gallery-browser.test.js",
+              "test/browser-menu-preload-key.test.js",
+              "test/browser-page-actions-service.test.ts"
             ],
             "outcome": "passed",
-            "summary": "验证同次创建只执行一次、应用标题及会话交接",
-            "verifiedCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
-            "completedAt": "2026-11-20T05:50:25.685Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/sidebar-new-note-browser.test.js",
-              "-t",
-              "fresh spreadsheet|creates normal native Notes"
-            ],
-            "outcome": "passed",
-            "summary": "验证已有侧栏笔记和表格创建入口",
-            "verifiedCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
-            "completedAt": "2026-11-20T05:50:25.685Z",
+            "summary": "验证图片切换、关闭、重试、键盘操作与原生浏览器服务",
+            "verifiedCommit": "6cf5dcfb46aa2cc11fd66a6f1d1b4c065d5458d4",
+            "completedAt": "2026-11-20T05:56:08.475Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "渲染测试验证选择工作区创建会话后，斜杠按钮直接打开菜单"
+          "summary": "浏览器渲染测试已验证会话截图 Blob 大图成功解码，关闭后恢复同一标签页"
         },
         "acceptanceCriteria": [
-          "选择已有工作区时新建并进入该工作区的会话",
-          "延续当前应用的默认标题和模式",
-          "命令菜单不再次创建会话",
-          "编辑过的工作区保持锁定"
+          "浏览器模式下对话过程图片可放大",
+          "关闭后恢复同一网页标签",
+          "普通菜单继续覆盖实时网页"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T05:50:25.685Z"
-      },
-      "merged": {
-        "mergeCommit": "60a368e4dd5009887728e00c3c601f95475149f1",
-        "verificationCommit": "60a368e4dd5009887728e00c3c601f95475149f1",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "60a368e4dd5009887728e00c3c601f95475149f1",
-            "completedAt": "2026-11-20T05:50:40.948Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "60a368e4dd5009887728e00c3c601f95475149f1",
-            "completedAt": "2026-11-20T05:50:40.948Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-20T05:50:40.948Z"
+        "generatedAt": "2026-11-20T05:56:08.475Z"
       }
     }
   ],
