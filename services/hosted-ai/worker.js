@@ -128,7 +128,8 @@ function chatInput(input) {
   }
   if (input.temperature !== undefined) {
     if (!Number.isFinite(input.temperature) || input.temperature < 0 || input.temperature > 2) throw Error('temperature')
-    out.temperature = input.temperature
+    // Ark fixes Kimi K3.1 Pro's temperature at 1 and rejects other values.
+    if (model.id !== 'kimi-k3.1-pro') out.temperature = input.temperature
   }
   if (input.tools !== undefined) {
     if (!Array.isArray(input.tools) || input.tools.length > 128) throw Error('tools')
