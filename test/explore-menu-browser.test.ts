@@ -3,6 +3,20 @@ import {readFile,writeFile} from 'node:fs/promises'
 import {createExploreBrowserFixture} from './helpers/explore-menu-browser-fixture'
 import {scheduledStyles} from '../src/preload/scheduled/style'
 const {evidence,fixture,open,clickExploreControl,uiExpect}=createExploreBrowserFixture()
+it.each([false,true])('keeps the Explore backdrop neutral over colored wallpapers (dark: %s)',async dark=>{
+ const f=await fixture({dark})
+ try {
+  await open(f.page)
+  const {background,filter}=await f.page.locator('dialog.odyssey-explore').evaluate((dialog:HTMLElement)=>{
+   const style=getComputedStyle(dialog,'::backdrop')
+   return {background:style.backgroundColor,filter:style.backdropFilter}
+  })
+  const [red,green,blue]=background.match(/\d+(?:\.\d+)?/g)!.map(Number)
+  expect([green,blue]).toEqual([red,red])
+  expect(filter).toContain('grayscale(1)')
+ } finally { await f.close() }
+},15000)
+
 it.each([[1600,1000,true],[1380,900,false],[850,600,true],[851,600,false],[540,600,true],[1000,640,false]])('limits Explore window dragging to its top chrome and keeps actual controls reachable at %sx%s dark=%s',async(width,height,dark)=>{
  const f=await fixture({width:width as number,height:height as number,dark:dark as boolean});try{
   await open(f.page)
