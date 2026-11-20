@@ -9,39 +9,51 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "启动会话恢复、顶栏与工作区交互",
+        "featureName": "应用入口与首页原生拖窗",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "0d4ada3637c67e6cdc7427757919e4e54ec0a9c4",
-        "tipCommit": "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d",
+        "baseCommit": "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d",
+        "tipCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
         "commits": [
           {
-            "commit": "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d",
+            "commit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
             "parents": [
-              "0d4ada3637c67e6cdc7427757919e4e54ec0a9c4"
+              "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d"
             ],
-            "subject": "保留冷启动恢复期间的看板打开意图"
+            "subject": "修复连续打开应用报错并接通首页原生拖窗"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/session-identity-list.d.mts"
+            "path": "src/main/window-resize.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/session-identity-list.mjs"
+            "path": "src/preload/navigation-shortcuts.ts"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "src/preload/sidebar-new-note.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
+            "path": "src/preload/window-resize.ts"
           },
           {
             "status": "M",
-            "path": "test/home-guide-session.test.ts"
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/navigation-shortcuts.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/panel-toggle-drag-region.test.js"
           }
         ],
         "checks": [
@@ -50,26 +62,29 @@
               "npx",
               "vitest",
               "run",
-              "test/home-guide-session.test.ts",
-              "-t",
-              "startup catalog"
+              "test/navigation-shortcuts.test.ts",
+              "test/window-resize.test.ts",
+              "test/panel-toggle-drag-region.test.js"
             ],
             "outcome": "passed",
-            "summary": "模拟自动恢复上次会话及用户主动切换，校验实际打开意图",
-            "verifiedCommit": "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d",
-            "completedAt": "2026-11-20T04:31:15.178Z",
+            "summary": "覆盖重复点击、取消、状态清理与真实指针事件",
+            "verifiedCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
+            "completedAt": "2026-11-20T04:42:35.174Z",
             "timeoutMs": 90000
           },
           {
             "argv": [
-              "node",
-              "--experimental-vm-modules",
-              "scripts/verify-frontend-patch-reentry.mjs"
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-note-browser.test.js",
+              "-t",
+              "spreadsheet|cancel"
             ],
             "outcome": "passed",
-            "summary": "校验原生会话状态和前端补丁的构建重入",
-            "verifiedCommit": "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d",
-            "completedAt": "2026-11-20T04:31:15.178Z",
+            "summary": "验证表格和笔记原生入口",
+            "verifiedCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
+            "completedAt": "2026-11-20T04:42:35.174Z",
             "timeoutMs": 90000
           },
           {
@@ -80,59 +95,21 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过",
-            "verifiedCommit": "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d",
-            "completedAt": "2026-11-20T04:31:15.178Z",
+            "verifiedCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
+            "completedAt": "2026-11-20T04:42:35.174Z",
             "timeoutMs": 90000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "复用已验证的工作区与顶栏渲染，并以冷启动状态测试覆盖恢复与主动切换"
+          "summary": "实际客户端复现连续点击报错；在 Chromium 用指针事件验证首页留白向原生窗口发出移动操作"
         },
         "acceptanceCriteria": [
-          "启动时恢复看板和工作区会话",
-          "首页空白顶栏可移窗且没有重叠页签",
-          "知识库文件可拖入输入框形成引用",
-          "笔记、表格和研究看板编辑后工作区锁定"
+          "连续点击应用入口只启动一次，正常取消不弹出打开失败",
+          "首页页签右侧留白移动原生窗口，菜单和按钮照常响应"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T04:31:15.178Z"
-      },
-      "merged": {
-        "mergeCommit": "922f18b05890ff5bb74d9e5bc66df82d7ae05759",
-        "verificationCommit": "922f18b05890ff5bb74d9e5bc66df82d7ae05759",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "922f18b05890ff5bb74d9e5bc66df82d7ae05759",
-            "completedAt": "2026-11-20T04:31:26.912Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "922f18b05890ff5bb74d9e5bc66df82d7ae05759",
-            "completedAt": "2026-11-20T04:31:26.912Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-20T04:31:26.912Z"
+        "generatedAt": "2026-11-20T04:42:35.174Z"
       }
     }
   ],
