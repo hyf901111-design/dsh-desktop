@@ -1,4 +1,5 @@
 import { watchResearchSessionTitle } from './research-session-title'
+import { sharedPageContext } from './research-board-page-context'
 import { ResearchBoardHeaderMenu } from './research-board-header-menu'
 import headerEditLock from '../shared/header-edit-lock.json'
 import { HeaderViewModeIcon } from './header-view-mode-icon'
@@ -1614,7 +1615,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     context: SharedRequestContext,
     imageIds: string[],
     mode: string,
-    retryDraft?: string
+    retryDraft?: string,
+    inspectReferences = context.scope === 'references'
   ) {
     const shell = deps.inputHub.shells.get(sessionId),
       v = view(sessionId)
@@ -1641,6 +1643,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       shell?.notify('error', '请先将图片加入共享画板后引用，输入已保留。')
       return
     }
+    const workspace = deps.researchWorkspaces.for(sessionId)
+    context = sharedPageContext(workspace, context)
     const before = shell?.snapshot,
       draft = before?.draft ?? text,
       key = signature([text, context, mode])
@@ -1655,7 +1659,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       sends.set(sessionId, request)
     }
     request.retry = () =>
-      submitShared(sessionId, text, context, imageIds, mode, retryDraft ?? draft)
+      submitShared(sessionId, text, context, imageIds, mode, retryDraft ?? draft, inspectReferences)
     request.text = text
     request.busy = true
     notify()
@@ -1670,8 +1674,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     shell?.setResearchContextPreparing?.(true)
     try {
       const inspect = (win as any).dshDesktop?.researchLinkFrame?.inspect
-      if (inspect && context.references?.length) {
-        const workspace = deps.researchWorkspaces.for(sessionId)
+      if (inspect && inspectReferences && context.references.length) {
         await Promise.all(context.references.filter(ref => ref.collection === 'artifacts').map(async ref => {
           const node = workspace.getSnapshot().artifacts.find((n: LegacyNode) => n.id === ref.nodeId)
           if (node?.kind !== 'web-link' || new URL(node.url).hostname === 'mp.weixin.qq.com') return
@@ -1681,7 +1684,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           workspace.applyWebLinkInspection(node.id, node.url, inspection)
         }))
       }
-      await (win as any).dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:context.references?.length?context.references.map(ref=>ref.nodeId):deps.researchWorkspaces.for(sessionId).getSnapshot().selection.selectedNodeIds})
+      const selectedIds = inspectReferences
+        ? context.references.map(ref => ref.nodeId)
+        : workspace.getSnapshot().selection.selectedNodeIds
+      await (win as any).dshDesktop?.researchCanvasActions?.bind({ sessionId, selectedIds })
       const current = await flushCanvas(sessionId, { recover: true })
       if (generation !== state.account.generation) return
       if (!current.permissions.execute || current.boardId !== v.boardId || current.epoch !== v.epoch)
@@ -1849,7 +1855,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (pending) return pending
       const generation = state.account.generation
       const check = () => {
-        if (disposed || generation !== state.account.generation || !boardOnlySession(state, id))
+        if (disposed || generation !== state.account.generation || !(isShared(id) || boardOnlySession(state, id)))
           throw new DOMException('看板已切换，请重新打开。', 'AbortError')
       }
       const resolve = async () => {

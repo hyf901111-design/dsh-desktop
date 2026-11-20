@@ -230,7 +230,7 @@ ctx.effect(()=>{
      return selected===undefined?state.recentWorkspaceId:selected;
    };
  const factory=(${installImageFactoryContext.toString()})({
-   sessions,removeProvisionalReference:deleteProvisionalResearchReferenceOccurrence,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
+   sessions,removeProvisionalReference:deleteProvisionalResearchReferenceOccurrence,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockShared(id)||sherlockBoardsAdapter?.isBoardOnly(id)===true,
    getTaskWorkspace,
    getExistingInput:id=>inputHub.shells.get(id),
    hasProjectDraftActivity:sessionId=>eworkRightProjects?.hasActivityFor({sessionId,mode:'image-factory'}),
@@ -273,13 +273,13 @@ ctx.effect(()=>{
    'content: imageFactoryQueueEditContent(queue.find(row=>row.id===editing.id),editing.text,serializeResearchPrompt)')
  const anchor='\n\t\t\tconst composerBlocks = new ComposerBlockRegistry();'
  replace(anchor,anchor+`\nctx.effect(()=>(${installWorkspaceAppSessions.toString()})({
-  sessions,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true,
+  sessions,isBoardOnly:id=>sherlockShared(id)||sherlockBoardsAdapter?.isBoardOnly(id)===true,
   viewFor:id=>slots.resolveStore(chatStore,id),
   workspaceSession:id=>sherlockBoardsAdapter.appWorkspaceSession(id),
   showError:error=>sherlockBoardsAdapter?.showError(error)
 }),'Workspace application sessions');
 const getRightBrowserDraft=id=>{const draft=eworkRightProjects?.getSnapshot();return draft?.mode==='browser'&&draft.sessionId===id?draft.pending:undefined;};
-ctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getRightDraft:getRightBrowserDraft,isBoardOnly:id=>sherlockBoardsAdapter?.isBoardOnly(id)===true}),'Browser application navigation');
+ctx.effect(()=>(${installBrowserNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getRightDraft:getRightBrowserDraft,isBoardOnly:id=>sherlockShared(id)||sherlockBoardsAdapter?.isBoardOnly(id)===true}),'Browser application navigation');
 ctx.effect(()=>{const bridge=(${installBrowserQuestionNative.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],
  getRightDraft:getRightBrowserDraft,
  subscribeRightDraft:notify=>eworkRightProjects?.subscribe(notify),getConversation:()=>ctx.get('conversation')});return bridge.dispose},'Browser region shared composer');

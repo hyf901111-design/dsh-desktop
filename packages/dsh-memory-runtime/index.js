@@ -14,7 +14,8 @@ const identifier = value => typeof value === 'string' && value.length > 0 && val
 const integer = value => Number.isSafeInteger(value) && value >= 0
 const bytes = value => Buffer.byteLength(value, 'utf8')
 const textOf = message => message?.content?.filter(block => block.type === 'text').map(block => block.text).join('\n') ?? ''
-const directUser = message => message?.role === 'user' && message.source?.kind === 'user'
+const sharedBoardRequest = message => typeof message?.id === 'string' && message.id.startsWith('shared-board-task:')
+const directUser = message => message?.role === 'user' && message.source?.kind === 'user' && !sharedBoardRequest(message)
 const eligibleHeader = header => header && !header.parentSession && header.origin !== 'subagent' && !(header.delegationDepth > 0)
 const confirmation = text => bytes(text) <= 180 && /^(?:好的?[！!。.]?$|确认|采用|同意|确定|就这样|按.{0,40}方案)/u.test(text.trim())
 const simpleReply = text => /^(?:\s*(?:好(?:的)?|谢谢|收到|你好|您好|ok|thanks|hello|hi)[！!。.]?\s*)$/iu.test(text)
@@ -196,6 +197,10 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
   listeners.push(ctx.on('agent/pre-step', async ({ agent, turn, signal }, next) => {
     const decision = await next()
     if (!live(agent) || signal.aborted || decision.kind !== 'enter') return decision
+    if (decision.messages.some(sharedBoardRequest)) {
+      states.delete(agent)
+      return decision
+    }
     const userText = decision.messages.filter(directUser).map(textOf).join('\n')
     let state = states.get(agent)
     if (!state || state.turn !== turn) { state = { turn, query: userText, snapshot: undefined }; states.set(agent, state) }
@@ -257,6 +262,7 @@ export function createMemoryRuntime(ctx, { env = process.env, fetch: fetchReques
     const start = session.events.findLast(item => item.seq < event.seq && item.type === 'turn/start' && item.data.turn === event.data.turn)
     if (!start) return
     const body = session.events.filter(item => item.seq > start.seq && item.seq < event.seq)
+    if (body.some(item => item.type === 'user/message' && sharedBoardRequest(item.data))) return
     const users = body.filter(item => item.type === 'user/message' && directUser(item.data))
     const previousEnd = session.events.findLast(item => item.seq < start.seq && item.type === 'turn/end' && item.data.reason?.kind === 'completed')
     const previousStart = previousEnd && session.events.findLast(item => item.seq < previousEnd.seq && item.type === 'turn/start' && item.data.turn === previousEnd.data.turn)
