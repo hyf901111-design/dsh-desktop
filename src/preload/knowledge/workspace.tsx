@@ -1093,6 +1093,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
                     const published = row.publishedSession
                     const title = session ? session.title : row.name
+                    const more = <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
+                      aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
+                      onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button>
                     const completed = completedImports[row.id] !== undefined
                     const bytes = published && !row.size ? '—' : formatBytes(row.size)
                     const updatedAt = new Date(row.updatedAt)
@@ -1134,13 +1137,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                           {completed && <progress className="knowledge-import-progress" aria-label={`${row.name}的上传进度`}
                             value={row.size || 1} max={row.size || 1} />}
                         </span>
-                      </button></td>
+                      </button>{row.received && more}</td>
                       <td>{bytes}</td>
                       <td>{row.updatedAt ? <time dateTime={updatedAt.toISOString()}>{date}</time> : '—'}</td>
-                      <td title={row.received?.owner}>{row.received?.owner}
-                        <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
-                          aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
-                          onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button></td>
+                      <td title={row.received?.owner}>{row.received ? row.received.owner : more}</td>
                     </tr>
                   })}
                 </tbody>
