@@ -427,6 +427,146 @@
         "risks": [],
         "generatedAt": "2026-11-20T23:45:28.553886Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "投委会用例与普通对话跨页双标记联合改稿",
+        "branch": "codex/feat/presentation-cross-page-20261121",
+        "baseCommit": "8c4ccadb4b3a5ca6f95ac287d823cd40581834df",
+        "tipCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+        "commits": [
+          {
+            "commit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+            "parents": [
+              "8c4ccadb4b3a5ca6f95ac287d823cd40581834df"
+            ],
+            "subject": "支持跨页双标记同时改图与居中表格并更新投委会演示"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/presentation-edit-guide-chat.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/edit-guide.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/presentation-references.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/edit-guide.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/edit-guide-chat.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/edit-guide.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/presentation-edit-guide-content.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-edit-guide-composer-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-edit-guide-content.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-reference-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "build:presentation"
+            ],
+            "outcome": "passed",
+            "summary": "编译演示编辑器",
+            "verifiedCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+            "completedAt": "2026-11-20T23:56:22.290684Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "客户端类型检查",
+            "verifiedCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+            "completedAt": "2026-11-20T23:56:34.300284Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-sidebars.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-edit-guide-content.test.ts",
+              "test/presentation-edit-guide-composer-browser.test.js",
+              "test/presentation-reference-browser.test.js",
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "演示归档、会话工具调用和四种侧栏布局",
+            "verifiedCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+            "completedAt": "2026-11-20T23:56:37.669575Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "实际编辑器第 12 页 25 个单元格居中后实测最大中心偏差小于 0.01 像素，导出 PPTX 有 25 个 ctr 锚点并保留第 10 页八个数据。"
+        },
+        "acceptanceCriteria": [
+          "跨页保留两个框选标签及意见并一次发送，同时修改两张幻灯片。",
+          "写好首页备注后直接翻页，先检查第 12 页表格，再回看第 10 页横向条形图。"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-20T23:56:39.009923Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -557,6 +697,22 @@
         "test/workspace-sidebars.test.ts",
         "test/presentation-workspace.test.ts",
         "test/knowledge-library.test.ts",
+        "test/client-capabilities.test.js",
+        "test/conversation-components-policy.test.js",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workspace-sidebars.test.ts",
+        "test/presentation-workspace.test.ts",
+        "test/presentation-edit-guide-content.test.ts",
+        "test/presentation-edit-guide-composer-browser.test.js",
+        "test/presentation-reference-browser.test.js",
         "test/client-capabilities.test.js",
         "test/conversation-components-policy.test.js",
         "--maxWorkers=2"
