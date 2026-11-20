@@ -837,7 +837,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    window.browserView.close()
    document.body.removeAttribute('data-workspace-surface')
    const center=document.querySelector('.pI_x6G_centerCol')
-   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header class="wSkVaW_header" data-odyssey-header-layout="compact" data-srb-session-header><div class="wSkVaW_crumbs"><span class="wSkVaW_crumb">新研究</span></div><div data-srb-tabs hidden><button data-conversation-view-id="chat">对话</button></div></header></section>'
+   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="home" style="position:relative;height:100%"><header class="wSkVaW_header" data-odyssey-header-layout="compact" data-srb-session-header><div class="wSkVaW_crumbs"><span class="wSkVaW_crumb">新研究</span></div><div class="wSkVaW_tabs" data-srb-tabs><button data-conversation-view-id="chat">对话</button></div></header></section>'
    document.body.insertAdjacentHTML('beforeend', `
     <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
      <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home aria-label="主页">主页</button></div>
@@ -866,6 +866,10 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   const homeIcon=homeBar.locator('.workspace-app-title>i')
   const homeToggle=homeBar.getByRole('button',{name:'展开工作区页签',exact:true})
   await homeTitle.waitFor()
+  expect(await page.locator('.wSkVaW_header [data-srb-tabs]').isVisible()).toBe(false)
+  const dragRegion=node=>getComputedStyle(node).getPropertyValue('-webkit-app-region')
+  expect(await homeBar.evaluate(dragRegion)).toBe('drag')
+  expect(await homeToggle.evaluate(dragRegion)).toBe('no-drag')
   expect(await homeIcon.evaluate(icon=>getComputedStyle(icon).maskImage)).not.toBe('none')
   const [iconBox,titleBox,toggleBox]=await Promise.all([homeIcon.boundingBox(),homeTitle.boundingBox(),homeToggle.boundingBox()])
   expect(iconBox.x+iconBox.width).toBeLessThan(titleBox.x)

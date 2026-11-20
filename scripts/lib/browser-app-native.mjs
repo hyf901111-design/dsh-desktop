@@ -309,7 +309,7 @@ ctx.effect(()=>{
  };
  const makePending=(${createPendingConversation.toString()});
  const pending=makePending(conversationOptions);
- const right=(${createRightProjectDrafts.toString()})({globalDraft:pending,makeDraft(entry,ownership){
+ const right=(${createRightProjectDrafts.toString()})({globalDraft:pending,getInput:conversationOptions.getInput,makeDraft(entry,ownership){
    const draft=makePending({...conversationOptions,initialWorkspace:entry.workspaceId,detached:{
      ...ownership,sessionId:entry.sessionId,mode:['notes','research','spreadsheet'].includes(entry.mode)?entry.mode:'chat',
      open:id=>{
@@ -378,6 +378,8 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
 
  // Feed the native global ConversationRoot/Panel/ComposerSurface with a draft,
  // rather than constructing another conversation layout for the Browser.
+ const referenceInput='"data-odyssey-file-reference-session": sessionId,';
+ replace(referenceInput,referenceInput+'\n "data-pending-conversation-input": sessionId===undefined&&keyboard?true:undefined,');
  {const signature=source.match(/function HomeGuideNativeOriginalConversationRoot\([^\n]+\) \{/)?.[0];if(!signature)throw Error('Native conversation root signature drift');replace(signature,signature+`
  const composerApp=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);return()=>document.removeEventListener('sherlock:workspace-surface-change',callback)},()=>subagentPanel?undefined:document.body.dataset.workspaceSurface,()=>undefined);
  const browserTabId=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:browser-active-tab-change',callback);return()=>document.removeEventListener('sherlock:browser-active-tab-change',callback)},()=>composerApp==='browser'?document.body.dataset.browserActiveTab:undefined,()=>undefined);
@@ -406,8 +408,10 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('researchEmpty ? { placeholder: "描述你想研究的问题…" }', `researchEmpty ? { placeholder: document.body.dataset.workspaceSurface==='knowledge' ? "筛选、排序或查找文件…" : browserAppActive ? "输入你的问题…" : "描述你想研究的问题…" }`)
  replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = imageTaskCreating || (sessionId === undefined ? !pendingConversation || pendingChatState?.workspaceId === undefined : hero && chipTitle === undefined && !cwd);')
  const inputRow='const inputBar = renderSlot("conversation.composer.bar", {';
- replace(inputRow,`const canChooseRightProject=sidebarMode&&!subagentPanel&&(pendingConversation||conversationVacant);
- const rightProjectMode=browserAppActive?composerApp:activeView??'chat';
+ replace(inputRow,`const rightProjectMode=browserAppActive?composerApp:activeView??'chat';
+ const locksRightProject=['notes','spreadsheet','research'].includes(rightProjectMode);
+ const rightProjectLocked=locksRightProject&&directoryLocked;
+ const canChooseRightProject=sidebarMode&&!subagentPanel&&!rightProjectLocked&&(pendingConversation||conversationVacant);
  const sessionScopedWorkspace=sessionId!==undefined&&document.body.dataset.sessionWorkspaceSwitch===sessionId;
  const launchWorkspaceId=eworkSidebarWorkspace?.forSurface(rightProjectMode,sessionId);
  const rightProjectContext=react.useMemo(()=>canChooseRightProject?{
@@ -416,13 +420,17 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  }:undefined,[canChooseRightProject,sessionId,rightProjectMode,browserTabId,launchWorkspaceId,browserAppActive,sessionScopedWorkspace,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
  const rightDraft=react.useSyncExternalStore(eworkRightProjects?.subscribe||(()=>()=>{}),eworkRightProjects?.getSnapshot||(()=>undefined));
  const rightProjectDraft=rightProjectContext&&rightDraft?.sessionId===sessionId&&rightDraft?.mode===rightProjectMode&&rightDraft?.tabId===browserTabId?rightDraft:undefined;
- react.useLayoutEffect(()=>{if(!subagentPanel)eworkRightProjects?.show(rightProjectContext)},[subagentPanel,rightProjectContext]);
+ react.useLayoutEffect(()=>{
+  if(subagentPanel)return;
+  if(rightProjectLocked&&sessionId!==undefined)eworkRightProjects?.lockToSession(sessionId,rightProjectMode);
+  eworkRightProjects?.show(rightProjectContext);
+ },[subagentPanel,rightProjectContext,rightProjectLocked,sessionId,rightProjectMode]);
  const rightWorkspaceId=rightProjectDraft?rightProjectDraft.workspaceId:rightProjectContext?.workspaceId;
  const rightWorkspaceLabel=rightProjectDraft?workspaces.items.find(item=>item.workspaceId===rightWorkspaceId)?.title:chipTitle;
  const pickRightWorkspace=workspaceId=>{
   setPickerOpen(false);
   pickerAnchor.current?.focus({preventScroll:true});
-  if(!rightProjectContext)return;
+  if(!rightProjectContext||locksRightProject&&(directoryLocked||sessionId!==undefined&&localStorage.getItem(directoryLockKey)==='true'))return;
   try{
    if(!browserTabId&&(sessionId===undefined||workspaceId===rightWorkspaceId))eworkPendingConversation?.selectWorkspace(workspaceId);
    else eworkRightProjects?.select(rightProjectContext,workspaceId);

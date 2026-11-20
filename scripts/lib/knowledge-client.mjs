@@ -133,17 +133,27 @@ export function sharedKnowledgeCitation(value, doc = document) {
  }}
 }
 
-export function installKnowledgeReferences({sessions,getInput,getPending,window:win=window,document:doc=document}) {
- const insert=(reference,sessionId,segment)=>{
+export function installKnowledgeReferences({sessions,getInput,getPending,getRightDraft,window:win=window,document:doc=document}) {
+ const type='application/x-ework-knowledge-file'
+ const selector='textarea:is([data-odyssey-file-reference-session],[data-pending-conversation-input])'
+ const editable=(input,sessionId)=>input?.getClientRects().length&&!input.disabled&&!input.readOnly&&
+  !input.closest('[hidden],[aria-hidden=true],[data-odyssey-subagent-panel]')&&
+  (input.hasAttribute('data-pending-conversation-input')||input.dataset.odysseyFileReferenceSession===sessionId)
+ const shellFor=(input,sessionId)=>input.hasAttribute('data-pending-conversation-input')
+  ? (input.closest('[data-research-composer-host]')&&getRightDraft?.(sessionId)||sessionId===undefined&&getPending())?.shell
+  : getInput(sessionId)
+ const fileReference=detail=>{
+  if(!detail||typeof detail.id!=='string'||!detail.id||typeof detail.label!=='string'||!detail.label)throw Error('知识库引用无效。')
+  return {kind:'file',id:detail.id,label:detail.label}
+ }
+ const insert=(reference,sessionId,segment,target)=>{
   const currentId=sessions.list.getSnapshot().current
   if(currentId!==sessionId||sessionId&&sessions.subagentAddress(sessionId))throw Error('当前会话已变化，原草稿已保留。')
-  const shell=sessionId?getInput(sessionId):getPending()?.shell
-  const snapshot=shell?.snapshot
-  if(!snapshot||shell.disposed||snapshot.phase!=='plain'||snapshot.researchContextPreparing)throw Error('当前输入不可编辑。')
-  const visible=Array.from(doc.querySelectorAll(sessionId?'textarea[data-odyssey-file-reference-session]':'textarea[data-pending-conversation-input]'))
-   .filter(el=>(!sessionId||el.dataset.odysseyFileReferenceSession===sessionId)&&el.getClientRects().length&&!el.closest('[hidden],[aria-hidden=true],[data-odyssey-subagent-panel]'))
+  const visible=target?[target]:Array.from(doc.querySelectorAll(selector)).filter(el=>editable(el,sessionId))
   const input=visible.find(el=>el===doc.activeElement)??visible.find(el=>el.closest('#odyssey-right-workspace-panel'))??visible[0]
-  if(!input||input.disabled||input.readOnly)throw Error('当前对话输入不可用。')
+  if(!editable(input,sessionId))throw Error('当前对话输入不可用。')
+  const shell=shellFor(input,sessionId),snapshot=shell?.snapshot
+  if(!snapshot||shell.disposed||snapshot.phase!=='plain'||snapshot.researchContextPreparing)throw Error('当前输入不可编辑。')
   const add={source:'knowledge-reference',ref:JSON.stringify(reference),label:reference.label,clipboardText:reference.label}
   let span=segment?.via==='menu'?segment.span:undefined
   if(!span&&segment?.via==='enter'){
@@ -163,19 +173,40 @@ export function installKnowledgeReferences({sessions,getInput,getPending,window:
  const receive=async event=>{
   const detail=event.detail
   try {
-   if(!detail||typeof detail.id!=='string'||typeof detail.label!=='string')throw Error('知识库引用无效。')
+   const reference=fileReference(detail)
    const sessionId=sessions.list.getSnapshot().current
    if(detail.activateChat){
     doc.dispatchEvent(new win.CustomEvent('sherlock:knowledge-activate-chat'))
     await new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)))
    }
-   insert({kind:'file',id:detail.id,label:detail.label},sessionId)
+   insert(reference,sessionId)
    doc.dispatchEvent(new win.CustomEvent('sherlock:knowledge-reference-status',{detail:{requestId:detail.requestId,ok:true}}))
   } catch(error) {
    doc.dispatchEvent(new win.CustomEvent('sherlock:knowledge-reference-status',{detail:{requestId:detail?.requestId,ok:false,message:error.message}}))
   }
  }
+ const dropTarget=event=>{
+  if(!event.dataTransfer?.types.includes(type))return
+  const input=event.target?.closest?.('.uV2eYG_root')?.querySelector(selector)
+  const sessionId=sessions.list.getSnapshot().current
+  if(editable(input,sessionId)&&shellFor(input,sessionId))return {input,sessionId}
+ }
+ const dragover=event=>{
+  if(!dropTarget(event))return
+  event.preventDefault()
+  event.dataTransfer.dropEffect='copy'
+ }
+ const drop=event=>{
+  const target=dropTarget(event)
+  if(!target)return
+  event.preventDefault()
+  try{insert(fileReference(JSON.parse(event.dataTransfer.getData(type))),target.sessionId,undefined,target.input)}
+  catch(error){shellFor(target.input,target.sessionId)?.notify('error',error.message)}
+ }
  doc.addEventListener('sherlock:knowledge-reference-file',receive)
+ doc.addEventListener('dragover',dragover)
+ // A guided demo can consume its own drop at the target before it bubbles here.
+ doc.addEventListener('drop',drop)
  return {
   command:{
    name:'knowledge', description:'选择要参考的知识库分类或文件夹',
@@ -190,7 +221,11 @@ export function installKnowledgeReferences({sessions,getInput,getPending,window:
     }
    }
   },
-  dispose:()=>doc.removeEventListener('sherlock:knowledge-reference-file',receive)
+  dispose:()=>{
+   doc.removeEventListener('sherlock:knowledge-reference-file',receive)
+   doc.removeEventListener('dragover',dragover)
+   doc.removeEventListener('drop',drop)
+  }
  }
 }
 
@@ -409,7 +444,9 @@ export function patchKnowledgeConversation(input) {
   input=replace(input,registration,registration+`
  ${marker}
  ctx.inject(['commandUi','inputTriggers'],scope=>{
-  const references=(${installKnowledgeReferences.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')]});
+  const references=(${installKnowledgeReferences.toString()})({sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for('sherlock:pending-conversation')],getRightDraft:id=>{
+   const draft=eworkRightProjects?.getSnapshot();return draft?.sessionId===id?draft?.pending:undefined;
+  }});
   scope.effect(()=>references.dispose,'Knowledge Base file references');
   scope.effect(()=>scope.get('commandUi').register(references.command),'Knowledge Base slash command');
   scope.effect(()=>scope.get('inputTriggers').registerSource((${knowledgeReferenceCodec.toString()})()),'Knowledge Base reference codec');

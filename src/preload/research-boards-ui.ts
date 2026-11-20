@@ -1254,27 +1254,45 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
   }))
 
-  async function openBoard(boardId: string) {
-    const missingSession = (id: string) => {
-      const list = deps.sessions.list.getSnapshot()
-      return list.phase === 'ready' && (!list.byId[id] || !!list.byId[id].removed)
+  function waitForBoardSession(id: string) {
+    const list = deps.sessions.list.getSnapshot()
+    if (list.phase === 'pending' && !list.byId[id]) {
+      return deps.sessions.refresh().then(() => {
+        const refreshed = deps.sessions.list.getSnapshot()
+        if (refreshed.phase === 'pending' && !refreshed.byId[id]) throw Error('会话列表加载失败，请重试。')
+      })
     }
+  }
+
+  const missingSession = (id: string) => {
+    const list = deps.sessions.list.getSnapshot()
+    return list.phase === 'ready' && (!list.byId[id] || !!list.byId[id].removed)
+  }
+
+  async function openBoard(boardId: string) {
+    const turn = ++navigation, generation = state.account.generation, selected = current()
+    const stillOpening = () => !disposed && turn === navigation && generation === state.account.generation && selected === current()
     // The account-scoped directory already identifies pinned local sessions.
-    // Open the shell now; activate remains the authoritative fresh permission read.
+    // Wait for the native catalog before opening a cached local session.
     const known = state.account.status === 'ready' && state.account.user &&
       state.boards.find(board => board.boardId === boardId && board.pinned && board.localSessionId)
-    if (known && known.localSessionId && !missingSession(known.localSessionId)) {
-      const id = known.localSessionId, generation = state.account.generation
-      prime(id)
-      deps.sessions.open(id)
-      selectBoardSession(id)
-      await activate(id, true)
-      if (!disposed && generation === state.account.generation && current() === id && !activationErrors.has(id))
-        await call('local.directory', { mode: 'ensure', sessionId: id })
-      return id
+    const knownSession = known && known.localSessionId
+    if (knownSession) {
+      const loading = waitForBoardSession(knownSession)
+      if (loading) {
+        await loading
+        if (!stillOpening()) return knownSession
+      }
+      if (!missingSession(knownSession)) {
+        prime(knownSession)
+        deps.sessions.open(knownSession)
+        selectBoardSession(knownSession)
+        await activate(knownSession, true)
+        if (!disposed && generation === state.account.generation && current() === knownSession && !activationErrors.has(knownSession))
+          await call('local.directory', { mode: 'ensure', sessionId: knownSession })
+        return knownSession
+      }
     }
-    const turn = ++navigation,
-      generation = state.account.generation
     let pending = opening.get(boardId)
     if (!pending) {
       pending = (async () => {
@@ -1283,9 +1301,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           reservationId?: string
           title: string
         }
-        const missingLocalSessionId = known && known.localSessionId && missingSession(known.localSessionId)
-          ? known.localSessionId : undefined
+        const missingLocalSessionId = knownSession && missingSession(knownSession) ? knownSession : undefined
         let opened = await call<OpenedBoard>('board.open', { boardId, ...(missingLocalSessionId && { missingLocalSessionId }) })
+        if (opened.localSessionId) await waitForBoardSession(opened.localSessionId)
         if (opened.localSessionId && missingSession(opened.localSessionId) && opened.localSessionId !== missingLocalSessionId)
           opened = await call<OpenedBoard>('board.open', { boardId, missingLocalSessionId: opened.localSessionId })
         if (opened.localSessionId) { await call('local.directory',{mode:'ensure',sessionId:opened.localSessionId}); return opened.localSessionId }
@@ -1302,8 +1320,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
     try {
       const id = await pending
-      if (turn !== navigation || generation !== state.account.generation)
-        return id
+      if (disposed || turn !== navigation || generation !== state.account.generation || ![selected, id].includes(current())) return id
       prime(id)
       deps.sessions.open(id)
       selectBoardSession(id)
@@ -1861,7 +1878,13 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     showError,
     isResearch: (id: string) => activeResearch.has(id),
     async openPersonal(id: string) {
-      navigation++
+      const turn = ++navigation, generation = state.account.generation, selected = current()
+      const loading = waitForBoardSession(id)
+      if (loading) {
+        await loading
+        if (disposed || turn !== navigation || generation !== state.account.generation || selected !== current()) return
+      }
+      if (missingSession(id)) throw Error('该看板的会话已不可用。')
       prime(id)
       deps.sessions.open(id)
       await activate(id, true)

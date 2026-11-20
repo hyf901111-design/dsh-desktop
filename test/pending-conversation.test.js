@@ -1,5 +1,6 @@
 import {expect,it,vi} from 'vitest'
 import {createPendingConversation,browserPromptReference,EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
+import {createRightProjectDrafts} from '../scripts/lib/right-project-drafts.mjs'
 function fixture(extra={}){let sink;const original={draft:'请总结当前网页',draftRev:3,imageIds:[],occurrences:[]},shell={snapshot:{...original},notify:vi.fn(),setResearchContextPreparing:vi.fn(),commitSend:vi.fn(),dispose:vi.fn()},real={snapshot:{draft:'',imageIds:[]},restoreDraftState:vi.fn(),submit:vi.fn(),addImages:vi.fn(()=>true)},session={current:undefined},projects={items:[{workspaceId:'A',title:'A项目',path:'/a'},{workspaceId:'B',title:'B项目',path:'/b'}],recentWorkspaceId:'A'},sessions={list:{getSnapshot:()=>session},create:vi.fn(async()=> 'new'),open:vi.fn(id=>{session.current=id})},onCreated=vi.fn();const pending=createPendingConversation({makeShell:deps=>{sink=deps.defaultSink;return shell},sessions,workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated,prepareContext:async()=>({title:'当前页',text:'真实正文'}),...extra});return{session,pending,shell,real,sessions,onCreated,send:()=>sink(original.draft,[],'queue',original)}}
 it('selects a project and opens no session until the first nonempty send',async()=>{const f=fixture();f.pending.selectWorkspace('B');expect(f.sessions.create).not.toHaveBeenCalled();await f.send();expect(f.sessions.create).toHaveBeenCalledExactlyOnceWith({workspaceId:'B'});expect(f.real.restoreDraftState).toHaveBeenCalledWith(expect.objectContaining({draft:'请总结当前网页',draftRev:3}));expect(f.real.submit).toHaveBeenCalledExactlyOnceWith('queue');expect(f.onCreated).toHaveBeenCalledWith('new',expect.objectContaining({text:'真实正文'}));expect(f.shell.commitSend).toHaveBeenCalled()})
 it('does not allocate an output folder until a first send, and keeps an explicit no-project choice through a list refresh', async () => {
@@ -32,6 +33,26 @@ it('leaves the center session selected if a right draft is superseded during cre
  expect(f.shell.commitSend).not.toHaveBeenCalled();
  expect(f.shell.snapshot.draft).toBe('请总结当前网页');
 });
+
+it('moves a right draft and its references to the edited document before closing the project picker', () => {
+ const existing={phase:'plain',draft:'原\uFFFC',occurrences:[{occurrenceId:1,offset:1}],imageIds:[]}
+ const draft={draft:'新\uFFFC',occurrences:[{occurrenceId:1,offset:1}],imageIds:['image']}
+ const target={snapshot:existing,addImages:vi.fn(()=>true),restoreDraftState:vi.fn()}
+ const source={snapshot:draft,commitSend:vi.fn()}
+ const host=createRightProjectDrafts({
+  globalDraft:{getManualWorkspace:()=>undefined,selectWorkspace:vi.fn()},
+  makeDraft:()=>({shell:source,getSnapshot:()=>({busy:false})}),
+  getInput:()=>target
+ })
+ const context={sessionId:'document',mode:'notes',workspaceId:'A'}
+ host.select(context,'B')
+ host.lockToSession(context.sessionId,context.mode)
+ expect(target.addImages).toHaveBeenCalledExactlyOnceWith(['image'])
+ expect(target.restoreDraftState).toHaveBeenCalledExactlyOnceWith({
+  draft:'原\uFFFC\n新\uFFFC',occurrences:[{occurrenceId:1,offset:1},{occurrenceId:2,offset:4}]
+ })
+ expect(source.commitSend).toHaveBeenCalledExactlyOnceWith(['image'],draft.draft)
+})
 
 it('deduplicates concurrent first sends and preserves the draft when creation fails',async()=>{const f=fixture();let release;f.sessions.create.mockImplementation(()=>new Promise((_,reject)=>{release=()=>reject(Error('创建失败'))}));const first=f.send();await Promise.resolve();await f.send();expect(f.sessions.create).toHaveBeenCalledTimes(1);release();await first;expect(f.shell.commitSend).not.toHaveBeenCalled();expect(f.shell.notify).toHaveBeenCalledWith('error','创建失败');expect(f.pending.getSnapshot().busy).toBe(false)})
 
