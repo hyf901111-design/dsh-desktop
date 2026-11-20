@@ -101,7 +101,18 @@ edit('src/hooks/useExport.ts', [
     "pptx.write({ outputType: 'arraybuffer' }).then(bytes => { window.dispatchEvent(new CustomEvent('odyssey:export', {detail:bytes})); exporting.value=false }).catch"
   ]
 ])
+// PowerPoint's Tab cycle and Clear Canvas operate on slide content only.
+edit('src/hooks/useDeleteElement.ts', [
+  ['slidesStore.updateSlide({ elements: [] })',
+    "slidesStore.updateSlide({ elements: currentSlide.value.elements.filter(el => 'odysseyMaster' in el && el.odysseyMaster) })"]
+])
 edit('src/hooks/useGlobalHotkey.ts',[
+  ['const tabActiveElement = () => {\n    if (!currentSlide.value.elements.length) return',
+    "const tabActiveElement = () => {\n    const selectable = currentSlide.value.elements.filter(el => !el.lock)\n    if (!selectable.length) return"],
+  ['const firstElement = currentSlide.value.elements[0]', 'const firstElement = selectable[0]'],
+  ['const currentIndex = currentSlide.value.elements.findIndex', 'const currentIndex = selectable.findIndex'],
+  ['currentIndex >= currentSlide.value.elements.length - 1', 'currentIndex >= selectable.length - 1'],
+  ['const nextElementId = currentSlide.value.elements[nextIndex].id', 'const nextElementId = selectable[nextIndex].id'],
   ['const { ctrlKey, shiftKey, altKey, metaKey } = e',
     "if ((e.target as HTMLElement)?.closest?.('input,textarea,select,.style-popover,.theater')) return; const { ctrlKey, shiftKey, altKey, metaKey } = e"],
   ['e.preventDefault()\n      undo()', 'e.preventDefault()\n      if (shiftKey) redo(); else undo()']
