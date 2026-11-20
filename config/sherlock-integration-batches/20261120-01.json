@@ -9,41 +9,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复会话顶栏拖动、统一背景并恢复右侧斜杠命令",
+        "featureName": "右侧切换工作区时立即新建对应应用会话",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "8dd903ddfca6b482eaf91de07665ad5eb651d7ca",
-        "tipCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
+        "baseCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
+        "tipCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
         "commits": [
           {
-            "commit": "f3abd5faf185b48316bd5d650017810241555ac6",
+            "commit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
             "parents": [
-              "8dd903ddfca6b482eaf91de07665ad5eb651d7ca"
+              "18f77f9e460c90127c62c131a01590e14956dc30"
             ],
-            "subject": "修复会话顶栏空白拖窗并统一表格底色"
-          },
-          {
-            "commit": "46b405f3556a6fc9bdc8fac133b2837be40c51c3",
-            "parents": [
-              "f3abd5faf185b48316bd5d650017810241555ac6"
-            ],
-            "subject": "将探索页背景调整为中性灰"
-          },
-          {
-            "commit": "18f77f9e460c90127c62c131a01590e14956dc30",
-            "parents": [
-              "46b405f3556a6fc9bdc8fac133b2837be40c51c3"
-            ],
-            "subject": "接通右侧工作区草稿的斜杠命令菜单"
+            "subject": "右侧切换工作区时立即新建对应应用会话"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "scripts/lib/browser-app-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/notes-composer.mjs"
           },
           {
             "status": "M",
@@ -55,23 +37,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/explore-menu.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/window-resize.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-topbar.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/explore-menu-browser.test.ts"
+            "path": "scripts/lib/sidebar-new-note.mjs"
           },
           {
             "status": "M",
@@ -79,11 +45,15 @@
           },
           {
             "status": "M",
-            "path": "test/panel-toggle-drag-region.test.js"
+            "path": "test/fixtures/sidebar-new-note-browser.tsx"
           },
           {
             "status": "M",
             "path": "test/pending-conversation-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation.test.js"
           }
         ],
         "checks": [
@@ -92,43 +62,14 @@
               "npx",
               "vitest",
               "run",
-              "test/panel-toggle-drag-region.test.js",
-              "test/window-resize.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "会话顶栏拖动、按钮命中、弹窗和表格底色，14 项通过",
-            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
-            "completedAt": "2026-11-20T05:26:07.464Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/explore-menu-browser.test.ts",
-              "-t",
-              "backdrop neutral|limits Explore window dragging"
-            ],
-            "outcome": "passed",
-            "summary": "探索页明暗背景和顶栏命中，8 项通过",
-            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
-            "completedAt": "2026-11-20T05:26:07.464Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
               "test/pending-conversation-rendered.test.js",
               "-t",
-              "native command menu for a selected browser project|hands the first home|restores the chosen project|changes only the right project|renders native welcome|hides the right project picker"
+              "native command menu|hides the right project picker|opens the selected right project|creating a session from the picker fails|without leaving the image canvas|restores the chosen project and unsent text|retains the session project|inherits the visible workspace|keeps the research welcome|changing or clearing the right project"
             ],
             "outcome": "passed",
-            "summary": "右侧和首页命令交接、项目选择和草稿，11 项通过",
-            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
-            "completedAt": "2026-11-20T05:26:07.464Z",
+            "summary": "右侧选择即新建、模式保留、草稿保留、命令菜单及编辑锁定",
+            "verifiedCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
+            "completedAt": "2026-11-20T05:50:25.685Z",
             "timeoutMs": 120000
           },
           {
@@ -140,72 +81,39 @@
               "test/pending-conversation-panel.test.js"
             ],
             "outcome": "passed",
-            "summary": "待创建会话和右侧对话，17 项通过",
-            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
-            "completedAt": "2026-11-20T05:26:07.464Z",
+            "summary": "验证同次创建只执行一次、应用标题及会话交接",
+            "verifiedCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
+            "completedAt": "2026-11-20T05:50:25.685Z",
             "timeoutMs": 120000
           },
           {
             "argv": [
-              "node",
-              "--experimental-vm-modules",
-              "scripts/verify-frontend-patch-reentry.mjs"
+              "npx",
+              "vitest",
+              "run",
+              "test/sidebar-new-note-browser.test.js",
+              "-t",
+              "fresh spreadsheet|creates normal native Notes"
             ],
             "outcome": "passed",
-            "summary": "客户端补丁重复应用结果一致且语法有效",
-            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
-            "completedAt": "2026-11-20T05:26:07.464Z",
+            "summary": "验证已有侧栏笔记和表格创建入口",
+            "verifiedCommit": "1e75d81db4cd7f988d41f0273f4a00b729bfb25a",
+            "completedAt": "2026-11-20T05:50:25.685Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 验证会话标题栏拖动事件、明暗主题以及浏览器右侧原生命令菜单"
+          "summary": "渲染测试验证选择工作区创建会话后，斜杠按钮直接打开菜单"
         },
         "acceptanceCriteria": [
-          "从空白会话顶栏拖动 macOS 窗口，顶栏按钮可点击",
-          "表格的顶栏和内容区使用同一底色",
-          "探索页明暗主题背景无色相",
-          "浏览器右侧所选工作区可打开命令菜单并保留草稿"
+          "选择已有工作区时新建并进入该工作区的会话",
+          "延续当前应用的默认标题和模式",
+          "命令菜单不再次创建会话",
+          "编辑过的工作区保持锁定"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T05:26:07.464Z"
-      },
-      "merged": {
-        "mergeCommit": "e392fbc62251570694a410806dfbbcba019de79c",
-        "verificationCommit": "e392fbc62251570694a410806dfbbcba019de79c",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "e392fbc62251570694a410806dfbbcba019de79c",
-            "completedAt": "2026-11-20T05:26:21.198Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e392fbc62251570694a410806dfbbcba019de79c",
-            "completedAt": "2026-11-20T05:26:21.198Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-20T05:26:21.198Z"
+        "generatedAt": "2026-11-20T05:50:25.685Z"
       }
     }
   ],
