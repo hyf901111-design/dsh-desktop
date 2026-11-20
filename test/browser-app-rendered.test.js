@@ -7,6 +7,7 @@ let browser,code
 const evidence=process.env.BROWSER_APP_EVIDENCE||'/tmp/browser-app-figma-20261109'
 beforeAll(async()=>{
  const result=await build({stdin:{resolveDir:process.cwd(),contents:`import {mountDesktopShellStyles} from './src/preload/shell-style';mountDesktopShellStyles(document);import {mountNavigationShortcuts} from './src/preload/navigation-shortcuts';window.mountNavigationShortcuts=mountNavigationShortcuts;import {mountWorkspaceContentIndicators} from './src/preload/workspace-content-indicators';window.mountWorkspaceContentIndicators=mountWorkspaceContentIndicators;import {keepWorkspaceViewsExpanded,mountSessionWorkspaceViewShortcuts,mountWorkspaceViewCustomization,setWorkspaceViewPreferences} from './src/preload/workspace-view-shortcuts';window.mountSessionWorkspaceViewShortcuts=mountSessionWorkspaceViewShortcuts;window.keepWorkspaceViewsExpanded=keepWorkspaceViewsExpanded;window.mountWorkspaceViewCustomization=mountWorkspaceViewCustomization;window.setWorkspaceViewPreferences=setWorkspaceViewPreferences;import homeShortcutStyles from './src/preload/home-app-shortcuts.css?raw';window.homeShortcutStyles=homeShortcutStyles;import {BrowserAppView} from './src/preload/browser/view';import {scheduledStyles} from './src/preload/scheduled/style';import {ScheduledTaskView} from './src/preload/scheduled/view';window.scheduledMenuView=new ScheduledTaskView(document,{});const railStyle=document.createElement('style');railStyle.textContent=scheduledStyles;document.head.append(railStyle);
+import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';window.mountNativeBrowserMenuProjection=bridge=>new NativeBrowserMenuProjection(document,bridge);
 let listener;let n=0;const data={tabs:[{id:'tab0',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'tab0',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}};
 window.setBrowserState=value=>{Object.assign(data,value);listener(structuredClone(data))};window.browserCalls=[];window.snapshot=()=>structuredClone(data);window.update=()=>listener(structuredClone(data));
 const bridge={subscribe:f=>{listener=f;return()=>{}},source:async(...args)=>window.browserCalls.push(['source',...args]),request:async(method,input={})=>{if(method==='site')return{permissions:data.sitePermissions??{}};window.browserCalls.push([method,input]);const t=data.tabs.find(t=>t.id===data.activeId);if(method==='capture'){if(window.browserCapture)return await window.browserCapture();const c=document.createElement('canvas');c.width=20;c.height=20;return c.toDataURL()};if(method==='new'){const tab={...t,id:'tab'+(++n),title:input.url?'Example Domain':'新标签页',url:input.url??'',private:!!input.private};delete tab.page;data.tabs.push(tab);data.activeId=tab.id}if(method==='internal-page'){let page=data.tabs.find(tab=>tab.page===input.page);if(!page){page={...t,id:'tab'+(++n),url:'',page:input.page,title:input.page==='history'?'历史记录':'下载内容',private:false,loading:false,canBack:false,canForward:false};data.tabs.push(page)}data.activeId=page.id}if(method==='select')data.activeId=input.id;if(method==='reorder'){const tab=data.tabs.find(t=>t.id===input.id),before=data.tabs.find(t=>t.id===input.beforeId);if(tab&&tab!==before){data.tabs.splice(data.tabs.indexOf(tab),1);data.tabs.splice(before?data.tabs.indexOf(before):data.tabs.length,0,tab)}}if(method==='zoom')data.tabs.find(tab=>tab.id===input.id).zoom=input.value;if(method==='close'){const index=data.tabs.findIndex(t=>t.id===input.id);data.tabs.splice(index,1);if(data.activeId===input.id)data.activeId=data.tabs[Math.min(index,data.tabs.length-1)].id}if(method==='home'){delete t.page;t.url='';t.title='新标签页';t.canBack=false;t.canForward=false}if(method==='history-remove')data.history=data.history.filter(row=>row.id!==input.id);if(method==='navigate'){delete t.page;t.url=input.url;t.title='Example Domain';data.history.unshift({id:'h'+n,url:input.url,title:t.title,at:Date.now()})}if(method==='bookmark'){const old=data.bookmarks.find(b=>b.url===input.url);if(input.remove)data.bookmarks=data.bookmarks.filter(b=>b.url!==input.url);else if(old)Object.assign(old,{title:input.title,folder:input.folder});else data.bookmarks.push({id:'b'+n,url:input.url,title:input.title,folder:input.folder,at:Date.now()})}if(method==='bookmark-update')Object.assign(data.bookmarks.find(b=>b.id===input.id),input);if(method==='bookmarks-remove')data.bookmarks=data.bookmarks.filter(b=>!input.ids.includes(b.id));if(method==='folder')data.folders.push(input.name);if(method==='settings')Object.assign(data.settings,input);if(method==='clear'&&input.history)data.history=[];if(method==='find')t.find={matches:6,activeMatchOrdinal:1};return structuredClone(data)}};
@@ -271,6 +272,59 @@ it('keeps only the newest browser popup and never revives a cancelled menu',asyn
   await liveWebsite(page);await page.evaluate(()=>{void window.browserView.show('bookmarks');void window.browserView.show('menu')});await page.getByRole('menu',{name:'浏览器菜单',exact:true}).waitFor();expect(await page.locator('[data-browser-panel]').count()).toBe(1)
   await page.getByRole('button',{name:'收藏夹',exact:true}).click();expect(await page.locator('[data-browser-panel=menu]').count()).toBe(0);await page.getByRole('dialog',{name:'收藏夹',exact:true}).waitFor();await page.keyboard.press('Escape');await expectLivePage(page);expect(await page.locator('[data-browser-panel]').count()).toBe(0)
   await page.evaluate(()=>{void window.browserView.show('menu');window.browserView.close()});await page.evaluate(()=>window.browserView.open('session-B'));await liveWebsite(page);expect(await page.locator('[data-browser-panel]').count()).toBe(0);await expectLivePage(page);expect(errors).toEqual([])
+ }finally{await page.close()}
+})
+
+it('keeps conversation image previews in the attachment renderer and restores the same native webpage on close',async()=>{
+ const {page,errors}=await fixture()
+ try{
+  await page.evaluate(()=>window.setBrowserState({nativeMenus:true}))
+  await liveWebsite(page)
+  await page.evaluate(()=>{
+   if(!crypto.randomUUID)crypto.randomUUID=()=>String(Math.random())
+   window.mountNativeBrowserMenuProjection({
+    request:async(method,input)=>{window.browserCalls.push([method,input]);return true},
+    subscribeAction:()=>()=>{}
+   })
+   const canvas=document.createElement('canvas')
+   canvas.width=120;canvas.height=60
+   const opener=document.createElement('button')
+   opener.textContent='放大过程截图'
+   opener.style.cssText='position:fixed;right:20px;bottom:20px'
+   opener.onclick=()=>canvas.toBlob(blob=>{
+    const url=URL.createObjectURL(blob)
+    const dialog=document.createElement('div')
+    dialog.setAttribute('data-image-preview-dialog','')
+    dialog.setAttribute('role','dialog')
+    dialog.setAttribute('aria-modal','true')
+    dialog.style.cssText='position:fixed;inset:0;z-index:100;display:grid;place-content:center'
+    const image=new Image()
+    image.src=url
+    image.alt='过程截图.png'
+    const close=document.createElement('button')
+    close.textContent='关闭预览'
+    close.onclick=()=>{dialog.remove();URL.revokeObjectURL(url);opener.focus()}
+    dialog.append(image,close)
+    document.body.append(dialog)
+    close.focus()
+   })
+   document.body.append(opener)
+  })
+  const opener=page.getByRole('button',{name:'放大过程截图'})
+  const lastLayout=()=>page.evaluate(()=>window.browserCalls.filter(([method])=>method==='layout').at(-1)?.[1])
+  const tab=await page.locator('.eb-root').getAttribute('data-tab-id')
+  await opener.click()
+  const dialog=page.locator('[data-image-preview-dialog]')
+  await expect.poll(async()=>(await lastLayout())?.visible).toBe(false)
+  expect((await lastLayout()).active).toBe(true)
+  expect(await dialog.getAttribute('data-browser-projected')).toBeNull()
+  await expect.poll(()=>dialog.locator('img').evaluate(image=>image.naturalWidth)).toBe(120)
+  await dialog.getByRole('button',{name:'关闭预览'}).click()
+  await expect.poll(async()=>(await lastLayout())?.visible).toBe(true)
+  expect(await page.locator('.eb-root').getAttribute('data-tab-id')).toBe(tab)
+  expect(await opener.evaluate(element=>document.activeElement===element)).toBe(true)
+  expect(await page.evaluate(()=>window.browserCalls.slice(window.liveCallStart).map(([method])=>method))).toEqual(['layout','layout'])
+  expect(errors).toEqual([])
  }finally{await page.close()}
 })
 

@@ -3,6 +3,8 @@ export type BrowserOverlayPreparation = {
  waitUntil(ready:Promise<boolean>):void
 }
 
+export const imagePreviewDialogSelector = '[data-image-preview-dialog]'
+
 /** Popup owners can measure a hidden portal before handing it to a native surface. */
 export function prepareBrowserOverlay(document:Document,element:HTMLElement){
  const pending:Promise<boolean>[]=[],Event=document.defaultView?.CustomEvent
