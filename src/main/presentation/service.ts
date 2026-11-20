@@ -267,10 +267,20 @@ export function installPresentation(options: {
         )
         if (admitted && !admitted.useSlide && !args.slideId && !admitted.references.length)
           delete data.currentSlide
+        const selected = admitted?.references ?? []
+        const deck = selected.some(ref => ref.kind === 'mark') ? store.read(key).deck : null
+        const references = selected.map(ref => {
+          if (ref.kind !== 'mark') return ref
+          const page = deck?.slides.find(slide => slide.id === ref.slideId)
+          const mark = page?.marks?.find((item: { id: string }) => item.id === ref.id)
+          return { ...ref, comment: mark?.comment, targets: page?.elements
+            .filter(el => mark?.nodeIds?.includes(el.id) && !el.odysseyMaster)
+            .map(el => ({ id: el.id, type: el.type })), chartPoints: mark?.chartPoints }
+        })
         return {
           status: 'succeeded',
           message: '已读取演示文稿。',
-          data: { ...data, references: admitted?.references ?? [], useSlide: admitted?.useSlide ?? true }
+          data: { ...data, references, useSlide: admitted?.useSlide ?? true }
         }
       }
       const applyPresentation: CapabilityHandler<'presentation.apply'> = async (args) => {

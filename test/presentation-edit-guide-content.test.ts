@@ -104,3 +104,31 @@ it('rewrites only the selected passage in the speaker notes and rejects an outda
     expect(() => editGuideDocument(store, key, { documentId: deck.id, stage: 'notes-selection' })).toThrow('选区已变化')
   } finally { store.close(); rmSync(directory, { recursive: true, force: true }) }
 })
+
+it('applies both page marks together and preserves every other table style and chart value', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'presentation-guide-marks-'))
+  const store = new PresentationStore(directory)
+  try {
+    const key = { owner: 'reader', sessionId: 'two-marks' }
+    const deck = blankDeck(guide.filename.replace(/\.pptx$/, ''))
+    deck.slides = guide.notes.map((_, i) => ({ id: 'page-' + i, elements: [] }))
+    const chart = deck.slides[guide.chart.page - 1]!, table = deck.slides[guide.table.page - 1]!
+    const bounds = { left: 15, top: 40, width: 500, height: 160 }
+    chart.elements.push({ ...bounds, id: 'chart', type: 'chart', chartType: 'bar', data: { series: [[1, 3], [2, 4]] } })
+    const cells = [[{ text: '概率', style: { align: 'right', vAlign: 'top' } }], [{ text: '60%', style: { align: 'right' } }]]
+    table.elements.push({ ...bounds, id: 'table', type: 'table', data: cells, rowHeights: [40, 60] })
+    const mark = { id: 'a', ordinal: 1, kind: 'rect' as const, region: { x: 0, y: 0, width: 1, height: 1 }, nodeIds: ['chart'], comment: guide.chart.comment }
+    chart.marks = [mark]
+    table.marks = [{ ...mark, id: 'b', ordinal: 2, nodeIds: ['table'], comment: guide.table.comment }]
+    store.save(key, 0, deck, true)
+    store.setPosition(key, deck.id, table.id)
+    const request = { stage: 'chart' as const, documentId: deck.id, referenceId: 'a', tableMarkId: 'b' }
+    expect(() => editGuideDocument(store, key, { ...request, tableMarkId: 'missing' })).toThrow()
+    expect(store.read(key).revision).toBe(1)
+    editGuideDocument(store, key, request)
+    const result = store.read(key)
+    expect(result.revision).toBe(2)
+    expect(result.deck!.slides[9]!.elements[0]).toEqual({ ...chart.elements[0], chartType: 'column' })
+    expect(result.deck!.slides[11]!.elements[0]).toEqual({ ...table.elements[0], data: cells.map(row => row.map(c => ({ ...c, style: { ...c.style, vAlign: 'middle' } }))) })
+  } finally { store.close(); rmSync(directory, { recursive: true, force: true }) }
+})

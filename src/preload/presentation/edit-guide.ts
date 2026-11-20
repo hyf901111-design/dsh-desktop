@@ -28,7 +28,8 @@ export async function mountPresentationEditGuide(
   const { sessionId, runId, signal, point, wait } = options
   let closed = false,
     documentId = '',
-    markId = '',
+    chartMarkId = '',
+    tableMarkId = '',
     titleId = ''
   let drag: Awaited<ReturnType<typeof preparePresentationGuideDrop>> | undefined
   let chat: Awaited<ReturnType<typeof mountPresentationEditGuideChat>> | undefined
@@ -105,7 +106,7 @@ export async function mountPresentationEditGuide(
       sessionId,
       documentId,
       stage,
-      referenceId
+      referenceId, tableMarkId
     })
   }
   const cue = async (target: HTMLElement, label: string) => {
@@ -131,11 +132,12 @@ export async function mountPresentationEditGuide(
     await until((s) => s.page === number, '所选幻灯片未打开。')
     await wait(200)
   }
-  async function selectChart() {
-    await page(content.chart.page)
-    await hit('mark')
+  async function markObject(target: 'chart' | 'table') {
+    const spec = content[target]
+    await page(spec.page)
+    if (!(await command<EditorState>('state')).marking) await hit('mark')
     await hit('rect')
-    const rect = await command<Bounds>('bounds', { target: 'chart' })
+    const rect = await command<Bounds>('bounds', { target })
     const start = { x: rect.left + rect.width * 0.06, y: rect.top + rect.height * 0.12 }
     const end = { x: rect.left + rect.width * 0.95, y: rect.top + rect.height * 0.88 }
     const draw = (event: string, p: Position) => post('draw', { event, ...p })
@@ -169,9 +171,9 @@ export async function mountPresentationEditGuide(
       draw('pointerup', end)
     }
     const state = await until((s) => !!s.markId, '尚未生成图表框选标注。')
-    markId = state.markId!
+    const markId = state.markId!
     await hit('comment')
-    const text = content.chart.comment
+    const text = spec.comment
     for (let i = 3; i < text.length; i += 3) {
       await command('comment', { target: 'comment', text: text.slice(0, i) })
       await wait(84)
@@ -179,6 +181,7 @@ export async function mountPresentationEditGuide(
     await command('comment', { target: 'comment', text })
     await until((s) => s.comment === text, '图表批注尚未保存。')
     await wait(1500)
+    return markId
   }
   async function openChat() {
     const sidebar = doc.getElementById('odyssey-right-workspace-panel')
@@ -263,14 +266,23 @@ export async function mountPresentationEditGuide(
           }
           break
         case 'mark-chart':
-          await selectChart()
+          chartMarkId = await markObject('chart')
+          await hit('close')
+          break
+        case 'mark-table':
+          tableMarkId = await markObject('table')
           break
         case 'revise-chart':
-          await request(content.chart.comment, true)
+          await request(content.chart.comment + '\n' + content.table.comment, true)
           await hit('close')
-          await native('chart', markId)
-          await until((s) => s.page === content.chart.page && !s.marking, '图表调整尚未显示。')
+          await native('chart', chartMarkId)
+          await until((s) => s.page === content.table.page && !s.marking, '表格调整尚未显示。')
           await chat!.reply(content.replies.chart)
+          await wait(2200)
+          break
+        case 'review-chart':
+          await page(content.chart.page)
+          await wait(2200)
           break
         case 'select-title': {
           await page(content.title.page)

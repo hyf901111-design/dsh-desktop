@@ -155,7 +155,7 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
    if(reference?.mode==='presentation'){
     const mode=latestClientModeForAuthority(session)
     const use=reference.scope==='selection'?'本轮含演示选区标签，读取 references 按稳定 ID 定位；备注局部替换带 quote 与 start，text 仅含替换片段；提交完整备注时省略 quote 与 start 并保留选区外原文，柱形标注读取 marks[].chartPoints。':reference.scope==='slide'?'本轮参考当前幻灯片。':'本轮未参考当前页；仅处理用户明确指定的内容。'
-    const system=(request.system??'')+'\n【演示应用的原生右侧对话】'+use+' 用户请求编辑时，先调用 client_capabilities，再调用 client_action 执行 presentation.inspect 和 presentation.apply，以 saved=true 确认真实文稿已修改。为整份文稿写逐页备注时，从 startPage=1 开始按 nextPage 逐批读取页面正文和数据，然后将每页讲稿通过 notes 操作写入对应 slideId。若有框选批注，读取 marks 的 comment 和 nodeIds，按用户所选图表使用 chartType、move 或 chartPointColor。'
+    const system=(request.system??'')+'\n【演示应用的原生右侧对话】'+use+' 用户请求编辑时，先调用 client_capabilities，再调用 client_action 执行 presentation.inspect 和 presentation.apply，以 saved=true 确认真实文稿已修改。为整份文稿写逐页备注时，从 startPage=1 开始按 nextPage 逐批读取页面正文和数据，然后将每页讲稿通过 notes 操作写入对应 slideId。若有框选批注，读取 marks 的 comment 和 nodeIds，跨页的多个标注分别带有 slideId，请按每个标注定位对象并在一次 presentation.apply 中提交所有修改。改图表使用 chartType、move 或 chartPointColor，整张表格文字上下居中使用 tableVerticalAlign。'
     if(!mode&&reference.scope!=='none')return {...request,system,tools:request.tools.filter(t=>t.name==='client_capabilities')}
     return {...request,system}
    }

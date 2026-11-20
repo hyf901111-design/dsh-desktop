@@ -33,7 +33,11 @@ export const PRESENTATION_EDIT_GUIDE_CONTENT = {
   filename: '人工智能周期与资产配置.pptx',
   notesPrompt: '给这份 PPT 每页写一段能直接照着讲的逐字稿，放在演讲者备注里，翻页时衔接自然一点。',
   notes,
-  reviewPages: [1, 5, 12, 20],
+  reviewPages: [5, 12, 20],
+  table: {
+    page: 12,
+    comment: '把框选表格的文字全部上下居中，保留各列原有的水平对齐、字号、底色和数据。'
+  },
   chart,
   title: {
     page: 13,
@@ -51,7 +55,7 @@ export const PRESENTATION_EDIT_GUIDE_CONTENT = {
   executionMs: 3000,
   replies: {
     notes: '20 页的逐字稿已写入演讲者备注。翻到任意一页，都可以在画布下方查看这一页怎么讲。',
-    chart: '框选区域已改为横向条形图。图表保持原位置、大小及易方达配色，八个数值和其余页面内容均已保留。',
+    chart: '第 12 页表格的文字已上下居中。第 10 页图表已改为分组横向条形图，保留了原尺寸、配色和八个数值。',
     title: '第 13 页的标题已改为“五种情景中，仅一种净现值为正”。',
     'notes-selection': '选中的逐字稿已优化为更自然的口头表达，原始数字、判断条件和选区外的备注均已保留。'
   }

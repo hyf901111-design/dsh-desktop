@@ -78,8 +78,10 @@ export function installPresentationReferences({ win, doc, sessions, getInput }) 
       return
     }
     const hint = carets.get(input)
-    const offset =
-      hint?.revision === before.draftRev
+    // A second mark and its comment follow the first pair, even when the caret still
+    // points between the first chip and the text synchronized from its bubble.
+    const appendMark = ref.kind === 'mark' && [...comments.values()].some(entry => entry.shell === shell)
+    const offset = appendMark ? before.draft.length : hint?.revision === before.draftRev
         ? hint.offset
         : input.value.length === before.draft.length
           ? (input.selectionEnd ?? before.draft.length)
