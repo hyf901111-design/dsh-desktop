@@ -197,29 +197,401 @@
         "schemaVersion": 1,
         "featureName": "演示应用：PPTist 编辑、原生共享对话及选区改稿",
         "branch": "codex/feat/presentation-workspace-20261120",
-        "baseCommit": "0ba8b7f578ddf8deec1c00931c0ebaa86bb26f90",
-        "tipCommit": "c8cbcb403cb1c2d6ef259b1509ecbc989fc2d3de",
+        "baseCommit": "c8cbcb403cb1c2d6ef259b1509ecbc989fc2d3de",
+        "tipCommit": "a1fdbccecb9d0a191e04bdc86dd072b8238c9e10",
         "commits": [
           {
-            "commit": "c8cbcb403cb1c2d6ef259b1509ecbc989fc2d3de",
+            "commit": "a1fdbccecb9d0a191e04bdc86dd072b8238c9e10",
             "parents": [
-              "0ba8b7f578ddf8deec1c00931c0ebaa86bb26f90"
+              "c8cbcb403cb1c2d6ef259b1509ecbc989fc2d3de"
             ],
-            "subject": "演示空状态复用侧栏的演示应用图标"
+            "subject": "复用右栏图表渲染并修复演示母版、编辑工具和文稿锁定"
           }
         ],
         "files": [
+          {
+            "status": "A",
+            "path": "docs/sherlock-presentation-acceptance.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/NOTICE.md"
+          },
           {
             "status": "M",
             "path": "packages/presentation-editor/build.mjs"
           },
           {
             "status": "M",
+            "path": "packages/presentation-editor/generate-layouts.py"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/arrow.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/line.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/0131b29b83f4ad88.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/03fa1f2868c466de.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/0b6d1383d5c5d3aa.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/138baa384f58619b.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/29ec9675b17bb6d2.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/2d0907b9c4956450.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/2d4134c1fbc76a3b.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/2f5709ac61b9fc08.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/3318392750762bfa.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/34101ac4b0ddce65.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/3cea6d2ba55407bc.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/3df4f87b4ec60637.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/3f7d3bf408e7a342.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/43a0814d1608281f.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/47aa168ff4f50b42.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/54aca81d8d59d664.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/576b48d19c35ed7d.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/57dded71856160bc.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/59fc41e5b70cf9d9.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/5bf1efbdb2124962.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/5c02673b7cffa3e5.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/5cabff0a0bc88703.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/6562ac3a97ad9a48.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/674160fc19027fbb.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/68b22f0f46ca2cf6.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/6aa5b2baae14f41f.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/74cb7804ed143e43.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/7588d09f7f307c4b.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/79695826d921465a.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/7e53ed336ab624a8.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/820dd04b13660975.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/87e910343970df2a.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/883bccc426606ec3.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/8cdfcbf0b87a2b15.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/8f2233e3f07b7b89.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/92ba46073b74b53f.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/951675b51f6bd4e3.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/9589f770a4482ed6.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/97d32a5c372e150b.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/97e4f5334537129f.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/9bb149f29cbed8fd.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/9c6f15443cfc0415.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/a16b82e1cfcdd532.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/a793d8307948991f.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/a851e0a96685ab76.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/a8bb43db4a496a39.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/ab5972e7f179710e.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/b257f7dd6b94865f.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/b4d84da1c3f0cab5.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/b7500a605a27235b.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/ba96a5048e9d8a3d.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/bc7ce5c930fd0c4b.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/bee0d767b0b57dda.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/c08ee34733d0241e.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/c0b906ba8f5c6eab.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/c39437ee10a1dd56.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/c41bfc224334d0bd.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/c6b5586cf81b631d.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/ca26a13b26fa882a.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/cb7e715adb7bacaf.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/d3e71f04a8ed7cb3.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/d6aac394a2824fc9.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/d99faf00917fb379.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/dee2fdcbbed5ccc7.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/df8d877ebc648d37.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/e0333afa4acf608f.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/e51ff6d21c024779.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/e531f6c185aa5673.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/ea867ee48c4421f9.png"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/layout-art/ed716235245d3799.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/f5e730456d58c922.png"
+          },
+          {
+            "status": "D",
+            "path": "packages/presentation-editor/layout-art/f714837910939d75.png"
+          },
+          {
+            "status": "M",
             "path": "packages/presentation-editor/overlay/App.vue"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/OfficeChart.vue"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/ReadOnlySlide.vue"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/SelectionFormatBar.vue"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/apply-layout.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/efund-layouts.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/legacy-office-signatures.json"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/legacy-office.js"
           },
           {
             "status": "M",
             "path": "packages/presentation-editor/overlay/odyssey.css"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/office-import.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/vendor/office-renderer-1.2.4.tgz"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/protocol.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/header.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-layouts.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-workspace.test.ts"
           }
         ],
         "checks": [
@@ -231,8 +603,8 @@
             ],
             "outcome": "passed",
             "summary": "编译 PPTist",
-            "verifiedCommit": "c8cbcb403cb1c2d6ef259b1509ecbc989fc2d3de",
-            "completedAt": "2026-11-20T15:29:13.678125Z",
+            "verifiedCommit": "a1fdbccecb9d0a191e04bdc86dd072b8238c9e10",
+            "completedAt": "2026-11-20T16:06:00.579735Z",
             "timeoutMs": 180000
           },
           {
@@ -243,8 +615,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "c8cbcb403cb1c2d6ef259b1509ecbc989fc2d3de",
-            "completedAt": "2026-11-20T15:29:26.214643Z",
+            "verifiedCommit": "a1fdbccecb9d0a191e04bdc86dd072b8238c9e10",
+            "completedAt": "2026-11-20T16:06:12.505028Z",
             "timeoutMs": 180000
           },
           {
@@ -258,14 +630,14 @@
             ],
             "outcome": "passed",
             "summary": "演示布局、编辑交互与文稿数据",
-            "verifiedCommit": "c8cbcb403cb1c2d6ef259b1509ecbc989fc2d3de",
-            "completedAt": "2026-11-20T15:29:26.830076Z",
+            "verifiedCommit": "a1fdbccecb9d0a191e04bdc86dd072b8238c9e10",
+            "completedAt": "2026-11-20T16:06:12.933994Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Electron 深浅主题均验证标题上方图标与应用图标路径一致、28 像素居中；点击新建可进入编辑器。"
+          "summary": "用 PowerPoint 打开原稿并导出 46 页参照；真实 Electron 验证目录、旧会话迁移、锁定后拦截手工及 AI 修改、原生图表选区和导出重开。"
         },
         "acceptanceCriteria": [
           "首页及左栏打开演示，可固定为会话顶部页签。研究、演示和表格来回切换保留会话历史、当前文稿及页码。",
@@ -275,177 +647,7 @@
         "risks": [
           "整体验收以签名客户端会话场景的实际复测为准。"
         ],
-        "generatedAt": "2026-11-20T15:29:26.830141Z"
-      },
-      "merged": {
-        "mergeCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-        "verificationCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-canvas-storage.test.ts",
-              "test/board-tabs-contract.test.js",
-              "test/workbench-style.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台|默认显示五条|五条以内"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-boards-browser.mjs",
-              "--manager-workbench-focus"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "build:presentation"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run build:presentation",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/presentation-workspace.test.ts",
-              "test/presentation-reference-browser.test.js",
-              "test/workspace-mode-welcome.test.js",
-              "test/navigation-shortcuts.test.ts",
-              "test/workspace-draft-state.test.js",
-              "test/client-capability-service.test.ts",
-              "test/client-capabilities.test.js",
-              "test/browser-app-native.test.js",
-              "test/presentation-artboard-browser.test.ts",
-              "--maxWorkers=3"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/presentation-workspace.test.ts test/presentation-reference-browser.test.js test/workspace-mode-welcome.test.js test/navigation-shortcuts.test.ts test/workspace-draft-state.test.js test/client-capability-service.test.ts test/client-capabilities.test.js test/browser-app-native.test.js test/presentation-artboard-browser.test.ts --maxWorkers=3",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "SHERLOCK_ROUTING_RESIDENT=1",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-component-submit-routing-browser.test.js",
-              "-t",
-              "one native right-side",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env SHERLOCK_ROUTING_RESIDENT=1 ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/conversation-component-submit-routing-browser.test.js -t one native right-side --maxWorkers=1",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pptx-annotation-browser.test.js",
-              "-t",
-              "point|rect",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/pptx-annotation-browser.test.js -t point|rect --maxWorkers=1",
-            "verifiedCommit": "fe17edd3040cc6385ebb455b08b2a13c74195886",
-            "completedAt": "2026-11-20T15:29:34.156Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-20T15:29:34.156Z"
+        "generatedAt": "2026-11-20T16:06:12.934058Z"
       }
     }
   ],
