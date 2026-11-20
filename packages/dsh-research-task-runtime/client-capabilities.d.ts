@@ -33,7 +33,7 @@ export type ClientCapabilityArguments={
  'notes.challenge.configure':{level?:0|1|2|3|4;commentsExpanded?:boolean}
  'notes.components.data':{action:'inspect'|'configure'|'refresh';revision?:number;settings?:{enabled?:boolean;intervalMinutes?:number}}
  'presentation.open':{revision:number;path:string}
- 'presentation.inspect':{slideId?:string}
+ 'presentation.inspect':{slideId?:string;startPage?:number}
  'presentation.apply':{revision:number;createName?:string;operations:Record<string,any>[]}
  'spreadsheet.inspect':{scope?:'workbook'}|{scope:'selected'}|{scope:'range';sheetId:string;range:string}|{scope:'reference';referenceIndex:number}
  'spreadsheet.apply':{revision:number;createName?:string;operations:Record<string,any>[]}

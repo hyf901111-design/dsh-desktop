@@ -262,7 +262,8 @@ export function installPresentation(options: {
         const data = store.inspect(
           key,
           admitted?.slideId ?? store.position(key),
-          args.slideId ?? admitted?.references[0]?.slideId
+          args.slideId ?? admitted?.references[0]?.slideId,
+          args.startPage
         )
         if (admitted && !admitted.useSlide && !args.slideId && !admitted.references.length)
           delete data.currentSlide
