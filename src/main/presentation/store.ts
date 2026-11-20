@@ -22,6 +22,7 @@ type ReferenceRange = { kind: string; slideId: string; start?: number; quote?: s
 type Marker = {
   id: string
   ordinal: number
+  chartPoints?: Array<{elementId: string; seriesIndex: number; pointIndex: number; label: string}>
   kind: 'point' | 'rect'
   region: { x: number; y: number; width: number; height: number }
   nodeIds: string[]
@@ -419,6 +420,11 @@ export class PresentationStore {
         )
           throw Error('图表数据格式无效。')
         el.data = d
+      } else if (op.op === 'tableVerticalAlign' && el.type === 'table') {
+        if (!['top', 'middle', 'bottom'].includes(op.vAlign)) throw Error('表格垂直对齐方式无效。')
+        for (const row of el.data) {
+          for (const cell of row) cell.style = { ...cell.style, vAlign: op.vAlign }
+        }
       } else if (op.op === 'tableCell' && el.type === 'table') {
         const cell = el.data?.[op.row]?.[op.column]
         if (!Number.isInteger(op.row) || !Number.isInteger(op.column) || !cell) throw Error('单元格不存在。')
