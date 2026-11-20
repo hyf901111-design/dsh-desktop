@@ -25,6 +25,29 @@ beforeAll(async()=>{
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>browser?.close())
+it.each(['notes','spreadsheet','research'])('hides the right project picker after editing %s', async mode => {
+ const page = await browser.newPage({viewport:{width:1180,height:800}})
+ try {
+  await page.route('http://workspace.test/', route=>route.fulfill({contentType:'text/html',body:
+   '<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>'}))
+  await page.goto('http://workspace.test/')
+  await page.evaluate(({input,mode})=>{window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true,initialView:mode}}, {input,mode})
+  await page.addScriptTag({content:script})
+  const picker=page.locator('#right [data-odyssey-composer-workspace]')
+  await picker.getByText('研究项目 A',{exact:true}).click()
+  await page.getByText('研究项目 B',{exact:true}).click()
+  await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  await page.evaluate(()=>{
+   const sessionId='existing-canvas';
+   localStorage.setItem('sherlock.research.directory-locked.v1:'+sessionId,'true')
+   document.dispatchEvent(new CustomEvent('sherlock:workspace-project-edited',{detail:{sessionId}}))
+  })
+  await picker.waitFor({state:'detached'})
+  expect(await page.locator('#right [data-right-project-draft-hint]').count()).toBe(0)
+  expect(await page.locator('#right textarea').count()).toBe(1)
+  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
+ } finally { await page.close() }
+})
 it.each([true, false])('shows the local work location on home and right composers and keeps the folder picker independent (dark: %s)', async dark => {
  const page = await browser.newPage({ viewport: { width: 1180, height: 800 } })
  try {

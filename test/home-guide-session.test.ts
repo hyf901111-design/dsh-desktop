@@ -44,6 +44,29 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
   return { win, page, sessions, workspaces, state, requests, opened, archived, panelEvents, disk, replies, send, reply,nativeSessions, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
+it('opens a personal board after the startup catalog arrives and respects intervening navigation', async () => {
+  const f = await fixture()
+  const list = f.sessions.list as ReturnType<typeof store<{current: string; byId: Record<string, any>; phase?: string}>>
+  const initial = {...list.getSnapshot(), phase: 'pending'}
+  list.set(initial)
+  let finish!: () => void
+  Object.assign(f.sessions, {refresh: vi.fn(() => new Promise<void>(resolve => { finish = resolve }))})
+  const board = {id: 'board-during-startup', cwd: '/board'}
+  const opening = f.page.openPersonal(board.id)
+  expect(f.opened).toEqual([])
+  list.set({...initial, phase: 'ready', byId: {...initial.byId, [board.id]: board}})
+  finish()
+  await opening
+  expect(f.opened).toEqual([board.id])
+
+  list.set(initial)
+  const interrupted = f.page.openPersonal(board.id)
+  list.set({...initial, current: 'different', phase: 'ready', byId: {...initial.byId, [board.id]: board}})
+  finish()
+  await interrupted
+  expect(f.opened).toEqual([board.id])
+})
+
 it.each(['board','workbench','note','spreadsheet','ppt','report'])('sets the right conversation visibility for the %s demo before navigation',async kind=>{
  const f=await fixture(),entry=await f.reply(f.send(kind))
  expect(entry.ok).toBe(true)

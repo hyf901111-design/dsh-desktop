@@ -37,7 +37,7 @@ export function installSidebarWorkspaceHandoff({ sessions, workspaces, pending, 
 }
 
 /** A right-hand draft belongs to the visible application and center session. */
-export function createRightProjectDrafts({ globalDraft, makeDraft }) {
+export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
   const listeners = new Set()
   const drafts = new Map()
   const browserProjects = new Map()
@@ -84,6 +84,23 @@ export function createRightProjectDrafts({ globalDraft, makeDraft }) {
   return {
     subscribe(notify) { listeners.add(notify); return () => listeners.delete(notify) },
     getSnapshot: () => active,
+    lockToSession(sessionId, mode) {
+      if (active?.sessionId !== sessionId || active?.mode !== mode) return
+      const {pending} = active
+      const source = pending.shell, draft = source.snapshot, target = getInput?.(sessionId, mode)
+      const existing = target?.snapshot
+      if (!hasContent(active) || pending.getSnapshot().busy || !existing || target.disposed ||
+        existing.phase !== 'plain' || existing.researchContextPreparing) return
+      const prefix = existing.draft && draft.draft ? existing.draft + '\n' : existing.draft
+      let occurrenceId = Math.max(0, ...existing.occurrences.map(ref => ref.occurrenceId))
+      const occurrences = existing.occurrences.concat(draft.occurrences.map(ref => ({
+        ...ref, occurrenceId: ++occurrenceId, offset: prefix.length + ref.offset
+      })))
+      const images = draft.imageIds.filter(id => !existing.imageIds.includes(id))
+      if (!target.addImages(images)) return
+      target.restoreDraftState({draft: prefix + draft.draft, occurrences})
+      source.commitSend([...draft.imageIds], draft.draft)
+    },
     hasActivityFor(context) {
       const owner = key(context)
       return [...drafts.values()].some(entry => entry.key === owner && hasActivity(entry))

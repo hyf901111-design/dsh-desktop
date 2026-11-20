@@ -9,6 +9,8 @@ import { stripBrowserAppNative, patchBrowserAppNative } from '../scripts/lib/bro
 import { stripSpreadsheetClient, patchSpreadsheetClient } from '../scripts/lib/spreadsheet-client.mjs'
 import { patchResearchBoardHeaderClient, stripResearchBoardHeaderClient } from '../scripts/lib/research-board-header-client.mjs'
 import { patchConversationPermissionDefault, stripConversationPermissionDefault } from '../scripts/lib/conversation-permission-default.mjs'
+import { stripComposerWorkspaceBar } from '../scripts/lib/patch-figma-final-shell.mjs'
+import { stripKnowledgeSharedResearch } from '../scripts/lib/knowledge-shared-research.mjs'
 
 it('anchors only a matched native filter receipt after its visible reply', () => {
   const revision = 'cd676d89-2f9b-4b0a-b09f-1ee934b39d66'
@@ -85,6 +87,47 @@ it('inserts a scope at the slash token while retaining adjacent text and blockin
   }
 })
 
+it('drops a sidebar file into the hovered composer, including a detached draft', async () => {
+  const window = new Window(), document = window.document
+  document.body.innerHTML = '<div class="uV2eYG_root"><textarea data-odyssey-file-reference-session="s1"></textarea></div>' +
+    '<div data-research-composer-host><div class="uV2eYG_root"><textarea data-pending-conversation-input></textarea><span id="drop"></span></div></div>'
+  const [main, right] = document.querySelectorAll('textarea')
+  for (const input of [main, right]) {
+    input.getClientRects = () => [input.getBoundingClientRect()]
+    input.value = '保留草稿'
+    input.setSelectionRange(2, 2)
+  }
+  const draft = {draft: main.value, draftRev: 2, phase: 'plain'}
+  const mainShell = {snapshot: draft, insertReference: vi.fn(() => true)}
+  const rightShell = {snapshot: draft, insertReference: vi.fn(() => true)}
+  const sessions = {list: {getSnapshot: () => ({current: 's1'})}, subagentAddress: () => undefined}
+  const app = installKnowledgeReferences({window, document, sessions, getInput: () => mainShell,
+    getPending: () => null, getRightDraft: () => ({shell: rightShell})})
+  try {
+    const transfer = new window.DataTransfer()
+    transfer.setData('application/x-ework-knowledge-file', JSON.stringify({id: 'report', label: '报告.pdf'}))
+    const dispatch = (target, name) => {
+      const event = new window.DragEvent(name, {bubbles: true, cancelable: true})
+      Object.defineProperty(event, 'dataTransfer', {value: transfer})
+      return target.dispatchEvent(event)
+    }
+    main.focus()
+    expect(dispatch(document.querySelector('#drop'), 'dragover')).toBe(false)
+    expect(transfer.dropEffect).toBe('copy')
+    expect(dispatch(document.querySelector('#drop'), 'drop')).toBe(false)
+    expect(rightShell.insertReference).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      source: 'knowledge-reference', label: '报告.pdf'
+    }), {start: 2, end: 2, draftRev: 2})
+    expect(mainShell.insertReference).not.toHaveBeenCalled()
+    expect(dispatch(main, 'drop')).toBe(false)
+    expect(mainShell.insertReference).toHaveBeenCalledTimes(1)
+    expect(dispatch(document.body, 'drop')).toBe(true)
+  } finally {
+    app.dispose()
+    await window.happyDOM.abort()
+  }
+})
+
 it('renders a verified shared citation as a labeled native button and sends only its file ID to preview', async () => {
   const window = new Window()
   const document = window.document
@@ -118,7 +161,7 @@ it('composes with the installed native client patch sequence and keeps its resto
   const installed = source('conversation')
   const withoutOuterPatches = value =>
     stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(value))))
-  const base = stripKnowledgeConversation(withoutOuterPatches(installed))
+  const base = stripKnowledgeConversation(withoutOuterPatches(stripKnowledgeSharedResearch(stripComposerWorkspaceBar(installed))))
   const knowledge = patchKnowledgeConversation(base)
   expect(knowledge).toContain('const {actions} = slots.resolveStore(chatStore, sessionId);')
   const patched = patchSpreadsheetClient(

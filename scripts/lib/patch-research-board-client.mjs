@@ -848,6 +848,19 @@ export function patchResearchBoardWorkspace(source) {
   source = source.replace(/wide && (\(0, react_jsx_runtime.jsx\)\("div", \{\s*className: clsx\(WorkspaceBrowser_module_css_default.searchSlot,)/, 'false && $1')
 
   source = patchBoardDirectoryWorkspace(source)
+  if (!source.includes('loadingWorkspaceSessions')) {
+    source = replace(source, 'containsCurrent: g.key === currentGroup,', `containsCurrent: g.key === currentGroup,
+                    loadingWorkspaceSessions: list.phase === 'pending' && workspaces.find(workspace =>
+                      workspace.workspaceId === g.workspaceId)?.sessionIds.some(id => !list.byId[id] && !archived.has(id)),
+                    workspaceSessionsFailed: list.state === 'error',`)
+    source = replace(source, '(expandedSessionGroups.includes(group.key) ? group.sessions', `group.expanded && group.loadingWorkspaceSessions && (0, react_jsx_runtime.jsx)("div", {
+                                        className: WorkspaceBrowser_module_css_default.empty, role: "status",
+                                        children: document.documentElement.dataset.odysseyLocale === 'en'
+                                          ? (group.workspaceSessionsFailed ? 'Could not load conversations' : 'Loading conversations…')
+                                          : (group.workspaceSessionsFailed ? '会话加载失败' : '正在加载会话…')
+                                    }),
+                                    (expandedSessionGroups.includes(group.key) ? group.sessions`)
+  }
   // Figma 22/44: idle search and the collapsed add-project glyph remain 16 px.
   source = source.replace('size: searchExpanded ? 11 : 14', 'size: searchExpanded ? 11 : 16')
     .replace('size: wide ? 16 : 18', 'size: 16')

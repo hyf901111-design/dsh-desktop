@@ -68,11 +68,13 @@ body{
 @container(max-width:480px){html:not([data-navigation-sidebar-only]) .workspace-app-title:not(.workspace-app-heading)>span{display:none}}
 @container(max-width:480px){.workspace-app-topbar{gap:4px}}
 .workspace-home-topbar{
-  position:absolute;inset:0 48px auto 0;width:auto;min-width:0;z-index:10;pointer-events:none;
+  position:absolute;inset:0 48px auto 0;width:auto;min-width:0;z-index:10;
+  -webkit-app-region:var(--odyssey-popup-window-drag,drag);
 }
+.workspace-home-topbar .eb-workspace-controls,.workspace-home-topbar .eb-workspace-tabs{-webkit-app-region:var(--odyssey-popup-window-drag,drag)}
+.workspace-home-topbar .eb-workspace-controls button{-webkit-app-region:no-drag}
 .workspace-home-topbar .workspace-app-title{flex:0 1 auto;min-width:24px}
 .workspace-home-topbar .workspace-app-title>span{overflow:hidden;text-overflow:ellipsis}
-.workspace-home-topbar :is(.workspace-app-title,.eb-workspace-controls){pointer-events:auto}
 .workspace-home-topbar .workspace-app-title>i{mask-image:${chatTitleIcon}}
 .workspace-app-heading[data-workspace-app=scheduled]>i{mask-image:${navigationAppIcon('scheduled')}}
 .workspace-app-heading[data-workspace-app=plugin]>i{mask-image:${navigationAppIcon('plugin')};mask-size:16px}
