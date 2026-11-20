@@ -9,6 +9,9 @@ import {createPendingConversation} from '../../scripts/lib/pending-conversation.
 import {eworkBindWorkspaceDraft} from '../../scripts/lib/workspace-draft-state.mjs'
 import {mountDesktopShellStyles} from '../../src/preload/shell-style'
 import {WorkspaceSurfaceHost} from '../../src/preload/workspace-surface-host'
+import {mountImageFactory} from '../../src/preload/image-factory/view'
+import {installImageFactoryContext} from '../../scripts/lib/image-factory-native.mjs'
+import type {CanvasScope, StoredCanvas} from '../../src/shared/image-factory-canvas'
 declare global{interface Window{pendingInput:any;pendingFixture:any;__ModuleLoader__:any}}
 const data=window.pendingInput,fake:any=new Proxy(function(){},{get:(_target,key)=>key===Symbol.toPrimitive?()=> 'unused':fake,apply:()=>fake,construct:()=>({})});let runtime:any
 function load(source:string){let result:any;window.__ModuleLoader__={load:({factory}:any)=>{result=factory((name:string)=>name==='react'?React:name==='react/jsx-runtime'?jsx:name==='react-dom'?{createPortal}:name==='@deepseek-ai/dsh-client-runtime/client'?runtime:name==='@deepseek-ai/dsh-client-ui-primitives'?primitives:name==='@deepseek-ai/cordis'?new Proxy({Context:{filter:Symbol('filter')}},{get:(target,key)=>Reflect.get(target,key)??fake}):fake)}};new Function(source)();return result}
@@ -23,11 +26,15 @@ const history = new native.__testSessionInputShell({
  actx:{get:()=>undefined},inputTriggers:()=>undefined,
  defaultSink:(text:string)=>events.push({type:'continue',id:'existing-canvas',text})
 })
+const imageInputs = new Map([['existing-canvas', history]])
 const historyState = {openState:'open',composerPhase:'active',pending:[],chat:{
  order:['prior'],nodes:new Map([['prior',{kind:'context',data:{text:'已有消息'}}]])
 }}
 const options={makeShell:(deps:any)=>new native.__testSessionInputShell({...deps,actx:{},inputTriggers:()=>undefined}),sessions:{list:{getSnapshot:()=>current,subscribe:active.subscribe},create:async(value:any)=>{events.push({type:'create',...value});if(failCreate){failCreate=false;throw Error('测试创建失败，输入保留')}
- const project=projects.items.find(item=>item.workspaceId===value.workspaceId);project?.sessionIds.push('new-session');emptySessions.byId['new-session']={cwd:value.cwd??project?.path,blank:true};return 'new-session'},open:(id:string)=>{current.current=id;events.push({type:'open',id});active.set(id)}},workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated:(id:string,_context:unknown,source?:{sessionId?:string})=>{
+ const id=value.sessionId??'new-session';
+ const project=projects.items.find(item=>item.workspaceId===value.workspaceId);project?.sessionIds.push(id);emptySessions.byId[id]={cwd:value.cwd??project?.path,blank:true};
+ if(value.sessionId)imageInputs.set(id,options.makeShell({defaultSink:(text:string,images:string[])=>events.push({type:'send',text,images})}));
+ return id},open:(id:string)=>{current.current=id;events.push({type:'open',id});active.set(id)}},workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated:(id:string,_context:unknown,source?:{sessionId?:string})=>{
  if(!source?.sessionId)window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}))
 },prepareContext:async()=>undefined,
  initializeWorkspaceSession:async(id:string,view:string)=>initialized.push({id,view}),
@@ -78,8 +85,8 @@ function Home(){
  if(data.verifyRightCommand&&sessionId==='new-session')return null
  if(data.verifyHandoff&&sessionId==='new-session')return <ProjectComposer sessionId={sessionId}/>
  const inHistory=data.verifyHistory&&sessionId==='existing-canvas'
- const shell=sessionId==='new-session'?real:inHistory?history:undefined
- const sessionState=shell===real?{...state,openState:'open',composerPhase:'blank'}:inHistory?historyState:undefined
+ const shell=sessionId==='new-session'?real:inHistory?history:data.realImageTabs?imageInputs.get(sessionId):undefined
+ const sessionState=inHistory?historyState:shell?{...state,openState:'open',composerPhase:'blank'}:undefined
  const historyInput=(select:any)=>select(React.useSyncExternalStore(shell.state.subscribe,shell.state.getSnapshot))
  const historyRenderSlot=(name:string,props:any)=>name==='conversation.composer.bar'
   ? <NativePendingBar {...hooks} {...props} sessionId={sessionId} useSession={select=>select(sessionState)}
@@ -99,16 +106,40 @@ function Right(){
 createRoot(document.getElementById('app')!).render(<Home/>);
 createRoot(document.getElementById('right-body')!).render(<Right/>);
 const surfaces=new WorkspaceSurfaceHost(document)
+let images: ReturnType<typeof mountImageFactory> | undefined
+if (data.realImageTabs) {
+ const canvases=new Map<CanvasScope,StoredCanvas>()
+ const factory=installImageFactoryContext({
+  sessions:{...options.sessions,
+   binding:(id:string)=>emptySessions.byId[id]?{state:'open'}:undefined,
+   clear:()=>{current.current=undefined;active.set(undefined)}
+  },
+  getInput:(id:string)=>imageInputs.get(id),getPending:()=>record,
+  getTaskWorkspace:(id=current.current)=>id==null?record.getSnapshot().workspaceId:
+   projects.items.find(project=>project.sessionIds.includes(id))?.workspaceId??null,
+  standaloneDirectory:options.standaloneDirectory,
+  setTaskView:(id:string)=>options.setView(id,'chat'),
+  send:async()=>({ok:true})
+ })
+ native.__testSetImageFactory(factory)
+ images=mountImageFactory(document,surfaces,{
+  storage:{read:async scope=>({epoch:1,canvas:canvases.get(scope)}),
+   write:async ({scope,canvas})=>{canvases.set(scope,canvas)},adopt:async()=>false},
+  saveProject:async()=>{},save:async()=>({})
+ })
+}
 for (const name of ['browser','image-factory','knowledge'] as const) {
+ if (name==='image-factory' && images) continue
  const surface=document.createElement('section')
  surface.innerHTML='<button type="button">返回工作区</button>'
  surface.firstElementChild!.addEventListener('click',()=>surfaces.back())
  surfaces.register(name,surface)
 }
+const openSurface=(name:'browser'|'image-factory'|'knowledge')=>name==='image-factory'&&images?images.open():surfaces.open(name)
 window.pendingFixture={sidebarWorkspace,openViaRail(name:'browser'|'image-factory'|'knowledge'){
  document.dispatchEvent(new CustomEvent('sherlock:sidebar-launch-workspace-app',{detail:name}))
- surfaces.open(name)
-},openSurface:(name:'browser'|'image-factory'|'knowledge')=>surfaces.open(name),events,initialized,record,right,real,controller,openExisting(id:string){current.current=id;active.set(id)},
+ openSurface(name)
+},openSurface,events,initialized,record,right,real,controller,openExisting(id:string){current.current=id;active.set(id)},
  goHome(){document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));current.current=undefined;active.set(undefined)},
  readySession:()=>ready.set(true),current,failOnce:()=>{failCreate=true},setPaneOpen(open:boolean){
  sidebarStore.reduce((s:any)=>({...s,panelOpen:open}))

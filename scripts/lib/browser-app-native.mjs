@@ -232,12 +232,6 @@ ctx.effect(()=>{
  const factory=(${installImageFactoryContext.toString()})({
    sessions,removeProvisionalReference:deleteProvisionalResearchReferenceOccurrence,getInput:id=>inputHub.shell(id),getPending:()=>eworkPendingConversation,isBoardOnly:id=>sherlockShared(id)||sherlockBoardsAdapter?.isBoardOnly(id)===true,
    getTaskWorkspace,
-   getExistingInput:id=>inputHub.shells.get(id),
-   hasProjectDraftActivity:sessionId=>eworkRightProjects?.hasActivityFor({sessionId,mode:'image-factory'}),
-   getProjectDraft:()=>{
-     const draft=eworkRightProjects?.getSnapshot();
-     if(draft?.mode==='image-factory'&&draft.sessionId===sessions.list.getSnapshot().current)return draft.pending;
-   },
    getDefaultWorkspace:()=>{
      const selected=eworkSidebarWorkspace?.current();
      return selected===undefined?getTaskWorkspace():selected;
@@ -315,16 +309,7 @@ ctx.effect(()=>{
    const draft=makePending({...conversationOptions,initialWorkspace:entry.workspaceId,detached:{
      ...ownership,get sessionId(){return entry.sessionId},mode:['notes','research','spreadsheet'].includes(entry.mode)?entry.mode:'chat',
      isCommandCurrent:()=>!entry.tabId||document.body.dataset.browserActiveTab===entry.tabId,
-     open:id=>{
-       const images=entry.mode==='image-factory';
-       if(images)document.dispatchEvent(new CustomEvent('sherlock:image-factory-canvas-intent',{detail:id}));
-       try {
-         sessions.open(id);
-         if(images)document.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session',{detail:{reopen:id}}));
-       } finally {
-         if(images)document.dispatchEvent(new CustomEvent('sherlock:image-factory-canvas-intent-ended',{detail:id}));
-       }
-     }
+     open:id=>sessions.open(id)
    },prepareSession:async id=>{
      await conversationOptions.prepareSession(id);
      if(entry.mode==='notes')await new Promise((resolve,reject)=>{
@@ -392,6 +377,11 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
   ()=>imageFactoryActive && eworkImageFactory?.getSnapshot().creating===true,
   ()=>false
  );
+ const imageWorkspaceSwitching=react.useSyncExternalStore(
+  imageFactoryActive&&eworkImageFactory?.subscribe || (()=>()=>{}),
+  ()=>imageFactoryActive && eworkImageFactory?.getSnapshot().switchingWorkspace===true,
+  ()=>false
+ );
  const browserAppActive=['browser','knowledge','image-factory'].includes(composerApp);
  const pendingConversation=sessionId===undefined&&!subagentPanel&&!!eworkPendingConversation;
  const pendingRight=pendingConversation&&browserAppActive;`)}
@@ -418,28 +408,28 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  const sessionScopedWorkspace=sessionId!==undefined&&document.body.dataset.sessionWorkspaceSwitch===sessionId;
  const launchWorkspaceId=eworkSidebarWorkspace?.forSurface(rightProjectMode,sessionId);
  const rightProjectContext=react.useMemo(()=>canChooseRightProject?{
-  sessionId,mode:rightProjectMode,tabId:browserTabId,launchWorkspaceId,useSharedSession:!!browserTabId&&sessionScopedWorkspace,followDefault:browserAppActive&&sessionId!==undefined&&!sessionScopedWorkspace,
+  sessionId,mode:rightProjectMode,tabId:browserTabId,launchWorkspaceId,useSharedSession:!!browserTabId&&sessionScopedWorkspace,followDefault:browserAppActive&&!imageFactoryActive&&sessionId!==undefined&&!sessionScopedWorkspace,
   workspaceId:sessionId===undefined?pendingChatState?.workspaceId:sessionWorkspace?.workspaceId??workspaces.items.find(item=>cwd&&item.path===cwd)?.workspaceId??null
- }:undefined,[canChooseRightProject,sessionId,rightProjectMode,browserTabId,launchWorkspaceId,browserAppActive,sessionScopedWorkspace,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
+ }:undefined,[canChooseRightProject,sessionId,rightProjectMode,browserTabId,launchWorkspaceId,browserAppActive,imageFactoryActive,sessionScopedWorkspace,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
  const rightDraft=react.useSyncExternalStore(eworkRightProjects?.subscribe||(()=>()=>{}),eworkRightProjects?.getSnapshot||(()=>undefined));
  const rightProjectDraft=rightProjectContext&&rightDraft?.sessionId===sessionId&&rightDraft?.mode===rightProjectMode&&rightDraft?.tabId===browserTabId?rightDraft:undefined;
  const rightPending=rightProjectDraft?.pending;
  const rightPendingState=react.useSyncExternalStore(rightPending?.subscribe||(()=>()=>{}),rightPending?.getSnapshot||(()=>undefined));
- const switchingRightWorkspace=rightPendingState?.activating||pendingConversation&&pendingChatState?.activating;
+ const switchingRightWorkspace=imageWorkspaceSwitching||rightPendingState?.activating||pendingConversation&&pendingChatState?.activating;
  react.useLayoutEffect(()=>{
   if(subagentPanel)return;
   if(rightProjectLocked&&sessionId!==undefined)eworkRightProjects?.lockToSession(sessionId,rightProjectMode);
   eworkRightProjects?.show(rightProjectContext);
  },[subagentPanel,rightProjectContext,rightProjectLocked,sessionId,rightProjectMode]);
  const rightWorkspaceId=rightProjectDraft?rightProjectDraft.workspaceId:rightProjectContext?.workspaceId;
- const rightWorkspaceLabel=rightProjectDraft?workspaces.items.find(item=>item.workspaceId===rightWorkspaceId)?.title:chipTitle;
+ const rightWorkspaceLabel=rightProjectDraft||imageFactoryActive?workspaces.items.find(item=>item.workspaceId===rightWorkspaceId)?.title:chipTitle;
  const pickRightWorkspace=async workspaceId=>{
   setPickerOpen(false);
   pickerAnchor.current?.focus({preventScroll:true});
   if(!rightProjectContext||locksRightProject&&(directoryLocked||sessionId!==undefined&&localStorage.getItem(directoryLockKey)==='true'))return;
   try{
-   if(imageFactoryActive)document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-selected',{detail:workspaceId}));
-   if(workspaceId!==null)await eworkRightProjects?.switchWorkspace(rightProjectContext,workspaceId);
+   if(imageFactoryActive)await eworkImageFactory?.switchWorkspace(workspaceId,rightWorkspaceId);
+   else if(workspaceId!==null)await eworkRightProjects?.switchWorkspace(rightProjectContext,workspaceId);
    else if(!browserTabId&&(sessionId===undefined||workspaceId===rightWorkspaceId))eworkPendingConversation?.selectWorkspace(workspaceId);
    else eworkRightProjects?.select(rightProjectContext,workspaceId);
   }catch(error){sherlockBoardsAdapter?.showError(error)}
@@ -466,6 +456,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
  replace('selectWorkspace: async (workspaceId) => {',`selectWorkspace: async (workspaceId) => {
+ if(imageFactoryActive)return eworkImageFactory?.switchWorkspace(workspaceId,rightWorkspaceId);
  if(sessionId===undefined&&eworkPendingConversation){eworkPendingConversation.selectWorkspace(workspaceId);return;}
  if(workspaceId===null){
   const surface=document.body.dataset.workspaceSurface;
@@ -490,16 +481,10 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
    next.restoreDraftState(draft);
   }
   slots.resolveStore(chatStore,nextId).actions.setView(previous||'chat');
-  if(surface==='image-factory')document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-changed',{detail:{previous:sessionId,next:nextId}}));
   sessions.open(nextId);
   if(draft)from.commitSend([...(draft.imageIds??[])],draft.draft);
   return;
  }`)
- const openProject='sessions.open(nextId);\n            if (boardNext && nextId !== sessionId)';
- replace(openProject,`if (sessionId !== undefined && document.body.dataset.workspaceSurface === 'image-factory') {
-              document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-changed', {detail:{previous:sessionId,next:nextId}}));
-            }
-            `+openProject);
  {const start=source.indexOf('function ResearchConversationPanel('),end=source.indexOf('\n\t\t//#endregion',start),before=source.slice(start,end);replace(before,exact(before,'const workspace = (0, react.useMemo)(() => researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);','const workspace = (0, react.useMemo)(() => sessionId===undefined?{...ABSENT_RESEARCH_WORKSPACE,getSnapshot:()=>ABSENT_PENDING_RESEARCH_SNAPSHOT,setAssistantActionsActive:()=>{},clearPendingMessageJump:()=>{}}:researchWorkspaces.for(sessionId), [researchWorkspaces, sessionId]);'))}
  for(const name of ['conversation.input.left']){
   const pattern='"'+name+'": {',start=source.indexOf(pattern),end=source.indexOf('}',start),before=source.slice(start,end);if(start<0||!before.includes('scope: "session"'))throw Error('Pending native slot scope missing '+name);replace(before,before.replace('scope: "session"','scope: "session-maybe"'))

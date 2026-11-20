@@ -106,6 +106,30 @@ it('shows the saved target when draft adoption is declined', async () => {
   } finally { workspace.dispose(); await win.happyDOM.abort() }
 })
 
+it('keeps the scene and its undo history while switching the workspace session', async () => {
+  const win = new Window()
+  const records = new Map<CanvasScope, StoredCanvas>([['one', scene('原始画布')]])
+  const workspace = new CanvasWorkspace(win.document as unknown as Document, {
+    read: async scope => ({ epoch: 1, canvas: records.get(scope) }),
+    write: async write => { records.set(write.scope, write.canvas) },
+    adopt: async () => false,
+  })
+  try {
+    workspace.select('one')
+    await workspace.ready('one')
+    workspace.change('one', current => current && { ...current, title: '编辑后画布' }, false)
+    const before = workspace.getSnapshot().scene
+    await workspace.copyToSession('one', 'two')
+    expect(workspace.getSnapshot().scope).toBe('one')
+    workspace.select('two')
+    expect(workspace.wasRebound('one', 'two')).toBe(true)
+    expect(workspace.getSnapshot().scene).toBe(before)
+    expect(workspace.undo('two')).toBe(true)
+    expect(workspace.getSnapshot().scene?.title).toBe('原始画布')
+    expect(records.get('one')?.title).toBe('编辑后画布')
+  } finally { workspace.dispose(); await win.happyDOM.abort() }
+})
+
 it('undoes a complete pointer gesture per canvas and drops redo after a new edit', async () => {
   const win = new Window()
   const original = scene('画板')

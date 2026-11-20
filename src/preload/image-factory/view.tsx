@@ -380,6 +380,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     const previous = previousCanvas.current
     previousCanvas.current = { scope, sceneId: scene?.id }
     if (scope === previous.scope) return
+    if (workspace.wasRebound(previous.scope, scope)) {
+      setGalleryScope(value => value === previous.scope ? scope : value)
+      return
+    }
     setDrawer(drawer => drawer === 'layers' ? drawer : undefined)
     setExpandedGroups([])
     setBrandDragging(false)
@@ -391,7 +395,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     setSelectedId(undefined); setEditing(undefined); resetViewport()
     resetSelectionGesture()
     canvasLayerDrag.current = undefined; layerDrag.current = undefined; setDropTarget(undefined)
-  }, [scope, scene?.id, resetViewport])
+  }, [scope, scene?.id, resetViewport, workspace])
   useLayoutEffect(() => {
     if (!scroll.current) return
     const observer = new ResizeObserver(([entry]) => { if (entry) setBounds({ width: entry.contentRect.width, height: entry.contentRect.height }) })
@@ -1796,11 +1800,15 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
     }))
     void workspace.adopt(id).then(() => reply(), reply)
   }
-  const inspectTab = (event: Event) => {
-    const scope = (event as CustomEvent).detail?.scope
-    if (validCanvasScope(scope) && workspace.hasTabActivity(scope)) event.preventDefault()
+  const rebind = (event: Event) => {
+    const { previous, next } = (event as CustomEvent).detail ?? {}
+    if (!activeHere() || !validCanvasScope(previous) || typeof next !== 'string' || !validCanvasScope(next) || previous === next) return
+    const reply = (error?: unknown) => doc.dispatchEvent(new CustomEvent('sherlock:image-factory-canvas-rebound', {
+      detail: { next, error: error && errorLabel(error, '画布未能切换工作区。') },
+    }))
+    void workspace.copyToSession(previous, next).then(() => reply(), reply)
   }
-  doc.addEventListener('sherlock:image-factory-inspect-tab', inspectTab)
+  doc.addEventListener('sherlock:image-factory-rebind-canvas', rebind)
   doc.addEventListener('sherlock:image-factory-session', select)
   doc.addEventListener('sherlock:image-factory-adopt', adopt)
   let english = doc.documentElement.dataset.odysseyLocale === 'en'
@@ -1853,7 +1861,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
       doc.dispatchEvent(new Event('sherlock:image-factory-reset')); render()
     },
     dispose() {
-      doc.removeEventListener('sherlock:image-factory-inspect-tab', inspectTab)
+      doc.removeEventListener('sherlock:image-factory-rebind-canvas', rebind)
       doc.removeEventListener('sherlock:image-factory-session', select)
       doc.removeEventListener('sherlock:image-factory-adopt', adopt)
       language.disconnect(); react.unmount(); workspace.dispose(); root.remove(); style.remove()

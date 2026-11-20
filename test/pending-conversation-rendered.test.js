@@ -1,7 +1,7 @@
 import {beforeAll,afterAll,expect,it} from 'vitest'
 import {build} from 'esbuild'
 import {readFile,readdir} from 'node:fs/promises'
-import {resolve} from 'node:path'
+import {dirname,join,resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
 import {EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
 import {patchPendingConversationPanel} from '../scripts/lib/pending-conversation-panel.mjs'
@@ -14,14 +14,26 @@ import {stripKnowledgeSharedResearch} from '../scripts/lib/knowledge-shared-rese
 import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-header-client.mjs'
 let browser,script,input,css
 const base='node_modules/@deepseek-ai/',expose=(source,names)=>source.replace('exports.apply = apply;',`exports.apply = apply;${names.map(name=>`exports.__test${name}=${name};`).join('')}`)
+const imageAssets={name:'image-assets',setup(build){
+ build.onLoad({filter:/image-factory\/(icons\.ts|gallery\.tsx)$/},async ({path})=>{
+  const source=await readFile(path,'utf8');
+  const glob=source.match(/import\.meta\.glob\('\.\/([\w-]+)\/\*\.(svg|jpg)', \{[^}]+\}\)/);
+  const [,directory,extension]=glob;
+  const folder=join(dirname(path),directory);
+  const assets=await Promise.all((await readdir(folder)).filter(name=>name.endsWith('.'+extension)).map(async name=>[
+   './'+directory+'/'+name,'data:'+(extension==='svg'?'image/svg+xml':'image/jpeg')+';base64,'+(await readFile(join(folder,name))).toString('base64')
+  ]));
+  return {contents:source.replace(glob[0],JSON.stringify(Object.fromEntries(assets))),loader:path.endsWith('.tsx')?'tsx':'ts'};
+ });
+}};
 beforeAll(async()=>{
  const installed=stripComposerWorkspaceBar(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8'))
  const baseConversation=stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(installed))))
- const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;exports.__testSetRightProjects=value=>eworkRightProjects=value;exports.__testSetSidebarWorkspace=value=>eworkSidebarWorkspace=value;')
+ const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;exports.__testSetRightProjects=value=>eworkRightProjects=value;exports.__testSetSidebarWorkspace=value=>eworkSidebarWorkspace=value;exports.__testSetImageFactory=value=>eworkImageFactory=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(patchBoardDirectoryWorkspace(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspacePicker'])}
  input.triggers=expose(await readFile(base+'dsh-client-ui-input-trigger/lib/client.js','utf8'),['MenuView'])
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
- const result=await build({entryPoints:['test/fixtures/pending-conversation-browser.tsx'],bundle:true,platform:'browser',format:'iife',outfile:'pending.js',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl','.ttf':'dataurl'},plugins:[{name:'raw',setup(b){b.onResolve({filter:/\?raw$/},async args=>({path:(await b.resolve(args.path.slice(0,-4),{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css+='\n'+(result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')
+ const result=await build({entryPoints:['test/fixtures/pending-conversation-browser.tsx'],bundle:true,platform:'browser',format:'iife',outfile:'pending.js',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl','.ttf':'dataurl'},plugins:[imageAssets,{name:'raw',setup(b){b.onResolve({filter:/\?raw$/},async args=>({path:(await b.resolve(args.path.slice(0,-4),{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css+='\n'+(result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>browser?.close())
@@ -346,7 +358,7 @@ it('opens the native command menu for a selected browser project without sending
  } finally { await page.close() }
 },15000);
 
-it('opens the new workspace without leaving the image canvas', async () => {
+it('switches workspaces in place and restores the matching workspace when selecting each image tab', async () => {
  const page=await browser.newPage({viewport:{width:1180,height:800}}), errors=[];
  page.setDefaultTimeout(5000);
  page.on('pageerror',error=>errors.push(error.message));
@@ -354,31 +366,44 @@ it('opens the new workspace without leaving the image canvas', async () => {
   await page.route('http://127.0.0.1/right-project',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><body></body>'}));
   await page.goto('http://127.0.0.1/right-project');
   await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>');
-  await page.evaluate(value=>{window.pendingInput={...value,recentWorkspaceId:'A',verifyRightProject:true}},input);
+  await page.evaluate(value=>{window.pendingInput={...value,recentWorkspaceId:'A',verifyRightProject:true,realImageTabs:true}},input);
   await page.addScriptTag({content:script});
+  expect(errors).toEqual([]);
   const composer=page.locator('#right [data-odyssey-composer-project]');
   const picker=composer.locator('.pXSMma_workspace');
   await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
   await picker.getByText('研究项目 A',{exact:true}).waitFor().catch(async error=>{
    throw Error(JSON.stringify({errors,center:(await page.locator('#app').innerText()).slice(0,500),right:(await page.locator('#right').innerText()).slice(0,500)}),{cause:error})
   });
-  await page.evaluate(()=>{window.existingCanvas=document.querySelector('section[data-workspace-surface="image-factory"]')});
-  const selection=()=>page.evaluate(()=>window.pendingFixture.current.current);
-  const events=()=>page.evaluate(()=>window.pendingFixture.events);
-  await picker.click();
-  await page.getByText('研究项目 B',{exact:true}).click();
+  const surface=page.locator('.image-factory');
+  const tabs=surface.getByRole('tab');
+  await tabs.first().waitFor();
+  const firstTab=await tabs.first().elementHandle();
+  const pick=async project=>{
+   await picker.click();
+   const option=page.getByRole('menuitem',{name:project,exact:true});
+   await option.press('Enter');
+   await picker.getByText(project,{exact:true}).waitFor();
+  };
+  await composer.locator('textarea').fill('第一张图的草稿');
+  await pick('研究项目 B');
+  expect(await tabs.count()).toBe(1);
+  expect(await tabs.first().evaluate((node, original)=>node===original,firstTab)).toBe(true);
+  expect(await composer.locator('textarea').inputValue()).toBe('第一张图的草稿');
+
+  await surface.getByRole('button',{name:'新建图片任务',exact:true}).click();
+  await expect.poll(()=>tabs.count()).toBe(2);
+  await pick('研究项目 A');
+  expect(await tabs.count()).toBe(2);
+  await composer.locator('textarea').fill('第二张图的草稿');
+  await tabs.nth(0).click();
   await picker.getByText('研究项目 B',{exact:true}).waitFor();
-  await expect.poll(selection).toBe('new-session');
-  expect(await page.evaluate(()=>window.existingCanvas===document.querySelector('section[data-workspace-surface="image-factory"]'))).toBe(true);
-  expect(await events()).toEqual([
-   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},{type:'open',id:'new-session'},
-  ]);
-  await composer.locator('textarea').fill('为项目 B 创建新任务');
-  await composer.getByRole('button',{name:'发送消息',exact:true}).click();
-  await expect.poll(events).toEqual([
-   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},
-   {type:'open',id:'new-session'},{type:'send',text:'为项目 B 创建新任务',images:[]}
-  ]);
+  expect(await composer.locator('textarea').inputValue()).toBe('第一张图的草稿');
+  await tabs.nth(1).click();
+  await picker.getByText('研究项目 A',{exact:true}).waitFor();
+  expect(await composer.locator('textarea').inputValue()).toBe('第二张图的草稿');
+  expect(await tabs.count()).toBe(2);
+  expect(await page.evaluate(()=>document.body.dataset.workspaceSurface)).toBe('image-factory');
   expect(errors).toEqual([]);
  } finally { await page.close() }
 },16000);
@@ -408,6 +433,8 @@ it('retains the session project for top-bar mode changes and still follows the m
    delete document.body.dataset.sessionWorkspaceSwitch
    window.pendingFixture.openSurface('image-factory')
   })
+  await chip.getByText('研究项目 A',{exact:true}).waitFor()
+  await page.evaluate(()=>window.pendingFixture.openSurface('knowledge'))
   await chip.getByText('研究项目 B',{exact:true}).waitFor()
   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
   expect(errors).toEqual([])
@@ -542,10 +569,11 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
    await page.route('http://127.0.0.1/right-project-mode',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8"><body></body>'}));
    await page.goto('http://127.0.0.1/right-project-mode');
    await page.setContent('<style>'+css+'body{margin:0}#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:32%;max-width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>');
+   const image=mode==='image-factory';
    const app=['image-factory','browser','knowledge'].includes(mode);
    await page.evaluate(({input,mode,dark,app})=>{
     document.body.toggleAttribute('data-ds-dark-theme',dark);
-    window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true,initialView:app?'chat':mode};
+    window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true,realImageTabs:mode==='image-factory',initialView:app?'chat':mode};
    },{input,mode,dark,app});
    await page.addScriptTag({content:script});
    if(app)await page.evaluate(mode=>window.pendingFixture.openSurface(mode),mode);
@@ -560,10 +588,12 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
    }));
    const original=await center();
    await chip.click();
-   await page.getByText('研究项目 B',{exact:true}).click();
+   const project=page.getByRole('menuitem',{name:'研究项目 B',exact:true});
+   if(image)await project.press('Enter');else await project.click();
    await chip.getByText('研究项目 B',{exact:true}).waitFor();
    expect(await seat.locator('[data-right-project-draft-hint]').count()).toBe(0);
-   await expect.poll(center).toEqual({...original,owner:'new-session'});
+   await expect.poll(center).toEqual({...original,owner:image?expect.stringMatching(/^image-task-/):'new-session'});
+   const firstOwner=(await center()).owner;
    expect(await seat.locator('textarea').isEditable()).toBe(true);
    expect(await seat.locator('[data-note-context-anchor]').count()).toBe(0);
    expect(await seat.evaluate(el=>{
@@ -571,12 +601,25 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
     return bounds.left>=pane.left&&bounds.right<=pane.right+1&&el.scrollWidth<=el.clientWidth+1;
    })).toBe(true);
    await chip.click();
-   await page.getByRole('menuitem',{name:'不在项目中工作',exact:true}).click();
+   const standalone=page.getByRole('menuitem',{name:'不在项目中工作',exact:true});
+   if(image)await standalone.press('Enter');else await standalone.click();
    await chip.getByText('选择项目',{exact:true}).waitFor();
    expect(await seat.locator('[data-right-project-draft-hint]').count()).toBe(0);
+   const events=await page.evaluate(()=>window.pendingFixture.events);
+   if(image){
+    const nextOwner=(await center()).owner;
+    expect(nextOwner).not.toBe(firstOwner);
+    expect(await center()).toEqual({...original,owner:nextOwner});
+    expect(await page.locator('.image-factory .eb-tab').count()).toBe(1);
+    expect(events.filter(event=>event.type==='create')).toEqual([
+     {type:'create',sessionId:firstOwner,workspaceId:'B'},{type:'create',sessionId:nextOwner,cwd:'/tmp/standalone/outputs'},
+    ]);
+    expect(errors).toEqual([]);
+    return;
+   }
    await expect.poll(center).toEqual({...original,owner:'new-session'});
    expect(await page.evaluate(()=>window.pendingFixture.record.getManualWorkspace())).toBeNull();
-   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   expect(events).toEqual([
     {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:app?'chat':mode},{type:'open',id:'new-session'},
    ]);
    expect(await page.evaluate(()=>window.pendingFixture.initialized)).toEqual([{id:'new-session',view:app?'chat':mode}]);
