@@ -43,12 +43,16 @@ export function createManagerWorkbenchCanvas(sessionId: string) {
   }
   const width = 1000
   const area = boardTabsLayout(spec, width)
-  const metrics = createResearchGrid().metrics(area.width)
+  const grid = createResearchGrid()
+  const metrics = grid.metrics(area.width)
+  const design = grid.metrics(1360)
+  // The native title, source footer and iframe insets sit outside the card body.
+  const componentChrome = 76
   const completeNode = (id: string, title: string) => ({
     id, messageId: id, kind: 'generated-container', title,
     excerpt: title, containerPrompt: title + ' · 管理者工作台设计快照',
     generationStatus: 'completed', generationLastSeq: 0, refreshMinutes: 0,
-    sizeMode: 'manual', preserveGenerationSize: true
+    sizeMode: 'manual'
   })
   return {
     files: [],
@@ -61,7 +65,7 @@ export function createManagerWorkbenchCanvas(sessionId: string) {
           x: area.left + metrics.inset + column * metrics.step + w / 2,
           y: area.top + metrics.inset + row * metrics.rowStep + h / 2,
           width: w, height: h,
-          containerSpec: { version: 1, type: 'html', title, html: managerPanelHtml(panel) }
+          containerSpec: { version: 1, type: 'html', title, html: managerPanelHtml(panel, Math.round(rows * design.rowStep - design.gap - componentChrome)) }
         }
       }))
     ]

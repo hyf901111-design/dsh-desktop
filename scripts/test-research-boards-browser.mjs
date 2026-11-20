@@ -757,7 +757,14 @@ if (process.argv.includes('--serve')) {
         const target = canvas.getByRole('tab', { name: tab, exact: true })
         await target.click()
         assert.equal(await target.getAttribute('aria-selected'), 'true')
-        await content(card).getByText(value, { exact: true }).waitFor()
+        const panel = card === 'organization'
+          ? content(card).locator('[data-organization-layout="horizontal"]') : content(card)
+        await panel.getByText(value, { exact: true }).waitFor()
+        if (card === 'people') {
+          assert.equal(await content('residences').locator('.manager-province').count(), 34)
+          assert.equal(await content('residences').locator('.manager-province-reported').count(), 5)
+          assert.equal(await content('residences').locator('.manager-map-inset').count(), 1)
+        }
         assert.equal(await canvas.locator('iframe[data-research-html-artifact]:visible').count(), count)
         assert.ok(await cards(card).locator('[data-workbench-drag-handle]').count())
         assert.match(await cards(card).locator('.odyssey-data-stamp').innerText(), /高管驾驶舱 [12]\.0/)
@@ -779,7 +786,42 @@ if (process.argv.includes('--serve')) {
       assert.equal(await canvas.getAttribute('data-workbench-style'), 'enterprise')
       assert.deepEqual(await page.evaluate(() => window.fixture.page.getState().favorites.filter(
         item => item.title === '管理者工作台').map(item => item.sessionId)), [managerId])
-      console.log('MANAGER_WORKBENCH_PASSED personal-board/native-cards/four-tabs/four-themes/reload')
+      await style.click()
+      await page.locator('[data-workbench-style-option="dark"]').click()
+      await page.setViewportSize({ width: 1380, height: 900 })
+      for (const [tab, nodes] of [
+        ['驾驶舱', ['people', 'residences', 'demographics']],
+        ['我的团队', ['team-roster']],
+        ['组织架构', ['organization', 'department-count']],
+        ['易招聘', ['interview', 'offer']]
+      ]) {
+        await canvas.getByRole('tab', { name: tab, exact: true }).click()
+        if (tab === '组织架构') {
+          const compact = content('organization').locator('[data-organization-layout="compact"]')
+          await compact.waitFor()
+          assert.equal(await compact.locator('.manager-org-roles li').count(), 9)
+          assert.equal(await compact.getByRole('region', { name: '研发部', exact: true }).locator('.manager-org-roles li').count(), 2)
+          assert.equal(await content('organization').locator('[data-organization-layout="horizontal"]').isVisible(), false)
+        }
+        for (const node of nodes) {
+          await until(async () => {
+            const size = await content(node).locator('.manager-panel').evaluate(element => ({
+              height: element.getBoundingClientRect().bottom, width: element.scrollWidth,
+              viewportHeight: innerHeight, viewportWidth: innerWidth
+            }), undefined, { timeout: 3000 })
+            return size.height <= size.viewportHeight + 8 && size.width <= size.viewportWidth + 3
+          }, 'readable component at default window width: ' + node)
+        }
+        if (tab === '组织架构') await page.screenshot({
+          path: join(out, 'manager-organization-adaptive.png'), animations: 'disabled'
+        })
+      }
+      await page.setViewportSize({ width: 1024, height: 900 })
+      await canvas.getByRole('tab', { name: '组织架构', exact: true }).click()
+      await until(async () => await content('organization').locator('.manager-org-branches').evaluate(
+        element => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length === 1
+      ), 'single-column organizational chart')
+      console.log('MANAGER_WORKBENCH_PASSED personal-board/native-cards/four-tabs/four-themes/reload/map/adaptive-organization')
       break focusedFlow
     }
     if (process.argv.includes('--shared-queue-focus')) {
