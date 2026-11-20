@@ -30,6 +30,7 @@ import {
   patchResearchBoardSidebar,
   patchResearchBoardWorkspace
 } from './lib/patch-research-board-client.mjs'
+const focusManager = process.argv.includes('--manager-workbench-focus')
 const root = process.cwd(),
   out = process.env.SHERLOCK_BOARD_QA_OUTPUT || join(root, 'output/playwright/research-boards')
 await mkdir(out, { recursive: true })
@@ -457,12 +458,10 @@ for (let i = 0; i < 2; i++) {
 const assets = new Map()
 for (const file of ['sherlock-logo.svg', 'sherlock-research.svg'])
   assets.set('/' + file, await readFile('build/' + file, 'utf8'))
-const conversation = await patchResearchBoardConversation(
-  await readFile(
-    packagePath('dsh-client-ui-conversation', 'lib/client.js'),
-    'utf8'
-  )
-)
+const conversationSource = await readFile(packagePath('dsh-client-ui-conversation', 'lib/client.js'), 'utf8')
+if (focusManager) assert.ok(conversationSource.includes('initializeWorkbenchDocument(canvas){'),
+  'Run node scripts/patch-web-frontend-loading.mjs before the manager workbench browser check')
+const conversation = focusManager ? conversationSource : await patchResearchBoardConversation(conversationSource)
 assets.set(
   '/conversation.js',
   conversation.replace(
@@ -518,7 +517,7 @@ const browser = await build({
         if (packageRoot !== root) b.onResolve({ filter: /^@deepseek-ai\/dsh-client-ui-primitives$/ }, async () => ({
           path: packagePath('dsh-client-ui-primitives', 'lib/index.js')
         }))
-        b.onResolve({ filter: /\?(raw|url)/ }, (a) => ({
+        b.onResolve({ filter: /\?(raw|url|inline)/ }, (a) => ({
           path: resolve(a.resolveDir, a.path.split('?')[0]),
           namespace: a.path.includes('raw') ? 'raw' : 'image'
         }))
@@ -532,7 +531,7 @@ const browser = await build({
           contents:
             'export default ' +
             JSON.stringify(
-              'data:image/png;base64,' +
+              (a.path.endsWith('.svg') ? 'data:image/svg+xml;base64,' : 'data:image/png;base64,') +
                 (await readFile(a.path)).toString('base64')
             ),
           loader: 'js'
@@ -698,6 +697,7 @@ if (process.argv.includes('--serve')) {
     })
   const page = await context.newPage(),
     peer = await peerContext.newPage()
+  if (!focusManager) for (const user of users) user.storage.setItem('ework.research.manager-workbench.v1', 'installed')
   const errors = [],
     failedRequests = [],
     previewRequests = new Set()
@@ -728,6 +728,60 @@ if (process.argv.includes('--serve')) {
     ])
     await page.waitForFunction(() => window.fixture?.ready)
     await peer.waitForFunction(() => window.fixture?.ready)
+    if (focusManager) {
+      await page.setViewportSize({ width: 2000, height: 1120 })
+      await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''))
+      const group = page.locator('[data-srb-board-group="private"]')
+      const entry = group.getByRole('button', { name: '管理者工作台', exact: true })
+      await entry.click()
+      const canvas = page.locator('[data-research-canvas][data-ework-grid]')
+      await canvas.locator('[role="tablist"]').waitFor()
+      const managerId = await page.evaluate(() => {
+        const { page } = window.fixture
+        return page.getState().favorites.find(item => item.title === '管理者工作台').sessionId
+      })
+      assert.equal(await entry.count(), 1)
+      assert.equal(users[0].storage.peekItem('ework.research.manager-workbench.v1'), 'installed')
+      assert.equal(await canvas.getAttribute('data-workbench-style'), 'dark')
+      const overview = await canvas.locator('[data-research-node-id$=":people"]').boundingBox()
+      assert.ok(overview && overview.height < 200, 'the overview remains a compact summary card')
+      const cards = name => canvas.locator('[data-research-node-id$=":' + name + '"]')
+      const content = name => cards(name).frameLocator('iframe[data-research-html-artifact]').frameLocator('#preview')
+      const tabs = [
+        ['驾驶舱', 'people', '1,091', 6, 'cockpit'],
+        ['我的团队', 'team-roster', '员工 011', 4, 'team'],
+        ['组织架构', 'organization', '登记清算岗', 2, 'organization'],
+        ['易招聘', 'offer', '44.4%', 4, 'hiring']
+      ]
+      for (const [tab, card, value, count, screenshot] of tabs) {
+        const target = canvas.getByRole('tab', { name: tab, exact: true })
+        await target.click()
+        assert.equal(await target.getAttribute('aria-selected'), 'true')
+        await content(card).getByText(value, { exact: true }).waitFor()
+        assert.equal(await canvas.locator('iframe[data-research-html-artifact]:visible').count(), count)
+        assert.ok(await cards(card).locator('[data-workbench-drag-handle]').count())
+        assert.match(await cards(card).locator('.odyssey-data-stamp').innerText(), /高管驾驶舱 [12]\.0/)
+        await page.screenshot({ path: join(out, 'manager-' + screenshot + '.png'), animations: 'disabled' })
+      }
+      const style = page.locator('[data-workbench-theme-toggle]')
+      for (const theme of ['light', 'enterprise', 'openterminal', 'dark', 'enterprise']) {
+        await style.click()
+        await page.locator('[data-workbench-style-option="' + theme + '"]').click()
+        await until(async () => await canvas.getAttribute('data-workbench-style') === theme &&
+          await content('offer').locator('html').getAttribute('data-workbench-style') === theme, 'manager theme ' + theme)
+        if (theme !== 'dark') await page.screenshot({ path: join(out, 'manager-' + theme + '.png'), animations: 'disabled' })
+      }
+      await page.reload()
+      await page.waitForFunction(() => window.fixture?.ready)
+      await entry.click()
+      await canvas.getByRole('tab', { name: '易招聘', exact: true, selected: true }).waitFor()
+      await content('offer').getByText('44.4%', { exact: true }).waitFor()
+      assert.equal(await canvas.getAttribute('data-workbench-style'), 'enterprise')
+      assert.deepEqual(await page.evaluate(() => window.fixture.page.getState().favorites.filter(
+        item => item.title === '管理者工作台').map(item => item.sessionId)), [managerId])
+      console.log('MANAGER_WORKBENCH_PASSED personal-board/native-cards/four-tabs/four-themes/reload')
+      break focusedFlow
+    }
     if (process.argv.includes('--shared-queue-focus')) {
       await page.getByRole('button', { name: '更多看板操作', exact: true }).click()
       await page.locator('.srb-header-menu').getByRole('menuitem', { name: '创建协作看板', exact: true }).click()

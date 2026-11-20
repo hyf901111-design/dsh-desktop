@@ -96,6 +96,8 @@ export type PageDependencies = {
 export { selectionNodeReady } from './research-board-presentation'
 import { boardOnlySession, boardRequestPresentation, boardEditTime, boardTaskStatus, boardTaskAttempts, boardMembers, boardEntryActions, boardAvatarBackground } from './research-board-presentation'
 export { followResearchConversation } from './research-conversation-follow'
+import { createManagerWorkbenchCanvas, managerWorkbenchTitle } from './manager-workbench/canvas'
+import { managerWorkbenchInstallKey } from '../shared/research-boards'
 import { taskFailureMessage } from '../../packages/dsh-research-collaboration/protocol.js'
 import {
   selectedBoardSession,
@@ -935,6 +937,72 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId: id })
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
+  }
+  let managerWorkbenchFlight: Promise<void> | undefined
+  const managerWorkbenchStorage: {
+    getItem(key: string): string | null
+    setItem(key: string, value: string): boolean | void
+  } = (win as any).dshDesktop?.researchCanvasStorage ?? win.localStorage
+  let managerWorkbenchMarker: string | null | undefined
+  const managerWorkbenchInstall = () => {
+    if (managerWorkbenchMarker === undefined)
+      managerWorkbenchMarker = managerWorkbenchStorage.getItem(managerWorkbenchInstallKey)
+    return managerWorkbenchMarker
+  }
+  const saveManagerWorkbenchInstall = (value: string) => {
+    if (managerWorkbenchStorage.setItem(managerWorkbenchInstallKey, value) === false)
+      throw Error('无法保存管理者工作台入口。')
+    managerWorkbenchMarker = value
+  }
+  async function openManagerWorkbench() {
+    if (managerWorkbenchFlight) return managerWorkbenchFlight
+    const generation = state.account.generation, account = state.account.user?.userId
+    const selected = selectionIntent(), request = navigation
+    const valid = () => {
+      if (disposed || state.account.generation !== generation || state.account.user?.userId !== account)
+        throw Error('账号已变化，请重新打开管理者工作台。')
+    }
+    managerWorkbenchFlight = (async () => {
+      const saved = managerWorkbenchInstall()
+      if (saved === 'installed' || state.account.status === 'loading') return
+      valid()
+      let id = saved ?? undefined
+      if (id) {
+        await waitForBoardSession(id)
+        valid()
+        if (missingSession(id) || isShared(id)) id = undefined
+      }
+      if (!id) {
+        id = await freshBoard(managerWorkbenchTitle)
+        // Keep the created session available for a retry if the canvas write
+        // or pin fails. The installation marker is local to the personal list.
+        saveManagerWorkbenchInstall(id)
+        valid()
+      }
+      if (!state.favorites.some(favorite => favorite.sessionId === id)) {
+        const board = identity(id)
+        if (!board) throw Error('管理者工作台会话尚未就绪。')
+        const workspace = deps.researchWorkspaces.for(id)
+        const canvas = createManagerWorkbenchCanvas(id)
+        const existing = workspace.getSnapshot()
+        if (existing.files.length || existing.artifacts.some((node: { id: string }) => !canvas.artifacts.some(card => card.id === node.id))) {
+          throw Error('当前会话已有研究资料，无法初始化管理者工作台。')
+        }
+        workspace.setWorkbenchStyle('dark', { scope: 'board' })
+        workspace.applyDirectoryCanvas(canvas)
+        if (workspace.initializeWorkbenchDocument(canvas) !== true) throw Error('管理者工作台布局保存失败。')
+        valid()
+        await call('favorite.add', { identity: { ...board, title: managerWorkbenchTitle }, dedicated: true })
+      }
+      saveManagerWorkbenchInstall('installed')
+      notify()
+      valid()
+      if (request === navigation && selected === selectionIntent()) {
+        await api.openPersonal(id)
+        if (current() === id) selectBoardSession(id)
+      }
+    })().finally(() => { managerWorkbenchFlight = undefined })
+    return managerWorkbenchFlight
   }
   type GuideKind = HomeGuideEntryKind
   type GuideSession = { kind: GuideKind; sessionId: string; cwd: string; title: string; createdAt: number }
@@ -1959,6 +2027,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (wasTemporary) trackTemporary(nextId)
       return nextId
     },
+    showManagerWorkbenchEntry: () => state.account.status !== 'loading' && managerWorkbenchInstall() !== 'installed',
+    openManagerWorkbench,
     async createPrivateBoard() {
       const id = await freshBoard('新研究看板')
       const i = identity(id)
@@ -2512,6 +2582,16 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
   React.useEffect(() => { updateDrag(null) }, [preferences.groupBy, preferences.sort, query])
   React.useEffect(() => { setExpandedGroups((keys: string[]) => keys.filter(key => !preferences.collapsedGroups.includes(key))) }, [preferences.collapsedGroups])
   const B = skin.header, grouped = preferences.groupBy === 'type'
+  const [openingManager, setOpeningManager] = React.useState(false)
+  const managerEntry = page.showManagerWorkbenchEntry() && managerWorkbenchTitle.includes(query.trim()) &&
+    h('div', { key: 'manager-workbench', className: ['srb-row', skin.rows.sessionRow, !grouped && skin.rows.flatSessionRowWithoutStatus].filter(Boolean).join(' ') },
+      grouped && h('span', { className: skin.rows.slot }),
+      h('button', { type: 'button', className: skin.rows.title + ' srb-board-title', title: managerWorkbenchTitle,
+        disabled: openingManager, onClick: safely(page, async () => {
+          setOpeningManager(true)
+          try { await page.openManagerWorkbench() } finally { setOpeningManager(false) }
+        }) },
+        h('span', { className: 'odyssey-nav-title' }, h('span', { className: 'odyssey-nav-title-text' }, managerWorkbenchTitle))))
   const commit = (over: { key: string; half: 'before' | 'after' } | null) => {
     const active = currentDrag.current
     if (!active || !over || committed.current) return
@@ -2550,13 +2630,14 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
     })
   }
   const renderRows = (rows: any[], group: string) => {
-    const limit = skin.collapsedSessionLimit ?? 5, expanded = !!query || expandedGroups.includes(group)
+    const starter = (group !== 'shared' && managerEntry) || null
+    const limit = Math.max(1, (skin.collapsedSessionLimit ?? 5) - (starter ? 1 : 0)), expanded = !!query || expandedGroups.includes(group)
     let shown = expanded ? rows : rows.slice(0, limit)
     // Keep the open board discoverable without rewriting the user's manual order.
     const current = rows.find(row => (row.value.localSessionId ?? row.value.sessionId) === page.current())
     if (!expanded && current && !shown.includes(current)) shown = [...shown.slice(0, limit - 1), current]
     return [
-      ...shown.map(renderRow),
+      starter, ...shown.map(renderRow),
       !query && rows.length > limit && h('button', {
         key: 'overflow:' + group, type: 'button', className: B.sessionOverflowButton,
         'data-srb-board-overflow': group, 'aria-expanded': expanded,
@@ -2564,11 +2645,11 @@ function ResearchBoardList({ page, skin, visible, entries, preferences, query, s
       }, expanded ? '收起' : `展开其余 ${rows.length - shown.length} 个看板`)
     ]
   }
-  const groups = grouped ? ['private', 'shared'].map(group => ({ group, rows: visible.filter((e: any) => e.group === group) })).filter(g => g.rows.length) : []
+  const groups = grouped ? ['private', 'shared'].map(group => ({ group, rows: visible.filter((e: any) => e.group === group) })).filter(g => g.rows.length || g.group === 'private' && managerEntry) : []
   const firstMarker = !grouped && drag?.over?.key === visible[0]?.key && drag?.over?.half === 'before'
   return h('div', { className: B.listArea }, h('div', { className: B.treeBody },
     h('div', { className: ['srb-board-list', B.list, !grouped && B.flatList].filter(Boolean).join(' '), 'data-group-by': preferences.groupBy },
-      !visible.length && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '暂无看板'),
+      !visible.length && !managerEntry && h('p', { className: 'srb-empty' }, query ? '没有找到匹配的看板' : '暂无看板'),
       ...(grouped ? groups.map(({ group, rows }) => h(ResearchBoardGroup, { key: group, skin, group,
         expanded: !!query || !preferences.collapsedGroups.includes(group),
         onToggle: () => { if (!query) save({ ...preferences, collapsedGroups: preferences.collapsedGroups.includes(group) ? preferences.collapsedGroups.filter((g: string) => g !== group) : [...preferences.collapsedGroups, group] }) }
