@@ -163,7 +163,7 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
   if(!run||run.target!==target||run.token!==marker.token||!id(marker.requestId))return
   try{
    consume(run,marker.requestId)
-   if(run.action==='new-note'){
+   if(run.action==='new-note'&&target.matches(sidebarMoreItemSelector)){
     // Let the actual More menu close via its own handler; its native prepare
     // request below is the only normal callback replaced by this lease.
     activeSidebarDocument=run
