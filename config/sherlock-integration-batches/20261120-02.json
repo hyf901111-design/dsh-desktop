@@ -276,6 +276,108 @@
           "桌面会话仍需使用已打包客户端走真实账号验收。"
         ],
         "generatedAt": "2026-11-20T08:22:44.096Z"
+      },
+      "merged": {
+        "mergeCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+        "verificationCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+            "completedAt": "2026-11-20T08:23:36.420Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+            "completedAt": "2026-11-20T08:23:36.420Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-session.test.js",
+              "test/pending-conversation.test.js",
+              "test/session-title-subject.test.js",
+              "test/research-session-title.test.ts",
+              "test/image-factory-native.test.js",
+              "test/research-board-page-context.test.ts",
+              "test/shared-main-agent.test.js",
+              "test/component-agent-scope.test.js",
+              "test/browser-app-native.test.js",
+              "test/research-board-runtime.test.js",
+              "--maxWorkers=3"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-session.test.js test/pending-conversation.test.js test/session-title-subject.test.js test/research-session-title.test.ts test/image-factory-native.test.js test/research-board-page-context.test.ts test/shared-main-agent.test.js test/component-agent-scope.test.js test/browser-app-native.test.js test/research-board-runtime.test.js --maxWorkers=3",
+            "verifiedCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+            "completedAt": "2026-11-20T08:23:36.420Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/memory-runtime.test.js",
+              "-t",
+              "isolates a shared board summary|does not extract shared",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/memory-runtime.test.js -t isolates a shared board summary|does not extract shared --maxWorkers=1",
+            "verifiedCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+            "completedAt": "2026-11-20T08:23:36.420Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-final-shell-patch.test.ts",
+              "test/session-view-preferences.test.js",
+              "-t",
+              "uses view-specific empty titles|filters only explicit New Chat reuse",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/figma-final-shell-patch.test.ts test/session-view-preferences.test.js -t uses view-specific empty titles|filters only explicit New Chat reuse --maxWorkers=2",
+            "verifiedCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+            "completedAt": "2026-11-20T08:23:36.420Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sidebar-new-note-browser.test.js",
+              "-t",
+              "updates the native sidebar",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/sidebar-new-note-browser.test.js -t updates the native sidebar --maxWorkers=1",
+            "verifiedCommit": "2e46d9f4c14db9bbb7353f6a02458ff48743c2dc",
+            "completedAt": "2026-11-20T08:23:36.420Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-20T08:23:36.420Z"
       }
     }
   ],
