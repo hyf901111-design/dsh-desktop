@@ -1,6 +1,7 @@
 import { icons } from './scheduled/icons'
 import noteIcon from '../../build/brand/odyssey-app-note.svg?inline'
 import researchIcon from '../../build/brand/odyssey-app-research.svg?inline'
+import presentationIcon from '../../build/brand/odyssey-app-presentation.svg?inline'
 import spreadsheetIcon from '../../build/brand/odyssey-app-spreadsheet.svg?inline'
 import newWorkspaceIcon from '../../build/brand/odyssey-b-workspace-add-18.svg?inline'
 import knowledgeApp from '../../build/brand/odyssey-knowledge-base.svg?inline'
@@ -17,6 +18,7 @@ const appIcons = {
   research: researchIcon,
   note: noteIcon,
   spreadsheet: spreadsheetIcon,
+  presentation: presentationIcon,
   'new-chat': icons.chat,
   'new-workspace': newWorkspaceIcon
 } satisfies Record<NavigationShortcut, string>
@@ -26,8 +28,8 @@ export function navigationAppIcon(app: NavigationShortcut) {
 }
 
 const labels = {
-  zh: ['浏览器', '知识库', '图像', '插件', '定时任务', '研究看板', '笔记', '表格'],
-  en: ['Browser', 'Knowledge Base', 'Images', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet']
+  zh: ['浏览器', '知识库', '图像', '插件', '定时任务', '研究看板', '笔记', '表格', '演示'],
+  en: ['Browser', 'Knowledge Base', 'Images', 'Plugins', 'Scheduled tasks', 'Research board', 'Notes', 'Spreadsheet', 'Presentation']
 }
 const mounted = new WeakMap<Document, () => void>()
 

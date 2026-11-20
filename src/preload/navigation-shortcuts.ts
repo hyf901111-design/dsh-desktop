@@ -16,6 +16,7 @@ const presentation = {
   research: ['研究', 'Research'],
   note: ['笔记', 'Notes'],
   spreadsheet: ['表格', 'Spreadsheet'],
+  presentation: ['演示', 'Presentation'],
   'new-chat': ['新建对话', 'New chat'],
   'new-workspace': ['新建工作区', 'New workspace']
 } as const
@@ -126,6 +127,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     const mode = resident.querySelector<HTMLElement>('[data-srb-tabs] [aria-selected=true]')?.dataset.conversationViewId
     if (mode === 'notes') return 'note'
     if (mode === 'spreadsheet' || resident.dataset.odysseyPage === 'spreadsheet') return 'spreadsheet'
+    if (mode === 'presentation' || resident.dataset.odysseyPage === 'presentation') return 'presentation'
     if (mode === 'research' || resident.dataset.odysseyPage === 'research') return 'research'
     const selectedSession = doc.documentElement.dataset.srbSelectedSession ||
       resident.querySelector<HTMLElement>('[data-srb-session-header]')?.dataset.eworkNotesSession

@@ -307,7 +307,7 @@ ctx.effect(()=>{
  const pending=makePending(conversationOptions);
  const right=(${createRightProjectDrafts.toString()})({globalDraft:pending,getInput:conversationOptions.getInput,makeDraft(entry,ownership){
    const draft=makePending({...conversationOptions,initialWorkspace:entry.workspaceId,detached:{
-     ...ownership,get sessionId(){return entry.sessionId},mode:['notes','research','spreadsheet'].includes(entry.mode)?entry.mode:'chat',
+     ...ownership,get sessionId(){return entry.sessionId},mode:['notes','research','spreadsheet','presentation'].includes(entry.mode)?entry.mode:'chat',
      isCommandCurrent:()=>!entry.tabId||document.body.dataset.browserActiveTab===entry.tabId,
      open:id=>sessions.open(id)
    },prepareSession:async id=>{
@@ -402,7 +402,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = imageTaskCreating || (sessionId === undefined ? !pendingConversation || pendingChatState?.workspaceId === undefined : hero && chipTitle === undefined && !cwd);')
  const inputRow='const inputBar = renderSlot("conversation.composer.bar", {';
  replace(inputRow,`const rightProjectMode=browserAppActive?composerApp:activeView??'chat';
- const locksRightProject=['notes','spreadsheet','research'].includes(rightProjectMode);
+ const locksRightProject=['notes','spreadsheet','research','presentation'].includes(rightProjectMode);
  const rightProjectLocked=locksRightProject&&directoryLocked;
  const canChooseRightProject=sidebarMode&&!subagentPanel&&!rightProjectLocked&&(pendingConversation||conversationVacant);
  const sessionScopedWorkspace=sessionId!==undefined&&document.body.dataset.sessionWorkspaceSwitch===sessionId;

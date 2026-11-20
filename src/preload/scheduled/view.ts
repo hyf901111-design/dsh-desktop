@@ -101,7 +101,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
-    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];visibleApps?:()=>readonly NavigationShortcut[];sidebarFull?:()=>boolean;pinApp?:(app:NavigationShortcut)=>void},
+    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;newPresentation?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];visibleApps?:()=>readonly NavigationShortcut[];sidebarFull?:()=>boolean;pinApp?:(app:NavigationShortcut)=>void},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)
@@ -262,6 +262,10 @@ export class ScheduledTaskView {
         app: 'spreadsheet', label: english ? 'Spreadsheet' : '表格', icon: 'spreadsheet',
         disabled: this.newDocumentBusy, run: () => void this.createDocument('spreadsheet')
       })
+      if (this.sidebarActions?.newPresentation) entries.push({
+        app:'presentation', label:english?'Presentation':'演示', icon:'presentation',
+        disabled:this.newDocumentBusy, run:()=>void this.createDocument('presentation')
+      })
       if (this.surfaceHost) {
         if (wide || pinned) entries.push(
           { app: 'browser', label: english ? 'Browser' : '浏览器', icon: 'browser', run: () => this.openBrowser() },
@@ -362,13 +366,13 @@ export class ScheduledTaskView {
   private newDocumentBusy=false
   private newNoteNotice?:HTMLElement
   private newNoteTimer?:number
-  private async createDocument(kind:'note'|'spreadsheet'){
-    const action=kind==='note'?this.sidebarActions?.newNote:this.sidebarActions?.newSpreadsheet
+  private async createDocument(kind:'note'|'spreadsheet'|'presentation'){
+    const action=kind==='note'?this.sidebarActions?.newNote:kind==='spreadsheet'?this.sidebarActions?.newSpreadsheet:this.sidebarActions?.newPresentation
     if(this.newDocumentBusy||!action)return
     this.newDocumentBusy=true;this.newNoteNotice?.remove()
     try{await action()}
     catch(error){if(error instanceof Error&&error.name==='AbortError')return
-      const notice=this.document.createElement('div');notice.className='st-menu st-new-note-error';notice.dataset.dark=String(this.dark());notice.role='alert';notice.textContent=error instanceof Error?error.message:kind==='note'?'新笔记未能创建。':'新表格未能创建。'
+      const notice=this.document.createElement('div');notice.className='st-menu st-new-note-error';notice.dataset.dark=String(this.dark());notice.role='alert';notice.textContent=error instanceof Error?error.message:kind==='note'?'新笔记未能创建。':kind==='spreadsheet'?'新表格未能创建。':'新演示未能创建。'
       const rect=this.more?.getBoundingClientRect();notice.style.left=Math.max(8,Math.min((rect?.left??8),this.document.documentElement.clientWidth-248))+'px';notice.style.top=(rect?.bottom??40)+6+'px'
       this.document.body.append(notice);this.newNoteNotice=notice
       this.newNoteTimer=this.document.defaultView?.setTimeout(()=>notice.remove(),6000)
