@@ -124,6 +124,22 @@ edit('src/hooks/useGlobalHotkey.ts',[
   ['e.preventDefault()\n      undo()', 'e.preventDefault()\n      if (shiftKey) redo(); else undo()']
 ])
 edit('src/hooks/usePasteEvent.ts', [['if (!editorAreaFocus.value', "if (document.querySelector('.deck-app[data-readonly]')) return\n    if (!editorAreaFocus.value"]])
+// PowerPoint stores the author's measured extent even for auto-fit text. Chromium
+// may measure a different font height on first paint. Visiting a slide must not
+// save that measurement as an edit. Resume auto-fit after its text or style changes.
+edit('src/views/components/element/TextElement/index.vue', [
+  ['watch(() => props.elementInfo.inset,', "watch(() => props.elementInfo.inset?.join(','),"],
+  [
+  'const updateTextElementHeight = (entries: ResizeObserverEntry[]) => {',
+  `let autoFitEdited = false
+watch([() => props.elementInfo.content, () => props.elementInfo.defaultFontName, () => props.elementInfo.lineHeight,
+  () => props.elementInfo.wordSpace, () => props.elementInfo.paragraphSpace, () => props.elementInfo.vertical,
+  () => props.elementInfo.vertical ? props.elementInfo.height : props.elementInfo.width],
+  () => { autoFitEdited = true }, { flush: 'sync' })
+
+const updateTextElementHeight = (entries: ResizeObserverEntry[]) => {
+  if (slidesStore.currentSlide?.odysseyOfficeVersion && !autoFitEdited) return`
+]])
 edit('src/views/components/element/ProsemirrorEditor.vue', [
   ['const handleBlur = () => {', "const flushText = () => handleInput.flush()\nonMounted(() => document.addEventListener('odyssey:flush-text', flushText))\nonUnmounted(() => {document.removeEventListener('odyssey:flush-text', flushText); handleInput.cancel()})\nconst handleBlur = () => {\n  handleInput.flush()"],
 ])
@@ -142,6 +158,17 @@ for (const file of ['index.vue','BaseChartElement.vue']) {
   ])
 }
 // Imported tables keep Office row geometry and individual cell edges in both canvas renderers.
+// The imported row heights already specify the Office table's bounds. DOM
+// layout rounds those heights even when the user has only changed slides.
+edit('src/views/components/element/TableElement/index.vue', [[
+  'const updateTableElementHeight = (entries: ResizeObserverEntry[]) => {',
+  `let tableLayoutEdited = false
+watch([() => JSON.stringify(props.elementInfo.data), () => props.elementInfo.width,
+  () => props.elementInfo.rowHeights?.join(','), () => props.elementInfo.colWidths?.join(','),
+  () => props.elementInfo.cellMinHeight], () => { tableLayoutEdited = true }, { flush: 'sync' })
+const updateTableElementHeight = (entries: ResizeObserverEntry[]) => {
+  if (slidesStore.currentSlide?.odysseyOfficeVersion && !tableLayoutEdited) return`
+]])
 edit('src/views/components/element/TableElement/utils.ts', [
   ["borderWidth: outline.width + 'px',", "borderWidth: outline.width + 'px',\n    ...Object.fromEntries(Object.entries(style?.officeBorders || {}).map(([edge,css])=>['border'+edge,css])),"],
   ["minHeight: (cellMinHeight - 4) + 'px',", "minHeight: cellMinHeight + 'px', boxSizing:'border-box',\n    ...(style?.officeInsets ? {padding:style.officeInsets.map(n=>n+'px').join(' '),lineHeight:1.05} : {}),"]
