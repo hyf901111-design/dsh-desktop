@@ -1,4 +1,5 @@
 import { attachPptxAnnotationViewer } from './native-annotations.mjs'
+import { selectedBars } from './chart-points'
 import style from './native-annotations.css?raw'
 
 const names = [
@@ -73,6 +74,7 @@ export function attachEditorMarks(host, store, documentId, reference, snapshot, 
         kind: target.kind,
         region: r,
         nodeIds: ids,
+        chartPoints: selectedBars(host, r),
         comment: ''
       }
       slide.marks = [...(slide.marks || []), mark]

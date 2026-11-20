@@ -318,6 +318,7 @@ import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
 import emitter, { EmitterEvents } from '@/utils/emitter'
 import { slideTitle } from './presentation-slide-title'
+import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
 
 const Glyph = defineComponent({
@@ -674,7 +675,7 @@ function readFile(file, importId) {
     return
   }
   const before = store.slides
-  importing = { before, importId, title: file.name.replace(/\.pptx$/i, '') }
+  importing = { before, file, importId, title: file.name.replace(/\.pptx$/i, '') }
   notice.value = '正在导入…'
   importer.importPPTXFile([file], { cover: true })
 }
@@ -687,6 +688,8 @@ watch(importer.exporting, async (busy) => {
     notice.value = '导入失败，原文稿已保留。'
     return
   }
+  await reconcilePointColors(job.file, store.slides).catch(() => {})
+  if (importing !== job) return
   docId.value = crypto.randomUUID()
   store.setTitle(job.title)
   marking.value = false
@@ -715,8 +718,13 @@ function exportDeck() {
   notice.value = '正在导出…'
   exporter.exportPPTX(store.slides, true, false)
 }
-function exported(event) {
-  send('export', { bytes: event.detail, title: store.title, format: 'pptx' })
+async function exported(event) {
+  try {
+    const bytes = await reconcilePointColors(event.detail, store.slides, true)
+    send('export', { bytes, title: store.title, format: 'pptx' })
+  } catch {
+    notice.value = '图表导出失败，请重试。'
+  }
 }
 watch(marking, async (enabled) => {
   markViewer?.destroy()

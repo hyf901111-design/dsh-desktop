@@ -244,7 +244,7 @@ export class PresentationStore {
           top: e.top,
           width: e.width,
           height: e.height,
-          ...(e.type === 'chart' ? { chartType: e.chartType, data: e.data } : {}),
+          ...(e.type === 'chart' ? { chartType: e.chartType, data: e.data, themeColors: e.themeColors } : {}),
           ...(e.type === 'table'
             ? { cells: e.data?.map((r: any[]) => r.map((c) => visibleText(c.text))) }
             : {})
@@ -332,6 +332,28 @@ export class PresentationStore {
               throw Error('元素尺寸无效。')
             el[attr] = op[attr]
           }
+      } else if (
+        op.op === 'chartPointColor' &&
+        el.type === 'chart' &&
+        ['bar', 'column'].includes(el.chartType)
+      ) {
+        const { seriesIndex, pointIndex, color } = op
+        if (
+          !Number.isInteger(seriesIndex) ||
+          !Number.isInteger(pointIndex) ||
+          !Number.isFinite(el.data.series?.[seriesIndex]?.[pointIndex]) ||
+          typeof color !== 'string' ||
+          !/^#[0-9a-f]{6}$/i.test(color)
+        )
+          throw Error('柱形索引或颜色无效。')
+        const colors = el.data.pointColors ?? {}
+        el.data = {
+          ...el.data,
+          pointColors: {
+            ...colors,
+            [seriesIndex]: { ...colors[seriesIndex], [pointIndex]: color.toUpperCase() }
+          }
+        }
       } else if (op.op === 'chartData' && el.type === 'chart') {
         const d = op.data
         if (
