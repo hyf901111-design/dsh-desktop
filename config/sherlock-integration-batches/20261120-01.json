@@ -155,6 +155,42 @@
           "旧版本已标记为保留的会话沿用原标记"
         ],
         "generatedAt": "2026-11-20T06:21:07.824Z"
+      },
+      "merged": {
+        "mergeCommit": "ef1b0318b47b8103336f57800ad0163f6dedf628",
+        "verificationCommit": "ef1b0318b47b8103336f57800ad0163f6dedf628",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/spreadsheet-cash-flow-playback.test.ts",
+              "--testTimeout",
+              "10000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
+            "verifiedCommit": "ef1b0318b47b8103336f57800ad0163f6dedf628",
+            "completedAt": "2026-11-20T06:21:20.347Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "ef1b0318b47b8103336f57800ad0163f6dedf628",
+            "completedAt": "2026-11-20T06:21:20.347Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "recordedAt": "2026-11-20T06:21:20.347Z"
       }
     }
   ],
