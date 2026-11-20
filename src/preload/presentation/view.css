@@ -1,0 +1,76 @@
+[data-odyssey-page='presentation'] > [data-conversation-scroll] {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 !important;
+  max-width: none !important;
+  scrollbar-gutter: auto;
+}
+[data-odyssey-page='presentation'] :is([data-odyssey-reading-status], [data-odyssey-center-composer]),
+[data-odyssey-page='presentation'] > [data-center-composer-host] {
+  display: none !important;
+}
+[data-ework-presentation-view] {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+[data-ework-presentation-view] > iframe {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
+}
+[data-odyssey-page='presentation'] .wSkVaW_header {
+  border-bottom: 0 !important;
+  box-shadow: none !important;
+}
+body[data-ework-presentation-session]
+  [data-research-composer-host]
+  :has(> [data-input-backdrop] [data-reference-source='presentation-reference'])
+  textarea::placeholder {
+  color: transparent;
+}
+body[data-ework-presentation-session]
+  [data-research-composer-host]:has([data-reference-source='presentation-reference'])
+  :is([data-sheet-context-anchor], [data-input-placeholder]) {
+  display: none;
+}
+body[data-ework-presentation-session]
+  [data-research-composer-host]:has([data-reference-source='presentation-reference'])
+  textarea::placeholder {
+  color: transparent;
+}
+.ew-presentation-chip-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  mask: center/contain no-repeat var(--ew-presentation-icon);
+}
+
+body[data-ework-presentation-session] .ew-sheet-pending-reference {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  gap: 5px;
+  max-width: 100%;
+  box-sizing: border-box;
+  height: 23px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: #aaa2;
+  box-shadow: inset 0 0 0 1px #9994;
+  opacity: 0.72;
+  font-size: 13px;
+  pointer-events: none;
+}
+body[data-ework-presentation-session] .ew-sheet-pending-reference > span:last-child {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

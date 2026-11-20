@@ -13,7 +13,7 @@ export function eworkWorkspaceDraftRevision(core){
 }
 
 export function eworkBindWorkspaceDraft(shell,view,legacyDraft,savedDrafts,write,createCore){
- const mode=['research','notes','spreadsheet'].includes(view)?view:'chat'
+ const mode=['research','notes','spreadsheet','presentation'].includes(view)?view:'chat'
  if(!shell.eworkDraftSlots){
   shell.eworkDraftSlots=new Map()
   shell.eworkDraftMode='chat'

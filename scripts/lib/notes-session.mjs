@@ -10,9 +10,11 @@ export function installNoteSessionTitles(sessions, doc) {
     const id = event.detail?.sessionId
     if (typeof id === 'string' && sessions.list.getSnapshot().byId[id]?.blank) sessions.retainSpreadsheetSession(id)
   }
+  doc.addEventListener('sherlock:presentation-saved', edited)
   doc.addEventListener('sherlock:notes-edited', edited)
   doc.addEventListener('sherlock:spreadsheet-saved', spreadsheet)
   return () => {
+    doc.removeEventListener('sherlock:presentation-saved', edited)
     doc.removeEventListener('sherlock:notes-edited', edited)
     doc.removeEventListener('sherlock:spreadsheet-saved', spreadsheet)
   }
@@ -59,7 +61,7 @@ export function patchNoteSessionHost(source) {
   const marker='/* ework:note-participation:v1 */'
   // Sessions created by earlier clients can already own workbooks without
   // an edit event. Keep their established retention on replay.
-  const activity = 'event.type === "turn/start" || event.type === "workspace-note/edited" || event.type === "workspace-spreadsheet/edited" || event.type === "workspace-knowledge/copied" || (event.type === "workspace-spreadsheet/created" && event.data?.provisional !== true)'
+  const activity = 'event.type === "turn/start" || event.type === "workspace-note/edited" || event.type === "workspace-presentation/edited" || event.type === "workspace-spreadsheet/edited" || event.type === "workspace-knowledge/copied" || (event.type === "workspace-spreadsheet/created" && event.data?.provisional !== true)'
   const predicate = /(function sessionBlank\(session\) \{\s*)(?:\/\* ework:note-participation:v1 \*\/\s*)?return !session\.events\.some\(\(event\) => [^\n]+\);/g
   const projection = /(function applySessionListMetadata\(state, event\) \{\s*)const blank = state\.blank && [^\n]+?;/g
   if([...source.matchAll(predicate)].length!==1||[...source.matchAll(projection)].length!==1)throw Error('笔记无法定位服务端会话参与判定。')
@@ -70,7 +72,7 @@ export function patchNoteSessionHost(source) {
 /** Register the EWork event in both bundled and unbundled native readers. */
 export function patchNoteSessionCatalog(source) {
   const marker = '/* ework:note-event-catalog:v1 */'
-  const events = ['"workspace-note/created",','"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-spreadsheet/edited",','"workspace-knowledge/copied",','"workspace-research/title-context",']
+  const events = ['"workspace-presentation/edited",','"workspace-presentation/created",','"workspace-note/created",','"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-spreadsheet/edited",','"workspace-knowledge/copied",','"workspace-research/title-context",']
   if (source.includes(marker)) {
     const missing = events.filter(event=>!source.includes(event))
     return missing.length ? source.replace(marker, marker+'\n'+missing.join('\n')) : source

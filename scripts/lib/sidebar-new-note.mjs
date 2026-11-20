@@ -2,6 +2,7 @@ export async function initializeWorkspaceSession(_sessions,id,view,locale) {
   const routes = {
     notes: '/sherlock/notes/session',
     research: '/sherlock/research/session-title',
+    presentation: '/sherlock/presentation/session',
     spreadsheet: '/sherlock/spreadsheet/session'
   }
   if (!Object.hasOwn(routes,view)) return
@@ -27,7 +28,7 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
   // a detached store or retrying writes. A same-view acknowledgement is benign.
   const view=id=>{
     if(!id)return null
-    const key='ework.session.view.v1:'+id,valid=value=>['chat','research','notes','trajectory','spreadsheet'].includes(value)
+    const key='ework.session.view.v1:'+id,valid=value=>['chat','research','notes','trajectory','spreadsheet', 'presentation'].includes(value)
     const durable=window.dshDesktop?.researchCanvasStorage?.getItem(key)??null,local=window.localStorage.getItem(key),raw=window.localStorage.getItem(key+'.pending-native')
     let pending=null
     try{const value=raw&&raw.length<256?JSON.parse(raw):null;if(value&&(valid(value.view)||value.view==='')&&(value.previous===null||value.previous===''||valid(value.previous)))pending=value}catch{}
@@ -58,18 +59,18 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
   const reply=(requestId,value)=>window.dispatchEvent(new CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId,...value}}))
   const handle=async detail=>{
     if(disposed)throw abort()
-    const spreadsheet=detail.kind==='spreadsheet',noun=spreadsheet?'表格':'笔记'
-    if(detail.phase==='cancel'){if(tickets.get(detail.token)?.spreadsheet===spreadsheet)drop(detail.token);return {}}
+    const kind=detail.kind??'note', noun=kind==='spreadsheet'?'表格':kind==='presentation'?'演示':'笔记'
+    if(detail.phase==='cancel'){if(tickets.get(detail.token)?.kind===kind)drop(detail.token);return {}}
     if(detail.phase==='prepare'){
       const target=workspace();if(!target)throw Error('请先选择工作区，再新建'+noun+'。')
       const current=sessions.list.getSnapshot().current,shell=current?getInput(current):null,token=crypto.randomUUID()
       if(current&&!shell)throw Error('当前输入正在读取，请稍后重试。')
-      const ticket={spreadsheet,current,shell,fingerprint:fingerprint(shell),workspaceId:target.workspaceId,path:target.path,epoch,expires:Date.now()+30_000,ids:new Set(sessions.list.getSnapshot().ids),surface:document.body.dataset.workspaceSurface,view:view(current)}
+      const ticket={kind,current,shell,fingerprint:fingerprint(shell),workspaceId:target.workspaceId,path:target.path,epoch,expires:Date.now()+30_000,ids:new Set(sessions.list.getSnapshot().ids),surface:document.body.dataset.workspaceSurface,view:view(current)}
       tickets.set(token,ticket)
       return {token}
     }
     const ticket=tickets.get(detail.token)
-    if(!ticket||ticket.spreadsheet!==spreadsheet||!valid(ticket))throw abort()
+    if(!ticket||ticket.kind!==kind||!valid(ticket))throw abort()
     if(creating)throw Error('正在新建，请稍候。')
     creating=true
     try{
@@ -83,7 +84,7 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
       if(typeof id!=='string'||!id||ticket.ids.has(id)||!sessions.list.getSnapshot().ids.includes(id))throw Error('新'+noun+'会话未能创建。')
       const binding=sessions.binding(id)
       if(!binding||binding.state==='removed'||binding.kind==='subagent')throw Error('新'+noun+'会话不可用。')
-      const view=spreadsheet?'spreadsheet':'notes'
+      const view=kind==='note'?'notes':kind
       await initializeSession(sessions,id,view,document.documentElement.dataset.odysseyLocale==='en'?'en':'zh')
       if(!valid(ticket))throw abort()
       chatStore.create(id).actions.setView(view)
@@ -95,7 +96,7 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
   }
   const listener=event=>{
     const d=event.detail
-    if(!d||typeof d.requestId!=='string'||d.requestId.length>100||!['prepare','create','cancel'].includes(d.phase)||d.kind!==undefined&&d.kind!=='spreadsheet'||Object.keys(d).some(key=>!['requestId','phase','token','kind'].includes(key))||(d.phase!=='prepare'&&typeof d.token!=='string'))return
+    if(!d||typeof d.requestId!=='string'||d.requestId.length>100||!['prepare','create','cancel'].includes(d.phase)||d.kind!==undefined&&!['spreadsheet','presentation'].includes(d.kind)||Object.keys(d).some(key=>!['requestId','phase','token','kind'].includes(key))||(d.phase!=='prepare'&&typeof d.token!=='string'))return
     let request=requests.get(d.requestId)
     if(!request){request=handle(d).then(value=>({ok:true,...value}),error=>({ok:false,cancelled:error?.name==='AbortError',message:error?.message||'新笔记未能创建。'}));requests.set(d.requestId,request);if(requests.size>64)requests.delete(requests.keys().next().value)}
     void request.then(value=>{if(!disposed)reply(d.requestId,value)})

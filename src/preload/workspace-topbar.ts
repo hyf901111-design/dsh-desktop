@@ -86,6 +86,7 @@ html[data-odyssey-native-window-move] :is(${sessionWindowMoveHeader},${sessionWi
 ${workspaceSessionHeader}{--workspace-title-icon:${chatTitleIcon}}
 ${resident}[data-odyssey-page="research"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('research')};--workspace-title-art-size:auto 14px}
 ${resident}[data-odyssey-page="spreadsheet"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('spreadsheet')};--workspace-title-art-size:14px auto}
+${resident}[data-odyssey-page="presentation"] ${sessionHeader}{--workspace-title-icon:${navigationAppIcon('presentation')};--workspace-title-art-size:14px auto}
 ${workspaceSessionHeader}:has([data-conversation-view-id=notes][aria-selected=true]),
 body[data-workspace-surface=notes] ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('note')};--workspace-title-art-size:auto 14px}
 ${workspaceSessionHeader} .wSkVaW_crumbs{display:flex;align-items:center;gap:var(--odyssey-app-title-gap)}

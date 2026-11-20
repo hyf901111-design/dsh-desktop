@@ -134,7 +134,7 @@ export class ResearchCanvasStorage {
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
     if (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(value)) return false
     if (key.startsWith(RESPONSIVE_ARRANGE_PREFIX) && value !== 'auto' && value !== 'manual') return false
-    if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet'].includes(value)) return false
+    if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet', 'presentation'].includes(value)) return false
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
     if (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(value)) return false
     if (key.startsWith('sherlock.workbench.auto-arrange.v1:') && !validWorkbenchArrange(value)) return false
@@ -180,7 +180,7 @@ export class ResearchCanvasStorage {
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
           (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(record.value)) ||
           (key.startsWith(RESPONSIVE_ARRANGE_PREFIX) && record.value !== 'auto' && record.value !== 'manual') ||
-          (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet'].includes(record.value)) ||
+          (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet', 'presentation'].includes(record.value)) ||
           (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value)) ||
           (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(record.value)) ||
           (key.startsWith('sherlock.workbench.auto-arrange.v1:') && !validWorkbenchArrange(record.value))) return null

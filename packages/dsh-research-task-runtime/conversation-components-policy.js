@@ -70,7 +70,7 @@ export function latestClientModeForAuthority(session){
    if(result.type!=='tool-result'||result.isError)continue
    for(const block of result.content??[]){
     if(block.type!=='text')continue
-    try{const value=JSON.parse(block.text);if(['conversation','research','notes','spreadsheet','knowledge'].includes(value?.mode)&&Array.isArray(value.capabilities)&&!value.error)mode=value.mode}catch{}
+    try{const value=JSON.parse(block.text);if(['conversation','research','notes','spreadsheet','presentation','knowledge'].includes(value?.mode)&&Array.isArray(value.capabilities)&&!value.error)mode=value.mode}catch{}
    }
   }
  }
@@ -119,6 +119,7 @@ export function registerConversationComponentsPolicy(ctx,{readSpreadsheetReferen
   const quick=spreadsheetQuickPrompt(planningHumanRequest(session)?.text)
   if(quick>=0&&!documentOnly(session)&&(!mode||mode==='spreadsheet'))return [SHEET_QUICK_GUIDANCE,SHEET_WRITE_GUIDANCE,quick===2?CASH_FLOW_QUICK_GUIDANCE:''].filter(Boolean).join('\n')
   if(documentOnly(session))return '【文件交付】本轮制作或修订的是文件，文件中的图表、表格和版式属于该交付件。沿用户指定技能和原有文件读取、代码执行、渲染检查、保存与文件交付流程完成；保留原任务预算，不将内部图表替换为独立界面组件或新研究画布。'
+  if(mode==='presentation')return '演示内容通过 client_capabilities 和 client_action 读写。打开会话工作目录内的 .pptx 用 presentation.open，读取和改稿用 presentation.inspect 和 presentation.apply。先查看引用对应的元素、备注或标注位置，仅在 saved=true 后回复已修改。'
   if(mode==='spreadsheet')return SHEET_WRITE_GUIDANCE
   if(!mode&&!request&&/表格|工作簿|工作表|单元格|选区|公式|xlsx|spreadsheet/i.test(planningHumanRequest(session)?.text??''))return '本轮涉及表格或单元格；先查询 client_capabilities 确认客户端模式。spreadsheet 模式用 spreadsheet.inspect、spreadsheet.apply 或 spreadsheet.undo，其它模式遵循本轮目录。'
   if(request?.target==='workbench')return ''

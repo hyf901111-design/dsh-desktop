@@ -5,7 +5,7 @@ import {
 import { prepareBrowserOverlay } from './browser/overlay-preflight'
 
 const nativeViews = [
-  ['chat', '对话', 'Chat'], ['research', '研究', 'Research'], ['notes', '笔记', 'Notes'], ['spreadsheet', '表格', 'Spreadsheet']
+  ['chat', '对话', 'Chat'], ['research', '研究', 'Research'], ['notes', '笔记', 'Notes'], ['spreadsheet', '表格', 'Spreadsheet'], ['presentation', '演示', 'Presentation']
 ] as const
 export const sessionWorkspaceAppViews = [
   ['browser', '浏览器', 'Browser'], ['image-factory', '图像', 'Images'], ['knowledge', '知识库', 'Knowledge']
@@ -100,7 +100,7 @@ export function navigateWorkspaceView(document: Document, sessionId: string, vie
   return true
 }
 
-const viewForApp = { research: 'research', note: 'notes', spreadsheet: 'spreadsheet',
+const viewForApp = { research: 'research', note: 'notes', spreadsheet: 'spreadsheet', presentation: 'presentation',
   browser: 'browser', 'image-factory': 'image-factory', knowledge: 'knowledge' } as const
 type WorkspaceView = typeof workspaceViews[number]
 type WorkspaceViewPreferences = {

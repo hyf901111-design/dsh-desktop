@@ -1,7 +1,7 @@
 import { sidebarUsageSnapshot, sidebarUsageTimes, recordSidebarSessionUse } from './sidebar-session-recency.mjs'
 
 export function isSessionViewId(value) {
-  return ['chat', 'research', 'notes', 'trajectory', 'spreadsheet'].includes(value)
+  return ['chat', 'research', 'notes', 'trajectory', 'spreadsheet', 'presentation'].includes(value)
 }
 
 export function hasSessionViewPreference(sessionId, view) {
