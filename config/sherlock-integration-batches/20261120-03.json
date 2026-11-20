@@ -197,15 +197,15 @@
         "schemaVersion": 1,
         "featureName": "演示应用：PPTist 编辑、原生共享对话及选区改稿",
         "branch": "codex/feat/presentation-workspace-20261120",
-        "baseCommit": "08d60e29b46a80de77bb582621b9d7195d097944",
-        "tipCommit": "07984fd30d40b23366a73c73803135c573e3f3fb",
+        "baseCommit": "07984fd30d40b23366a73c73803135c573e3f3fb",
+        "tipCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
         "commits": [
           {
-            "commit": "07984fd30d40b23366a73c73803135c573e3f3fb",
+            "commit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
             "parents": [
-              "08d60e29b46a80de77bb582621b9d7195d097944"
+              "07984fd30d40b23366a73c73803135c573e3f3fb"
             ],
-            "subject": "按原稿恢复组合图双轴、日期刻度与透明图表叠放"
+            "subject": "还原易方达图表的日期间隔、分类配色与散点标记"
           }
         ],
         "files": [
@@ -215,14 +215,30 @@
           },
           {
             "status": "M",
+            "path": "packages/presentation-editor/overlay/App.vue"
+          },
+          {
+            "status": "M",
             "path": "packages/presentation-editor/overlay/OfficeChart.vue"
           },
           {
-            "status": "A",
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/chart-points.js"
+          },
+          {
+            "status": "M",
             "path": "packages/presentation-editor/overlay/office-axes.js"
           },
           {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/office-import.js"
+          },
+          {
             "status": "A",
+            "path": "packages/presentation-editor/overlay/office-series.js"
+          },
+          {
+            "status": "M",
             "path": "test/presentation-office-axes.test.js"
           }
         ],
@@ -235,8 +251,8 @@
             ],
             "outcome": "passed",
             "summary": "编译 PPTist",
-            "verifiedCommit": "07984fd30d40b23366a73c73803135c573e3f3fb",
-            "completedAt": "2026-11-20T16:31:46.744943Z",
+            "verifiedCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
+            "completedAt": "2026-11-20T16:41:54.956598Z",
             "timeoutMs": 180000
           },
           {
@@ -247,8 +263,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "07984fd30d40b23366a73c73803135c573e3f3fb",
-            "completedAt": "2026-11-20T16:31:59.006764Z",
+            "verifiedCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
+            "completedAt": "2026-11-20T16:42:08.317293Z",
             "timeoutMs": 180000
           },
           {
@@ -263,14 +279,14 @@
             ],
             "outcome": "passed",
             "summary": "演示布局、编辑交互与文稿数据",
-            "verifiedCommit": "07984fd30d40b23366a73c73803135c573e3f3fb",
-            "completedAt": "2026-11-20T16:31:59.631056Z",
+            "verifiedCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
+            "completedAt": "2026-11-20T16:42:09.317374Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Electron 导入易方达模板，截图核对 46 页。第 24、26 页左侧为收益率、右侧为成交额、显示原月份，第 24 页图例、刻度与图下来源均完整可见。"
+          "summary": "真实 Electron 中检查 46 页，第 17 页按年显示日期并保留标注散点，第 22 页六根柱与六个图例颜色一致，第 24、26 页保留双轴和月份。"
         },
         "acceptanceCriteria": [
           "首页及左栏打开演示，可固定为会话顶部页签。研究、演示和表格来回切换保留会话历史、当前文稿及页码。",
@@ -280,177 +296,7 @@
         "risks": [
           "整体验收以签名客户端会话场景的实际复测为准。"
         ],
-        "generatedAt": "2026-11-20T16:31:59.631116Z"
-      },
-      "merged": {
-        "mergeCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-        "verificationCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-canvas-storage.test.ts",
-              "test/board-tabs-contract.test.js",
-              "test/workbench-style.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台|默认显示五条|五条以内"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-boards-browser.mjs",
-              "--manager-workbench-focus"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "build:presentation"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run build:presentation",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/presentation-workspace.test.ts",
-              "test/presentation-reference-browser.test.js",
-              "test/workspace-mode-welcome.test.js",
-              "test/navigation-shortcuts.test.ts",
-              "test/workspace-draft-state.test.js",
-              "test/client-capability-service.test.ts",
-              "test/client-capabilities.test.js",
-              "test/browser-app-native.test.js",
-              "test/presentation-artboard-browser.test.ts",
-              "--maxWorkers=3"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/presentation-workspace.test.ts test/presentation-reference-browser.test.js test/workspace-mode-welcome.test.js test/navigation-shortcuts.test.ts test/workspace-draft-state.test.js test/client-capability-service.test.ts test/client-capabilities.test.js test/browser-app-native.test.js test/presentation-artboard-browser.test.ts --maxWorkers=3",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "SHERLOCK_ROUTING_RESIDENT=1",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-component-submit-routing-browser.test.js",
-              "-t",
-              "one native right-side",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env SHERLOCK_ROUTING_RESIDENT=1 ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/conversation-component-submit-routing-browser.test.js -t one native right-side --maxWorkers=1",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pptx-annotation-browser.test.js",
-              "-t",
-              "point|rect",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/pptx-annotation-browser.test.js -t point|rect --maxWorkers=1",
-            "verifiedCommit": "7701e5726bbb6366fc1d401f02a47e648be51814",
-            "completedAt": "2026-11-20T16:32:08.252Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-20T16:32:08.252Z"
+        "generatedAt": "2026-11-20T16:42:09.317481Z"
       }
     }
   ],
