@@ -5,6 +5,27 @@ export type DraftNote = NoteContent & { baseRevision: number; updatedAt: number;
 export type NoteLoad = { saved: SavedNote; draft?: DraftNote }
 export type NoteSave = { status: 'saved'; saved: SavedNote } | { status: 'conflict'; saved: SavedNote }
 export const noteText = (value: unknown): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(item => typeof item === 'string' ? item : noteText(item?.text ?? item?.content)).join('') : ''
+/** A compact title for untitled notes, derived from the first meaningful body text. */
+export function noteSessionTitle(title: string, blocks: NoteContent['blocks']): string {
+  const explicit = title.replace(/\s+/g, ' ').trim()
+  if (explicit) return explicit
+  const visit = (items: NoteContent['blocks'], depth: number): string => {
+    if (depth > 32) return ''
+    for (const block of items) {
+      const text = noteText(block?.content)
+      const subject = text.split(/(?:[\r\n。！？]|[.!?](?:\s|$))/u)
+        .map(line => line.replace(/\s+/g, ' ').trim())
+        .find(line => /[\p{L}\p{N}]/u.test(line))
+      if (subject) return [...subject].slice(0, 40).join('').trimEnd()
+      if (Array.isArray(block?.children)) {
+        const nested = visit(block.children, depth + 1)
+        if (nested) return nested
+      }
+    }
+    return ''
+  }
+  return visit(blocks, 0)
+}
 export function noteOutline(blocks: any[]): Array<{ id: string; level: number; text: string }> {
   const result: Array<{ id: string; level: number; text: string }> = []
   const visit = (items: any[], depth: number) => {

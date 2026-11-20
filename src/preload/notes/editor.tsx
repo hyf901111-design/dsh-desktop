@@ -14,7 +14,7 @@ import { blocksToYXmlFragment, withCollaboration, YjsThreadStore } from '@blockn
 import { BlockNoteView } from '@blocknote/mantine'
 import { useCreateBlockNote, useBlockNoteEditor, createReactBlockSpec, FormattingToolbar, FormattingToolbarController, BlockTypeSelect, BasicTextStyleButton, ColorStyleButton, CreateLinkButton, AddCommentButton, TextAlignButton, SideMenuController, SideMenu, DragHandleButton, useComponentsContext, useExtensionState, useEditorState, getDefaultReactSlashMenuItems, SuggestionMenuController, FloatingComposerController } from '@blocknote/react'
 import * as Y from 'yjs'
-import { noteOutline, noteText, restoreNoteDraft, noteSuggestionPreview, noteComponentRequest, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult, type NoteInsertionAnchor } from '../../shared/workspace-notes'
+import { noteOutline, noteSessionTitle, noteText, restoreNoteDraft, noteSuggestionPreview, noteComponentRequest, type NoteSuggestionPreview, type NoteContent, type NoteLoad, type NotesBridge, type NoteAiResult, type NoteInsertionAnchor } from '../../shared/workspace-notes'
 import { NotesOutline } from './outline'
 import { NoteViewMode } from './view-mode'
 import { NoteAiSelection } from './selection'
@@ -400,7 +400,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     if(props.guide)return
     recordSidebarSessionUse(props.sessionId)
     document.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:props.sessionId}}))
-    const state=engagement.current;state.started=true;state.target=titleRef.current;clearTimeout(state.timer)
+    const state=engagement.current;state.started=true;state.target=noteSessionTitle(titleRef.current,editor.document);clearTimeout(state.timer)
     if(state.sent===undefined)void persistEngagement();else state.timer=setTimeout(()=>void persistEngagement(),300)
   }
   const snapshot = (): NoteContent => ({ title: titleRef.current, blocks: editor.document, yjs: encode(doc) })

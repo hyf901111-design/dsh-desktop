@@ -7,7 +7,7 @@ import { join } from 'node:path'
 import { Session, KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session'
 import { PersistenceCoordinator } from '@deepseek-ai/dsh-session-persistence'
 import { runInNewContext } from 'node:vm'
-import {engageNoteSession} from '../packages/dsh-research-task-runtime/notes-session.js'
+import {engageNoteSession, registerNoteSessions} from '../packages/dsh-research-task-runtime/notes-session.js'
 import {registerSpreadsheetSessions} from '../packages/dsh-research-task-runtime/spreadsheet-sessions.js'
 import {patchFigmaNavigationTitles} from '../scripts/lib/figma-refinements-client.mjs'
 import {createSourceFile,ScriptTarget,ScriptKind,forEachChild,isFunctionDeclaration} from 'typescript'
@@ -24,11 +24,42 @@ it('durably records note participation and follows its title after native event 
   expect(reopened.rename).toHaveBeenCalledWith(reopened.session,'每周研究笔记')
   expect(reopened.session.events.findLast(e=>e.type==='workspace-note/edited').data.automatic).toBe(true)
 })
+it('initializes a blank note title without recording activity and follows its supplied title after replay', async () => {
+  const f = fixture()
+  let handle
+  f.ctx.sessions.flush = async () => true
+  f.ctx.webServer = { register: ({ handler }) => { handle = handler } }
+  registerNoteSessions(f.ctx, { isTrustedRequest: () => true, readJsonBody: async req => req.payload })
+  let status
+  const response = { writeHead: value => { status = value }, end() {} }
+  const initialize = () => handle({ method: 'POST', payload: { action: 'initialize', sessionId: 's', locale: 'zh' } }, response)
+  await initialize()
+  await initialize()
+  expect(status).toBe(200)
+  expect(f.rename).toHaveBeenCalledExactlyOnceWith(f.session, '新笔记')
+  expect(f.session.events.some(event => event.type === 'workspace-note/edited')).toBe(false)
+
+  const reopened = fixture(structuredClone(f.session.events))
+  expect(engageNoteSession(reopened.ctx, { sessionId: 's', title: '下半年资产配置' })).toMatchObject({ title: '下半年资产配置', automatic: true })
+  expect(engageNoteSession(reopened.ctx, { sessionId: 's', title: '下半年资产配置纪要' })).toMatchObject({ title: '下半年资产配置纪要', automatic: true })
+
+  const manuallyNamed = fixture(structuredClone(f.session.events))
+  manuallyNamed.session.append('session/title', { title: '新笔记', source: { kind: 'user' } })
+  expect(engageNoteSession(manuallyNamed.ctx, { sessionId: 's', title: '正文标题' })).toMatchObject({ title: '新笔记', automatic: false })
+})
+
 it('preserves existing names and manual renames, including a manual rename to the same text',()=>{
   const f=fixture([{type:'session/title',seq:0,data:{title:'既有会话名'}}]);engageNoteSession(f.ctx,{sessionId:'s',title:'文档标题'});expect(f.rename).not.toHaveBeenCalled()
   const owned=fixture();engageNoteSession(owned.ctx,{sessionId:'s',title:'笔记标题'});owned.session.append('session/title',{title:'笔记标题',source:{kind:'user'}})
   engageNoteSession(owned.ctx,{sessionId:'s',title:'新文档标题'});expect(owned.rename).toHaveBeenCalledTimes(1)
   expect(owned.session.events.findLast(e=>e.type==='workspace-note/edited').data.automatic).toBe(false)
+})
+it('lets previous clients’ initial New Note placeholder follow document edits', () => {
+  const f = fixture([{ type: 'session/title', seq: 0, data: { title: 'New Note', source: { kind: 'user' } } }])
+  f.session.append('workspace-note/edited', { automatic: false, lastAutoSeq: -1, lastAutoTitle: '' })
+  expect(engageNoteSession(f.ctx, { sessionId: 's', title: 'Allocation notes' })).toMatchObject({
+    title: 'Allocation notes', automatic: true
+  })
 })
 it('optimistically retains only known current-account sessions before the durable reply',()=>{
   const doc=new EventTarget(),retainNoteSession=vi.fn(),retainSpreadsheetSession=vi.fn()
@@ -99,6 +130,7 @@ it('the real native host classifies replayed note and knowledge-copy events as n
   expect(api.sessionBlank({events:[{type:'session/title',data:{title:'临时会话'}}]})).toBe(true);expect(patchNoteSessionHost(source)).toBe(source)
 })
 it('writes real Session events and reloads through the native persistence reader', async () => {
+  expect(KNOWN_SESSION_EVENT_TYPES.has('workspace-note/created')).toBe(true)
   expect(KNOWN_SESSION_EVENT_TYPES.has('workspace-note/edited')).toBe(true)
   expect(KNOWN_SESSION_EVENT_TYPES.has('workspace-knowledge/copied')).toBe(true)
   for (const path of ['lib/index.js','lib/types/known-event-types.js']) {

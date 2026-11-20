@@ -70,7 +70,7 @@ export function patchNoteSessionHost(source) {
 /** Register the EWork event in both bundled and unbundled native readers. */
 export function patchNoteSessionCatalog(source) {
   const marker = '/* ework:note-event-catalog:v1 */'
-  const events = ['"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-spreadsheet/edited",','"workspace-knowledge/copied",','"workspace-research/title-context",']
+  const events = ['"workspace-note/created",','"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-spreadsheet/edited",','"workspace-knowledge/copied",','"workspace-research/title-context",']
   if (source.includes(marker)) {
     const missing = events.filter(event=>!source.includes(event))
     return missing.length ? source.replace(marker, marker+'\n'+missing.join('\n')) : source
