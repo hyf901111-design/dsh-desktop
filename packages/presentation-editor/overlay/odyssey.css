@@ -120,6 +120,9 @@ body:not([data-ds-dark-theme]) :is(.ribbon, .doc-line, .pages > header, footer, 
   background: var(--ink);
   color: var(--bg);
 }
+.empty button.primary:hover:not(:disabled) {
+  filter: brightness(.90);
+}
 .empty button.outline {
   border: 1px solid var(--line);
 }

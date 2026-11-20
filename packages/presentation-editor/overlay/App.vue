@@ -23,7 +23,9 @@
         <p>导入已有 PowerPoint，或在右侧对话里描述你要制作的演示文稿。</p>
         <div>
           <button class="primary" :disabled="!ready" @click="create">
-            <Glyph name="plus" />
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
             新建空白演示文稿
           </button>
           <button class="outline" :disabled="!ready" @click="fileInput.click()">导入 PowerPoint</button>
