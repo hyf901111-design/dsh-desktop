@@ -7,6 +7,7 @@ import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import Chart from '@/views/components/element/ChartElement/Chart.vue'
 import { buildPresentation, renderSlide } from '@aiden0z/pptx-renderer'
 import { chartAppearance, liveChartXml } from './office-import'
+import { applyOfficeAxes } from './office-axes'
 import { visibleBars } from './chart-points'
 const props = defineProps([
   'source',
@@ -111,8 +112,11 @@ function applyOfficeLabels(chart, sourceXml) {
   const first = (node, name) => node?.getElementsByTagNameNS('*', name)[0]
   const chartNode = first(doc, 'chart')
   const title = [...chartNode.children].find((node) => node.localName === 'title')
-  const axes = [...doc.getElementsByTagNameNS('*', 'dateAx')]
   const option = chart.getOption()
+  const chartArea = [...doc.documentElement.children].find((node) => node.localName === 'spPr')
+  // A chart with only a border has no authored fill. The preview engine paints it opaque white.
+  if (chartArea && ![...chartArea.children].some((node) => node.localName.endsWith('Fill')) &&
+      !props.source.attachments?.chartStyle) chart.setOption({ backgroundColor: 'transparent' })
   const themeXml = props.source.theme && new DOMParser().parseFromString(props.source.theme, 'application/xml')
   const scheme = first(first(themeXml, 'themeElements'), 'clrScheme')
   const aliases = { tx1: 'dk1', tx2: 'dk2', bg1: 'lt1', bg2: 'lt2' }
@@ -120,7 +124,7 @@ function applyOfficeLabels(chart, sourceXml) {
     const rgb = first(node, 'srgbClr')?.getAttribute('val')
     const key = first(node, 'schemeClr')?.getAttribute('val')
     const color = rgb || (key && first(scheme, aliases[key] || key)?.firstElementChild?.getAttribute('val'))
-    return /^[a-f\\d]{6}$/i.test(color || '') ? '#' + color : undefined
+    return /^[a-f0-9]{6}$/i.test(color || '') ? '#' + color : undefined
   }
   const seriesNodes = [...doc.getElementsByTagNameNS('*', 'ser')]
   const pies = option.series?.map((series, index) => {
@@ -143,7 +147,7 @@ function applyOfficeLabels(chart, sourceXml) {
       title: {
         text: '图表标题',
         left: 'center',
-        top: 0,
+        top: Number(first(first(title, 'manualLayout'), 'y')?.getAttribute('val') || 0) * chart.getHeight(),
         textStyle: {
           fontSize: 13,
           fontWeight: 'normal',
@@ -152,35 +156,7 @@ function applyOfficeLabels(chart, sourceXml) {
       }
     })
   }
-  if (!axes.length || !option.xAxis?.length) return
-  const date = axes.find((a) => ['b', 't'].includes(first(a, 'axPos')?.getAttribute('val')))
-  if (!date) return
-  const categories = first(first(chartNode, 'ser'), 'cat')
-  const values = [...(categories?.getElementsByTagNameNS('*', 'pt') || [])].map(
-    (pt) => first(pt, 'v')?.textContent
-  )
-  const format = first(date, 'numFmt')?.getAttribute('formatCode') || ''
-  const low = first(date, 'tickLblPos')?.getAttribute('val') === 'low'
-  const base = first(date, 'baseTimeUnit')?.getAttribute('val')
-  const unit = first(date, 'majorTimeUnit')?.getAttribute('val')
-  const requested = base === unit ? Number(first(date, 'majorUnit')?.getAttribute('val')) : 0
-  const interval = Math.max(1, requested, Math.ceil(values.length / Math.max(2, chart.getWidth() / 32)))
-  const epoch =
-    first(doc, 'date1904')?.getAttribute('val') === '1' ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30)
-  const labels = { interval: interval - 1, hideOverlap: true, rotate: 35 }
-  if (/yy/i.test(format))
-    labels.formatter = (value, index) => {
-      const raw = values[index]
-      if (!/^\d+(\.\d+)?$/.test(raw || '')) return value
-      const iso = new Date(epoch + Number(raw) * 86400000).toISOString()
-      return iso.slice(0, /d/i.test(format) ? 10 : /m/i.test(format) ? 7 : 4)
-    }
-  chart.setOption({
-    xAxis: {
-      axisLabel: { ...labels, ...(low ? { margin: 6 } : {}) },
-      ...(low ? { axisLine: { onZero: false } } : {})
-    }
-  })
+  applyOfficeAxes(chart, doc, option)
 }
 let handle
 watch(
@@ -209,6 +185,8 @@ watch(
         if (current === handle)
           for (const chart of charts) if (!chart.isDisposed()) applyOfficeLabels(chart, native.value)
       })
+      // Only the slide wrapper is synthetic. The imported chart keeps its own Office fill.
+      handle.element.style.backgroundColor = 'transparent'
       host.value.replaceChildren(handle.element)
       host.value.odysseyBars = () => Array.from(charts).flatMap((c) => visibleBars(c, c.getDom(), props.data))
     } catch {
