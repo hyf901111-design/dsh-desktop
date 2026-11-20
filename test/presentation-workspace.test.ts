@@ -32,6 +32,21 @@ it('keeps each deck, its current slide and the recent order across launches', ()
   expect(store.read({ ...key, sessionId: 'another' }).deck).toBeNull()
 })
 
+it('preserves surrounding notes when the assistant supplies the finished paragraph', () => {
+  const deck = blankDeck()
+  const slide = deck.slides[0]!
+  slide.remark = '<p>先说营收，再说续约。</p>'
+  store.save(key, 0, deck, true)
+  const ref = { kind: 'notes', slideId: slide.id, start: 0, quote: '先说营收' }
+  const operation = { op: 'notes', slideId: slide.id, text: '先讲增长，再说续约。' }
+  const apply = (op: Record<string, unknown>) => store.apply(key, { revision: 1, operations: [op] }, [ref])
+  expect(() => apply({ ...operation, quote: ref.quote, start: ref.start })).toThrow('上下文')
+  expect(() => apply({ ...operation, text: '先讲增长。' })).toThrow('选区前后')
+  expect(store.read(key).revision).toBe(1)
+  apply(operation)
+  expect(store.inspect(key).currentSlide?.notes).toBe(operation.text)
+})
+
 it('edits the quoted notes and selected title atomically and preserves their neighbors', () => {
   const draft = blankDeck()
   const slide = draft.slides[0]!

@@ -241,7 +241,7 @@ export function installPresentation(options: {
       const applyPresentation: CapabilityHandler<'presentation.apply'> = async (args) => {
         guard()
         if (!options.canWrite(key.sessionId)||locks.has(who(key))) throw Error('文稿已锁定，只能查看。')
-        const data = store.apply(key, args)
+        const data = store.apply(key, args, admitted?.references)
         createdId = data.documentId
         retain(key)
         notify(key)

@@ -154,7 +154,7 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
    signal?.throwIfAborted()
    if(reference?.mode==='presentation'){
     const mode=latestClientModeForAuthority(session)
-    const use=reference.scope==='selection'?'本轮含演示选区标签，读取 references 按稳定 ID 定位；备注局部替换带 quote 与 start，柱形标注读取 marks[].chartPoints。':reference.scope==='slide'?'本轮参考当前幻灯片。':'本轮未参考当前页；仅处理用户明确指定的内容。'
+    const use=reference.scope==='selection'?'本轮含演示选区标签，读取 references 按稳定 ID 定位；备注局部替换带 quote 与 start，text 仅含替换片段；提交完整备注时省略 quote 与 start 并保留选区外原文，柱形标注读取 marks[].chartPoints。':reference.scope==='slide'?'本轮参考当前幻灯片。':'本轮未参考当前页；仅处理用户明确指定的内容。'
     const system=(request.system??'')+'\n【演示应用的原生右侧对话】'+use+' 用户请求编辑时，先调用 client_capabilities，再调用 client_action 执行 presentation.inspect 和 presentation.apply，以 saved=true 确认真实文稿已修改。'
     if(!mode&&reference.scope!=='none')return {...request,system,tools:request.tools.filter(t=>t.name==='client_capabilities')}
     return {...request,system}
