@@ -197,72 +197,25 @@
         "schemaVersion": 1,
         "featureName": "演示应用：PPTist 编辑、原生共享对话及选区改稿",
         "branch": "codex/feat/presentation-workspace-20261120",
-        "baseCommit": "3eaa65ba0c720a4f833177cf07b0542ffeba45de",
-        "tipCommit": "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad",
+        "baseCommit": "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad",
+        "tipCommit": "922e400dee7a4ae4b84a5b570b5b642b9c647c64",
         "commits": [
           {
-            "commit": "0fe9017cd58f235a345de9a36a128a8adcd0c2ee",
+            "commit": "922e400dee7a4ae4b84a5b570b5b642b9c647c64",
             "parents": [
-              "3eaa65ba0c720a4f833177cf07b0542ffeba45de"
+              "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad"
             ],
-            "subject": "让演示右栏按真实选区调用原生编辑，并修复导入标题、字体字号和选框样式"
-          },
-          {
-            "commit": "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad",
-            "parents": [
-              "0fe9017cd58f235a345de9a36a128a8adcd0c2ee"
-            ],
-            "subject": "补全空文稿标题回归用例的类型判断"
+            "subject": "修复放映只占编辑区，使内置演示可进入和退出全屏"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-tools.js"
+            "path": "src/main/security.ts"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/index.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/build.mjs"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/App.vue"
-          },
-          {
-            "status": "M",
-            "path": "src/main/presentation/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/client-capability-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/shared/presentation-slide-title.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/client-tools.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-components-policy.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/presentation-workspace.test.ts"
+            "path": "test/security.test.ts"
           }
         ],
         "checks": [
@@ -274,8 +227,8 @@
             ],
             "outcome": "passed",
             "summary": "编译 PPTist",
-            "verifiedCommit": "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad",
-            "completedAt": "2026-11-20T13:31:16.591720Z",
+            "verifiedCommit": "922e400dee7a4ae4b84a5b570b5b642b9c647c64",
+            "completedAt": "2026-11-20T13:37:56.892000Z",
             "timeoutMs": 180000
           },
           {
@@ -286,8 +239,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad",
-            "completedAt": "2026-11-20T13:31:27.935451Z",
+            "verifiedCommit": "922e400dee7a4ae4b84a5b570b5b642b9c647c64",
+            "completedAt": "2026-11-20T13:38:07.932533Z",
             "timeoutMs": 180000
           },
           {
@@ -304,8 +257,8 @@
             ],
             "outcome": "passed",
             "summary": "演示操作与工具契约",
-            "verifiedCommit": "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad",
-            "completedAt": "2026-11-20T13:31:30.601650Z",
+            "verifiedCommit": "922e400dee7a4ae4b84a5b570b5b642b9c647c64",
+            "completedAt": "2026-11-20T13:38:10.440053Z",
             "timeoutMs": 180000
           },
           {
@@ -320,8 +273,8 @@
             ],
             "outcome": "passed",
             "summary": "编辑器入口导航回归",
-            "verifiedCommit": "fe2b19e7c7aa1d2df6c36a0ee2e29e4e6206d1ad",
-            "completedAt": "2026-11-20T13:31:30.973758Z",
+            "verifiedCommit": "922e400dee7a4ae4b84a5b570b5b642b9c647c64",
+            "completedAt": "2026-11-20T13:38:10.824920Z",
             "timeoutMs": 180000
           }
         ],
@@ -337,177 +290,7 @@
         "risks": [
           "整体验收以签名客户端会话场景的实际复测为准。"
         ],
-        "generatedAt": "2026-11-20T13:31:30.973824Z"
-      },
-      "merged": {
-        "mergeCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-        "verificationCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-canvas-storage.test.ts",
-              "test/board-tabs-contract.test.js",
-              "test/workbench-style.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台|默认显示五条|五条以内"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-boards-browser.mjs",
-              "--manager-workbench-focus"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "build:presentation"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run build:presentation",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/presentation-workspace.test.ts",
-              "test/presentation-reference-browser.test.js",
-              "test/workspace-mode-welcome.test.js",
-              "test/navigation-shortcuts.test.ts",
-              "test/workspace-draft-state.test.js",
-              "test/client-capability-service.test.ts",
-              "test/client-capabilities.test.js",
-              "test/browser-app-native.test.js",
-              "test/presentation-artboard-browser.test.ts",
-              "--maxWorkers=3"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/presentation-workspace.test.ts test/presentation-reference-browser.test.js test/workspace-mode-welcome.test.js test/navigation-shortcuts.test.ts test/workspace-draft-state.test.js test/client-capability-service.test.ts test/client-capabilities.test.js test/browser-app-native.test.js test/presentation-artboard-browser.test.ts --maxWorkers=3",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "SHERLOCK_ROUTING_RESIDENT=1",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-component-submit-routing-browser.test.js",
-              "-t",
-              "one native right-side",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env SHERLOCK_ROUTING_RESIDENT=1 ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/conversation-component-submit-routing-browser.test.js -t one native right-side --maxWorkers=1",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pptx-annotation-browser.test.js",
-              "-t",
-              "point|rect",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/pptx-annotation-browser.test.js -t point|rect --maxWorkers=1",
-            "verifiedCommit": "a846caa57e42015775dd05ca5dca01177ee49c8d",
-            "completedAt": "2026-11-20T13:31:50.883Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-20T13:31:50.883Z"
+        "generatedAt": "2026-11-20T13:38:10.824986Z"
       }
     }
   ],
