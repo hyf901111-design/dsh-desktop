@@ -47,7 +47,25 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
     await click(modelMenu().querySelector('[role=menuitem]')!)
   }
   try {
-    await react.act(async()=>root.render(jsx.jsx(ModelSelect,{locked:false,available:true,directory,load:()=>{},select,t:(key:string)=>copy[key]??key})))
+    const props = {locked:false,available:true,directory,sessionId:'example',load:()=>{},select,t:(key:string)=>copy[key]??key}
+    await react.act(async()=>root.render(jsx.jsx(ModelSelect,props)))
+    const preview = {
+      current: { provider: 'source', model: 'source-model', reasoningEffort: 'medium' },
+      groups: [{ id: 'source', name: 'Source', models: [{ id: 'source-model', name: 'Source Model',
+        reasoning: { efforts: [{ id: 'medium', name: 'Medium' }] } }] }]
+    }
+    const previewKey = Symbol.for('sherlock:home-guide-model')
+    await react.act(async()=>{
+      ;(win as any)[previewKey]=(id:string)=>id==='example'?preview:undefined
+      win.dispatchEvent(new win.Event('sherlock:home-guide-model-changed'))
+    })
+    expect(host.querySelector('button')?.textContent).toContain('Source Model')
+    expect(host.querySelector('button')?.textContent).toContain('Medium')
+    expect(select).not.toHaveBeenCalled()
+    await react.act(async()=>{
+      delete (win as any)[previewKey]
+      win.dispatchEvent(new win.Event('sherlock:home-guide-model-changed'))
+    })
     const trigger=host.querySelector('button')!;trigger.getBoundingClientRect=()=>new DOMRect(700,550,120,28)
     expect(trigger.querySelector('.odyssey-model-vision-tag')?.textContent).toBe('视觉')
     await click(trigger)
