@@ -9,30 +9,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "管理者工作台地图与图表优化及组织架构自适应",
+        "featureName": "管理者工作台横向组织架构适配与图表优化",
         "branch": "codex/feat/manager-workbench-20261120",
-        "baseCommit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
-        "tipCommit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
+        "baseCommit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
+        "tipCommit": "763042905840d05deac0fc7c1c3c8f19d322ea29",
         "commits": [
           {
-            "commit": "b40fe28dc1ff917b55e98c5ec6a97bffcfa41d96",
+            "commit": "763042905840d05deac0fc7c1c3c8f19d322ea29",
             "parents": [
-              "7d0fbf91ba08f8724999f84751f1936f87b32fef"
+              "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a"
             ],
-            "subject": "修复：适配窄窗口的管理者工作台组件内容"
-          },
-          {
-            "commit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
-            "parents": [
-              "b40fe28dc1ff917b55e98c5ec6a97bffcfa41d96"
-            ],
-            "subject": "优化：重绘管理者看板图表并适配组织架构"
+            "subject": "修复：保留横向组织架构并优化工作台图表"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/html-artifact.js"
+            "path": "packages/dsh-research-task-runtime/workbench-structure-reading.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
           },
           {
             "status": "M",
@@ -41,10 +38,6 @@
           {
             "status": "M",
             "path": "src/preload/manager-workbench/canvas.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/manager-workbench/china-map.ts"
           },
           {
             "status": "M",
@@ -64,8 +57,8 @@
             ],
             "outcome": "passed",
             "summary": "客户端 TypeScript 类型检查通过",
-            "verifiedCommit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
-            "completedAt": "2026-11-20T10:54:10.840Z",
+            "verifiedCommit": "763042905840d05deac0fc7c1c3c8f19d322ea29",
+            "completedAt": "2026-11-20T11:19:59.706Z",
             "timeoutMs": 120000
           },
           {
@@ -75,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "应用客户端研究画布补丁",
-            "verifiedCommit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
-            "completedAt": "2026-11-20T10:54:10.840Z",
+            "verifiedCommit": "763042905840d05deac0fc7c1c3c8f19d322ea29",
+            "completedAt": "2026-11-20T11:19:59.706Z",
             "timeoutMs": 120000
           },
           {
@@ -86,31 +79,13 @@
               "--",
               "vitest",
               "run",
-              "test/research-canvas-storage.test.ts",
-              "test/board-tabs-contract.test.js",
-              "test/workbench-style.test.js"
+              "test/workbench-structure-reading-browser.test.js",
+              "test/research-canvas-storage.test.ts"
             ],
             "outcome": "passed",
-            "summary": "研究画布存储、页签与模式合同测试 31 项通过",
-            "verifiedCommit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
-            "completedAt": "2026-11-20T10:54:10.840Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台|默认显示五条|五条以内"
-            ],
-            "outcome": "passed",
-            "summary": "个人看板入口与侧栏折叠渲染聚焦测试 3 项通过",
-            "verifiedCommit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
-            "completedAt": "2026-11-20T10:54:10.840Z",
+            "summary": "结构图与画布存储聚焦测试 20 项通过",
+            "verifiedCommit": "763042905840d05deac0fc7c1c3c8f19d322ea29",
+            "completedAt": "2026-11-20T11:19:59.706Z",
             "timeoutMs": 120000
           },
           {
@@ -120,102 +95,25 @@
               "--manager-workbench-focus"
             ],
             "outcome": "passed",
-            "summary": "验证地图五地与真实省界、四主题和四页签切换、刷新恢复及 2000/1380/1024 三档窗口的组织架构。",
-            "verifiedCommit": "31ddbb0e53e7ebc93b61ed22d275a5c1de67a30a",
-            "completedAt": "2026-11-20T10:54:10.840Z",
+            "summary": "四种模式、四个页签、恢复和组件宽高适配聚焦验证通过",
+            "verifiedCommit": "763042905840d05deac0fc7c1c3c8f19d322ea29",
+            "completedAt": "2026-11-20T11:19:59.706Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实客户端研究看板渲染器兼本地 Host 场景通过，核对地图与组织架构两种布局并导出截图。"
+          "summary": "客户端原生研究看板浏览器场景检查横向树图等比、改变高度和极窄时滚动。"
         },
         "acceptanceCriteria": [
-          "个人看板入口首次创建普通的个人研究看板，四个页签与四种模式可切换并保存。",
-          "常驻地地图显示 34 个省级区域、5 个底稿常驻地和对应人数。",
-          "组织架构宽窗口保留横向层级，窄窗口按部门重排，九个岗位和两条直属关系完整。",
-          "窄窗口卡片通过原生内容测量贴合图表和表格高度。"
+          "保留组织架构四层节点与连接关系。",
+          "按组件宽度和高度等比缩放，极窄组件可滚动查看。",
+          "已安装看板升级默认卡片，保留手动调整。"
         ],
         "risks": [
-          "看板使用设计快照与样例记录。原手动顺序的最近访问测试在共同基线同样失败。"
+          "管理者工作台数据继续使用设计快照与样例。"
         ],
-        "generatedAt": "2026-11-20T10:54:10.840Z"
-      },
-      "merged": {
-        "mergeCommit": "e10840edd3c33194b03a862f9eb974d5783aa65e",
-        "verificationCommit": "e10840edd3c33194b03a862f9eb974d5783aa65e",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "e10840edd3c33194b03a862f9eb974d5783aa65e",
-            "completedAt": "2026-11-20T10:54:24.815Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "e10840edd3c33194b03a862f9eb974d5783aa65e",
-            "completedAt": "2026-11-20T10:54:24.815Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-canvas-storage.test.ts",
-              "test/board-tabs-contract.test.js",
-              "test/workbench-style.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
-            "verifiedCommit": "e10840edd3c33194b03a862f9eb974d5783aa65e",
-            "completedAt": "2026-11-20T10:54:24.815Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台|默认显示五条|五条以内"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
-            "verifiedCommit": "e10840edd3c33194b03a862f9eb974d5783aa65e",
-            "completedAt": "2026-11-20T10:54:24.815Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-boards-browser.mjs",
-              "--manager-workbench-focus"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
-            "verifiedCommit": "e10840edd3c33194b03a862f9eb974d5783aa65e",
-            "completedAt": "2026-11-20T10:54:24.815Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-20T10:54:24.815Z"
+        "generatedAt": "2026-11-20T11:19:59.706Z"
       }
     }
   ],
