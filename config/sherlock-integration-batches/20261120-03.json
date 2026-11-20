@@ -191,6 +191,467 @@
         ],
         "recordedAt": "2026-11-20T11:20:11.677Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "演示应用：PPTist 编辑、原生共享对话及选区改稿",
+        "branch": "codex/feat/presentation-workspace-20261120",
+        "baseCommit": "d880a9c24ff4d870b3607a2776064653b39d9a33",
+        "tipCommit": "3e1fe17676b9973a7ed089004303d214016847b8",
+        "commits": [
+          {
+            "commit": "05d8f6b92a5a02bbb77435ec15d3f3bb8a2f4d35",
+            "parents": [
+              "d880a9c24ff4d870b3607a2776064653b39d9a33"
+            ],
+            "subject": "功能：接入基于 PPTist 的演示工作区并复用原生会话改稿"
+          },
+          {
+            "commit": "3e1fe17676b9973a7ed089004303d214016847b8",
+            "parents": [
+              "05d8f6b92a5a02bbb77435ec15d3f3bb8a2f4d35"
+            ],
+            "subject": "修复：为缩放画布设置实际页面尺寸并验证标题可选中"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "build/brand/odyssey-app-presentation.svg"
+          },
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/spreadsheet-sessions.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/NOTICE.md"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/build.mjs"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/align.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/down.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/fit.svg"
+          },
+          {
+            "status": "C062",
+            "path": "packages/presentation-editor/icons/insert.svg",
+            "previousPath": "build/figma-workbench-icons/plus.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/layout.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/list.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/mark.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-download.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-edit.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-file.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-image.svg"
+          },
+          {
+            "status": "C062",
+            "path": "packages/presentation-editor/icons/menu-plus.svg",
+            "previousPath": "build/figma-workbench-icons/plus.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-right.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-screen.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-shape.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-slide.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-text.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-undo.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu-upload.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/menu.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/minus.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/more.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/newslide.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/play.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/plus.svg"
+          },
+          {
+            "status": "C071",
+            "path": "packages/presentation-editor/icons/redo.svg",
+            "previousPath": "src/preload/image-factory/assets/redo.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/slide.svg"
+          },
+          {
+            "status": "C071",
+            "path": "packages/presentation-editor/icons/undo.svg",
+            "previousPath": "src/preload/image-factory/assets/undo.svg"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/index.html"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/App.vue"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/annotations.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/odyssey.css"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/vendor/pptist-source.tgz"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-inline-references-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/knowledge-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-session.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pptx-annotation-viewer.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/presentation-references.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/right-project-drafts.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/spreadsheet-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/workspace-draft-state.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/presentation/protocol.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/presentation/service.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/presentation/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/client-capabilities.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-app-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/navigation-shortcuts.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/presentation/view.css"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/presentation/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/icons.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-new-note.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/navigation-shortcuts.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/presentation-slide-title.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capabilities.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-component-submit-routing-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/navigation-shortcuts.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-artboard-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-reference-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-workspace.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "build:presentation"
+            ],
+            "outcome": "passed",
+            "summary": "从锁定的 PPTist 源码构建编辑器、模板及图标",
+            "verifiedCommit": "3e1fe17676b9973a7ed089004303d214016847b8",
+            "completedAt": "2026-11-20T12:40:10.092439Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "生成原生会话页签、右栏和输入框补丁",
+            "verifiedCommit": "3e1fe17676b9973a7ed089004303d214016847b8",
+            "completedAt": "2026-11-20T12:40:20.014983Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "客户端主进程与预载类型检查",
+            "verifiedCommit": "3e1fe17676b9973a7ed089004303d214016847b8",
+            "completedAt": "2026-11-20T12:40:16.078408Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-reference-browser.test.js",
+              "test/workspace-mode-welcome.test.js",
+              "test/navigation-shortcuts.test.ts",
+              "test/workspace-draft-state.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capabilities.test.js",
+              "test/browser-app-native.test.js",
+              "test/presentation-artboard-browser.test.ts",
+              "--maxWorkers=3"
+            ],
+            "outcome": "passed",
+            "summary": "演示存储、选区引用、原生导航、草稿和客户端能力回归",
+            "verifiedCommit": "3e1fe17676b9973a7ed089004303d214016847b8",
+            "completedAt": "2026-11-20T12:40:29.665191Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "SHERLOCK_ROUTING_RESIDENT=1",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-component-submit-routing-browser.test.js",
+              "-t",
+              "one native right-side",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "在原生研究、演示和表格页签之间复用同一右侧输入框与会话历史",
+            "verifiedCommit": "3e1fe17676b9973a7ed089004303d214016847b8",
+            "completedAt": "2026-11-20T12:40:24.615576Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/pptx-annotation-browser.test.js",
+              "-t",
+              "point|rect",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "验证既有 PPT 点选与框选标注交互",
+            "verifiedCommit": "3e1fe17676b9973a7ed089004303d214016847b8",
+            "completedAt": "2026-11-20T12:40:26.607618Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离 Electron 使用生产编辑器和 IPC，从易方达 V6 文件实际导入 46 页，通过真实工具改选中备注，工具栏撤销再修改，验证点选和框选、放映、导出与重新导入后逐页数及备注。另在 Chromium 的原生会话组件中，点击研究、演示和表格页签后确认右侧消息与输入框；实测原生 SessionInputShell 的混排标签。模型工具通过确定性调用验证，签名客户端与在线模型联调待验收。 验证 815 × 459 像素的实际画布能显示易方达封面并点击选中标题。"
+        },
+        "acceptanceCriteria": [
+          "首页及左栏打开演示，可固定为会话顶部页签。研究、演示和表格来回切换保留会话历史、当前文稿及页码。",
+          "编辑器提供易方达 V6 模板、导入和导出 PPTX、缩略图、备注、格式工具和放映。",
+          "点选和框选标注、幻灯片元素和选区备注可作为内联标签与指令混排。当前页、局部文字、图表与表格按照稳定 ID 定向修改，可撤销 AI 修改。"
+        ],
+        "risks": [
+          "正式客户端与登录账号的真实模型发送仍待集成验收。PPTist 采用 AGPL-3.0，附嵌入版本许可证及对应源码。",
+          "旧测试中的侧栏会话夹具、trajectory 迁移预期和研究规划断言在原主干同样失败，演示功能聚焦检查单列。"
+        ],
+        "generatedAt": "2026-11-20T12:40:29.665393Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -242,6 +703,76 @@
         "--manager-workbench-focus"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "build:presentation"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "/usr/bin/env",
+        "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+        "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/presentation-workspace.test.ts",
+        "test/presentation-reference-browser.test.js",
+        "test/workspace-mode-welcome.test.js",
+        "test/navigation-shortcuts.test.ts",
+        "test/workspace-draft-state.test.js",
+        "test/client-capability-service.test.ts",
+        "test/client-capabilities.test.js",
+        "test/browser-app-native.test.js",
+        "test/presentation-artboard-browser.test.ts",
+        "--maxWorkers=3"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "/usr/bin/env",
+        "SHERLOCK_ROUTING_RESIDENT=1",
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-component-submit-routing-browser.test.js",
+        "-t",
+        "one native right-side",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/pptx-annotation-browser.test.js",
+        "-t",
+        "point|rect",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
