@@ -4,7 +4,7 @@ import { browserIcons } from '../browser/icons'
 import { clipWorkspaceTabs, reserveWorkspaceRightControl, revealWorkspaceTab } from '../workspace-topbar'
 import { iconSource } from './icons'
 
-export type TaskTabs = { tabs: ImageFactoryTaskTab[]; active?: CanvasScope; busy: boolean; creating?: string; fresh?: string; canRestore?: boolean }
+export type TaskTabs = { tabs: (ImageFactoryTaskTab & { key?: string })[]; active?: CanvasScope; busy: boolean; creating?: string; fresh?: string; canRestore?: boolean }
 export type TaskAction = { kind: 'new' | 'select' | 'close' | 'restore' | 'reorder' | 'pin' | 'close-others'; scope?: CanvasScope; before?: CanvasScope }
 type Translate = (zh: string, en: string) => string
 type Drag = { pointer: number; id: string; x: number; y: number; active: boolean }
@@ -226,7 +226,7 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
       onPointerCancel={event => endDrag(event, true)}>
       {tabs.map((tab, index) => {
         const selected = tab.scope === active, title = labels[index]!
-        return <div key={tab.scope ?? ''} className="eb-tab" role="tab" data-id={tab.scope ?? ''} data-pinned={!!tab.pinned}
+        return <div key={tab.key ?? tab.scope ?? ''} className="eb-tab" role="tab" data-id={tab.scope ?? ''} data-pinned={!!tab.pinned}
           tabIndex={selected && !busy ? 0 : -1} aria-label={title} aria-selected={selected} aria-disabled={busy || undefined}
           aria-controls="image-factory-task-workspace" title={title}
           onClick={event => { if (!event.detail || win.performance.now() >= suppressClick.current) select(tab.scope) }}
@@ -281,7 +281,7 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
       </> : <>
         <div className="eb-tab-heading"><span>{listLabel}</span><span>{tabs.length}</span></div>
         <hr/>
-        <div className="eb-tab-options">{tabs.map((tab, index) => <button key={tab.scope ?? ''} type="button" role="menuitemradio"
+        <div className="eb-tab-options">{tabs.map((tab, index) => <button key={tab.key ?? tab.scope ?? ''} type="button" role="menuitemradio"
           className="eb-tab-option" aria-checked={tab.scope === active} disabled={busy} onClick={() => select(tab.scope, true)}>
           <TabIcon name="image"/><span>{labels[index]}</span>{tab.scope === active && <TabIcon name="check"/>}
         </button>)}</div>

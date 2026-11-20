@@ -441,6 +441,33 @@ it('expands workspace shortcuts after the draggable title and gives their space 
  }finally{await page.close()}
 })
 
+it('hides the session switcher for board-only sessions and restores it after leaving Boards', async () => {
+ const {page,errors}=await fixture(1280,830,true)
+ try {
+  await page.evaluate(() => {
+   window.browserView.close()
+   const center=document.querySelector('.pI_x6G_centerCol')
+   center.innerHTML='<div class="wSkVaW_root" data-odyssey-page="research"><header data-srb-session-header data-ework-notes-session="session-A"><span>看板标题</span><button>子代理</button></header><div role="tablist"><button role="tab">画布页签</button></div></div>'
+   window.mountSessionWorkspaceViewShortcuts(document,()=>{})
+  })
+  const switcher=page.locator('[data-session-workspace-controls]')
+  const root=page.locator('.wSkVaW_root[data-odyssey-page=research]')
+  await switcher.waitFor()
+  for (const id of ['personal-board','shared-board']) {
+   await root.evaluate((node,id)=>{
+    node.dataset.homeGuideBoardOnly='true'
+    node.querySelector('header').dataset.eworkNotesSession=id
+   },id)
+   await switcher.waitFor({state:'detached',timeout:2000})
+   expect(await root.getByRole('button',{name:'子代理'}).isVisible()).toBe(true)
+   expect(await root.getByRole('tab',{name:'画布页签'}).isVisible()).toBe(true)
+   await root.evaluate(node=>delete node.dataset.homeGuideBoardOnly)
+   await switcher.waitFor()
+  }
+  expect(errors).toEqual([])
+ } finally {await page.close()}
+})
+
 it('keeps the shared switcher expanded and carries the current session through mode changes', async () => {
  const {page,errors}=await fixture(1280,830,true)
  try {

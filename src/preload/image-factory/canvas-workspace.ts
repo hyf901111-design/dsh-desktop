@@ -23,9 +23,10 @@ const imageLayer = (scene?: ImageScene) => scene?.layers.find((layer): layer is 
 
 export class CanvasWorkspace {
   private readonly entries = new Map<CanvasScope, Entry>()
-  private readonly edited = new Set<CanvasScope>()
   private readonly listeners = new Set<() => void>()
   private readonly adoptions = new Map<string, Promise<void>>()
+  private rebind?: { previous: CanvasScope; next: string; entry: Entry }
+  private lastRebind?: { previous: CanvasScope; next: string }
   private scope: CanvasScope = null
   private disposed = false
   private current = { scope: null as CanvasScope, status: 'idle' as RestoreStatus, save: 'idle' as SaveStatus, scene: undefined as ImageScene | undefined, canUndo: false, canRedo: false }
@@ -40,6 +41,17 @@ export class CanvasWorkspace {
     if (previous !== scope) {
       if (this.entries.get(previous)?.dirty) this.commit(previous)
       this.finishEdit(previous)
+      const rebind = this.rebind
+      this.rebind = undefined
+      this.lastRebind = undefined
+      if (rebind?.previous === previous && rebind.next === scope && this.entries.get(previous) === rebind.entry) {
+        this.drop(scope)
+        this.entries.delete(previous)
+        rebind.entry.scope = scope
+        this.entries.set(scope, rebind.entry)
+        this.lastRebind = rebind
+        if (rebind.entry.scene) markWorkspaceProjectEdited(this.doc, scope)
+      }
     }
     this.scope = scope
     const selected = this.entries.get(scope)
@@ -74,9 +86,22 @@ export class CanvasWorkspace {
     return () => { entry.retained--; this.evict(entry.scope) }
   }
 
-  hasTabActivity(scope: CanvasScope) {
-    const entry = this.entries.get(scope)
-    return this.edited.has(scope) || !!entry?.retained || entry?.status === 'error'
+  async copyToSession(previous: CanvasScope, next: string) {
+    const scene = await this.ready(previous)
+    const entry = this.entry(previous)
+    if (scene) {
+      const epoch = await this.flush(previous, scene)
+      const { canvas, image } = await this.storage.read(previous)
+      if (!canvas || canvas.id !== scene.id) throw Error('画布未能保存，请重试。')
+      await this.storage.write({ scope: next, epoch, canvas, image: image?.data })
+    }
+    if (this.disposed || this.scope !== previous || entry.scene !== scene || entry.dirty)
+      throw Error('当前画布已变化，请重试。')
+    this.rebind = { previous, next, entry }
+  }
+
+  wasRebound(previous: CanvasScope, next: CanvasScope) {
+    return this.lastRebind?.previous === previous && this.lastRebind.next === next
   }
 
   epoch(scope: CanvasScope) { return this.entries.get(scope)?.epoch }
@@ -102,7 +127,6 @@ export class CanvasWorkspace {
     if (!editKey || editKey !== entry.coalescing) entry.beforeEdit ??= previous
     entry.scene = next
     entry.editedInSession = true
-    this.edited.add(scope)
     markWorkspaceProjectEdited(this.doc, scope)
     if (persist) {
       this.recordEdit(entry, editKey)
@@ -206,8 +230,6 @@ export class CanvasWorkspace {
       draft.scope = sessionId
       this.entries.set(sessionId, draft)
       this.entries.delete(null)
-      this.edited.delete(null)
-      this.edited.add(sessionId)
       markWorkspaceProjectEdited(this.doc, sessionId)
       this.publish(this.scope)
       this.evict(sessionId)
@@ -269,7 +291,6 @@ export class CanvasWorkspace {
         const { version: _version, editedInSession, ...canvas } = data.canvas
         entry.scene = { ...canvas, layers }
         entry.editedInSession = editedInSession
-        this.edited.add(scope)
         markWorkspaceProjectEdited(this.doc, scope)
         entry.assetId = restored?.assetId
         this.collectRasters(entry)

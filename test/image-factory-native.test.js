@@ -9,8 +9,14 @@ function fixture(taskStorage, removeProvisionalReference, workspace = () => 'tes
     win.setTimeout = (fn, ms) => setTimeout(fn, ms)
     win.clearTimeout = timer => clearTimeout(timer)
   }
-  const snapshot = { draft: '保留未发送的文字', imageIds: [] }
-  const shell = { snapshot, notify: vi.fn(), setDraft: vi.fn(draft => { snapshot.draft = draft }) }
+  const makeShell = (draft = '') => {
+    const snapshot = { draft, imageIds: [], occurrences: [] }
+    return { snapshot, notify: vi.fn(), setDraft: vi.fn(draft => { snapshot.draft = draft }),
+      addImages: vi.fn(ids => { snapshot.imageIds.push(...ids); return true }),
+      restoreDraftState: vi.fn(({ draft, occurrences }) => Object.assign(snapshot, { draft, occurrences })),
+      commitSend: vi.fn(() => Object.assign(snapshot, { draft: '', imageIds: [], occurrences: [] })) }
+  }
+  const shell = makeShell('保留未发送的文字')
   const listeners = new Set()
   const state = { running: false, chat: { order: [], nodes: new Map() } }
   const session = {
@@ -30,8 +36,9 @@ function fixture(taskStorage, removeProvisionalReference, workspace = () => 'tes
   const sessionCatalog = {
     list: { getSnapshot: () => sessionsState, subscribe: fn => { listListeners.add(fn); return () => listListeners.delete(fn) } },
     binding: id => sessionsState.byId[id] ? { session } : undefined,
-    create: vi.fn(async ({ sessionId }) => {
-      sessionsState.byId[sessionId] = { blank: true }
+    create: vi.fn(async ({ sessionId, workspaceId, cwd }) => {
+      sessionsState.byId[sessionId] = { blank: true, workspaceId, cwd }
+      shells.set(sessionId, makeShell())
       notifyList()
       return sessionId
     }),
@@ -71,23 +78,45 @@ it('keeps an image request out of the board while its application conversation o
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
-it('keeps one tab when its project changes and creates additional projectless tasks in their own directory', async () => {
-  const f = fixture(undefined, undefined, () => null)
+it('updates only the selected image tab and restores each tab’s project and draft', async () => {
+  const f = fixture(undefined, undefined, id => f.sessionsState.byId[id]?.workspaceId ?? null)
   let tasks
   try {
     f.doc.body.dataset.workspaceSurface = 'image-factory'
     f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
+    f.doc.addEventListener('sherlock:image-factory-rebind-canvas', ({ detail }) => {
+      f.events('canvas-rebound', { next: detail.next })
+    })
     f.events('request-session')
     expect(tasks.active).toBe('native-session')
-    const unassigned = await f.sessionCatalog.create({ sessionId: 'projectless-tab' })
-    f.events('project-changed', { previous: 'native-session', next: unassigned })
-    f.sessionCatalog.open(unassigned)
-    expect(tasks.tabs.map(tab => tab.scope)).toEqual([unassigned])
-    expect(tasks.active).toBe(unassigned)
+    f.shell.addImages(['example.png'])
+    await f.binding.switchWorkspace('first-project', null)
+    const first = tasks.active
+    expect(tasks.tabs).toMatchObject([{ scope: first, key: 'native-session' }])
+    expect(f.shells.get(first).snapshot).toMatchObject({ draft: '保留未发送的文字', imageIds: ['example.png'] })
+    expect(f.sessionsState.byId[first].workspaceId).toBe('first-project')
 
     f.events('task-action', { kind: 'new' })
-    await vi.waitFor(() => expect(tasks.tabs).toHaveLength(2))
-    expect(f.sessionCatalog.create).toHaveBeenLastCalledWith({ sessionId: tasks.active, cwd: '/tmp/standalone/outputs' })
+    await vi.waitFor(() => expect(tasks).toMatchObject({ busy: false, tabs: expect.arrayContaining([expect.objectContaining({ scope: first })]) }))
+    const second = tasks.active
+    expect(second).not.toBe(first)
+    await f.binding.switchWorkspace('second-project', null)
+    const secondProject = tasks.active
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual([first, secondProject])
+    expect(f.sessionsState.byId[secondProject].workspaceId).toBe('second-project')
+    f.events('task-action', { kind: 'select', scope: first })
+    expect(f.sessionsState.current).toBe(first)
+    f.events('task-action', { kind: 'select', scope: secondProject })
+    expect(f.sessionsState.current).toBe(secondProject)
+    await f.binding.switchWorkspace(null, 'second-project')
+    expect(f.sessionsState.byId[tasks.active].cwd).toBe('/tmp/standalone/outputs')
+    expect(tasks.tabs).toMatchObject([{ scope: first }, { scope: tasks.active, key: second }])
+    expect(f.sessionsState.byId[first].workspaceId).toBe('first-project')
+    const selected = tasks.active
+    f.sessionCatalog.create.mockRejectedValueOnce(Error('项目暂时不可用'))
+    await expect(f.binding.switchWorkspace('unavailable-project', null)).rejects.toThrow('项目暂时不可用')
+    expect(tasks.tabs.map(tab => tab.scope)).toEqual([first, selected])
+    expect(f.sessionsState.current).toBe(selected)
   } finally {
     f.binding.dispose()
     await f.win.happyDOM.close()
@@ -238,19 +267,17 @@ it('opens a fresh image gallery in the new default while preserving the previous
   }
 })
 
-it.each(['new-workspace', null])('drops untouched image tabs on return after selecting %s elsewhere', async project => {
+it.each(['new-workspace', null])('keeps untouched image tabs on return after selecting %s elsewhere', async project => {
   const original = 'original-workspace'
   let preferred = original
   const empty = 'native-session'
-  const draft = 'typed-draft'
-  const scopes = [empty, 'saved-canvas', 'working-canvas', 'running-image', draft, 'right-project-draft']
+  const scopes = [empty, 'saved-canvas', 'another-empty-tab']
   const storage = {
-    read: async () => ({ epoch: 4, tabs: scopes.map(scope => ({ scope })), canvasScopes: ['saved-canvas'] }),
+    read: async () => ({ epoch: 4, tabs: scopes.map(scope => ({ scope })) }),
     write: vi.fn(async () => {}),
   }
   const f = fixture(storage, undefined, () => original, {
     getDefaultWorkspace: () => preferred,
-    hasProjectDraftActivity: id => id === 'right-project-draft',
   })
   let tasks, canvasScope
   const show = () => {
@@ -258,20 +285,12 @@ it.each(['new-workspace', null])('drops untouched image tabs on return after sel
     f.events('request-session', { entry: true })
   }
   try {
-    for (const id of scopes) f.sessionsState.byId[id] = { blank: true, running: id === 'running-image' }
+    for (const id of scopes) f.sessionsState.byId[id] = { blank: true }
     f.shells.get(empty).snapshot.draft = ''
-    f.shells.set(draft, { snapshot: { draft: '未发送的海报要求' } })
-    f.doc.addEventListener('sherlock:image-factory-inspect-tab', event => {
-      if (event.detail?.scope === 'working-canvas') event.preventDefault()
-    })
     f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
     f.doc.addEventListener('sherlock:image-factory-session', event => { canvasScope = event.detail.sessionId })
     show()
     await vi.waitFor(() => expect(tasks).toMatchObject({ active: empty, busy: false }))
-    // Changing the right project leaves the image tab in place, with an empty canvas and draft.
-    preferred = 'picked-in-images'
-    f.events('project-selected', preferred)
-    expect(tasks.active).toBe(empty)
     f.doc.body.dataset.workspaceSurface = 'browser'
     preferred = project
     if (project === null) {
@@ -279,7 +298,7 @@ it.each(['new-workspace', null])('drops untouched image tabs on return after sel
       f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change', { detail: { back: true } }))
     } else show()
 
-    const expected = [...scopes.slice(1), null]
+    const expected = [...scopes, null]
     expect(tasks.tabs.map(tab => tab.scope)).toEqual(expected)
     expect(tasks).toMatchObject({ active: null, canRestore: false })
     expect(canvasScope).toBeNull()
@@ -296,7 +315,7 @@ it.each(['new-workspace', null])('drops untouched image tabs on return after sel
   }
 })
 
-it('keeps only the active empty gallery on load, after creating a tab, and while switching tabs', async () => {
+it('keeps all empty galleries on load, when creating and switching tabs, and when leaving Images', async () => {
   const empty = 'native-session'
   const edited = { scope: 'edited-tab', title: '已编辑的图像' }
   const stored = [{ scope: empty }, { scope: 'old-empty-tab', pinned: true }, edited]
@@ -313,30 +332,57 @@ it('keeps only the active empty gallery on load, after creating a tab, and while
     f.shells.get(empty).snapshot.draft = ''
     f.doc.addEventListener('sherlock:image-factory-task-state', event => { tasks = event.detail })
     open()
-    await vi.waitFor(() => expect(tasks).toMatchObject({ active: empty, tabs: [{ scope: empty }, edited], busy: false }))
+    await vi.waitFor(() => expect(tasks).toMatchObject({ active: empty, tabs: stored, busy: false }))
 
+    const expected = [...stored]
     for (let attempt = 0; attempt < 2; attempt++) {
       const previous = tasks.active
       f.events('task-action', { kind: 'new' })
       await vi.waitFor(() => expect(tasks).toMatchObject({ busy: false, active: expect.not.stringMatching(previous) }))
-      expect(tasks.tabs).toEqual([edited, { scope: tasks.active }])
+      expected.push({ scope: tasks.active })
+      expect(tasks.tabs).toEqual(expected)
       expect(tasks.canRestore).toBe(false)
     }
     f.events('task-action', { kind: 'select', scope: edited.scope })
-    expect(tasks).toMatchObject({ active: edited.scope, tabs: [edited] })
-    expect(storage.write.mock.lastCall[0].tabs).toEqual([edited])
+    expect(tasks).toMatchObject({ active: edited.scope, tabs: expected })
+    expect(storage.write.mock.lastCall[0].tabs).toEqual(expected)
 
     f.events('task-action', { kind: 'new' })
     await vi.waitFor(() => expect(tasks).toMatchObject({ busy: false, active: expect.stringMatching(/^image-task-/) }))
+    const active = tasks.active
+    expected.push({ scope: active })
     f.doc.body.dataset.workspaceSurface = 'browser'
     f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change'))
-    expect(storage.write.mock.lastCall[0].tabs).toEqual([edited])
+    expect(storage.write.mock.lastCall[0].tabs).toEqual(expected)
     open()
-    expect(tasks).toMatchObject({ active: edited.scope, tabs: [edited] })
+    expect(tasks).toMatchObject({ active, tabs: expected })
   } finally {
     f.binding.dispose()
     await f.win.happyDOM.abort()
   }
+})
+
+it('does not evict an open image tab to make room for another task', async () => {
+  const stored = [{ scope: 'native-session' }, ...Array.from({ length: 31 }, (_, index) => ({ scope: 'tab-' + index }))]
+  const f = fixture({ read: async () => ({ epoch: 4, tabs: stored }), write: async () => {} })
+  let tasks
+  const errors = vi.fn()
+  try {
+    for (const { scope } of stored) f.sessionsState.byId[scope] = { blank: true }
+    f.sessionsState.byId['extra-tab'] = { blank: true }
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.doc.addEventListener('sherlock:image-factory-task-state', ({ detail }) => { tasks = detail })
+    f.doc.addEventListener('sherlock:image-factory-task-error', errors)
+    f.events('request-session', { entry: true })
+    await vi.waitFor(() => expect(tasks).toMatchObject({ tabs: stored, busy: false }))
+    f.events('task-action', { kind: 'new' })
+    f.events('canvas-intent', 'extra-tab')
+    f.sessionCatalog.open('extra-tab')
+    f.events('canvas-intent-ended', 'extra-tab')
+    expect(tasks.tabs).toEqual(stored)
+    expect(f.sessionsState.current).toBe('native-session')
+    await vi.waitFor(() => expect(errors).toHaveBeenCalledTimes(2))
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
 it('shows a new tab while the Host is creating its session and rolls back on failure', async () => {

@@ -25,13 +25,12 @@ export function imageFactoryNeedsCanvas(text, targeted = false) {
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
 export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
-  getTaskWorkspace, getDefaultWorkspace, getProjectDraft, hasProjectDraftActivity, getExistingInput = getInput, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
+  getTaskWorkspace, getDefaultWorkspace, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
-  let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false }
-  let galleryDrafts = new WeakMap(), draftOwner
+  let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false, switchingWorkspace: false }
+  let galleryDrafts = new WeakMap(), draftOwner, workspaceChange
   const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
-  let wasActive = isActive()
   const currentId = () => sessions.list.getSnapshot().current
   const canvasScope = () => {
     const id = currentId()
@@ -42,32 +41,9 @@ export function installImageFactoryContext({
     if (isActive() && typeof detail?.sessionId === 'string') draftOwner = detail.sessionId
   }
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
-  const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail, cancelable: name === 'inspect-tab' }))
-  function hasTabActivity(scope) {
-    const catalog = sessions.list.getSnapshot()
-    const summary = scope !== null && catalog.byId?.[scope]
-    if (summary?.running) return true
-    if (!signal('inspect-tab', { scope })) return true
-    if ([...jobs.values()].some(job => job.sessionId === scope || scope === null && job.draft)) return true
-    if (hasProjectDraftActivity?.(scope ?? undefined)) return true
-    const pending = scope === null ? getPending?.() : undefined
-    const pendingState = pending?.getSnapshot?.()
-    if (pendingState?.busy || pendingState?.activating) return true
-    const session = scope === null ? undefined : sessions.binding(scope)?.session?.getSnapshot?.()
-    if (session?.running || session?.queue?.length || session?.pending?.length || session?.subagent) return true
-    const input = (scope === null ? pending?.shell : getExistingInput?.(scope))?.snapshot
-    if (input?.draft?.trim() || input?.imageIds?.length || input?.occurrences?.length) return true
-    // A session may also contain work from another mode. Look for image requests specifically.
-    const chat = session?.chat
-    return chat?.order?.some(key => {
-      const row = chat.nodes.get(key)
-      const content = row?.data?.content
-      return (row?.kind === 'user' || row?.kind === 'steering') && Array.isArray(content) &&
-        content.some(part => part.type === 'text' && readImageFactoryContext(part.text))
-    }) ?? false
-  }
+  const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
   const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, getDefaultWorkspace, standaloneDirectory,
-    setView: setTaskView, storage: taskStorage, hasTabActivity, isBoardOnly,
+    setView: setTaskView, storage: taskStorage, isBoardOnly,
     signal(name, detail) {
       if (name === 'task-state') publishState()
       signal(name, detail)
@@ -76,8 +52,10 @@ export function installImageFactoryContext({
     const creating = tasks.isCreating()
     const current = !creating && canvasState.current
     const busy = creating || canvasState.busy
-    if (state.current === current && state.busy === busy && state.creating === creating) return
-    state = { current, busy, creating }
+    const switchingWorkspace = !!workspaceChange
+    if (state.current === current && state.busy === busy && state.creating === creating &&
+        state.switchingWorkspace === switchingWorkspace) return
+    state = { current, busy, creating, switchingWorkspace }
     for (const listener of listeners) listener()
   }
   const stateChange = event => {
@@ -93,7 +71,7 @@ export function installImageFactoryContext({
     if (job?.draft && updateScope) syncSession()
   }
   function fill(prompt, gallery = false) {
-    const shell = getProjectDraft?.()?.shell ?? nativeInput()
+    const shell = nativeInput()
     if (!shell || shell.disposed || !isActive() || state.busy || typeof prompt !== 'string' || !prompt.trim()) return false
     const draft = shell.snapshot.draft
     if (!gallery && draft.trim()) { focus(); return true }
@@ -180,6 +158,7 @@ export function installImageFactoryContext({
     const { parts, layers, hasInstructions } = bindImageLayerReferences(content)
     const targeted = layers.length > 0
     if (isActive() && tasks.isCreating()) throw Error('正在创建图片任务，输入已保留。')
+    if (isActive() && workspaceChange) throw Error('正在切换工作区，输入已保留。')
     if (isActive() && isBoardOnly(sessionId)) throw Error('看板工作区会话尚在打开，输入已保留。')
     if (!isActive() || currentId() !== sessionId) {
       if (action || targeted) throw Error('当前会话或画布已切换。')
@@ -361,9 +340,78 @@ export function installImageFactoryContext({
       signal('adopt', { sessionId })
     })
   }
+  function rebindCanvas(previous, next) {
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        win.clearTimeout(timer)
+        doc.removeEventListener('sherlock:image-factory-canvas-rebound', reply)
+      }
+      const reply = ({ detail }) => {
+        if (detail?.next !== next) return
+        cleanup()
+        if (detail.error) reject(Error(detail.error)); else resolve()
+      }
+      const timer = win.setTimeout(() => { cleanup(); reject(Error('画布未能切换工作区，请重试。')) }, 12000)
+      doc.addEventListener('sherlock:image-factory-canvas-rebound', reply)
+      signal('rebind-canvas', { previous, next })
+    })
+  }
+  async function switchWorkspace(workspaceId, currentWorkspaceId) {
+    if (!isActive() || workspaceChange || state.busy || workspaceId === currentWorkspaceId) return
+    const before = currentId(), previous = canvasScope()
+    const pending = before === undefined ? getPending() : undefined
+    const pendingState = pending?.getSnapshot?.()
+    if (pendingState?.busy || pendingState?.activating) return
+    const source = nativeInput()
+    const token = workspaceChange = {}
+    const validate = () => {
+      if (workspaceChange !== token || !isActive() || currentId() !== before || state.busy ||
+          source?.disposed || source?.snapshot.researchContextPreparing)
+        throw Error('当前图片任务已变化，草稿已保留。')
+    }
+    publishState()
+    try {
+      const directory = workspaceId === null ? { cwd: await standaloneDirectory() } : { workspaceId }
+      validate()
+      const id = 'image-task-' + win.crypto.randomUUID()
+      const next = await sessions.create({ sessionId: id, ...directory })
+      validate()
+      if (next !== id || !sessions.binding(id)) throw Error('工作区会话未能打开，草稿已保留。')
+      await rebindCanvas(previous, next)
+      validate()
+      clearLayerPreview()
+      const input = getInput(next)
+      const draft = source?.snapshot
+      if (!input || input.disposed) throw Error('新会话输入尚未就绪，原输入已保留。')
+      if (draft) {
+        if (draft.imageIds?.length && !input.addImages([...draft.imageIds])) throw Error('图片未能加入新会话，原输入已保留。')
+        const occurrences = draft.occurrences?.map(occurrence => {
+          if (occurrence.source !== 'image-factory-layer') return occurrence
+          try {
+            const reference = readImageLayerReference(occurrence.ref)
+            if (reference.scope === previous) return { ...occurrence, ref: JSON.stringify({ ...reference, scope: next }) }
+          } catch {}
+          return occurrence
+        })
+        input.restoreDraftState({ ...draft, occurrences })
+      }
+      if (!tasks.replaceActive(previous, next)) throw Error('当前图片任务已变化，草稿已保留。')
+      tasks.projectSelected(workspaceId)
+      if (draftOwner === before) draftOwner = undefined
+      setTaskView?.(next)
+      sessions.open(next)
+      if (draft) {
+        const galleryDraft = galleryDrafts.get(source)
+        if (galleryDraft) galleryDrafts.set(input, galleryDraft)
+        source.commitSend([...(draft.imageIds ?? [])], draft.draft)
+      }
+    } finally {
+      if (workspaceChange === token) workspaceChange = undefined
+      publishState()
+    }
+  }
   let publishedScope, intendedCanvas
   function syncSession(force = false, reopen, entry = false) {
-    if (isActive()) wasActive = true
     const scope = canvasScope()
     const sessionId = tasks.sync(scope, scope !== null && (scope === reopen || scope === intendedCanvas), entry)
     if (!force && sessionId === publishedScope) return
@@ -375,7 +423,7 @@ export function installImageFactoryContext({
     for (const id of jobs.keys()) finish(id, false)
     galleryDrafts = new WeakMap()
     clearLayerPreview()
-    publishedScope = intendedCanvas = draftOwner = undefined
+    publishedScope = intendedCanvas = draftOwner = workspaceChange = undefined
     tasks.reset()
   }
   const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt, 'reference-layer': referenceLayer, 'reference-clear': () => clearLayerPreview(),
@@ -384,8 +432,6 @@ export function installImageFactoryContext({
     'focus-chat': focus, reset,
     'canvas-intent': event => { intendedCanvas = event.detail },
     'canvas-intent-ended': event => { if (event.detail === intendedCanvas) intendedCanvas = undefined },
-    'project-selected': event => tasks.projectSelected(event.detail),
-    'project-changed': event => { if (event.detail?.previous === currentId()) tasks.replaceActive(event.detail.previous, event.detail.next) },
     'task-action': event => {
       const detail = event.detail
       const pending = tasks.action(detail)
@@ -396,10 +442,7 @@ export function installImageFactoryContext({
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   const surfaceChange = event => {
-    const active = isActive()
-    if (wasActive && !active) tasks.leave()
-    wasActive = active
-    if (active && event.detail?.back) syncSession(true, undefined, true)
+    if (isActive() && event.detail?.back) syncSession(true, undefined, true)
     syncLayerPreview()
   }
   doc.addEventListener('sherlock:workspace-surface-change', surfaceChange)
@@ -408,7 +451,7 @@ export function installImageFactoryContext({
   signal('request-state', {})
   syncSession()
   return {
-    prompt, fill, focus, confirmLayerPreview, clearLayerPreview, action: kind => { if (!tasks.isCreating()) signal('action', { kind }) },
+    prompt, fill, focus, switchWorkspace, confirmLayerPreview, clearLayerPreview, action: kind => { if (!tasks.isCreating()) signal('action', { kind }) },
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
       offSession?.()
