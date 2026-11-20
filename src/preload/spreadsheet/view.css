@@ -9,12 +9,12 @@ body [data-odyssey-page=spreadsheet] .wSkVaW_header[data-srb-session-header]:not
 [data-odyssey-page=spreadsheet] [data-conversation-scroll]>:has([data-ework-spreadsheet-view]){display:flex;flex:1;min-height:0;min-width:0;width:100%;max-width:none;margin:0;padding:0;overflow:hidden}
 :is([data-odyssey-page=spreadsheet],.ew-sheet,.ew-sheet-welcome){--ss-bg:#fff}
 body[data-ds-dark-theme] :is([data-odyssey-page=spreadsheet],.ew-sheet,.ew-sheet-welcome){--ss-bg:#1e1e1e}
-.ew-sheet,.ew-sheet-welcome{
+.ew-sheet,.ew-sheet-welcome,.presentation-header-menu{
  --ss-text:#26282c;--ss-muted:#686a70;--ss-icon:#656970;--ss-ribbon:#f5f5f6;
  --ss-formula:#f8f8f8;--ss-hover:#ebebed;--ss-selected:#e8e9eb;--ss-border:#dedee2;--ss-menu:#fff;
  --ss-blue:#366cc1;--ss-blue-quiet:#dce9fb;--ss-danger:#ae323c;--ss-primary:#292b30;--ss-primary-text:#fff;
 }
-body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
+body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome,.presentation-header-menu){
  --ss-text:#e6e6e6;--ss-muted:#a5a5a5;--ss-icon:#b6b6b6;--ss-ribbon:#242424;
  --ss-formula:#222;--ss-hover:#333;--ss-selected:#303030;--ss-border:#404040;--ss-menu:#242424;
  --ss-blue:#99bfff;--ss-blue-quiet:#293647;--ss-danger:#f17c82;--ss-primary:#e6e6e6;--ss-primary-text:#212121;

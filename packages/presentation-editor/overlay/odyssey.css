@@ -323,6 +323,8 @@ footer button:hover,
   position: relative;
 }
 .canvas-slot {
+  /* Keep PPTist selection handles and alignment guides below workspace menus. */
+  isolation: isolate;
   flex: 1;
 }
 .slide-area,

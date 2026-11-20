@@ -1,4 +1,5 @@
 import headerEditLock from '../../shared/header-edit-lock.json'
+import { browserIcons } from '../browser/icons'
 import { sheetIcon } from '../spreadsheet/icons'
 
 type State = { hasDeck: boolean; writable: boolean; locked: boolean; busy: boolean }
@@ -41,13 +42,16 @@ export function presentationHeader(doc: Document, actions: Actions) {
     menu = doc.createElement('div')
     menu.className = 'presentation-header-menu'
     menu.role = 'menu'
-    const item = (title: string, icon: string, disabled: boolean, run: () => void) => {
+    const item = (title: string, icon: 'external' | 'download', disabled: boolean, run: () => void) => {
       const b = doc.createElement('button')
       b.type = 'button'
       b.role = 'menuitem'
       b.disabled = disabled
-      b.innerHTML = sheetIcon(icon)
-      b.append(title)
+      const glyph = doc.createElement('i')
+      glyph.className = 'ew-sheet-browser-icon'
+      glyph.setAttribute('aria-hidden', 'true')
+      glyph.style.setProperty('--menu-icon', 'url("' + browserIcons[icon].replaceAll('"', '%22') + '")')
+      b.append(glyph, title)
       b.onclick = () => {
         close()
         run()
