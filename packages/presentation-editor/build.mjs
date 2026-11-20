@@ -129,9 +129,11 @@ edit('src/hooks/usePasteEvent.ts', [['if (!editorAreaFocus.value', "if (document
 // save that measurement as an edit. Resume auto-fit after its text or style changes.
 edit('src/views/components/element/TextElement/index.vue', [
   ['watch(() => props.elementInfo.inset,', "watch(() => props.elementInfo.inset?.join(','),"],
+  ['ref="elementRef"', 'ref="elementRef" @beforeinput.capture="allowAutoFit" @paste.capture="allowAutoFit" @cut.capture="allowAutoFit"'],
   [
   'const updateTextElementHeight = (entries: ResizeObserverEntry[]) => {',
   `let autoFitEdited = false
+const allowAutoFit = () => { autoFitEdited = true }
 watch([() => props.elementInfo.content, () => props.elementInfo.defaultFontName, () => props.elementInfo.lineHeight,
   () => props.elementInfo.wordSpace, () => props.elementInfo.paragraphSpace, () => props.elementInfo.vertical,
   () => props.elementInfo.vertical ? props.elementInfo.height : props.elementInfo.width],
@@ -160,9 +162,12 @@ for (const file of ['index.vue','BaseChartElement.vue']) {
 // Imported tables keep Office row geometry and individual cell edges in both canvas renderers.
 // The imported row heights already specify the Office table's bounds. DOM
 // layout rounds those heights even when the user has only changed slides.
-edit('src/views/components/element/TableElement/index.vue', [[
+edit('src/views/components/element/TableElement/index.vue', [
+  ['ref="elementRef"', 'ref="elementRef" @beforeinput.capture="allowTableFit" @paste.capture="allowTableFit" @cut.capture="allowTableFit"'],
+  [
   'const updateTableElementHeight = (entries: ResizeObserverEntry[]) => {',
   `let tableLayoutEdited = false
+const allowTableFit = () => { tableLayoutEdited = true }
 watch([() => JSON.stringify(props.elementInfo.data), () => props.elementInfo.width,
   () => props.elementInfo.rowHeights?.join(','), () => props.elementInfo.colWidths?.join(','),
   () => props.elementInfo.cellMinHeight], () => { tableLayoutEdited = true }, { flush: 'sync' })
