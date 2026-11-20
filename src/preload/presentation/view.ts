@@ -1,4 +1,5 @@
 import type { IpcRenderer } from 'electron'
+import { presentationHeader } from './header'
 import styles from './view.css?raw'
 import icon from '../../../build/brand/odyssey-app-presentation.svg?raw'
 import { markWorkspaceProjectEdited } from '../workspace-project-lock'
@@ -14,6 +15,7 @@ type Editor = {
   documentId: string | null
   slideId?: string
   revision: number
+  locked: boolean
   editable: boolean
   queue: Promise<void>
   failure?: string
@@ -26,8 +28,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
   doc.head.append(style)
   let current: Editor | undefined,
     disposed = false
-  const dark = () =>
-    doc.body.hasAttribute('data-ds-dark-theme') || doc.documentElement.dataset.theme === 'dark'
+  const dark = () => doc.body.hasAttribute('data-ds-dark-theme') || doc.documentElement.dataset.theme === 'dark'
   const post = (e: Editor, type: string, data: Record<string, unknown> = {}) =>
     e.frame.contentWindow?.postMessage({ channel: 'odyssey-presentation', type, ...data }, origin)
   const request = (e: Editor, method: string, data: Record<string, unknown> = {}) =>
@@ -38,11 +39,63 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
         detail: { ...reference, sessionId: e.sessionId, documentId: e.documentId }
       })
     )
+  let switching = false
+  const paintHeader = () => {
+    const e = current,
+      node =
+        e?.host
+          .closest('[data-odyssey-page=presentation]')
+          ?.querySelector<HTMLElement>('[data-ework-presentation-actions]') ?? null
+    header.paint(node, {
+      hasDeck: !!e?.documentId,
+      writable: !!e?.editable,
+      locked: !!e?.locked,
+      busy: switching || !e?.ready
+    })
+  }
+  const header = presentationHeader(doc, {
+    async toggle() {
+      const e = current
+      if (!e?.ready || !e.editable || switching) return
+      switching = true
+      paintHeader()
+      try {
+        await flushEditor(e)
+        const locked = await request(e, 'lock', { locked: !e.locked })
+        if (current !== e) return
+        e.locked = locked
+        post(e, 'edit-mode', { editable: e.editable && !locked })
+      } catch (err) {
+        if (current === e) post(e, 'error', { message: String(err) })
+      } finally {
+        switching = false
+        paintHeader()
+      }
+    },
+    async import(file) {
+      const e = current
+      if (!e?.ready || !e.editable || e.locked) return
+      if (file.size > 64 * 1024 * 1024) {
+        post(e, 'status', { message: '文件超过 64 MB。' })
+        return
+      }
+      try {
+        const bytes = await file.arrayBuffer()
+        if (current === e && !e.locked) post(e, 'header-import', { bytes, title: file.name })
+      } catch {
+        if (current === e) post(e, 'status', { message: '文件读取失败。' })
+      }
+    },
+    export() {
+      if (current?.documentId) post(current, 'header-export')
+    }
+  })
   const hydrate = (e: Editor, record: any, recent?: unknown) => {
     e.revision = record.revision
     e.documentId = record.deck?.id ?? null
     e.failure = undefined
-    post(e, 'load', { record, recent, dark: dark(), editable: e.editable, slideId: e.slideId })
+    paintHeader()
+    post(e, 'load', { record, recent, dark: dark(), editable: e.editable && !e.locked, slideId: e.slideId })
   }
   function markSaved(e: Editor) {
     markWorkspaceProjectEdited(doc, e.sessionId)
@@ -56,6 +109,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
         e.generation = state.generation
         e.owner = state.owner
         e.editable = state.editable
+        e.locked = !!state.locked
         e.slideId = state.slideId
         e.ready = true
         hydrate(e, state.record, state.recent)
@@ -94,6 +148,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       current.frame.remove()
     }
     current = undefined
+    paintHeader()
     delete doc.body.dataset.eworkPresentationSession
   }
   const sync = () => {
@@ -102,6 +157,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       '.pI_x6G_centerCol [data-odyssey-page=presentation] [data-ework-presentation-view]:not([data-odyssey-subagent-panel] *)'
     )
     if (current && current.host === host) {
+      paintHeader()
       return
     }
     reset()
@@ -116,6 +172,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       host,
       sessionId: host.dataset.eworkPresentationView,
       ready: false,
+      locked: false,
       editable: false,
       documentId: null,
       revision: 0,
@@ -124,6 +181,10 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     doc.body.dataset.eworkPresentationSession = current.sessionId
     host.append(frame)
   }
+  const dismissEditorMenus = () => {
+    if (current?.ready) post(current, 'dismiss-menus')
+  }
+  doc.addEventListener('pointerdown', dismissEditorMenus, true)
   const onMessage = (event: MessageEvent) => {
     const e = current,
       d = event.data
@@ -134,6 +195,10 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       d?.channel !== 'odyssey-presentation'
     )
       return
+    if (d.type === 'pointerdown') {
+      doc.dispatchEvent(new Event('sherlock:workspace-pointerdown'))
+      return
+    }
     if (d.type === 'ready') {
       void load(e)
       return
@@ -169,6 +234,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
             slideId: d.slideId
           })
           e.documentId = d.deck.id
+          paintHeader()
           markSaved(e)
           post(e, 'saved', { revision: e.revision })
         } else if (d.type === 'open') {
@@ -269,6 +335,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     },
     dispose() {
       disposed = true
+      doc.removeEventListener('pointerdown', dismissEditorMenus, true)
       observer.disconnect()
       theme.disconnect()
       win.removeEventListener('sherlock:presentation-referenced-marks', committedMarks)
@@ -276,6 +343,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       ipc.removeListener('presentation:changed', changed)
       win.removeEventListener('message', onMessage)
       reset()
+      header.dispose()
       style.remove()
     }
   }

@@ -46,16 +46,7 @@ function edit(path, edits) {
 }
 // Start each document with its own undo stack in the embedded editor.
 edit('src/assets/styles/variable.scss', [['$themeColor: #d14424;', '$themeColor: #588afa;']])
-edit('src/store/snapshot.ts', [
-  [
-    'await db.snapshots.add(newFirstSnapshot)',
-    "this.setSnapshotCursor(-1); this.setSnapshotLength(0); await db.transaction('rw', db.snapshots, async () => { await db.snapshots.clear(); await db.snapshots.add(newFirstSnapshot) })"
-  ],
-  [
-    'const snapshot = snapshots[snapshotCursor]',
-    'const snapshot = snapshots[snapshotCursor]; if (!snapshot) return'
-  ]
-])
+writeFileSync(join(work, 'src/store/snapshot.ts'), "export { useSnapshotStore } from '../editor-history'\n")
 edit('src/views/components/element/ChartElement/Chart.vue', [
   [
     "import tinycolor from 'tinycolor2'",
@@ -81,15 +72,22 @@ edit('src/types/slides.ts', [
 edit('src/views/Editor/Canvas/EditableElement.vue', [
   [
     ':id="`editable-element-${elementInfo.id}`"',
-    ':id="`editable-element-${elementInfo.id}`" :data-pptx-node-id="elementInfo.id"'
+    ':id="`editable-element-${elementInfo.id}`" :data-pptx-node-id="elementInfo.odysseyMaster ? undefined : elementInfo.id" :inert="elementInfo.odysseyMaster || undefined" :data-master-art="elementInfo.odysseyMaster || undefined"'
   ]
 ])
 // Keep imported media playable after the window or session has closed.
 edit('src/hooks/useImport.ts', [
+  ['parseElements([...item.elements, ...item.layoutElements])',
+    'parseElements(item.layoutElements); for (const element of slide.elements) Object.assign(element, { lock:true, odysseyMaster:true }); parseElements(item.elements)'],
   ["videoMode: 'blob'", "videoMode: 'base64'"],
   ["audioMode: 'blob'", "audioMode: 'base64'"]
 ])
 edit('src/hooks/useExport.ts', [
+  ['for (const slide of _slides) {\n      const pptxSlide = pptx.addSlide()',
+    "for (const slide of _slides) {\n      const masterName = 'OdysseyMaster' + (_slides.indexOf(slide)+1); const inherited = slide.elements.some(e=>e.odysseyMaster); if(inherited)pptx.defineSlideMaster({title:masterName,objects:[]}); const pptxSlide = inherited ? pptx.addSlide({masterName}) : pptx.addSlide()"],
+  ['for (const el of slide.elements) {', 'for (const el of slide.elements) {\n        const beforeArtwork = pptxSlide._slideObjects.length'],
+  ['pptxSlide.addMedia(options)\n          }\n        }\n      }',
+    "pptxSlide.addMedia(options)\n          }\n        }\n        if(el.odysseyMaster)for(const object of pptxSlide._slideObjects.slice(beforeArtwork))object.options.objectName='OdysseyInheritedArtwork'\n      }"],
   [
     "styleAttr.value.split(';')",
     "styleAttr.value.replace(/&quot;|&#34;|&#x22;/gi, '\"').replace(/&apos;|&#39;|&#x27;/gi, \"'\").split(';')"
@@ -103,12 +101,18 @@ edit('src/hooks/useExport.ts', [
     "pptx.write({ outputType: 'arraybuffer' }).then(bytes => { window.dispatchEvent(new CustomEvent('odyssey:export', {detail:bytes})); exporting.value=false }).catch"
   ]
 ])
+edit('src/hooks/useGlobalHotkey.ts',[
+  ['const { ctrlKey, shiftKey, altKey, metaKey } = e',
+    "if ((e.target as HTMLElement)?.closest?.('input,textarea,select,.style-popover,.theater')) return; const { ctrlKey, shiftKey, altKey, metaKey } = e"],
+  ['e.preventDefault()\n      undo()', 'e.preventDefault()\n      if (shiftKey) redo(); else undo()']
+])
 edit('src/main.ts', [["import '@/assets/styles/font.scss'", "import './odyssey.css'"]])
 cpSync(join(project, 'src/shared/presentation-slide-title.ts'), join(work, 'src/presentation-slide-title.ts'))
 cpSync(join(source, 'overlay'), join(work, 'src'), { recursive: true })
 cpSync(join(project, 'scripts/lib/pptx-annotation-viewer.mjs'), join(work, 'src/native-annotations.mjs'))
 cpSync(join(project, 'src/preload/pptx-annotations.css'), join(work, 'src/native-annotations.css'))
 cpSync(join(project, 'src/preload/pptx-annotation-icons'), join(work, 'public/markers'), { recursive: true })
+cpSync(join(source, 'layout-art'), join(work, 'public/layout-art'), {recursive:true})
 cpSync(join(source, 'icons'), join(work, 'public/icons'), { recursive: true })
 cpSync(join(project, 'skills/efund-ppt-maker/assets/efund-template-v6.pptx'), join(work, 'public/efund.pptx'))
 cpSync(join(source, 'index.html'), join(work, 'index.html'))

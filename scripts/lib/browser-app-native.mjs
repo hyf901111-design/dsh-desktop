@@ -505,7 +505,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  `+browserSendAnchor)
  replace('const researchActive = this.researchActiveSessions.has(session.sessionId);',"const researchActive = this.researchActiveSessions.has(session.sessionId) && !['browser','image-factory'].includes(document.body.dataset.workspaceSurface);")
  replace('const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(', `const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(rightProjectDraft
-  ? (imageFactoryActive ? react.createElement(EWorkImageFactoryWelcome) : ['research','notes','spreadsheet'].includes(rightProjectMode) ? react.createElement(EWorkModeWelcome,{sessionId,mode:rightProjectMode}) : researchConversationView)
+  ? (imageFactoryActive ? react.createElement(EWorkImageFactoryWelcome) : ['research','notes','spreadsheet','presentation'].includes(rightProjectMode) ? react.createElement(EWorkModeWelcome,{sessionId,mode:rightProjectMode}) : researchConversationView)
   : imageFactoryActive ? (imageTaskCreating || pendingRight || conversationVacant ? react.createElement(EWorkImageFactoryWelcome) : researchConversationView) : `)
  replace("activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation", "pendingRight ? researchConversationView : activeView === 'notes' && document.body.dataset.workspaceSurface!=='browser' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation")
  const project='function projectUserText(text, openFile) {'

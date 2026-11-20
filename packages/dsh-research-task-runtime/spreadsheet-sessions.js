@@ -30,7 +30,7 @@ export function registerDocumentSessions(ctx,{isTrustedRequest,readJsonBody},kin
         const title=ctx.sessionTitle.rename(session,input.locale==='en'?(presentation?'New Presentation':'New Spreadsheet'):'新'+noun)
         created=session.append(createdType,{titleSeq:title.eventSeq,provisional:true})
       }
-      if(await ctx.sessions.flush(session)!==true)throw Error('新表格尚未保存，请重试。')
+      if(await ctx.sessions.flush(session)!==true)throw Error('新'+noun+'尚未保存，请重试。')
       return send(200,{ok:true,titleSeq:created.data.titleSeq})
     }catch(error){return send(400,{error:error.message})}
   }})

@@ -55,11 +55,7 @@
         <select aria-label="字体" :value="selectedFont" @change="command('fontname', $event.target.value)">
           <option v-for="f in fontOptions" :key="f" :value="f">{{ f }}</option>
         </select>
-        <select
-          aria-label="字号"
-          :value="selectedSize"
-          @change="command('fontsize', $event.target.value + 'px')"
-        >
+        <select aria-label="字号" :value="selectedSize" @change="command('fontsize', $event.target.value + 'px')">
           <option v-for="s in sizeOptions" :key="s" :value="s">{{ s }}</option>
         </select>
         <button
@@ -76,6 +72,15 @@
           A
           <input type="color" aria-label="文字颜色" @input="command('color', $event.target.value)" />
         </label>
+        <button
+          v-if="main.activeElementIdList.length"
+          title="对象样式"
+          aria-label="对象样式"
+          :aria-pressed="stylesOpen"
+          @click="stylesOpen = !stylesOpen"
+        >
+          <Glyph name="menu-shape" /><span>样式</span>
+        </button>
         <button aria-label="对齐" @click="toggle('align')"><Glyph name="align" /></button>
         <button aria-label="项目符号" @mousedown.prevent @click="command('bulletList')">
           <Glyph name="list" />
@@ -97,77 +102,28 @@
         </button>
         <button aria-label="更多" @click="toggle('more')"><Glyph name="more" /></button>
       </nav>
-      <div v-if="menu && menu !== 'recent'" class="menu" :style="menuPos">
-        <template v-if="menu === 'commands'">
-          <button v-for="item in commandGroups" :key="item.id" @click="menu = item.id">
-            <Glyph :name="item.icon" />
-            <span>{{ item.label }}</span>
-            <Glyph class="end" name="menu-right" />
-          </button>
-        </template>
-        <button
-          v-if="menuHeadings[menu]"
-          class="menu-back"
-          @click="menu = ['export', 'files'].includes(menu) ? 'file' : 'commands'"
-        >
-          <Glyph name="menu-undo" />
-          {{ menuHeadings[menu] }}
-        </button>
-        <template v-if="menu === 'file'">
-          <button @click="chooseFile(fileInput)">
-            <Glyph name="menu-upload" />
-            导入 PowerPoint…
-          </button>
-          <button @click="menu = 'export'">
-            <Glyph name="menu-download" />
-            导出演示文稿
-            <Glyph class="end" name="menu-right" />
-          </button>
-          <button @click="create">
-            <Glyph name="menu-plus" />
-            新建空白演示文稿
-          </button>
-          <button @click="importTemplate">
-            <Glyph name="menu-slide" />
-            从易方达 V6 模板新建
-          </button>
-          <button v-if="recent.length > 1" @click="menu = 'files'">
-            <Glyph name="menu-file" />
-            最近使用
-          </button>
-        </template>
-        <template v-if="menu === 'edit'">
-          <button :disabled="!canUndoAI" @click="menuAction('undo')">
-            <Glyph name="undo" />
-            撤销 AI 修改
-          </button>
-          <button @click="undoEdit">
-            <Glyph name="undo" />
-            撤销编辑
-          </button>
-          <button @click="hist.redo">
-            <Glyph name="redo" />
-            重做编辑
-          </button>
-        </template>
-        <template v-if="menu === 'export'">
-          <button @click="exportDeck">
-            <Glyph name="menu-file" />
-            PowerPoint 演示文稿 (.pptx)
-          </button>
-        </template>
-        <template v-if="menu === 'view'">
-          <button @click="play">
-            <Glyph name="play" />
-            从当前页放映
-          </button>
-          <button @click="fullscreen">
-            <Glyph name="fit" />
-            全屏
-          </button>
-        </template>
+      <CommandMenu
+        v-if="menu === 'commands'"
+        :anchor="menuPos"
+        :groups="commandTree"
+        @run="runCommand"
+        @close="menu = ''"
+      />
+      <CommandMenu
+        v-else-if="menu === 'pages'"
+        :anchor="menuPos"
+        :groups="pageCommands"
+        @run="runPage"
+        @close="menu = ''"
+      />
+      <div
+        v-else-if="menu && menu !== 'recent'"
+        class="menu"
+        :class="{ 'layout-menu': menu === 'layout' }"
+        :style="menuPos"
+      >
         <template v-if="menu === 'more'">
-          <button @click="menu = 'file'">
+          <button @click="menu = 'commands'">
             <Glyph name="menu-slide" />
             演示文稿
           </button>
@@ -175,16 +131,6 @@
             <Glyph name="redo" />
             重新载入已保存版本
           </button>
-          <details>
-            <summary>关于 PPTist</summary>
-            <p>PPTist · AGPL-3.0</p>
-            <a href="./LICENSE.txt" download>开源许可证</a>
-            ·
-            <a href="./source/editor.tgz" download>编辑器源码</a>
-          </details>
-        </template>
-        <template v-if="menu === 'files'">
-          <button v-for="d in recent" @click="open(d.id)">{{ d.title }}</button>
         </template>
         <template v-if="menu === 'insert'">
           <button @click="insert('text')">
@@ -199,13 +145,17 @@
             <Glyph name="menu-image" />
             图片…
           </button>
-          <button @click="insert('chart')">柱状图</button>
+          <button @click="insert('chart')">图表…</button>
           <button @click="insert('table')">表格</button>
         </template>
-        <template v-if="menu === 'layout'">
-          <button @click="insertLayout(false)">标题</button>
-          <button @click="insertLayout(true)">标题和正文</button>
-        </template>
+        <ShapePool v-if="menu === 'shape-pool'" @select="(shape) => insertObject('shape', shape)" />
+        <ChartPool v-if="menu === 'chart-pool'" @select="(chart) => insertObject('chart', chart)" />
+        <TableGenerator
+          v-if="menu === 'table-pool'"
+          @close="menu = ''"
+          @insert="(size) => insertObject('table', size)"
+        />
+        <LayoutGallery v-if="menu === 'layout'" :active="slide?.odysseyLayoutId" @choose="chooseLayout" />
         <template v-if="menu === 'align'">
           <button v-for="(v, k) in { left: '左对齐', center: '居中', right: '右对齐' }" @click="alignText(k)">
             {{ v }}
@@ -235,6 +185,16 @@
             class="page-row"
             :aria-current="i === index ? 'page' : undefined"
             @click="selectSlide(i)"
+            @focus="main.setThumbnailsFocus(true)"
+            :draggable="editable"
+            :data-moving="draggedPage === page.id || undefined"
+            :data-drop="dragOverPage === page.id || undefined"
+            @dragstart="startPageDrag(page, $event)"
+            @dragover.prevent="dragOverPage = page.id"
+            @drop.prevent="dropPage(i)"
+            @dragend="endPageDrag"
+            @contextmenu.prevent="openPageMenu(i, $event)"
+            @keydown="pageKey($event, i)"
           >
             <span class="num">{{ i + 1 }}</span>
             <div class="page-detail">
@@ -244,6 +204,21 @@
           </button>
         </aside>
         <section class="edit-col sherlock-ppt-editor" :data-readonly="!editable || undefined">
+          <aside v-if="stylesOpen && main.activeElementIdList.length && editable" class="style-popover">
+            <header>
+              <div class="style-tabs" role="group" aria-label="对象格式">
+                <button :aria-pressed="styleTab === 'style'" @click="styleTab = 'style'">样式</button>
+                <button :aria-pressed="styleTab === 'position'" @click="styleTab = 'position'">排列</button>
+              </div>
+              <button title="关闭样式" aria-label="关闭样式" @click="stylesOpen = false">×</button>
+            </header>
+            <template v-if="styleTab === 'position'"
+              ><MultiPositionPanel v-if="main.activeElementIdList.length > 1" /><ElementPositionPanel v-else
+            /></template>
+            <template v-else
+              ><MultiStylePanel v-if="main.activeElementIdList.length > 1" /><ElementStylePanel v-else
+            /></template>
+          </aside>
           <div ref="stage" class="canvas-slot">
             <div
               class="slide-area"
@@ -270,6 +245,7 @@
           </div>
         </section>
       </div>
+      <ChartDataEditorDialog v-if="editable" />
       <footer>
         <span>第 {{ index + 1 }} 页，共 {{ store.slides.length }} 页</span>
         <span>{{ ratio }}</span>
@@ -278,7 +254,13 @@
         <button title="缩小" @click="zoom.scaleCanvas('-')"><Glyph name="minus" /></button>
         <button title="适合窗口" @click="zoom.resetCanvas">适合</button>
         <button title="放大" @click="zoom.scaleCanvas('+')"><Glyph name="plus" /></button>
-        <button title="全屏" @click="fullscreen"><Glyph name="fit" /></button>
+        <button
+          :title="editorFullscreen ? '退出全屏' : '全屏'"
+          :aria-pressed="editorFullscreen"
+          @click="fullscreen"
+        >
+          <Glyph name="fit" />
+        </button>
       </footer>
     </template>
     <div
@@ -302,6 +284,18 @@
 <script setup>
 import { computed, defineComponent, h, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useSlidesStore, useMainStore, useSnapshotStore } from '@/store'
+import CommandMenu from './CommandMenu.vue'
+import LayoutGallery from './LayoutGallery.vue'
+import { applyMaster } from './apply-layout'
+import ShapePool from '@/views/Editor/CanvasTool/ShapePool.vue'
+import ChartPool from '@/views/Editor/CanvasTool/ChartPool.vue'
+import TableGenerator from '@/views/Editor/CanvasTool/TableGenerator.vue'
+import ChartDataEditorDialog from '@/views/Editor/ChartDataEditorDialog.vue'
+import ElementPositionPanel from '@/views/Editor/Toolbar/ElementPositionPanel.vue'
+import MultiPositionPanel from '@/views/Editor/Toolbar/MultiPositionPanel.vue'
+import useCombineElement from '@/hooks/useCombineElement'
+import ElementStylePanel from '@/views/Editor/Toolbar/ElementStylePanel/index.vue'
+import MultiStylePanel from '@/views/Editor/Toolbar/MultiStylePanel.vue'
 import Canvas from '@/views/Editor/Canvas/index.vue'
 import ThumbnailSlide from '@/views/components/ThumbnailSlide/index.vue'
 import useImport from '@/hooks/useImport'
@@ -314,6 +308,8 @@ import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
 import emitter, { EmitterEvents } from '@/utils/emitter'
 import { slideTitle } from './presentation-slide-title'
+import { protectMaster } from './master-protection'
+import { exportMasterArtwork } from './powerpoint-masters'
 import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
 
@@ -332,6 +328,11 @@ const importer = useImport(),
   zoom = useScaleCanvas()
 useGlobalHotkey()
 usePasteEvent()
+const editable = ref(true)
+const editorFullscreen = ref(false)
+const stylesOpen = ref(false),
+  styleTab = ref('style')
+const grouping = useCombineElement()
 const fileInput = ref(),
   imageInput = ref(),
   stage = ref(),
@@ -358,7 +359,6 @@ const ratio = computed(() =>
 let revision = 0,
   baseline = '',
   loading = false,
-  editable = true,
   freeze = false,
   importing = null,
   markViewer,
@@ -380,9 +380,7 @@ let committedMarkIds = new Set()
 const noteText = computed(() => plain(slide.value?.remark))
 const selectedFont = computed(() => (main.richTextAttrs.fontname || '华文黑体').replace(/^["']|["']$/g, ''))
 const selectedSize = computed(() => parseFloat(main.richTextAttrs.fontsize) || 24)
-const fontOptions = computed(() => [
-  ...new Set([selectedFont.value, '华文黑体', '微软雅黑', '宋体', 'Arial'])
-])
+const fontOptions = computed(() => [...new Set([selectedFont.value, '华文黑体', '微软雅黑', '宋体', 'Arial'])])
 const sizeOptions = computed(() =>
   [...new Set([12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60, 72, selectedSize.value])].sort((a, b) => a - b)
 )
@@ -401,7 +399,7 @@ const snapshot = () => ({
   slides: store.slides
 })
 function save(create = false, importId) {
-  if (loading || !docId.value || !editable || freeze || importing) return
+  if (loading || !docId.value || !editable.value || freeze || importing) return
   const json = JSON.stringify(snapshot())
   if (!create && json === baseline) return
   baseline = json
@@ -415,10 +413,7 @@ watch(
   { deep: true }
 )
 function remember() {
-  recent.value = [
-    { id: docId.value, title: store.title },
-    ...recent.value.filter((d) => d.id !== docId.value)
-  ]
+  recent.value = [{ id: docId.value, title: store.title }, ...recent.value.filter((d) => d.id !== docId.value)]
 }
 async function hydrate(d) {
   const seq = ++hydration
@@ -428,16 +423,19 @@ async function hydrate(d) {
   menu.value = ''
   canUndoAI.value = !!d.record.canUndoAI
   revision = d.record.revision
-  editable = d.editable
+  editable.value = d.editable
   ready.value = true
   document.body.toggleAttribute('data-ds-dark-theme', d.dark)
-  notice.value = editable ? '' : '只读'
+  notice.value = editable.value ? '' : '只读'
   if (d.recent) recent.value = d.recent
   committedMarkIds = new Set()
   const deck = d.record.deck
+  let migrated = false
   docId.value = deck?.id || ''
   main.setActiveElementIdList([])
   if (deck) {
+    migrated = await protectMaster(deck.slides, deck.viewportSize, deck.viewportRatio, true)
+    if (seq !== hydration) return
     store.setSlides(deck.slides)
     store.updateSlideIndex(
       Math.max(
@@ -450,11 +448,12 @@ async function hydrate(d) {
     store.setViewportRatio(deck.viewportRatio)
     if (deck.theme) store.setTheme(deck.theme)
     remember()
-    baseline = JSON.stringify(snapshot())
+    baseline = migrated ? '' : JSON.stringify(snapshot())
   } else store.setSlides([])
   await nextTick()
   if (seq !== hydration) return
   loading = false
+  if (migrated && editable.value) save()
   if (deck) {
     void snapshots.initSnapshotDatabase()
     send('position', { documentId: docId.value, slideId: slide.value.id })
@@ -468,7 +467,10 @@ function receive(event) {
   )
     return
   const d = event.data
-  if (d.type === 'load') void hydrate(d)
+  if (d.type === 'dismiss-menus') {
+    menu.value = ''
+    stylesOpen.value = false
+  } else if (d.type === 'load') void hydrate(d)
   else if (d.type === 'flush') {
     nextTick(() => {
       save()
@@ -477,8 +479,19 @@ function receive(event) {
   } else if (d.type === 'referenced-marks') {
     committedMarkIds = new Set(d.ids)
     markViewer?.redraw()
+  } else if (d.type === 'edit-mode') {
+    editable.value = !!d.editable
+    menu.value = ''
+    stylesOpen.value = false
+    marking.value = false
+    main.setActiveElementIdList([])
+    notice.value = editable.value ? '已保存' : '已锁定'
+  } else if (d.type === 'header-export') {
+    if (docId.value) exportDeck()
+  } else if (d.type === 'header-import') {
+    if (editable.value) readFile(new File([d.bytes], d.title))
   } else if (d.type === 'import') {
-    if (d.revision !== revision || !editable || importing || freeze) {
+    if (d.revision !== revision || !editable.value || importing || freeze) {
       send('import-error', { importId: d.importId })
       return
     }
@@ -494,9 +507,10 @@ function receive(event) {
   }
 }
 function create() {
-  if (!ready.value || !editable) return
+  if (!ready.value || !editable.value) return
   menu.value = ''
   marking.value = false
+  copiedPage.value = null
   docId.value = crypto.randomUUID()
   store.setSlides([{ id: crypto.randomUUID(), elements: [] }])
   store.updateSlideIndex(0)
@@ -512,19 +526,180 @@ const open = (id) => {
   menu.value = ''
   send('open', { id })
 }
-const commandGroups = [
-  { id: 'file', label: '演示文稿', icon: 'menu-slide' },
-  { id: 'edit', label: '编辑', icon: 'menu-edit' },
-  { id: 'insert', label: '插入', icon: 'menu-plus' },
-  { id: 'align', label: '格式', icon: 'menu-text' },
-  { id: 'view', label: '视图', icon: 'menu-screen' }
-]
-const menuHeadings = {
-  file: '演示文稿',
-  edit: '编辑',
-  view: '视图',
-  export: '导出演示文稿',
-  files: '最近使用'
+const row = (id, label, icon, children) => ({ id, label, icon, children })
+const commandTree = computed(() => [
+  row('file', '演示文稿', 'menu-slide', [
+    row('import', '导入 PowerPoint…', 'menu-upload'),
+    row('export', '导出演示文稿', 'menu-download', [row('pptx', 'PowerPoint 演示文稿 (.pptx)', 'menu-file')]),
+    row('create', '新建空白演示文稿', 'menu-plus'),
+    row('template', '从易方达 V6 模板新建', 'menu-slide'),
+    ...(recent.value.length > 1
+      ? [
+          row(
+            'files',
+            '最近使用',
+            'menu-file',
+            recent.value.map((d) => row('open:' + d.id, d.title, 'slide'))
+          )
+        ]
+      : [])
+  ]),
+  row('edit', '编辑', 'menu-edit', [
+    { ...row('undo-ai', '撤销 AI 修改', 'undo'), disabled: !canUndoAI.value },
+    row('undo', '撤销编辑', 'undo'),
+    row('redo', '重做编辑', 'redo')
+  ]),
+  row('insert', '插入', 'menu-plus', [
+    row('text', '文本框', 'menu-text'),
+    row('shape', '形状', 'menu-shape'),
+    row('image', '图片…', 'menu-image'),
+    row('chart', '图表…', 'insert'),
+    row('table', '表格', 'layout')
+  ]),
+  row('format', '格式', 'menu-text', [
+    { ...row('styles', '对象样式', 'menu-shape'), disabled: !main.activeElementIdList.length },
+    { ...row('position', '排列与尺寸', 'align'), disabled: !main.activeElementIdList.length },
+    { ...row('group', '组合', 'layout'), disabled: main.activeElementIdList.length < 2 },
+    { ...row('ungroup', '取消组合', 'layout'), disabled: !main.activeElementList.some((e) => e.groupId) },
+    row('left', '左对齐', 'align'),
+    row('center', '居中', 'align'),
+    row('right', '右对齐', 'align')
+  ]),
+  row('view', '视图', 'menu-screen', [
+    row('first', '从头放映', 'play'),
+    row('play', '从当前页放映', 'play'),
+    row('fullscreen', '全屏', 'fit')
+  ])
+])
+function runCommand(id) {
+  menu.value = ''
+  if (!editable.value && !['pptx', 'play', 'first', 'fullscreen'].includes(id) && !id.startsWith('open:')) return
+  if (id.startsWith('open:')) return open(id.slice(5))
+  const actions = {
+    import: () => chooseFile(fileInput.value),
+    pptx: exportDeck,
+    create,
+    template: importTemplate,
+    'undo-ai': () => menuAction('undo'),
+    undo: undoEdit,
+    redo: hist.redo,
+    image: () => chooseFile(imageInput.value),
+    styles: () => {
+      styleTab.value = 'style'
+      stylesOpen.value = true
+    },
+    position: () => {
+      styleTab.value = 'position'
+      stylesOpen.value = true
+    },
+    group: grouping.combineElements,
+    ungroup: grouping.uncombineElements,
+    first: () => {
+      selectSlide(0)
+      play()
+    },
+    play,
+    fullscreen
+  }
+  if (actions[id]) return actions[id]()
+  if (['left', 'center', 'right'].includes(id)) return alignText(id)
+  insert(id)
+}
+const draggedPage = ref(null),
+  dragOverPage = ref(null)
+function startPageDrag(page, event) {
+  if (!editable.value) return
+  draggedPage.value = page.id
+  event.dataTransfer.setData('application/x-odyssey-slide', page.id)
+  event.dataTransfer.effectAllowed = 'move'
+}
+function endPageDrag() {
+  draggedPage.value = null
+  dragOverPage.value = null
+}
+function dropPage(index) {
+  const from = store.slides.findIndex((s) => s.id === draggedPage.value)
+  endPageDrag()
+  if (!editable.value || from < 0 || from === index) return
+  snapshots.addSnapshot()
+  slideActions.sortSlides(index, from)
+  snapshots.addSnapshot()
+}
+const copiedPage = ref(null)
+const pageCommands = computed(() =>
+  [
+    row('new', '新建幻灯片', 'newslide'),
+    row('duplicate', '创建副本', 'slide'),
+    row('copy', '复制', 'menu-file'),
+    { ...row('paste', '粘贴', 'insert'), disabled: !copiedPage.value },
+    row('cut', '剪切', 'menu-edit'),
+    { ...row('up', '上移一页'), disabled: index.value === 0 },
+    { ...row('down', '下移一页'), disabled: index.value === store.slides.length - 1 },
+    row('layout', '更改版式', 'layout'),
+    row('play', '从此页放映', 'play'),
+    row('delete', '删除幻灯片', 'minus')
+  ].filter((item) => editable.value || ['copy', 'play'].includes(item.id))
+)
+function openPageMenu(i, e) {
+  selectSlide(i)
+  menuPos.value = {
+    left: Math.max(4, Math.min(e.clientX, innerWidth - 214)) + 'px',
+    top: Math.max(4, Math.min(e.clientY, innerHeight - pageCommands.value.length * 32 - 16)) + 'px'
+  }
+  menu.value = 'pages'
+}
+function runPage(id) {
+  snapshots.addSnapshot()
+  menu.value = ''
+  if (!editable.value && !['copy', 'play'].includes(id)) return
+  if (id === 'new') return slideActions.createSlide()
+  if (id === 'play') return play()
+  if (id === 'layout') return toggle('layout')
+  if (id === 'copy' || id === 'cut') copiedPage.value = JSON.parse(JSON.stringify(slide.value))
+  if (id === 'paste' && copiedPage.value)
+    return slideActions.createSlideByTemplate(JSON.parse(JSON.stringify(copiedPage.value)))
+  if (id === 'duplicate') return slideActions.copyAndPasteSlide()
+  if (id === 'delete' || id === 'cut') return slideActions.deleteSlide([slide.value.id])
+  const next = index.value + (id === 'up' ? -1 : 1)
+  if (['up', 'down'].includes(id) && next >= 0 && next < store.slides.length) {
+    slideActions.sortSlides(next, index.value)
+    hist.addHistorySnapshot()
+  }
+}
+function pageKey(e, i) {
+  if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+    e.preventDefault()
+    const box = e.currentTarget.getBoundingClientRect()
+    openPageMenu(i, { clientX: box.left + 12, clientY: box.top + 12 })
+    return
+  }
+  const mod = e.ctrlKey || e.metaKey,
+    k = e.key.toLowerCase()
+  if (mod && k === 'z') {
+    e.preventDefault()
+    e.stopPropagation()
+    if (editable.value) {
+      if (e.shiftKey) hist.redo()
+      else undoEdit()
+    }
+    return
+  }
+  const action = mod
+    ? { c: 'copy', x: 'cut', v: 'paste', d: 'duplicate', y: 'redo' }[k]
+    : ['Backspace', 'Delete'].includes(e.key)
+      ? 'delete'
+      : undefined
+  if (action) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (action === 'redo') {
+      if (editable.value) hist.redo()
+      return
+    }
+    selectSlide(i)
+    runPage(action)
+    nextTick(() => document.querySelector('.page-row[aria-current="page"]')?.focus())
+  }
 }
 function chooseFile(input) {
   menu.value = ''
@@ -544,18 +719,20 @@ function toggle(name) {
     return
   }
   const rect = document.activeElement?.getBoundingClientRect()
-  menuPos.value = { left: Math.min(Math.max(8, rect?.left || 8), innerWidth - 218) + 'px', top: '40px' }
+  const width = name === 'layout' ? Math.min(520, innerWidth - 16) : 210
+  menuPos.value = { left: Math.max(8, Math.min(rect?.left || 8, innerWidth - width - 8)) + 'px', top: '40px' }
   menu.value = name
 }
 function rename(input) {
   const title = input.value.trim()
-  if (title && editable) store.setTitle(title)
+  if (title && editable.value) store.setTitle(title)
   input.value = store.title
 }
 function selectSlide(i) {
   menu.value = ''
   main.setActiveElementIdList([])
   store.updateSlideIndex(i)
+  main.updateSelectedSlidesIndex([])
 }
 function reference(ref) {
   send('selection', { reference: ref ? { slideId: slide.value?.id, ...ref } : undefined })
@@ -602,8 +779,10 @@ function editNotes(e) {
   hist.addHistorySnapshot()
 }
 function protectReadOnly(event) {
+  if (editable.value && event.type === 'keydown' && event.target.closest('textarea,input,[contenteditable=true]'))
+    return
   if (
-    editable &&
+    editable.value &&
     event.type === 'keydown' &&
     (event.ctrlKey || event.metaKey) &&
     event.key.toLowerCase() === 'z' &&
@@ -616,7 +795,7 @@ function protectReadOnly(event) {
     return
   }
   if (
-    editable ||
+    editable.value ||
     playing.value ||
     (event.type === 'keydown' && ['Tab', 'Escape', 'ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key))
   )
@@ -638,31 +817,63 @@ const command = (command, value) => {
 }
 function insert(kind) {
   menu.value = ''
-  if (kind === 'table') elements.createTableElement(3, 3)
-  if (kind === 'chart') elements.createChartElement('bar')
+  if (['shape', 'table', 'chart'].includes(kind)) {
+    toggle(kind + '-pool')
+    return
+  }
   if (kind === 'text')
     elements.createTextElement({ left: 64, top: 64, width: 400, height: 52 }, { content: '<p>文本</p>' })
+}
+function insertObject(kind, value) {
+  menu.value = ''
+  snapshots.addSnapshot()
+  if (kind === 'table') elements.createTableElement(value.row, value.col)
+  if (kind === 'chart') elements.createChartElement(value)
   if (kind === 'shape')
     elements.createShapeElement(
-      { left: 80, top: 90, width: 240, height: 128 },
-      { viewBox: [200, 200], path: 'M0 0H200V200H0Z', pptxShapeType: 'rect' }
+      {
+        left: store.viewportSize * 0.2,
+        top: store.viewportSize * store.viewportRatio * 0.22,
+        width: store.viewportSize * 0.25,
+        height: store.viewportSize * store.viewportRatio * 0.24
+      },
+      value
     )
 }
-function insertLayout(body) {
+async function chooseLayout(layout, action) {
+  const documentId = docId.value,
+    pageId = slide.value?.id
   menu.value = ''
-  const count = slide.value.elements.length
-  if (count) {
-    slideActions.createSlide()
+  try {
+    const response = await fetch('./layout-art/' + layout.art)
+    if (!response.ok) throw Error('版式未能读取')
+    const blob = await response.blob()
+    const image = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+    if (docId.value !== documentId || slide.value?.id !== pageId || !editable.value || freeze) return
+    const page = action === 'new' ? { id: crypto.randomUUID(), elements: [] } : slide.value
+    const title = caption(page)
+    const titleId = page.elements.find(
+      (e) =>
+        !e.odysseyMaster &&
+        title &&
+        plain(e.content || e.text?.content)
+          .trim()
+          .slice(0, 120) === title
+    )?.id
+    snapshots.addSnapshot()
+    const next = applyMaster(layout, image, page, store.viewportSize, store.viewportRatio, titleId)
+    main.setActiveElementIdList([])
+    if (action === 'new') store.addSlide(next)
+    else store.updateSlide(next, page.id)
+    snapshots.addSnapshot()
+  } catch {
+    notice.value = '版式未能应用，请重试。'
   }
-  elements.createTextElement(
-    { left: 50, top: 38, width: 890, height: 70 },
-    { content: '<p style="font-size:36px">单击编辑标题</p>' }
-  )
-  if (body)
-    elements.createTextElement(
-      { left: 50, top: 150, width: 890, height: 282 },
-      { content: '<p>单击编辑正文</p>' }
-    )
 }
 function insertImage(e) {
   const f = e.target.files[0]
@@ -673,7 +884,7 @@ function insertImage(e) {
   r.readAsDataURL(f)
 }
 function readFile(file, importId) {
-  if (!file || !editable || importing) return
+  if (!file || !editable.value || importing) return
   if (file.size > 64 * 1024 * 1024) {
     notice.value = '文件超过 64 MB。'
     return
@@ -692,6 +903,7 @@ watch(importer.exporting, async (busy) => {
     notice.value = '导入失败，原文稿已保留。'
     return
   }
+  await protectMaster(store.slides, store.viewportSize, store.viewportRatio, false)
   await reconcilePointColors(job.file, store.slides).catch(() => {})
   if (importing !== job) return
   docId.value = crypto.randomUUID()
@@ -724,10 +936,14 @@ function exportDeck() {
 }
 async function exported(event) {
   try {
-    const bytes = await reconcilePointColors(event.detail, store.slides, true)
+    const bytes = await reconcilePointColors(
+      await exportMasterArtwork(event.detail, store.slides),
+      store.slides,
+      true
+    )
     send('export', { bytes, title: store.title, format: 'pptx' })
   } catch {
-    notice.value = '图表导出失败，请重试。'
+    notice.value = '文稿导出失败，请重试。'
   }
 }
 watch(marking, async (enabled) => {
@@ -736,13 +952,8 @@ watch(marking, async (enabled) => {
   if (enabled) {
     await nextTick()
     if (stage.value && marking.value)
-      markViewer = attachEditorMarks(
-        stage.value,
-        store,
-        docId.value,
-        reference,
-        hist.addHistorySnapshot,
-        (id) => committedMarkIds.has(id)
+      markViewer = attachEditorMarks(stage.value, store, docId.value, reference, hist.addHistorySnapshot, (id) =>
+        committedMarkIds.has(id)
       )
   }
 })
@@ -780,20 +991,26 @@ function playKey(e) {
   }
 }
 function fullscreen() {
-  if (document.fullscreenElement) void document.exitFullscreen()
-  else void document.documentElement.requestFullscreen().catch(() => {})
+  menu.value = ''
+  const root = document.querySelector('.deck-app')
+  const operation = document.fullscreenElement ? document.exitFullscreen() : root?.requestFullscreen()
+  void operation?.catch(() => {
+    notice.value = '未能切换全屏，请重试。'
+  })
 }
 const fsChanged = () => {
+  editorFullscreen.value = document.fullscreenElement?.classList.contains('deck-app') || false
   if (playing.value && !document.fullscreenElement) playing.value = false
 }
 const outside = (e) => {
+  send('pointerdown')
   if (!e.target.closest('.ribbon,.menu,.recent')) menu.value = ''
 }
 onMounted(() => {
   window.addEventListener('message', receive)
   window.addEventListener('odyssey:export', exported)
   window.addEventListener('resize', resize)
-  document.addEventListener('pointerdown', outside)
+  document.addEventListener('pointerdown', outside, true)
   document.addEventListener('fullscreenchange', fsChanged)
   document.addEventListener('odyssey:undo', hist.undo)
   send('ready')
@@ -803,7 +1020,7 @@ onUnmounted(() => {
   window.removeEventListener('message', receive)
   window.removeEventListener('odyssey:export', exported)
   window.removeEventListener('resize', resize)
-  document.removeEventListener('pointerdown', outside)
+  document.removeEventListener('pointerdown', outside, true)
   document.removeEventListener('fullscreenchange', fsChanged)
   document.removeEventListener('odyssey:undo', hist.undo)
 })

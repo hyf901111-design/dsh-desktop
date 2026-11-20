@@ -1,10 +1,12 @@
 import { expect, it } from 'vitest'
 import { runInNewContext } from 'node:vm'
 import { patchNotesClient } from '../scripts/lib/notes-client.mjs'
-const source = `function ConversationSessionHeader({sessionId, blank, composerPhase, active}) {
+const source = `function ConversationSessionHeader({sessionId, composerPhase, active}) {
+const blank = useSession((s) => s.blank);
 const homeHeader = blank && composerPhase === "blank" && active?.id === "chat";
 return {"data-srb-session-header":"", "data-odyssey-home-header":homeHeader, children: nativeTabs, utilities:{children: renderSlot("conversation.session.header.utilities", {})}};
 }
+function ConversationSession(){}
 function boot(){registerResearchCanvasView(slots, t, researchWorkspaces, researchOfficePreview);}`
 it('adds the session identity and registers notes in the native view ledger exactly once', () => {
   const patched = patchNotesClient(source)
@@ -12,7 +14,7 @@ it('adds the session identity and registers notes in the native view ledger exac
   expect(patched).toContain('children: nativeTabs')
   expect(patchNotesClient(patched)).toBe(patched)
   const entries = [], effects = [], events = [], nativeTabs = {}, reference = { current: undefined }
-  const context = { nativeTabs, renderSlot:()=>null, react: { useRef: value => { reference.current ??= value; return reference }, useLayoutEffect: fn => effects.push(fn) }, react_jsx_runtime: { jsx: (type, props) => ({ type, props }), jsxs: (type,props)=>({type,props}) }, slots: { register: (options, view) => entries.push({ options, view }) }, t: () => {}, researchWorkspaces: {}, researchOfficePreview: {}, registerResearchCanvasView: () => {}, CustomEvent: class { constructor(type, options){this.type=type;this.detail=options.detail} }, document: { dispatchEvent: e => events.push(e) } }
+  const context = { nativeTabs, selectView:()=>{}, useSession:select=>select({blank:true}), renderSlot:()=>null, react: { useRef: value => { reference.current ??= value; return reference }, useLayoutEffect: fn => effects.push(fn) }, react_jsx_runtime: { jsx: (type, props) => ({ type, props }), jsxs: (type,props)=>({type,props}) }, slots: { register: (options, view) => entries.push({ options, view }) }, t: () => {}, researchWorkspaces: {}, researchOfficePreview: {}, registerResearchCanvasView: () => {}, CustomEvent: class { constructor(type, options){this.type=type;this.detail=options.detail} }, document: { dispatchEvent: e => events.push(e) } }
   runInNewContext(patched+';boot()', context)
   expect(entries).toHaveLength(1)
   expect(entries[0].options).toMatchObject({ name:'conversation.view', id:'notes', order:7 })
@@ -23,7 +25,7 @@ it('adds the session identity and registers notes in the native view ledger exac
 })
 it('retains the same header presentation when entering notes from chat or research', () => {
   const reference = {current:undefined}, nativeTabs = {}
-  const header = runInNewContext(patchNotesClient(source)+';ConversationSessionHeader', { nativeTabs, renderSlot:()=>null, react_jsx_runtime:{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}, react:{useRef:value=>{reference.current??=value;return reference}} })
+  const header = runInNewContext(patchNotesClient(source)+';ConversationSessionHeader', { nativeTabs, selectView:()=>{}, useSession:select=>select({blank:true}), renderSlot:()=>null, react_jsx_runtime:{jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})}, react:{useLayoutEffect:()=>{},useRef:value=>{reference.current??=value;return reference}} })
   const props = { sessionId:'session', blank:true, composerPhase:'blank' }
   const chat = header({...props,active:{id:'chat'}})
   const notes = header({...props,active:{id:'notes'}})

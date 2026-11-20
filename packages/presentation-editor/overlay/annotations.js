@@ -47,7 +47,7 @@ export function attachEditorMarks(host, store, documentId, reference, snapshot, 
         slides: store.slides.map((s, index) => ({
           part: s.id,
           index,
-          nodes: s.elements.map((e) => ({ id: e.id, nodeId: e.id, part: s.id, name: e.name || '' }))
+          nodes: s.elements.filter(e=>!e.odysseyMaster).map((e) => ({ id: e.id, nodeId: e.id, part: s.id, name: e.name || '' }))
         }))
       }
     }),
@@ -67,7 +67,7 @@ export function attachEditorMarks(host, store, documentId, reference, snapshot, 
         (e.left + e.width) / w >= r.x &&
         e.top / h <= r.y + (r.height || 0) &&
         (e.top + e.height) / h >= r.y
-      const ids = target.nodeIds.length ? target.nodeIds : slide.elements.filter(overlaps).map((e) => e.id)
+      const ids = target.nodeIds.length ? target.nodeIds : slide.elements.filter(e=>!e.odysseyMaster && overlaps(e)).map((e) => e.id)
       const mark = {
         id,
         ordinal: Math.max(0, ...marks().map((m) => m.ordinal)) + 1,

@@ -4,6 +4,14 @@ import {SPREADSHEET_QUICK_PROMPTS} from '../../packages/dsh-research-task-runtim
 import {eworkWorkspaceDraftText,eworkWorkspaceDraftRevision,eworkBindWorkspaceDraft,eworkRestoreWorkspaceDraft,eworkWorkspaceDraftImages} from './workspace-draft-state.mjs'
 
 const modeWelcome={
+ presentation:{
+  zh:{heading:['从一个主题，','开始一份演示。'],body:['描述汇报主题，或导入已有 PowerPoint。','可以编排幻灯片、修改图表，也可以撰写讲稿。'],
+   labels:['起草季度经营汇报','优化当前页的标题','为当前页撰写讲稿'],
+   prompts:['请用易方达版式起草一份季度经营汇报，包含封面、经营表现和下一季度行动。请先向我确认汇报的季度和可用资料。','请阅读当前幻灯片，把标题改成一句有依据的结论，保留原始数据与其他内容。','请根据当前幻灯片的内容撰写一段一分钟讲稿，写入本页备注。如果还没有幻灯片，请先问我要讲什么。']},
+  en:{heading:['Start with a topic,','build a presentation.'],body:['Describe your presentation or import a PowerPoint file.','Arrange slides, revise charts, or write speaker notes.'],
+   labels:['Draft a quarterly review','Improve this slide’s title','Write speaker notes'],
+   prompts:['Draft a quarterly business review using the E Fund layouts, including a cover, performance and next-quarter actions. First ask me which quarter and source materials to use.','Read the current slide and give it a clear takeaway title supported by the data. Keep the figures and other content intact.','Write one minute of speaker notes for the current slide and save them in its notes. If there is no slide yet, ask what I want to present.']}
+ },
  spreadsheet:{
   zh:{heading:['从一个问题，','开始一张表格。'],body:['导入已有 Excel，或直接描述需要的分析。','我可以创建工作表、填写公式、整理格式。'],
    labels:['制作消费行业可比估值表','整理上传的数据并去重','创建现金流预测模型'],prompts:SPREADSHEET_QUICK_PROMPTS.zh},
@@ -67,6 +75,7 @@ ctx.effect(()=>{
   const {sessionId,mode,index}=detail,surface=document.body.dataset.workspaceSurface;
   if(mode==='notes'?surface!=='notes':surface)return;
   if(mode==='spreadsheet'&&document.body.dataset.eworkSpreadsheetSession!==sessionId)return;
+  if(mode==='presentation'&&document.body.dataset.eworkPresentationSession!==sessionId)return;
   const prompt=eworkModeWelcome[mode]?.[eworkModeLocale()]?.prompts[index];
   if(typeof prompt!=='string')return;
   const shell=eworkActiveInput(sessionId,inputHub.shell(sessionId)),draft=shell?.snapshot;
@@ -141,7 +150,7 @@ function EWorkModeWelcome({sessionId,mode}){
  const {heading,body,labels}=eworkModeWelcome[mode][language];
  const choose=index=>window.dispatchEvent(new CustomEvent('sherlock:mode-quick-prompt',{detail:{sessionId,mode,index}}));
  const h=react.createElement,br=()=>h('br');
- return h('div',{className:'ew-sheet-welcome','data-mode-welcome':mode,'data-research-empty-state':mode==='spreadsheet'?undefined:'','data-note-empty-state':mode==='notes'?'':undefined},
+ return h('div',{className:'ew-sheet-welcome','data-mode-welcome':mode,'data-research-empty-state':['notes','research'].includes(mode)?'':undefined,'data-note-empty-state':mode==='notes'?'':undefined},
   h('div',{className:'ew-sheet-welcome-content'},
   h('h2',null,heading[0],br(),heading[1]),
   h('p',null,body[0],br(),body[1]),
@@ -174,7 +183,7 @@ function EWorkSpreadsheetContextBadge({keyboard,input,disabled,presentation=fals
 }
 ${welcomeAnchor}`,'right pane welcome component')
  const portal='pendingRight ? researchConversationView : activeView === \'notes\' && document.body.dataset.workspaceSurface!==\'browser\' ?'
- change(portal,"pendingRight ? researchConversationView : activeView==='presentation'&&!browserAppActive&&!subagentPanel ? sessionPresentation.conversationView : activeView==='spreadsheet'&&!browserAppActive&&!subagentPanel ? (conversationVacant ? react.createElement(EWorkModeWelcome,{sessionId,mode:'spreadsheet'}) : sessionPresentation.conversationView) : activeView==='notes'&&!browserAppActive&&!subagentPanel ?",'right pane welcome')
+ change(portal,"pendingRight ? researchConversationView : activeView==='presentation'&&!browserAppActive&&!subagentPanel ? (conversationVacant ? react.createElement(EWorkModeWelcome,{sessionId,mode:'presentation'}) : sessionPresentation.conversationView) : activeView==='spreadsheet'&&!browserAppActive&&!subagentPanel ? (conversationVacant ? react.createElement(EWorkModeWelcome,{sessionId,mode:'spreadsheet'}) : sessionPresentation.conversationView) : activeView==='notes'&&!browserAppActive&&!subagentPanel ?",'right pane welcome')
  const notePortal='EWorkNotesConversation,{sessionId,t,empty:conversationVacant,children:sessionPresentation.conversationView}'
  change(notePortal,"EWorkNotesConversation,{sessionId,t,empty:conversationVacant,welcomeView:react.createElement(EWorkModeWelcome,{sessionId,mode:'notes'}),children:sessionPresentation.conversationView}",'notes welcome without replacing native history')
  const researchWelcome=': researchEmpty ? (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: "sRp_emptyState",'
@@ -187,12 +196,12 @@ ${welcomeAnchor}`,'right pane welcome component')
  change(canvasContext,canvasContext.replace('research &&','research && !browserAppActive && !pendingRight && !subagentPanel &&'),'research context surface')
  const badge='researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),'
  change(badge,"eworkNoteContext,\n "+badge+"\n (eworkSpreadsheet||eworkPresentation) && react.createElement(EWorkSpreadsheetContextBadge,{key:sessionId+String(eworkPresentation),keyboard,input,disabled,presentation:eworkPresentation}),",'spreadsheet context badge')
- for(const [before,after] of [["notes:'新笔记',trajectory:", "notes:'新笔记',spreadsheet:'新表格',trajectory:"],["notes:'New Note',trajectory:", "notes:'New Note',spreadsheet:'New Spreadsheet',trajectory:"]]){
+ for(const [before,after] of [["notes:'新笔记',trajectory:", "notes:'新笔记',spreadsheet:'新表格',presentation:'新演示',trajectory:"],["notes:'New Note',trajectory:", "notes:'New Note',spreadsheet:'New Spreadsheet',presentation:'New Presentation',trajectory:"]]){
   const nativeTitle=source.split('/* browser-app-native:v1 */')[0]
   if(nativeTitle.split(before).length===2)change(before,after,'spreadsheet blank title '+before)
  }
  const utilities=`children: [active?.id === 'notes' && (0,react_jsx_runtime.jsx)(EWorkNoteExportMenu,{sessionId}), renderSlot("conversation.session.header.utilities", {})]`
- change(utilities,utilities.replace('children: [', "children: [active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId,'data-ework-spreadsheet-title':explicitSessionTitle?.trim()||(!blankResearchTitle&&ancestry.at(-1)?.displayTitle)||(document.documentElement.dataset.odysseyLocale==='en'?'New Spreadsheet':'新表格')}),"),'spreadsheet top bar actions')
+ change(utilities,utilities.replace('children: [', "children: [active?.id==='presentation' && react.createElement('div',{'data-ework-presentation-actions':sessionId}),active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId,'data-ework-spreadsheet-title':explicitSessionTitle?.trim()||(!blankResearchTitle&&ancestry.at(-1)?.displayTitle)||(document.documentElement.dataset.odysseyLocale==='en'?'New Spreadsheet':'新表格')}),"),'spreadsheet top bar actions')
  const binding="const mode=active.id==='notes'?'notes':active.id==='research'?'research':'conversation';"
  change(binding,binding.replace(":'conversation'",":['presentation','spreadsheet'].includes(active.id)?active.id:'conversation'"),'tool mode')
  const select='const selectView = (0, react.useCallback)((viewId) => {'

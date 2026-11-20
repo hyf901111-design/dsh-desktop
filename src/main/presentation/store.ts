@@ -236,7 +236,7 @@ export class PresentationStore {
         id: current.id,
         notes: visibleText(current.remark),
         marks: current.marks ?? [],
-        elements: current.elements.map((e) => ({
+        elements: current.elements.filter(e=>!e.odysseyMaster).map((e) => ({
           id: e.id,
           type: e.type,
           text: visibleText(e.content ?? e.text?.content),
@@ -299,7 +299,7 @@ export class PresentationStore {
         slide.elements.push(newText(validText(op.text, '文本'), false))
         continue
       }
-      const el = slide.elements.find((e) => e.id === op.elementId)
+      const el = slide.elements.find((e) => !e.odysseyMaster && e.id === op.elementId)
       if (!el) throw Error('找不到目标元素。')
       if (op.op === 'text') {
         const target = el.type === 'text' ? el : el.text
