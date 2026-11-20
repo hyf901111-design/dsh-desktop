@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "探索演示入口、PPT 资料与回放恢复",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "65d4bd5f943e7a2b7780a3efbefee5f4751f2ec0",
-        "tipCommit": "0b56aa355f39139bf0f20510897ece35ae19b361",
+        "baseCommit": "0b56aa355f39139bf0f20510897ece35ae19b361",
+        "tipCommit": "6cf5e2e9fd4e304b79fc2afaae219a6596283c5d",
         "commits": [
           {
-            "commit": "0b56aa355f39139bf0f20510897ece35ae19b361",
+            "commit": "6cf5e2e9fd4e304b79fc2afaae219a6596283c5d",
             "parents": [
-              "65d4bd5f943e7a2b7780a3efbefee5f4751f2ec0"
+              "0b56aa355f39139bf0f20510897ece35ae19b361"
             ],
-            "subject": "统一演示文稿和研究报告入口并修复参考 PDF 拖动中断"
+            "subject": "等待演示右侧栏展开并将 PPT 参考资料排在首位"
           }
         ],
         "files": [
@@ -29,23 +29,31 @@
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-entry-native.ts"
+            "path": "scripts/lib/knowledge-client.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guide-explore-entry.ts"
+            "path": "src/main/index.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/home-guides.css"
+            "path": "src/main/knowledge/store.ts"
           },
           {
             "status": "M",
-            "path": "test/home-guide-entry-native.test.ts"
+            "path": "src/preload/home-guide-presentation.ts"
           },
           {
             "status": "M",
-            "path": "test/home-guide-explore-entry-browser.test.js"
+            "path": "src/preload/knowledge/panel.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-library.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -54,69 +62,35 @@
               "npm",
               "test",
               "--",
-              "test/home-guide-entry-native.test.ts",
+              "test/knowledge-library.test.ts",
               "test/home-guide-presentation-adapter.test.ts",
               "--testTimeout",
-              "10000"
+              "12000"
             ],
             "outcome": "passed",
-            "summary": "59 项原生演示入口及演示文稿请求检查",
-            "verifiedCommit": "0b56aa355f39139bf0f20510897ece35ae19b361",
-            "completedAt": "2026-11-20T01:43:09.947813+00:00",
+            "summary": "14 项知识库和 PPT 演示适配测试通过",
+            "verifiedCommit": "6cf5e2e9fd4e304b79fc2afaae219a6596283c5d",
+            "completedAt": "2026-11-20T01:55:50.752557+00:00",
             "timeoutMs": 90000
           },
           {
             "argv": [
               "env",
-              "SHERLOCK_TEST_PLAYWRIGHT=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
               "npm",
               "test",
               "--",
-              "test/home-guide-explore-entry-browser.test.js",
+              "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "visible Home button|mode tabs are collapsed|animates the PPT reference|preserves a nonempty homepage draft|uses the named More menu",
+              "opens the animated PPT sidebar",
               "--testTimeout",
-              "10000"
+              "12000"
             ],
             "outcome": "passed",
-            "summary": "9 项渲染检查覆盖折叠侧栏、首页输入、独立草稿和 PDF 拖动",
-            "verifiedCommit": "0b56aa355f39139bf0f20510897ece35ae19b361",
-            "completedAt": "2026-11-20T01:43:09.947813+00:00",
-            "timeoutMs": 90000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "passed",
-          "summary": "Chromium 验证两种演示启动路径和 PDF 拖动动画；本地包由用户验收。"
-        },
-        "acceptanceCriteria": [
-          "首页从当前可见输入框进入演示文稿或研究报告的独立会话",
-          "折叠侧栏直接演示点击主页",
-          "右侧知识库里的 PPT 参考 PDF 可拖到输入框",
-          "固定笔记图标成功接管已准备的会话"
-        ],
-        "risks": [],
-        "generatedAt": "2026-11-20T01:43:09.947813+00:00"
-      },
-      "merged": {
-        "mergeCommit": "72a95985c66be952ccf76658bfeb45ea45dad60a",
-        "verificationCommit": "72a95985c66be952ccf76658bfeb45ea45dad60a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "72a95985c66be952ccf76658bfeb45ea45dad60a",
-            "completedAt": "2026-11-20T01:43:13.678Z",
+            "summary": "Chromium 验证右侧栏滑入后点击加号、从知识库首行拖动参考 PDF",
+            "verifiedCommit": "6cf5e2e9fd4e304b79fc2afaae219a6596283c5d",
+            "completedAt": "2026-11-20T01:55:50.752557+00:00",
             "timeoutMs": 90000
           },
           {
@@ -126,13 +100,24 @@
               "typecheck"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "72a95985c66be952ccf76658bfeb45ea45dad60a",
-            "completedAt": "2026-11-20T01:43:13.678Z",
+            "summary": "TypeScript 检查通过",
+            "verifiedCommit": "6cf5e2e9fd4e304b79fc2afaae219a6596283c5d",
+            "completedAt": "2026-11-20T01:55:50.752557+00:00",
             "timeoutMs": 90000
           }
         ],
-        "recordedAt": "2026-11-20T01:43:13.678Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证右侧栏过渡、原生入口的点击顺序、首行 PDF 及拖入目标输入框；本地客户端留给用户验收。"
+        },
+        "acceptanceCriteria": [
+          "首页从当前可见输入框进入演示文稿或研究报告的独立会话",
+          "折叠侧栏直接演示点击主页",
+          "展开右栏，点击加号选择知识库，参考 PDF 位于所有文件首位且可拖入现有输入框",
+          "固定笔记图标成功接管已准备的会话"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-20T01:55:50.752557+00:00"
       }
     }
   ],
