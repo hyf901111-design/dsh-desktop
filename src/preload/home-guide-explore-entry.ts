@@ -1,7 +1,7 @@
 import {homeGuideTargetPoint,type HomeGuidePointerAction} from './home-guide-pointer'
 import type {HomeOperationActionContext} from './home-operations'
 import type {HomeGuideKind} from './home-guides'
-import {homeGuideMode,isSidebarNewSessionEntry,isSidebarNewSpreadsheetEntry,sidebarHomeSelector,sidebarMoreItemSelector,type HomeGuideEntryAction} from './home-guide-entry-native'
+import {homeGuideMode,isSidebarNewSessionEntry,isSidebarNewSpreadsheetEntry,isSidebarNewPresentationEntry,sidebarHomeSelector,sidebarMoreItemSelector,type HomeGuideEntryAction} from './home-guide-entry-native'
 type Options={homeEmpty?:boolean;context:HomeOperationActionContext;signal:AbortSignal;pointer:{perform(action:HomeGuidePointerAction):Promise<void>};assert():void;nativeClick(target:HTMLElement):void;activate(target:HTMLElement,action:HomeGuideEntryAction,beforeCommit:()=>Promise<void>):Promise<void>}
 /** Only visible native controls. The final click consumes one prepared-session lease. */
 export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuideKind,options:Options){
@@ -31,13 +31,14 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
   const more=await wait(()=>unique(document.querySelectorAll<HTMLButtonElement>('[data-dsh-sidebar-root] button.st-more')))
   if(more.getAttribute('aria-expanded')!=='true')await click(more)
  }
- if(kind==='spreadsheet'){
-  let target=unique([...document.querySelectorAll<HTMLButtonElement>('[data-navigation-rail] button')].filter(isSidebarNewSpreadsheetEntry))
+ if(kind==='spreadsheet'||kind==='presentation-edit'){
+  const isEntry=kind==='spreadsheet'?isSidebarNewSpreadsheetEntry:isSidebarNewPresentationEntry
+  let target=unique([...document.querySelectorAll<HTMLButtonElement>('[data-navigation-rail] button')].filter(isEntry))
   if(!target){
    await openMore()
-   target=await wait(()=>unique([...document.querySelectorAll<HTMLButtonElement>(sidebarMoreItemSelector)].filter(isSidebarNewSpreadsheetEntry)))
+   target=await wait(()=>unique([...document.querySelectorAll<HTMLButtonElement>(sidebarMoreItemSelector)].filter(isEntry)))
   }
-  await activate(target,'new-spreadsheet')
+  await activate(target,kind==='spreadsheet'?'new-spreadsheet':'new-presentation')
   return
  }
  // An app's back button follows surface history. Choose the real sidebar
@@ -89,6 +90,11 @@ export async function waitForHomeGuideNativeView(document:Document,sessionId:str
    if(header?.dataset.eworkNotesSession!==sessionId)return false
    try{
     homeGuideTargetPoint(document,resident)
+    if(kind==='presentation-edit'){
+     const view=resident.querySelector<HTMLElement>('[data-ework-presentation-view]')
+     if(resident.dataset.odysseyPage!=='presentation'||view?.dataset.eworkPresentationView!==sessionId)return false
+     homeGuideTargetPoint(document,view);return true
+    }
     if(tabs){if(tab?.getAttribute('aria-selected')!=='true')return false;if(!document.documentElement.hasAttribute('data-navigation-sidebar-only'))homeGuideTargetPoint(document,tab);return true}
     // Dedicated Boards intentionally omit mode tabs. Their ordinary canvas is
     // also suppressed while the guide's transition owns the resident. Read the

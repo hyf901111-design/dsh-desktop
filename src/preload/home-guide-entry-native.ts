@@ -1,7 +1,7 @@
 import {emitHomeGuideEntryDiagnostic,type HomeGuideEntryDenial} from '../shared/home-guide-entry-diagnostics'
-export type HomeGuideEntryKind='board'|'workbench'|'note'|'ppt'|'report'|'spreadsheet'
+export type HomeGuideEntryKind='board'|'workbench'|'note'|'ppt'|'report'|'spreadsheet'|'presentation-edit'
 type SidebarNewSessionAction='new-chat'|'new-research'|'new-note'
-export type HomeGuideEntryAction='home-input'|'home-chat'|'home-research'|'home-notes'|SidebarNewSessionAction|'new-spreadsheet'|'sidebar-home'
+export type HomeGuideEntryAction='home-input'|'home-chat'|'home-research'|'home-notes'|SidebarNewSessionAction|'new-spreadsheet'|'new-presentation'|'sidebar-home'
 export type HomeGuideEntrySession={sessionId:string;cwd:string;title:string;fresh?:boolean}
 export type HomeGuideEntryContext={owner:string;generation:number;identityRevision:number;sessionId?:string;selectionRevision?:number;input?:any;eligible?:boolean}
 type NativeDependencies={
@@ -13,10 +13,15 @@ type NativeDependencies={
 }
 const REQUEST='sherlock:home-guide-entry-request',REPLY='sherlock:home-guide-entry-reply',CANCELLED='sherlock:home-guide-entry-cancelled'
 const TARGET='data-home-guide-entry-target',CLICK='data-home-guide-entry-click'
-const kinds=['board','workbench','note','ppt','report','spreadsheet'],actions=['home-input','home-chat','home-research','home-notes','new-chat','new-research','new-note','new-spreadsheet','sidebar-home']
-export const homeGuideMode=(kind:HomeGuideEntryKind)=>kind==='board'||kind==='workbench'?'research':kind==='note'?'notes':kind==='spreadsheet'?'spreadsheet':'chat'
+const kinds=['board','workbench','note','ppt','report','spreadsheet','presentation-edit'],actions=['home-input','home-chat','home-research','home-notes','new-chat','new-research','new-note','new-spreadsheet','new-presentation','sidebar-home']
+export const homeGuideMode=(kind:HomeGuideEntryKind)=>kind==='board'||kind==='workbench'?'research':kind==='note'?'notes':kind==='spreadsheet'?'spreadsheet':kind==='presentation-edit'?'presentation':'chat'
 export const sidebarMoreItemSelector='.st-menu[data-sidebar-more="true"] button[role="menuitem"]'
 export const sidebarHomeSelector='[data-dsh-sidebar-root] button[data-sidebar-home]'
+export function isSidebarNewPresentationEntry(target:HTMLElement){
+ if(target.matches('[data-navigation-rail] [data-navigation-app=presentation]'))return true
+ const label=target.getAttribute('aria-label')||target.textContent?.trim()||''
+ return target.matches(sidebarMoreItemSelector)&&['演示','Presentation','新建演示','New presentation','New Presentation'].includes(label)
+}
 export function isSidebarNewSpreadsheetEntry(target:HTMLElement){
  if(target.matches('[data-navigation-rail] [data-navigation-app=spreadsheet]'))return true
  const label=target.getAttribute('aria-label')||target.textContent?.trim()||''
@@ -54,6 +59,7 @@ function available(document:Document,target:HTMLElement){
 }
 function matches(document:Document,target:HTMLElement,action:HomeGuideEntryAction,kind:HomeGuideEntryKind){
  if(!available(document,target))return false
+ if(kind==='presentation-edit')return action==='new-presentation'&&isSidebarNewPresentationEntry(target)
  if(kind==='spreadsheet')return action==='new-spreadsheet'&&isSidebarNewSpreadsheetEntry(target)
  const mode=homeGuideMode(kind)
  if(action==='sidebar-home')return mode==='chat'&&target.matches(sidebarHomeSelector)

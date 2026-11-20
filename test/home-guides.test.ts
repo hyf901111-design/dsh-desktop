@@ -21,7 +21,7 @@ function fixture(fresh = true) {
  }
  window.addEventListener('sherlock:home-guide-session-request',listener);off=()=>window.removeEventListener('sherlock:home-guide-session-request',listener)
  const runStep=vi.fn(async(_step:string)=>{}),release=vi.fn(),flush=vi.fn(async()=>{})
- const adapters={mountWorkbench:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),prepareHandoff:vi.fn(async(_session:any,_signal:AbortSignal):Promise<void|(()=>void)>=>{}),mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
+ const adapters={mountPresentationEdit:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountWorkbench:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),prepareHandoff:vi.fn(async(_session:any,_signal:AbortSignal):Promise<void|(()=>void)>=>{}),mountNotes:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush})),mountPresentation:vi.fn(async(_document:Document,_host:HTMLElement,_options:any)=>({runStep,dispose:release,flush}))}
  const controller=mountHomeGuides(document,adapters);dispose=controller.dispose
  return{controller,adapters,runStep,release,flush,text,header,requests,setOpen:(fn:(detail:any,reply:(value:any)=>void)=>void)=>{open=fn},setPrepare:(fn:(detail:any)=>void)=>{prepare=fn}}
 }
@@ -437,4 +437,24 @@ test('records a real window-blur pause, foreground resume and reset cancellation
   const logs=rows.filter(row=>row.startsWith('[notes-guide-step] ')).map(row=>JSON.parse(row.slice('[notes-guide-step] '.length)))
   expect(logs).toEqual(expect.arrayContaining([expect.objectContaining({step:'write',phase:'paused',reason:'window-blur'}),expect.objectContaining({step:'write',phase:'resumed',reason:'foreground-restored'}),expect.objectContaining({step:'write',phase:'cancelled',reason:'reset'})]))
  }finally{info.mockRestore()}
+})
+
+test('pauses and resumes the independent presentation editor, preserving all eleven scenes for native handoff',async()=>{
+ vi.useFakeTimers();const f=fixture()
+ await f.controller.start('presentation-edit',{replay:true});await vi.advanceTimersByTimeAsync(1)
+ const control=(label:string)=>f.header.querySelector<HTMLButtonElement>('button[aria-label="'+label+'"]')
+ expect(f.runStep.mock.calls.flat()).toEqual(['enter'])
+ control('暂停演示')!.click();await vi.advanceTimersByTimeAsync(30000)
+ expect(f.runStep.mock.calls.flat()).toEqual(['enter'])
+ control('继续播放演示')!.click();await vi.advanceTimersByTimeAsync(32000)
+ expect(f.runStep.mock.calls.flat()).toEqual(['enter','library','drag-import','ask-notes','notes','review-notes','mark-chart','revise-chart','select-title','revise-title','finish'])
+ expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(1)
+ expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
+ expect(document.querySelector('[data-home-guide]')).toBeNull()
+})
+test('reopens a saved presentation without starting its three-turn replay or replacing edits',async()=>{
+ const f=fixture(false)
+ await f.controller.start('presentation-edit')
+ expect(f.adapters.mountPresentationEdit).not.toHaveBeenCalled()
+ expect(document.querySelector('[data-home-guide]')).toBeNull()
 })

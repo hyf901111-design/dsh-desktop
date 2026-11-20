@@ -68,6 +68,7 @@ import { mountExploreMenu } from './explore-menu'
 import { playHomeGuideFromExplore } from './explore-menu-actions'
 import { mountHomeGuides } from './home-guides'
 import { mountHomeNotesGuide } from './home-guide-notes'
+import { mountPresentationEditGuide } from './presentation/edit-guide'
 import { mountHomePresentationGuide } from './home-guide-presentation'
 import { mountHomeWorkbenchGuide } from './home-guide-workbench'
 import { createHomeOperationsActions } from './home-operations-actions'
@@ -460,10 +461,29 @@ function initializeUi(): void {
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill }, { beforeNavigate: () => notes.flushCurrent() })
-  const homeGuides = mountHomeGuides(document, { beforeOpen: async session => { if(session.kind==='spreadsheet'){const id=document.body.dataset.eworkSpreadsheetSession;if(id)await spreadsheetView?.flush(id)} await notes.prepareGuideFromCurrent(session.sessionId) }, prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: async (doc, host, options) => {
+  const homeGuides = mountHomeGuides(document, {
+    beforeOpen: async session => {
+      if (session.kind === 'spreadsheet' || session.kind === 'presentation-edit') {
+        const id = document.body.dataset.eworkSpreadsheetSession
+        if (id) await spreadsheetView?.flush(id)
+      }
+      if (session.kind === 'presentation-edit') {
+        const id = document.body.dataset.eworkPresentationSession
+        if (id) await presentationView?.flush(id)
+      }
+      await notes.prepareGuideFromCurrent(session.sessionId)
+    },
+    prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined,
+    revealConversation: () => workspaceSurfaceHost.revealConversation(),
+    mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }),
+    mountPresentation: async (doc, host, options) => {
       const librarySource = options.kind === 'ppt' && options.fresh
         ? await ipcRenderer.invoke('knowledge:presentation-guide-source') : undefined
       return mountHomePresentationGuide(doc, host, { ...options, librarySource })
+    },
+    mountPresentationEdit: async (doc, host, options) => {
+      const adapter = await mountPresentationEditGuide(doc, host, options)
+      return { ...adapter, flush: async () => { await presentationView?.flush(options.sessionId) } }
     },
     mountWorkbench: mountHomeWorkbenchGuide,
     mountSpreadsheet: async (doc, _host, options) => mountCashFlowGuide(doc, options, spreadsheetView!) })

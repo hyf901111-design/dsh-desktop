@@ -14,6 +14,7 @@ import { registerHomeReportRuntime } from './home-report-runtime.js'
 import { registerHomeNotesRuntime } from './home-notes-runtime.js'
 import { registerHomeBoardSmartRuntime } from './home-board-smart-runtime.js'
 import { registerHomeWorkbenchRuntime } from './home-workbench-runtime.js'
+import { registerPresentationEditGuideChat } from './presentation-edit-guide-chat.js'
 import { registerHomeSpreadsheetRuntime } from './home-spreadsheet-runtime.js'
 import {registerSpreadsheetSessions,registerDocumentSessions} from './spreadsheet-sessions.js'
 import { registerResearchSessionTitles } from './research-session-title.js'
@@ -3751,6 +3752,7 @@ export async function apply(ctx) {
     const disposeHomeNotes = registerHomeNotesRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomeBoardSmart = registerHomeBoardSmartRuntime(ctx, runtime, {isTrustedRequest, readJsonBody})
     const disposeHomeWorkbench = registerHomeWorkbenchRuntime(ctx, runtime, {isTrustedRequest, readJsonBody})
+    const disposePresentationEditGuideChat = registerPresentationEditGuideChat(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomeSpreadsheet = registerHomeSpreadsheetRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     const disposeClientTools = registerClientTools(ctx)
@@ -3784,6 +3786,7 @@ export async function apply(ctx) {
       void disposeHomeNotes()
       disposeHomeBoardSmart()
       void disposeHomeWorkbench()
+      void disposePresentationEditGuideChat()
       void disposeHomeSpreadsheet()
       throw error
     }
@@ -3816,6 +3819,7 @@ export async function apply(ctx) {
       await disposeHomeNotes()
       disposeHomeBoardSmart()
       await disposeHomeWorkbench()
+      await disposePresentationEditGuideChat()
       await disposeHomeSpreadsheet()
       await runtime.dispose()
     }
