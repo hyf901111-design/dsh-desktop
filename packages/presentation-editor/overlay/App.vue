@@ -319,6 +319,7 @@ import { protectMaster } from './master-protection'
 import { exportMasterArtwork } from './powerpoint-masters'
 import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
+import { runEditGuideAction } from './edit-guide'
 
 const Glyph = defineComponent({
   props: ['name'],
@@ -489,6 +490,13 @@ function receive(event) {
   )
     return
   const d = event.data
+  if (d.type === 'edit-guide') {
+    try {
+      const result = runEditGuideAction(d, {store, documentId:docId.value, editable:editable.value && !loading && !freeze, activeIds:main.activeElementIdList, plain, resizeNotes:h=>{noteHeight.value=h}})
+      if (d.id) send('edit-guide-result', {id:d.id,result})
+    } catch (error) { if (d.id) send('edit-guide-result', {id:d.id,error:String(error.message || error)}) }
+    return
+  }
   if (d.type === 'dismiss-menus') {
     menu.value = ''
     stylesOpen.value = false
@@ -1043,7 +1051,7 @@ const fsChanged = () => {
   if (playing.value && !document.fullscreenElement) playing.value = false
 }
 const outside = (e) => {
-  send('pointerdown')
+  send('pointerdown', {trusted: e.isTrusted})
   if (!e.target.closest('.ribbon,.menu,.recent')) menu.value = ''
 }
 onMounted(() => {

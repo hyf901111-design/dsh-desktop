@@ -5,6 +5,7 @@ import { basename, extname, isAbsolute, relative, resolve, sep } from 'node:path
 import { randomUUID } from 'node:crypto'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { PresentationStore, type Key, type Deck } from './store'
+import { editGuideDocument } from './edit-guide'
 import type { ConversationComponentVisibleContext } from '../../../packages/dsh-research-task-runtime/conversation-component-contract'
 import type { CapabilityHandler } from '../../../packages/dsh-research-task-runtime/client-capabilities'
 import { canvasHumanText } from '../../../packages/dsh-research-task-runtime/canvas-task-routing.js'
@@ -83,9 +84,14 @@ export function installPresentation(options: {
       const { key, generation } = scope(
         input.sessionId,
         input.generation,
-        ['save', 'open', 'undo'].includes(action)
+        ['save', 'open', 'undo', 'edit-guide'].includes(action)
       )
       const owner = who(key)
+      if (action === 'edit-guide') {
+        const result = editGuideDocument(store,key,input)
+        if (input.stage) notify(key)
+        return result
+      }
       if (action === 'lock') {
         if (!options.canWrite(key.sessionId) || typeof input.locked !== 'boolean') throw Error('文稿只读。')
         store.setLocked(key, input.locked)
