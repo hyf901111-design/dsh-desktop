@@ -1,3 +1,4 @@
+import { notifyModelDirectory, presentHomeGuideReplayRoute } from './home-guide-replay-route.js'
 import { LlmAdapter } from '@deepseek-ai/dsh-llm'
 import { lstat, readFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
@@ -74,6 +75,7 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
       if (ctx.agents.get(run.sessionId) === run.agent && header?.config.provider === provider &&
           run.originalHeader.config.provider && run.originalHeader.config.model) {
         session.append('request/header', { header: run.originalHeader, reason: 'change' })
+        notifyModelDirectory(ctx)
       }
     })
   }
@@ -228,6 +230,7 @@ export function createHomeSpreadsheetRuntime(ctx, { env = process.env } = {}) {
             return restoreRoute(run)
           }
         }))
+        presentHomeGuideReplayRoute(ctx, run, provider, 1024)
         return { ready: true }
       } finally {
         if (preparing.get(input.sessionId) === ticket) preparing.delete(input.sessionId)

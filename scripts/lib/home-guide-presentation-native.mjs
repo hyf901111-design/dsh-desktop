@@ -178,25 +178,67 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      if(ticket.shell.snapshot.imageIds?.length||ticket.shell.snapshot.occurrences?.length!==1||ticket.shell.snapshot.draft.replaceAll('\uFFFC','').trim())throw Error('输入内容已更改，已停止自动填写。')
      if(ticket.kind==='ppt'){
      const skillDraft=ticket.shell.snapshot.draft,skillRevision=ticket.shell.snapshot.draftRev,skillOccurrences=JSON.stringify(ticket.shell.snapshot.occurrences??[])
-     const dropFile=document.createElement('div'),fileType=document.createElement('span'),fileName=document.createElement('span')
-     dropFile.className='odyssey-home-guide-drag-file';dropFile.dataset.homeGuideDragFile=ticket.detail.runId;dropFile.setAttribute('aria-hidden','true')
-     fileType.className='odyssey-home-guide-drag-file-type';fileType.textContent='PDF';fileName.textContent=ticket.prepared.sourcePath.split(/[\\/]/).pop()
-     const dropTarget=document.createElement('span');dropTarget.dataset.homeGuideFileDropTarget=ticket.detail.runId;dropTarget.setAttribute('aria-hidden','true')
-     const dropBounds=()=>{
-      check(ticket);if(inputFor(ticket)!==input||input.disabled||input.readOnly)throw changed()
-      const box=input.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(window.innerWidth,box.right),bottom=Math.min(window.innerHeight,box.bottom)
-      for(let node=input;node;node=node.parentElement){const style=window.getComputedStyle(node);if(node.hidden||node.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')throw changed();if(node!==input){const clip=node.getBoundingClientRect();if(/hidden|auto|scroll|clip/.test(style.overflowX||style.overflow)){left=Math.max(left,clip.left);right=Math.min(right,clip.right)}if(/hidden|auto|scroll|clip/.test(style.overflowY||style.overflow)){top=Math.max(top,clip.top);bottom=Math.min(bottom,clip.bottom)}}}
-      if(right-left<4||bottom-top<4)throw changed();return[left,top,right,bottom]
+     const source=ticket.detail.librarySource
+     if(!source||![source.folderId,source.fileId].every(value=>typeof value==='string'&&/^[a-f0-9-]{36}$/.test(value)))throw Error('演示参考资料尚未放入知识库。')
+     const visibleNode=selector=>[...document.querySelectorAll(selector)].find(visible)
+     const right=()=>visibleNode('[data-odyssey-panel-entry="right"]')
+     const toggle=await waitFor(ticket,()=>!!right()).then(right)
+     if(toggle.getAttribute('aria-expanded')!=='true'){
+      await cue(ticket,toggle,'展开右侧栏');toggle.click()
      }
-     const targetBounds=dropBounds();dropTarget.style.cssText='position:fixed;pointer-events:none;width:2px;height:2px;background:transparent;left:'+((targetBounds[0]+targetBounds[2])/2-1)+'px;top:'+((targetBounds[1]+targetBounds[3])/2-1)+'px'
-     dropFile.append(fileType,fileName);const bounds=input.getBoundingClientRect(),center=ticket.host.closest('.pI_x6G_centerCol').getBoundingClientRect()
-     dropFile.style.left=Math.max(12,Math.min(window.innerWidth-252,center.right-252))+'px';dropFile.style.top=Math.max(72,bounds.top-105)+'px';document.body.append(dropFile,dropTarget)
-     try{
-      await cue(ticket,dropTarget,'把参考研报拖入输入框','drag',dropFile)
-      if(dropBounds().some((value,index)=>Math.abs(value-targetBounds[index])>2))throw changed()
-      if(ticket.shell.snapshot.draft!==skillDraft||ticket.shell.snapshot.draftRev!==skillRevision||ticket.shell.snapshot.imageIds?.length||JSON.stringify(ticket.shell.snapshot.occurrences??[])!==skillOccurrences)throw Error('输入内容已更改，已停止自动填写。')
+     const sidebar='#odyssey-right-workspace-panel'
+     const libraryTab=()=>visibleNode(sidebar+' [data-odyssey-panel-tab-id="sherlock-knowledge-library"]')
+     const library=()=>visibleNode(sidebar+' [data-knowledge-panel-host] .knowledge-panel-files')
+     if(!library()){
+      const tab=libraryTab()
+      if(tab){await cue(ticket,tab,'切换到知识库');tab.click()}
+      else{
+       const plus=()=>[...document.querySelectorAll(sidebar+' button[aria-expanded]')].find(node=>visible(node)&&['新建标签页','New tab'].includes(node.getAttribute('aria-label')))
+       await waitFor(ticket,()=>!!plus())
+       const button=plus()
+       await cue(ticket,button,'打开右侧栏页签菜单');button.click()
+       const knowledgeOption=()=>[...document.querySelectorAll('.odyssey-file-new-tab-menu [data-odyssey-file-menu-label]')].find(node=>visible(node)&&['知识库','Knowledge Base'].includes(node.textContent?.trim()))?.closest('[role="menuitem"]')
+       await waitFor(ticket,()=>!!knowledgeOption())
+       const item=knowledgeOption()
+       await cue(ticket,item,'打开知识库');item.click()
+      }
+     }
+     await waitFor(ticket,()=>!!library())
+     const directory=library().querySelector('.knowledge-panel-location-label')
+     await cue(ticket,directory,'打开知识库目录');directory.click()
+     const folder=()=>library()?.querySelector('[data-knowledge-folder-id="'+source.folderId+'"]')
+     await waitFor(ticket,()=>!!folder())
+     const folderButton=folder()
+     await cue(ticket,folderButton,'进入演示用例参考资料');folderButton.click()
+     const row=()=>library()?.querySelector('[data-knowledge-file-id="'+source.fileId+'"][draggable=true]')
+     await waitFor(ticket,()=>!!row())
+     const file=row(),transfer=new window.DataTransfer(),format='application/x-ework-knowledge-file'
+     const expectedName=ticket.prepared.sourcePath.split(/[\\/]/).pop()
+     const unchanged=()=>ticket.shell.snapshot.draft===skillDraft&&ticket.shell.snapshot.draftRev===skillRevision&&!ticket.shell.snapshot.imageIds?.length&&JSON.stringify(ticket.shell.snapshot.occurrences??[])===skillOccurrences
+     const drag=type=>new window.DragEvent(type,{bubbles:true,cancelable:true,dataTransfer:transfer})
+     file.dispatchEvent(drag('dragstart'))
+     const selected=JSON.parse(transfer.getData(format)||'null')
+     if(selected?.id!==source.fileId||selected.label!==expectedName)throw Error('演示参考资料已变化，请重试。')
+     const shadow=file.cloneNode(true)
+     shadow.removeAttribute('data-knowledge-file-id');shadow.removeAttribute('draggable')
+     shadow.className='odyssey-home-guide-drag-file';shadow.dataset.homeGuideDragFile=ticket.detail.runId;shadow.setAttribute('aria-hidden','true');shadow.inert=true
+     const bounds=file.getBoundingClientRect()
+     shadow.style.cssText='left:'+bounds.left+'px;top:'+bounds.top+'px;width:'+bounds.width+'px'
+     document.body.append(shadow)
+     const drop=event=>{
+      if(event.dataTransfer!==transfer)return
+      event.preventDefault();event.stopImmediatePropagation()
+      if(!unchanged()||row()!==file||inputFor(ticket)!==input)return
       input.focus({preventScroll:true});ticket.shell.insertFilePaths([ticket.prepared.sourcePath])
-     }finally{dropFile.remove();dropTarget.remove()}
+     }
+     input.addEventListener('drop',drop,true)
+     try{
+      await cue(ticket,input,'把知识库里的参考 PDF 拖入输入框','drag',shadow)
+      if(!unchanged()||row()!==file||inputFor(ticket)!==input)throw changed()
+      input.dispatchEvent(drag('drop'))
+     }finally{
+      input.removeEventListener('drop',drop,true);shadow.remove();file.dispatchEvent(drag('dragend'))
+     }
      if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='chat-file'&&JSON.parse(ref.ref).path===ticket.prepared.sourcePath))throw Error('研报附件未能加入原生输入框。')
      }
      const preparedDraft=ticket.shell.snapshot.draft,preparedRevision=ticket.shell.snapshot.draftRev,preparedOccurrences=JSON.stringify(ticket.shell.snapshot.occurrences??[])
@@ -275,10 +317,10 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
   const receive=event=>{
    const detail=event.detail
    if(!detail||detail.sessionId!==sessionId||!['requestId','runId','sessionId','hostId'].every(key=>typeof detail[key]==='string'&&/^[\w:-]{1,128}$/.test(detail[key]))||typeof detail.command!=='string')return
-   const key=JSON.stringify([detail.runId,detail.sessionId,detail.hostId,detail.command,detail.cwd,detail.fresh,detail.kind]),prior=requests.get(detail.requestId)
+   const key=JSON.stringify([detail.runId,detail.sessionId,detail.hostId,detail.command,detail.cwd,detail.fresh,detail.kind,detail.librarySource]),prior=requests.get(detail.requestId)
    if(prior){if(prior.key!==key){reply(detail,false,'教程请求标识已使用。');return}prior.promise.then(()=>reply(detail,true),error=>reply(detail,false,error?.message));return}
    const promise=execute(detail);requests.set(detail.requestId,{key,promise});if(requests.size>128)requests.delete(requests.keys().next().value)
-   promise.then(()=>reply(detail,true),error=>{if(owned?.detail.runId===detail.runId)dispose();reply(detail,false,error?.message||'演示未完成，请重试。')})
+   promise.then(()=>reply(detail,true),error=>{if(detail.command!=='open'&&owned?.detail.runId===detail.runId)dispose();reply(detail,false,error?.message||'演示未完成，请重试。')})
   }
   const playback=event=>{const ticket=owned,detail=event.detail;if(!ticket||detail?.sessionId!==sessionId||detail.runId!==ticket.detail.runId)return;ticket.playing=detail.playing===true;if(ticket.detail.fresh){ticket.playbackTask=(ticket.playbackTask??Promise.resolve()).catch(()=>{}).then(()=>{check(ticket);return rpc(ticket,'playback',{playing:ticket.playing&&!document.hidden})});void ticket.playbackTask.catch(error=>{if(error?.name!=='AbortError'&&owned===ticket){dispose();reply(ticket.detail,false,error?.message)}})}}
   const visibility=()=>{if(owned)playback({detail:{sessionId,runId:owned.detail.runId,playing:owned.playing}})}

@@ -58,6 +58,10 @@ export function createHomeGuideTimeline(options: {
   }
   return {
     snapshot,
+    retry() {
+      if (phase !== 'error') return
+      holding = false; phase = 'ready'; this.play()
+    },
     play() {
       if (phase !== 'ready' && phase !== 'paused') return
       phase = 'playing'; single = false; wake(); notify()

@@ -1186,10 +1186,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       }
       navigation++
       valid()
-      if (kind === 'spreadsheet') deps.chatStore?.create(entry.sessionId).actions.setView('spreadsheet')
-      configureHomeGuideConversation(kind, entry.sessionId)
-      valid()
+      deps.chatStore?.create(entry.sessionId).actions.setView(homeGuideMode(kind))
       deps.sessions.open(entry.sessionId)
+      configureHomeGuideConversation(kind, entry.sessionId)
       if (kind === 'board' || kind === 'workbench') selectBoardSession(entry.sessionId)
       return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: false }
     })().catch(error => ({ ok: false, message: error instanceof Error ? error.message : '示例暂时无法打开，请稍后重试。' }))
@@ -1210,8 +1209,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       check();const registered=getHomeGuideSession(entry.sessionId)
       if(!registered||registered.kind!==kind||registered.cwd!==entry.cwd||!deps.chatStore)throw Error('原生示例入口已变化。')
       deps.chatStore.create(entry.sessionId).actions.setView(homeGuideMode(kind));check()
-      configureHomeGuideConversation(kind, entry.sessionId);check()
       navigation++;deps.sessions.open(entry.sessionId)
+      check();configureHomeGuideConversation(kind, entry.sessionId)
       if(kind==='board'||kind==='workbench')selectBoardSession(entry.sessionId)
     }
   }))

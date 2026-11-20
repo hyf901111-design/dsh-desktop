@@ -10,7 +10,7 @@ import {playExploreHomeGuideEntry,waitForHomeGuideNativeView} from './home-guide
 import {createHomeGuideEntryClient,homeGuideMode,type HomeGuideEntryKind} from './home-guide-entry-native'
 
 export type HomeGuideKind = HomeGuideEntryKind
-export type HomeGuideAdapter = { runStep(step: any): Promise<void>; flush?(): Promise<void>; dispose(): void }
+export type HomeGuideAdapter = { runStep(step: any): Promise<void>; canRetry?(step: string): boolean; flush?(): Promise<void>; dispose(): void }
 export type HomeGuideMountOptions = { kind?:HomeGuideKind; signal: AbortSignal; runId: string; sessionId: string; cwd: string; fresh: boolean; wait(ms: number, signal?: AbortSignal): Promise<void>; waitUntilPlaying(): Promise<void>; onStatus(text: string): void; point?(action:HomeGuidePointerAction):Promise<void>; onTakeover?():void }
 type Adapters = {
  beforeOpen?(session: Session & {kind:HomeGuideKind}): void | Promise<void>
@@ -132,7 +132,7 @@ function mountBoard(document:Document,host:HTMLElement,options:HomeGuideMountOpt
  })
  const dispose=()=>{if(disposed)return;disposed=true;options.signal.removeEventListener('abort',dispose);for(const cancel of pending)cancel();win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-native-request',{detail:{requestId:win.crypto.randomUUID(),runId:options.runId,sessionId:options.sessionId,hostId:host.id,command:'dispose'}}))}
  options.signal.addEventListener('abort',dispose,{once:true})
- return exchange('mount-board').then(()=>({runStep:async step=>{await options.waitUntilPlaying();await exchange(step)},dispose}),error=>{dispose();throw error})
+ return exchange('mount-board').then(()=>({canRetry:step=>!disposed&&step==='board-add',runStep:async step=>{await options.waitUntilPlaying();await exchange(step)},dispose}),error=>{dispose();throw error})
 }
 
 /** Saved examples use normal sessions; this shell owns their autoplay lifetime. */
@@ -157,10 +157,29 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  }
  const playback=(run:Run,playing:boolean,ending=false)=>win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-playback',{detail:{runId:run.id,sessionId:run.sessionId,playing,...ending?{ending:true}:{}}}))
  const hideCue=()=>active?.pointer?.hide()
+ let recovery:HTMLButtonElement|undefined
+ const clearRecovery=()=>{recovery?.remove();recovery=undefined}
+ const showRecovery=(sessionId:string|undefined, label:string, resume:()=>void)=>{
+  if(disposed||selected()!==sessionId)return
+  const surface=document.body.dataset.workspaceSurface
+  const header=(surface&&document.querySelector(`[data-workspace-surface="${CSS.escape(surface)}"]:not([hidden]) .workspace-app-topbar`))||
+    document.querySelector('.pI_x6G_centerCol [data-srb-session-header]:not([aria-hidden=true],[data-odyssey-subagent-panel] *)')||
+    document.querySelector('.pI_x6G_centerCol .wSkVaW_header')
+  if(!header)return
+  clearRecovery()
+  const button=document.createElement('button');button.type='button';button.className='odyssey-home-guide-resume'
+  button.setAttribute('aria-label',label);button.title=label
+  button.innerHTML='<svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16"><path d="M4 2.9a.7.7 0 0 1 1.06-.6l7.62 5.1a.72.72 0 0 1 0 1.2l-7.62 5.1a.7.7 0 0 1-1.06-.6z" fill="currentColor"/></svg>'
+  button.onclick=()=>{if(selected()!==sessionId)return;clearRecovery();resume()}
+  const utilities=header.querySelector('[data-srb-utilities]')
+  if(utilities)utilities.prepend(button);else header.append(button)
+  recovery=button
+ }
  const notices=new Set<HTMLElement>()
  const saveFailure=(message:string,prefix='示例保存未完成：')=>{const notice=document.createElement('div');notice.className='odyssey-home-guide-save-error';notice.setAttribute('role','alert');const text=document.createElement('span');text.textContent=prefix+message;const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='关闭';dismiss.addEventListener('click',()=>{notices.delete(notice);notice.remove()});notice.append(text,dismiss);notices.add(notice);document.body.append(notice)}
  const close=(restoreFocus=true,alreadySaved=false,reason:NotesGuideDiagnosticReason='closed'):Promise<void>=>{
   const run=active;if(!run)return closing
+  clearRecovery()
   if(reason!=='handoff')diagnostic(run,'cancelled',reason);active=undefined;run.timeline?.dispose();run.pointer?.dispose();playback(run,false,true)
   if(document.documentElement.dataset.homeGuidePointerRun===run.id)delete document.documentElement.dataset.homeGuidePointerRun
   // A save can outlive navigation or wait on persistence. Its old editor stays
@@ -182,8 +201,18 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   closing=run.adapter.flush().catch(error=>{saveFailure(error instanceof Error?error.message:'请返回示例后重试。');win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-save-error',{detail:{sessionId:run.sessionId,message:error instanceof Error?error.message:'示例尚未保存，请返回后重试。'}}))}).finally(finish)
   return closing
  }
+ const retryEntry=(kind:HomeGuideKind,sessionId:string|undefined)=>{
+  showRecovery(sessionId,'重新播放演示',()=>{
+   void start(kind,{replay:true}).catch(error=>{
+    if(disposed||selected()!==sessionId)return
+    saveFailure(error instanceof Error?error.message:'示例暂时无法打开。','')
+    retryEntry(kind,sessionId)
+   })
+  })
+ }
  const start=async(kind:HomeGuideKind,input:{replay?:boolean;entry?:HomeOperationActionContext}={})=>{
   if(disposed||input.entry?.signal.aborted)throw aborted();if(!(kind in EXAMPLES))throw Error('暂不支持此教程。')
+  clearRecovery()
   const token=++generation;preparing?.controller.abort();preparing=undefined
   await close(false,false,'restart');releaseTransition();if(disposed||token!==generation)throw aborted()
   const controller=new win.AbortController(),pending={controller,source:selected(),target:undefined as string|undefined};preparing=pending
@@ -200,7 +229,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     entry.signal.addEventListener('abort',cancel,{once:true});for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.addEventListener(name,takeover,true)
     clearEntry=()=>{entry.signal.removeEventListener('abort',cancel);for(const name of ['pointerdown','keydown','beforeinput','input','compositionstart'])document.removeEventListener(name,takeover,true);if(document.body.dataset.homeGuideEntryRun===id)delete document.body.dataset.homeGuideEntryRun;checkDraft=undefined}
     controller.signal.addEventListener('abort',clearEntry,{once:true})
-    if(document.body.dataset.workspaceSurface==='browser')document.body.dataset.homeGuideEntryRun=id
+    document.body.dataset.homeGuideEntryRun=id
     const gate=async()=>{ensurePending();while(document.hidden||!document.hasFocus()){await new Promise(resolve=>win.setTimeout(resolve,32));ensurePending()}}
     const bounds=entry.demoEntry!.closeTarget.getBoundingClientRect(),origin=entry.origin??{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}
     if(!Number.isFinite(origin.x)||!Number.isFinite(origin.y)||origin.x<0||origin.y<0||origin.x>win.innerWidth||origin.y>win.innerHeight)throw aborted()
@@ -277,7 +306,20 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    while(selected()!==session.sessionId){ensurePending();if(Date.now()>deadline)throw Error('示例会话尚未打开，请重试。');await new Promise(resolve=>win.setTimeout(resolve,32))}
    if(openedFromEntry)entryView=await waitForHomeGuideNativeView(document,session.sessionId,kind,{signal:controller.signal,assert:ensurePending})
    clearEntry();ensurePending()
-  }catch(error){if(input.entry?.demoEntry&&!controller.signal.aborted&&(error as {name?:string})?.name!=='AbortError')saveFailure('演示准备未完成，请重新打开探索后重试。','');if(input.entry?.demoEntry)emitHomeGuideEntryDiagnostic({runId:id,sessionId:pending.source,kind,phase:'cancel',reason:controller.signal.aborted?'source-context':'operation-failed'});clearEntry();clearTakeover();entryPointer?.dispose();if(preparing===pending)preparing=undefined;controller.abort();releaseTransition();throw error}
+  }catch(error){
+   const failedSession=selected()
+   const retryable=!controller.signal.aborted&&(error as {name?:string})?.name!=='AbortError'
+   if(input.entry?.demoEntry){
+    if(retryable)saveFailure('演示准备未完成，可从顶栏重试。','')
+    emitHomeGuideEntryDiagnostic({runId:id,sessionId:pending.source,kind,phase:'cancel',reason:controller.signal.aborted?'source-context':'operation-failed'})
+   }
+   clearEntry();clearTakeover();entryPointer?.dispose()
+   if(preparing===pending){preparing=undefined;releaseTransition()}
+   controller.abort()
+   if(token===generation&&(retryable||failedSession===pending.target)&&
+      (failedSession===pending.source||failedSession===pending.target))retryEntry(kind,failedSession)
+   throw error
+  }
   clearTakeover()
   if(preparing===pending)preparing=undefined
   const center=entryView?.center??document.querySelector<HTMLElement>('.pI_x6G_centerCol'),resident=entryView?.resident??[...(center?.querySelectorAll<HTMLElement>('.wSkVaW_root')||[])].find(node=>!node.closest('[data-odyssey-subagent-panel]'))
@@ -288,7 +330,13 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   const status=document.createElement('p');status.className='odyssey-home-guide-status';status.textContent='正在打开已保存的示例…'
   const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='×';dismiss.setAttribute('aria-label','关闭示例');dismiss.addEventListener('click',()=>{void close(true,false,'dismiss')})
   notice.append(status,dismiss);root.append(content,notice)
-  const fault=(message:string)=>{root.dataset.phase='error';notice.hidden=false;status.textContent=message}
+  const restart=()=>{void start(kind,{replay:true}).catch(error=>{
+    saveFailure(error instanceof Error?error.message:'示例暂时无法打开。','')
+  })}
+  const fault=(message:string,resume=restart,label='重新播放演示')=>{
+    root.dataset.phase='error';notice.hidden=false;status.textContent=message
+    showRecovery(run.sessionId,label,()=>{notice.hidden=true;resume()})
+  }
   const blocked=new Map<HTMLElement,boolean>()
   const run:Run={id,kind,sessionId:session.sessionId,abort:controller,root,resident,center,content,status,cleanup:()=>{}}
   active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report'||kind==='workbench'||kind==='spreadsheet')resident.dataset.homeGuideLive='true';if(kind==='ppt'||kind==='report')resident.dataset.homeGuidePlanning=id
@@ -319,11 +367,12 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     if(handoff)run.handoff=handoff;diagnostic(run,'handoff-end','handoff');await close(false,true,'handoff')
    }
    const scenes:readonly Scene[]=definition.steps
+   const applied=new Set<string>()
    run.timeline=createHomeGuideTimeline({steps:scenes.map(([id,,,hold])=>({id,hold})),run:async step=>{
     ensure();diagnostic(run,'step-start','playback',step)
     try{
      if((kind==='ppt'||kind==='report')&&step==='plan')resident.dataset.homeGuidePlanReady=run.id
-     await adapter.runStep(step);ensure()
+     if(!applied.has(step)){await adapter.runStep(step);ensure();applied.add(step)}
      if(kind==='spreadsheet'&&step==='import-file'||kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
       await options.waitUntilPlaying();ensure()
       await exchangeSession(document,{kind,command:'activate-title',sessionId:run.sessionId},controller.signal);ensure()
@@ -339,15 +388,28 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
      run.diagnosticPhase=state.phase;run.pauseReason=undefined;run.resumeReason=undefined
     }
     playback(run,state.phase==='playing');root.dataset.phase=state.phase
-    if(state.phase==='completed'){hideCue();void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}
+    if(state.phase==='completed'){hideCue();void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。',()=>{
+      void handoffSaved().catch(next=>{if(active===run)fault(next instanceof Error?next.message:'示例尚未保存，请重试。')})
+    },'继续保存演示')})}
     else if(state.holding){status.textContent=scenes[state.index]?.[2]||''}
     else if(state.index===0)status.textContent=definition.intro
-   },onError:error=>{if(active!==run)return;playback(run,false);hideCue();if(kind==='spreadsheet')void adapter.flush?.().catch(()=>{});fault(error instanceof Error?error.message:'演示已中断，可结束演示查看已保留内容。');if(kind==='note'&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===run.id)void handoffSaved().catch(error=>{diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error);if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')})}})
+   },onError:error=>{
+    if(active!==run)return
+    playback(run,false);hideCue();if(kind==='spreadsheet')void adapter.flush?.().catch(()=>{})
+    const step=scenes[run.timeline?.snapshot().index??0]?.[0]
+    const retry=!!step&&(applied.has(step)||adapter.canRetry?.(step))
+    fault(error instanceof Error?error.message:'演示已中断，已保留当前内容。',retry?()=>run.timeline?.retry():restart,retry?'继续播放演示':'重新播放演示')
+    if(!retry&&kind==='note'&&(error as {name?:string})?.name!=='AbortError'&&document.documentElement.dataset.homeGuidePointerRun===run.id)
+     void handoffSaved().then(()=>{if(!active&&token===generation)showRecovery(run.sessionId,'重新播放演示',restart)},error=>{
+      diagnostic(run,'handoff-fail',notesGuideFailureReason(error),undefined,error)
+      if(active===run)fault(error instanceof Error?error.message:'示例尚未保存，请重试。')
+     })
+   }})
    run.timeline.play();visibility()
   }catch(error){if(active!==run||controller.signal.aborted)throw error;playback(run,false);fault(error instanceof Error?error.message:'示例尚未就绪，请重试。')}
  }
  const changed=()=>{if(preparing){const current=selected();if(current===preparing.source||current===preparing.target)return;preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&selected()!==active.sessionId)void close(false,false,'owner-changed')}
- const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false,false,'navigation')}
+ const navigate=(event:Event)=>{if(ownedNavigation)return;const target=(event.target as Element)?.closest?.('[data-srb-tabs] button,[data-dsh-sidebar-root] button,[data-dsh-sidebar-root] [role=row]');if(!target||target.matches('[data-dsh-sidebar-root] button.hHd-Xa_toggle'))return;if(preparing){preparing.controller.abort();preparing=undefined;generation++;releaseTransition()}if(active&&!active.root.contains(target))void close(false,false,'navigation');else if(!active)clearRecovery()}
  const escape=(event:KeyboardEvent)=>{if((active||preparing)&&event.key==='Escape'){event.preventDefault();if(preparing){generation++;preparing.controller.abort();preparing=undefined;releaseTransition()}void close(true,false,'escape')}}
  // The native note reviewer also pauses on window blur. Its actor must share
  // that gate so background time cannot consume a foreground review budget.
@@ -377,5 +439,5 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  }
  win.addEventListener('sherlock:home-action-context-changed',changed);win.addEventListener('sherlock:skill-menu-reset',changed);win.addEventListener('sherlock:home-guide-cue',showCue)
  document.addEventListener('keydown',escape,true);document.addEventListener('click',navigate,true);document.addEventListener('visibilitychange',visibility);win.addEventListener('blur',visibility);win.addEventListener('focus',visibility)
- return{start,reset:(restoreFocus=true)=>{generation++;preparing?.controller.abort();preparing=undefined;releaseTransition();return close(restoreFocus,false,'reset')},dispose:async()=>{if(disposed)return;disposed=true;generation++;preparing?.controller.abort();preparing=undefined;await close(false,false,'disposed');releaseTransition();win.removeEventListener('sherlock:home-action-context-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',changed);win.removeEventListener('sherlock:home-guide-cue',showCue);document.removeEventListener('keydown',escape,true);document.removeEventListener('click',navigate,true);document.removeEventListener('visibilitychange',visibility);win.removeEventListener('blur',visibility);win.removeEventListener('focus',visibility);for(const notice of notices)notice.remove();notices.clear();style.remove()}}
+ return{start,reset:(restoreFocus=true)=>{clearRecovery();generation++;preparing?.controller.abort();preparing=undefined;releaseTransition();return close(restoreFocus,false,'reset')},dispose:async()=>{if(disposed)return;disposed=true;clearRecovery();generation++;preparing?.controller.abort();preparing=undefined;await close(false,false,'disposed');releaseTransition();win.removeEventListener('sherlock:home-action-context-changed',changed);win.removeEventListener('sherlock:skill-menu-reset',changed);win.removeEventListener('sherlock:home-guide-cue',showCue);document.removeEventListener('keydown',escape,true);document.removeEventListener('click',navigate,true);document.removeEventListener('visibilitychange',visibility);win.removeEventListener('blur',visibility);win.removeEventListener('focus',visibility);for(const notice of notices)notice.remove();notices.clear();style.remove()}}
 }
