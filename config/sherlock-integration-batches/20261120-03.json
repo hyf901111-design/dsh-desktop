@@ -197,49 +197,223 @@
         "schemaVersion": 1,
         "featureName": "演示应用：PPTist 编辑、原生共享对话及选区改稿",
         "branch": "codex/feat/presentation-workspace-20261120",
-        "baseCommit": "07984fd30d40b23366a73c73803135c573e3f3fb",
-        "tipCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
+        "baseCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
+        "tipCommit": "c6acc629634c75747d9a535c8e52c74d34070417",
         "commits": [
           {
-            "commit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
+            "commit": "9a2ea066d9f6c867e2aeb91073d8c0edfd7a3fbb",
             "parents": [
-              "07984fd30d40b23366a73c73803135c573e3f3fb"
+              "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e"
             ],
-            "subject": "还原易方达图表的日期间隔、分类配色与散点标记"
+            "subject": "补齐研报演示逐页讲稿与引用图表改版内容"
+          },
+          {
+            "commit": "3b3cb01def34ca2d8337e5adb9d7ee7dab7c0c53",
+            "parents": [
+              "9a2ea066d9f6c867e2aeb91073d8c0edfd7a3fbb"
+            ],
+            "subject": "接入投委会演示用例、原生对话回放与会话接管"
+          },
+          {
+            "commit": "18d58b6b2d1d9729e161ef999386e2bcdeaf2a84",
+            "parents": [
+              "3b3cb01def34ca2d8337e5adb9d7ee7dab7c0c53"
+            ],
+            "subject": "串联演示编辑用例的真实备注、图表框选和标题修改"
+          },
+          {
+            "commit": "c6acc629634c75747d9a535c8e52c74d34070417",
+            "parents": [
+              "18d58b6b2d1d9729e161ef999386e2bcdeaf2a84"
+            ],
+            "subject": "支持从右侧知识库拖入演示文稿并复用公司示例原件"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "docs/sherlock-presentation-acceptance.md"
+            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-guide-session-titles.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-spreadsheet-runtime.js"
+          },
+          {
+            "status": "C074",
+            "path": "packages/dsh-research-task-runtime/home-workspace-guide-chat.js",
+            "previousPath": "packages/dsh-research-task-runtime/home-spreadsheet-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/presentation-edit-guide-chat.js"
           },
           {
             "status": "M",
             "path": "packages/presentation-editor/overlay/App.vue"
           },
           {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/OfficeChart.vue"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/chart-points.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/office-axes.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/office-import.js"
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/edit-guide.js"
           },
           {
             "status": "A",
-            "path": "packages/presentation-editor/overlay/office-series.js"
+            "path": "scripts/lib/home-guide-presentation-native.d.mts"
           },
           {
             "status": "M",
-            "path": "test/presentation-office-axes.test.js"
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/store.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/presentation/edit-guide.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/import-file.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-entry-native.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-explore-entry.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-assets.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-carousel.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/panel.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/presentation/edit-guide-chat.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/presentation/edit-guide.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/import-file.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/presentation/knowledge-drop.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/home-guide-entry-diagnostics.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/knowledge-library.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/presentation-edit-guide-content.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-native.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-explore-entry-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-spreadsheet-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-library.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-edit-guide-content.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-knowledge-drop-browser.test.js"
           }
         ],
         "checks": [
@@ -251,8 +425,8 @@
             ],
             "outcome": "passed",
             "summary": "编译 PPTist",
-            "verifiedCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
-            "completedAt": "2026-11-20T16:41:54.956598Z",
+            "verifiedCommit": "c6acc629634c75747d9a535c8e52c74d34070417",
+            "completedAt": "2026-11-20T17:00:10.876110Z",
             "timeoutMs": 180000
           },
           {
@@ -263,8 +437,8 @@
             ],
             "outcome": "passed",
             "summary": "类型检查",
-            "verifiedCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
-            "completedAt": "2026-11-20T16:42:08.317293Z",
+            "verifiedCommit": "c6acc629634c75747d9a535c8e52c74d34070417",
+            "completedAt": "2026-11-20T17:00:21.978653Z",
             "timeoutMs": 180000
           },
           {
@@ -272,21 +446,21 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/presentation-layouts.test.js",
-              "test/presentation-workspace.test.ts",
-              "test/presentation-office-axes.test.js",
+              "test/presentation-edit-guide-content.test.ts",
+              "test/home-spreadsheet-runtime.test.js",
+              "test/home-guide-session.test.ts",
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "演示布局、编辑交互与文稿数据",
-            "verifiedCommit": "66d8ea135dd6dcc1690a7a417c7ddd9734eec52e",
-            "completedAt": "2026-11-20T16:42:09.317374Z",
+            "summary": "逐页演讲稿和图表的原始数据、教程三轮真实会话与默认标题",
+            "verifiedCommit": "c6acc629634c75747d9a535c8e52c74d34070417",
+            "completedAt": "2026-11-20T17:00:27.747275Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Electron 中检查 46 页，第 17 页按年显示日期并保留标注散点，第 22 页六根柱与六个图例颜色一致，第 24、26 页保留双轴和月份。"
+          "summary": "在真实 Electron 编辑器导入20页案例，逐页读回讲稿，画矩形并填写批注、原生图表重排、点击标题且通过元素引用写回标题。"
         },
         "acceptanceCriteria": [
           "首页及左栏打开演示，可固定为会话顶部页签。研究、演示和表格来回切换保留会话历史、当前文稿及页码。",
@@ -296,177 +470,7 @@
         "risks": [
           "整体验收以签名客户端会话场景的实际复测为准。"
         ],
-        "generatedAt": "2026-11-20T16:42:09.317481Z"
-      },
-      "merged": {
-        "mergeCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-        "verificationCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-canvas-storage.test.ts",
-              "test/board-tabs-contract.test.js",
-              "test/workbench-style.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "exec",
-              "--",
-              "vitest",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台|默认显示五条|五条以内"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/test-research-boards-browser.mjs",
-              "--manager-workbench-focus"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "build:presentation"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run build:presentation",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
-              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/presentation-workspace.test.ts",
-              "test/presentation-reference-browser.test.js",
-              "test/workspace-mode-welcome.test.js",
-              "test/navigation-shortcuts.test.ts",
-              "test/workspace-draft-state.test.js",
-              "test/client-capability-service.test.ts",
-              "test/client-capabilities.test.js",
-              "test/browser-app-native.test.js",
-              "test/presentation-artboard-browser.test.ts",
-              "--maxWorkers=3"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/presentation-workspace.test.ts test/presentation-reference-browser.test.js test/workspace-mode-welcome.test.js test/navigation-shortcuts.test.ts test/workspace-draft-state.test.js test/client-capability-service.test.ts test/client-capabilities.test.js test/browser-app-native.test.js test/presentation-artboard-browser.test.ts --maxWorkers=3",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "/usr/bin/env",
-              "SHERLOCK_ROUTING_RESIDENT=1",
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/conversation-component-submit-routing-browser.test.js",
-              "-t",
-              "one native right-side",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：/usr/bin/env SHERLOCK_ROUTING_RESIDENT=1 ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/conversation-component-submit-routing-browser.test.js -t one native right-side --maxWorkers=1",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pptx-annotation-browser.test.js",
-              "-t",
-              "point|rect",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/pptx-annotation-browser.test.js -t point|rect --maxWorkers=1",
-            "verifiedCommit": "2ae54701e570f4f8bce64e1a12cc7b1606be39f0",
-            "completedAt": "2026-11-20T16:44:42.109Z",
-            "timeoutMs": 180000
-          }
-        ],
-        "recordedAt": "2026-11-20T16:44:42.109Z"
+        "generatedAt": "2026-11-20T17:00:27.747335Z"
       }
     }
   ],
