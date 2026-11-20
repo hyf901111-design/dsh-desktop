@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { efundImageFactoryFont } from '../../scripts/lib/image-factory-web-font.mjs'
 import { execFileSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { resolve, join } from 'node:path'
@@ -83,6 +84,8 @@ edit('src/hooks/useImport.ts', [
   ["audioMode: 'blob'", "audioMode: 'base64'"]
 ])
 edit('src/hooks/useExport.ts', [
+  ['const exportPPTX = (_slides: Slide[], masterOverwrite: boolean, ignoreMedia: boolean)', 'const exportPPTX = (_slides: Slide[], masterOverwrite: boolean, ignoreMedia: boolean, bytesOnly = false)'],
+  ['    setTimeout(() => {\n      pptx.writeFile({ fileName: `${title.value}.pptx` }).then(() => exporting.value = false)', '    if (bytesOnly) return pptx.write({ outputType: "arraybuffer" }).finally(() => { exporting.value = false })\n    setTimeout(() => {\n      pptx.writeFile({ fileName: `${title.value}.pptx` }).then(() => exporting.value = false)'],
   ['for (const slide of _slides) {\n      const pptxSlide = pptx.addSlide()',
     "for (const slide of _slides) {\n      const masterName = 'OdysseyMaster' + (_slides.indexOf(slide)+1); const inherited = slide.elements.some(e=>e.odysseyMaster); if(inherited)pptx.defineSlideMaster({title:masterName,objects:[]}); const pptxSlide = inherited ? pptx.addSlide({masterName}) : pptx.addSlide()"],
   ['for (const el of slide.elements) {', 'for (const el of slide.elements) {\n        const beforeArtwork = pptxSlide._slideObjects.length'],
@@ -186,7 +189,10 @@ edit('src/hooks/useImport.ts', [
   ['if (metrics.margin) textEl.paragraphSpace = metrics.margin','textEl.paragraphSpace = metrics.margin || 0'],
   ['if (metrics.margin) element.text!.paragraphSpace = metrics.margin','element.text!.paragraphSpace = metrics.margin || 0']
 ])
-edit('src/main.ts', [["import '@/assets/styles/font.scss'", "import './odyssey.css'"]])
+edit('src/main.ts', [
+  ["import App from './App.vue'", "import App from './App.vue'\nimport ArchiveSurface from './ArchiveSurface.vue'"],
+  ['const app = createApp(App)', "const app = createApp(location.search === '?archive' ? ArchiveSurface : App)"],
+  ["import '@/assets/styles/font.scss'", "import './odyssey.css'"]])
 cpSync(join(project, 'src/shared/presentation-slide-title.ts'), join(work, 'src/presentation-slide-title.ts'))
 cpSync(join(source, 'overlay'), join(work, 'src'), { recursive: true })
 const appIcon = 'build/brand/odyssey-app-presentation.svg'
@@ -195,7 +201,7 @@ cpSync(join(project, 'scripts/lib/pptx-annotation-viewer.mjs'), join(work, 'src/
 cpSync(join(project, 'src/preload/pptx-annotations.css'), join(work, 'src/native-annotations.css'))
 cpSync(join(project, 'src/preload/pptx-annotation-icons'), join(work, 'public/markers'), { recursive: true })
 cpSync(join(source, 'layout-art'), join(work, 'public/layout-art'), {recursive:true})
-cpSync(join(project,'skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf'),join(work,'public/STHeiti_YFD.ttf'))
+writeFileSync(join(work, 'public/STHeiti_YFD.ttf'), efundImageFactoryFont(readFileSync(join(project, 'skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf'))))
 cpSync(join(source, 'icons'), join(work, 'public/icons'), { recursive: true })
 cpSync(join(project, 'skills/efund-ppt-maker/assets/efund-template-v6.pptx'), join(work, 'public/efund.pptx'))
 cpSync(join(source, 'index.html'), join(work, 'index.html'))
@@ -218,6 +224,7 @@ execFileSync('tar', [
   appIcon,
   'src/shared/presentation-slide-title.ts',
   'scripts/lib/pptx-annotation-viewer.mjs',
+  'scripts/lib/image-factory-web-font.mjs',
   'src/preload/pptx-annotations.css',
   'src/preload/pptx-annotation-icons',
   'skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf',

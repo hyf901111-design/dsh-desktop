@@ -280,3 +280,24 @@ it('persists a bounded and deduplicated recent search history for each account',
   switchAccount()
   expect(await store.recentSearches()).toEqual([])
 })
+
+it('archives presentation copies by session, deck, name and format, and preserves imported and shared originals', async () => {
+  const { open, file } = await fixture()
+  const store = open()
+  const original = await store.importFile(await file('投委会.pptx', '来源'))
+  const options = { sessionId: 'session-a', sessionTitle: '季度会议', documentId: 'deck-a', name: '投委会', format: 'pptx' as const }
+  const save = (text: string, patch: Partial<typeof options> = {}) =>
+    store.savePresentationArchive(Buffer.from(text), { ...options, ...patch }, () => {})
+  const first = await save('版本一')
+  expect(first).toMatchObject({ name: '投委会（2）.pptx', updated: false })
+  expect(await save('版本二')).toMatchObject({ id: first.id, name: first.name, updated: true })
+  expect(await readFile((await store.file(original.id)).path, 'utf8')).toBe('来源')
+  expect(await readFile((await open().file(first.id)).path, 'utf8')).toBe('版本二')
+  const pdf = await store.savePresentationArchive(Buffer.from('%PDF-'), { ...options, format: 'pdf' }, () => {})
+  expect(pdf.name).toBe('投委会.pdf')
+  expect(await save('改名', { name: '更新稿' })).toMatchObject({ name: '更新稿.pptx', updated: false })
+  expect(await save('另一份文稿', { documentId: 'deck-b' })).toMatchObject({ name: '投委会（3）.pptx', updated: false })
+  await store.setSharing(first.id, async () => ({ id: '0123456789abcdef0123456789abcdef', category: '行业研究' }))
+  expect(await save('后续')).toMatchObject({ name: '投委会（4）.pptx', updated: false })
+  expect(await readFile((await store.file(first.id)).path, 'utf8')).toBe('版本二')
+})

@@ -81,7 +81,7 @@ body[data-ds-dark-theme] {
   flex: none;
   pointer-events: none;
 }
-body:not([data-ds-dark-theme]) :is(.ribbon, .doc-line, .pages > header, footer, .empty) .glyph {
+body:not([data-ds-dark-theme]) :is(.ribbon, .doc-line, .pages > header, footer, .empty, .menu) .glyph {
   filter: brightness(0.4);
 }
 .empty {
@@ -508,7 +508,14 @@ footer > span {
   min-height: 32px;
   gap: 8px;
 }
-.menu .end {
+.menu button > .glyph {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.menu button > .glyph.end {
+  width: 14px;
+  height: 14px;
   margin-left: auto;
 }
 .menu .menu-back {
