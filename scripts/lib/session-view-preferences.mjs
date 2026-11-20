@@ -59,8 +59,8 @@ export function installInitialChatViewIntent(chatStore, sessions, researchWorksp
   }
 }
 
-// Only explicit New Chat callbacks attach this predicate. Workspace selection
-// and New Research retain their native reuse and per-session restoration paths.
+// Only explicit new session callbacks attach a reuse predicate. Workspace selection
+// and automatic startup retain their native reuse and restoration paths.
 export function patchNewChatSessionRuntime(source) {
   const changes = [
     ['async connectWorkspace(workspaceId) {', 'async connectWorkspace(workspaceId, canReuse) { /* ework:new-chat-reuse-filter:v1 */'],
@@ -113,7 +113,12 @@ export function patchNewChatSidebar(source) {
     source=source.replace(research,tagged)
   }
   if(source.split(tagged).length!==2)throw Error('New Research sidebar intent missing')
-  return source
+  const start = 'ctx.workspaces.startSession(workspaceId, (sessionId) => {\n\t\t\t\t\t\ttry {'
+  const finish = tagged + '\n\t\t\t\t\t});'
+  const gated = tagged + '\n\t\t\t\t\t}, { canReuse: id => [undefined, "新看板", "New Board"].includes(ctx.sessions.list.getSnapshot().byId[id]?.title) }));'
+  if (source.includes(gated)) return source
+  if (source.split(start).length !== 2 || source.split(finish).length !== 2) throw Error('New Research reuse anchor drifted')
+  return source.replace(start, start.replace('(sessionId)', 'Object.assign((sessionId)')).replace(finish, gated)
 }
 
 export function useInitialChatSessionView(sessionId, storedView, actions) {

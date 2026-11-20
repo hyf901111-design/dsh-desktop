@@ -1,15 +1,16 @@
 export async function initializeWorkspaceSession(sessions,id,view,locale) {
-  if(view==='spreadsheet'){
-    const response=await fetch('/sherlock/spreadsheet/session',{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:id,locale})
+  if(view==='spreadsheet'||view==='research'){
+    const research=view==='research'
+    const response=await fetch(research?'/sherlock/research/session-title':'/sherlock/spreadsheet/session',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(research?{sessionId:id,locale,components:[]}:{sessionId:id,locale})
     })
     const result=await response.json()
-    if(!response.ok||result.ok!==true)throw Error(result.error||'新表格未能保存。')
+    if(!response.ok||result.ok!==true)throw Error(result.error||(research?'新看板未能保存。':'新表格未能保存。'))
     return
   }
-  const names=locale==='en'?{notes:'New Note',research:'New Research'}:{notes:'新笔记',research:'新研究'}
-  if(!Object.hasOwn(names,view))return
-  const result=await sessions.binding(id)?.session.rename(names[view])
+  if(view!=='notes')return
+  const result=await sessions.binding(id)?.session.rename(locale==='en'?'New Note':'新笔记')
   if(result?.ok!==true)throw Error(result?.error?.message||'新会话名称未能保存。')
 }
 

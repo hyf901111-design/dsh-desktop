@@ -156,7 +156,8 @@ export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
       if (state?.busy || state?.activating) return
       if (context.sessionId === undefined && !context.tabId) {
         globalDraft.selectWorkspace(workspaceId)
-        return globalDraft.activate({ workspaceSwitch: true })
+        const view = ['notes', 'spreadsheet', 'research'].includes(context.mode) ? context.mode : undefined
+        return globalDraft.activate({ workspaceSwitch: true, view })
       }
       if (context.sessionId !== undefined && workspaceId === context.workspaceId) {
         globalDraft.selectWorkspace(workspaceId)

@@ -3,13 +3,24 @@ import {createPendingConversation,browserPromptReference,EWorkPendingInputBar} f
 import {createRightProjectDrafts} from '../scripts/lib/right-project-drafts.mjs'
 import {initializeWorkspaceSession} from '../scripts/lib/sidebar-new-note.mjs'
 
-it.each([['notes','zh','新笔记'],['research','zh','新研究'],['notes','en','New Note'],['research','en','New Research']])(
+it.each([['notes','zh','新笔记'],['notes','en','New Note']])(
  'initializes a %s workspace session using its %s default title',async (view,locale,title)=>{
   const rename=vi.fn(async()=>({ok:true})),binding=vi.fn(()=>({session:{rename}}))
   await initializeWorkspaceSession({binding},'selected-session',view,locale)
   expect(binding).toHaveBeenCalledExactlyOnceWith('selected-session')
   expect(rename).toHaveBeenCalledExactlyOnceWith(title)
  })
+
+it('initializes Research through the provisional board title route before opening',async()=>{
+ const request=vi.fn(async()=>({ok:true,json:async()=>({ok:true})}))
+ vi.stubGlobal('fetch',request)
+ try{
+  await initializeWorkspaceSession({},'board','research','zh')
+  expect(request).toHaveBeenCalledWith('/sherlock/research/session-title',expect.objectContaining({
+   method:'POST', body:JSON.stringify({sessionId:'board',locale:'zh',components:[]})
+  }))
+ }finally{vi.unstubAllGlobals()}
+})
 
 it('creates and names the chosen workspace session once before opening it',async()=>{
  let finish
