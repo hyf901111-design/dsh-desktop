@@ -249,7 +249,16 @@
         </aside>
         <section class="edit-col sherlock-ppt-editor" :data-readonly="!editable || undefined">
           <div ref="stage" class="canvas-slot">
-            <div class="slide-area" :data-slide-index="index"><Canvas /></div>
+            <div
+              class="slide-area"
+              :data-slide-index="index"
+              :style="{
+                '--page-w': store.viewportSize + 'px',
+                '--page-h': store.viewportSize * store.viewportRatio + 'px'
+              }"
+            >
+              <Canvas />
+            </div>
           </div>
           <div class="notes" :style="{ height: noteHeight + 'px' }">
             <div class="grip" @pointerdown="resizeNotes"></div>

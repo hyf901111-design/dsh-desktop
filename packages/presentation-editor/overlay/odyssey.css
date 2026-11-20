@@ -354,6 +354,9 @@ footer button:hover,
   line-height: 1.6;
 }
 .slide-area .viewport {
+  /* Absolutely positioned slide objects need an unscaled artboard to clip against. */
+  width: var(--page-w);
+  height: var(--page-h);
   clip-path: inset(0);
 }
 .grip {
