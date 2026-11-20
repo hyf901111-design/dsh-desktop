@@ -130,6 +130,17 @@ export class PresentationStore {
   close() {
     this.db.close()
   }
+  remove(key: Key) {
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      for (const table of ['positions', 'recent_use', 'history', 'active', 'decks'])
+        this.db.prepare('DELETE FROM ' + table + ' WHERE owner=? AND session=?').run(key.owner, key.sessionId)
+      this.db.exec('COMMIT')
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
   recent(key: Key) {
     return this.db
       .prepare(

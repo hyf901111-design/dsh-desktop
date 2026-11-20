@@ -20,7 +20,7 @@ import {
 import { noteBlocksFromFile } from './notes/editor'
 import { openKnowledgeSession } from './knowledge/session-directory'
 import type { FileEditorMode, FileEditorSource } from '../shared/file-editor.mjs'
-import type { KnowledgeSessionCopy } from '../shared/knowledge-sessions'
+import { parsePresentationFile } from './presentation/import-file'
 import { mountNotes } from './notes/mount'
 import {createSidebarNewNoteAction} from './sidebar-new-note'
 import {createNoteHistoryLoader} from './notes/history-loader'
@@ -296,9 +296,12 @@ function initializeUi(): void {
     try {
       const locale = document.documentElement.dataset.odysseyLocale
       let result = await ipcRenderer.invoke('knowledge:request', 'open-file-in-editor', { ...source, mode, locale }) as {
-        session?: KnowledgeSessionCopy; token?: string; note?: { format: 'markdown' | 'text'; text: string }
+        session?: { id: string; mode: FileEditorMode }; token?: string; bytes?: Uint8Array; name?: string; note?: { format: 'markdown' | 'text'; text: string }
       }
-      if (result.token && result.note) {
+      if (result.token && result.bytes && result.name) {
+        const deck = await parsePresentationFile(document, result.bytes, result.name)
+        result = await ipcRenderer.invoke('knowledge:request', 'finish-presentation-file-import', { token: result.token, deck })
+      } else if (result.token && result.note) {
         const blocks = noteBlocksFromFile(result.note)
         result = await ipcRenderer.invoke('knowledge:request', 'finish-note-file-import', { token: result.token, blocks })
       }

@@ -431,7 +431,16 @@ function FilePicker({ document, bridge, referenceFile }: Omit<PanelProps, 'id'>)
         const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
         const title = session ? session.title : row.name
         const published = row.publishedSession
-        return <div className="knowledge-panel-row" key={row.id} data-knowledge-file-id={row.id}
+        return <div className="knowledge-panel-row" key={row.id} data-knowledge-file-id={row.id} data-knowledge-file-context-menu
+          onContextMenu={event => {
+            event.preventDefault()
+            event.stopPropagation()
+            const bounds = event.currentTarget.getBoundingClientRect()
+            event.currentTarget.dispatchEvent(new CustomEvent('sherlock:knowledge-panel-file-menu', {
+              bubbles: true, detail: { row, folders: snapshot.folders, shares: snapshot.sessionShares,
+                left: event.clientX || bounds.left, top: event.clientY || bounds.bottom }
+            }))
+          }}
           draggable={!session && !published} onDragStart={event => {
             if (session || published) return
             event.dataTransfer.effectAllowed = 'copy'

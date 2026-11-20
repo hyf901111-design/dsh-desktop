@@ -23,6 +23,12 @@ body[data-ds-dark-theme] .knowledge-panel {
   --knowledge-control-active: #484848;
   color-scheme: dark;
 }
+.knowledge-panel { position: relative; --knowledge-danger: #ad3838; }
+body[data-ds-dark-theme] .knowledge-panel { --knowledge-danger: #f19a91; }
+.knowledge-panel .knowledge-action-menu[popover] { inset: auto; margin: 0; color: var(--knowledge-ink); }
+.knowledge-panel .knowledge-action-menu button { text-align: start; width: 100%; }
+.knowledge-panel .knowledge-danger { color: var(--knowledge-danger); }
+.knowledge-panel .knowledge-dialog .knowledge-primary { background: var(--knowledge-ink); color: var(--knowledge-menu); }
 .knowledge-panel button, .knowledge-panel input { color: inherit; font: inherit; min-width: 0; }
 .knowledge-panel button { border: 0; border-radius: 6px; padding: 4px 9px; background: transparent; cursor: pointer; }
 .knowledge-panel button:disabled { opacity: .45; cursor: default; }
