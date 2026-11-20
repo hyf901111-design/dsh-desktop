@@ -106,10 +106,12 @@ it('keeps the translated pinned skills searchable in a narrow native popup witho
   await menu.getByRole('textbox').fill('PPT 自定义');expect(await menu.getByRole('option').count()).toBe(1);expect(await menu.locator('.odyssey-deliverable-preview').count()).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
-it.each([true,false])('routes composer file drops through the picker with dock=%s',async showDock=>{
+it.each([true,false])('routes composer file drops and pastes through the picker with dock=%s',async showDock=>{
  const files=[
   {name:'reference.png',mimeType:'image/png',buffer:Buffer.from('png')},
   {name:'report.pdf',mimeType:'application/pdf',buffer:Buffer.from('pdf')},
+  {name:'workbook.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:Buffer.from('xlsx')},
+  {name:'diagram.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')},
  ]
  async function attach(method){
   const f=await fixture(false,900,'?attachments')
@@ -119,14 +121,19 @@ it.each([true,false])('routes composer file drops through the picker with dock=%
    await input.waitFor({state:'attached'})
    if(method==='picker')await input.setInputFiles(files)
    else{
-    const transfer=await f.page.evaluateHandle(()=>{
+    const transfer=await f.page.evaluateHandle(descriptors=>{
      const data=new DataTransfer()
-     data.items.add(new File(['png'],'reference.png',{type:'image/png'}))
-     data.items.add(new File(['pdf'],'report.pdf',{type:'application/pdf'}))
+     for(const {name,mimeType} of descriptors)data.items.add(new File(['sample content'],name,{type:mimeType}))
      return data
-    })
-    await f.page.locator('textarea').dispatchEvent('dragover',{dataTransfer:transfer})
-    await f.page.locator('textarea').dispatchEvent('drop',{dataTransfer:transfer})
+    },files.map(({name,mimeType})=>({name,mimeType})))
+    if(method==='drop'){
+     await f.page.locator('textarea').dispatchEvent('dragover',{dataTransfer:transfer})
+     await f.page.locator('textarea').dispatchEvent('drop',{dataTransfer:transfer})
+    }else{
+     await f.page.locator('textarea').evaluate((input,data)=>input.dispatchEvent(
+      new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data})
+     ),transfer)
+    }
     await transfer.dispose()
    }
    const result=await f.page.evaluate(()=>({
@@ -138,8 +145,24 @@ it.each([true,false])('routes composer file drops through the picker with dock=%
   }finally{await f.close()}
  }
  const picked=await attach('picker')
- expect(picked).toEqual({images:['reference.png'],paths:['/qa/report.pdf'],imageOnlyFallback:[]})
+ expect(picked).toEqual({images:['reference.png'],paths:['/qa/report.pdf','/qa/workbook.xlsx','/qa/diagram.svg'],imageOnlyFallback:[]})
  expect(await attach('drop')).toEqual(picked)
+ expect(await attach('paste')).toEqual(picked)
+},15000)
+it('preserves ordinary text paste in the file-enabled composer',async()=>{
+ const f=await fixture(false,900,'?attachments')
+ try{
+  const input=f.page.locator('textarea')
+  await input.focus()
+  await input.evaluate(element=>{
+   const data=new DataTransfer()
+   data.setData('text/plain','粘贴普通文本')
+   element.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,cancelable:true,clipboardData:data}))
+  })
+  expect(await input.inputValue()).toBe('粘贴普通文本')
+  expect(await f.page.evaluate(()=>probe.files)).toEqual([])
+  expect(f.errors).toEqual([])
+ }finally{await f.close()}
 },15000)
 for(const dark of [false,true])it(`dims only the disabled home send arrow, leaving enabled send, stop and reading intact (dark=${dark})`,async()=>{
  const f=await fixture(dark);try{
