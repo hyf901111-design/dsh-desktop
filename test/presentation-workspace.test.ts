@@ -138,5 +138,5 @@ it('uses imported PowerPoint shape text as a slide caption', () => {
     }
   ]
   store.save(key, 0, deck, true)
-  expect(store.inspect(key).slides[0]?.title).toBe('季度经营表现')
+  expect(store.inspect(key).slides?.[0]?.title).toBe('季度经营表现')
 })
