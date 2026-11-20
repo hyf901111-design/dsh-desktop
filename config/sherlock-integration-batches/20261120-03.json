@@ -351,154 +351,25 @@
         "schemaVersion": 1,
         "featureName": "演示菜单、侧栏专注布局、知识库归档与逐页改稿",
         "branch": "codex/feat/presentation-menu-20261121",
-        "baseCommit": "574abd5988f89ffe2b98cf4f51d8c723b3d24443",
-        "tipCommit": "d9afe6e70a3c12ad4064629d93fd644ac0f0a225",
+        "baseCommit": "d9afe6e70a3c12ad4064629d93fd644ac0f0a225",
+        "tipCommit": "c8232c221f7dc3ed8b154984526985e46ccfca89",
         "commits": [
           {
-            "commit": "737f32f2d2fe8d9bf6c39c82eed48eefa6278a5f",
+            "commit": "c8232c221f7dc3ed8b154984526985e46ccfca89",
             "parents": [
-              "574abd5988f89ffe2b98cf4f51d8c723b3d24443"
+              "d9afe6e70a3c12ad4064629d93fd644ac0f0a225"
             ],
-            "subject": "修复演示插入菜单的图标尺寸、对齐和主题对比度"
-          },
-          {
-            "commit": "8762c816f47fab9b3833685c3bb029772281d7d3",
-            "parents": [
-              "737f32f2d2fe8d9bf6c39c82eed48eefa6278a5f"
-            ],
-            "subject": "让演示全屏沿用表格的侧栏收起与恢复逻辑"
-          },
-          {
-            "commit": "b5fc2b27c2269a1d169c9595762a802bf2917215",
-            "parents": [
-              "8762c816f47fab9b3833685c3bb029772281d7d3"
-            ],
-            "subject": "支持按会话名称将演示归档为知识库 PowerPoint 或 PDF"
-          },
-          {
-            "commit": "d9afe6e70a3c12ad4064629d93fd644ac0f0a225",
-            "parents": [
-              "b5fc2b27c2269a1d169c9595762a802bf2917215"
-            ],
-            "subject": "补全常规演示对话的逐页内容读取和图表类型编辑"
+            "subject": "按编辑器真实方向区分横向条形图和纵向柱形图"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/client-capabilities.js"
           },
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/build.mjs"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/icons/arrow.svg"
-          },
-          {
-            "status": "A",
-            "path": "packages/presentation-editor/icons/chart.svg"
-          },
-          {
-            "status": "A",
-            "path": "packages/presentation-editor/icons/exit-focus.svg"
-          },
-          {
-            "status": "A",
-            "path": "packages/presentation-editor/icons/library.svg"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/icons/line.svg"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/App.vue"
-          },
-          {
-            "status": "A",
-            "path": "packages/presentation-editor/overlay/ArchiveSurface.vue"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/CommandMenu.vue"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/OfficeChart.vue"
-          },
-          {
-            "status": "A",
-            "path": "packages/presentation-editor/overlay/finalize-pptx.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/odyssey.css"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/knowledge/store.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/presentation/archive-renderer.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/presentation/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/presentation/store.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/presentation/archive-dialog.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/header.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/view.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/workspace-sidebars.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-library.test.ts"
-          },
-          {
-            "status": "M",
             "path": "test/presentation-workspace.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/workspace-sidebars.test.ts"
           }
         ],
         "checks": [
@@ -510,8 +381,8 @@
             ],
             "outcome": "passed",
             "summary": "编译演示编辑器",
-            "verifiedCommit": "d9afe6e70a3c12ad4064629d93fd644ac0f0a225",
-            "completedAt": "2026-11-20T23:40:46.212784Z",
+            "verifiedCommit": "c8232c221f7dc3ed8b154984526985e46ccfca89",
+            "completedAt": "2026-11-20T23:45:12.260493Z",
             "timeoutMs": 180000
           },
           {
@@ -522,8 +393,8 @@
             ],
             "outcome": "passed",
             "summary": "客户端类型检查",
-            "verifiedCommit": "d9afe6e70a3c12ad4064629d93fd644ac0f0a225",
-            "completedAt": "2026-11-20T23:40:57.845091Z",
+            "verifiedCommit": "c8232c221f7dc3ed8b154984526985e46ccfca89",
+            "completedAt": "2026-11-20T23:45:23.650945Z",
             "timeoutMs": 180000
           },
           {
@@ -540,8 +411,8 @@
             ],
             "outcome": "passed",
             "summary": "演示归档、会话工具调用和四种侧栏布局",
-            "verifiedCommit": "d9afe6e70a3c12ad4064629d93fd644ac0f0a225",
-            "completedAt": "2026-11-20T23:41:00.494806Z",
+            "verifiedCommit": "c8232c221f7dc3ed8b154984526985e46ccfca89",
+            "completedAt": "2026-11-20T23:45:26.236160Z",
             "timeoutMs": 180000
           }
         ],
@@ -554,7 +425,7 @@
           "演示全屏收起并恢复侧栏；将可编辑 PPTX 与分页 PDF 按会话归档，用户可通过原生对话读取、修改文稿。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T23:41:02.846482Z"
+        "generatedAt": "2026-11-20T23:45:28.553886Z"
       }
     }
   ],
