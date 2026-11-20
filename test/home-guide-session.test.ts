@@ -46,22 +46,27 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
 }
 it('opens a personal board after the startup catalog arrives and respects intervening navigation', async () => {
   const f = await fixture()
-  const list = f.sessions.list as ReturnType<typeof store<{current: string; byId: Record<string, any>; phase?: string}>>
-  const initial = {...list.getSnapshot(), phase: 'pending'}
+  const list = f.sessions.list as ReturnType<typeof store<{current?: string; byId: Record<string, any>; phase?: string}>>
+  const initial = {...list.getSnapshot(), current: undefined, phase: 'pending'}
   list.set(initial)
   let finish!: () => void
-  Object.assign(f.sessions, {refresh: vi.fn(() => new Promise<void>(resolve => { finish = resolve }))})
+  let requested = 'original'
+  Object.assign(f.sessions, {
+    refresh: vi.fn(() => new Promise<void>(resolve => { finish = resolve })),
+    selectionIntent: () => requested
+  })
   const board = {id: 'board-during-startup', cwd: '/board'}
   const opening = f.page.openPersonal(board.id)
   expect(f.opened).toEqual([])
-  list.set({...initial, phase: 'ready', byId: {...initial.byId, [board.id]: board}})
+  list.set({...initial, current: requested, phase: 'ready', byId: {...initial.byId, [board.id]: board}})
   finish()
   await opening
   expect(f.opened).toEqual([board.id])
 
   list.set(initial)
   const interrupted = f.page.openPersonal(board.id)
-  list.set({...initial, current: 'different', phase: 'ready', byId: {...initial.byId, [board.id]: board}})
+  requested = 'different'
+  list.set({...initial, current: requested, phase: 'ready', byId: {...initial.byId, [board.id]: board}})
   finish()
   await interrupted
   expect(f.opened).toEqual([board.id])

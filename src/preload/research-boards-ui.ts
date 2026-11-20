@@ -1269,9 +1269,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     return list.phase === 'ready' && (!list.byId[id] || !!list.byId[id].removed)
   }
 
+  const selectionIntent = () => typeof deps.sessions.selectionIntent === 'function' ? deps.sessions.selectionIntent() : current()
   async function openBoard(boardId: string) {
-    const turn = ++navigation, generation = state.account.generation, selected = current()
-    const stillOpening = () => !disposed && turn === navigation && generation === state.account.generation && selected === current()
+    const turn = ++navigation, generation = state.account.generation, selected = selectionIntent()
+    const stillOpening = () => !disposed && turn === navigation && generation === state.account.generation && selected === selectionIntent()
     // The account-scoped directory already identifies pinned local sessions.
     // Wait for the native catalog before opening a cached local session.
     const known = state.account.status === 'ready' && state.account.user &&
@@ -1320,7 +1321,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
     try {
       const id = await pending
-      if (disposed || turn !== navigation || generation !== state.account.generation || ![selected, id].includes(current())) return id
+      if (disposed || turn !== navigation || generation !== state.account.generation || ![selected, id].includes(selectionIntent())) return id
       prime(id)
       deps.sessions.open(id)
       selectBoardSession(id)
@@ -1878,11 +1879,11 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     showError,
     isResearch: (id: string) => activeResearch.has(id),
     async openPersonal(id: string) {
-      const turn = ++navigation, generation = state.account.generation, selected = current()
+      const turn = ++navigation, generation = state.account.generation, selected = selectionIntent()
       const loading = waitForBoardSession(id)
       if (loading) {
         await loading
-        if (disposed || turn !== navigation || generation !== state.account.generation || selected !== current()) return
+        if (disposed || turn !== navigation || generation !== state.account.generation || selected !== selectionIntent()) return
       }
       if (missingSession(id)) throw Error('该看板的会话已不可用。')
       prime(id)
@@ -2570,9 +2571,9 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
     onContextMenu: (event: React.MouseEvent) => { event.preventDefault(); setOpen(true) } },
     (nested || running) && h('span', { className: R.slot, 'aria-label': running ? '任务运行中' : undefined }, running && h(StateDot, { state: 'ongoing' })),
     h('button', { className: R.title + ' srb-board-title', title: entry.title, onClick: safely(page, async () => {
-      if (shared) await page.openBoard(entry.boardId)
-      else await page.openPersonal(entry.sessionId)
-      selectBoardSession(page.current() ?? '')
+      const id = shared ? await page.openBoard(entry.boardId) : entry.sessionId
+      if (!shared) await page.openPersonal(id)
+      if (page.current() === id) selectBoardSession(id)
     }) },
       collaboration && (entry.memberCount ?? page.getView(sessionId)?.members.length ?? 1) <= 1 &&
         h('span', { className: 'srb-pending-ring', title: '等待成员接受邀请', 'aria-label': '等待接受邀请' }),
