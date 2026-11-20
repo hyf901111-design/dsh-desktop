@@ -1,6 +1,30 @@
 import { afterEach, expect, test, vi } from 'vitest'
 import { createHomeGuideTimeline } from '../src/preload/home-guide-timeline'
 
+test('retries the failed scene without repeating a completed scene', async () => {
+  vi.useFakeTimers()
+  const played: string[] = []
+  let failed = false
+  const timeline = createHomeGuideTimeline({
+    steps: [{ id: 'first', hold: 0 }, { id: 'second', hold: 0 }],
+    async run(step) {
+      played.push(step)
+      if (step === 'second' && !failed) {
+        failed = true
+        throw Error('control not ready')
+      }
+    }
+  })
+  timeline.play()
+  await vi.runAllTimersAsync()
+  expect(timeline.snapshot()).toMatchObject({ phase: 'error', index: 1 })
+  timeline.retry()
+  await vi.runAllTimersAsync()
+  expect(played).toEqual(['first', 'second', 'second'])
+  expect(timeline.snapshot().phase).toBe('completed')
+  timeline.dispose()
+})
+
 afterEach(() => vi.useRealTimers())
 
 test('keeps atomic steps ordered and provides readable holds', async () => {

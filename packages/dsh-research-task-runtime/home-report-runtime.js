@@ -1,3 +1,4 @@
+import { notifyModelDirectory, presentHomeGuideReplayRoute } from './home-guide-replay-route.js'
 import {LlmAdapter} from '@deepseek-ai/dsh-llm'
 import {parse as parseHtml} from 'parse5'
 import {defineTool} from '@deepseek-ai/dsh-tools'
@@ -117,7 +118,7 @@ export function createHomeReportRuntime(ctx,{env=process.env,assetsDirectory}={}
   }
  }
  const offAdapter=ctx.llm.registerAdapter([PROVIDER],new ReportPresetAdapter())
- const releaseRoute=async run=>{for(const off of run.off.splice(0))off();await Promise.resolve();const header=run.agent.session.requestHeader();if(ctx.agents.get(run.agent.id)===run.agent&&header?.config.provider===PROVIDER&&run.originalConfig.provider&&run.originalConfig.model)run.agent.session.append('request/header',{header:{...header,config:run.originalConfig},reason:'change'})}
+ const releaseRoute=async run=>{for(const off of run.off.splice(0))off();await Promise.resolve();const header=run.agent.session.requestHeader();if(ctx.agents.get(run.agent.id)===run.agent&&header?.config.provider===PROVIDER&&run.originalConfig.provider&&run.originalConfig.model)run.agent.session.append('request/header',{header:{...header,config:run.originalConfig},reason:'change'});notifyModelDirectory(ctx)}
  const cancel=async run=>{if(run.cancelled)return;run.cancelled=true;const release=releaseRoute(run);notify(run);for(const gate of run.milestones.values())gate.reject(aborted());if(!run.complete){await run.agent.cancel({kind:'user'});await run.agent.whenIdle()}await release}
  const publish=async(run,signal)=>{
   current(run);signal?.throwIfAborted()
@@ -172,6 +173,7 @@ export function createHomeReportRuntime(ctx,{env=process.env,assetsDirectory}={}
      current(run);exec.signal?.throwIfAborted();if(exec.agent!==agent||Object.keys(args).length)throw Error('报告示例交付上下文无效。')
      await publish(run,exec.signal);return'已保存 '+deliveryNames.html+' 和 '+deliveryNames.pdf+'；研究时点 '+metadata.researchAsOf+'。'
     }})))
+    presentHomeGuideReplayRoute(ctx, run, PROVIDER, 1024)
     return structuredClone(prepared)
    }finally{if(preparing.get(input.sessionId)===ticket)preparing.delete(input.sessionId)}
   },

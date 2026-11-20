@@ -1,3 +1,4 @@
+import { notifyModelDirectory, presentHomeGuideReplayRoute } from './home-guide-replay-route.js'
 import {LlmAdapter} from '@deepseek-ai/dsh-llm'
 import {lstat,readFile,realpath} from 'node:fs/promises'
 import {isAbsolute,join} from 'node:path'
@@ -22,7 +23,7 @@ export function createHomeWorkbenchRuntime(ctx,tasks,{env=process.env}={}){
  const current=input=>{const run=runs.get(input?.sessionId);if(stopped||!run||run.runId!==input.runId||run.cancelled||run.interrupted||ctx.agents.get(run.sessionId)!==run.agent||run.agent.session.header.cwd!==run.cwd)throw abort();return run}
  const notify=run=>{for(const wake of run.waiters)wake();run.waiters.clear()}
  const wait=async(run,predicate,signal)=>{for(;;){signal?.throwIfAborted();current(run);if(predicate())return;await new Promise((resolve,reject)=>{const clean=()=>{run.waiters.delete(wake);signal?.removeEventListener('abort',stop)},wake=()=>{clean();resolve()},stop=()=>{clean();reject(abort())};run.waiters.add(wake);signal?.addEventListener('abort',stop,{once:true})})}}
- const releaseRoute=async run=>{for(const off of run.off.splice(0))off();await Promise.resolve();const header=run.agent.session.requestHeader();if(ctx.agents.get(run.sessionId)===run.agent&&header?.config.provider===PROVIDER&&run.originalConfig.provider&&run.originalConfig.model)run.agent.session.append('request/header',{header:{...header,config:run.originalConfig},reason:'change'})}
+ const releaseRoute=async run=>{for(const off of run.off.splice(0))off();await Promise.resolve();const header=run.agent.session.requestHeader();if(ctx.agents.get(run.sessionId)===run.agent&&header?.config.provider===PROVIDER&&run.originalConfig.provider&&run.originalConfig.model)run.agent.session.append('request/header',{header:{...header,config:run.originalConfig},reason:'change'});notifyModelDirectory(ctx)}
  const progress=(run,kind,extra={})=>{if(run.receipt)run.agent.session.append(HOME_WORKBENCH_EVENT,{version:1,purpose:HOME_WORKBENCH_PURPOSE,runId:run.runId,turn:run.receipt.turn,kind,...extra})}
  const stopProgress=run=>{if(run.receipt&&!run.complete&&!run.progressStopped){progress(run,'stopped');run.progressStopped=true}}
  const stopRun=async run=>{if(run.cancelled)return;run.cancelled=true;stopProgress(run);notify(run);for(const gate of run.milestones.values())gate.reject(abort());const release=releaseRoute(run);if(!run.complete){await run.agent.cancel({kind:'user'});await run.agent.whenIdle()}await release}
@@ -83,6 +84,7 @@ export function createHomeWorkbenchRuntime(ctx,tasks,{env=process.env}={}){
     runs.set(input.sessionId,run)
     run.off.push(agent.ctx.on('agent/request',()=>{current(run);return{provider:PROVIDER,model:'v1',maxTokens:2048}},{prepend:true}))
     run.off.push(ctx.on('session/event',async(owner,event)=>{if(owner!==session||event.type!=='turn/end')return;if(run.complete)return releaseRoute(run);if(event.data.reason?.kind!=='completed'){run.interrupted=true;notify(run);const error=Error(event.data.reason?.error?.message||'示例执行已停止。');run.accepted.reject(error);for(const gate of run.milestones.values())gate.reject(error);await Promise.resolve();stopProgress(run)}}))
+    presentHomeGuideReplayRoute(ctx, run, PROVIDER, 2048)
     return prepared
    }finally{if(preparing.get(input.sessionId)===ticket)preparing.delete(input.sessionId)}
   },

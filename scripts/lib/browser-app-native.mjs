@@ -38,7 +38,7 @@ export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSessi
    }
    doc.body.dataset.boardWorkspacePending='true'
    void workspaceSession(selected).then(id=>{
-    if(turn!==revision || current()!==selected)return
+    if(turn!==revision || current()!==selected || doc.body.dataset.homeGuideEntryRun)return
     sessions.open(id)
     delete doc.body.dataset.boardWorkspacePending
    }).catch(error=>{

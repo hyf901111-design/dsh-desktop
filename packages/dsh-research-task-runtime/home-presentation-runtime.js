@@ -1,3 +1,4 @@
+import { notifyModelDirectory, presentHomeGuideReplayRoute } from './home-guide-replay-route.js'
 import {LlmAdapter} from '@deepseek-ai/dsh-llm'
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {createHash} from 'node:crypto'
@@ -114,7 +115,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
   }
  }
  const offAdapter=ctx.llm.registerAdapter([PROVIDER],new PresetAdapter())
- const releaseRoute=async run=>{for(const off of run.off.splice(0))off();await Promise.resolve();const header=run.agent.session.requestHeader();if(ctx.agents.get(run.agent.id)===run.agent&&header?.config.provider===PROVIDER&&run.originalConfig.provider&&run.originalConfig.model)run.agent.session.append('request/header',{header:{...header,config:run.originalConfig},reason:'change'})}
+ const releaseRoute=async run=>{for(const off of run.off.splice(0))off();await Promise.resolve();const header=run.agent.session.requestHeader();if(ctx.agents.get(run.agent.id)===run.agent&&header?.config.provider===PROVIDER&&run.originalConfig.provider&&run.originalConfig.model)run.agent.session.append('request/header',{header:{...header,config:run.originalConfig},reason:'change'});notifyModelDirectory(ctx)}
  const cancel=async run=>{if(run.cancelled)return;run.cancelled=true;const released=releaseRoute(run);notify(run);for(const gate of run.milestones.values())gate.reject(aborted());if(!run.complete){await run.agent.cancel({kind:'user'});await run.agent.whenIdle()}await released}
  return{
   async prepare(input){
@@ -158,6 +159,7 @@ export function createHomePresentationRuntime(ctx,{env=process.env}={}){
      await writeFile(join(run.cwd,HOME_PRESENTATION_FILE),run.bytes,{flag:'wx',mode:0o600})
      run.published=true;return'已保存 '+HOME_PRESENTATION_FILE+'（'+run.metadata.presentationSlides+'页、可编辑PPTX）；原始附件 '+HOME_PRESENTATION_SOURCE_FILE+' 已保留。'
     }})))
+    presentHomeGuideReplayRoute(ctx, run, PROVIDER, 1024)
     return prepared
    }finally{if(preparing.get(input.sessionId)===ticket)preparing.delete(input.sessionId)}
   },

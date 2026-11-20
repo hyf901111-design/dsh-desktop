@@ -55,8 +55,9 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
  const cache=new Map<string,{at:number;value:Row}>(),pending=new Map<string,Promise<Row>>()
  const fetcher=options.fetch??((url,init)=>networkFetch(url,init,{allowedOrigins:origins},{timeoutMs:12000}))
  async function query(raw:unknown):Promise<any>{
-  const account=options.identity();if(!account)throw Error('请先登录 EWork')
   validQuery(raw);const q=raw as Row
+  const account=options.identity()
+  if(!account&&['tushare','datapro','doubao'].includes(q.source))throw Error('请先登录 EWork')
   if(owner!==account){owner=account;cache.clear();pending.clear()}
   const check=()=>{if(options.identity()!==account)throw Error('账户已变化，取消旧行情请求')}
   const {refresh,...request}=q,key=JSON.stringify(request),previous=cache.get(key)

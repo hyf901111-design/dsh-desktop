@@ -70,7 +70,7 @@ import {NOTES_GUIDE_DIAGNOSTIC_PREFIX} from '../shared/notes-guide-diagnostics'
 import {createHomeGuideEntryDiagnosticLog,recordHomeGuideEntryConsoleMessage} from './state/home-guide-entry-diagnostics'
 import {HOME_GUIDE_ENTRY_DIAGNOSTIC_PREFIX} from '../shared/home-guide-entry-diagnostics'
 import { copyResearchFile } from './state/research-owned-files'
-import {randomUUID} from 'node:crypto'
+import {createHash, randomUUID} from 'node:crypto'
 import { ResearchBoardIntegration } from './research-board-integration'
 import { finishQuitCleanup } from './quit-cleanup'
 import { AccountService } from './account-service'
@@ -89,7 +89,7 @@ import { localAcceptanceOrigin } from './local-acceptance-services'
 import { dirname, isAbsolute, join, normalize, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { appendFileSync, existsSync, readFileSync } from 'node:fs'
-import { mkdir, mkdtemp, rm, stat } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat } from 'node:fs/promises'
 import { parse } from 'yaml'
 import {
   app,
@@ -1385,6 +1385,17 @@ async function bootstrap(): Promise<void> {
       historyScanChangeTimer = undefined
       sendKnowledgeChange()
     }, 150)
+  })
+  registerTrustedMainWindowHandler(ipcMain, 'knowledge:presentation-guide-source', () => mainWindow, async () => {
+    const directory = join(app.getAppPath(), 'node_modules/dsh-research-task-runtime/assets/home-presentation')
+    const [manifest, source] = await Promise.all([
+      readFile(join(directory, 'source-metadata.json'), 'utf8'),
+      readFile(join(directory, 'source-report.pdf'))
+    ])
+    if (source.subarray(0, 5).toString() !== '%PDF-' ||
+        createHash('sha256').update(source).digest('hex') !== JSON.parse(manifest).sourceSha256)
+      throw Error('演示参考 PDF 校验失败。')
+    return knowledge.ensurePresentationGuideSource('Vanguard-2026经济与市场展望.pdf', '演示用例参考资料', source)
   })
   const factoryCanvases = new ImageFactoryCanvases(join(app.getPath('userData'), 'image-factory-canvases'), () => {
     const owner = integrationOwner()

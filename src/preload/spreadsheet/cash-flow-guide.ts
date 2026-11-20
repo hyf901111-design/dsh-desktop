@@ -197,16 +197,17 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
   }
   const sendPrompt = async (input: HTMLTextAreaElement, expected: string, prefix: DraftPrefix = plainDraft) => {
     if (composer() !== input || !matchesDraft(input, expected, prefix)) throw abort()
-    if (!preparing) {
-      preparing = true
-      await rpc('prepare')
-    }
     await options.waitUntilPlaying()
     await rpc('arm')
     await clickControl(() => composer()?.closest('.uV2eYG_root')?.querySelector<HTMLButtonElement>('button.uV2eYG_primary') ?? undefined, '表格对话发送按钮尚未就绪。', () => {
       if (composer() !== input || !matchesDraft(input, expected, prefix)) throw abort()
     })
     await rpc('accepted')
+  }
+  const prepareReplay = async () => {
+    if (preparing) return
+    await rpc('prepare')
+    preparing = true
   }
   const takeOver = (event: Event) => {
     const target = event.target
@@ -247,6 +248,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         return
       }
       if (step === 'ask') {
+        await prepareReplay()
         const input = await waitFor(composer, '右侧表格对话尚未就绪。')
         const prompt = HOME_SPREADSHEET_GUIDE_PROMPTS[locale]
         await write(input, prompt)
@@ -259,6 +261,7 @@ export function mountCashFlowGuide(document: Document, options: HomeGuideMountOp
         return
       }
       if (step === 'ask-trend') {
+        await prepareReplay()
         const input = await waitFor(composer, '右侧表格对话尚未就绪。')
         const prompt = HOME_SPREADSHEET_GUIDE_TREND_PROMPTS[locale]
         await write(input, prompt, true)

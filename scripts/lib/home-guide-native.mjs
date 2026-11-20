@@ -795,7 +795,8 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
         for (const symbol of provider.symbols.slice(3)) {
           const hasStock = () => workspace.getSnapshot().artifacts.find(node => node.id === watchlist)?.containerSpec.symbols.some(item => item.market === symbol.market && item.code === symbol.code)
           if (hasStock()) continue
-          await click(ticket, card()?.querySelector('[aria-label="添加自选股"]'), '添加关注标的 ' + symbol.code)
+          if (!card()?.querySelector('input[role="combobox"]'))
+            await click(ticket, card()?.querySelector('[aria-label="添加自选股"]'), '添加关注标的 ' + symbol.code)
           await settle(ticket, () => !!card()?.querySelector('input[role="combobox"]'))
           const input = card().querySelector('input[role="combobox"]')
           await click(ticket, input, '搜索 ' + symbol.name + ' ' + symbol.code)

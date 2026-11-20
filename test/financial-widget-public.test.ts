@@ -146,9 +146,14 @@ it('业务失败、非法参数和旧账户响应不能显示成成功或空行�
  await expect(f.service.query({action:'news'})).rejects.toThrow('暂不可用')
  await expect(f.service.query({action:'quotes',symbols:[{...stock,code:'../private'}]})).rejects.toThrow('参数')
  expect(f.fetch).toHaveBeenCalledTimes(1)
- f.setOwner(null);await expect(f.service.query({action:'news'})).rejects.toThrow('登录')
+ f.setOwner(null);await expect(f.service.query({action:'news',source:'doubao'})).rejects.toThrow('登录')
  f.setOwner('one');let release!:(r:Response)=>void;f.fetch.mockImplementation(()=>new Promise(resolve=>release=resolve))
  const old=f.service.query({action:'news',refresh:true});await vi.waitFor(()=>expect(release).toBeTypeOf('function'));f.setOwner('two');release(Response.json({result:{status:{code:0},data:[]}}));await expect(old).rejects.toThrow('账户')
+})
+it('allows guests to query Tencent search and Sina news without an account source',async()=>{
+ const f=fixture();f.setOwner(null)
+ await expect(f.service.query({action:'search',query:'600519'})).resolves.toMatchObject({source:'腾讯财经',symbols:expect.any(Array)})
+ await expect(f.service.query({action:'news',source:'sina'})).resolves.toMatchObject({source:'新浪财经',news:expect.any(Array)})
 })
 it('分时使用实际分钟价格与增量成交量，不拿日线替代',async()=>{
  const f=fixture();f.fetch.mockResolvedValue(Response.json({code:0,data:{sh600519:{data:{date:'20261009',data:['0930 1255.42 195 24480690','0931 1263.91 1595 201154584']}}}}))

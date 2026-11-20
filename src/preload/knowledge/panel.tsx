@@ -378,7 +378,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
           <button key={id} type="button" aria-current={category === id && !folder ? 'page' : undefined}
             onClick={() => pick(id as KnowledgeCategory)}><KnowledgeIcon name={categoryIcons[id as KnowledgeCategory]} />{label}</button>)}
         {snapshot.folders.length > 0 && <span>文件夹</span>}
-        {snapshot.folders.map(folder => <button key={folder.id} type="button" onClick={() => pick('all', folder.id)}>
+        {snapshot.folders.map(folder => <button key={folder.id} type="button" data-knowledge-folder-id={folder.id} onClick={() => pick('all', folder.id)}>
           <KnowledgeIcon name="folder" /> {folder.name}
         </button>)}
       </div>}
@@ -409,7 +409,12 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
         const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
         const title = session ? session.title : row.name
         const published = row.publishedSession
-        return <div className="knowledge-panel-row" key={row.id}>
+        return <div className="knowledge-panel-row" key={row.id} data-knowledge-file-id={row.id}
+          draggable={!session && !published} onDragStart={event => {
+            if (session || published) return
+            event.dataTransfer.effectAllowed = 'copy'
+            event.dataTransfer.setData('application/x-ework-knowledge-file', JSON.stringify({ id: row.id, label: row.name }))
+          }}>
           <KnowledgeItemIcon format={published?.mode ?? (session ? session.mode : knowledgeFormat(row.name))} tile />
           <button type="button" className="knowledge-panel-name" onClick={() => {
             if (published) {

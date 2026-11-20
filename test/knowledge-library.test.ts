@@ -37,6 +37,21 @@ async function withoutSourceVersion(root: string) {
   await writeFile(path, JSON.stringify(state))
 }
 
+it('seeds one checked presentation reference per library and preserves the PDF bytes', async () => {
+  const { open, switchAccount } = await fixture()
+  const store = open(), pdf = Buffer.from('%PDF-1.4\nfixed presentation reference')
+  const seed = () => store.ensurePresentationGuideSource('参考.pdf', '演示用例参考资料', pdf)
+  const [first, repeated] = await Promise.all([seed(), seed()])
+  expect(repeated).toEqual(first)
+  expect(await store.snapshot()).toMatchObject({
+    folders: [{ id: first.folderId, name: '演示用例参考资料' }],
+    documents: [{ id: first.fileId, folderId: first.folderId, name: '参考.pdf' }]
+  })
+  expect(await readFile((await store.file(first.fileId)).path)).toEqual(pdf)
+  switchAccount()
+  expect((await seed()).fileId).not.toBe(first.fileId)
+})
+
 it('keeps uploaded bytes and document organization through reopen and account switches', async () => {
   const { file, open, switchAccount } = await fixture()
   const store = open()

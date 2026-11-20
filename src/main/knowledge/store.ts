@@ -295,6 +295,36 @@ export class KnowledgeStore {
     return document
   }
 
+  ensurePresentationGuideSource(name: string, folderName: string, bytes: Buffer) {
+    return this.run(async (state, directory, current) => {
+      const origin = digest('bundled-presentation-guide:' + hashBytes(bytes))
+      const folder = state.folders.find(item => item.name === folderName) ?? { id: randomUUID(), name: folderName }
+      for (const row of state.documents) {
+        if (row.origin !== origin || row.folderId !== folder.id || row.name !== name) continue
+        const path = join(directory, 'files', row.id, row.storageName)
+        if (await hashFile(path).catch(() => '') === hashBytes(bytes)) return { folderId: folder.id, fileId: row.id }
+      }
+      const id = randomUUID(), target = join(directory, 'files', id)
+      const row: StoredDocument = {
+        id, name, storageName: name, origin, folderId: folder.id, source: 'upload',
+        saved: false, starred: false, size: bytes.length, updatedAt: Date.now()
+      }
+      current()
+      await mkdir(target, { recursive: true })
+      try {
+        await atomicWrite(join(target, name), bytes)
+        await this.persist(state, {
+          ...state, documents: [...state.documents, row],
+          folders: state.folders.includes(folder) ? state.folders : [...state.folders, folder]
+        }, directory, current)
+      } catch (error) {
+        await rm(target, { recursive: true, force: true })
+        throw error
+      }
+      return { folderId: folder.id, fileId: id }
+    })
+  }
+
   historicalScanRevisions() {
     return this.run(async state => ({ ...state.historicalScanRevisions }))
   }

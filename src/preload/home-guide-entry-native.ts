@@ -163,7 +163,7 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
   if(!run||run.target!==target||run.token!==marker.token||!id(marker.requestId))return
   try{
    consume(run,marker.requestId)
-   if(run.action==='new-note'||run.action==='new-spreadsheet'){
+   if(run.action==='new-note'){
     // Let the actual More menu close via its own handler; its native prepare
     // request below is the only normal callback replaced by this lease.
     activeSidebarDocument=run
@@ -187,7 +187,7 @@ export function installHomeGuideEntryNative(deps:NativeDependencies){
   if(!preparing&&!id(d.token))return
   const run=preparing?activeSidebarDocument:[...runs.values()].find(value=>value.sidebarToken===d.token)
   if(!preparing&&!run&&closedSidebarTokens.has(d.token)){event.stopImmediatePropagation();win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,ok:false,cancelled:true}}));return}
-  if(!run||(run.action==='new-spreadsheet')!==(d.kind==='spreadsheet'))return
+  if(!run||d.kind==='spreadsheet')return
   if(d.phase==='prepare'&&(!run.target?.hasAttribute(CLICK)||run.phase!=='committing'))return
   event.stopImmediatePropagation()
   const nativeReply=(value:Record<string,unknown>)=>win.dispatchEvent(new win.CustomEvent('sherlock:sidebar-new-note-reply',{detail:{requestId:d.requestId,...value}}))
