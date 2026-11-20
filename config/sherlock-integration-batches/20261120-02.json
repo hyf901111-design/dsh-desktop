@@ -9,27 +9,74 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "将新建看板会话置于所属工作区首位",
+        "featureName": "图像页签独立切换工作区与隐藏看板标题切换按钮",
         "branch": "codex/feat/board-session-titles-20261120",
-        "baseCommit": "9911e81b5f78c2adad8cf0ab73b42dea2a6568f0",
-        "tipCommit": "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c",
+        "baseCommit": "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c",
+        "tipCommit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
         "commits": [
           {
-            "commit": "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c",
+            "commit": "19a5d9075ae9fb67567329ac766d5f4b4df48909",
             "parents": [
-              "9911e81b5f78c2adad8cf0ab73b42dea2a6568f0"
+              "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c"
             ],
-            "subject": "将新建看板会话置于所属工作区首位"
+            "subject": "移除看板会话标题旁的视图切换按钮"
+          },
+          {
+            "commit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
+            "parents": [
+              "19a5d9075ae9fb67567329ac766d5f4b4df48909"
+            ],
+            "subject": "保留图像页签并独立切换工作区"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/session-view-preferences.mjs"
+            "path": "scripts/lib/browser-app-native.mjs"
           },
           {
             "status": "M",
-            "path": "test/sidebar-session-recency.test.ts"
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/canvas-workspace.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/task-tabs.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/pending-conversation-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-canvas-workspace.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
           }
         ],
         "checks": [
@@ -39,9 +86,9 @@
               "scripts/patch-web-frontend-loading.mjs"
             ],
             "outcome": "passed",
-            "summary": "更新客户端实际加载的入口补丁",
-            "verifiedCommit": "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c",
-            "completedAt": "2026-11-20T09:13:39.861Z",
+            "summary": "应用客户端入口补丁",
+            "verifiedCommit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
+            "completedAt": "2026-11-20T09:44:55.930Z",
             "timeoutMs": 120000
           },
           {
@@ -52,8 +99,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c",
-            "completedAt": "2026-11-20T09:13:39.861Z",
+            "verifiedCommit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
+            "completedAt": "2026-11-20T09:44:55.930Z",
             "timeoutMs": 120000
           },
           {
@@ -61,13 +108,14 @@
               "npm",
               "test",
               "--",
-              "test/sidebar-session-recency.test.ts",
-              "test/sidebar-session-search.test.ts"
+              "test/image-factory-native.test.js",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-canvas-workspace.test.ts"
             ],
             "outcome": "passed",
-            "summary": "验证复用空白看板时置顶，普通打开保留顺序",
-            "verifiedCommit": "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c",
-            "completedAt": "2026-11-20T09:13:39.861Z",
+            "summary": "验证图像任务页签保留、项目切换、画布和草稿迁移",
+            "verifiedCommit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
+            "completedAt": "2026-11-20T09:44:55.930Z",
             "timeoutMs": 120000
           },
           {
@@ -75,131 +123,63 @@
               "npm",
               "test",
               "--",
-              "test/session-view-preferences.test.js",
+              "test/pending-conversation-rendered.test.js",
               "-t",
-              "installs one lifecycle-owned Chat intent|filters only explicit New Chat reuse"
+              "matching workspace when selecting each image tab|keeps the active .image-factory. page|retains the session project for top-bar mode changes"
             ],
             "outcome": "passed",
-            "summary": "验证原生新建入口补丁的调用及幂等性",
-            "verifiedCommit": "3f7e58ab090e8b940c1d6fb9b62b2cf45bdcaf5c",
-            "completedAt": "2026-11-20T09:13:39.861Z",
+            "summary": "在 Chromium 中切换图像应用右侧工作区及页签",
+            "verifiedCommit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
+            "completedAt": "2026-11-20T09:44:55.930Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "npm",
+              "test",
+              "--",
+              "test/browser-app-rendered.test.js",
+              "-t",
+              "hides the session switcher|keeps the shared switcher expanded"
+            ],
+            "outcome": "passed",
+            "summary": "在 Chromium 中验证看板标题栏和普通会话视图切换",
+            "verifiedCommit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
+            "completedAt": "2026-11-20T09:44:55.930Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/browser-app-native.test.js",
+              "test/pending-conversation.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "验证原生入口和普通右侧项目选项",
+            "verifiedCommit": "07ee51f2037dd78e04b2b9a39a6f698576baf91a",
+            "completedAt": "2026-11-20T09:44:55.930Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "在本次源码回归中执行客户端的实际会话排序函数，桌面端验收使用后续构建。"
+          "outcome": "passed",
+          "summary": "Chromium 驱动真实渲染器和工作区菜单。桌面客户端的会话验收仍使用后续构建。"
         },
         "acceptanceCriteria": [
-          "在工作区明确创建新看板时，工作区下该会话排第一，即使复用已有空白会话。",
-          "正常打开已有看板时保留其排序。"
+          "选择或清空图像页签右侧的工作区时保留当前页签、画布和草稿。",
+          "显式新建图像页签后可分别选择工作区，往返切换仍恢复各自项目。空白页签保留至显式关闭。",
+          "个人和协作看板会话标题旁不显示视图切换按钮，画布页签和子代理入口可用。"
         ],
         "risks": [
-          "新增排序回归通过自动化测试。当前打开的桌面测试客户端是此前构建。"
+          "当前打开的桌面客户端来自此前构建。",
+          "扩展检查中旧图层拖拽测试的断言在改动前后均失败，原因是存储返回已有的 editedInSession 字段。"
         ],
-        "generatedAt": "2026-11-20T09:13:39.861Z"
-      },
-      "merged": {
-        "mergeCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-        "verificationCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "scripts/patch-web-frontend-loading.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
-            "verifiedCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-            "completedAt": "2026-11-20T09:14:02.436Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-            "completedAt": "2026-11-20T09:14:02.436Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-session.test.js",
-              "test/pending-conversation.test.js",
-              "test/session-title-subject.test.js",
-              "test/research-session-title.test.ts",
-              "test/image-factory-native.test.js",
-              "test/research-board-page-context.test.ts",
-              "test/shared-main-agent.test.js",
-              "test/component-agent-scope.test.js",
-              "test/browser-app-native.test.js",
-              "test/research-board-runtime.test.js",
-              "--maxWorkers=3"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/notes-session.test.js test/pending-conversation.test.js test/session-title-subject.test.js test/research-session-title.test.ts test/image-factory-native.test.js test/research-board-page-context.test.ts test/shared-main-agent.test.js test/component-agent-scope.test.js test/browser-app-native.test.js test/research-board-runtime.test.js --maxWorkers=3",
-            "verifiedCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-            "completedAt": "2026-11-20T09:14:02.436Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/memory-runtime.test.js",
-              "-t",
-              "isolates a shared board summary|does not extract shared",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/memory-runtime.test.js -t isolates a shared board summary|does not extract shared --maxWorkers=1",
-            "verifiedCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-            "completedAt": "2026-11-20T09:14:02.436Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/figma-final-shell-patch.test.ts",
-              "test/session-view-preferences.test.js",
-              "-t",
-              "uses view-specific empty titles|filters only explicit New Chat reuse",
-              "--maxWorkers=2"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/figma-final-shell-patch.test.ts test/session-view-preferences.test.js -t uses view-specific empty titles|filters only explicit New Chat reuse --maxWorkers=2",
-            "verifiedCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-            "completedAt": "2026-11-20T09:14:02.436Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "./node_modules/node/bin/node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-note-browser.test.js",
-              "-t",
-              "updates the native sidebar",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/sidebar-new-note-browser.test.js -t updates the native sidebar --maxWorkers=1",
-            "verifiedCommit": "6432db1408932253388a57c0cb2b00bf037a0d1e",
-            "completedAt": "2026-11-20T09:14:02.436Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-20T09:14:02.436Z"
+        "generatedAt": "2026-11-20T09:44:55.930Z"
       }
     }
   ],
