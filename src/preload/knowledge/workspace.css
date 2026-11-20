@@ -415,6 +415,14 @@
 .knowledge-shared-folders > button { flex-shrink: 0; }
 .knowledge-shared-folders > .knowledge-shared-folder { margin-inline-start: 8px; }
 .knowledge-shared-folders button .knowledge-icon:last-child { margin-left: auto; width: 13px; }
+.knowledge-table-area[data-received=true] td:first-child { position: relative; }
+.knowledge-table-area[data-received=true] td:first-child > .knowledge-square {
+  position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%);
+  background: var(--knowledge-field); opacity: 0; pointer-events: none;
+}
+.knowledge-table-area[data-received=true] tr:is(:hover, :focus-within) td:first-child > .knowledge-square {
+  opacity: 1; pointer-events: auto;
+}
 .knowledge-shared-inline-size, .knowledge-shared-metadata > time, .knowledge-shared-inline-owner { display: none; }
 .knowledge-empty {
   display: flex;
