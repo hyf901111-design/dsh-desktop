@@ -1,6 +1,8 @@
 export const managerPanelCss = `
 @layer ework-workbench { html body:has(.manager-panel) { padding: 0!important; } }
 .manager-panel {
+  box-sizing: border-box;
+  width: 100%;
   color: var(--sherlock-text);
   background: var(--sherlock-surface);
   font: 12px/1.5 var(--sherlock-font-sans);
@@ -18,7 +20,7 @@ export const managerPanelCss = `
 :root:is([data-workbench-style="enterprise"], [data-workbench-style="openterminal"]) .manager-panel {
   --manager-radius: 0;
 }
-.manager-body { padding: 12px 16px; min-width: 0; }
+.manager-body { padding: 4px 6px; min-width: 0; }
 .manager-panel :is(p, h3, dl, dd, figure) { margin: 0; }
 .manager-panel h3 { font-size: 12px; font-weight: 500; }
 .manager-panel small, .manager-caption, .manager-unit { color: var(--sherlock-muted); font-size: 11px; }
@@ -39,7 +41,7 @@ export const managerPanelCss = `
 .manager-overview .manager-hero .manager-value strong { line-height: 36px; }
 .manager-section-label { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
 .manager-section-label::after { content: ""; flex: 1; height: 1px; background: var(--sherlock-border); }
-.manager-three, .manager-two { display: grid; gap: 10px; }
+.manager-three, .manager-two { display: grid; gap: 10px; min-width: 0; }
 .manager-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .manager-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .manager-status { display: flex; align-items: center; gap: 10px; }
@@ -133,19 +135,28 @@ export const managerPanelCss = `
 .manager-organization svg .manager-tree-link { fill: none; stroke: var(--sherlock-chart-crosshair); stroke-width: 1; opacity: .65; }
 .manager-organization svg text, .manager-line-chart svg text { fill: var(--sherlock-text); font: 12px var(--sherlock-font-sans); }
 .manager-organization svg .manager-tree-label, .manager-organization svg .manager-tree-subtitle { fill: var(--sherlock-muted); font-size: 11px; }
-@media (max-width: 650px) {
+@media (max-width: 780px) {
   .manager-overview, .manager-interview { gap: 10px; }
   .manager-overview { grid-template-columns: minmax(125px, .9fr) minmax(0, 2.1fr); }
   .manager-status { gap: 6px; }
+  .manager-overview .manager-three { gap: 6px; }
+  .manager-overview .manager-unit { margin-inline-start: 2px; }
   .manager-tile { padding-inline: 8px; }
   .manager-status .manager-value strong { font-size: 19px; }
   .manager-location { grid-template-columns: minmax(100px, 1fr) minmax(170px, 1fr); gap: 10px; }
   .manager-departments .manager-between { align-items: flex-start; }
+}
+@media (max-width: 640px) {
+  .manager-panel :is(td,th), .manager-panel td:last-child { padding-inline: 5px; white-space: normal; overflow-wrap: anywhere; }
 }
 @media (max-width: 450px) {
   .manager-overview, .manager-interview, .manager-location, .manager-interview-summary { grid-template-columns: 1fr; }
   .manager-location svg { max-height: 94px; }
   .manager-mini-offers { border-left: 0; padding-inline-start: 0; }
   .manager-departments .manager-three, .manager-demographics { grid-template-columns: 1fr; }
+}
+@media (max-width: 330px) {
+  .manager-overview .manager-three { grid-template-columns: 1fr; }
+  .manager-overview .manager-status .manager-value strong { font-size: 19px; }
 }
 `

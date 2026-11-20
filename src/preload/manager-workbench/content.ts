@@ -204,10 +204,10 @@ export const managerPanels = {
   stages: { body: caption('底稿各环节人数  ·  人') + barList(stages.slice(0, -1), 5, '', n => n < 5 ? 'manager-gold' : '') }
 } satisfies Record<string, { body: string; source?: string; note?: string; className?: string }>
 
-export function managerPanelHtml(panel: keyof typeof managerPanels) {
+export function managerPanelHtml(panel: keyof typeof managerPanels, minimumHeight: number) {
   const { body, source = snapshotSource, note = '2024 年设计快照', className = '' } =
     managerPanels[panel] as { body: string; source?: string; note?: string; className?: string }
   const metadata = JSON.stringify({ data: { source, note } })
-  return `<style>${managerPanelCss}</style><script id="sherlock-template-data" type="application/json">${metadata}</script>
-    <article class="manager-panel"><div class="manager-body ${className}">${body}</div></article>`
+  return `<body data-readable-snapshot><style>${managerPanelCss}</style><script id="sherlock-template-data" type="application/json">${metadata}</script>
+    <article class="manager-panel" data-workbench-content-fit style="min-height:${minimumHeight}px"><div class="manager-body ${className}">${body}</div></article></body>`
 }

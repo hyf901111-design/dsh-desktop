@@ -779,7 +779,24 @@ if (process.argv.includes('--serve')) {
       assert.equal(await canvas.getAttribute('data-workbench-style'), 'enterprise')
       assert.deepEqual(await page.evaluate(() => window.fixture.page.getState().favorites.filter(
         item => item.title === '管理者工作台').map(item => item.sessionId)), [managerId])
-      console.log('MANAGER_WORKBENCH_PASSED personal-board/native-cards/four-tabs/four-themes/reload')
+      await page.setViewportSize({ width: 1380, height: 900 })
+      for (const [tab, nodes] of [
+        ['驾驶舱', ['people', 'residences', 'demographics']],
+        ['我的团队', ['team-roster']],
+        ['易招聘', ['interview', 'offer']]
+      ]) {
+        await canvas.getByRole('tab', { name: tab, exact: true }).click()
+        for (const node of nodes) {
+          await until(async () => {
+            const size = await content(node).locator('.manager-panel').evaluate(element => ({
+              height: element.getBoundingClientRect().bottom, width: element.scrollWidth,
+              viewportHeight: innerHeight, viewportWidth: innerWidth
+            }), undefined, { timeout: 3000 })
+            return size.height <= size.viewportHeight + 8 && size.width <= size.viewportWidth + 3
+          }, 'readable component at default window width: ' + node)
+        }
+      }
+      console.log('MANAGER_WORKBENCH_PASSED personal-board/native-cards/four-tabs/four-themes/reload/narrow-window')
       break focusedFlow
     }
     if (process.argv.includes('--shared-queue-focus')) {

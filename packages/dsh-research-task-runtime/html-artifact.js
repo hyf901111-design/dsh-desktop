@@ -620,7 +620,14 @@ const RESEARCH_HTML_INNER_THEME_RUNTIME = String.raw`function researchHtmlInnerT
         }
       }
       if (workbench && document.body.dataset.researchKind === 'view' && document.querySelector('[data-view-page-size]')) intrinsicTable = true;
-      if (workbench && document.body.hasAttribute('data-readable-snapshot')) intrinsicTable = true;
+      if (workbench && document.body.hasAttribute('data-readable-snapshot')) {
+        const content = document.body.querySelector(':scope > [data-workbench-content-fit]');
+        if (content && visible(content)) {
+          const padding = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+          bottom = Math.max(bottom, content.getBoundingClientRect().bottom + window.scrollY + padding);
+        }
+        intrinsicTable = true;
+      }
       // Quote tables and overview strips have bounded scroll viewports. Their
       // clipped boxes must not feed a progressively smaller height to Arrange.
       // Measure the intrinsic controls, a bounded set of rows, and provenance
