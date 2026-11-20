@@ -67,9 +67,9 @@ export async function patchResearchBoardConversation(source) {
   source = source.replace('void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:(e.clientX-r.left-s.viewport.x)/s.viewport.scale,y:(e.clientY-r.top-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});', 'const zoom=Number(root.style.getPropertyValue("zoom"))||1;void sherlockBoardsAdapter.presence(sessionId,{cursor:{x:((e.clientX-r.left)/zoom+(root.scrollLeft||0)-s.viewport.x)/s.viewport.scale,y:((e.clientY-r.top)/zoom-s.viewport.y)/s.viewport.scale},selectedIds:s.selection.selectedNodeIds.slice(0,100)});')
   const legacyEntry='sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,slots,bridge:window.dshDesktop.researchBoards})'
   const existingEntry='sherlockBoardsPage.createResearchBoardsPage({sessions,workspaces,researchWorkspaces,inputHub,chatStore,getInput:id=>typeof eworkActiveInput==="function"?eworkActiveInput(id,inputHub.shells.get(id)):inputHub.shells.get(id),slots,bridge:window.dshDesktop.researchBoards})'
-  const entry=existingEntry.replace('inputHub,chatStore,','inputHub,chatStore,researchSidebar,')
-  if(source.includes(legacyEntry))source=replace(source,legacyEntry,entry)
-  if(source.includes(existingEntry))source=replace(source,existingEntry,entry)
+  const sidebarEntry=existingEntry.replace('inputHub,chatStore,','inputHub,chatStore,researchSidebar,')
+  const entry=sidebarEntry.replace('inputHub,chatStore,','inputHub,chatStore,composerModel:id=>(id===undefined?window[Symbol.for("sherlock:pending-conversation")]?.preferences?.model:ctx.get("modelDirectories")?.directoryFor(id))?.store.getSnapshot(),')
+  for(const previous of [legacyEntry,existingEntry,sidebarEntry])if(source.includes(previous))source=replace(source,previous,entry)
   if (source.includes(START)) {
     for (const sentinel of [
       'sharedSubmit: (mode) => {',

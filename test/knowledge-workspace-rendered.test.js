@@ -37,6 +37,7 @@ beforeAll(async () => {
       import { createHomePresentationFileGhost, openHomePresentationReference } from './scripts/lib/home-guide-presentation-native.mjs'
       import { installKnowledgeSidebar, installKnowledgeSourceNavigation } from './scripts/lib/knowledge-client.mjs'
       import React from 'react'
+      import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
       import { createRoot } from 'react-dom/client'
       if (document.body.hasAttribute('data-test-native-drops')) {
         window.installComposerDrop = source => {
@@ -211,6 +212,25 @@ beforeAll(async () => {
         style.textContent = guideStyles
         document.head.append(style)
         window.presentationReplay = { createHomeGuidePointer, createHomePresentationFileGhost, openHomePresentationReference }
+        window.renderPresentationTabMenu = (host, onOpen, onSelect) => {
+          const h = React.createElement
+          function Tabs() {
+            const [open, setOpen] = React.useState(false)
+            return h(Menu, {
+              open, portal: true, align: 'end', className: 'odyssey-file-new-tab-menu',
+              anchor: h('button', { className: 't8lSSG_tabBarPlus', 'aria-expanded': open,
+                onClick: () => { onOpen(); setOpen(!open) } }, '＋'),
+              items: [
+                { id: 'files', label: h('span', { 'data-odyssey-file-menu-label': 'files' }, '文件') },
+                { id: 'sherlock-knowledge-library',
+                  label: h('span', { 'data-odyssey-file-menu-label': 'sherlock-knowledge-library' }, '知识库') },
+              ],
+              onSelect: id => { setOpen(false); onSelect(id) },
+              onClose: () => setOpen(false)
+            })
+          }
+          createRoot(host).render(h(Tabs))
+        }
       }
       const uploads = new Map()
       const recentSearches = []
@@ -301,7 +321,7 @@ beforeAll(async () => {
       })
       window.dispatchEvent(new Event('sherlock:knowledge-open'))
     ` },
-    bundle: true, write: false, format: 'iife', platform: 'browser',
+    bundle: true, write: false, format: 'iife', platform: 'browser', loader: { '.css': 'empty' },
     plugins: [{ name: 'inline-design-assets', setup(builder) {
       builder.onResolve({ filter: /\?(inline|raw)$/ }, async args => {
         const resolved = await builder.resolve(args.path.split('?')[0], { resolveDir: args.resolveDir, kind: args.kind })
@@ -323,6 +343,7 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
   const page = await browser.newPage({ viewport: { width: 980, height: 820 }, reducedMotion: 'reduce' })
   try {
     await page.setContent(`
+      <style>body > [role="menu"] { position:fixed; z-index:10; background:white; padding:8px }</style>
       <body data-test-ppt-reference>
         <button data-odyssey-panel-entry="right" aria-expanded="false">展开右侧栏</button>
         <section data-home-guide="ppt-run" data-kind="ppt"><div id="guide"></div></section>
@@ -330,7 +351,7 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
         <aside id="odyssey-right-workspace-panel" aria-hidden="true"
           style="position:fixed;right:0;top:0;width:310px;height:620px;
             transform:translateX(100%);transition:transform 240ms ease;visibility:hidden">
-          <button class="t8lSSG_tabBarPlus">＋</button>
+          <div id="tabs"></div>
         </aside>
         <div id="other" data-knowledge-panel-host data-knowledge-panel-session="other-session"
           style="width:395px;margin-top:360px"></div>
@@ -345,8 +366,7 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
       guide.dataset.homePresentationReferenceFile = id
       const toggle = document.querySelector('[data-odyssey-panel-entry]')
       const panel = document.querySelector('#odyssey-right-workspace-panel')
-      const plus = panel.querySelector('button')
-      let openAt, plusAt
+      let openAt, plusAt, portalAtBody
       toggle.onclick = () => {
         openAt = performance.now()
         toggle.setAttribute('aria-expanded', 'true')
@@ -354,21 +374,15 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
         panel.style.visibility = 'visible'
         panel.style.transform = 'translateX(0)'
       }
-      plus.onclick = () => {
-        plusAt = performance.now()
-        const menu = document.createElement('div')
-        menu.className = 'odyssey-file-new-tab-menu'
-        menu.style.cssText = 'position:fixed;right:10px;top:38px'
-        menu.innerHTML = '<button role="menuitem"><span data-odyssey-file-menu-label>知识库</span></button>'
-        menu.querySelector('button').onclick = () => {
-          menu.remove()
-          const host = document.createElement('div')
-          host.dataset.knowledgePanelHost = ''
-          host.dataset.knowledgePanelSession = 'ppt-session'
-          panel.append(host)
-        }
-        document.body.append(menu)
-      }
+      window.renderPresentationTabMenu(panel.querySelector('#tabs'), () => { plusAt = performance.now() }, type => {
+        if (type !== 'sherlock-knowledge-library') throw Error('打开了错误页签')
+        portalAtBody = document.querySelector('body > [role="menu"]')?.parentElement === document.body &&
+          !document.querySelector('.odyssey-file-new-tab-menu [role="menu"]')
+        const host = document.createElement('div')
+        host.dataset.knowledgePanelHost = ''
+        host.dataset.knowledgePanelSession = 'ppt-session'
+        panel.append(host)
+      })
       const { createHomeGuidePointer, createHomePresentationFileGhost, openHomePresentationReference } = window.presentationReplay
       const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
       const waitFor = async predicate => {
@@ -402,11 +416,12 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
       pointer.dispose()
       shadow.remove()
       return {
-        labels, dropped, firstId: file.parentElement.firstElementChild.dataset.knowledgeFileId,
+        labels, dropped, portalAtBody, firstId: file.parentElement.firstElementChild.dataset.knowledgeFileId,
         otherFirstId: document.querySelector('#other .knowledge-panel-row').dataset.knowledgeFileId,
         transitionDelay: plusAt - openAt
       }
     })
+    expect(result.portalAtBody).toBe(true)
     expect(result.labels).toEqual(['展开右侧栏', '打开右侧栏页签菜单', '打开知识库'])
     expect(result.firstId).toBe('bbbbbbbb-1234-1234-1234-123456789abc')
     expect(result.otherFirstId).toBe('c')

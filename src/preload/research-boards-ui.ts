@@ -46,6 +46,10 @@ type Store<T> = {
   getSnapshot(): T
   subscribe(listener: () => void): () => void
 }
+type ComposerModelSnapshot = {
+  current: { provider: string; model: string; reasoningEffort?: string } | null
+  groups: readonly { id: string; models: readonly { id: string }[] }[]
+}
 type LegacyNode = Record<string, any>
 type Workspace = {
   isCollaborationGesture?(): boolean
@@ -75,6 +79,7 @@ export type PageDependencies = {
   researchWorkspaces: { for(id: string): Workspace }
   inputHub: { shells: Map<string, any> }
   getInput?(sessionId:string):any
+  composerModel?(sessionId?: string): ComposerModelSnapshot | undefined
   chatStore?:{create(sessionId:string):{actions:{setView(view:string):void}}}
   researchSidebar?: {
     service?: {
@@ -792,7 +797,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       next.account.generation < state.account.generation
     )
       return
-    if (next.account.generation !== state.account.generation || next.account.user?.userId !== state.account.user?.userId) { guideIdentityRevision++; guideRequests.clear(); guidePendingTitles.clear() }
+    if (next.account.generation !== state.account.generation || next.account.user?.userId !== state.account.user?.userId) { guideIdentityRevision++; guideRequests.clear(); guidePendingTitles.clear(); clearGuideModel() }
     if (next.account.generation !== state.account.generation) {
       clearEditors()
       activeSession = null
@@ -933,6 +938,29 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   const guideFlights = new Map<string, Promise<GuideSession>>()
   const guidePendingTitles = new Map<string, {owner:string;generation:number;revision:number;cwd:string;original:string}>()
   cleanups.push(()=>guidePendingTitles.clear())
+  // Pre-recorded chat demonstrations borrow the visible picker state only.
+  // Do not select a model on the Host or change the user's default.
+  const guideModelKey = Symbol.for('sherlock:home-guide-model')
+  const pageWindow = win as Window & { [guideModelKey]?: (id: string) => ComposerModelSnapshot | undefined }
+  let guideModel: { sessionId: string; snapshot: ComposerModelSnapshot } | undefined
+  const readGuideModel = (id: string) => guideModel?.sessionId === id ? guideModel.snapshot : undefined
+  const setGuideModel = (value?: typeof guideModel) => {
+    if (guideModel === value) return
+    guideModel = value
+    win.dispatchEvent(new win.Event('sherlock:home-guide-model-changed'))
+  }
+  const clearGuideModel = () => setGuideModel()
+  const endGuideModel = (event: Event) => {
+    const detail = (event as CustomEvent).detail
+    if (detail?.ending === true && detail.sessionId === guideModel?.sessionId) clearGuideModel()
+  }
+  pageWindow[guideModelKey] = readGuideModel
+  win.addEventListener('sherlock:home-guide-playback', endGuideModel)
+  cleanups.push(() => {
+    win.removeEventListener('sherlock:home-guide-playback', endGuideModel)
+    if (pageWindow[guideModelKey] === readGuideModel) delete pageWindow[guideModelKey]
+    clearGuideModel()
+  })
   const guideWorkspaceFlights = new Map<string, { guards: Set<() => void>; promise?: Promise<void> }>()
   let guideSelectedSession = current(), guideSelectionRevision = 0, guideSelectedAttempt = ''
   const guideRequests = new Map<string, { fingerprint: string; promise: Promise<Record<string, unknown>>; owner?: string; generation?: number; revision?: number;cancelled?:boolean;source?:string;selectionRevision?:number }>()
@@ -1092,6 +1120,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (!flight) {
       flight = (async () => {
         if (previous) { await ensureGuideWorkspace(previous, valid); return previous }
+        const sourceSession = current()
+        let sourceModel: ComposerModelSnapshot | undefined
+        if (kind === 'ppt' || kind === 'report') {
+          sourceModel = (sourceSession ? readGuideModel(sourceSession) : undefined) ?? deps.composerModel?.(sourceSession)
+          if (sourceSession && !sourceModel?.current) sourceModel = deps.composerModel?.()
+        }
         const title = homeGuideSessionTitle(kind,replay)
         const basePath = await defaultDirectory(); valid()
         const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath }); valid()
@@ -1122,7 +1156,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         const latest = guideRegistry(owner)
         const next = [...latest, entry]
         if (guideStorage().setItem(guidePrefix + encodeURIComponent(owner), JSON.stringify({ version: 1, scope: owner, entries: next })) !== true) throw Error('示例保存失败，已创建的会话仍保留在本地。')
-        guideRecords.set(owner, next); notify()
+        guideRecords.set(owner, next)
+        if (sourceModel?.current && sourceModel.groups.some(group =>
+          group.id === sourceModel.current?.provider && group.models.some(model => model.id === sourceModel.current?.model))) {
+          setGuideModel({ sessionId, snapshot: { current: { ...sourceModel.current }, groups: sourceModel.groups } })
+        }
+        notify()
         return entry
       })()
       guideFlights.set(key, flight)

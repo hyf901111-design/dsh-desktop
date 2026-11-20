@@ -16,7 +16,7 @@ afterEach(()=>{cleanup.splice(0).reverse().forEach(fn=>fn());vi.unstubAllGlobals
 function store<T>(value:T){const listeners=new Set<()=>void>();return{getSnapshot:()=>value,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>listeners.delete(fn)},set:(next:T)=>{value=next;for(const fn of listeners)fn()}}}
 const gate=()=>{let release!:()=>void;return{promise:new Promise<void>(yes=>release=yes),release:()=>release()}}
 const blank=()=>({snapshot:{phase:'plain',draft:'用户未发送的文字',draftRev:4,imageIds:['image-kept'],occurrences:[{kind:'skill',id:'skill-kept'}],researchContextPreparing:false},disposed:false})
-async function fixture(options:{createGate?:Promise<void>;reserveGate?:Promise<void>;noteFlush?:Promise<void>;noteFlushError?:Error;noteInput?:boolean;historyCount?:number;reserveFailure?:boolean}={}){
+async function fixture(options:{createGate?:Promise<void>;reserveGate?:Promise<void>;noteFlush?:Promise<void>;noteFlushError?:Error;noteInput?:boolean;historyCount?:number;reserveFailure?:boolean;composerModel?:(id?:string)=>unknown}={}){
  const win=new Window({url:'http://localhost:44321'}),document=win.document as unknown as Document
  vi.stubGlobal('Event',win.Event);vi.stubGlobal('CustomEvent',win.CustomEvent);vi.stubGlobal('document',document)
  document.body.innerHTML='<aside data-dsh-sidebar-root><div data-navigation-rail><button data-navigation-app="spreadsheet" aria-label="表格">表格</button><button data-navigation-app="note" aria-label="笔记">笔记</button></div><button aria-label="新建对话">新建对话</button><button aria-label="新建研究">新建研究</button></aside><div class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="home"><div data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="research">研究</button><button data-conversation-view-id="notes">笔记</button></div><textarea></textarea></div></div><div class="st-menu" data-sidebar-more="true" role="menu"><button role="menuitem">新笔记</button></div>'
@@ -34,7 +34,7 @@ async function fixture(options:{createGate?:Promise<void>;reserveGate?:Promise<v
   activateTab: (tabId: string, scope: {sessionId: string}) => panelEvents.push(['activate', tabId, scope.sessionId, list.getSnapshot().current]),
   setPanelState: (state: {open: boolean}, scope: {sessionId: string}) => panelEvents.push(['state', state.open, scope.sessionId, list.getSnapshot().current])
  }}
- const page=createResearchBoardsPage({document,sessions,workspaces,researchSidebar,inputHub:{shells:new Map([['A',ordinary]])},getInput:()=>effective,chatStore:{create:(id:string)=>({actions:{setView:(view:string)=>{modes.push([id,view])}}})},researchWorkspaces:{for:()=>({getSnapshot:()=>({files:[],artifacts:[]}),subscribe:()=>()=>{},persist:()=>true})},bridge:{isSharedSession:()=>false,getSnapshot:async()=>state,subscribe:(fn:(event:any)=>void)=>{emit=fn;return()=>{}},invoke:async(action:string,input:any)=>{requests.push([action,input]);if(action==='local.directory'&&input.mode==='reserve'){if(options.reserveFailure)throw Error('private credential /private/source');await options.reserveGate;return{ok:true,value:{directoryId:'dir-'+requests.length,path:'/examples/'+requests.length}}}if(action==='favorite.add'){state.favorites.push({...input.identity,favoriteId:'f'+requests.length,dedicated:true});return{ok:true,value:state.favorites.at(-1)}}return{ok:true,value:null}}}}as any)
+ const page=createResearchBoardsPage({document,sessions,workspaces,researchSidebar,composerModel:options.composerModel,inputHub:{shells:new Map([['A',ordinary]])},getInput:()=>effective,chatStore:{create:(id:string)=>({actions:{setView:(view:string)=>{modes.push([id,view])}}})},researchWorkspaces:{for:()=>({getSnapshot:()=>({files:[],artifacts:[]}),subscribe:()=>()=>{},persist:()=>true})},bridge:{isSharedSession:()=>false,getSnapshot:async()=>state,subscribe:(fn:(event:any)=>void)=>{emit=fn;return()=>{}},invoke:async(action:string,input:any)=>{requests.push([action,input]);if(action==='local.directory'&&input.mode==='reserve'){if(options.reserveFailure)throw Error('private credential /private/source');await options.reserveGate;return{ok:true,value:{directoryId:'dir-'+requests.length,path:'/examples/'+requests.length}}}if(action==='favorite.add'){state.favorites.push({...input.identity,favoriteId:'f'+requests.length,dedicated:true});return{ok:true,value:state.favorites.at(-1)}}return{ok:true,value:null}}}}as any)
  const ordinaryNew=(event:Event)=>{normal++;navigate('ordinary-'+normal)}
  document.querySelector('[aria-label="新建对话"]')!.addEventListener('click',ordinaryNew);document.querySelector('[aria-label="新建研究"]')!.addEventListener('click',ordinaryNew);document.querySelector('[data-navigation-app=spreadsheet]')!.addEventListener('click',ordinaryNew)
  const noteAction=createSidebarNewNoteAction(document,async()=>{await options.noteFlush;if(options.noteFlushError)throw options.noteFlushError})
@@ -82,6 +82,26 @@ it.each(['ppt','report'] as const)('opens the prepared %s session at the collaps
  expect(nativeHome).not.toHaveBeenCalled()
  expect(f.opened).toEqual([entry.sessionId])
  expect(f.ordinary.snapshot.draft).toBe('用户未发送的文字')
+ client.dispose()
+})
+it.each(['ppt','report'] as const)('keeps the source model and effort visible throughout the %s demonstration',async kind=>{
+ const snapshot = { current: { provider: 'custom', model: 'model-x', reasoningEffort: 'high' },
+  groups: [{ id: 'custom', models: [{ id: 'model-x', name: 'Model X' }] }] }
+ const composerModel = vi.fn((id?:string)=> id === 'A' ? snapshot : undefined)
+ const f=await fixture({composerModel}),client=await f.client(kind),target=f.target(kind)
+ const entry=await client.prepare(target,'new-chat')
+ const modelFor=(f.win as any)[Symbol.for('sherlock:home-guide-model')]
+ expect(modelFor(entry.sessionId)).toEqual(snapshot)
+ expect(modelFor('A')).toBeUndefined()
+ expect(composerModel).toHaveBeenCalledWith('A')
+ await client.commit(target)
+ snapshot.current.reasoningEffort='low'
+ for(const playing of [true,false,true]) {
+  f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:entry.sessionId,playing}}))
+  expect(modelFor(entry.sessionId).current.reasoningEffort).toBe('high')
+ }
+ f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:entry.sessionId,ending:true}}))
+ expect(modelFor(entry.sessionId)).toBeUndefined()
  client.dispose()
 })
 it.each([['board','home-research','research'],['note','home-notes','notes'],['ppt','home-chat','chat']]as const)('uses the %s homepage tab as final native entry without changing the old view',async(kind,action,mode)=>{

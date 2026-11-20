@@ -26,6 +26,17 @@ export function patchFigmaModelMenu(source) {
   const end = source.indexOf('\n\t\t//#endregion', start)
   if (start < 0 || end < start) throw Error('ModelSelect boundary drifted')
   let restored = original
+    .replace('available, directory, load', 'available, directory, sessionId, load')
+    .replace('const state = (0, react.useSyncExternalStore)', 'const nativeState = (0, react.useSyncExternalStore)')
+    .replace('const [open, setOpen]', `const preview = (0, react.useSyncExternalStore)(notify => {
+        window.addEventListener('sherlock:home-guide-model-changed', notify);
+        return () => window.removeEventListener('sherlock:home-guide-model-changed', notify);
+      }, () => sessionId === undefined ? undefined : window[Symbol.for('sherlock:home-guide-model')]?.(sessionId));
+      const [overriddenPreview, setOverriddenPreview] = (0, react.useState)(undefined);
+      const state = preview && preview !== overriddenPreview
+        ? { ...nativeState, current: preview.current, groups: preview.groups } : nativeState;
+      const [open, setOpen]`)
+    .replace('if (accepted) {', 'if (accepted) { setOverriddenPreview(preview);')
     .replace('const id = (0, react.useId)();', `const id = (0, react.useId)();
       const menuRef = (0, react.useRef)(null);
       const [position, setPosition] = (0, react.useState)({});
@@ -77,5 +88,13 @@ export function patchFigmaModelMenu(source) {
   }
   const anchor='const directory = models.directoryFor(sessionId);',patched=`if(sessionId===undefined){const model=window[Symbol.for('sherlock:pending-conversation')]?.preferences.model;if(!model)throw Error('新对话模型尚未就绪');return {available:true,directory:model.store,load:()=>model.load().catch(()=>{}),select:selection=>model.select(selection).then(()=>true,()=>false)}}\n                        `+anchor;
   if(!source.includes("新对话模型尚未就绪")){const start=source.indexOf('name: "conversation.input.model"'),at=source.indexOf(anchor,start);if(start<0||at<0)throw Error('Pending model injection anchor drift');source=source.slice(0,at)+patched+source.slice(at+anchor.length)}
+  const slotDirectory = 'directory: directory.store,'
+  const withSession = 'directory: directory.store, sessionId,'
+  const selectStart = source.indexOf('name: "conversation.input.model"')
+  if (!source.includes(withSession, selectStart)) {
+    const at = source.indexOf(slotDirectory, selectStart)
+    if (selectStart < 0 || at < 0) throw Error('Demo model display anchor drift')
+    source = source.slice(0, at) + withSession + source.slice(at + slotDirectory.length)
+  }
   return source
 }

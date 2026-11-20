@@ -60,7 +60,7 @@ export function createHomePresentationFileGhost(document,file,label,runId){
 /** Wait until the real right panel and its next control have settled inside the viewport. */
 export async function openHomePresentationReference(document,fileId,{waitFor,cue}){
  const win=document.defaultView,sidebar='#odyssey-right-workspace-panel'
- const target=async read=>{
+ const target=async(read,message)=>{
   let last,node,stable=0
   await waitFor(()=>{
    node=read()
@@ -77,11 +77,11 @@ export async function openHomePresentationReference(document,fileId,{waitFor,cue
    stable=last?.node===node&&next.every((value,index)=>Math.abs(value-last.bounds[index])<.5)?stable+1:0
    last={node,bounds:next}
    return stable>=2
-  })
+  },message)
   return node
  }
  const click=async(read,label)=>{
-  const control=await target(read)
+  const control=await target(read,'未能'+label+'，请重试。')
   await cue(control,label)
   control.click()
  }
@@ -92,12 +92,12 @@ export async function openHomePresentationReference(document,fileId,{waitFor,cue
   .find(host=>host.checkVisibility({checkVisibilityCSS:true})&&!host.closest('[hidden],[inert],[aria-hidden=true]'))
  if(!library()){
   await click(()=>panel()?.querySelector('button.t8lSSG_tabBarPlus'),'打开右侧栏页签菜单')
-  const item=()=>[...document.querySelectorAll('.odyssey-file-new-tab-menu [data-odyssey-file-menu-label]')]
+  const item=()=>[...document.querySelectorAll('[role="menu"] [data-odyssey-file-menu-label]')]
    .find(node=>['知识库','Knowledge Base'].includes(node.textContent?.trim()))?.closest('[role="menuitem"]')
   await click(item,'打开知识库')
  }
  const row=()=>library()?.querySelector('.knowledge-panel-rows[data-ready=true] > [draggable=true]:first-child[data-knowledge-file-id="'+fileId+'"]')
- return {file: await target(row),row}
+ return {file: await target(row,'知识库首位的参考 PDF 尚未就绪，请重试。'),row}
 }
 
 /** Disable only this demo's composer action tips; keep the real buttons intact. */
@@ -148,7 +148,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
    ticket.controller.signal.addEventListener('abort',abort,{once:true})
   })
   const playing=async ticket=>{for(;;){check(ticket);if(ticket.playing&&!document.hidden)return;await delay(ticket,35)}}
-  const waitFor=async(ticket,predicate,requiresPlayback=true)=>{for(let i=0;i<200;i++){if(requiresPlayback)await playing(ticket);check(ticket);if(predicate())return;await delay(ticket,25)}throw Error('原生会话暂未就绪，请重试。')}
+  const waitFor=async(ticket,predicate,requiresPlayback=true,message='原生会话暂未就绪，请重试。')=>{for(let i=0;i<200;i++){if(requiresPlayback)await playing(ticket);check(ticket);if(predicate())return;await delay(ticket,25)}throw Error(message)}
   const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;delete ticket.host.dataset.homePresentationReferenceFile;delete ticket.host.dataset.homePresentationReferenceSession;ticket.controller.abort();if(ticket.detail.fresh)void window.fetch(ticket.kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId}),keepalive:true}).catch(()=>{})}
   const inputFor=ticket=>[...ticket.host.closest('.pI_x6G_centerCol').querySelectorAll('textarea[data-odyssey-file-reference-session]')].find(input=>input.dataset.odysseyFileReferenceSession===sessionId&&!input.closest('[data-odyssey-subagent-panel]'))
   const cue=async(ticket,target,label,action='click',fromTarget,scroll=true)=>{
@@ -237,7 +237,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      ticket.host.dataset.homePresentationReferenceSession=sessionId
      ticket.host.dataset.homePresentationReferenceFile=source.fileId
      const {file,row}=await openHomePresentationReference(document,source.fileId,{
-      waitFor:predicate=>waitFor(ticket,predicate),
+      waitFor:(predicate,message)=>waitFor(ticket,predicate,true,message),
       cue:(node,label)=>cue(ticket,node,label,'click',undefined,false)
      })
      const transfer=new window.DataTransfer(),format='application/x-ework-knowledge-file'
