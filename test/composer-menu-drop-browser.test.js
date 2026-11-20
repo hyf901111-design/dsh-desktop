@@ -23,11 +23,12 @@ beforeAll(async()=>{
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },40000)
 afterAll(async()=>{await browser?.close();await rm(temp,{recursive:true,force:true})})
-async function fixture(dark=false,width=900){
+async function fixture(dark=false,width=900,query=''){
  const page=await browser.newPage({viewport:{width,height:760}}),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.route('**/*',route=>route.abort());page.setDefaultTimeout(3000)
  const css=Object.values(sources).flatMap(source=>[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(match=>JSON.parse(match[1]))).join('\n')
  const html=`<meta charset="utf-8"><style>${css}body{margin:0;--dsw-alias-label-primary:${dark?'#eee':'#222'};--dsw-alias-label-tertiary:${dark?'#bbb':'#666'};font-family:system-ui}#composer{position:absolute;left:40px;top:80px;width:calc(100% - 80px)}#outside{position:absolute;bottom:0;width:100%;height:100px}.wSkVaW_heroWorkspaceRow{height:30px}.wSkVaW_composerStack{transform:translateY(0)}#menus{position:absolute;left:40px;bottom:160px;width:400px}</style><body ${dark?'data-ds-dark-theme':''}><main class="pI_x6G_centerCol"><section class="wSkVaW_root" data-odyssey-page="home"><div id="composer"></div></section></main><div id="menus"></div><div id="outside">窗口其他位置</div></body>`
- await page.route('http://127.0.0.1/composer-menu-drop',route=>route.fulfill({contentType:'text/html',body:html}));await page.goto('http://127.0.0.1/composer-menu-drop')
+ const url='http://127.0.0.1/composer-menu-drop'+query
+ await page.route(url,route=>route.fulfill({contentType:'text/html',body:html}));await page.goto(url)
  await page.evaluate(sources=>{window.nativeModules={};for(const[key,source]of Object.entries(sources)){window.__ModuleLoader__={load:value=>window.nativeModules[key]=value};new Function(source)()}},sources)
  await page.addScriptTag({content:styles});await page.addScriptTag({content:script});await page.locator('textarea').waitFor().catch(error=>{throw Error(errors.join('\n')+' '+error.message)})
  return{page,errors,close:async()=>{await page.evaluate(()=>probe.dispose());await page.close()}}
@@ -104,6 +105,41 @@ it('keeps the translated pinned skills searchable in a narrow native popup witho
   const rect=await menu.boundingBox();expect(rect.x).toBeGreaterThanOrEqual(0);expect(rect.x+rect.width).toBeLessThanOrEqual(360)
   await menu.getByRole('textbox').fill('PPT 自定义');expect(await menu.getByRole('option').count()).toBe(1);expect(await menu.locator('.odyssey-deliverable-preview').count()).toBe(0);expect(f.errors).toEqual([])
  }finally{await f.close()}
+},15000)
+it.each([true,false])('routes composer file drops through the picker with dock=%s',async showDock=>{
+ const files=[
+  {name:'reference.png',mimeType:'image/png',buffer:Buffer.from('png')},
+  {name:'report.pdf',mimeType:'application/pdf',buffer:Buffer.from('pdf')},
+ ]
+ async function attach(method){
+  const f=await fixture(false,900,'?attachments')
+  try{
+   await f.page.evaluate(show=>probe.setDock(show),showDock)
+   const input=f.page.locator('[data-composer-card] input[type=file]')
+   await input.waitFor({state:'attached'})
+   if(method==='picker')await input.setInputFiles(files)
+   else{
+    const transfer=await f.page.evaluateHandle(()=>{
+     const data=new DataTransfer()
+     data.items.add(new File(['png'],'reference.png',{type:'image/png'}))
+     data.items.add(new File(['pdf'],'report.pdf',{type:'application/pdf'}))
+     return data
+    })
+    await f.page.locator('textarea').dispatchEvent('dragover',{dataTransfer:transfer})
+    await f.page.locator('textarea').dispatchEvent('drop',{dataTransfer:transfer})
+    await transfer.dispose()
+   }
+   const result=await f.page.evaluate(()=>({
+    images:probe.files,paths:probe.shell.snapshot.occurrences.map(value=>JSON.parse(value.ref).path),
+    imageOnlyFallback:probe.fallbackFiles??[],
+   }))
+   expect(f.errors).toEqual([])
+   return result
+  }finally{await f.close()}
+ }
+ const picked=await attach('picker')
+ expect(picked).toEqual({images:['reference.png'],paths:['/qa/report.pdf'],imageOnlyFallback:[]})
+ expect(await attach('drop')).toEqual(picked)
 },15000)
 for(const dark of [false,true])it(`dims only the disabled home send arrow, leaving enabled send, stop and reading intact (dark=${dark})`,async()=>{
  const f=await fixture(dark);try{

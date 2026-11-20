@@ -24,13 +24,25 @@ probe.extendSkillCatalog=count=>{
 }
 const bridge=installSkillCommandBridge(document,{request:async()=>({type:'snapshot',snapshot:{revision:1,rows:skills.map(skill=>({...skill,kind:'skill',revision:1,enabled:true,status:'已启用'}))}}),useSkill:async input=>{probe.selections.push(input.id);shell.insertReference({source:'ework-managed-skill',ref:JSON.stringify({id:input.id,revision:1,label:input.name,invocationName:'ework-skill-1111111111111111'}),label:input.name,clipboardText:'/'+input.name},{start:shell.snapshot.draft.length,end:shell.snapshot.draft.length,draftRev:shell.snapshot.draftRev})}})
 effects.push(()=>bridge.dispose(),installSkillCommand({document,command:{register(value){definition=value;return()=>{}}},sessions:{subagentAddress:()=>undefined}}))
-window.dshDesktop={drainDroppedPaths:()=>['/qa/外部附件.pdf']}
+window.dshDesktop={
+ drainDroppedPaths:()=>['/qa/外部附件.pdf'],
+ getPathForFile:file=>'/qa/'+file.name,
+}
 const use=store=>select=>select(React.useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot)),useSession=select=>select(React.useSyncExternalStore(session.subscribe,session.getSnapshot,session.getSnapshot))
 const session=rt.createSnapshotStore({running:false,promptError:null,subagent:null,removed:false})
 function Composer(){
+ const [showDock,setShowDock]=React.useState(true)
+ probe.setDock=setShowDock
  const input=React.useSyncExternalStore(shell.state.subscribe,shell.state.getSnapshot,shell.state.getSnapshot)
- const props={sessionId,variant:'hero',keyboard:shell,inputActions:shell.actions,useInput:use(shell.state),useNotices:use(shell.notices),useSession,useLexicon:()=>[],useMenuLauncher:()=>undefined,useProjection:()=>undefined,resolveSubmitMode:()=> 'queue',renderSlot:()=>null,t:key=>({'input.commands':'命令','input.send':'发送消息','input.stop':'停止生成'})[key]||key,stop:()=>{},toggleCommandMenu:()=>popup.open('skills',definition.ui,{sessionId})}
- return <native.__ComposerSurface zone={{sessionId,input,inputActions:shell.actions}} hero={true} inputBar={<native.__InputBar {...props}/>} heroWorkspaceRow={<div className="wSkVaW_heroWorkspaceRow">工作区选择</div>} renderSlot={(name,props)=>slots.get(name)?.(props)} renderSlotChain={(_name,_props,options)=>options.fallback} t={key=>key}/>
+ const attachmentTest=window.location.search==='?attachments'
+ const inputActions=attachmentTest?{...shell.actions,addImageFiles:files=>{probe.files.push(...files.map(file=>file.name));return null}}:shell.actions
+ const zone={sessionId,input,inputActions}
+ const props={sessionId,variant:'hero',keyboard:shell,inputActions,useInput:use(shell.state),useNotices:use(shell.notices),useSession,useLexicon:()=>[],useMenuLauncher:()=>undefined,useProjection:()=>undefined,resolveSubmitMode:()=> 'queue',renderSlot:()=>null,t:key=>({'input.commands':'命令','input.send':'发送消息','input.stop':'停止生成'})[key]||key,stop:()=>{},toggleCommandMenu:()=>popup.open('skills',definition.ui,{sessionId}),
+  ...(attachmentTest?{
+   leftItems:slots.get('conversation.input.left')?.(zone),
+   addImages:files=>{probe.fallbackFiles=files.map(file=>file.name);return files.some(file=>!file.type.startsWith('image/'))?'unsupported image media type: application/pdf':null},
+  }:{})}
+ return <native.__ComposerSurface zone={showDock?zone:undefined} hero={true} inputBar={<native.__InputBar {...props}/>} heroWorkspaceRow={<div className="wSkVaW_heroWorkspaceRow">工作区选择</div>} renderSlot={(name,props)=>slots.get(name)?.(props)} renderSlotChain={(_name,_props,options)=>options.fallback} t={key=>key}/>
 }
 const root=createRoot(document.querySelector('#composer'));root.render(<Composer/>);const menuRoot=createRoot(document.querySelector('#menus'));menuRoot.render(<commands.__Popup popup={popup} t={key=>key}/>)
 Object.assign(probe,{shell,popup,setRunning(value){session.set({...session.getSnapshot(),running:value})},open:()=>popup.open('skills',definition.ui,{sessionId}),dispose(){root.unmount();menuRoot.unmount();popup.dismiss();shell.dispose();for(const stop of effects.reverse())stop()}})

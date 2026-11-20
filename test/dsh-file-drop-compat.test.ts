@@ -285,12 +285,31 @@ describe('dsh-file-drop Research canvas compatibility', () => {
     expect(runtime.snapshot().phase).toBe('failed')
   })
 
-  it('upgrades the previous Research-only compatibility patch in place', async () => {
+  it.each(['previous desktop', 'Research-only'])('upgrades the %s compatibility patch in place', async (version) => {
     const { dshHome, clientPath } = await makeDshHome()
     expect((await ensureDshFileDropResearchCanvasCompatibility(dshHome)).status)
       .toBe('patched')
     const current = await readFile(clientPath, 'utf8')
-    const legacy = current.replace(/\n *\/\/ odyssey:image-file-(?:intake|drop):start[\s\S]*?\/\/ odyssey:image-file-(?:intake|drop):end/g, '').replace("(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner'))", "node.hasAttribute('data-research-canvas')").replace(
+    const previous = current
+      .replace(/\n      React\.useEffect\(\(\) => \{\n        const picker = pickRef\.current[\s\S]*?\n      \}, \[\]\)/, '')
+      .replace(
+        `          depthRef.current = 0
+          setDrag(false)
+          const card = e.target?.closest?.('[data-composer-card]')
+          if (e.dataTransfer.files.length && card?.querySelector('[data-odyssey-composer-file-drop]')) return
+          e.preventDefault()
+          e.stopPropagation()
+          void handleDrop(e)`,
+        `          e.preventDefault()
+          e.stopPropagation()
+          depthRef.current = 0
+          setDrag(false)
+          void handleDrop(e)`
+      )
+    const legacy = version === 'previous desktop' ? previous : previous
+      .replace(/\n *\/\/ odyssey:image-file-(?:intake|drop):start[\s\S]*?\/\/ odyssey:image-file-(?:intake|drop):end/g, '')
+      .replace("(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner') || node.hasAttribute('data-knowledge-file-drop-owner'))", "node.hasAttribute('data-research-canvas')")
+      .replace(
       `      if (!inputActions || !Array.isArray(paths) || paths.length === 0) return
       // ${DSH_FILE_DROP_INLINE_REFERENCE_MARKER}
       if (typeof inputActions.insertFilePaths === 'function') {
