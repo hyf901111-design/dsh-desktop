@@ -163,6 +163,42 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-20T04:27:56.518Z"
+      },
+      "merged": {
+        "mergeCommit": "d8ee126e074d37bd768879c9c9f26d86075f18ed",
+        "verificationCommit": "d8ee126e074d37bd768879c9c9f26d86075f18ed",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/spreadsheet-cash-flow-playback.test.ts",
+              "--testTimeout",
+              "10000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
+            "verifiedCommit": "d8ee126e074d37bd768879c9c9f26d86075f18ed",
+            "completedAt": "2026-11-20T04:28:25.098Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "d8ee126e074d37bd768879c9c9f26d86075f18ed",
+            "completedAt": "2026-11-20T04:28:25.098Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "recordedAt": "2026-11-20T04:28:25.098Z"
       }
     }
   ],
