@@ -510,3 +510,31 @@ footer > span {
   border-bottom: 1px solid var(--line);
   border-radius: 0;
 }
+
+.menu.layout-menu{position:fixed;width:min(520px,calc(100vw - 16px));max-height:min(440px,calc(100vh - 54px));overflow:hidden;box-sizing:border-box}
+.edit-col{position:relative}
+.style-popover{position:absolute;right:10px;top:8px;z-index:60;box-sizing:border-box;width:min(264px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;padding:12px;border-radius:8px;background:#fff;color:#303030;border:1px solid #ccc;box-shadow:0 4px 18px #0003}
+.style-popover header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.style-popover header >button{height:26px;width:26px;color:inherit;background:transparent;border:0;cursor:pointer}
+.menu,.style-popover{animation:odyssey-menu-in 120ms ease-out}
+@keyframes odyssey-menu-in{from{opacity:0;translate:0 -3px}to{opacity:1;translate:0 0}}
+.page-row,.ribbon button,footer button,.layout-grid button{transition:background-color 120ms ease-out,color 120ms ease-out}
+.page-row:active,.ribbon button:active,footer button:active{background:var(--hover,#8883)}
+@media(prefers-reduced-motion:reduce){.menu,.style-popover,.page-row,.ribbon button,footer button,.layout-grid button{animation:none;transition:none}}
+
+.editable-element[data-master-art]{pointer-events:none!important;user-select:none}
+.deck-app:fullscreen{width:100vw;height:100vh}
+
+.style-popover .style-tabs{display:flex;gap:4px}
+.style-tabs button{border:0;background:transparent;padding:4px 9px;border-radius:4px;cursor:pointer;color:inherit}
+.style-tabs button[aria-pressed=true]{background:#e5edfa;color:#244574}
+.menu:has(.shape-pool,.chart-pool,.table-generator){max-width:calc(100vw - 16px);color:#303030;background:#fff}
+@keyframes slide-arrive{from{opacity:.85}to{opacity:1}}
+.slide-area:has(.viewport){animation:slide-arrive 150ms ease-out}
+@media(prefers-reduced-motion:reduce){.slide-area:has(.viewport){animation:none}}
+
+.page-row[data-moving]{opacity:.5}
+.page-row[data-drop]{box-shadow:inset 0 2px var(--accent)}
+.style-popover{background:var(--bar);border-color:var(--line);color:var(--ink);color-scheme:normal}
+.style-popover :is(input,select,.select,.input,.select-custom,.number-input){color:#303030}
+.style-tabs button[aria-pressed=true]{background:var(--hover);color:var(--ink)}

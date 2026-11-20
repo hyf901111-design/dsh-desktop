@@ -479,10 +479,10 @@ export function mountWorkspaceViewCustomization(document: Document) {
       return slots[index]
     }
     const stopDrag = () => {
-      const id = press?.id
+      const source = press?.button, id = press?.id
       press?.button.removeAttribute('data-workspace-editor-source')
       press = undefined
-      if (id !== undefined && panel.hasPointerCapture(id)) panel.releasePointerCapture(id)
+      if (id !== undefined && source?.hasPointerCapture(id)) source.releasePointerCapture(id)
       highlight()
       ghost.remove()
       nav.removeAttribute('data-dragging')
@@ -499,6 +499,8 @@ export function mountWorkspaceViewCustomization(document: Document) {
       const button = target.closest<HTMLElement>('[data-workspace-editor-app]')
       const app = button?.dataset.workspaceEditorApp
       if (!button || event.button !== 0 || !event.isPrimary || !isTopNavigationApp(app)) return
+      // Capture before the first move can cross the presentation iframe.
+      button.setPointerCapture(event.pointerId)
       const bounds = button.getBoundingClientRect()
       press = { id: event.pointerId, app, button, x: event.clientX, y: event.clientY,
         offsetX: event.clientX - bounds.left, offsetY: event.clientY - bounds.top }
@@ -507,7 +509,6 @@ export function mountWorkspaceViewCustomization(document: Document) {
       if (!press || press.id !== event.pointerId) return
       if (!ghost.isConnected) {
         if (Math.hypot(press.x - event.clientX, press.y - event.clientY) < 5) return
-        panel.setPointerCapture(event.pointerId)
         pick()
         ghost.textContent = appName(press.app)
         ghost.style.width = press.button.offsetWidth + 'px'
@@ -590,7 +591,7 @@ export function mountWorkspaceViewCustomization(document: Document) {
     document.addEventListener('pointerup', pointerUp, { capture: true, signal })
     document.addEventListener('pointercancel', stopDrag, { signal })
     document.addEventListener('click', ignoreDragClick, { capture: true, signal })
-    panel.addEventListener('lostpointercapture', stopDrag, { signal })
+    document.addEventListener('lostpointercapture', event => { if (press?.id === event.pointerId && event.target === press.button) stopDrag() }, { signal })
     panel.append(palette, status)
     renderSlots()
     labels.before(strip)

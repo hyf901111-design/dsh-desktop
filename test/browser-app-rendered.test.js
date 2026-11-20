@@ -910,6 +910,59 @@ it('dismisses a browser popup before collapsing the workspace shortcuts on Escap
  }finally{await page.close()}
 })
 
+it('drags Presentation from the palette across the editor into an empty top slot',async()=>{
+ const {page}=await fixture(1380,890,true)
+ try {
+  await page.evaluate(()=>{
+   window.browserView.close()
+   document.body.removeAttribute('data-workspace-surface')
+   const center=document.querySelector('.pI_x6G_centerCol')
+   center.innerHTML='<section class="wSkVaW_root" data-odyssey-page="presentation" style="position:relative;height:100%"><header class="wSkVaW_header" data-odyssey-header-layout="compact" data-srb-session-header><div class="wSkVaW_crumbs"><span class="wSkVaW_crumb">新演示</span></div><div class="wSkVaW_tabs" data-srb-tabs><button data-conversation-view-id="chat">对话</button></div></header></section>'
+   document.body.insertAdjacentHTML('beforeend', `
+    <aside data-dsh-sidebar-root data-dsh-sidebar-wide="false" style="position:fixed;left:8px;top:180px">
+     <div class="hHd-Xa_newSessionGroup"><button data-sidebar-home aria-label="主页">主页</button></div>
+    </aside>`)
+   center.querySelector('header').dataset.eworkNotesSession='presentation-owner'
+   const frame=document.createElement('iframe')
+   frame.sandbox='allow-scripts'
+   frame.style='position:absolute;inset:52px 0 0;width:100%;height:80%;border:0'
+   center.firstElementChild.append(frame)
+   window.homeOpens=[]
+   window.mountNavigationShortcuts(document,{
+    read:()=>({top:['research','spreadsheet','note',null]}),
+    save:value=>{if(window.failTopSave)return false;window.savedTop=value.top;return true},
+    open:()=>{}
+   })
+   window.mountSessionWorkspaceViewShortcuts(document,()=>{},app=>{
+    window.homeOpens.push(app)
+    if(app==='browser'){
+     document.body.dataset.workspaceSurface='browser'
+     return window.browserView.open('')
+    }
+   })
+   document.addEventListener('sherlock:workspace-surface-change',()=>{
+    if(window.browserView.root.hidden) delete document.body.dataset.workspaceSurface
+   })
+   window.mountWorkspaceViewCustomization(document)
+  })
+  const controls=page.locator('[data-session-workspace-controls]')
+  await controls.locator('.eb-workspace-toggle').click()
+  await controls.getByRole('button',{name:'自定义顶栏'}).click()
+  const palette=page.locator('.workspace-view-palette [data-workspace-editor-app=presentation]')
+  const slot=controls.locator('[data-workspace-editor-slot="3"]')
+  const source=await palette.boundingBox(), dest=await slot.boundingBox()
+  await page.mouse.move(source.x+source.width/2,source.y+source.height/2)
+  await page.mouse.down()
+  await page.mouse.move(source.x+source.width/2,source.y+source.height+20,{steps:5})
+  await page.mouse.move(dest.x+dest.width/2,dest.y+dest.height/2,{steps:12})
+  await page.mouse.up()
+  await expect.poll(()=>page.evaluate(()=>window.savedTop)).toEqual(['research','spreadsheet','note','presentation'])
+  await page.keyboard.press('Escape')
+  await controls.getByRole('button',{name:'自定义顶栏'}).click()
+  expect(await controls.locator('[data-workspace-editor-slot="3"] [data-workspace-editor-app]').getAttribute('data-workspace-editor-app')).toBe('presentation')
+ }finally{await page.close()}
+})
+
 it.each([true,false])('sizes top-bar labels and lets users drag app labels into the workspace switcher (dark=%s)',async dark=>{
  const {page,errors}=await fixture(1440,900,dark)
  try {
@@ -994,7 +1047,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   expect(await done.count()).toBe(1)
   expect(await slots.count()).toBe(4)
   expect(await dialog.getByRole('combobox').count()).toBe(0)
-  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','笔记','表格','图像','浏览器','知识库'])
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','笔记','表格','演示','图像','浏览器','知识库'])
   expect(await dialog.evaluate(panel=>getComputedStyle(panel).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
   expect(await palette.evaluate(row=>{
    const style=getComputedStyle(row)
@@ -1040,7 +1093,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await dragApp('表格',3)
   await dragApp('知识库',3)
   expect(await slots.locator('[data-workspace-editor-app]').allTextContents()).toEqual(['图像','笔记','表格','知识库'])
-  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','浏览器'])
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','演示','浏览器'])
   expect(await paletteFitsLabels()).toBe(true)
   expect((await palette.boundingBox()).width).toBeLessThan(paletteBox.width / 2)
   expect(await slotGeometry()).toEqual(emptyGeometry)
@@ -1085,7 +1138,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await strip.getByRole('button',{name:'移除表格'}).click()
   expect(await page.evaluate(()=>window.savedTop)).toEqual(['note','browser','image-factory',null])
   expect(await deleteButtons.count()).toBe(3)
-  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','表格','知识库'])
+  expect(await palette.getByRole('button').allTextContents()).toEqual(['研究','表格','演示','知识库'])
   expect(await paletteFitsLabels()).toBe(true)
   expect(await slotGeometry()).toEqual(emptyGeometry)
   await dragApp('知识库',3)

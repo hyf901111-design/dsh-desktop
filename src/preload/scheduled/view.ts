@@ -125,6 +125,7 @@ export class ScheduledTaskView {
       if (this.root || this.componentMode) this.syncPanel()
     })
     this.document.addEventListener('pointerdown', this.outside, true)
+    this.document.addEventListener('sherlock:workspace-pointerdown', () => this.closeMenu())
     this.document.addEventListener('keydown', this.keyboard)
     this.document.addEventListener('click', this.navigateAway, true)
     this.document.addEventListener('sherlock:search-session-opened', () => this.close())

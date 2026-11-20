@@ -96,7 +96,7 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
     if (!id || ((event as CustomEvent | undefined)?.detail?.sessionId && (event as CustomEvent).detail.sessionId !== id)) return
     sessionId = id;handoffPreloads.delete(id);host.open('notes');render()
   }
-  const onNativeTabClick = (event: Event) => { if ((event.target as Element)?.closest?.('[data-srb-tabs] [data-conversation-view-id=notes]')) open() }
+  const onNativeTabClick = (event: Event) => { if ((event.target as Element)?.closest?.('[data-srb-tabs] [data-conversation-view-id=notes]') && document.querySelector('[data-ework-note-view]')) open() }
   const close = (event: Event) => { if ((event as CustomEvent).detail?.sessionId === sessionId) host.close('notes') }
   let locale = document.documentElement.dataset.odysseyLocale
   const sync = () => {
@@ -105,7 +105,10 @@ export function mountNotes(document: Document, bridge: NotesBridge, host: Worksp
     const id = document.querySelector<HTMLElement>('[data-ework-notes-session]')?.dataset.eworkNotesSession
     const anchor = id ? document.querySelector('[data-ework-note-view="' + CSS.escape(id) + '"]') : null
     if (anchor && (id !== sessionId || anchor !== lastAnchor || !host.current()) && !document.querySelector('.VOzbGW_overlay')) { lastAnchor = anchor; open() }
-    else if (!anchor) lastAnchor = null
+    else if (!anchor) {
+      lastAnchor = null
+      if(host.current()?.surface==='notes' && document.querySelector('[data-odyssey-page=spreadsheet] [data-ework-spreadsheet-view],[data-odyssey-page=presentation] [data-ework-presentation-view]'))host.close('notes')
+    }
   }
   const observer = new MutationObserver(() => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; sync() }) }); observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-ework-notes-session', 'data-odyssey-locale', 'data-home-guide-transition'] })
   const theme = new MutationObserver(render); theme.observe(surface, { attributes: true, attributeFilter: ['data-dark'] })

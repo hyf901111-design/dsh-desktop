@@ -40,6 +40,7 @@ export function installPresentation(options: {
     finish(deck?: Deck, error?: string): void
   }
   const imports = new Map<string, PendingImport>()
+  const locks = new Set<string>()
   const retained = new Set<string>(),
     retaining = new Set<string>()
   function retain(key: Key) {
@@ -69,7 +70,7 @@ export function installPresentation(options: {
       c.mode !== 'presentation' ||
       c.sessionId !== id ||
       (generation !== undefined && c.generation !== generation) ||
-      (write && !options.canWrite(id))
+      (write && (!options.canWrite(id) || locks.has(who({owner:c.ownerAccountId,sessionId:id}))))
     )
       throw Error('请回到此会话的演示页签。')
     return { key: { owner: c.ownerAccountId, sessionId: id }, generation: c.generation }
@@ -85,12 +86,18 @@ export function installPresentation(options: {
         ['save', 'open', 'undo'].includes(action)
       )
       const owner = who(key)
+      if(action==='lock') {
+        if(!options.canWrite(key.sessionId)||typeof input.locked!=='boolean')throw Error('文稿只读。')
+        if(input.locked)locks.add(owner);else locks.delete(owner)
+        return input.locked
+      }
       if (action === 'load' && store.recent(key).length) retain(key)
       if (action === 'load')
         return {
           generation,
           owner: key.owner,
           editable: options.canWrite(key.sessionId),
+          locked:locks.has(owner),
           record: store.read(key),
           recent: store.recent(key),
           slideId: store.position(key)
@@ -233,7 +240,7 @@ export function installPresentation(options: {
       }
       const applyPresentation: CapabilityHandler<'presentation.apply'> = async (args) => {
         guard()
-        if (!options.canWrite(key.sessionId)) throw Error('文稿只读。')
+        if (!options.canWrite(key.sessionId)||locks.has(who(key))) throw Error('文稿已锁定，只能查看。')
         const data = store.apply(key, args)
         createdId = data.documentId
         retain(key)
