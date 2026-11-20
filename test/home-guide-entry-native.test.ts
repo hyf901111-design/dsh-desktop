@@ -19,7 +19,7 @@ const blank=()=>({snapshot:{phase:'plain',draft:'用户未发送的文字',draft
 async function fixture(options:{createGate?:Promise<void>;reserveGate?:Promise<void>;noteFlush?:Promise<void>;noteFlushError?:Error;noteInput?:boolean;historyCount?:number;reserveFailure?:boolean}={}){
  const win=new Window({url:'http://localhost:44321'}),document=win.document as unknown as Document
  vi.stubGlobal('Event',win.Event);vi.stubGlobal('CustomEvent',win.CustomEvent);vi.stubGlobal('document',document)
- document.body.innerHTML='<aside data-dsh-sidebar-root><div data-navigation-rail><button data-navigation-app="spreadsheet" aria-label="表格">表格</button></div><button aria-label="新建对话">新建对话</button><button aria-label="新建研究">新建研究</button></aside><div class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="home"><div data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="research">研究</button><button data-conversation-view-id="notes">笔记</button></div><textarea></textarea></div></div><div class="st-menu" data-sidebar-more="true" role="menu"><button role="menuitem">新笔记</button></div>'
+ document.body.innerHTML='<aside data-dsh-sidebar-root><div data-navigation-rail><button data-navigation-app="spreadsheet" aria-label="表格">表格</button><button data-navigation-app="note" aria-label="笔记">笔记</button></div><button aria-label="新建对话">新建对话</button><button aria-label="新建研究">新建研究</button></aside><div class="pI_x6G_centerCol"><div class="wSkVaW_root" data-odyssey-page="home"><div data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="research">研究</button><button data-conversation-view-id="notes">笔记</button></div><textarea></textarea></div></div><div class="st-menu" data-sidebar-more="true" role="menu"><button role="menuitem">新笔记</button></div>'
  for(const el of document.querySelectorAll<HTMLElement>('button,textarea'))el.getBoundingClientRect=()=>({x:10,y:10,left:10,top:10,right:110,bottom:45,width:100,height:35,toJSON(){return{}}})
  const list=store<any>({current:'A',byId:{A:{id:'A',title:'用户原文',cwd:'/source',blank:false}}}),ordinary=blank(),notes=blank(),sessionsById=new Map<string,any>(),requests:any[]=[],opened:string[]=[],modes:any[]=[],disk=new Map<string,string>();let sequence=0,normal=0,emit=(event:any)=>{},effective=options.noteInput?notes:ordinary
  const state:any={version:1,eventSeq:1,account:{status:'ready',generation:1,user:{userId:'owner'}},favorites:[],boards:[],current:null,recoveries:[],notifications:{cursor:0,unreadCount:0,pendingCount:0,notifications:[]}}
@@ -59,6 +59,16 @@ it.each(['board','workbench','note','ppt','report','spreadsheet']as HomeGuideEnt
  ])
  expect(()=>client.commit(target)).toThrow();expect(f.sessionsById.get(entry.sessionId).events.some((row:any)=>row.type==='session/title')).toBe(true)
  if(kind==='note')expect(f.document.querySelector('[role="menu"]')).toBeNull()
+ client.dispose()
+})
+it('opens a prepared Notes demo through the pinned shortcut that ignores branded clicks',async()=>{
+ const f=await fixture(),client=await f.client('note')
+ const target=f.document.querySelector<HTMLButtonElement>('[data-navigation-app=note]')!
+ const ordinaryClick=vi.fn()
+ target.onclick=()=>{if(!target.hasAttribute('data-home-guide-entry-click'))ordinaryClick()}
+ const entry=await client.prepare(target,'new-note')
+ await expect(client.commit(target)).resolves.toMatchObject({sessionId:entry.sessionId,cwd:entry.cwd})
+ expect(f.opened).toEqual([entry.sessionId]);expect(ordinaryClick).not.toHaveBeenCalled()
  client.dispose()
 })
 it.each([['board','home-research','research'],['note','home-notes','notes'],['ppt','home-chat','chat']]as const)('uses the %s homepage tab as final native entry without changing the old view',async(kind,action,mode)=>{
