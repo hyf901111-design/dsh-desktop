@@ -13,7 +13,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
     const object = slide.elements.find(
       (e) =>
         !e.odysseyMaster &&
-        (d.target === 'chart' ? e.type === 'chart' : plain(e.content || e.text?.content).trim() === d.title)
+        (['chart', 'table'].includes(d.target) ? e.type === d.target : plain(e.content || e.text?.content).trim() === d.title)
     )
     if (!object) throw Error('当前页没有找到要演示的对象。')
     const viewport = document.querySelector('.slide-area .viewport-wrapper').getBoundingClientRect()
@@ -67,7 +67,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
     return
   }
   if (d.command === 'bounds')
-    return d.target === 'chart' || d.target === 'title'
+    return ['chart', 'table', 'title'].includes(d.target)
       ? box(getObject().rect)
       : box(control().getBoundingClientRect())
   if (d.command === 'click') {

@@ -439,7 +439,7 @@ test('records a real window-blur pause, foreground resume and reset cancellation
  }finally{info.mockRestore()}
 })
 
-test('pauses and resumes the independent presentation editor, preserving all eleven scenes for native handoff',async()=>{
+test('pauses and resumes the independent presentation editor, preserving the cross-page mark and review scenes for native handoff',async()=>{
  vi.useFakeTimers();const f=fixture()
  await f.controller.start('presentation-edit',{replay:true});await vi.advanceTimersByTimeAsync(1)
  const control=(label:string)=>f.header.querySelector<HTMLButtonElement>('button[aria-label="'+label+'"]')
@@ -447,7 +447,7 @@ test('pauses and resumes the independent presentation editor, preserving all ele
  control('暂停演示')!.click();await vi.advanceTimersByTimeAsync(30000)
  expect(f.runStep.mock.calls.flat()).toEqual(['enter'])
  control('继续播放演示')!.click();await vi.advanceTimersByTimeAsync(32000)
- expect(f.runStep.mock.calls.flat()).toEqual(['enter','library','drag-import','ask-notes','notes','review-notes','mark-chart','revise-chart','select-title','revise-title','finish'])
+ expect(f.runStep.mock.calls.flat()).toEqual(['enter','library','drag-import','ask-notes','notes','review-notes','mark-chart','mark-table','revise-chart','review-chart','select-title','revise-title','select-notes','revise-notes','return-first','play','finish'])
  expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(1)
  expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
  expect(document.querySelector('[data-home-guide]')).toBeNull()

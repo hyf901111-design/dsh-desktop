@@ -11,7 +11,7 @@ export async function mountPresentationEditGuideChat(document: Document, options
   let prepared = false
   let preparing = false
   let sent = false
-  let pending: { input: HTMLTextAreaElement; text: string; referenceLabel?: string } | undefined
+  let pending: { input: HTMLTextAreaElement; text: string; referenceLabel?: string; marks?: string[] } | undefined
   const abort = () => new DOMException('演示对话已结束。', 'AbortError')
   const check = () => {
     if (controller.signal.aborted || options.signal.aborted ||
@@ -77,6 +77,12 @@ export async function mountPresentationEditGuideChat(document: Document, options
     const marker = prefix(input, label)
     return marker !== undefined && input.value === marker + text
   }
+  const matchesMarks = (input: HTMLTextAreaElement, comments: string[], labels: string[]) => {
+    const chips = [...(input.closest('.uV2eYG_root')?.querySelectorAll('[data-reference-source="presentation-reference"]:not([data-provisional=true])') ?? [])]
+    const segments = input.value.split(/[\uFFFC\uE000-\uF8FF]/u).map(part => part.trim())
+    return chips.length === labels.length && chips.every((chip, i) => chipLabel(chip) === labels[i]) &&
+      segments.length === comments.length + 1 && !segments[0] && comments.every((comment, i) => segments[i + 1] === comment)
+  }
   const end = (event: Event) => {
     const detail = (event as CustomEvent).detail
     if (detail?.ending && detail.runId === options.runId && detail.sessionId === options.sessionId) dispose()
@@ -112,13 +118,19 @@ export async function mountPresentationEditGuideChat(document: Document, options
       const input = await waitFor(composer, '未找到当前演示会话的输入框。')
       const chips = () => [...(input.closest('.uV2eYG_root')?.querySelectorAll('[data-reference-source="presentation-reference"]') ?? [])]
       const initial = chips()
+      const marks = existing && index === 1 && initial.length === 2 ? initial.map(el => chipLabel(el) || '') : undefined
       const referenceLabel = index > 0 && initial.length === 1 ? chipLabel(initial[0]!) : undefined
-      if ((index > 0 && !referenceLabel) || (index === 0 && initial.length)) throw Error('未找到本步骤的演示选区。')
+      if ((index > 0 && !marks && !referenceLabel) || (index === 0 && initial.length)) throw Error('未找到本步骤的演示选区。')
       // Focusing is the normal action that pins a provisional selection in the native composer.
       await click(input, () => {
         if (initial[0]?.hasAttribute('data-provisional') && document.activeElement === input) input.blur()
         input.focus({ preventScroll: true })
       })
+      if (marks) {
+        await waitFor(() => matchesMarks(input, text.split('\n'), marks) || undefined, '两条标注和修改意见尚未就绪。')
+        pending = { input, text, marks }
+        return
+      }
       await waitFor(() => matches(input, existing ? text : '', referenceLabel) ? true : undefined, '输入框已有草稿，或选区尚未就绪。')
       if (existing) { pending = { input, text, referenceLabel }; return }
       const setValue = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value')!.set!
@@ -139,13 +151,13 @@ export async function mountPresentationEditGuideChat(document: Document, options
     async send() {
       check()
       if (sent || !pending) throw Error('本步骤尚无待发送的演示请求。')
-      const { input, text, referenceLabel } = pending
+      const { input, text, referenceLabel, marks } = pending
       const validate = () => {
-        if (composer() !== input || !matches(input, text, referenceLabel)) throw Error('待发送的演示请求已变化。')
+        if (composer() !== input || !(marks ? matchesMarks(input, text.split('\n'), marks) : matches(input, text, referenceLabel))) throw Error('待发送的演示请求已变化。')
       }
       validate()
       await options.waitUntilPlaying()
-      await rpc('arm', { prompt: text, ...(referenceLabel ? { referenceLabel } : {}) })
+      await rpc('arm', { prompt: text, ...(marks ? { marks } : {}), ...(referenceLabel ? { referenceLabel } : {}) })
       const button = await waitFor(() => {
         const button = input.closest('.uV2eYG_root')?.querySelector<HTMLButtonElement>('button.uV2eYG_primary')
         return button && point(button) ? button : undefined

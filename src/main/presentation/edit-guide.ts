@@ -10,6 +10,7 @@ export function editGuideDocument(
   input: {
     stage?: 'notes' | 'chart' | 'title' | 'notes-selection'
     documentId?: string
+    tableMarkId?: string
     referenceId?: string
   }
 ) {
@@ -30,12 +31,16 @@ export function editGuideDocument(
   if (input.stage === 'notes') {
     operations = state.slides.map((s, i) => ({ op: 'notes', slideId: s.id, text: content.notes[i] }))
   } else if (input.stage === 'chart') {
-    const mark = slide.marks.find(
-      (m: any) => m.id === input.referenceId && m.kind === 'rect' && m.comment === content.chart.comment
-    )
-    const chart = slide.elements.find((e) => e.type === 'chart' && mark?.nodeIds?.includes(e.id))
-    if (page !== content.chart.page || !chart) throw Error('请在指定图表上框选并填写修改意见。')
-    operations = createPresentationGuideChartOperations(slide, state.viewportSize!, chart.id)
+    const chartSlide = store.inspect(key, state.slides[content.chart.page - 1]!.id).currentSlide!
+    const markedElement = (target: typeof slide, markId: string | undefined, comment: string, type: string) => {
+      const mark = target.marks.find((m: any) => m.id === markId && m.kind === 'rect' && m.comment === comment)
+      return target.elements.find(e => e.type === type && mark?.nodeIds?.includes(e.id))
+    }
+    const chart = markedElement(chartSlide, input.referenceId, content.chart.comment, 'chart')
+    const table = markedElement(slide, input.tableMarkId, content.table.comment, 'table')
+    if (page !== content.table.page || !chart || !table) throw Error('请先在两页分别框选图表和表格并填写修改意见。')
+    operations = [...createPresentationGuideChartOperations(chartSlide, state.viewportSize!, chart.id),
+      { op: 'tableVerticalAlign', slideId: slide.id, elementId: table.id, vAlign: 'middle' }]
   } else if (input.stage === 'title') {
     const title = slide.elements.find(
       (e) => e.id === input.referenceId && e.text.trim() === content.title.original
