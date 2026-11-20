@@ -948,6 +948,10 @@ it('drags Presentation from the palette across the editor into an empty top slot
   const controls=page.locator('[data-session-workspace-controls]')
   await controls.locator('.eb-workspace-toggle').click()
   await controls.getByRole('button',{name:'自定义顶栏'}).click()
+  const windowDragStrip=page.locator('#dsh-desktop-drag-region')
+  await page.evaluate(()=>document.body.insertAdjacentHTML('beforeend',
+   '<div id="dsh-desktop-drag-region" style="position:fixed;top:0;left:80px;right:220px;height:24px;z-index:18;pointer-events:auto"></div>'))
+  expect(await windowDragStrip.isVisible()).toBe(false)
   const palette=page.locator('.workspace-view-palette [data-workspace-editor-app=presentation]')
   const slot=controls.locator('[data-workspace-editor-slot="3"]')
   const source=await palette.boundingBox(), dest=await slot.boundingBox()
@@ -960,6 +964,10 @@ it('drags Presentation from the palette across the editor into an empty top slot
   await page.keyboard.press('Escape')
   await controls.getByRole('button',{name:'自定义顶栏'}).click()
   expect(await controls.locator('[data-workspace-editor-slot="3"] [data-workspace-editor-app]').getAttribute('data-workspace-editor-app')).toBe('presentation')
+  await controls.getByRole('button',{name:'移除演示'}).click()
+  await expect.poll(()=>page.evaluate(()=>window.savedTop)).toEqual(['research','spreadsheet','note',null])
+  await page.keyboard.press('Escape')
+  expect(await windowDragStrip.isVisible()).toBe(true)
  }finally{await page.close()}
 })
 
