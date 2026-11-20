@@ -312,6 +312,7 @@ ctx.effect(()=>{
  const right=(${createRightProjectDrafts.toString()})({globalDraft:pending,getInput:conversationOptions.getInput,makeDraft(entry,ownership){
    const draft=makePending({...conversationOptions,initialWorkspace:entry.workspaceId,detached:{
      ...ownership,sessionId:entry.sessionId,mode:['notes','research','spreadsheet'].includes(entry.mode)?entry.mode:'chat',
+     isCommandCurrent:()=>!entry.tabId||document.body.dataset.browserActiveTab===entry.tabId,
      open:id=>{
        const images=entry.mode==='image-factory';
        if(images)document.dispatchEvent(new CustomEvent('sherlock:image-factory-canvas-intent',{detail:id}));

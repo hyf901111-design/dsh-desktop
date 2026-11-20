@@ -291,6 +291,38 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
  } finally { await page.close() }
 },15000)
 
+it('opens the native command menu for a selected browser project without sending the draft', async () => {
+ const page=await browser.newPage({viewport:{width:1180,height:800}});
+ page.setDefaultTimeout(5000);
+ try {
+  await page.route('http://127.0.0.1/right-project-command',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8">'}));
+  await page.goto('http://127.0.0.1/right-project-command');
+  await page.setContent('<style>'+css+'#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>');
+  await page.evaluate(value=>{window.pendingInput={...value,recentWorkspaceId:'A',verifyRightProject:true,verifyRightCommand:true}},input);
+  await page.addScriptTag({content:script});
+  await page.evaluate(()=>{document.body.dataset.browserActiveTab='tab-1';window.pendingFixture.openSurface('browser')});
+  const right=page.locator('#right');
+  await right.locator('.pXSMma_workspace').click();
+  await page.getByText('研究项目 B',{exact:true}).click();
+  await right.locator('.pXSMma_workspace').getByText('研究项目 B',{exact:true}).waitFor();
+  await right.locator('textarea').fill('保留浏览器草稿');
+  const commands=right.getByRole('button',{name:'命令',exact:true});
+  expect(await commands.isEnabled()).toBe(true);
+  await commands.click();
+  const project=right.locator('[data-mounted-project=new-session]');
+  await project.waitFor();
+  expect(await page.evaluate(()=>window.pendingFixture.right.getSnapshot())).toBeUndefined();
+  expect(await project.locator('textarea').inputValue()).toBe('保留浏览器草稿');
+  expect(await project.getByRole('listbox').count()).toBe(0);
+  await page.evaluate(()=>window.pendingFixture.readySession());
+  await project.getByRole('listbox').getByRole('option').first().waitFor({state:'visible'});
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},{type:'open',id:'new-session'},
+  ]);
+  expect(await page.evaluate(()=>document.body.dataset.workspaceSurface)).toBe('browser');
+ } finally { await page.close() }
+},15000);
+
 it('changes only the right project, drops an empty draft, and opens the new workspace on first send', async () => {
  const page=await browser.newPage({viewport:{width:1180,height:800}}), errors=[];
  page.setDefaultTimeout(5000);

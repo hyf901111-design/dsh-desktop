@@ -31,7 +31,8 @@ const options={makeShell:(deps:any)=>new native.__testSessionInputShell({...deps
  setView:(id:string,view:string)=>events.push({type:'view',id,view})}
 const record=createPendingConversation(options)
 const right=createRightProjectDrafts({globalDraft:record,makeDraft:(entry:any,ownership:any)=>createPendingConversation({
- ...options,initialWorkspace:entry.workspaceId,detached:{...ownership,sessionId:entry.sessionId,mode:'chat'}
+ ...options,initialWorkspace:entry.workspaceId,detached:{...ownership,sessionId:entry.sessionId,mode:'chat',
+  isCommandCurrent:()=>!entry.tabId||document.body.dataset.browserActiveTab===entry.tabId}
 })})
 if(data.verifyRightProject){current.current='existing-canvas';active.set('existing-canvas');native.__testSetRightProjects(right)}
 
@@ -68,6 +69,7 @@ function ProjectComposer({sessionId}:{sessionId:string}){
 }
 function Home(){
  const sessionId=React.useSyncExternalStore(active.subscribe,active.getSnapshot)
+ if(data.verifyRightCommand&&sessionId==='new-session')return null
  if((data.verifyHandoff||data.verifyRightProject)&&sessionId==='new-session')return <ProjectComposer sessionId={sessionId}/>
  const inHistory=data.verifyHistory&&sessionId==='existing-canvas'
  const historyInput=(select:any)=>select(React.useSyncExternalStore(history.state.subscribe,history.state.getSnapshot))
@@ -77,8 +79,17 @@ function Home(){
   : nativeRenderSlot(name,props)
  return <native.__testHomeGuideNativeOriginalConversationRoot sessionId={data.verifyRightProject?sessionId:undefined} useSession={(select:any)=>inHistory?select(historyState):undefined} useSessions={(select:any)=>select(emptySessions)} useWorkspaces={useWorkspaces} useInput={inHistory?historyInput:()=>undefined} useComposerBlock={()=>undefined} useStore={(select:any)=>select(view)} actions={actions} researchSidebar={coordinator} researchWorkspaces={registry} useProjection={()=>undefined} renderSlot={inHistory?historyRenderSlot:nativeRenderSlot} renderSlotChain={(_name:any,_props:any,{fallback}:any)=>fallback} selectWorkspace={async(id:string)=>record.selectWorkspace(id)} t={t}/>
 }
+function Right(){
+ const sessionId=React.useSyncExternalStore(active.subscribe,active.getSnapshot)
+ React.useLayoutEffect(()=>{
+  if(data.verifyRightCommand&&sessionId==='new-session')right.show({
+   sessionId,mode:'browser',tabId:document.body.dataset.browserActiveTab,workspaceId:'B'
+  })
+ },[sessionId])
+ return data.verifyRightCommand&&sessionId==='new-session'?<ProjectComposer sessionId={sessionId}/>:<NativeRight/>
+}
 createRoot(document.getElementById('app')!).render(<Home/>);
-createRoot(document.getElementById('right-body')!).render(<NativeRight/>);
+createRoot(document.getElementById('right-body')!).render(<Right/>);
 const surfaces=new WorkspaceSurfaceHost(document)
 for (const name of ['browser','image-factory','knowledge'] as const) {
  const surface=document.createElement('section')
