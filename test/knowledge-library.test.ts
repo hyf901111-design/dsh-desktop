@@ -37,17 +37,22 @@ async function withoutSourceVersion(root: string) {
   await writeFile(path, JSON.stringify(state))
 }
 
-it('seeds one checked presentation reference per library and preserves the PDF bytes', async () => {
+it('seeds a checked presentation reference without creating a folder', async () => {
   const { open, switchAccount } = await fixture()
   const store = open(), pdf = Buffer.from('%PDF-1.4\nfixed presentation reference')
-  const seed = () => store.ensurePresentationGuideSource('参考.pdf', '演示用例参考资料', pdf)
+  const seed = () => store.ensurePresentationGuideSource('参考.pdf', pdf)
   const [first, repeated] = await Promise.all([seed(), seed()])
   expect(repeated).toEqual(first)
   expect(await store.snapshot()).toMatchObject({
-    folders: [{ id: first.folderId, name: '演示用例参考资料' }],
-    documents: [{ id: first.fileId, folderId: first.folderId, name: '参考.pdf' }]
+    folders: [],
+    documents: [{ id: first.fileId, name: '参考.pdf' }]
   })
   expect(await readFile((await store.file(first.fileId)).path)).toEqual(pdf)
+  await store.edit({ type: 'create-folder', name: '原有参考目录' })
+  const [folder] = (await store.snapshot()).folders
+  await store.edit({ type: 'move', id: first.fileId, folderId: folder!.id })
+  expect(await seed()).toEqual(first)
+  expect((await store.snapshot()).documents).toMatchObject([{ id: first.fileId, folderId: folder!.id }])
   switchAccount()
   expect((await seed()).fileId).not.toBe(first.fileId)
 })

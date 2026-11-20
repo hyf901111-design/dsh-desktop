@@ -26,42 +26,50 @@ type PanelBridge = {
   download(id: string): Promise<boolean>
 }
 
-type PanelProps = { id?: string; document: Document; bridge: PanelBridge }
+type PanelProps = { id?: string; document: Document; bridge: PanelBridge; referenceFile?: string }
 const size = (value: number) => value >= 1024 * 1024
   ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(value / 1024))} KB`
 
 export function mountKnowledgePanels(document: Document, bridge: PanelBridge) {
-  const roots = new Map<HTMLElement, ReturnType<typeof createRoot>>()
+  const roots = new Map<HTMLElement, { root: ReturnType<typeof createRoot>; referenceFile?: string }>()
   const style = document.createElement('style')
   style.textContent = css
   document.head.append(style)
   const scan = () => {
-    for (const [host, root] of roots) if (!host.isConnected) {
+    for (const [host, entry] of roots) if (!host.isConnected) {
       roots.delete(host)
-      root.unmount()
+      entry.root.unmount()
     }
+    const guide = document.querySelector<HTMLElement>('[data-home-guide][data-kind="ppt"] [data-home-presentation-reference-file]')
     for (const host of document.querySelectorAll<HTMLElement>('[data-knowledge-panel-host]')) {
-      if (roots.has(host)) continue
-      const root = createRoot(host)
-      roots.set(host, root)
-      root.render(<KnowledgePanel id={host.dataset.knowledgePanelFile} document={document} bridge={bridge} />)
+      const id = host.dataset.knowledgePanelFile
+      const session = host.dataset.knowledgePanelSession
+      const referenceFile = !id && session && guide?.dataset.homePresentationReferenceSession === session &&
+        host.closest('#odyssey-right-workspace-panel') ? guide.dataset.homePresentationReferenceFile : undefined
+      const existing = roots.get(host)
+      if (existing && existing.referenceFile === referenceFile) continue
+      const root = existing?.root ?? createRoot(host)
+      roots.set(host, { root, referenceFile })
+      root.render(<KnowledgePanel id={id} document={document} bridge={bridge} referenceFile={referenceFile} />)
     }
   }
   const observer = new MutationObserver(scan)
-  observer.observe(document.body, { childList: true, subtree: true })
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true,
+    attributeFilter: ['data-home-presentation-reference-file', 'data-knowledge-panel-session'] })
   scan()
   return () => {
     observer.disconnect()
-    roots.forEach(root => root.unmount())
+    roots.forEach(({ root }) => root.unmount())
     roots.clear()
     style.remove()
   }
 }
 
-function KnowledgePanel({ id, document, bridge }: PanelProps) {
+function KnowledgePanel({ id, document, bridge, referenceFile }: PanelProps) {
   const [section, setSection] = useState<'files' | 'memory'>('files')
   const panel = useRef<HTMLElement>(null)
   const showFiles = section === 'files'
+  useEffect(() => { if (referenceFile) setSection('files') }, [referenceFile])
   useEffect(() => {
     const reset = () => setSection('files')
     document.addEventListener('sherlock:knowledge-identity-changed', reset)
@@ -79,7 +87,7 @@ function KnowledgePanel({ id, document, bridge }: PanelProps) {
         )}>打开完整知识库</button>
       </header>
       <div className="knowledge-panel-files" hidden={!showFiles}>
-        <FilePicker document={document} bridge={bridge} />
+        <FilePicker document={document} bridge={bridge} referenceFile={referenceFile} />
       </div>
       {!showFiles && bridge.memory && <KnowledgeMemory document={document} bridge={bridge.memory} compact />}
     </>}
@@ -228,7 +236,7 @@ function FilePreview({ id, bridge, document, panel }: PanelProps & { id: string;
   </>
 }
 
-function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
+function FilePicker({ document, bridge, referenceFile }: Omit<PanelProps, 'id'>) {
   const [snapshot, setSnapshot] = useState<KnowledgeSnapshot>({ documents: [], folders: [] })
   const [category, setCategory] = useState<KnowledgeCategory>('all')
   const [folder, setFolder] = useState<string>()
@@ -245,6 +253,16 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   const filterTrigger = useRef<HTMLButtonElement>(null)
   const reloadReceived = useRef<() => void>(() => {})
   const browsingReceived = category === 'received'
+  useEffect(() => {
+    if (!referenceFile) return
+    setCategory('all')
+    setFolder(undefined)
+    setSharedCategory(undefined)
+    setQuery('')
+    setFacets({})
+    setMenu(undefined)
+    setAllShared(false)
+  }, [referenceFile])
   useEffect(() => {
     let revision = 0
     const load = (force = false, catalog?: KnowledgeDocument[]) => {
@@ -300,7 +318,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
       document.removeEventListener('sherlock:knowledge-shared-access-changed', sharedAccessChanged)
       document.removeEventListener('sherlock:knowledge-shared-catalog', catalogChanged)
     }
-  }, [bridge, document, browsingReceived])
+  }, [bridge, document, browsingReceived, referenceFile])
   useEffect(() => {
     if (!menu) return
     const outside = (event: PointerEvent) => {
@@ -322,6 +340,10 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
   }, [document, menu])
   const publishedSessions = usePublishedKnowledgeSessions(document, snapshot, category === 'shared')
   const rows = listKnowledgeRows(snapshot, { ...facets, category, folderId: folder, sharedCategory, query }, publishedSessions)
+  if (referenceFile) {
+    const index = rows.findIndex(row => row.id === referenceFile)
+    if (index > 0) rows.unshift(...rows.splice(index, 1))
+  }
   const sharedDirectory = browsingReceived && !allShared && !sharedCategory && !query.trim()
   const sharedCounts = new Map<string, number>()
   if (sharedDirectory) for (const row of rows) {
@@ -378,7 +400,7 @@ function FilePicker({ document, bridge }: Omit<PanelProps, 'id'>) {
           <button key={id} type="button" aria-current={category === id && !folder ? 'page' : undefined}
             onClick={() => pick(id as KnowledgeCategory)}><KnowledgeIcon name={categoryIcons[id as KnowledgeCategory]} />{label}</button>)}
         {snapshot.folders.length > 0 && <span>文件夹</span>}
-        {snapshot.folders.map(folder => <button key={folder.id} type="button" data-knowledge-folder-id={folder.id} onClick={() => pick('all', folder.id)}>
+        {snapshot.folders.map(folder => <button key={folder.id} type="button" onClick={() => pick('all', folder.id)}>
           <KnowledgeIcon name="folder" /> {folder.name}
         </button>)}
       </div>}

@@ -1395,7 +1395,7 @@ async function bootstrap(): Promise<void> {
     if (source.subarray(0, 5).toString() !== '%PDF-' ||
         createHash('sha256').update(source).digest('hex') !== JSON.parse(manifest).sourceSha256)
       throw Error('演示参考 PDF 校验失败。')
-    return knowledge.ensurePresentationGuideSource('Vanguard-2026经济与市场展望.pdf', '演示用例参考资料', source)
+    return knowledge.ensurePresentationGuideSource('Vanguard-2026经济与市场展望.pdf', source)
   })
   const factoryCanvases = new ImageFactoryCanvases(join(app.getPath('userData'), 'image-factory-canvases'), () => {
     const owner = integrationOwner()

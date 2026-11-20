@@ -197,7 +197,7 @@ export function installKnowledgeReferences({sessions,getInput,getPending,window:
 export function installKnowledgeSidebar({service,document:doc=document}) {
  const off=service.registerTab({
   id:'sherlock-knowledge-library',title:()=>doc.documentElement.dataset.odysseyLocale==='en'?'Knowledge Base':'知识库',
-  order:15,single:true,component:()=>react.createElement('div',{'data-knowledge-panel-host':''})
+  order:15,single:true,component:({scope})=>react.createElement('div',{'data-knowledge-panel-host':'','data-knowledge-panel-session':scope?.sessionId})
  })
  const offFile=service.registerTab({
   id:'sherlock-knowledge-file',title:'知识库文件',hidden:true,

@@ -57,6 +57,49 @@ export function createHomePresentationFileGhost(document,file,label,runId){
  return shadow
 }
 
+/** Wait until the real right panel and its next control have settled inside the viewport. */
+export async function openHomePresentationReference(document,fileId,{waitFor,cue}){
+ const win=document.defaultView,sidebar='#odyssey-right-workspace-panel'
+ const target=async read=>{
+  let last,node,stable=0
+  await waitFor(()=>{
+   node=read()
+   if(!node?.isConnected||node.matches(':disabled,[aria-disabled=true]')||node.closest('[hidden],[inert],[aria-hidden=true]')||
+      !node.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})){last=undefined;stable=0;return false}
+   const panel=node.closest(sidebar)
+   if(panel?.getAnimations().some(animation=>animation.playState==='running'&&['transform','width'].includes(animation.transitionProperty))){last=undefined;stable=0;return false}
+   const {left,top,right,bottom,width,height}=node.getBoundingClientRect()
+   const hit=document.elementFromPoint(left+width/2,top+height/2)
+   if(!width||!height||left<0||top<0||right>win.innerWidth||bottom>win.innerHeight||!hit||!node.contains(hit)){
+    last=undefined;stable=0;return false
+   }
+   const next=[left,top,right,bottom]
+   stable=last?.node===node&&next.every((value,index)=>Math.abs(value-last.bounds[index])<.5)?stable+1:0
+   last={node,bounds:next}
+   return stable>=2
+  })
+  return node
+ }
+ const click=async(read,label)=>{
+  const control=await target(read)
+  await cue(control,label)
+  control.click()
+ }
+ const right=()=>document.querySelector('[data-odyssey-panel-entry="right"]')
+ if(right()?.getAttribute('aria-expanded')!=='true')await click(right,'展开右侧栏')
+ const panel=()=>document.querySelector(sidebar+':not([aria-hidden=true])')
+ const library=()=>[...(panel()?.querySelectorAll('[data-knowledge-panel-host]:not([data-knowledge-panel-file])')??[])]
+  .find(host=>host.checkVisibility({checkVisibilityCSS:true})&&!host.closest('[hidden],[inert],[aria-hidden=true]'))
+ if(!library()){
+  await click(()=>panel()?.querySelector('button.t8lSSG_tabBarPlus'),'打开右侧栏页签菜单')
+  const item=()=>[...document.querySelectorAll('.odyssey-file-new-tab-menu [data-odyssey-file-menu-label]')]
+   .find(node=>['知识库','Knowledge Base'].includes(node.textContent?.trim()))?.closest('[role="menuitem"]')
+  await click(item,'打开知识库')
+ }
+ const row=()=>library()?.querySelector('.knowledge-panel-rows[data-ready=true] > [draggable=true]:first-child[data-knowledge-file-id="'+fileId+'"]')
+ return {file: await target(row),row}
+}
+
 /** Disable only this demo's composer action tips; keep the real buttons intact. */
 function useHomePresentationTooltipSuppressed(sessionId){
  const active=()=>[...document.querySelectorAll('[data-home-guide-active][data-home-guide-kind]')].some(center=>['ppt','report'].includes(center.dataset.homeGuideKind)&&[...center.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')].some(header=>header.dataset.eworkNotesSession===sessionId))
@@ -106,15 +149,15 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
   })
   const playing=async ticket=>{for(;;){check(ticket);if(ticket.playing&&!document.hidden)return;await delay(ticket,35)}}
   const waitFor=async(ticket,predicate,requiresPlayback=true)=>{for(let i=0;i<200;i++){if(requiresPlayback)await playing(ticket);check(ticket);if(predicate())return;await delay(ticket,25)}throw Error('原生会话暂未就绪，请重试。')}
-  const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;ticket.controller.abort();if(ticket.detail.fresh)void window.fetch(ticket.kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId}),keepalive:true}).catch(()=>{})}
+  const dispose=()=>{const ticket=owned;if(!ticket)return;owned=null;delete ticket.host.dataset.homePresentationReferenceFile;delete ticket.host.dataset.homePresentationReferenceSession;ticket.controller.abort();if(ticket.detail.fresh)void window.fetch(ticket.kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({action:'dispose',sessionId,runId:ticket.detail.runId}),keepalive:true}).catch(()=>{})}
   const inputFor=ticket=>[...ticket.host.closest('.pI_x6G_centerCol').querySelectorAll('textarea[data-odyssey-file-reference-session]')].find(input=>input.dataset.odysseyFileReferenceSession===sessionId&&!input.closest('[data-odyssey-subagent-panel]'))
-  const cue=async(ticket,target,label,action='click',fromTarget)=>{
+  const cue=async(ticket,target,label,action='click',fromTarget,scroll=true)=>{
    await playing(ticket)
    const valid=(visible=false)=>{check(ticket);for(const node of [target,...fromTarget?[fromTarget]:[]]){if(!node?.isConnected||node.ownerDocument!==document||node.disabled||node.readOnly||node.getAttribute('aria-disabled')==='true'||node.closest('[inert]'))throw changed();if(visible){const rect=node.getBoundingClientRect();if(rect.width<=0||rect.height<=0||rect.right<=0||rect.bottom<=0||rect.left>=window.innerWidth||rect.top>=window.innerHeight)throw changed()}}}
    valid()
    const marker=document.documentElement.dataset.homeGuidePointerRun,requestId=window.crypto.randomUUID(),detail={runId:ticket.detail.runId,requestId,label,action}
    if(marker&&marker!==ticket.detail.runId)throw changed()
-   target.scrollIntoView?.({block:'nearest',inline:'nearest'})
+   if(scroll)target.scrollIntoView?.({block:'nearest',inline:'nearest'})
    if(marker){
     const targetToken=detail.runId+':'+requestId+':target',fromToken=fromTarget?detail.runId+':'+requestId+':from':undefined;detail.targetToken=targetToken;if(fromToken)detail.fromTargetToken=fromToken
     const markers=[[target,targetToken],...fromTarget?[[fromTarget,fromToken]]:[]]
@@ -190,40 +233,14 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      if(ticket.kind==='ppt'){
      const skillDraft=ticket.shell.snapshot.draft,skillRevision=ticket.shell.snapshot.draftRev,skillOccurrences=JSON.stringify(ticket.shell.snapshot.occurrences??[])
      const source=ticket.detail.librarySource
-     if(!source||![source.folderId,source.fileId].every(value=>typeof value==='string'&&/^[a-f0-9-]{36}$/.test(value)))throw Error('演示参考资料尚未放入知识库。')
-     const visibleNode=selector=>[...document.querySelectorAll(selector)].find(visible)
-     const right=()=>visibleNode('[data-odyssey-panel-entry="right"]')
-     const toggle=await waitFor(ticket,()=>!!right()).then(right)
-     if(toggle.getAttribute('aria-expanded')!=='true'){
-      await cue(ticket,toggle,'展开右侧栏');toggle.click()
-     }
-     const sidebar='#odyssey-right-workspace-panel'
-     const libraryTab=()=>visibleNode(sidebar+' [data-odyssey-panel-tab-id="sherlock-knowledge-library"]')
-     const library=()=>visibleNode(sidebar+' [data-knowledge-panel-host] .knowledge-panel-files')
-     if(!library()){
-      const tab=libraryTab()
-      if(tab){await cue(ticket,tab,'切换到知识库');tab.click()}
-      else{
-       const plus=()=>[...document.querySelectorAll(sidebar+' button[aria-expanded]')].find(node=>visible(node)&&['新建标签页','New tab'].includes(node.getAttribute('aria-label')))
-       await waitFor(ticket,()=>!!plus())
-       const button=plus()
-       await cue(ticket,button,'打开右侧栏页签菜单');button.click()
-       const knowledgeOption=()=>[...document.querySelectorAll('.odyssey-file-new-tab-menu [data-odyssey-file-menu-label]')].find(node=>visible(node)&&['知识库','Knowledge Base'].includes(node.textContent?.trim()))?.closest('[role="menuitem"]')
-       await waitFor(ticket,()=>!!knowledgeOption())
-       const item=knowledgeOption()
-       await cue(ticket,item,'打开知识库');item.click()
-      }
-     }
-     await waitFor(ticket,()=>!!library())
-     const directory=library().querySelector('.knowledge-panel-location-label')
-     await cue(ticket,directory,'打开知识库目录');directory.click()
-     const folder=()=>library()?.querySelector('[data-knowledge-folder-id="'+source.folderId+'"]')
-     await waitFor(ticket,()=>!!folder())
-     const folderButton=folder()
-     await cue(ticket,folderButton,'进入演示用例参考资料');folderButton.click()
-     const row=()=>library()?.querySelector('[data-knowledge-file-id="'+source.fileId+'"][draggable=true]')
-     await waitFor(ticket,()=>!!row())
-     const file=row(),transfer=new window.DataTransfer(),format='application/x-ework-knowledge-file'
+     if(typeof source?.fileId!=='string'||!/^[a-f0-9-]{36}$/.test(source.fileId))throw Error('演示参考资料尚未放入知识库。')
+     ticket.host.dataset.homePresentationReferenceSession=sessionId
+     ticket.host.dataset.homePresentationReferenceFile=source.fileId
+     const {file,row}=await openHomePresentationReference(document,source.fileId,{
+      waitFor:predicate=>waitFor(ticket,predicate),
+      cue:(node,label)=>cue(ticket,node,label,'click',undefined,false)
+     })
+     const transfer=new window.DataTransfer(),format='application/x-ework-knowledge-file'
      const expectedName=ticket.prepared.sourcePath.split(/[\\/]/).pop()
      const unchanged=()=>ticket.shell.snapshot.draft===skillDraft&&ticket.shell.snapshot.draftRev===skillRevision&&!ticket.shell.snapshot.imageIds?.length&&JSON.stringify(ticket.shell.snapshot.occurrences??[])===skillOccurrences
      const drag=type=>new window.DragEvent(type,{bubbles:true,cancelable:true,dataTransfer:transfer})
@@ -386,7 +403,7 @@ export function stripHomeGuidePresentationNative(source){
 
 export function patchHomeGuidePresentationNative(source){
  source=stripHomeGuidePresentationNative(source)
- const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,useHomePresentationTooltipSuppressed,createHomePresentationFileGhost,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,useHomePresentationTooltipSuppressed,createHomePresentationFileGhost,openHomePresentationReference,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
  const inputBar=source.match(/function InputBar\([^\n]+\) \{/g)
  if(inputBar?.length!==1)throw Error('Home presentation composer hook anchor drifted')
  source=one(source,inputBar[0],inputBar[0]+INPUT_TIP_HOOK)
