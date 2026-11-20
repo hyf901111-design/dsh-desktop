@@ -114,6 +114,82 @@
           "管理者工作台数据继续使用设计快照与样例。"
         ],
         "generatedAt": "2026-11-20T11:19:59.706Z"
+      },
+      "merged": {
+        "mergeCommit": "fec090cd58b2e55fdc3dd73cf1d24c02f478f9e0",
+        "verificationCommit": "fec090cd58b2e55fdc3dd73cf1d24c02f478f9e0",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "fec090cd58b2e55fdc3dd73cf1d24c02f478f9e0",
+            "completedAt": "2026-11-20T11:20:11.677Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "fec090cd58b2e55fdc3dd73cf1d24c02f478f9e0",
+            "completedAt": "2026-11-20T11:20:11.677Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-canvas-storage.test.ts",
+              "test/board-tabs-contract.test.js",
+              "test/workbench-style.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
+            "verifiedCommit": "fec090cd58b2e55fdc3dd73cf1d24c02f478f9e0",
+            "completedAt": "2026-11-20T11:20:11.677Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "管理者工作台|默认显示五条|五条以内"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
+            "verifiedCommit": "fec090cd58b2e55fdc3dd73cf1d24c02f478f9e0",
+            "completedAt": "2026-11-20T11:20:11.677Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-boards-browser.mjs",
+              "--manager-workbench-focus"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
+            "verifiedCommit": "fec090cd58b2e55fdc3dd73cf1d24c02f478f9e0",
+            "completedAt": "2026-11-20T11:20:11.677Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-20T11:20:11.677Z"
       }
     }
   ],
