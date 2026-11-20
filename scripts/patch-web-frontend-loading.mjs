@@ -27,7 +27,7 @@ import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
 import { patchSessionListStreamPerformance } from './lib/session-list-stream-performance.mjs'
-import { patchSessionIdentityList, patchStoredSessionIdentity } from './lib/session-identity-list.mjs'
+import { patchSessionCatalogStatus, patchSessionIdentityList, patchStoredSessionIdentity } from './lib/session-identity-list.mjs'
 import { patchSessionRunningActivity } from './lib/session-running-activity.mjs'
 import { patchWorkbenchPlanningSessionCatalog, patchWorkbenchPlanningSessionAppend } from './lib/workbench-planning-session.mjs'
 import { patchHomeGuideSessionCatalog } from './lib/home-guide-session-catalog.mjs'
@@ -254,7 +254,7 @@ for (const [name, patch] of [
 }
 
 for (const [relative, patch] of [
-  ['dsh-client-runtime/lib/client.js', source=>patchSessionRunningActivity(patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source))))],
+  ['dsh-client-runtime/lib/client.js', source=>patchSessionCatalogStatus(patchSessionRunningActivity(patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source)))))],
   ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
   ['dsh-client-ui-conversation/lib/client.js', source => patchResearchResidentConversation(patchSubagentPanelConversation(source))],
   ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]

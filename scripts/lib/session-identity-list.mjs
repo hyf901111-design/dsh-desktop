@@ -44,6 +44,26 @@ export function patchSessionIdentityList(source) {
  return source
 }
 
+export function patchSessionCatalogStatus(source) {
+ const marker='/* ework:session-catalog-status */'
+ if(source.includes(marker))return source
+ const replace=(anchor,value)=>{
+  if(source.split(anchor).length!==2)throw Error('Session catalog anchor drifted: '+anchor)
+  source=source.replace(anchor,value)
+ };
+ const projection='const { items, current, phase, subagentsByParent, jobsBySession, currentAddress } = this.manager.getListSnapshot();'
+ replace(projection,projection.replace('phase,','phase, state,'))
+ const publish='\n\t\t\t\t\tphase,\n\t\t\t\t\tsubagentsByParent,'
+ replace(publish,publish.replace('phase,','phase, state,'))
+ const open='\t\t\topen(id) {\n\t\t\t\tthis.manager.select(id);'
+ replace(open,`\t\t\t${marker}
+   // A restored selection can be masked until the initial catalog arrives.
+   // Navigation that starts during that gap needs the actual selection intent.
+   selectionIntent() { return this.manager.selected; }
+${open}`)
+ return source
+}
+
 export function patchStoredSessionIdentity(source){
  const listAnchor='\tasync listArtifacts(signal) {'
  if(!source.includes('/* ework:known-session-list-path */')){
