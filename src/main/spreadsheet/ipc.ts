@@ -21,9 +21,30 @@ function exportStem(value:unknown){
   :''
 }
 
-export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined;canPlayCashFlowGuide?(key:WorkbookKey):boolean}){
+export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined;owner?():string;canPlayCashFlowGuide?(key:WorkbookKey):boolean}){
  const {ipcMain,getWindow}=options
- const store=new SpreadsheetStore(options.dataPath)
+ const retaining=new Set<string>(),retained=new Set<string>()
+ const retainSavedSession=(key:WorkbookKey)=>{
+  const base=options.runtimeUrl?.()
+  if(!base||options.owner?.()!==key.owner||!options.canWrite(key.sessionId))return
+  const scope=JSON.stringify([base,key.owner,key.sessionId])
+  if(retained.has(scope)||retaining.has(scope))return
+  retaining.add(scope)
+  // The workbook is already saved. Keep the live row while recording its
+  // participation for session replay. Loading the workbook retries failures.
+  const win=getWindow()
+  try{if(win&&!win.isDestroyed())win.webContents.send('spreadsheet:session-saved',{sessionId:key.sessionId})}catch{}
+  void (async()=>{
+   try{
+    const url=new URL('/sherlock/spreadsheet/session',base)
+    const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:key.sessionId,action:'retain'})})
+    if(!response.ok||(await response.json()).ok!==true)throw Error('表格会话尚未保存。')
+    retained.add(scope)
+   }catch(error){console.warn('[spreadsheet-session]',error)}
+   finally{retaining.delete(scope)}
+  })()
+ }
+ const store=new SpreadsheetStore(options.dataPath,retainSavedSession)
  const visible=(sessionId:unknown,write=false)=>{
   const v=options.visible()
   if(!v||v.mode!=='spreadsheet'||typeof sessionId!=='string'||v.sessionId!==sessionId)throw Error('当前表格视图尚未就绪或已切换。')
@@ -61,7 +82,11 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
    if(next.owner!==key.owner||next.generation!==key.generation)throw Error('操作期间表格视图已切换。')
   }
   switch(action){
-   case 'load':return {owner:key.owner,generation:key.generation,editable:options.canWrite(key.sessionId),record:store.load(key),recent:store.recent(key)}
+   case 'load':{
+    const record=store.load(key)
+    if(record.revision>0)retainSavedSession(key)
+    return {owner:key.owner,generation:key.generation,editable:options.canWrite(key.sessionId),record,recent:store.recent(key)}
+   }
    case 'recent':return store.recent(key)
    case 'clipboard-text':{
     const text=clipboard.readText()

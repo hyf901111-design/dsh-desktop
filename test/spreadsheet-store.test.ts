@@ -9,6 +9,15 @@ const roots:string[]=[]
 function open(){const root=mkdtempSync(join(tmpdir(),'ework-sheet-test-'));roots.push(root);return {root,store:new SpreadsheetStore(root)}}
 afterEach(()=>{for(const root of roots.splice(0))rmSync(root,{recursive:true,force:true})})
 describe('local spreadsheet persistence and concurrent edits',()=>{
+ it('reports persistence after the workbook exists and skips empty loads or rejected writes',()=>{
+  const {root}=open(),key={owner:'account',sessionId:'provisional'},notifications:number[]=[]
+  const store=new SpreadsheetStore(root,saved=>notifications.push(new SpreadsheetStore(root).load(saved).revision))
+  expect(store.load(key)).toEqual({revision:0,workbook:null})
+  expect(()=>store.create(key,1,blankWorkbook('book'))).toThrow()
+  expect(notifications).toEqual([])
+  store.create(key,0,blankWorkbook('book'))
+  expect(notifications).toEqual([1])
+ })
  it('persists AI changes atomically, replaying the same action without duplicate effects',()=>{
   const {root,store}=open(), key={owner:'a',sessionId:'b'}
   const init=store.create(key,0,blankWorkbook('book'))
