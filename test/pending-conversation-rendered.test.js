@@ -27,6 +27,7 @@ beforeAll(async()=>{
 afterAll(async()=>browser?.close())
 it.each(['notes','spreadsheet','research'])('hides the right project picker after editing %s', async mode => {
  const page = await browser.newPage({viewport:{width:1180,height:800}})
+ page.setDefaultTimeout(4500)
  try {
   await page.route('http://workspace.test/', route=>route.fulfill({contentType:'text/html',body:
    '<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>'}))
@@ -36,16 +37,16 @@ it.each(['notes','spreadsheet','research'])('hides the right project picker afte
   const picker=page.locator('#right [data-odyssey-composer-workspace]')
   await picker.getByText('研究项目 A',{exact:true}).click()
   await page.getByText('研究项目 B',{exact:true}).click()
-  await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session')
   await page.evaluate(()=>{
-   const sessionId='existing-canvas';
+   const sessionId=window.pendingFixture.current.current;
    localStorage.setItem('sherlock.research.directory-locked.v1:'+sessionId,'true')
    document.dispatchEvent(new CustomEvent('sherlock:workspace-project-edited',{detail:{sessionId}}))
   })
   await picker.waitFor({state:'detached'})
   expect(await page.locator('#right [data-right-project-draft-hint]').count()).toBe(0)
   expect(await page.locator('#right textarea').count()).toBe(1)
-  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
+  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session')
  } finally { await page.close() }
 })
 it.each([true, false])('shows the local work location on home and right composers and keeps the folder picker independent (dark: %s)', async dark => {
@@ -227,18 +228,41 @@ it.each(['empty button','button with draft','typed slash','research tab'])('hand
   ]);
  }finally{await page.close()}
 },15000)
-it('renders native welcome/project picker/input and creates the selected project session only on send',async()=>{
- const page=await browser.newPage({viewport:{width:600,height:800}}),errors=[];page.on('pageerror',error=>errors.push(error.stack));try{
+it('renders native welcome and opens the selected right project before the first send',async()=>{
+ const page=await browser.newPage({viewport:{width:600,height:800}}),errors=[];page.setDefaultTimeout(4500);page.on('pageerror',error=>errors.push(error.stack));try{
+  await page.route('http://127.0.0.1/right-project-first',route=>route.fulfill({contentType:'text/html',body:'<!doctype html>'}))
+  await page.goto('http://127.0.0.1/right-project-first')
   await page.setContent('<html><head><style>'+css+'body{margin:0;background:#eee}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.evaluate(()=>window.pendingFixture.openSurface('browser'));await page.getByText('探索更远，洞见更深',{exact:true}).waitFor({timeout:5000}).catch(error=>{console.log('pending errors',errors);throw error})
-  expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.evaluate(()=>{const root=document.createElement('section');root.className='eb-root';Object.assign(root.dataset,{currentPageUrl:'https://example.com/',currentPageTitle:'Example Domain'});document.body.append(root)});expect(await page.getByText('参考当前网页',{exact:false}).count()).toBe(0);expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.getByRole('tab',{name:'对话',exact:true}).waitFor({state:'visible'});await page.getByRole('tab',{name:'文件',exact:true}).waitFor({state:'visible'});await page.screenshot({path:'/tmp/browser-pending-native-empty.png'});expect(await page.locator('[data-research-conversation-panel]').evaluate(el=>el.getBoundingClientRect().width)).toBe(340);const project=page.locator('.sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_workspace');await project.click();await page.getByText('研究项目 B',{exact:true}).click();expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
-  const textbox=page.locator('.sRp_composer textarea');await textbox.fill('请总结当前网页');await page.getByRole('button',{name:'发送消息',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'create',workspaceId:'B'});await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'send',text:'请总结当前网页',images:[]});expect(errors).toEqual([])
+  expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.evaluate(()=>{const root=document.createElement('section');root.className='eb-root';Object.assign(root.dataset,{currentPageUrl:'https://example.com/',currentPageTitle:'Example Domain'});document.body.append(root)});expect(await page.getByText('参考当前网页',{exact:false}).count()).toBe(0);expect(await page.locator('.sRp_composer .uV2eYG_accessory').count()).toBe(0);await page.getByRole('tab',{name:'对话',exact:true}).waitFor({state:'visible'});await page.getByRole('tab',{name:'文件',exact:true}).waitFor({state:'visible'});await page.screenshot({path:'/tmp/browser-pending-native-empty.png'});expect(await page.locator('[data-research-conversation-panel]').evaluate(el=>el.getBoundingClientRect().width)).toBe(340);const project=page.locator('.sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_workspace');await project.click();await page.getByText('研究项目 B',{exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toEqual([{type:'create',workspaceId:'B'},{type:'open',id:'new-session'}])
+  const textbox=page.locator('.sRp_composer textarea');await textbox.fill('请总结当前网页').catch(async error=>{throw Error(JSON.stringify({errors,right:await page.locator('#right').innerText(),center:(await page.locator('#app').innerText()).slice(0,240)}),{cause:error})});await page.getByRole('button',{name:'发送消息',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'create',workspaceId:'B'});await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toContainEqual({type:'send',text:'请总结当前网页',images:[]});expect(errors).toEqual([])
   await page.screenshot({path:'/tmp/browser-pending-native-input.png'})
  }finally{await page.close()}
 },15000)
 
-it('keeps the native draft editable and retryable after first-session creation fails',async()=>{const page=await browser.newPage({viewport:{width:600,height:800}});try{
- await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}#right>.t8lSSG_workbench{height:100%}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');await page.evaluate(input=>window.pendingInput=input,input);await page.addScriptTag({content:script});await page.evaluate(()=>window.pendingFixture.openSurface('browser'));await page.getByText('探索更远，洞见更深',{exact:true}).waitFor();await page.locator('.sRp_composer .wSkVaW_heroWorkspaceRow .pXSMma_workspace').click();await page.getByText('研究项目 A',{exact:true}).click();await page.evaluate(()=>window.pendingFixture.failOnce());const inputBox=page.locator('.sRp_composer textarea');await inputBox.fill('保留这个问题');await page.getByRole('button',{name:'发送消息',exact:true}).click();await page.getByText('测试创建失败，输入保留',{exact:true}).waitFor();expect(await inputBox.inputValue()).toBe('保留这个问题');expect(await inputBox.isEditable()).toBe(true);await page.getByRole('button',{name:'发送消息',exact:true}).click();await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events.some(e=>e.type==='send'&&e.text==='保留这个问题'))).toBe(true)
- }finally{await page.close()}},15000)
+it('keeps the native draft editable when creating a session from the picker fails',async()=>{
+ const page=await browser.newPage({viewport:{width:1180,height:800}});
+ page.setDefaultTimeout(4500);
+ try{
+  await page.route('http://127.0.0.1/right-project-first',route=>route.fulfill({contentType:'text/html',body:'<!doctype html>'}))
+  await page.goto('http://127.0.0.1/right-project-first')
+  await page.setContent('<style>'+css+'#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>');
+  await page.evaluate(input=>window.pendingInput={...input,recentWorkspaceId:'A'},input);
+  await page.addScriptTag({content:script});
+  await page.evaluate(()=>window.pendingFixture.openSurface('browser'));
+  const right=page.locator('#right'), inputBox=right.locator('textarea'), picker=right.locator('.pXSMma_workspace');
+  await inputBox.fill('保留这个问题');
+  await page.evaluate(()=>window.pendingFixture.failOnce());
+  await picker.click();
+  await page.getByText('研究项目 B',{exact:true}).click();
+  await page.getByText('测试创建失败，输入保留',{exact:true}).waitFor();
+  expect(await inputBox.inputValue()).toBe('保留这个问题');
+  expect(await inputBox.isEditable()).toBe(true);
+  await picker.click();
+  await page.getByRole('menuitem').filter({hasText:'研究项目 B'}).click();
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session');
+  expect(await inputBox.inputValue()).toBe('保留这个问题');
+ }finally{await page.close()}
+},15000)
 
 it.each(['back', 'home'])('restores the conversation homepage with the right pane still open on %s', async action => {
  const page=await browser.newPage({viewport:{width:1100,height:800}}), errors=[];
@@ -259,12 +283,13 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   expect(await filesTab.getAttribute('aria-selected')).toBe('true');
   expect(await chatTab.count()).toBe(0);
   expect(await center.isVisible()).toBe(true);
-  await page.evaluate(()=>window.pendingFixture.openSurface('browser'));
+  await page.evaluate(()=>{
+   window.pendingFixture.record.selectWorkspace('B');
+   window.pendingFixture.openSurface('browser');
+  });
   await chatTab.waitFor({state:'visible'});
   const right=page.locator('#right textarea');
   await right.waitFor({state:'visible'});
-  await page.locator('#right .wSkVaW_heroWorkspaceRow .pXSMma_workspace').click();
-  await page.getByText('研究项目 B',{exact:true}).click();
   await right.fill('切换应用后回到首页');
   await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
   await page.evaluate(()=>window.pendingFixture.openSurface('knowledge'));
@@ -304,26 +329,24 @@ it('opens the native command menu for a selected browser project without sending
   const right=page.locator('#right');
   await right.locator('.pXSMma_workspace').click();
   await page.getByText('研究项目 B',{exact:true}).click();
-  await right.locator('.pXSMma_workspace').getByText('研究项目 B',{exact:true}).waitFor();
-  await right.locator('textarea').fill('保留浏览器草稿');
-  const commands=right.getByRole('button',{name:'命令',exact:true});
-  expect(await commands.isEnabled()).toBe(true);
-  await commands.click();
   const project=right.locator('[data-mounted-project=new-session]');
   await project.waitFor();
   expect(await page.evaluate(()=>window.pendingFixture.right.getSnapshot())).toBeUndefined();
-  expect(await project.locator('textarea').inputValue()).toBe('保留浏览器草稿');
-  expect(await project.getByRole('listbox').count()).toBe(0);
+  const events=()=>page.evaluate(()=>window.pendingFixture.events);
+  const opened=[{type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},{type:'open',id:'new-session'}];
+  expect(await events()).toEqual(opened);
   await page.evaluate(()=>window.pendingFixture.readySession());
+  await project.locator('textarea').fill('保留浏览器草稿');
+  const commands=project.getByRole('button',{name:'命令',exact:true});
+  await commands.click();
   await project.getByRole('listbox').getByRole('option').first().waitFor({state:'visible'});
-  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([
-   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},{type:'open',id:'new-session'},
-  ]);
+  expect(await project.locator('textarea').inputValue()).toBe('保留浏览器草稿');
+  expect(await events()).toEqual(opened);
   expect(await page.evaluate(()=>document.body.dataset.workspaceSurface)).toBe('browser');
  } finally { await page.close() }
 },15000);
 
-it('changes only the right project, drops an empty draft, and opens the new workspace on first send', async () => {
+it('opens the new workspace without leaving the image canvas', async () => {
  const page=await browser.newPage({viewport:{width:1180,height:800}}), errors=[];
  page.setDefaultTimeout(5000);
  page.on('pageerror',error=>errors.push(error.message));
@@ -345,26 +368,12 @@ it('changes only the right project, drops an empty draft, and opens the new work
   await picker.click();
   await page.getByText('研究项目 B',{exact:true}).click();
   await picker.getByText('研究项目 B',{exact:true}).waitFor();
-  expect(await selection()).toBe('existing-canvas');
+  await expect.poll(selection).toBe('new-session');
   expect(await page.evaluate(()=>window.existingCanvas===document.querySelector('section[data-workspace-surface="image-factory"]'))).toBe(true);
-  await page.evaluate(()=>{window.originalProjectDraft=window.pendingFixture.right.getSnapshot()});
-  expect(await events()).toEqual([]);
-
-  await page.evaluate(()=>window.pendingFixture.goHome());
-  const home=page.locator('#app [data-odyssey-page=home]');
-  await home.getByText('研究项目 B',{exact:true}).waitFor();
-  expect(await page.evaluate(()=>window.pendingFixture.right.getSnapshot())).toBeUndefined();
-  expect(await events()).toEqual([]);
-
-  await page.evaluate(()=>window.pendingFixture.openExisting('existing-canvas'));
-  await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
-  await picker.getByText('研究项目 B',{exact:true}).waitFor();
-  expect(await page.evaluate(()=>window.originalProjectDraft!==window.pendingFixture.right.getSnapshot())).toBe(true);
+  expect(await events()).toEqual([
+   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},{type:'open',id:'new-session'},
+  ]);
   await composer.locator('textarea').fill('为项目 B 创建新任务');
-  await page.evaluate(()=>window.pendingFixture.goHome());
-  await page.evaluate(()=>window.pendingFixture.openExisting('existing-canvas'));
-  await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'));
-  await expect.poll(()=>composer.locator('textarea').inputValue()).toBe('为项目 B 创建新任务');
   await composer.getByRole('button',{name:'发送消息',exact:true}).click();
   await expect.poll(events).toEqual([
    {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},
@@ -386,9 +395,7 @@ it('retains the session project for top-bar mode changes and still follows the m
   await page.evaluate(()=>window.pendingFixture.openSurface('browser'))
   const chip=page.locator('#right [data-odyssey-composer-project] .pXSMma_workspace')
   await chip.getByText('研究项目 A',{exact:true}).waitFor()
-  await chip.click()
-  await page.getByText('研究项目 B',{exact:true}).click()
-  await chip.getByText('研究项目 B',{exact:true}).waitFor()
+  await page.evaluate(()=>window.pendingFixture.record.selectWorkspace('B'))
   for(const mode of ['image-factory','knowledge','browser']) {
    await page.evaluate(mode=>{
     document.body.dataset.sessionWorkspaceSwitch=window.pendingFixture.current.current
@@ -423,8 +430,8 @@ it('keeps the research welcome and shows the chosen right project in the picker'
   await page.getByText('研究项目 B',{exact:true}).click()
   await right.locator('.pXSMma_workspace').getByText('研究项目 B',{exact:true}).waitFor()
   expect(await welcome.isVisible()).toBe(true)
-  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
-  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session')
+  expect(await page.evaluate(()=>window.pendingFixture.initialized)).toEqual([{id:'new-session',view:'research'}])
  } finally { await page.close() }
 })
 
@@ -447,19 +454,24 @@ it('restores the chosen project and unsent text separately for each browser tab'
   const field=right.locator('textarea')
   await switchTab('one')
   await picker.getByText('研究项目 A',{exact:true}).waitFor()
+  await expect.poll(()=>page.evaluate(()=>({
+   tab:window.pendingFixture.right.getSnapshot()?.tabId,
+   workspace:window.pendingFixture.right.getSnapshot()?.workspaceId
+  }))).toEqual({tab:'one',workspace:'A'})
   await field.fill('第一个网页的草稿')
   await switchTab('two')
   await expect.poll(()=>field.inputValue()).toBe('')
   await picker.click()
   await page.getByText('研究项目 B',{exact:true}).click()
   await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session')
   await switchTab('one')
   await picker.getByText('研究项目 A',{exact:true}).waitFor()
   await expect.poll(()=>field.inputValue()).toBe('第一个网页的草稿')
   await switchTab('two')
   await picker.getByText('研究项目 B',{exact:true}).waitFor()
   await expect.poll(()=>field.inputValue()).toBe('')
-  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  expect(await page.evaluate(()=>window.pendingFixture.events.map(event=>event.type))).toEqual(['create','view','open'])
   await field.fill('第二个网页的消息')
   await right.getByRole('button',{name:'发送消息',exact:true}).click()
   await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toEqual([
@@ -467,7 +479,7 @@ it('restores the chosen project and unsent text separately for each browser tab'
    {type:'open',id:'new-session'},{type:'send',text:'第二个网页的消息',images:[]}
   ])
  } finally { await page.close() }
-})
+},15000)
 
 it('inherits the visible workspace from the app rail even when the last manual project differs', async () => {
  const page=await browser.newPage({viewport:{width:1380,height:900}})
@@ -484,11 +496,8 @@ it('inherits the visible workspace from the app rail even when the last manual p
   const picker=page.locator('#right .pXSMma_workspace')
   await page.evaluate(()=>window.pendingFixture.openViaRail('browser'))
   await picker.getByText('研究项目 A',{exact:true}).waitFor()
-  await picker.click()
-  await page.getByText('研究项目 B',{exact:true}).click()
-  await picker.getByText('研究项目 B',{exact:true}).waitFor()
   await page.evaluate(()=>window.pendingFixture.openViaRail('image-factory'))
-  await picker.getByText('研究项目 B',{exact:true}).waitFor()
+  await picker.getByText('研究项目 A',{exact:true}).waitFor()
   expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
  } finally { await page.close() }
@@ -554,7 +563,7 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
    await page.getByText('研究项目 B',{exact:true}).click();
    await chip.getByText('研究项目 B',{exact:true}).waitFor();
    expect(await seat.locator('[data-right-project-draft-hint]').count()).toBe(0);
-   expect(await center()).toEqual(original);
+   await expect.poll(center).toEqual({...original,owner:'new-session'});
    expect(await seat.locator('textarea').isEditable()).toBe(true);
    expect(await seat.locator('[data-note-context-anchor]').count()).toBe(0);
    expect(await seat.evaluate(el=>{
@@ -565,9 +574,12 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
    await page.getByRole('menuitem',{name:'不在项目中工作',exact:true}).click();
    await chip.getByText('选择项目',{exact:true}).waitFor();
    expect(await seat.locator('[data-right-project-draft-hint]').count()).toBe(0);
-   expect(await center()).toEqual(original);
+   await expect.poll(center).toEqual({...original,owner:'new-session'});
    expect(await page.evaluate(()=>window.pendingFixture.record.getManualWorkspace())).toBeNull();
-   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([]);
+   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([
+    {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:app?'chat':mode},{type:'open',id:'new-session'},
+   ]);
+   expect(await page.evaluate(()=>window.pendingFixture.initialized)).toEqual([{id:'new-session',view:app?'chat':mode}]);
    expect(errors).toEqual([]);
   } finally {await page.close()}
  },

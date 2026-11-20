@@ -1,5 +1,5 @@
 /** Keep project selection and drafts local until an action actually needs a session. */
-export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,prepareContext,prepareSession,releaseImages,setView,currentSurface,standaloneDirectory,initialWorkspace,detached}){
+export function createPendingConversation({makeShell,sessions,workspaces,getInput,onCreated,initializeWorkspaceSession,prepareContext,prepareSession,releaseImages,setView,currentSurface,standaloneDirectory,initialWorkspace,detached}){
  const listeners=new Set();let disposed=false,explicit=initialWorkspace!==undefined,projectRevision=0,state={workspaceId:initialWorkspace,busy:false,activating:false,rightSession:undefined};
  const publish=patch=>{
   if('workspaceId' in patch&&patch.workspaceId!==state.workspaceId)projectRevision++;
@@ -36,7 +36,13 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    const options=standalone?{cwd:await standaloneDirectory()}:{workspaceId:project.workspaceId};
    if(!ownsProject()||sessions.list.getSnapshot().current!==before||(!control&&shell.snapshot.draftRev!==draft.draftRev))throw Error('输入或项目已变化，请重试。');
    const id=await sessions.create(options);
-   if(!ownsProject()||![before,id].includes(sessions.list.getSnapshot().current))throw Error('当前会话已变化，输入已保留。');
+   const canOpen=()=>ownsProject()&&[before,id].includes(sessions.list.getSnapshot().current);
+   if(!canOpen())throw Error('当前会话已变化，输入已保留。');
+   const view=control?.view??detached?.mode;
+   if(control?.workspaceSwitch){
+    await initializeWorkspaceSession?.(id,view);
+    if(!canOpen())throw Error('当前会话已变化，输入已保留。');
+   }
    // A control can take time to connect. Carry edits made while the user was typing.
    const transfer=control?shell.snapshot:draft;
    const command=control?.selection&&{sessionId:id,surface,mode:detached?.mode,isCurrent:detached?.isCommandCurrent,
@@ -48,9 +54,8 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    handedOff=real;if(!control)real.setResearchContextPreparing?.(true);
    publish({rightSession:id});
    const handoff=detached?onCreated(id,context,detached):onCreated(id,context);
-   const view=control?.view??detached?.mode;
    if(view)setView(id,view);
-   if(command)detached?.adoptBrowserSession?.(id);
+   if(command||control?.workspaceSwitch)detached?.adoptBrowserSession?.(id);
    if(detached?.open)detached.open(id);else sessions.open(id);
    shell.commitSend([...(transfer.imageIds??[])],transfer.draft);
    const transferredRevision=real.snapshot.draftRev;

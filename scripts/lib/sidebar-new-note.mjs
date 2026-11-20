@@ -1,6 +1,21 @@
+export async function initializeWorkspaceSession(sessions,id,view,locale) {
+  if(view==='spreadsheet'){
+    const response=await fetch('/sherlock/spreadsheet/session',{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:id,locale})
+    })
+    const result=await response.json()
+    if(!response.ok||result.ok!==true)throw Error(result.error||'新表格未能保存。')
+    return
+  }
+  const names=locale==='en'?{notes:'New Note',research:'New Research'}:{notes:'新笔记',research:'新研究'}
+  if(!Object.hasOwn(names,view))return
+  const result=await sessions.binding(id)?.session.rename(names[view])
+  if(result?.ok!==true)throw Error(result?.error?.message||'新会话名称未能保存。')
+}
+
 // Serialized into the native conversation plugin. The preload first reserves
 // this exact owner, flushes its Note, then commits the same ticket.
-export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,getInput,getPending,standaloneDirectory}) {
+export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,getInput,getPending,standaloneDirectory,initializeSession=initializeWorkspaceSession}) {
   const tickets=new Map(),requests=new Map();let disposed=false,epoch=0,creating=false
   const abort=()=>new DOMException('当前会话已变化，请重新新建。','AbortError')
   const fingerprint=shell=>{const s=shell?.snapshot;return s?JSON.stringify([s.draft,s.draftRev,s.imageIds,s.occurrences,s.phase,s.researchContextPreparing,s.composing,s.isComposing,s.compositionActive]):null}
@@ -65,12 +80,7 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
       const binding=sessions.binding(id)
       if(!binding||binding.state==='removed'||binding.kind==='subagent')throw Error('新'+noun+'会话不可用。')
       if(spreadsheet){
-        const response=await fetch('/sherlock/spreadsheet/session',{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({sessionId:id,locale:document.documentElement.dataset.odysseyLocale==='en'?'en':'zh'})
-        })
-        const result=await response.json()
-        if(!response.ok||result.ok!==true)throw Error(result.error||'新表格未能保存。')
+        await initializeSession(sessions,id,'spreadsheet',document.documentElement.dataset.odysseyLocale==='en'?'en':'zh')
         if(!valid(ticket))throw abort()
         sessions.retainSpreadsheetSession(id)
       }
@@ -120,7 +130,7 @@ export const stripSidebarNewNoteShell=source=>restore(source,'shell')
 export function patchSidebarNewNoteConversation(input){
   const source=stripSidebarNewNoteConversation(input),anchor='const composerBlocks = new ComposerBlockRegistry();'
   if(source.includes('Sherlock sidebar new note'))throw Error('Orphan Sidebar New Note action')
-  const code='\nctx.effect(()=>{if(window.top!==window)return;return ('+installSidebarNewNote.toString()+')({sessions,workspaces,chatStore,inputHub,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for("sherlock:pending-conversation")],standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory()});},"Sherlock sidebar new note");'
+  const code='\nctx.effect(()=>{if(window.top!==window)return;return ('+installSidebarNewNote.toString()+')({sessions,workspaces,chatStore,inputHub,getInput:id=>eworkActiveInput(id,inputHub.shell(id)),getPending:()=>window[Symbol.for("sherlock:pending-conversation")],standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),initializeSession:('+initializeWorkspaceSession.toString()+')});},"Sherlock sidebar new note");'
   return apply(source,'conversation',[[anchor,anchor+code]])
 }
 export function patchSidebarNewNoteShell(input){
