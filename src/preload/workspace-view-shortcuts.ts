@@ -18,6 +18,7 @@ export type SessionWorkspaceAppView = typeof sessionWorkspaceAppViews[number][0]
 const sessionHeading = '[data-srb-session-header][data-ework-notes-session]:not([data-odyssey-subagent-panel] *)'
 const sessionHeader = '.pI_x6G_centerCol .wSkVaW_root ' + sessionHeading
 const homeRoot = '.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page=home]:not([hidden], [aria-hidden=true], [data-odyssey-subagent-panel] *)'
+const boardOnlyRoot = '[data-home-guide-board-only="true"]'
 
 export function findWorkspaceSession(document: Document, sessionId?: string) {
   if (!sessionId && !document.body.dataset.workspaceSurface) {
@@ -203,10 +204,10 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     if (surface && surface !== 'notes') return undefined
     if (!surface && openHome) {
       const home = document.querySelector<HTMLElement>(homeRoot)
-      if (home) return home
+      if (home && !home.matches(boardOnlyRoot)) return home
     }
     const header = findWorkspaceSession(document)
-    if (!header || header.dataset.odysseyHomeHeader === 'true' ||
+    if (!header || header.closest(boardOnlyRoot) || header.dataset.odysseyHomeHeader === 'true' ||
         header.getAttribute('aria-hidden') === 'true' ||
         header.closest('.wSkVaW_root')?.getAttribute('data-odyssey-page') === 'home') return undefined
     return header
@@ -280,7 +281,8 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   const schedule = () => { if (!frame) frame = win.requestAnimationFrame(sync) }
   const observer = new win.MutationObserver(schedule)
   observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: [
-    'data-ework-notes-session', 'data-odyssey-home-header', 'data-odyssey-page', 'aria-selected', 'disabled', 'aria-hidden'
+    'data-ework-notes-session', 'data-odyssey-home-header', 'data-odyssey-page', 'data-home-guide-board-only',
+    'aria-selected', 'disabled', 'aria-hidden'
   ] })
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
   document.addEventListener('sherlock:workspace-surface-change', schedule)
