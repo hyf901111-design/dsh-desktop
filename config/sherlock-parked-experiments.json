@@ -142,9 +142,9 @@
     },
     {
       "branch": "codex/feat/accounts-admin-20261110",
-      "tip": "7a3cbddfca0c9b798d56906deeab9a6bb3584bd4",
-      "decision": "docs/releases/sherlock-1.5.5.md",
-      "reason": "独立管理后台的用户排序与额度分配开发，保留待单独验收，排除于 1.5.5 桌面客户端。"
+      "tip": "876845e08d0caf25e48796a15413ecbe0884d3ee",
+      "decision": "docs/releases/sherlock-1.6.8.md",
+      "reason": "独立账号管理后台的全局额度、批量重置与用户排序继续单独验收。"
     },
     {
       "branch": "codex/feat/ework-oss-component-pilot-20261111",
