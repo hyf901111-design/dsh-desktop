@@ -4,7 +4,6 @@ import vm from 'node:vm'
 import {Window} from 'happy-dom'
 import {validResearchInteractionState,validResearchInteractionEvent,researchInteractionVersion} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {patchComponentInteractionState} from '../scripts/lib/component-interaction-state.mjs'
-import {restoreResearchGridWorkbench} from '../scripts/lib/research-grid-workbench.mjs'
 const e=(id,clock)=>({id,clock,targetRoute:[1],tag:'BUTTON',type:'click'})
 function priceVolumeJournalClient(marker='price-volume-v1'){
  const w=new Window({settings:{disableJavaScriptEvaluation:true}}),out=[],allowed=new WeakSet();let serial=0
@@ -75,11 +74,12 @@ it('restores JS closure state, incrementally applies remote events, and ignores 
  send({c:e('c',1),a:e('a',2)});expect(messages.at(-1).type).toBe('sherlock-interaction-reload');
 })
 it('patches the actual renderer without dropping saved state on parsing',()=>{
- const source=restoreResearchGridWorkbench(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));const patched=patchComponentInteractionState(source);
+ const installed=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
+ const patched=patchComponentInteractionState(installed);
  expect(patchComponentInteractionState(patched)).toBe(patched);
  expect(patched).toContain('config:{interactionState:value.config.interactionState,');
  expect(patched).toContain('researchSharedStateSinks.set(sessionId');
- expect(patched).toContain('function sharedComponentRuntime()');
+ expect(patched).toContain('function sharedComponentRuntime(semantic)');
  expect(patched).toContain('if(!collaborationCanWrite()');
 })
 it('preserves independent interaction events through shared document merging',async()=>{

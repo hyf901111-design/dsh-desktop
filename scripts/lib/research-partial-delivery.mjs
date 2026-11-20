@@ -79,7 +79,10 @@ export function patchResearchPartialDelivery(source) {
   };
   const canonical = 'function canonicalResearchCanvasArtifactNode(value) {';
   const definitions = [researchPartialDeliveryFields, researchRetainedDeliveryFields, researchContainerDeliveryFields, ResearchPartialDeliveryNotice, ResearchDataFallbackContent].map(fn => fn.toString()).join('\n');
-  const preview = '(0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, officePreview, onHtmlSize, onUpgradeSize })';
+  const basePreview = '(0, react_jsx_runtime.jsx)(ResearchContainerContent, { node, sessionId, visible, onHtmlSize, onUpgradeSize })';
+  const preview = source.includes(basePreview)
+    ? basePreview
+    : basePreview.replace('visible,', 'visible, officePreview,');
   if (!source.includes('/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V2 */')) {
     replace(preview, '(0, react_jsx_runtime.jsx)(ResearchDataFallbackContent, { node, children: ' + preview + ' })');
   }

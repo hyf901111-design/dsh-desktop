@@ -42,7 +42,10 @@ function patchLegacyComponentInteractionState(source) {
       return;
     }
     if (data.type === "sherlock-content-hover" && Object.keys(data).length === 2`);
-  once('const heroWorkspaceRow = research && directoryLocked ? null', "const heroWorkspaceRow = (research && directoryLocked) || (sherlockShared(sessionId) && ((sherlockBoardsAdapter?.getView(sessionId)?.history?.length ?? 0)+(sherlockBoardsAdapter?.getView(sessionId)?.messages?.length ?? 0))>0) ? null");
+  const directoryPolicy = source.includes('const heroWorkspaceRow = research && (!browserAppActive || directoryLocked) ? null')
+    ? '(!browserAppActive || directoryLocked)' : 'directoryLocked';
+  once(`const heroWorkspaceRow = research && ${directoryPolicy} ? null`,
+    `const heroWorkspaceRow = (research && ${directoryPolicy}) || (sherlockShared(sessionId) && ((sherlockBoardsAdapter?.getView(sessionId)?.history?.length ?? 0)+(sherlockBoardsAdapter?.getView(sessionId)?.messages?.length ?? 0))>0) ? null`);
   return source+'\n/* ODYSSEY_COMPONENT_INTERACTION_V1 */';
 }
 

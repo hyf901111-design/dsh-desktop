@@ -17,14 +17,17 @@ export function patchFigmaWorkspaceMenus(source) {
       const searchText = chinese ? '搜索工作区…' : 'Search workspaces…';`)
   exact('const items = pinAdd ? workspaces.map((workspace) => ({', 'const items = pinAdd ? workspaces.filter(workspace=>workspace.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((workspace) => ({')
   exact('label: workspace.title,\n\t\t\t\ticon: (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderClose16, { size: 16 }),','label: workspace.title,')
-  exact('const menuIsEmpty = items.length === 0;', `if(pinAdd) {
+  const emptyCheck = source.includes('const menuIsEmpty = items.length === 0 && !allowStandalone;')
+    ? 'const menuIsEmpty = items.length === 0 && !allowStandalone;'
+    : 'const menuIsEmpty = items.length === 0;'
+  exact(emptyCheck, `if(pinAdd) {
         if(items.length===0)items.push({type:'label',id:'workspace-empty',text:chinese ? '没有匹配的工作区' : 'No matching workspaces'});
         items.unshift({type:'label',id:'workspace-search',text:(0,react_jsx_runtime.jsx)('input',{
           type:'search',className:'odyssey-workspace-search',value:query,placeholder:searchText,'aria-label':searchText,
           autoFocus:true,onInput:event=>setQuery(event.currentTarget.value)
         })});
       }
-      const menuIsEmpty = items.length === 0;`)
+      ${emptyCheck}`)
   exact('className: "srb-navigation-menu", open,','className: "odyssey-view-menu", open,')
   exact('"groupBy.label": "分组方式",','"groupBy.label": "显示方式",')
   exact('"orderBy.label": "排序方式",','"orderBy.label": "排序",')
