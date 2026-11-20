@@ -438,6 +438,7 @@ function initializeUi(): void {
     saveImage:createResearchCanvasExportBridge((channel,value)=>ipcRenderer.invoke(channel,value)).save,
     subscribe:(name,callback)=>{const channel=name==='identity'?'integrations:identity-changed':'spreadsheet:'+name;const receive=(_event:unknown,value:unknown)=>callback(value);ipcRenderer.on(channel,receive);return()=>ipcRenderer.removeListener(channel,receive)}
   })
+  ipcRenderer.on('spreadsheet:session-saved',(_event,detail)=>document.dispatchEvent(new CustomEvent('sherlock:spreadsheet-saved',{detail})))
   window.addEventListener('unload',()=>spreadsheetView?.dispose(),{once:true})
   const notes = mountNotes(document, notesBridge, workspaceSurfaceHost)
   const flushBeforeCreate=async()=>{

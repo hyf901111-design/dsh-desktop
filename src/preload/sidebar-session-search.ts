@@ -1,4 +1,5 @@
 import {projectSkillText} from '../shared/skill-display.mjs'
+import {hasSavedSpreadsheetDraft} from '../shared/spreadsheet/session-draft.mjs'
 import { boardDialog } from './research-board-dialogs'
 import type { ResearchBoardsState } from '../shared/research-boards'
 export type SidebarSearchResult = { key: string; title: string; area: 'boards' | 'workspaces'; sessionId?: string; boardId?: string; time: number }
@@ -17,6 +18,7 @@ export function sidebarSearchResults(state: ResearchBoardsState, sessions: Recor
   for (const [id, session] of Object.entries(sessions)) {
     if (archived.has(id) || session.origin === 'subagent' || (session.blank && !session.title?.trim())) continue
     const title = session.title?.trim() || session.displayTitle?.trim()
+    if (session.blank && ['新表格', 'New Spreadsheet'].includes(title) && !hasSavedSpreadsheetDraft(id)) continue
     if (title) add({ key: 'session:' + id, sessionId: id, title, area: 'workspaces', time: session.updatedAt ?? session.createdAt ?? 0 })
   }
   return results.sort((a, b) => b.time - a.time || a.key.localeCompare(b.key))

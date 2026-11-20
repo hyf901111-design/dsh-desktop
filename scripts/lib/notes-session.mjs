@@ -6,8 +6,16 @@ export function installNoteSessionTitles(sessions, doc) {
     const id = event.detail?.sessionId
     if (typeof id === 'string' && sessions.list.getSnapshot().byId[id]) sessions.retainNoteSession(id)
   }
+  const spreadsheet = event => {
+    const id = event.detail?.sessionId
+    if (typeof id === 'string' && sessions.list.getSnapshot().byId[id]?.blank) sessions.retainSpreadsheetSession(id)
+  }
   doc.addEventListener('sherlock:notes-edited', edited)
-  return () => doc.removeEventListener('sherlock:notes-edited', edited)
+  doc.addEventListener('sherlock:spreadsheet-saved', spreadsheet)
+  return () => {
+    doc.removeEventListener('sherlock:notes-edited', edited)
+    doc.removeEventListener('sherlock:spreadsheet-saved', spreadsheet)
+  }
 }
 
 export function patchNoteSessionClient(source) {
@@ -45,28 +53,22 @@ export function patchNoteSessionRuntime(source) {
       ${anchor}`)
 }
 
-function retainKnowledgeCopy(source) {
-  return source
-    .replace('event.type === "workspace-spreadsheet/created");', 'event.type === "workspace-spreadsheet/created" || event.type === "workspace-knowledge/copied");')
-    .replace('event.type !== "workspace-spreadsheet/created";', 'event.type !== "workspace-spreadsheet/created" && event.type !== "workspace-knowledge/copied";')
-}
-
 export function patchNoteSessionHost(source) {
   const marker='/* ework:note-participation:v1 */'
-  if(source.includes(marker)){
-    return retainKnowledgeCopy(source.replace('event.type === "workspace-note/edited");','event.type === "workspace-note/edited" || event.type === "workspace-spreadsheet/created");')
-      .replace('event.type !== "workspace-note/edited";','event.type !== "workspace-note/edited" && event.type !== "workspace-spreadsheet/created";'))
-  }
-  const predicate='return !session.events.some((event) => event.type === "turn/start");'
-  const projection='const blank = state.blank && event.type !== "turn/start";'
-  if(source.split(predicate).length!==2||source.split(projection).length!==2)throw Error('笔记无法定位服务端会话参与判定。')
-  return retainKnowledgeCopy(source.replace(predicate,marker+'\nreturn !session.events.some((event) => event.type === "turn/start" || event.type === "workspace-note/edited" || event.type === "workspace-spreadsheet/created");').replace(projection,'const blank = state.blank && event.type !== "turn/start" && event.type !== "workspace-note/edited" && event.type !== "workspace-spreadsheet/created";'))
+  // Sessions created by earlier clients can already own workbooks without
+  // an edit event. Keep their established retention on replay.
+  const activity = 'event.type === "turn/start" || event.type === "workspace-note/edited" || event.type === "workspace-spreadsheet/edited" || event.type === "workspace-knowledge/copied" || (event.type === "workspace-spreadsheet/created" && event.data?.provisional !== true)'
+  const predicate = /(function sessionBlank\(session\) \{\s*)(?:\/\* ework:note-participation:v1 \*\/\s*)?return !session\.events\.some\(\(event\) => [^\n]+\);/g
+  const projection = /(function applySessionListMetadata\(state, event\) \{\s*)const blank = state\.blank && [^\n]+?;/g
+  if([...source.matchAll(predicate)].length!==1||[...source.matchAll(projection)].length!==1)throw Error('笔记无法定位服务端会话参与判定。')
+  return source.replace(predicate,(_match,start)=>start+marker+'\nreturn !session.events.some((event) => '+activity+');')
+    .replace(projection,(_match,start)=>start+'const blank = state.blank && !('+activity+');')
 }
 
 /** Register the EWork event in both bundled and unbundled native readers. */
 export function patchNoteSessionCatalog(source) {
   const marker = '/* ework:note-event-catalog:v1 */'
-  const events = ['"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-knowledge/copied",']
+  const events = ['"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-spreadsheet/edited",','"workspace-knowledge/copied",']
   if (source.includes(marker)) {
     const missing = events.filter(event=>!source.includes(event))
     return missing.length ? source.replace(marker, marker+'\n'+missing.join('\n')) : source

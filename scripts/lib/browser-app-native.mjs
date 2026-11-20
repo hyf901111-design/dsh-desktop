@@ -299,10 +299,7 @@ ctx.effect(()=>{
   standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),
   currentSurface:()=>document.body.dataset.workspaceSurface,
   setView:(id,view)=>chatStore.create(id).actions.setView(view),
- initializeWorkspaceSession:async (id,view)=>{
-  await (${initializeWorkspaceSession.toString()})(sessions,id,view,document.documentElement.dataset.odysseyLocale==='en'?'en':'zh');
-  if(view==='spreadsheet')sessions.retainSpreadsheetSession(id);
- },
+  initializeWorkspaceSession:(id,view)=>(${initializeWorkspaceSession.toString()})(sessions,id,view,document.documentElement.dataset.odysseyLocale==='en'?'en':'zh'),
   onCreated:(id,context,detached)=>{
    if(!detached||detached.sessionId===undefined)window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));
    chatStore.create(id).actions.setView('chat');

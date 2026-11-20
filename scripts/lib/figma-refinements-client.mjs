@@ -1,4 +1,5 @@
 import {patchSubagentAvatars,stripSubagentAvatars} from './subagent-avatars.mjs'
+import {hasSavedSpreadsheetDraft} from '../../src/shared/spreadsheet/session-draft.mjs'
 /** Figma's accepted A header, mode descriptions, task dock and subagent tree. */
 function exact(source, before, after) {
   if (source.includes(after)) return source
@@ -16,6 +17,10 @@ export function patchFigmaRefinementPreset(source) {
   return source.slice(0,start)+seat+source.slice(end)
 }
 export function patchFigmaNavigationTitles(source) {
+  const visible = 'function sessionVisible(session, current, archived) {'
+  const draft = '|| (["新表格", "New Spreadsheet"].includes(session.title) && hasSavedSpreadsheetDraft(session.id))'
+  source=exact(source,visible,hasSavedSpreadsheetDraft.toString()+'\n'+visible)
+  source=exact(source,'|| researchSessionEngaged(session.id));','|| researchSessionEngaged(session.id) '+draft+');')
   source = exact(source, 'if (session.title && researchSessionEngaged(session.id)) return session.title;', 'if (session.title?.trim()) return session.title;')
   source = exact(source, 'title: sessionTitle(s),', 'title: sessionTitle(s), explicitTitle: s.title?.trim(),')
   source = exact(source, 'return node.research && node.title === "New Research"', 'if(node.explicitTitle)return node.explicitTitle; return node.research && node.title === "New Research"')

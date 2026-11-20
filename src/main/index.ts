@@ -1482,7 +1482,7 @@ async function bootstrap(): Promise<void> {
   })
   registerTrustedMainWindowHandler(ipcMain, 'knowledge:view-reply', () => mainWindow, (_event, value) => knowledgeView.reply(value))
   const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
-  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,canPlayCashFlowGuide:({owner,sessionId})=>{
+  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',canPlayCashFlowGuide:({owner,sessionId})=>{
     const scope=owner==='local'?'local':'account:'+owner
     const raw=researchCanvasStorage.peekItem('sherlock.home-guide.sessions.v1:'+encodeURIComponent(scope))
     return !!raw&&JSON.parse(raw).entries.some((entry:{sessionId:string;kind:string})=>entry.sessionId===sessionId&&entry.kind==='spreadsheet')

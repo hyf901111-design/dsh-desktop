@@ -82,7 +82,6 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
       if(spreadsheet){
         await initializeSession(sessions,id,'spreadsheet',document.documentElement.dataset.odysseyLocale==='en'?'en':'zh')
         if(!valid(ticket))throw abort()
-        sessions.retainSpreadsheetSession(id)
       }
       const view=spreadsheet?'spreadsheet':'notes'
       chatStore.create(id).actions.setView(view)

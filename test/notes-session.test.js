@@ -8,6 +8,8 @@ import { Session, KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session'
 import { PersistenceCoordinator } from '@deepseek-ai/dsh-session-persistence'
 import { runInNewContext } from 'node:vm'
 import {engageNoteSession} from '../packages/dsh-research-task-runtime/notes-session.js'
+import {registerSpreadsheetSessions} from '../packages/dsh-research-task-runtime/spreadsheet-sessions.js'
+import {patchFigmaNavigationTitles} from '../scripts/lib/figma-refinements-client.mjs'
 import {createSourceFile,ScriptTarget,ScriptKind,forEachChild,isFunctionDeclaration} from 'typescript'
 
 function fixture(events=[]) {
@@ -29,8 +31,61 @@ it('preserves existing names and manual renames, including a manual rename to th
   expect(owned.session.events.findLast(e=>e.type==='workspace-note/edited').data.automatic).toBe(false)
 })
 it('optimistically retains only known current-account sessions before the durable reply',()=>{
-  const doc=new EventTarget(),retain=vi.fn(),sessions={list:{getSnapshot:()=>({byId:{s:{}}})},retainNoteSession:retain};const dispose=installNoteSessionTitles(sessions,doc)
-  doc.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:'s'}}));doc.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:'foreign'}}));expect(retain.mock.calls).toEqual([['s']]);dispose()
+  const doc=new EventTarget(),retainNoteSession=vi.fn(),retainSpreadsheetSession=vi.fn()
+  const sessions={list:{getSnapshot:()=>({byId:{s:{blank:true},saved:{blank:false}}})},retainNoteSession,retainSpreadsheetSession}
+  const dispose=installNoteSessionTitles(sessions,doc)
+  for(const id of ['s','foreign'])doc.dispatchEvent(new CustomEvent('sherlock:notes-edited',{detail:{sessionId:id}}))
+  for(const id of ['s','foreign','saved'])doc.dispatchEvent(new CustomEvent('sherlock:spreadsheet-saved',{detail:{sessionId:id}}))
+  dispose()
+  doc.dispatchEvent(new CustomEvent('sherlock:spreadsheet-saved',{detail:{sessionId:'s'}}))
+  expect(retainNoteSession.mock.calls).toEqual([['s']])
+  expect(retainSpreadsheetSession.mock.calls).toEqual([['s']])
+})
+it('hides provisional spreadsheets after leaving and keeps saved, legacy and conversation sessions',async()=>{
+  const source=patchNoteSessionHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
+  const sidebar=patchFigmaNavigationTitles(await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'))
+  const names=['sessionBlank','applySessionListMetadata','sessionListMetadata','sessionVisible','hasSavedSpreadsheetDraft']
+  const functions=new Map()
+  for(const code of [source,sidebar]){
+    const syntax=createSourceFile('native.js',code,ScriptTarget.Latest,false,ScriptKind.JS)
+    const visit=node=>{if(isFunctionDeclaration(node)&&node.name&&names.includes(node.name.text))functions.set(node.name.text,node.getText(syntax));forEachChild(node,visit)}
+    visit(syntax)
+  }
+  const drafts=new Map()
+  const api=runInNewContext([...functions.values()].join('\n')+';({sessionBlank,sessionListMetadata,sessionVisible})',
+    {window:{localStorage:{getItem:key=>drafts.get(key)}},researchSessionEngaged:()=>false})
+  const session=Session.create('spreadsheet-test')
+  let handle
+  registerSpreadsheetSessions({
+    webServer:{register:({handler})=>{handle=handler}},
+    sessions:{get:id=>id===session.id?session:undefined,flush:async()=>true},
+    sessionTitle:{rename:(target,title)=>({eventSeq:target.append('session/title',{title,source:{kind:'user'}}).seq})}
+  },{isTrustedRequest:()=>true,readJsonBody:async request=>request.payload})
+  const request=async payload=>{
+    let status,response
+    await handle({method:'POST',payload:{sessionId:session.id,...payload}},{writeHead:value=>status=value,end:value=>response=JSON.parse(value)})
+    expect({status,...response}).toMatchObject({status:200,ok:true})
+  }
+  await request({locale:'zh'})
+  const provisional=structuredClone(session.events)
+  expect(provisional.find(event=>event.type==='session/title').data.title).toBe('新表格')
+  const blank=api.sessionBlank({events:provisional})
+  expect(blank).toBe(true)
+  expect(api.sessionListMetadata(provisional).blank).toBe(true)
+  const row={id:session.id,blank,title:'新表格'}
+  expect(api.sessionVisible(row,session.id,new Set())).toBe(true)
+  expect(api.sessionVisible(row,'other',new Set())).toBe(false)
+  drafts.set('dsh.conversation.chat.'+session.id, JSON.stringify({workspaceDrafts:{spreadsheet:'尚未发出的估值问题'}}))
+  expect(api.sessionVisible(row,'other',new Set())).toBe(true)
+  drafts.clear()
+  expect(api.sessionListMetadata([...provisional,{type:'turn/start'}]).blank).toBe(false)
+  expect(api.sessionListMetadata([{type:'workspace-spreadsheet/created',data:{titleSeq:3}}]).blank).toBe(false)
+  await request({action:'retain'})
+  await request({action:'retain'})
+  const replay=Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header))
+  expect(replay.events.filter(event=>event.type==='workspace-spreadsheet/edited')).toHaveLength(1)
+  expect(api.sessionBlank(replay)).toBe(false)
+  expect(api.sessionVisible({id:session.id,blank:api.sessionListMetadata(replay.events).blank},'other',new Set())).toBe(true)
 })
 it('the real native host classifies replayed note and knowledge-copy events as non-blank',async()=>{
   const source=patchNoteSessionHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
@@ -48,7 +103,9 @@ it('writes real Session events and reloads through the native persistence reader
   expect(KNOWN_SESSION_EVENT_TYPES.has('workspace-knowledge/copied')).toBe(true)
   for (const path of ['lib/index.js','lib/types/known-event-types.js']) {
     const source = await readFile('node_modules/@deepseek-ai/dsh-session/' + path, 'utf8')
-    expect(patchNoteSessionCatalog(source)).toBe(source)
+    const catalog=patchNoteSessionCatalog(source)
+    expect(catalog).toContain('"workspace-spreadsheet/edited"')
+    expect(patchNoteSessionCatalog(catalog)).toBe(catalog)
   }
   const dir = await mkdtemp(join(tmpdir(), 'ework-note-persistence-')), file = join(dir, 'session.json')
   const ctx = { effect:()=>{}, on:()=>{}, sessions:{list:()=>[], get:()=>undefined, prepare:(id, options)=>Session.fromRestore(id, options.seed, options.meta)} }

@@ -22,7 +22,7 @@ function withoutFormulaCache(workbook:Workbook){
 /** One synchronous revision compare and atomic rename per commit. Pending
  * imports/conversions and model calls never hold the write boundary. */
 export class SpreadsheetStore {
-  constructor(private root: string) {}
+  constructor(private root: string, private readonly onSaved?: (key: WorkbookKey) => void) {}
   private directory(key: WorkbookKey) { return join(this.root, 'spreadsheet-v1', hash([key.owner,key.sessionId])) }
   hasContent(key: WorkbookKey): boolean {
     return this.workbookWithContent(key) !== null
@@ -73,6 +73,7 @@ export class SpreadsheetStore {
       ...operation?.undo?{undo:{actionId:operation.actionId,revision,before:old.workbook}}:{},...operation?.redo?{redo:{...operation.redo,revision}}:{}}
     this.write(join(this.directory(key),'active.json'),next)
     if(workbook)try{unlinkSync(join(this.directory(key),hash(workbook.id)+'.json'))}catch{}
+    this.onSaved?.(key)
     return this.public(next)
   }
   remove(key:WorkbookKey){rmSync(this.directory(key),{recursive:true,force:true})}
