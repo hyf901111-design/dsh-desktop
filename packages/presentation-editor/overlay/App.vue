@@ -5,7 +5,7 @@
     @cut.capture="protectReadOnly"
     class="deck-app"
     :data-readonly="!editable || undefined"
-    @keydown.esc="menu = ''"
+    @keydown.esc="escapeEditor"
   >
     <input ref="fileInput" type="file" accept=".pptx" hidden @change="importFile" />
     <input ref="imageInput" type="file" accept="image/*" hidden @change="insertImage" />
@@ -245,11 +245,12 @@
         <button title="适合窗口" @click="zoom.resetCanvas">适合</button>
         <button title="放大" @click="zoom.scaleCanvas('+')"><Glyph name="plus" /></button>
         <button
-          :title="editorFullscreen ? '退出全屏' : '全屏'"
-          :aria-pressed="editorFullscreen"
+          :title="focusLabel"
+          :aria-label="focusLabel"
+          :aria-pressed="workspaceFocused"
           @click="fullscreen"
         >
-          <Glyph name="fit" />
+          <Glyph :name="focusIcon" />
         </button>
       </footer>
     </template>
@@ -324,7 +325,7 @@ const importer = useImport(),
 useGlobalHotkey()
 usePasteEvent()
 const editable = ref(true)
-const editorFullscreen = ref(false)
+const workspaceFocused = ref(false)
 const stylesOpen = ref(false),
   styleTab = ref('style')
 const grouping = useCombineElement()
@@ -420,6 +421,7 @@ async function hydrate(d) {
   menu.value = ''
   canUndoAI.value = !!d.record.canUndoAI
   revision = d.record.revision
+  workspaceFocused.value = !!d.focused
   editable.value = d.editable
   ready.value = true
   document.body.toggleAttribute('data-ds-dark-theme', d.dark)
@@ -487,7 +489,8 @@ function receive(event) {
   if (d.type === 'dismiss-menus') {
     menu.value = ''
     stylesOpen.value = false
-  } else if (d.type === 'load') void hydrate(d)
+  } else if (d.type === 'workspace-focus') workspaceFocused.value = !!d.active
+  else if (d.type === 'load') void hydrate(d)
   else if (d.type === 'flush') {
     if (d.locking && (importing || loading)) return send('flushed', { id: d.id, error: '文稿正在载入，请稍后锁定。' })
     document.dispatchEvent(new Event('odyssey:flush-text'))
@@ -551,7 +554,9 @@ const insertCommands = [
   row('chart', '图表…', 'chart'),
   row('table', '表格', 'layout')
 ]
-const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen','全屏','fit')] : [
+const focusLabel = computed(() => workspaceFocused.value ? '退出全屏' : '全屏')
+const focusIcon = computed(() => workspaceFocused.value ? 'exit-focus' : 'fit')
+const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen',focusLabel.value,focusIcon.value)] : [
   row('file', '演示文稿', 'menu-slide', [
     row('import', '导入 PowerPoint…', 'menu-upload'),
     row('export', '导出演示文稿', 'menu-download', [row('pptx', 'PowerPoint 演示文稿 (.pptx)', 'menu-file')]),
@@ -586,7 +591,7 @@ const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerP
   row('view', '视图', 'menu-screen', [
     row('first', '从头放映', 'play'),
     row('play', '从当前页放映', 'play'),
-    row('fullscreen', '全屏', 'fit')
+    row('fullscreen', focusLabel.value, focusIcon.value)
   ])
 ])
 function runCommand(id) {
@@ -1028,14 +1033,16 @@ function playKey(e) {
 }
 function fullscreen() {
   menu.value = ''
-  const root = document.querySelector('.deck-app')
-  const operation = document.fullscreenElement ? document.exitFullscreen() : root?.requestFullscreen()
-  void operation?.catch(() => {
-    notice.value = '未能切换全屏，请重试。'
-  })
+  send('workspace-focus', { active: !workspaceFocused.value })
+}
+function escapeEditor(event) {
+  if (event.defaultPrevented || event.isComposing || playing.value) return
+  if (menu.value) menu.value = ''
+  else if (workspaceFocused.value && !stylesOpen.value && !marking.value && !event.target.closest('input,textarea,[contenteditable=true],[role=dialog]')) {
+    send('workspace-focus', { active: false })
+  }
 }
 const fsChanged = () => {
-  editorFullscreen.value = document.fullscreenElement?.classList.contains('deck-app') || false
   if (playing.value && !document.fullscreenElement) playing.value = false
 }
 const outside = (e) => {

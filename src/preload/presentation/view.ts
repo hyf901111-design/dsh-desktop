@@ -2,6 +2,7 @@ import type { IpcRenderer } from 'electron'
 import { mountPresentationKnowledgeDrop } from './knowledge-drop'
 import { parsePresentationFile } from './import-file'
 import { presentationHeader } from './header'
+import { setWorkspaceSidebars, type WorkspaceSidebars } from '../workspace-sidebars'
 import styles from './view.css?raw'
 import icon from '../../../build/brand/odyssey-app-presentation.svg?raw'
 import { markWorkspaceProjectEdited } from '../workspace-project-lock'
@@ -21,8 +22,15 @@ type Editor = {
   editable: boolean
   queue: Promise<void>
   disposeDrop?: () => void
+  beforeFocus?: WorkspaceSidebars
   failure?: string
 }
+function restoreSidebars(doc: Document, editor: Editor) {
+  if (!editor.beforeFocus) return
+  setWorkspaceSidebars(doc, editor.beforeFocus)
+  editor.beforeFocus = undefined
+}
+
 export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>) {
   const win = doc.defaultView!
   const style = doc.createElement('style')
@@ -103,7 +111,8 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     e.failure = undefined
     e.host.dataset.presentationEmptyReady = String(e.ready && !e.documentId)
     paintHeader()
-    post(e, 'load', { record, recent, dark: dark(), editable: e.editable && !e.locked, slideId: e.slideId })
+    if (!e.documentId) restoreSidebars(doc, e)
+    post(e, 'load', { record, recent, dark: dark(), editable: e.editable && !e.locked, slideId: e.slideId, focused: !!e.beforeFocus })
   }
   function markSaved(e: Editor) {
     markWorkspaceProjectEdited(doc, e.sessionId)
@@ -154,6 +163,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
   const reset = () => {
     if (current) {
       publishSelection(current)
+      restoreSidebars(doc, current)
       current.disposeDrop?.()
       delete current.host.dataset.presentationDisplayedDocument
       delete current.host.dataset.presentationEmptyReady
@@ -247,6 +257,13 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       return
     }
     if (!e.ready) return
+    if (d.type === 'workspace-focus') {
+      if (typeof d.active !== 'boolean') return
+      if (d.active && !e.beforeFocus) e.beforeFocus = setWorkspaceSidebars(doc, { left: false, right: false })
+      if (!d.active) restoreSidebars(doc, e)
+      post(e, 'workspace-focus', { active: !!e.beforeFocus })
+      return
+    }
     if (d.type === 'flushed') {
       barriers.get(d.id)?.(d.error)
       return
