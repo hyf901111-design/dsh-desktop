@@ -32,6 +32,9 @@ beforeAll(async () => {
       }
       window.keepWorkspaceViewsExpanded = keepWorkspaceViewsExpanded
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
+      import { createHomeGuidePointer } from './src/preload/home-guide-pointer'
+      import guideStyles from './src/preload/home-guides.css?raw'
+      import { createHomePresentationFileGhost, openHomePresentationReference } from './scripts/lib/home-guide-presentation-native.mjs'
       import { installKnowledgeSidebar, installKnowledgeSourceNavigation } from './scripts/lib/knowledge-client.mjs'
       import React from 'react'
       import { createRoot } from 'react-dom/client'
@@ -203,6 +206,12 @@ beforeAll(async () => {
           ]
         }
       })
+      if (document.body.hasAttribute('data-test-ppt-reference')) {
+        const style = document.createElement('style')
+        style.textContent = guideStyles
+        document.head.append(style)
+        window.presentationReplay = { createHomeGuidePointer, createHomePresentationFileGhost, openHomePresentationReference }
+      }
       const uploads = new Map()
       const recentSearches = []
       window.addEventListener('sherlock:workspace-surface-change', () => {})
@@ -309,6 +318,104 @@ beforeAll(async () => {
 }, 20_000)
 
 afterAll(async () => { await browser?.close() })
+
+it('opens the animated PPT sidebar and drags the first knowledge reference into the composer', async () => {
+  const page = await browser.newPage({ viewport: { width: 980, height: 820 }, reducedMotion: 'reduce' })
+  try {
+    await page.setContent(`
+      <body data-test-ppt-reference>
+        <button data-odyssey-panel-entry="right" aria-expanded="false">展开右侧栏</button>
+        <section data-home-guide="ppt-run" data-kind="ppt"><div id="guide"></div></section>
+        <textarea style="position:fixed;left:20px;top:260px;width:400px;height:100px"></textarea>
+        <aside id="odyssey-right-workspace-panel" aria-hidden="true"
+          style="position:fixed;right:0;top:0;width:310px;height:620px;
+            transform:translateX(100%);transition:transform 240ms ease;visibility:hidden">
+          <button class="t8lSSG_tabBarPlus">＋</button>
+        </aside>
+        <div id="other" data-knowledge-panel-host data-knowledge-panel-session="other-session"
+          style="width:395px;margin-top:360px"></div>
+      </body>`)
+    await page.addScriptTag({ content: bundle })
+    const result = await page.evaluate(async () => {
+      const id = 'bbbbbbbb-1234-1234-1234-123456789abc'
+      const label = 'Vanguard-2026经济与市场展望.pdf'
+      window.data.documents.push({ id, name: label, source: 'upload', size: 4096, updatedAt: 1 })
+      const guide = document.querySelector('#guide')
+      guide.dataset.homePresentationReferenceSession = 'ppt-session'
+      guide.dataset.homePresentationReferenceFile = id
+      const toggle = document.querySelector('[data-odyssey-panel-entry]')
+      const panel = document.querySelector('#odyssey-right-workspace-panel')
+      const plus = panel.querySelector('button')
+      let openAt, plusAt
+      toggle.onclick = () => {
+        openAt = performance.now()
+        toggle.setAttribute('aria-expanded', 'true')
+        panel.setAttribute('aria-hidden', 'false')
+        panel.style.visibility = 'visible'
+        panel.style.transform = 'translateX(0)'
+      }
+      plus.onclick = () => {
+        plusAt = performance.now()
+        const menu = document.createElement('div')
+        menu.className = 'odyssey-file-new-tab-menu'
+        menu.style.cssText = 'position:fixed;right:10px;top:38px'
+        menu.innerHTML = '<button role="menuitem"><span data-odyssey-file-menu-label>知识库</span></button>'
+        menu.querySelector('button').onclick = () => {
+          menu.remove()
+          const host = document.createElement('div')
+          host.dataset.knowledgePanelHost = ''
+          host.dataset.knowledgePanelSession = 'ppt-session'
+          panel.append(host)
+        }
+        document.body.append(menu)
+      }
+      const { createHomeGuidePointer, createHomePresentationFileGhost, openHomePresentationReference } = window.presentationReplay
+      const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+      const waitFor = async predicate => {
+        const deadline = performance.now() + 3500
+        while (!predicate()) {
+          if (performance.now() >= deadline) throw Error('右侧栏参考资料未就绪')
+          await delay(20)
+        }
+      }
+      const pointer = createHomeGuidePointer(document, {
+        runId: 'ppt-run', signal: new AbortController().signal, wait: delay,
+        waitUntilPlaying: async () => {}
+      })
+      const labels = []
+      const { file } = await openHomePresentationReference(document, id, {
+        waitFor,
+        cue: (target, label) => {
+          labels.push(label)
+          return pointer.perform({ target, action: 'click' })
+        }
+      })
+      const format = 'application/x-ework-knowledge-file'
+      const dataTransfer = new DataTransfer()
+      file.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer }))
+      const shadow = createHomePresentationFileGhost(document, file, label, 'ppt-run')
+      const target = document.querySelector('textarea')
+      let dropped
+      target.addEventListener('drop', event => { dropped = JSON.parse(event.dataTransfer.getData(format)) })
+      await pointer.perform({ target, action: 'drag', fromTarget: shadow })
+      target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }))
+      pointer.dispose()
+      shadow.remove()
+      return {
+        labels, dropped, firstId: file.parentElement.firstElementChild.dataset.knowledgeFileId,
+        otherFirstId: document.querySelector('#other .knowledge-panel-row').dataset.knowledgeFileId,
+        transitionDelay: plusAt - openAt
+      }
+    })
+    expect(result.labels).toEqual(['展开右侧栏', '打开右侧栏页签菜单', '打开知识库'])
+    expect(result.firstId).toBe('bbbbbbbb-1234-1234-1234-123456789abc')
+    expect(result.otherFirstId).toBe('c')
+    expect(result.dropped).toEqual({ id: result.firstId, label: 'Vanguard-2026经济与市场展望.pdf' })
+    expect(result.transitionDelay).toBeGreaterThanOrEqual(220)
+  } finally {
+    await page.close()
+  }
+})
 
 it('lists real session modes under all files and opens each one in its native view', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })

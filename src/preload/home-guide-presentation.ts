@@ -2,7 +2,7 @@ export type HomePresentationGuideStep='brief'|'send'|'plan'|'layout'|'deliver'|'
 export type HomePresentationGuide={runStep(step:HomePresentationGuideStep):Promise<void>;canRetry(step:string):boolean;dispose():void}
 
 /** A request adapter only: the native page owns all InputBar, TodoPanel and Office UI. */
-export async function mountHomePresentationGuide(document:Document,host:HTMLElement,options:{kind?:string;signal:AbortSignal;sessionId:string;runId:string;cwd?:string;fresh?:boolean;librarySource?:{folderId:string;fileId:string};wait?:(ms:number)=>Promise<void>;waitUntilPlaying?:()=>Promise<void>}):Promise<HomePresentationGuide>{
+export async function mountHomePresentationGuide(document:Document,host:HTMLElement,options:{kind?:string;signal:AbortSignal;sessionId:string;runId:string;cwd?:string;fresh?:boolean;librarySource?:{fileId:string};wait?:(ms:number)=>Promise<void>;waitUntilPlaying?:()=>Promise<void>}):Promise<HomePresentationGuide>{
  const win=document.defaultView
  if(!win||options.signal.aborted||!host.isConnected)throw new DOMException('演示已结束。','AbortError')
  const kind=options.kind==='report'?'report':undefined
