@@ -11,21 +11,41 @@
         "schemaVersion": 1,
         "featureName": "探索演示入口、PPT 资料与回放恢复",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "8fc34d024c732ff228aab897c4740757f8899148",
-        "tipCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
+        "baseCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
+        "tipCommit": "73ad50747f2db2dd6ff41feef76b5346face4755",
         "commits": [
           {
-            "commit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
+            "commit": "73ad50747f2db2dd6ff41feef76b5346face4755",
             "parents": [
-              "8fc34d024c732ff228aab897c4740757f8899148"
+              "bb10a4b391a2a38b2db527f02e332845c8e3215e"
             ],
-            "subject": "兼容侧栏页面的演示模型依赖注入"
+            "subject": "统一演示参考文件拖动样式并居中放入输入框"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/calendar-tool-client.mjs"
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guide-pointer.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-explore-entry-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-pointer.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
           }
         ],
         "checks": [
@@ -34,16 +54,15 @@
               "npm",
               "test",
               "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/figma-model-menu.test.ts",
+              "test/home-guide-pointer.test.ts",
               "test/home-guide-presentation-adapter.test.ts",
               "--testTimeout",
               "12000"
             ],
             "outcome": "passed",
-            "summary": "62 项演示入口、模型选择显示和 PPT 请求适配测试通过",
-            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
-            "completedAt": "2026-11-20T02:10:36.836494+00:00",
+            "summary": "28 项指针和演示请求测试，通过拖动终止、预览移除与中断清理",
+            "verifiedCommit": "73ad50747f2db2dd6ff41feef76b5346face4755",
+            "completedAt": "2026-11-20T02:21:57.306473+00:00",
             "timeoutMs": 90000
           },
           {
@@ -61,9 +80,28 @@
               "12000"
             ],
             "outcome": "passed",
-            "summary": "Chromium 使用实际 Menu 浮层验证打开知识库、定位首项和拖入 PPT PDF",
-            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
-            "completedAt": "2026-11-20T02:10:36.836494+00:00",
+            "summary": "实际右栏 Menu 与知识库文件行渲染，验证正常行、拖动预览、松手居中与附件载荷",
+            "verifiedCommit": "73ad50747f2db2dd6ff41feef76b5346face4755",
+            "completedAt": "2026-11-20T02:21:57.306473+00:00",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "env",
+              "SHERLOCK_TEST_PLAYWRIGHT=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
+              "npm",
+              "test",
+              "--",
+              "test/home-guide-explore-entry-browser.test.js",
+              "-t",
+              "animates the PPT reference",
+              "--testTimeout",
+              "12000"
+            ],
+            "outcome": "passed",
+            "summary": "验证原生输入框拖动过程和预览来源",
+            "verifiedCommit": "73ad50747f2db2dd6ff41feef76b5346face4755",
+            "completedAt": "2026-11-20T02:21:57.306473+00:00",
             "timeoutMs": 90000
           },
           {
@@ -74,75 +112,25 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过",
-            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
-            "completedAt": "2026-11-20T02:10:36.836494+00:00",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/calendar-tool-client.test.js",
-              "--testTimeout",
-              "12000"
-            ],
-            "outcome": "passed",
-            "summary": "13 项日历客户端检查通过，额外核验当前原生页面的模型注入与客户端补丁重入",
-            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
-            "completedAt": "2026-11-20T02:10:36.836494+00:00",
+            "verifiedCommit": "73ad50747f2db2dd6ff41feef76b5346face4755",
+            "completedAt": "2026-11-20T02:21:57.306473+00:00",
             "timeoutMs": 90000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "复现原生 Menu Portal 脱离加号祖先导致等待超时，修复后 Chromium 验证菜单和首项 PDF 拖动。"
+          "summary": "以实际 Menu 和真实知识库渲染，验证参考 PDF 进入列表时为正常文件行，拖动预览保留图标、名称、来源和 @文件，释放位置为输入框中心。"
         },
         "acceptanceCriteria": [
           "首页从当前可见输入框进入演示文稿或研究报告的独立会话",
           "折叠侧栏直接演示点击主页",
           "展开右栏，点击加号选择知识库，参考 PDF 位于所有文件首位且可拖入现有输入框",
           "固定笔记图标成功接管已准备的会话",
-          "PPT 和研究报告录播保留原输入框已用模型和推理级别的显示，模型选择无需生成请求"
+          "PPT 和研究报告录播保留原输入框已用模型和推理级别的显示，模型选择无需生成请求",
+          "参考 PDF 在知识库以普通行显示，只在拖动时浮起原样卡片，松手落在输入框中央"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T02:10:36.836494+00:00"
-      },
-      "merged": {
-        "mergeCommit": "ed5ab8f416f4383f6fb62427345995f614b87fbd",
-        "verificationCommit": "ed5ab8f416f4383f6fb62427345995f614b87fbd",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "ed5ab8f416f4383f6fb62427345995f614b87fbd",
-            "completedAt": "2026-11-20T02:10:54.493Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "ed5ab8f416f4383f6fb62427345995f614b87fbd",
-            "completedAt": "2026-11-20T02:10:54.493Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-20T02:10:54.493Z"
+        "generatedAt": "2026-11-20T02:21:57.306473+00:00"
       }
     }
   ],
