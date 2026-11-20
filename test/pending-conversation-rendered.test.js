@@ -375,7 +375,7 @@ it('retains the session project for top-bar mode changes and still follows the m
  } finally { await page.close() }
 },15000)
 
-it('keeps the research welcome and names the destination when choosing another right project', async () => {
+it('keeps the research welcome and shows the chosen right project in the picker', async () => {
  const page=await browser.newPage({viewport:{width:1180,height:800}})
  page.setDefaultTimeout(4500)
  try {
@@ -389,7 +389,7 @@ it('keeps the research welcome and names the destination when choosing another r
   await welcome.waitFor()
   await right.locator('.pXSMma_workspace').click()
   await page.getByText('研究项目 B',{exact:true}).click()
-  await right.getByText('发送后在「研究项目 B」新建会话',{exact:true}).waitFor()
+  await right.locator('.pXSMma_workspace').getByText('研究项目 B',{exact:true}).waitFor()
   expect(await welcome.isVisible()).toBe(true)
   expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('existing-canvas')
   expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
@@ -521,6 +521,7 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
    await chip.click();
    await page.getByText('研究项目 B',{exact:true}).click();
    await chip.getByText('研究项目 B',{exact:true}).waitFor();
+   expect(await seat.locator('[data-right-project-draft-hint]').count()).toBe(0);
    expect(await center()).toEqual(original);
    expect(await seat.locator('textarea').isEditable()).toBe(true);
    expect(await seat.locator('[data-note-context-anchor]').count()).toBe(0);
@@ -531,6 +532,7 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
    await chip.click();
    await page.getByRole('menuitem',{name:'不在项目中工作',exact:true}).click();
    await chip.getByText('选择项目',{exact:true}).waitFor();
+   expect(await seat.locator('[data-right-project-draft-hint]').count()).toBe(0);
    expect(await center()).toEqual(original);
    expect(await page.evaluate(()=>window.pendingFixture.record.getManualWorkspace())).toBeNull();
    expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([]);

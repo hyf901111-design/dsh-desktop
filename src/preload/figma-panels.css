@@ -430,10 +430,3 @@ body:has(
 
 body:is([data-workspace-surface=browser],[data-workspace-surface=image-factory]) [data-browser-canvas-action],
 body[data-workspace-surface=knowledge] .t8lSSG_panel [data-browser-canvas-action]{display:none!important}
-
-[data-right-project-draft-hint] {
-  margin:0 8px 5px;
-  color:var(--dsw-alias-label-secondary,var(--odyssey-muted));
-  font:12px/17px var(--odyssey-font-ui,system-ui);
-  overflow-wrap:anywhere;
-}
