@@ -46,6 +46,17 @@ function HomePresentationSubmittedUser({entry,loadImage,openFile,t}){
  return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-home-guide-user-submission':entry.rpcId},react.createElement(UserStyleBubble,{content:entry.content,imageLoader:loadImage,openFile,t}))
 }
 
+export function createHomePresentationFileGhost(document,file,label,runId){
+ const shadow=document.createElement('div'),badge=document.createElement('span'),name=document.createElement('span')
+ shadow.className='odyssey-home-guide-drag-file';shadow.dataset.homeGuideDragFile=runId;shadow.setAttribute('aria-hidden','true')
+ badge.className='odyssey-home-guide-drag-file-type';badge.textContent='PDF';name.textContent=label
+ shadow.append(badge,name)
+ const bounds=file.getBoundingClientRect()
+ shadow.style.cssText='left:'+bounds.left+'px;top:'+bounds.top+'px;width:'+bounds.width+'px'
+ document.body.append(shadow)
+ return shadow
+}
+
 /** Disable only this demo's composer action tips; keep the real buttons intact. */
 function useHomePresentationTooltipSuppressed(sessionId){
  const active=()=>[...document.querySelectorAll('[data-home-guide-active][data-home-guide-kind]')].some(center=>['ppt','report'].includes(center.dataset.homeGuideKind)&&[...center.querySelectorAll('[data-srb-session-header][data-ework-notes-session]')].some(header=>header.dataset.eworkNotesSession===sessionId))
@@ -219,12 +230,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      file.dispatchEvent(drag('dragstart'))
      const selected=JSON.parse(transfer.getData(format)||'null')
      if(selected?.id!==source.fileId||selected.label!==expectedName)throw Error('演示参考资料已变化，请重试。')
-     const shadow=file.cloneNode(true)
-     shadow.removeAttribute('data-knowledge-file-id');shadow.removeAttribute('draggable')
-     shadow.className='odyssey-home-guide-drag-file';shadow.dataset.homeGuideDragFile=ticket.detail.runId;shadow.setAttribute('aria-hidden','true');shadow.inert=true
-     const bounds=file.getBoundingClientRect()
-     shadow.style.cssText='left:'+bounds.left+'px;top:'+bounds.top+'px;width:'+bounds.width+'px'
-     document.body.append(shadow)
+     const shadow=createHomePresentationFileGhost(document,file,selected.label,ticket.detail.runId)
      const drop=event=>{
       if(event.dataTransfer!==transfer)return
       event.preventDefault();event.stopImmediatePropagation()
@@ -380,7 +386,7 @@ export function stripHomeGuidePresentationNative(source){
 
 export function patchHomeGuidePresentationNative(source){
  source=stripHomeGuidePresentationNative(source)
- const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,useHomePresentationTooltipSuppressed,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,useHomePresentationTooltipSuppressed,createHomePresentationFileGhost,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
  const inputBar=source.match(/function InputBar\([^\n]+\) \{/g)
  if(inputBar?.length!==1)throw Error('Home presentation composer hook anchor drifted')
  source=one(source,inputBar[0],inputBar[0]+INPUT_TIP_HOOK)

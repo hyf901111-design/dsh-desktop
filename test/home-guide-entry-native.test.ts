@@ -71,6 +71,19 @@ it('opens a prepared Notes demo through the pinned shortcut that ignores branded
  expect(f.opened).toEqual([entry.sessionId]);expect(ordinaryClick).not.toHaveBeenCalled()
  client.dispose()
 })
+it.each(['ppt','report'] as const)('opens the prepared %s session at the collapsed Home button without clearing the source draft',async kind=>{
+ const f=await fixture(),client=await f.client(kind)
+ const target=f.document.createElement('button');target.dataset.sidebarHome=''
+ target.getBoundingClientRect=()=>f.target('ppt').getBoundingClientRect()
+ f.document.querySelector('[data-dsh-sidebar-root]')!.append(target)
+ const nativeHome=vi.fn();target.onclick=nativeHome
+ const entry=await client.prepare(target,'sidebar-home')
+ await client.commit(target)
+ expect(nativeHome).not.toHaveBeenCalled()
+ expect(f.opened).toEqual([entry.sessionId])
+ expect(f.ordinary.snapshot.draft).toBe('用户未发送的文字')
+ client.dispose()
+})
 it.each([['board','home-research','research'],['note','home-notes','notes'],['ppt','home-chat','chat']]as const)('uses the %s homepage tab as final native entry without changing the old view',async(kind,action,mode)=>{
  const f=await fixture(),target=f.document.querySelector<HTMLElement>('[data-conversation-view-id="'+mode+'"]')!;Object.assign(f.ordinary.snapshot,{draft:'',imageIds:[],occurrences:[]});const client=await f.client(kind);let oldViewChanges=0;target.onclick=()=>oldViewChanges++
  const entry=await client.prepare(target,action);await client.commit(target)

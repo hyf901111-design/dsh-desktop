@@ -23,9 +23,6 @@
 [data-srb-utilities]>.odyssey-home-guide-resume{margin-inline-start:0}
 .odyssey-home-guide-resume:hover{background:var(--dsw-alias-bg-selected,#7772)}
 .odyssey-home-guide-resume:focus-visible{outline:2px solid var(--primary-color,#628ee8);outline-offset:2px}
-.odyssey-home-guide-drag-file .knowledge-panel-name{min-width:0;display:grid;text-align:left;background:none;border:0;padding:0;color:inherit}
-.odyssey-home-guide-drag-file .knowledge-panel-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.odyssey-home-guide-drag-file .knowledge-panel-action{display:none}
 .odyssey-home-guide-content .dw-container,.odyssey-home-guide-content .en-blocks{scroll-behavior:auto}
 .odyssey-home-guide-save-error{position:fixed;z-index:2147483000;left:50%;bottom:24px;transform:translateX(-50%);max-width:520px;padding:12px 18px;border-radius:9px;background:var(--background-raised,#30323a);color:var(--text-error,#ffb2ae);box-shadow:0 6px 26px #0005;font:13px/1.5 system-ui}
 .odyssey-home-guide-pointer{position:fixed;z-index:2147483000;inset:0 auto auto 0;margin:0;padding:0;border:0;background:transparent;overflow:visible;width:18px;height:20px;pointer-events:none;transform:translate3d(var(--pointer-x,0px),var(--pointer-y,0px),0);contain:layout style;will-change:transform}

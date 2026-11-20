@@ -7,6 +7,21 @@ beforeAll(async()=>{
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'ts',contents:`
  import{playExploreHomeGuideEntry}from'./src/preload/home-guide-explore-entry';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';import{installResidentEntryFixture}from'./test/fixtures/home-guide-resident-entry-browser';window.installResidentEntryFixture=installResidentEntryFixture;
  import{WorkspaceSurfaceHost}from'./src/preload/workspace-surface-host';
+ import{createHomePresentationFileGhost}from'./scripts/lib/home-guide-presentation-native.mjs';
+ window.presentationDragProbe=async()=>{
+  document.querySelector('dialog')?.close()
+  const row=document.createElement('div')
+  row.style.cssText='position:fixed;top:200px;left:850px;width:140px;height:32px'
+  document.body.append(row)
+  const input=document.querySelector('textarea'),ghost=createHomePresentationFileGhost(document,row,'参考.pdf','ppt-file-drag')
+  const controller=new AbortController(),frames=[]
+  const pointer=createHomeGuidePointer(document,{runId:'ppt-file-drag',signal:controller.signal,wait:()=>Promise.resolve(),waitUntilPlaying:()=>Promise.resolve()})
+  try{
+   await pointer.perform({target:input,fromTarget:ghost,action:'drag',onFrame:frame=>frames.push(frame.phase)})
+   return {frames,buttons:ghost.querySelectorAll('button').length,label:ghost.textContent}
+  }finally{pointer.dispose();ghost.remove();row.remove()}
+ };
+
  window.entryFixture=(page,kind)=>{
   const moreButton='<button class="st-more" aria-label="更多" aria-haspopup="menu" aria-expanded="false">更多</button>';
   document.body.innerHTML='<nav data-dsh-sidebar-root><button aria-label="新建对话">新建对话</button><button aria-label="新建研究">新建研究</button><button data-sidebar-new-note aria-label="新建笔记">新建笔记</button>'+moreButton+'</nav><main class="pI_x6G_centerCol"><div class="wSkVaW_root"><div data-srb-tabs><button data-conversation-view-id="chat">对话</button><button data-conversation-view-id="research">研究</button><button data-conversation-view-id="notes">笔记</button><button data-conversation-view-id="spreadsheet">表格</button></div><textarea></textarea><article>原有正文</article></div></main><button id="other-session">用户切换会话</button><dialog data-explore-menu><button data-explore-close>关闭探索</button><p>当前探索用例菜单</p></dialog>';
@@ -56,7 +71,7 @@ async function fixture(start,kind,reduced=true){const context=await browser.newC
 it.each(['board','note','ppt','report','workbench'].flatMap(kind=>['home','chat','research','notes'].map(start=>[kind,start])))('navigates %s from visible %s through one Explore close and native route without changing source content',async(kind,start)=>{
  const{context,page}=await fixture(start,kind);try{const before=await page.evaluate(()=>window.entryProbe.snapshot());await page.evaluate(()=>window.entryProbe.start());const result=await page.evaluate(()=>({actions:window.entryProbe.actions,clicks:window.entryProbe.nativeClicks,state:window.entryProbe.snapshot()}));expect(result.actions.filter(x=>x==='close')).toHaveLength(1);expect(result.actions[0]).toBe('close');expect(result.actions.filter(x=>x.startsWith('activate:'))).toEqual(['activate:'+(start==='home'?(kind==='note'?'home-notes':kind==='board'||kind==='workbench'?'home-research':'home-input'):kind==='note'?'new-note':kind==='board'||kind==='workbench'?'new-research':'new-chat')]);expect(result.state).toMatchObject({...before,activated:true});expect(result.clicks.length).toBe(start==='home'?0:1)}finally{await context.close()}
 })
-it.each([['board','新建研究','new-research'],['note','新笔记','new-note'],['ppt','新建对话','new-chat'],['report','新建对话','new-chat'],['workbench','新建研究','new-research']])('uses the named More menu entry for collapsed %s playback',async(kind,label,action)=>{
+it.each([['board','新建研究','new-research'],['note','新笔记','new-note'],['workbench','新建研究','new-research']])('uses the named More menu entry for collapsed %s playback',async(kind,label,action)=>{
  const {context,page}=await fixture('collapsed-browser-over-image',kind);try{
   const before=await page.evaluate(()=>window.entryProbe.snapshot())
   await page.evaluate(()=>window.entryProbe.start())
@@ -64,6 +79,33 @@ it.each([['board','新建研究','new-research'],['note','新笔记','new-note']
   expect(result.actions).toEqual(['close','more','activate:'+action])
   expect(result.clicks).toEqual(['更多',label])
   expect(result.state).toMatchObject({...before,activated:true})
+ }finally{await context.close()}
+})
+it.each(['ppt','report'])('uses the visible Home button for %s with a collapsed sidebar',async kind=>{
+ const{context,page}=await fixture('collapsed-browser-over-image',kind)
+ try{
+  const before=await page.evaluate(()=>window.entryProbe.snapshot())
+  await page.evaluate(()=>window.entryProbe.start())
+  const result=await page.evaluate(()=>({actions:window.entryProbe.actions,clicks:window.entryProbe.nativeClicks,state:window.entryProbe.snapshot()}))
+  expect(result.actions).toEqual(['close','activate:sidebar-home'])
+  expect(result.clicks).toEqual(['主页'])
+  expect(result.state).toMatchObject({...before,activated:true})
+ }finally{await context.close()}
+})
+it.each(['ppt','report'])('starts %s from the visible home composer when the mode tabs are collapsed',async kind=>{
+ const{context,page}=await fixture('home',kind)
+ try{
+  await page.locator('[data-srb-tabs]').evaluate(el=>el.hidden=true)
+  await page.evaluate(()=>window.entryProbe.start())
+  expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close','activate:home-input'])
+ }finally{await context.close()}
+})
+it('animates the PPT reference PDF ghost into the real composer hit target',async()=>{
+ const{context,page}=await fixture('home','ppt')
+ try{
+  const result=await page.evaluate(()=>window.presentationDragProbe())
+  expect(result).toMatchObject({buttons:0,label:'PDF参考.pdf'})
+  expect(result.frames).toEqual(expect.arrayContaining(['pressed','dragging','released']))
  }finally{await context.close()}
 })
 it('uses collapsed More then its actual Note menu item and keeps the pointer above both top layers',async()=>{
