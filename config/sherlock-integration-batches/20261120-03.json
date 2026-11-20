@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261120-03",
+  "branch": "codex/integration/20261120-03",
+  "baseMainCommit": "d880a9c24ff4d870b3607a2776064653b39d9a33",
+  "expectedMainCommit": "d880a9c24ff4d870b3607a2776064653b39d9a33",
+  "createdAt": "2026-11-20T10:28:46.710Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "个人看板管理者工作台",
+        "branch": "codex/feat/manager-workbench-20261120",
+        "baseCommit": "d880a9c24ff4d870b3607a2776064653b39d9a33",
+        "tipCommit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
+        "commits": [
+          {
+            "commit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
+            "parents": [
+              "d880a9c24ff4d870b3607a2776064653b39d9a33"
+            ],
+            "subject": "功能：在个人看板新增管理者工作台"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-tabs-contract.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/research-grid.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-workbench.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/manager-workbench/canvas.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/manager-workbench/content.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/manager-workbench/status-icons.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/manager-workbench/styles.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/research-boards.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-sidebar-overflow.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "客户端 TypeScript 类型检查通过",
+            "verifiedCommit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
+            "completedAt": "2026-11-20T10:28:41.146Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "应用客户端研究画布补丁",
+            "verifiedCommit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
+            "completedAt": "2026-11-20T10:28:41.146Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-canvas-storage.test.ts",
+              "test/board-tabs-contract.test.js",
+              "test/workbench-style.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "研究画布存储、页签与模式合同测试 31 项通过",
+            "verifiedCommit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
+            "completedAt": "2026-11-20T10:28:41.146Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "管理者工作台|默认显示五条|五条以内"
+            ],
+            "outcome": "passed",
+            "summary": "个人看板入口与侧栏折叠渲染聚焦测试 3 项通过",
+            "verifiedCommit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
+            "completedAt": "2026-11-20T10:28:41.146Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-boards-browser.mjs",
+              "--manager-workbench-focus"
+            ],
+            "outcome": "passed",
+            "summary": "客户端渲染器与本地 Host 联测，验证首次打开、四页签、四模式和重载恢复",
+            "verifiedCommit": "7d0fbf91ba08f8724999f84751f1936f87b32fef",
+            "completedAt": "2026-11-20T10:28:41.146Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "由本地 Host 和真实客户端研究画布渲染器组成的浏览器场景通过；四页签与主题截图已导出，桌面应用安装验收待完成。"
+        },
+        "acceptanceCriteria": [
+          "从看板区的个人看板打开管理者工作台，首次建立可编辑的本地个人看板。",
+          "驾驶舱、我的团队、组织架构、易招聘都使用原生页签和研究组件框，来源及样例口径可查看。",
+          "初始深色，支持浅色、彭博、易方达，重载保留选中页签和模式。"
+        ],
+        "risks": [
+          "原侧栏测试的手动顺序最近访问用例在共同基线同样失败，相关聚焦用例均通过。",
+          "管理者工作台使用原设计快照，人员明细与候选人数据为样例。"
+        ],
+        "generatedAt": "2026-11-20T10:28:41.146Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "--",
+        "vitest",
+        "run",
+        "test/research-canvas-storage.test.ts",
+        "test/board-tabs-contract.test.js",
+        "test/workbench-style.test.js"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "exec",
+        "--",
+        "vitest",
+        "run",
+        "test/research-board-sidebar-overflow.test.ts",
+        "-t",
+        "管理者工作台|默认显示五条|五条以内"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "scripts/test-research-boards-browser.mjs",
+        "--manager-workbench-focus"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
