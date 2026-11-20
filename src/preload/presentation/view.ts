@@ -2,6 +2,7 @@ import type { IpcRenderer } from 'electron'
 import { mountPresentationKnowledgeDrop } from './knowledge-drop'
 import { parsePresentationFile } from './import-file'
 import { presentationHeader } from './header'
+import { openPresentationArchiveDialog } from './archive-dialog'
 import { setWorkspaceSidebars, type WorkspaceSidebars } from '../workspace-sidebars'
 import styles from './view.css?raw'
 import icon from '../../../build/brand/odyssey-app-presentation.svg?raw'
@@ -64,7 +65,22 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       busy: switching || !e?.ready
     })
   }
+  let closeArchive: (() => void) | undefined
+  function openArchive() {
+    const editor = current
+    if (!editor?.ready || !editor.documentId || doc.querySelector('.presentation-archive-dialog[open]')) return
+    const documentId = editor.documentId
+    const sessionTitle = editor.host.closest('[data-odyssey-page=presentation]')?.querySelector<HTMLElement>('[title="双击修改会话标题"]')?.textContent?.trim() ||
+      doc.title.replace(/\s*[—–-]\s*EWork Odyssey.*$/iu, '').trim() || '新演示'
+    closeArchive = openPresentationArchiveDialog(doc, sessionTitle, async (name, format) => {
+      await flushEditor(editor)
+      if (current !== editor || editor.documentId !== documentId) throw Error('文稿已切换，请重新保存。')
+      const saved = await request(editor, 'archive', { name, format, sessionTitle, documentId, revision: editor.revision })
+      if (current === editor) post(editor, 'status', { message: (saved.updated ? '已更新知识库文件 · ' : '已保存至知识库 · ') + saved.name })
+    })
+  }
   const header = presentationHeader(doc, {
+    archive: openArchive,
     async toggle() {
       const e = current
       if (!e?.ready || !e.editable || switching) return
@@ -163,6 +179,8 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
   const reset = () => {
     if (current) {
       publishSelection(current)
+      closeArchive?.()
+      closeArchive = undefined
       restoreSidebars(doc, current)
       current.disposeDrop?.()
       delete current.host.dataset.presentationDisplayedDocument
@@ -257,6 +275,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       return
     }
     if (!e.ready) return
+    if (d.type === 'open-archive') { openArchive(); return }
     if (d.type === 'workspace-focus') {
       if (typeof d.active !== 'boolean') return
       if (d.active && !e.beforeFocus) e.beforeFocus = setWorkspaceSidebars(doc, { left: false, right: false })

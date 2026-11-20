@@ -6,6 +6,8 @@ import { randomUUID } from 'node:crypto'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
 import { PresentationStore, type Key, type Deck } from './store'
 import { editGuideDocument } from './edit-guide'
+import type { KnowledgeStore } from '../knowledge/store'
+import { renderPresentationArchive } from './archive-renderer'
 import type { ConversationComponentVisibleContext } from '../../../packages/dsh-research-task-runtime/conversation-component-contract'
 import type { CapabilityHandler } from '../../../packages/dsh-research-task-runtime/client-capabilities'
 import { canvasHumanText } from '../../../packages/dsh-research-task-runtime/canvas-task-routing.js'
@@ -29,9 +31,11 @@ export function installPresentation(options: {
   workspaceRoot?(id: string): Promise<string | null | undefined>
   runtimeUrl?(): string | undefined
   visible(): ConversationComponentVisibleContext | undefined
+  library?: Pick<KnowledgeStore, 'savePresentationArchive'>
   canWrite(id: string): boolean
 }) {
   const { store, getWindow } = options
+  const archives = new Set<string>()
   const admissions = new Map<string, Map<string, Admission>>()
   type PendingImport = {
     revision: number
@@ -87,6 +91,30 @@ export function installPresentation(options: {
         ['save', 'open', 'undo', 'edit-guide'].includes(action)
       )
       const owner = who(key)
+      if (action === 'archive') {
+        const { name, format, documentId, revision, sessionTitle } = input
+        if (!options.library || typeof name !== 'string' || !name.trim() || name.length > 250 ||
+            typeof sessionTitle !== 'string' || sessionTitle.length > 512 || !['pptx', 'pdf'].includes(format))
+          throw Error('请检查文件名和保存格式。')
+        const record = store.read(key)
+        if (!record.deck || record.deck.id !== documentId || record.revision !== revision)
+          throw Error('文稿已变化，请重新保存。')
+        if (archives.has(owner)) throw Error('这份文稿正在保存至知识库。')
+        const guard = () => {
+          const visible = scope(key.sessionId, generation)
+          if (visible.key.owner !== key.owner || store.read(key).revision !== revision)
+            throw Error('文稿或会话已变化，请重新保存。')
+        }
+        archives.add(owner)
+        try {
+          const bytes = await renderPresentationArchive(record.deck, format)
+          if (!bytes.length || bytes.length > 64 * 1024 * 1024) throw Error('生成的文件为空或超过 64 MB。')
+          guard()
+          return await options.library.savePresentationArchive(bytes, {
+            sessionId: key.sessionId, sessionTitle, documentId, name, format
+          }, guard)
+        } finally { archives.delete(owner) }
+      }
       if (action === 'edit-guide') {
         const result = editGuideDocument(store,key,input)
         if (input.stage) notify(key)

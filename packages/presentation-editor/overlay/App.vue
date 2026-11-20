@@ -41,6 +41,9 @@
           <Glyph name="down" />
         </button>
         <i />
+        <button aria-label="保存至知识库" title="保存至知识库" @click="openArchive">
+          <Glyph name="library" /><span>保存至知识库</span>
+        </button>
         <button :disabled="!editable" title="撤销" aria-label="撤销" @click="undoEdit"><Glyph name="undo" /></button>
         <button :disabled="!editable" title="重做" aria-label="重做" @click="hist.redo"><Glyph name="redo" /></button>
         <i />
@@ -301,10 +304,10 @@ import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
 import emitter, { EmitterEvents } from '@/utils/emitter'
 import { slideTitle } from './presentation-slide-title'
-import {restoreOfficeFormatting, exportOfficeFormatting, trimEmptyOfficeSublists} from './office-import'
+import {restoreOfficeFormatting, trimEmptyOfficeSublists} from './office-import'
 import { upgradeEfundTemplate } from './legacy-office'
 import { protectMaster } from './master-protection'
-import { exportMasterArtwork } from './powerpoint-masters'
+import { finalizePptx } from './finalize-pptx'
 import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
 import { runEditGuideAction } from './edit-guide'
@@ -554,10 +557,13 @@ const insertCommands = [
   row('chart', '图表…', 'chart'),
   row('table', '表格', 'layout')
 ]
+function openArchive() { menu.value = ''; send('open-archive') }
+const archiveCommand = row('archive', '保存至知识库…', 'library')
 const focusLabel = computed(() => workspaceFocused.value ? '退出全屏' : '全屏')
 const focusIcon = computed(() => workspaceFocused.value ? 'exit-focus' : 'fit')
-const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen',focusLabel.value,focusIcon.value)] : [
+const commandTree = computed(() => !editable.value ? [archiveCommand, row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen',focusLabel.value,focusIcon.value)] : [
   row('file', '演示文稿', 'menu-slide', [
+    archiveCommand,
     row('import', '导入 PowerPoint…', 'menu-upload'),
     row('export', '导出演示文稿', 'menu-download', [row('pptx', 'PowerPoint 演示文稿 (.pptx)', 'menu-file')]),
     row('create', '新建空白演示文稿', 'menu-plus'),
@@ -596,11 +602,12 @@ const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerP
 ])
 function runCommand(id) {
   menu.value = ''
-  if (!editable.value && !['pptx', 'play', 'first', 'fullscreen'].includes(id) && !id.startsWith('open:')) return
+  if (!editable.value && !['archive', 'pptx', 'play', 'first', 'fullscreen'].includes(id) && !id.startsWith('open:')) return
   if (id.startsWith('open:')) return open(id.slice(5))
   const actions = {
     import: () => chooseFile(fileInput.value),
     pptx: exportDeck,
+    archive: openArchive,
     create,
     template: importTemplate,
     'undo-ai': () => menuAction('undo'),
@@ -977,12 +984,8 @@ function exportDeck() {
 }
 async function exported(event) {
   try {
-    const bytes = await reconcilePointColors(
-      await exportMasterArtwork(event.detail, store.slides),
-      store.slides,
-      true
-    )
-    send('export', { bytes: await exportOfficeFormatting(bytes, store.slides, store.viewportSize), title: store.title, format: 'pptx' })
+    const bytes = await finalizePptx(event.detail, store.slides, store.viewportSize)
+    send('export', { bytes, title: store.title, format: 'pptx' })
   } catch {
     notice.value = '文稿导出失败，请重试。'
   }

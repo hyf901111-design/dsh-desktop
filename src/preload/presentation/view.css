@@ -109,3 +109,27 @@ body[data-ds-dark-theme] .presentation-header-menu{background:#252525;color:#eee
 .knowledge-panel-row[data-presentation-dragging] {
   background: var(--dsw-alias-interactive-secondary, #5784ae20);
 }
+
+.presentation-archive-dialog {
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px); box-sizing: border-box; margin: auto; padding: 0;
+  border: 1px solid var(--dsw-alias-border-secondary, #8884); border-radius: 12px;
+  background: var(--dsw-alias-layer-menu, #fff); color: var(--dsw-alias-label-primary, #262626);
+  box-shadow: 0 12px 48px #0004; -webkit-app-region: no-drag;
+}
+.presentation-archive-dialog::backdrop { background: #0005; }
+.presentation-archive-dialog form { display: grid; gap: 16px; padding: 22px; }
+.presentation-archive-dialog h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.presentation-archive-dialog label { display: grid; gap: 6px; font-size: 13px; }
+.presentation-archive-dialog :is(input, select) {
+  box-sizing: border-box; width: 100%; height: 36px; padding: 0 10px; border-radius: 6px;
+  background: var(--dsw-alias-layer-background, transparent); color: inherit; font: inherit;
+  border: 1px solid var(--dsw-alias-border-secondary, #8886);
+}
+.presentation-archive-dialog p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--dsw-alias-label-secondary, #777); }
+.presentation-archive-dialog [role=alert] { font-size: 13px; color: var(--dsw-alias-label-negative, #cb5448); }
+.presentation-archive-dialog footer { display: flex; justify-content: flex-end; gap: 8px; }
+.presentation-archive-dialog button { padding: 6px 16px; border: 1px solid #8884; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.presentation-archive-dialog button[type=submit] { background: var(--dsw-alias-label-primary, #292929); color: var(--dsw-alias-layer-menu, white); }
+.presentation-archive-dialog button:disabled { opacity: .6; cursor: default; }
+body[data-ds-dark-theme] .presentation-archive-dialog { color-scheme: dark; }
