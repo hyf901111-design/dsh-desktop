@@ -7,6 +7,7 @@ import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import Chart from '@/views/components/element/ChartElement/Chart.vue'
 import { buildPresentation, renderSlide } from '@aiden0z/pptx-renderer'
 import { chartAppearance, liveChartXml } from './office-import'
+import { applyOfficeSeries } from './office-series'
 import { applyOfficeAxes } from './office-axes'
 import { visibleBars } from './chart-points'
 const props = defineProps([
@@ -40,7 +41,8 @@ const relationships = (entries) =>
   '">' +
   entries
     .map(
-      ([id, type, path]) => '<Relationship Id="' + id + '" Type="' + office + type + '" Target="' + path + '"/>'
+      ([id, type, path]) =>
+        '<Relationship Id="' + id + '" Type="' + office + type + '" Target="' + path + '"/>'
     )
     .join('') +
   '</Relationships>'
@@ -112,36 +114,54 @@ function applyOfficeLabels(chart, sourceXml) {
   const first = (node, name) => node?.getElementsByTagNameNS('*', name)[0]
   const chartNode = first(doc, 'chart')
   const title = [...chartNode.children].find((node) => node.localName === 'title')
-  const option = chart.getOption()
   const chartArea = [...doc.documentElement.children].find((node) => node.localName === 'spPr')
   // A chart with only a border has no authored fill. The preview engine paints it opaque white.
-  if (chartArea && ![...chartArea.children].some((node) => node.localName.endsWith('Fill')) &&
-      !props.source.attachments?.chartStyle) chart.setOption({ backgroundColor: 'transparent' })
-  const themeXml = props.source.theme && new DOMParser().parseFromString(props.source.theme, 'application/xml')
+  if (
+    chartArea &&
+    ![...chartArea.children].some((node) => node.localName.endsWith('Fill')) &&
+    !props.source.attachments?.chartStyle
+  )
+    chart.setOption({ backgroundColor: 'transparent' })
+  const option = chart.getOption()
+  const themeXml =
+    props.source.theme && new DOMParser().parseFromString(props.source.theme, 'application/xml')
   const scheme = first(first(themeXml, 'themeElements'), 'clrScheme')
   const aliases = { tx1: 'dk1', tx2: 'dk2', bg1: 'lt1', bg2: 'lt2' }
   const fillColor = (node) => {
-    const rgb = first(node, 'srgbClr')?.getAttribute('val')
-    const key = first(node, 'schemeClr')?.getAttribute('val')
-    const color = rgb || (key && first(scheme, aliases[key] || key)?.firstElementChild?.getAttribute('val'))
-    return /^[a-f0-9]{6}$/i.test(color || '') ? '#' + color : undefined
-  }
-  const seriesNodes = [...doc.getElementsByTagNameNS('*', 'ser')]
-  const pies = option.series?.map((series, index) => {
-    if (series.type !== 'pie' || !seriesNodes[index]) return {}
-    const colors = new Map(
-      [...seriesNodes[index].getElementsByTagNameNS('*', 'dPt')].map((point) => [
-        Number(first(point, 'idx')?.getAttribute('val')),
-        fillColor(first(first(point, 'spPr'), 'solidFill'))
-      ])
-    )
-    return {
-      data: series.data.map((item, index) =>
-        colors.get(index) ? { ...item, itemStyle: { ...item.itemStyle, color: colors.get(index) } } : item
+    const schemeRef = first(node, 'schemeClr')
+    const key = schemeRef?.getAttribute('val')
+    const resolved = key && first(scheme, aliases[key] || key)?.firstElementChild
+    const rgb =
+      first(node, 'srgbClr')?.getAttribute('val') ||
+      resolved?.getAttribute('lastClr') ||
+      resolved?.getAttribute('val')
+    if (!/^[a-f0-9]{6}$/i.test(rgb || '')) return
+    const mod = first(node, 'lumMod'),
+      off = first(node, 'lumOff')
+    if (!mod && !off) return '#' + rgb
+    const channels = rgb.match(/../g).map((s) => parseInt(s, 16) / 255)
+    const light = (Math.min(...channels) + Math.max(...channels)) / 2
+    const adjusted = Math.max(
+      0,
+      Math.min(
+        1,
+        (light * Number(mod?.getAttribute('val') ?? 100000)) / 100000 +
+          Number(off?.getAttribute('val') || 0) / 100000
       )
-    }
-  })
-  if (pies?.some((series) => series.data)) chart.setOption({ series: pies })
+    )
+    const ratio = (1 - Math.abs(2 * adjusted - 1)) / (1 - Math.abs(2 * light - 1) || 1)
+    return (
+      '#' +
+      channels
+        .map((c) =>
+          Math.round(255 * (adjusted + (c - light) * ratio))
+            .toString(16)
+            .padStart(2, '0')
+        )
+        .join('')
+    )
+  }
+  applyOfficeSeries(chart, doc, option, fillColor)
   if (title && !first(title, 'tx') && !option.title?.[0]?.text) {
     chart.setOption({
       title: {

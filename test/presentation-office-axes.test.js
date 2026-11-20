@@ -5,14 +5,21 @@ import JSZip from 'jszip'
 import { it, expect } from 'vitest'
 import { applyOfficeAxes } from '../packages/presentation-editor/overlay/office-axes'
 
+import { trimEmptyOfficeSublists } from '../packages/presentation-editor/overlay/office-import'
+import { applyOfficeSeries } from '../packages/presentation-editor/overlay/office-series'
+
+async function chartSource(number) {
+  const zip = await JSZip.loadAsync(
+    readFileSync(resolve('skills/efund-ppt-maker/assets/efund-template-v6.pptx'))
+  )
+  const source = await zip.file('ppt/charts/chart' + number + '.xml').async('string')
+  return new DOMParser().parseFromString(source, 'application/xml')
+}
+
 it.each([11, 12])(
   'retains the visible date axis and both scales of the EFund combination chart %s',
   async (number) => {
-    const zip = await JSZip.loadAsync(
-      readFileSync(resolve('skills/efund-ppt-maker/assets/efund-template-v6.pptx'))
-    )
-    const source = await zip.file('ppt/charts/chart' + number + '.xml').async('string')
-    const doc = new DOMParser().parseFromString(source, 'application/xml')
+    const doc = await chartSource(number)
     const host = document.createElement('div')
     host.innerHTML =
       '<div></div><div class="pptx-chart-custom-legend" style="flex-direction:column"><div><span>成交金额</span></div></div>'
@@ -46,3 +53,82 @@ it.each([11, 12])(
     if (number === 11) expect(result.grid.right).toBeGreaterThan(140)
   }
 )
+
+it('uses yearly calendar ticks across missing trading days and honors the percentage-axis major unit', async () => {
+  const doc = await chartSource(2)
+  const option = {
+    xAxis: [{ type: 'category' }],
+    yAxis: [{ min: 0 }, { min: 0 }],
+    series: [
+      { name: '量化增强', type: 'line' },
+      { name: '累计超额收益', type: 'line', yAxisIndex: 1 }
+    ],
+    grid: [{}]
+  }
+  let result
+  applyOfficeAxes(
+    { getWidth: () => 521, getDom: () => document.createElement('div'), setOption: (o) => (result = o) },
+    doc,
+    option
+  )
+  const label = result.xAxis.axisLabel
+  const count = doc
+    .getElementsByTagNameNS('*', 'cat')[0]
+    .getElementsByTagNameNS('*', 'ptCount')[0]
+    .getAttribute('val')
+  const shown = Array.from({ length: Number(count) }, (_, i) => i)
+    .filter((i) => label.interval(i))
+    .map((i) => label.formatter('', i))
+  expect(shown).toEqual(
+    ['2012/07/04', '2013/07/04', '2014/07/04', '2015/07/04', '2016/07/04', '2017/07/04'].slice(
+      0,
+      shown.length
+    )
+  )
+  expect(shown.length).toBeGreaterThanOrEqual(5)
+  expect(label.rotate).toBe(0)
+  expect(result.yAxis.map((a) => a.interval)).toEqual([0.5, 0.5])
+})
+
+it('lists individually colored bars by category and keeps values intact', async () => {
+  const doc = await chartSource(7),
+    host = document.createElement('div')
+  host.innerHTML =
+    '<div></div><div class="pptx-chart-custom-legend"><div><svg><rect fill="#005096"/></svg><span>1</span></div></div>'
+  const data = [110, 80, 60, 100, 120, 84]
+  const color = (fill) =>
+    fill?.firstElementChild?.getAttribute('val') === 'tx2'
+      ? '#FFC000'
+      : fill?.firstElementChild?.getAttribute('val') && '#' + fill.firstElementChild.getAttribute('val')
+  let result
+  applyOfficeSeries(
+    { getDom: () => host.firstElementChild, setOption: (o) => (result = o) },
+    doc,
+    { series: [{ type: 'bar', name: '1', data }] },
+    color
+  )
+  expect(result.series[0].data.map((p) => p.value)).toEqual(data)
+  expect(result.series[0].data[4].itemStyle.color).toBe('#FFC000')
+  expect(host.querySelectorAll('.pptx-chart-custom-legend span')).toHaveLength(6)
+  expect([...host.querySelectorAll('span')].at(-1).textContent).toBe('上位都')
+  expect(host.querySelectorAll('rect')[4].getAttribute('fill')).toBe('#FFC000')
+})
+
+it('discards the imported empty numbered sublist without touching authored nested lists', () => {
+  const parent = '<ul><li data-pptx-level="3"><p>公募量化先锋奖</p>'
+  const deck = [
+    {
+      elements: [
+        {
+          type: 'text',
+          content: parent + '<ol><li data-pptx-level="3"><p><span> </span></p></li></ol></li></ul>'
+        },
+        { type: 'text', content: parent + '<ol><li data-pptx-level="3"><p>后续事项</p></li></ol></li></ul>' }
+      ]
+    }
+  ]
+  expect(trimEmptyOfficeSublists(deck)).toBe(true)
+  expect(deck[0].elements[0].content).toBe(parent + '</li></ul>')
+  expect(deck[0].elements[1].content).toContain('后续事项')
+  expect(trimEmptyOfficeSublists(deck)).toBe(false)
+})
