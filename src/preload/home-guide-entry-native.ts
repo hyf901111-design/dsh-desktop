@@ -1,7 +1,7 @@
 import {emitHomeGuideEntryDiagnostic,type HomeGuideEntryDenial} from '../shared/home-guide-entry-diagnostics'
 export type HomeGuideEntryKind='board'|'workbench'|'note'|'ppt'|'report'|'spreadsheet'
 type SidebarNewSessionAction='new-chat'|'new-research'|'new-note'
-export type HomeGuideEntryAction='home-input'|'home-chat'|'home-research'|'home-notes'|SidebarNewSessionAction|'new-spreadsheet'
+export type HomeGuideEntryAction='home-input'|'home-chat'|'home-research'|'home-notes'|SidebarNewSessionAction|'new-spreadsheet'|'sidebar-home'
 export type HomeGuideEntrySession={sessionId:string;cwd:string;title:string;fresh?:boolean}
 export type HomeGuideEntryContext={owner:string;generation:number;identityRevision:number;sessionId?:string;selectionRevision?:number;input?:any;eligible?:boolean}
 type NativeDependencies={
@@ -13,9 +13,10 @@ type NativeDependencies={
 }
 const REQUEST='sherlock:home-guide-entry-request',REPLY='sherlock:home-guide-entry-reply',CANCELLED='sherlock:home-guide-entry-cancelled'
 const TARGET='data-home-guide-entry-target',CLICK='data-home-guide-entry-click'
-const kinds=['board','workbench','note','ppt','report','spreadsheet'],actions=['home-input','home-chat','home-research','home-notes','new-chat','new-research','new-note','new-spreadsheet']
+const kinds=['board','workbench','note','ppt','report','spreadsheet'],actions=['home-input','home-chat','home-research','home-notes','new-chat','new-research','new-note','new-spreadsheet','sidebar-home']
 export const homeGuideMode=(kind:HomeGuideEntryKind)=>kind==='board'||kind==='workbench'?'research':kind==='note'?'notes':kind==='spreadsheet'?'spreadsheet':'chat'
 export const sidebarMoreItemSelector='.st-menu[data-sidebar-more="true"] button[role="menuitem"]'
+export const sidebarHomeSelector='[data-dsh-sidebar-root] button[data-sidebar-home]'
 export function isSidebarNewSpreadsheetEntry(target:HTMLElement){
  if(target.matches('[data-navigation-rail] [data-navigation-app=spreadsheet]'))return true
  const label=target.getAttribute('aria-label')||target.textContent?.trim()||''
@@ -55,10 +56,11 @@ function matches(document:Document,target:HTMLElement,action:HomeGuideEntryActio
  if(!available(document,target))return false
  if(kind==='spreadsheet')return action==='new-spreadsheet'&&isSidebarNewSpreadsheetEntry(target)
  const mode=homeGuideMode(kind)
+ if(action==='sidebar-home')return mode==='chat'&&target.matches(sidebarHomeSelector)
  if(action.startsWith('home-')&&action!=='home-input')return action==='home-'+mode&&target.matches('[data-srb-tabs] button[data-conversation-view-id="'+mode+'"]')&&!!target.closest('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]')
  if(action==='home-input'){
   const root=target.closest('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]')??(target.closest('[data-research-composer-host]')?document.querySelector('.pI_x6G_centerCol .wSkVaW_root[data-odyssey-page="home"]'):null)
-  return target.matches('textarea')&&!!root?.querySelector('[data-srb-tabs] [data-conversation-view-id="'+mode+'"][aria-selected="true"]')&&!(target as HTMLTextAreaElement).readOnly&&!(target as HTMLTextAreaElement).value.trim()
+  return target.matches('textarea')&&!!root&&(mode==='chat'||!!root.querySelector('[data-srb-tabs] [data-conversation-view-id="'+mode+'"][aria-selected="true"]'))&&!(target as HTMLTextAreaElement).readOnly&&!(target as HTMLTextAreaElement).value.trim()
  }
  const expected=mode==='notes'?'new-note':mode==='research'?'new-research':'new-chat'
  return action===expected&&isSidebarNewSessionEntry(target,expected)

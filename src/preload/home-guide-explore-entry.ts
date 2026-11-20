@@ -1,7 +1,7 @@
 import {homeGuideTargetPoint,type HomeGuidePointerAction} from './home-guide-pointer'
 import type {HomeOperationActionContext} from './home-operations'
 import type {HomeGuideKind} from './home-guides'
-import {homeGuideMode,isSidebarNewSessionEntry,isSidebarNewSpreadsheetEntry,sidebarMoreItemSelector,type HomeGuideEntryAction} from './home-guide-entry-native'
+import {homeGuideMode,isSidebarNewSessionEntry,isSidebarNewSpreadsheetEntry,sidebarHomeSelector,sidebarMoreItemSelector,type HomeGuideEntryAction} from './home-guide-entry-native'
 type Options={homeEmpty?:boolean;context:HomeOperationActionContext;signal:AbortSignal;pointer:{perform(action:HomeGuidePointerAction):Promise<void>};assert():void;nativeClick(target:HTMLElement):void;activate(target:HTMLElement,action:HomeGuideEntryAction,beforeCommit:()=>Promise<void>):Promise<void>}
 /** Only visible native controls. The final click consumes one prepared-session lease. */
 export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuideKind,options:Options){
@@ -45,6 +45,12 @@ export async function playExploreHomeGuideEntry(document:Document,kind:HomeGuide
  const root=document.body.dataset.workspaceSurface?undefined:await wait(()=>unique(document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol .wSkVaW_root')))
  const mode=homeGuideMode(kind)
  const emptyHome=options.homeEmpty!==false&&root?.dataset.odysseyPage==='home'&&![...root.querySelectorAll<HTMLTextAreaElement>('textarea')].some(input=>input.value.trim())&&!root.querySelector('[data-note-reference-chip],[data-research-inline-reference],[data-input-attachment]')
+ if(mode==='chat'){
+  const input=emptyHome&&root&&unique([...root.querySelectorAll<HTMLTextAreaElement>('textarea')].filter(node=>!node.readOnly))
+  if(input){await activate(input,'home-input');return}
+  const home=unique(document.querySelectorAll<HTMLButtonElement>(sidebarHomeSelector))
+  if(home){await activate(home,'sidebar-home');return}
+ }
  if(emptyHome){
   const tab=unique(root.querySelectorAll<HTMLElement>('[data-srb-tabs] [data-conversation-view-id="'+mode+'"]'))
   if(tab){
