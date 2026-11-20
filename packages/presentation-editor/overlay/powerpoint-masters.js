@@ -14,6 +14,12 @@ async function xml(zip, path) {
 export async function exportMasterArtwork(bytes, slides) {
   if (!slides.some((s) => s.elements.some((e) => e.odysseyMaster))) return bytes
   const zip = await JSZip.loadAsync(bytes)
+  const field = slides.flatMap((s) => s.elements).find((e) => typeof e.odysseyPageNumber === 'number')
+  if (field) {
+    const presentation = await xml(zip, 'ppt/presentation.xml')
+    presentation.documentElement.setAttribute('firstSlideNum', String(field.odysseyPageNumber))
+    zip.file('ppt/presentation.xml', serialize(presentation))
+  }
   for (const [i, slide] of slides.entries()) {
     if (!slide.elements.some((e) => e.odysseyMaster)) continue
     const path = 'ppt/slides/slide' + (i + 1) + '.xml'
@@ -34,7 +40,18 @@ export async function exportMasterArtwork(bytes, slides) {
     )
     for (const shape of [...tree.children]) {
       const nv = find(shape, 'cNvPr')
-      if (nv?.getAttribute('name') !== 'OdysseyInheritedArtwork') continue
+      const name = nv?.getAttribute('name')
+      if (name !== 'OdysseyInheritedArtwork' && name !== 'OdysseyPageNumber') continue
+      if (name === 'OdysseyPageNumber') {
+        const run = find(shape, 'r')
+        if (run) {
+          const field = sheet.createElementNS(run.namespaceURI, 'a:fld')
+          field.setAttribute('id', '{' + crypto.randomUUID().toUpperCase() + '}')
+          field.setAttribute('type', 'slidenum')
+          field.append(...Array.from(run.childNodes))
+          run.replaceWith(field)
+        }
+      }
       for (const node of [shape, ...shape.getElementsByTagName('*')]) {
         for (const attr of [...node.attributes]) {
           if (attr.namespaceURI !== officeRel) continue

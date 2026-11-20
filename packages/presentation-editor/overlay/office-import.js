@@ -82,14 +82,33 @@ export async function restoreOfficeFormatting(input, slides, viewportSize, eligi
     links = await relations(zip, docPath)
   const scale = viewportSize / Number(parts(doc, 'sldSz')[0]?.getAttribute('cx'))
   const first = Number(doc.documentElement.getAttribute('firstSlideNum') ?? 1)
+  const numberBoxes = new Map()
   for (const [i, id] of ids.entries()) {
     const slide = slides[i],
       path = links.find((r) => r.id === id.getAttributeNS(relationships, 'id'))?.path
     if (!slide || !zip.file(path)) continue
     slide.odysseyOfficeVersion = 1
+    const rels = await relations(zip, path)
+    const layoutPath = link(rels, 'slideLayout')
+    if (layoutPath && !numberBoxes.has(layoutPath)) {
+      const layout = xml(await zip.file(layoutPath).async('string'))
+      const source = parts(layout, 'sp').find((shape) =>
+        parts(shape, 'fld').some((field) => field.getAttribute('type') === 'slidenum')
+      )
+      const offset = parts(source, 'off')[0]
+      numberBoxes.set(
+        layoutPath,
+        offset ? [Number(offset.getAttribute('x')) * scale, Number(offset.getAttribute('y')) * scale] : null
+      )
+    }
+    const box = numberBoxes.get(layoutPath)
     for (const el of slide.elements.filter((e) => e.odysseyMaster && e.type === 'text')) {
       const body = new DOMParser().parseFromString(el.content || '', 'text/html').body
-      if (/^[‹<]#(?:›|>)/.test(body.textContent.trim())) {
+      const text = body.textContent.trim()
+      if (
+        /^[‹<]#(?:›|>)/.test(text) ||
+        (box && /^\d+$/.test(text) && Math.abs(el.left - box[0]) < 1 && Math.abs(el.top - box[1]) < 1)
+      ) {
         const p = body.querySelector('p'),
           span = p?.querySelector('span:last-child')
         if (p && span) {
@@ -102,8 +121,7 @@ export async function restoreOfficeFormatting(input, slides, viewportSize, eligi
     }
     const objects = slide.elements.filter((e) => !e.odysseyMaster && ['chart', 'table'].includes(e.type))
     if (!objects.length) continue
-    const sheet = xml(await zip.file(path).async('string')),
-      rels = await relations(zip, path)
+    const sheet = xml(await zip.file(path).async('string'))
     let theme
     for (const frame of parts(sheet, 'graphicFrame')) {
       const tbl = parts(frame, 'tbl')[0],
