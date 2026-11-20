@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261120-02",
+  "branch": "codex/integration/20261120-02",
+  "baseMainCommit": "41e8798930bfb90ad032b9a6fd4b4efc60672c83",
+  "expectedMainCommit": "41e8798930bfb90ad032b9a6fd4b4efc60672c83",
+  "createdAt": "2026-11-20T08:22:52.499Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复看板和笔记命名及协作看板当前页上下文",
+        "branch": "codex/feat/board-session-titles-20261120",
+        "baseCommit": "41e8798930bfb90ad032b9a6fd4b4efc60672c83",
+        "tipCommit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+        "commits": [
+          {
+            "commit": "6396c335b9350ce81acfabb13689c2449e958088",
+            "parents": [
+              "41e8798930bfb90ad032b9a6fd4b4efc60672c83"
+            ],
+            "subject": "修复新看板默认标题及内容驱动的自动命名"
+          },
+          {
+            "commit": "2aa21ce2ac80b8051c1c32246d662fc846b8944d",
+            "parents": [
+              "6396c335b9350ce81acfabb13689c2449e958088"
+            ],
+            "subject": "隔离协作看板对话历史并绑定当前页资料"
+          },
+          {
+            "commit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+            "parents": [
+              "2aa21ce2ac80b8051c1c32246d662fc846b8944d"
+            ],
+            "subject": "同步新笔记默认标题与正文命名"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-memory-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/research-session-title.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-main-agent.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/desktop-locale-bridge.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-session.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/right-project-drafts.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-title-subject.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-board-integration.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-board-page-context.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/research-session-title.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/workspace-notes.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-final-shell-patch.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/sidebar-new-note-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/memory-runtime.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-session.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/research-board-page-context.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/research-session-title.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/session-title-subject.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-main-agent.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-note-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "重建原生前端与宿主依赖补丁",
+            "verifiedCommit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+            "completedAt": "2026-11-20T08:22:44.096Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查",
+            "verifiedCommit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+            "completedAt": "2026-11-20T08:22:44.096Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-session.test.js",
+              "test/pending-conversation.test.js",
+              "test/session-title-subject.test.js",
+              "test/research-session-title.test.ts",
+              "test/image-factory-native.test.js",
+              "test/research-board-page-context.test.ts",
+              "test/shared-main-agent.test.js",
+              "test/component-agent-scope.test.js",
+              "test/browser-app-native.test.js",
+              "test/research-board-runtime.test.js",
+              "--maxWorkers=3"
+            ],
+            "outcome": "passed",
+            "summary": "覆盖看板、笔记标题和协作请求范围的聚焦验证",
+            "verifiedCommit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+            "completedAt": "2026-11-20T08:22:44.096Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/memory-runtime.test.js",
+              "-t",
+              "isolates a shared board summary|does not extract shared",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "使用真实代理请求边界验证历史与记忆隔离",
+            "verifiedCommit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+            "completedAt": "2026-11-20T08:22:44.096Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/figma-final-shell-patch.test.ts",
+              "test/session-view-preferences.test.js",
+              "-t",
+              "uses view-specific empty titles|filters only explicit New Chat reuse",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "验证原生标题投影与新会话创建入口",
+            "verifiedCommit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+            "completedAt": "2026-11-20T08:22:44.096Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sidebar-new-note-browser.test.js",
+              "-t",
+              "updates the native sidebar",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "在浏览器渲染真实原生侧栏和编辑器，验证笔记命名",
+            "verifiedCommit": "6fd61c5df8453e9c73e3f1a4e099ba0a3fc3678f",
+            "completedAt": "2026-11-20T08:22:44.096Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 渲染原生侧栏、笔记编辑器和右侧工作区选择器，验证新笔记、正文与文档标题流转，以及看板和表格入口。尚未在共享桌面客户端验收。"
+        },
+        "acceptanceCriteria": [
+          "工作区和个人看板的新会话标题默认为新看板，手动添加组件、组件生成和右侧对话推动标题更新。",
+          "协作看板发送当前页总结时绑定该页资料，模型请求排除图片编辑等本地旧任务历史。",
+          "新笔记的左侧和顶部显示新笔记，进入正文或填写文档标题后同步更新会话标题。"
+        ],
+        "risks": [
+          "桌面会话仍需使用已打包客户端走真实账号验收。"
+        ],
+        "generatedAt": "2026-11-20T08:22:44.096Z"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "scripts/patch-web-frontend-loading.mjs"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-session.test.js",
+        "test/pending-conversation.test.js",
+        "test/session-title-subject.test.js",
+        "test/research-session-title.test.ts",
+        "test/image-factory-native.test.js",
+        "test/research-board-page-context.test.ts",
+        "test/shared-main-agent.test.js",
+        "test/component-agent-scope.test.js",
+        "test/browser-app-native.test.js",
+        "test/research-board-runtime.test.js",
+        "--maxWorkers=3"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/memory-runtime.test.js",
+        "-t",
+        "isolates a shared board summary|does not extract shared",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/figma-final-shell-patch.test.ts",
+        "test/session-view-preferences.test.js",
+        "-t",
+        "uses view-specific empty titles|filters only explicit New Chat reuse",
+        "--maxWorkers=2"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "./node_modules/node/bin/node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/sidebar-new-note-browser.test.js",
+        "-t",
+        "updates the native sidebar",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
