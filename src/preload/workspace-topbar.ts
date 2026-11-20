@@ -72,6 +72,7 @@ body{
   -webkit-app-region:var(--odyssey-popup-window-drag,drag);
 }
 .workspace-home-topbar .eb-workspace-controls,.workspace-home-topbar .eb-workspace-tabs{-webkit-app-region:var(--odyssey-popup-window-drag,drag)}
+.workspace-home-topbar > [data-session-workspace-controls]{order:0}
 .workspace-home-topbar .eb-workspace-controls button{-webkit-app-region:no-drag}
 .workspace-home-topbar [data-odyssey-window-move]{flex:1 0 0;align-self:stretch;min-width:0}
 html[data-odyssey-native-window-move] [data-odyssey-window-move]{-webkit-app-region:no-drag;touch-action:none}
