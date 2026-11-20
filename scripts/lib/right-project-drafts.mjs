@@ -75,6 +75,10 @@ export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
       entry = { ...visible, id, workspaceId }
       entry.pending = makeDraft(entry, {
         isActive: () => active === entry,
+        offerCommand: globalDraft.offerCommand,
+        adoptBrowserSession(sessionId) {
+          if (entry.tabId) browserProjects.set(entry.tabId, { workspaceId: entry.workspaceId, sessionId })
+        },
         settled: () => { if (active !== entry && (!hasContent(entry) || isClosed(entry)) && drafts.get(id) === entry) discard(entry) }
       })
       drafts.set(id, entry)
@@ -121,11 +125,13 @@ export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
       const project = context?.launchWorkspaceId === undefined
         ? globalDraft.getManualWorkspace() : context.launchWorkspaceId
       if (context?.tabId) {
-        const initial = browserProjects.has(context.tabId) ? browserProjects.get(context.tabId)
+        const selection = browserProjects.get(context.tabId)
+        const initial = selection ? selection.workspaceId
           : context.followDefault && project !== undefined ? project : context.workspaceId
         if (initial !== undefined) {
-          browserProjects.set(context.tabId, initial)
-          if (!context.useSharedSession || initial !== context.workspaceId) open(initial)
+          browserProjects.set(context.tabId, { ...selection, workspaceId: initial })
+          const adopted = selection?.sessionId !== undefined && selection.sessionId === context.sessionId
+          if (!adopted && (!context.useSharedSession || initial !== context.workspaceId)) open(initial)
         }
         return
       }
@@ -136,8 +142,10 @@ export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
     select(context, workspaceId) {
       globalDraft.selectWorkspace(workspaceId)
       this.show(context)
-      if (context.tabId) browserProjects.set(context.tabId, workspaceId)
-      if (context.useSharedSession && workspaceId === context.workspaceId) leave()
+      const selection = browserProjects.get(context.tabId)
+      const adopted = selection?.sessionId !== undefined && selection.sessionId === context.sessionId && selection.workspaceId === workspaceId
+      if (context.tabId && !adopted) browserProjects.set(context.tabId, { workspaceId })
+      if (adopted || context.useSharedSession && workspaceId === context.workspaceId) leave()
       else open(workspaceId)
     },
     reset() {

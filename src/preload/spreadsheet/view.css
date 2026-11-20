@@ -1,18 +1,21 @@
 /* The native session header, workspace rail and global conversation are retained. */
-[data-odyssey-page=spreadsheet]{min-height:0}
+.wSkVaW_root[data-odyssey-page=spreadsheet]{min-height:0;background:var(--ss-bg)}
 [data-odyssey-page=spreadsheet]>[data-conversation-scroll]{display:flex;flex:1;min-width:0;min-height:0;overflow:hidden;padding:0!important;max-width:none!important}
 [data-odyssey-page=spreadsheet] [data-odyssey-reading-status],
 [data-odyssey-page=spreadsheet] [data-odyssey-center-composer]{display:none!important}
 [data-odyssey-page=spreadsheet] .wSkVaW_header{border-bottom:0!important;box-shadow:none!important}
+body [data-odyssey-page=spreadsheet] .wSkVaW_header[data-srb-session-header]:not([aria-hidden=true]){backdrop-filter:none}
 [data-ework-spreadsheet-view]{display:flex;position:relative;flex:1;min-width:0;min-height:0;width:100%;height:100%;overflow:hidden;-webkit-app-region:no-drag}
 [data-odyssey-page=spreadsheet] [data-conversation-scroll]>:has([data-ework-spreadsheet-view]){display:flex;flex:1;min-height:0;min-width:0;width:100%;max-width:none;margin:0;padding:0;overflow:hidden}
+:is([data-odyssey-page=spreadsheet],.ew-sheet,.ew-sheet-welcome){--ss-bg:#fff}
+body[data-ds-dark-theme] :is([data-odyssey-page=spreadsheet],.ew-sheet,.ew-sheet-welcome){--ss-bg:#1e1e1e}
 .ew-sheet,.ew-sheet-welcome{
- --ss-text:#26282c;--ss-muted:#686a70;--ss-icon:#656970;--ss-bg:#fff;--ss-ribbon:#f5f5f6;
+ --ss-text:#26282c;--ss-muted:#686a70;--ss-icon:#656970;--ss-ribbon:#f5f5f6;
  --ss-formula:#f8f8f8;--ss-hover:#ebebed;--ss-selected:#e8e9eb;--ss-border:#dedee2;--ss-menu:#fff;
  --ss-blue:#366cc1;--ss-blue-quiet:#dce9fb;--ss-danger:#ae323c;--ss-primary:#292b30;--ss-primary-text:#fff;
 }
 body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome){
- --ss-text:#e6e6e6;--ss-muted:#a5a5a5;--ss-icon:#b6b6b6;--ss-bg:#1e1e1e;--ss-ribbon:#242424;
+ --ss-text:#e6e6e6;--ss-muted:#a5a5a5;--ss-icon:#b6b6b6;--ss-ribbon:#242424;
  --ss-formula:#222;--ss-hover:#333;--ss-selected:#303030;--ss-border:#404040;--ss-menu:#242424;
  --ss-blue:#99bfff;--ss-blue-quiet:#293647;--ss-danger:#f17c82;--ss-primary:#e6e6e6;--ss-primary-text:#212121;
 }
@@ -251,7 +254,7 @@ body[data-ds-dark-theme] .ew-sheet-pending-reference{color:#ececee;background:#3
 [data-ework-spreadsheet-actions][hidden]{display:none}
 [data-ework-spreadsheet-actions] button{display:inline-grid;place-items:center;width:30px;height:30px;padding:0;color:var(--dsw-alias-label-primary);border:0;border-radius:7px;cursor:pointer}
 [data-ework-spreadsheet-actions] button:disabled{opacity:.45;cursor:default}
-[data-odyssey-page=spreadsheet]:has(.ew-sheet-menu:not([hidden])) :is([data-srb-session-header],.wSkVaW_titleRow){-webkit-app-region:no-drag!important}
+[data-odyssey-page=spreadsheet]:has(.ew-sheet-menu:not([hidden])) :is([data-srb-session-header],.wSkVaW_titleRow){--odyssey-popup-window-drag:no-drag;-webkit-app-region:no-drag!important}
 
 /* Univer mounts the context menu and its submenus in document.body. */
 body[data-ework-spreadsheet-mode]{

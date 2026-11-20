@@ -20,6 +20,57 @@ beforeAll(async () => {
   browser = await chromium.launch({ headless: true, executablePath: process.env.SHERLOCK_TEST_CHROMIUM || '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
 })
 afterAll(async () => browser?.close())
+
+it.each(['spreadsheet', 'research', 'conversation'])('moves the macOS window from the blank %s session header', async view => {
+ const page=await browser.newPage()
+ try {
+  await page.setContent(`<div class="pI_x6G_centerCol"><main class="wSkVaW_root" data-odyssey-page="${view}">
+   <header class="wSkVaW_header" data-srb-session-header>
+    <div class="wSkVaW_titleRow"><button>会话标题</button></div>
+    <div data-session-workspace-controls><button>展开工作区页签</button></div>
+    <div data-srb-utilities><button>更多</button></div>
+   </header>
+  </main></div>`)
+  await page.addScriptTag({content:script})
+  await page.evaluate(()=>{window.operations=[];window.mountWindowResize(document,operation=>window.operations.push(operation))})
+  const header=page.locator('[data-srb-session-header]')
+  const handle=await header.boundingBox()
+  const x=handle.x+handle.width/2, y=handle.y+handle.height/2
+  await page.mouse.move(x,y)
+  await page.mouse.down()
+  await page.mouse.move(x+60,y+24)
+  await page.mouse.up()
+  const completed=['move',{dx:60,dy:24},null]
+  expect(await page.evaluate(()=>window.operations)).toEqual(completed)
+  await page.getByRole('button',{name:'展开工作区页签'}).click()
+  await page.evaluate(()=>{const menu=document.createElement('div');menu.setAttribute('role','menu');document.body.append(menu)})
+  await page.mouse.click(x,y)
+  expect(await page.evaluate(()=>window.operations)).toEqual(completed)
+  expect(await header.evaluate(node=>getComputedStyle(node).webkitAppRegion)).toBe('no-drag')
+ } finally {await page.close()}
+})
+
+it.each([false,true])('uses a continuous spreadsheet header and canvas backdrop (dark: %s)', async dark => {
+ const page=await browser.newPage()
+ try {
+  await page.setContent(`<div class="pI_x6G_centerCol"><main class="wSkVaW_root" data-odyssey-page="spreadsheet">
+   <header class="wSkVaW_header" data-srb-session-header></header>
+   <div data-conversation-scroll><div class="ew-sheet"></div></div>
+  </main></div>`)
+  await page.addScriptTag({content:script})
+  await page.addStyleTag({path:'src/preload/spreadsheet/view.css'})
+  await page.evaluate(dark=>document.body.toggleAttribute('data-ds-dark-theme',dark),dark)
+  const colors=await page.locator('main').evaluate(node=>{
+   const style=getComputedStyle(node.querySelector('header'))
+   return {canvas:getComputedStyle(node).backgroundColor, sheet:getComputedStyle(node.querySelector('.ew-sheet')).backgroundColor,
+    header:style.backgroundColor, filter:style.backdropFilter}
+  })
+  expect(colors.canvas).toBe(colors.sheet)
+  expect(colors.header).toBe('rgba(0, 0, 0, 0)')
+  expect(colors.filter).toBe('none')
+ } finally {await page.close()}
+})
+
 it('forwards the macOS home header space to window movement and skips it when a menu is open', async () => {
  const page=await browser.newPage()
  try {

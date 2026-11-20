@@ -5,6 +5,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
   if('workspaceId' in patch&&patch.workspaceId!==state.workspaceId)projectRevision++;
   state={...state,...patch};for(const fn of listeners)fn();
  };
+ const offerCommand=command=>publish({command});
  const target=()=>workspaces.list.getSnapshot().items.find(item=>item.workspaceId===state.workspaceId);
  const chooseDefault=()=>{
   if(disposed||detached||explicit&&(state.workspaceId===null||target()))return;
@@ -38,7 +39,8 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    if(!ownsProject()||![before,id].includes(sessions.list.getSnapshot().current))throw Error('当前会话已变化，输入已保留。');
    // A control can take time to connect. Carry edits made while the user was typing.
    const transfer=control?shell.snapshot:draft;
-   const command=control?.selection&&{sessionId:id,surface,draft:transfer.draft,selection:{...control.selection},typed:control.typed===true};
+   const command=control?.selection&&{sessionId:id,surface,mode:detached?.mode,isCurrent:detached?.isCommandCurrent,
+    draft:transfer.draft,selection:{...control.selection},typed:control.typed===true};
    const real=getInput(id,detached?.mode);
    if(!real||real.disposed||real.snapshot.draft||real.snapshot.imageIds?.length)throw Error('新会话输入尚未就绪，原输入已保留。');
    if(transfer.imageIds?.length&&!real.addImages([...transfer.imageIds]))throw Error('图片未能加入新会话，原输入已保留。');
@@ -48,6 +50,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    const handoff=detached?onCreated(id,context,detached):onCreated(id,context);
    const view=control?.view??detached?.mode;
    if(view)setView(id,view);
+   if(command)detached?.adoptBrowserSession?.(id);
    if(detached?.open)detached.open(id);else sessions.open(id);
    shell.commitSend([...(transfer.imageIds??[])],transfer.draft);
    const transferredRevision=real.snapshot.draftRev;
@@ -55,7 +58,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    await prepareSession?.(id);
    if(disposed||sessions.list.getSnapshot().current!==id||currentSurface?.()!==surface)throw Error('当前会话已变化，草稿已保留。');
    if(control){
-    if(command)publish({command});
+    if(command)(detached?.offerCommand??offerCommand)(command);
     return;
    }
    if(real.snapshot.draftRev!==transferredRevision)throw Error('草稿已变化，首条消息保留在新会话中，请重新发送。');
@@ -84,11 +87,13 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
   if(state.command&&state.command.sessionId!==sessions.list.getSnapshot().current)publish({command:undefined});
  });
  return{shell,submitExternal:fn=>send(undefined,undefined,'queue',undefined,fn),activate,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn)},getSnapshot:()=>state,
+  offerCommand,
   takeCommand(command,sessionId,keyboard){
    if(!command||state.command!==command||command.sessionId!==sessionId)return false;
    publish({command:undefined});
    // Mounting the real Chat draft advances draftRev even for unchanged empty text.
-   return !disposed&&sessions.list.getSnapshot().current===sessionId&&currentSurface?.()===command.surface&&getInput(sessionId)===keyboard&&keyboard.snapshot.draft===command.draft;
+   return !disposed&&sessions.list.getSnapshot().current===sessionId&&currentSurface?.()===command.surface&&
+    (command.isCurrent?.()??true)&&getInput(sessionId,command.mode)===keyboard&&keyboard.snapshot.draft===command.draft;
   },
   getManualWorkspace:()=>explicit?state.workspaceId:undefined,
   selectWorkspace(id){if(state.busy)throw Error('正在发送，请稍候。');if(id!==null&&!workspaces.list.getSnapshot().items.some(item=>item.workspaceId===id))throw Error('项目已不可用。');explicit=true;if(state.workspaceId!==id)publish({workspaceId:id})},
@@ -116,22 +121,26 @@ export function EWorkPendingInputBar(props){
  const state=react.useSyncExternalStore(pending?.subscribe||(()=>()=>{}),pending?.getSnapshot||(()=>undefined));
  const command=state?.command;
  const sessionReady=props.useSession?.(session=>session?.openState)==='open';
+ const noteCommand=command?.mode==='notes'&&props.eworkNotes;
+ const keyboard=noteCommand&&props.keyboard&&props.sessionId
+  ? eworkNotesInput(props.sessionId,props.keyboard,conversationController).shell : props.keyboard;
  react.useEffect(()=>{
-  if(!command||command.sessionId!==props.sessionId||props.subagentPanel||!sessionReady||!props.keyboard||!props.toggleCommandMenu)return;
+  if(!command||command.sessionId!==props.sessionId||props.subagentPanel||!sessionReady||!keyboard||!noteCommand&&!props.toggleCommandMenu)return;
   // The composer has mounted its native overlay and restored its workspace draft.
   const frame=requestAnimationFrame(()=>{
-   if(!pending.takeCommand(command,props.sessionId,props.keyboard))return;
-   if(command.typed)props.keyboard.track(command.draft,command.selection.start,'insertText');
+   if(!pending.takeCommand(command,props.sessionId,keyboard))return;
+   if(command.typed)keyboard.track(command.draft,command.selection.start,'insertText');
+   else if(noteCommand)eworkToggleNoteCommandMenu(keyboard,command.selection);
    else props.toggleCommandMenu(command.selection);
   });
   return()=>cancelAnimationFrame(frame);
- },[pending,command,props.sessionId,props.subagentPanel,sessionReady,props.keyboard,props.toggleCommandMenu]);
+ },[pending,command,props.sessionId,props.subagentPanel,sessionReady,keyboard,noteCommand,props.toggleCommandMenu]);
  if(!props.pendingConversation||!pending)return react_jsx_runtime.jsx(EWorkSharedInputBar,props);
  const shell=pending.shell;
  const disabled=props.disabled||state.workspaceId===undefined||state.busy;
  return react_jsx_runtime.jsx(InputBar,{...props,sessionId:undefined,disabled,
   ...(props.rightProjectDraft?{useSession:select=>props.useSession(()=>select({})),stop:undefined}:{}),
-  toggleCommandMenu:!props.rightProjectDraft&&!disabled&&!state.activating?selection=>pending.activate({selection}):undefined,
+  toggleCommandMenu:!disabled&&!state.activating?selection=>pending.activate({selection}):undefined,
   command:async line=>{
    const match=/^\/permission ([^\s]+)$/.exec(line);
    if(!match)return false;

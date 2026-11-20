@@ -64,6 +64,11 @@ function eworkNotesInput(sessionId, ordinary, conversation) {
   ordinary.deps.actx?.effect(()=>()=>{if(eworkNotesInputs.get(sessionId)!==record)return;eworkDisposeNoteInput(record,conversation);eworkNotesInputs.delete(sessionId)},'EWork note input');
   return record;
 }
+function eworkToggleNoteCommandMenu(shell,selection) {
+ const controller=shell.deps.inputTriggers?.();if(!controller)return;
+ shell.dismissPopup();const snapshot=shell.snapshot;
+ controller.toggleSource('command',{trigger:'/',query:'',position:snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',span:{...selection,draftRev:snapshot.draftRev}});
+}
 function EWorkSharedInputBar(props) {
  useNoteUiLocale();
   const {eworkNotes=false,sessionId}=props;
@@ -97,7 +102,7 @@ function EWorkSharedInputBar(props) {
     blocked:state.ready?undefined:{reason:noteUiText('正在打开笔记…')},
     addImages:files=>{try{const images=conversationController.createDraftImages(files);if(!shell.addImages(images.map(a=>a.id)))conversationController.releaseDraftImages(images);return null}catch(error){return error.message}},
     removeImage:id=>{conversationController.releaseDraftImage(id);shell.removeImage(id)},
-    toggleCommandMenu:selection=>{const controller=shell.deps.inputTriggers?.();if(!controller)return;shell.dismissPopup();const snapshot=shell.snapshot;controller.toggleSource('command',{trigger:'/',query:'',position:snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',span:{...selection,draftRev:snapshot.draftRev}})},
+    toggleCommandMenu:selection=>eworkToggleNoteCommandMenu(shell,selection),
     queryCommandCandidates:(selection,signal)=>ctx.get('commandUi')?.candidates(shell.deps.inputTriggers?.()?.project(),{query:'',position:shell.snapshot.draft.slice(0,selection.start).trim()===''?'leading':'inline',signal})??[],
     stop:()=>record.running?document.dispatchEvent(new CustomEvent('sherlock:notes-stop',{detail:{sessionId}})):props.stop?.()
   });
