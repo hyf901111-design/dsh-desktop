@@ -110,7 +110,7 @@ function savedSpreadsheetWrite(session){
 
 export const CONVERSATION_COMPONENT_GUIDANCE=COMPONENT_SURFACE_STYLE_RULES+"\n"+TRUSTED_TYPES_COMPONENT_INSTRUCTION+"\n"+PANEL_COLOR_INSTRUCTION+"\n"+'【原型页面的交付语义】用户给原型、附件或现有页面并要求实现其中内容时，先理解要交付的是当前客户端的可用视图还是源码文件修改。不要仅因“实现”二字就改写参考附件或另造其中已有的页面。真实目录为research时，默认把用户指定的已有区域及交互呈现到研究画布，先只读读取原型索引、命中页面及必要业务函数，按实际内容规划；只有用户明确要求修改源码文件才进入文件开发流程。插队补充沿用本轮任务目标，文件替换只更换参考来源；取消、换任务或明确改源码以新指令为准。已有页面先复用实际字段、记录和交互；真实文件截断时标明不可恢复部分，不擅自修复覆盖源文件，不把新增导航按钮当作已实现页面。当前模式未确认时先client_capabilities，不假定研究画布或源码开发。\n【对话内原生组件】主智能体可按用户问题判断组件是否更清楚；普通解释不强制建卡。用户明确要组件时直接交付已完成的完整 artifact 或原生 financial-widget spec。除非用户另有明确格式要求，先用简短自然的公开文字引出组件，再在对应的信息位置立即创建；保存成功后继续解释该组件或展开后续正文。多个组件按论述顺序逐个交付，各自的说明紧接在对应组件之后，不要等整篇回答结束后再集中创建；不要以占位符代替真实组件。面向用户的正文不展示工具名、requestId、manifest或协议标签；只依据真实成功回执说明已交付，创建失败时如实说明未完成。当前模式未由本轮目录确认时，在内部顺序读取 client_capabilities 确认真实 mode 和 available 状态；已有本轮结果直接复用，不向用户回报模式判断或能力发现，不能把目录和依赖它的创建放在同一个并行工具批次。conversation 模式调用 client_action({requestId,capability:"conversation.components.create",arguments:{artifact,title?}})，仅由宿主校验保存，再依据真实 saved effect 与 ready manifest 说明完成。不默认启动子智能体，不接受 prompt/recipe 代生成，不创建隐藏画布。原始HTML的初始 HTML 正文必须直接包含用户所需的真实文字、初始数值和真实控件，清单应直接写出各项标签、复选框和初始完成数量；不能只给空容器再由脚本生成所有内容，也不能添加无关、隐藏或占位文字蒙混首屏验收。JavaScript 只渐进增强已有内容，通过共享状态更新勾选、计数等交互；脚本未执行时也应能阅读真实内容。共享复选框在 click 事件中 dispatch 并读取当前 checked，让同一次点击由语义状态处理，避免在后续 change 中重复提交。原始HTML会按现有脚本语法、共享交互和组件样式规则验收；失败时严格针对回执指出的原因修改，不猜测无关问题；同一原因经过一次定向修复仍未解决时，不再反复更换requestId盲重试，应如实说明未完成且保留用户需求。失败回执未保存新组件，按同一轮具体问题修复完整artifact后用新requestId重试，不能修改已失败requestId的参数冒充幂等，不能重放已成功写入的组件。不额外启动子任务或要求用户调整需求来修复内部协议；无法完成时保留真实结果并如实说明。对话HTML沙箱已注入window.sherlockShared，本地交互由独立对话存储自动保存，宿主真正落盘后才确认，重开从该组件记录恢复；不要自行localStorage、IndexedDB、fetch或伪造保存接口。紧凑范式：const shared=window.sherlockShared.register({initialState:{count:0,memo:""},reduce:(s,a)=>a.type==="increment"?{...s,count:s.count+1}:a.type==="memo"?{...s,memo:a.value}:s,render:(s,ctx)=>{count.textContent=s.count;if(memo.value!==s.memo)memo.value=s.memo;add.disabled=memo.disabled=ctx.readOnly||!ctx.connected;}});add.onclick=()=>shared.dispatch({type:"increment"});memo.oninput=()=>shared.dispatch({type:"memo",value:memo.value});DOM变量先获取再注册，render内不引用尚未返回的shared。dispatch返回true仅表示受理，不等于已保存；保存状态由宿主显示，成功回执前不要公开承诺已经持久化。股票/ETF单标的行情与K线优先 financial-widget.quote，仅提交已由用户或实际工具确认的 symbols/code/market/name 和周期配置，不填价格或OHLC数组；未知代码先通过实际来源解析。场外基金必须走 financial_query 的 fund 能力，使用 fund/table/chart 等现有模板，保留净值日、报告期和来源，不能伪装为股票 quote。真实数据先实际取数，保留来源、单位、原始时点与缺失状态，不把保存时间写成获取时间。研究模式沿原研究画布流程；notes 模式沿 notes.components.create 等现有笔记能力，不能偷换创建目标。'
 const CATALOG_FIRST='组件或原型页面请求尚无本轮真实模式：请先顺序调用 client_capabilities，再按实际模式提交完整组件；不能直接调用 research_workbench_create 创建隐藏画布。'
-export function registerConversationComponentsPolicy(ctx,{readSpreadsheetReference}={}){
+export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference}={}){
  const disposePrompt=ctx.systemPrompt.context({name:'sherlock:conversation-components',order:151,text:({agent})=>{
   const session=agent?.session
   if(!session||session.header?.origin==='subagent'||(session.header?.delegationDepth??0)>0)return ''
@@ -149,10 +149,17 @@ export function registerConversationComponentsPolicy(ctx,{readSpreadsheetReferen
  const disposeWire=ctx.on('agent/request-context',async({agent,signal},next)=>{
   signal?.throwIfAborted();let request=await next();signal?.throwIfAborted()
   const session=agent?.session
-  if(readSpreadsheetReference&&request.tools?.some(tool=>tool.name==='client_capabilities')){
-   const reference=await readSpreadsheetReference(agent,signal)
+  if(readWorkspaceReference&&request.tools?.some(tool=>tool.name==='client_capabilities')){
+   const reference=await readWorkspaceReference(agent,signal)
    signal?.throwIfAborted()
-   if(reference)request={...request,system:(request.system??'')+'\n【当前表格参考范围】'+reference}
+   if(reference?.mode==='presentation'){
+    const mode=latestClientModeForAuthority(session)
+    const use=reference.scope==='selection'?'本轮含演示选区标签，读取 references 按稳定 ID 定位；备注局部替换带 quote 与 start，柱形标注读取 marks[].chartPoints。':reference.scope==='slide'?'本轮参考当前幻灯片。':'本轮未参考当前页；仅处理用户明确指定的内容。'
+    const system=(request.system??'')+'\n【演示应用的原生右侧对话】'+use+' 用户请求编辑时，先调用 client_capabilities，再调用 client_action 执行 presentation.inspect 和 presentation.apply，以 saved=true 确认真实文稿已修改。'
+    if(!mode&&reference.scope!=='none')return {...request,system,tools:request.tools.filter(t=>t.name==='client_capabilities')}
+    return {...request,system}
+   }
+   if(reference?.mode==='spreadsheet')request={...request,system:(request.system??'')+'\n【当前表格参考范围】'+reference.guidance}
   }
   const quick=session?.header?.origin!=='subagent'&&!session?.header?.delegationDepth&&!documentOnly(session)?spreadsheetQuickPrompt(planningHumanRequest(session)?.text):-1
   const mode=quick>=0?latestClientModeForAuthority(session):null

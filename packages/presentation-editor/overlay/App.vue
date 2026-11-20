@@ -52,19 +52,15 @@
           <Glyph name="down" />
         </button>
         <i />
-        <select
-          aria-label="字体"
-          :value="main.richTextAttrs.fontname || '华文黑体'"
-          @change="command('fontname', $event.target.value)"
-        >
-          <option v-for="f in ['华文黑体', '微软雅黑', '宋体', 'Arial']">{{ f }}</option>
+        <select aria-label="字体" :value="selectedFont" @change="command('fontname', $event.target.value)">
+          <option v-for="f in fontOptions" :key="f" :value="f">{{ f }}</option>
         </select>
         <select
           aria-label="字号"
-          :value="parseInt(main.richTextAttrs.fontsize) || 24"
+          :value="selectedSize"
           @change="command('fontsize', $event.target.value + 'px')"
         >
-          <option v-for="s in [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60, 72]">{{ s }}</option>
+          <option v-for="s in sizeOptions" :key="s" :value="s">{{ s }}</option>
         </select>
         <button
           aria-label="加粗"
@@ -382,6 +378,14 @@ function undoEdit() {
 }
 let committedMarkIds = new Set()
 const noteText = computed(() => plain(slide.value?.remark))
+const selectedFont = computed(() => (main.richTextAttrs.fontname || '华文黑体').replace(/^["']|["']$/g, ''))
+const selectedSize = computed(() => parseFloat(main.richTextAttrs.fontsize) || 24)
+const fontOptions = computed(() => [
+  ...new Set([selectedFont.value, '华文黑体', '微软雅黑', '宋体', 'Arial'])
+])
+const sizeOptions = computed(() =>
+  [...new Set([12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 60, 72, selectedSize.value])].sort((a, b) => a - b)
+)
 const caption = (page) => (page ? slideTitle(page, store.viewportSize, store.viewportRatio, plain) : '')
 const escape = (t) => t.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
 const origin = new URLSearchParams(location.search).get('host') || '*'

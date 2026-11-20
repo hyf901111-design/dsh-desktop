@@ -123,3 +123,20 @@ it('colors individual chart bars and preserves neighboring series, values and un
   store.undo(key, 2)
   expect(store.read(key).deck).toEqual(deck)
 })
+
+it('uses imported PowerPoint shape text as a slide caption', () => {
+  const deck = blankDeck()
+  deck.slides[0]!.elements = [
+    {
+      type: 'shape',
+      id: 'titleBox',
+      left: 30,
+      top: 12,
+      width: 480,
+      height: 60,
+      text: { content: '<p style="font-size:32px">季度经营表现</p>' }
+    }
+  ]
+  store.save(key, 0, deck, true)
+  expect(store.inspect(key).slides[0]?.title).toBe('季度经营表现')
+})
