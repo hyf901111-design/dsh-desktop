@@ -11,45 +11,21 @@
         "schemaVersion": 1,
         "featureName": "探索演示入口、PPT 资料与回放恢复",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "6cf5e2e9fd4e304b79fc2afaae219a6596283c5d",
-        "tipCommit": "8fc34d024c732ff228aab897c4740757f8899148",
+        "baseCommit": "8fc34d024c732ff228aab897c4740757f8899148",
+        "tipCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
         "commits": [
           {
-            "commit": "8fc34d024c732ff228aab897c4740757f8899148",
+            "commit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
             "parents": [
-              "6cf5e2e9fd4e304b79fc2afaae219a6596283c5d"
+              "8fc34d024c732ff228aab897c4740757f8899148"
             ],
-            "subject": "修复演示知识库原生菜单并保留所选模型显示"
+            "subject": "兼容侧栏页面的演示模型依赖注入"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/figma-model-menu.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/home-guide-presentation-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/patch-research-board-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-boards-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/figma-model-menu.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-guide-entry-native.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "scripts/lib/calendar-tool-client.mjs"
           }
         ],
         "checks": [
@@ -66,8 +42,8 @@
             ],
             "outcome": "passed",
             "summary": "62 项演示入口、模型选择显示和 PPT 请求适配测试通过",
-            "verifiedCommit": "8fc34d024c732ff228aab897c4740757f8899148",
-            "completedAt": "2026-11-20T02:08:33.582589+00:00",
+            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
+            "completedAt": "2026-11-20T02:10:36.836494+00:00",
             "timeoutMs": 90000
           },
           {
@@ -86,8 +62,8 @@
             ],
             "outcome": "passed",
             "summary": "Chromium 使用实际 Menu 浮层验证打开知识库、定位首项和拖入 PPT PDF",
-            "verifiedCommit": "8fc34d024c732ff228aab897c4740757f8899148",
-            "completedAt": "2026-11-20T02:08:33.582589+00:00",
+            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
+            "completedAt": "2026-11-20T02:10:36.836494+00:00",
             "timeoutMs": 90000
           },
           {
@@ -98,8 +74,23 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过",
-            "verifiedCommit": "8fc34d024c732ff228aab897c4740757f8899148",
-            "completedAt": "2026-11-20T02:08:33.582589+00:00",
+            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
+            "completedAt": "2026-11-20T02:10:36.836494+00:00",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/calendar-tool-client.test.js",
+              "--testTimeout",
+              "12000"
+            ],
+            "outcome": "passed",
+            "summary": "13 项日历客户端检查通过，额外核验当前原生页面的模型注入与客户端补丁重入",
+            "verifiedCommit": "bb10a4b391a2a38b2db527f02e332845c8e3215e",
+            "completedAt": "2026-11-20T02:10:36.836494+00:00",
             "timeoutMs": 90000
           }
         ],
@@ -115,43 +106,7 @@
           "PPT 和研究报告录播保留原输入框已用模型和推理级别的显示，模型选择无需生成请求"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T02:08:33.582589+00:00"
-      },
-      "merged": {
-        "mergeCommit": "77a3f1955b7cfe43c5c9a5d0a4d5d8b96a46907a",
-        "verificationCommit": "77a3f1955b7cfe43c5c9a5d0a4d5d8b96a46907a",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "77a3f1955b7cfe43c5c9a5d0a4d5d8b96a46907a",
-            "completedAt": "2026-11-20T02:08:50.442Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "77a3f1955b7cfe43c5c9a5d0a4d5d8b96a46907a",
-            "completedAt": "2026-11-20T02:08:50.442Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-20T02:08:50.442Z"
+        "generatedAt": "2026-11-20T02:10:36.836494+00:00"
       }
     }
   ],
