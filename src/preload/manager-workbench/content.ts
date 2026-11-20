@@ -1,3 +1,4 @@
+import { chinaProvinces, selectedProvinceCenters, southChinaSea } from './china-map'
 import { managerPanelCss } from './styles'
 import { onSite, businessTrip, leave } from './status-icons'
 
@@ -6,11 +7,11 @@ const tenure = [['1–3 年', 56], ['3–5 年', 40], ['5–10 年', 30], ['10 �
 const changes = [['入职', 2], ['离职', 0], ['调入', 12], ['调出', 2], ['条线内变动', 7]] as const
 const stages = [['简历筛选', 5], ['笔试', 4], ['部门面试', 3], ['实习', 2], ['分管面试', 0], ['终面', 0], ['Offer', 0]] as const
 const locations = [
-  { name: '广东省', label: '广东', count: 109, x: 166, y: 151, series: 'gd', labelX: 182, labelY: 155 },
-  { name: '海南省', label: '海南', count: 89, x: 130, y: 188, series: 'hi', labelX: 86, labelY: 199 },
-  { name: '北京市', label: '北京', count: 67, x: 285, y: 32, series: 'bj', labelX: 299, labelY: 32 },
-  { name: '上海市', label: '上海', count: 109, x: 303, y: 105, series: 'sh', labelX: 317, labelY: 120 },
-  { name: '江苏省', label: '江苏', count: 109, x: 257, y: 78, series: 'js', labelX: 215, labelY: 70 }
+  { code: '440000', name: '广东省', label: '广东', count: 109, labelX: 280, labelY: 190 },
+  { code: '460000', name: '海南省', label: '海南', count: 89, labelX: 214, labelY: 230 },
+  { code: '110000', name: '北京市', label: '北京', count: 67, labelX: 282, labelY: 75 },
+  { code: '310000', name: '上海市', label: '上海', count: 109, labelX: 321, labelY: 153 },
+  { code: '320000', name: '江苏省', label: '江苏', count: 109, labelX: 258, labelY: 125 }
 ]
 const departments = [['研究部', 345], ['固定收益交易部', 212], ['固定收益分类资产研究管理部', 105]] as const
 const research = '研究部', trading = '固定收益交易部', classified = '固收分类资产研究管理部'
@@ -50,8 +51,14 @@ function barList(items: readonly (readonly [string, number])[], scale: number, u
 }
 
 function table(headings: string[], rows: string[][]) {
+  const statuses: Record<string, string> = {
+    在岗: 'manager-teal', 出差: 'manager-gold', 休假: '',
+    简历筛选: '', 笔试: 'manager-gold', 部门面试: 'manager-teal', 实习: 'manager-teal'
+  }
   return `<table><thead><tr>${headings.map(text => `<th scope="col">${text}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(row => `<tr>${row.map(text => `<td>${text}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+    <tbody>${rows.map(row => `<tr>${row.map((text, i) => i === row.length - 1
+      ? `<td><span class="manager-table-status ${statuses[text] ?? ''}">${text}</span></td>`
+      : `<td>${text}</td>`).join('')}</tr>`).join('')}</tbody></table>`
 }
 
 function hero(label: string, value: string | number, unit: string, period = '') {
@@ -67,41 +74,77 @@ function overview() {
 }
 
 function residences() {
-  const bars = barList(locations.map(({ name, count }) => [name, count]), 109,
-    '', (_, i) => 'manager-location-' + locations[i]!.series)
-  return `${caption('底稿列出的五个常驻地  ·  人')}<div class="manager-location">
-    ${bars}
-    <svg viewBox="0 0 357 210" role="img" aria-label="五个常驻地的分布示意">
-      <defs><pattern id="location-grid" width="11" height="11" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".65" fill="var(--sherlock-chart-crosshair)" opacity=".42"/></pattern></defs>
-      <rect x="3" y="4" width="351" height="194" fill="url(#location-grid)"/>
-      <path class="manager-location-lines" d="M49 146Q151 60 320 72 M51 187Q175 75 339 94 M114 194Q161 75 197 16 M161 183Q242 95 272 27 M166 161Q243 131 343 133"/>
-      ${locations.map(({ name, label, count, x, y, series, labelX, labelY }) => `<g class="manager-location-${series}">
-        <circle cx="${x}" cy="${y}" r="${Math.sqrt(count) * 1.7}" opacity=".17"/>
-        <circle cx="${x}" cy="${y}" r="${Math.sqrt(count) * .48}"><title>${name} ${count} 人</title></circle>
-        <text x="${labelX}" y="${labelY}">${label}</text></g>`).join('')}
-    </svg>
+  const countsByProvince = new Map(locations.map(({ code, count }) => [code, count]))
+  return `<div class="manager-location">
+    <figure class="manager-map" aria-label="全国常驻地分布地图">
+      <svg viewBox="0 0 406 248" role="img" aria-label="全国省级行政区及五个常驻地">
+        ${Object.entries(chinaProvinces).map(([code, path]) => {
+          const count = countsByProvince.get(code)
+          return `<path class="manager-province${count ? ' manager-province-reported' : ''}" d="${path}"
+            ${count ? `style="--province-strength:${Math.round(count / 109 * 64)}%"` : ''} />`
+        }).join('')}
+        <g class="manager-map-inset"><rect x="337" y="166" width="59" height="76" rx="2"/>
+          <path d="${southChinaSea}"/><text x="366.5" y="239" text-anchor="middle">南海诸岛</text></g>
+        ${locations.map(({ code, name, label, count, labelX, labelY }) => {
+          const [x, y] = selectedProvinceCenters[code]!
+          const side = labelX < x ? -1 : 1
+          return `<g class="manager-place-marker">
+            <title>${name} ${count} 人</title>
+            <path d="M${x} ${y}L${labelX - side * 3} ${labelY - 4}"/>
+            <circle cx="${x}" cy="${y}" r="${(Math.sqrt(count) * .65).toFixed(1)}" class="manager-place-radius"/>
+            <circle cx="${x}" cy="${y}" r="3.2" class="manager-place-pin"/>
+            <text x="${labelX}" y="${labelY}" text-anchor="${side === -1 ? 'end' : 'start'}">${label}</text></g>`
+        }).join('')}
+      </svg>
+      <figcaption class="manager-map-legend"><span>底稿列出的常驻地</span><span>底稿未列出</span></figcaption>
+    </figure>
+    <div class="manager-locations-data">${caption('常驻地人数 · 人')}${barList(locations.map(({ name, count }) => [name, count]), 109)}</div>
   </div>`
+}
+
+function columnChart(values: readonly (readonly [string, number])[], maximum: number, unit: string) {
+  return `<dl class="manager-columns">${values.map(([label, count]) =>
+    `<div><dd>${count}<span class="manager-unit">${unit}</span></dd>
+      <div class="manager-column" aria-hidden="true"><span style="--share:${count / maximum * 100}%"></span></div>
+      <dt>${label}</dt></div>`
+  ).join('')}</dl>`
+}
+
+function peopleChanges() {
+  const flows = [
+    { label: '流入', list: [changes[0], changes[2]], color: 'manager-teal' },
+    { label: '流出', list: [changes[1], changes[3]], color: 'manager-gold' }
+  ]
+  return `${caption('按变动类型统计  ·  人')}
+    <div class="manager-two manager-flows">${flows.map(({ label, list, color }) =>
+      `<div>${section(label)}${barList(list, 12, '', () => color)}</div>`
+    ).join('')}</div>
+    <div class="manager-internal-flow">${barList([changes[4]], 12)}</div>`
 }
 
 function demographics() {
   return `${caption('按底稿列出的年龄与司龄分组')}
     <div class="manager-two manager-demographics">
       <div><h3>年龄分布 <small>· 平均 30 岁</small></h3>${barList(ages, 56)}</div>
-      <div><h3>司龄分布 <small>· 平均 3 年</small></h3>${barList(tenure, 56)}</div>
+      <div><h3>司龄分布 <small>· 平均 3 年</small></h3>${barList(tenure, 56, '', () => 'manager-teal')}</div>
     </div>
-    <div class="manager-gender"><h3>性别分布</h3>
-      <div class="manager-track" aria-hidden="true"><span style="--share:63.8%"></span><span class="manager-teal" style="--share:36.2%"></span></div>
-      <div class="manager-between"><span>男性 63.8%</span><span>女性 36.2%</span></div></div>`
+    <div class="manager-gender">
+      <div class="manager-gender-ring" aria-hidden="true"></div>
+      <div><h3>性别分布</h3>
+        <div class="manager-gender-legend"><span class="manager-legend">男性 <strong>63.8%</strong></span>
+          <span class="manager-legend manager-teal">女性 <strong>36.2%</strong></span></div>
+      </div>
+    </div>`
 }
 
 function interviewChart(summary = false) {
   const points = stages.map(([, value], i) => ({ x: 40 + i * 80, y: 87 - value * 12, value }))
-  const line = points.map(({ x, y }) => x + ',' + y).join(' ')
+  const line = points.map(({ x, y }, i) => i === 0 ? 'M' + x + ' ' + y : 'H' + (x - 40) + 'V' + y + 'H' + x).join(' ')
   return `<figure class="manager-line-chart">
     <figcaption class="manager-caption">${summary ? '面试进度  ·  总简历 23 份' : '各阶段简历数  ·  份'}</figcaption>
     <div class="manager-line-plot"><svg viewBox="0 0 560 106" preserveAspectRatio="none" aria-hidden="true">
       ${[18, 41, 64, 87].map(y => `<path d="M0 ${y}H560" stroke="var(--sherlock-chart-grid)"/>`).join('')}
-      <polyline points="${line}" fill="none" stroke="var(--manager-blue)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      <path d="${line}" fill="none" stroke="var(--manager-blue)" stroke-width="2" vector-effect="non-scaling-stroke"/>
       ${points.map(({ x, y, value }) => `<circle cx="${x}" cy="${y}" r="3" fill="${value ? 'var(--manager-blue)' : 'var(--sherlock-muted)'}"/>
         `).join('')}
     </svg>
@@ -114,8 +157,8 @@ function offerOutcome(label: string, value: number, color: string) {
   const share = value / 27 * 100
   return `<div class="manager-tile">
     <h3 class="manager-legend ${color}">${label}</h3>
-    <div class="manager-between">${number(value, '份')}<small>${share.toFixed(1)}%</small></div>
-    ${track(share, color, true)}</div>`
+    <div class="manager-between">${number(value, '份')}<span class="manager-offer-rate ${color}" style="--share:${share}%"
+      aria-label="占已发 Offer ${share.toFixed(1)}%"><small>${share.toFixed(1)}%</small></span></div></div>`
 }
 
 function organization() {
@@ -155,16 +198,35 @@ function organization() {
     }).join('')
     return `<text class="manager-tree-label" x="0" y="${y + h / 2 + 4}">${title}</text>${rectangles}`
   })
-  return `${caption('投资顾问板块')}<svg viewBox="0 0 1304 285" role="img" aria-label="投资顾问板块四级组织架构">
-    <path data-sherlock-structure="connector" class="manager-tree-link" d="${[...connectors].join(' ')}"/>
-    ${rows.join('')}</svg>`
+  const roles = layers[3]!.nodes
+  const groups = layers[2]!.nodes
+  const roleList = (people: typeof roles) =>
+    `<ul class="manager-org-roles">${people.map(role => `<li>${role.label}</li>`).join('')}</ul>`
+  const departments = layers[1]!.nodes.map((dept, index) => {
+    const direct = roles.filter(role => 'direct' in role && role.parent === index)
+    return `<section class="manager-org-branch" aria-label="${dept.label}">
+      <h3 data-sherlock-structure="node">${dept.label}</h3>
+      ${groups.map((group, groupIndex) => group.parent === index
+        ? `<div class="manager-org-subgroup"><h4>${group.label}</h4>${roleList(roles.filter(role => !('direct' in role) && role.parent === groupIndex))}</div>`
+        : '').join('')}
+      ${direct.length ? `<div class="manager-org-subgroup"><h4>直属岗位</h4>${roleList(direct)}</div>` : ''}
+    </section>`
+  }).join('')
+  return `${caption('投资顾问板块')}
+    <svg viewBox="0 0 1304 285" role="img" aria-label="投资顾问板块四级组织架构" data-organization-layout="horizontal">
+      <path data-sherlock-structure="connector" class="manager-tree-link" d="${[...connectors].join(' ')}"/>
+      ${rows.join('')}</svg>
+    <div class="manager-org-compact" aria-label="投资顾问板块组织架构" data-organization-layout="compact">
+      <div class="manager-org-root" data-sherlock-structure="primary"><strong>${layers[0]!.nodes[0]!.label}</strong><small>总经理</small></div>
+      <div class="manager-org-branches">${departments}</div>
+    </div>`
 }
 
 export const managerPanels = {
   overview: { body: overview() },
-  residences: { body: residences() },
+  residences: { body: residences(), map: true, note: '人数取自驾驶舱底稿。底图为 DataV GeoAtlas 省级行政区。' },
   demographics: { body: demographics() },
-  changes: { body: caption('按变动类型统计  ·  人') + barList(changes, 12, '', n => n === 12 ? 'manager-gold' : '') },
+  changes: { body: peopleChanges() },
   interviewSummary: {
     body: `<div class="manager-interview-summary">${interviewChart(true)}<div class="manager-mini-offers">${caption('Offer 情况')}<dl>
       ${([['已发', 27], ['接受', 5], ['拒绝', 12]] as const).map(([label, value]) => `<div class="manager-between"><dt>${label}</dt><dd>${number(value, '份')}</dd></div>`).join('')}
@@ -172,13 +234,13 @@ export const managerPanels = {
     note: '面试进度与 Offer 反馈分别统计'
   },
   expenses: { body: `<div class="manager-expenses">${caption('当前费用 / 预算  ·  万元')}
-    ${['业务招待费', '差旅费'].map(name => `<div class="manager-tile"><div class="manager-between"><h3>${name}</h3><span>${number('56,888')} <small>/ 98,888</small></span></div>${track(56_888 / 98_888 * 100, '', true)}</div>`).join('')}
+    ${['业务招待费', '差旅费'].map(name => `<div class="manager-tile"><div class="manager-between"><h3>${name}</h3><span>${number('56,888')} <small>/ 98,888</small></span></div><div class="manager-budget">${track(56_888 / 98_888 * 100, '', true)}<small>${(56_888 / 98_888 * 100).toFixed(1)}%</small></div></div>`).join('')}
     <div class="manager-between"><h3>统结用车  ·  年度累计</h3>${number('56,888', '万元')}</div></div>` },
   team: {
     body: caption('人员明细  ·  样例记录') + table(['员工', '部门', '岗位', '办公地点', '司龄', '状态'], teamRows),
     source: '高管驾驶舱 1.0', note: '员工编号、岗位和状态为设计样例'
   },
-  tenure: { body: caption('平均司龄 3 年') + barList(tenure, 56, '人') },
+  tenure: { body: caption('平均司龄 3 年') + columnChart(tenure, 56, '人') },
   organization: {
     body: organization(), className: 'manager-organization',
     source: '高管驾驶舱 1.0「我的团队」', note: '投资顾问板块示例'
@@ -202,12 +264,14 @@ export const managerPanels = {
     note: '候选人编号和岗位为设计样例'
   },
   stages: { body: caption('底稿各环节人数  ·  人') + barList(stages.slice(0, -1), 5, '', n => n < 5 ? 'manager-gold' : '') }
-} satisfies Record<string, { body: string; source?: string; note?: string; className?: string }>
+} satisfies Record<string, { body: string; source?: string; note?: string; className?: string; map?: boolean }>
 
 export function managerPanelHtml(panel: keyof typeof managerPanels, minimumHeight: number) {
-  const { body, source = snapshotSource, note = '2024 年设计快照', className = '' } =
-    managerPanels[panel] as { body: string; source?: string; note?: string; className?: string }
-  const metadata = JSON.stringify({ data: { source, note } })
+  const { body, source = snapshotSource, note = '2024 年设计快照', className = '', map = false } =
+    managerPanels[panel] as { body: string; source?: string; note?: string; className?: string; map?: boolean }
+  const metadata = JSON.stringify({ data: {
+    source, note, ...(map ? { sources: [{ label: 'DataV GeoAtlas', url: 'https://help.aliyun.com/zh/datav/datav-7-0/user-guide/datav-geoatlas-widgets/' }] } : {})
+  } })
   return `<body data-readable-snapshot><style>${managerPanelCss}</style><script id="sherlock-template-data" type="application/json">${metadata}</script>
     <article class="manager-panel" data-workbench-content-fit style="min-height:${minimumHeight}px"><div class="manager-body ${className}">${body}</div></article></body>`
 }
