@@ -15,7 +15,7 @@ import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionSha
 import { maximumCanvasImageBytes, validCanvasSize } from '../../shared/image-factory-canvas'
 import { fileEditorMode } from '../../shared/file-editor.mjs'
 import type { Deck } from '../presentation/store'
-import { presentationFileBytes } from '../presentation/import-file'
+import { presentationFileBytes, readDroppedPresentation } from '../presentation/import-file'
 import { readNoteDocumentContent } from '../notes/document-import'
 import { validateNoteContent } from '../notes/store'
 import { readWorkbookFile, readWorkbookPath } from '../spreadsheet/files'
@@ -251,6 +251,14 @@ export function installKnowledgeIpc({
           return await copySession(owner.owner, { mode: 'image-factory', title, image, width, height, epoch: owner.generation },
             document.sessionId, check)
         } finally { activeCopies.delete(key) }
+      }
+      case 'presentation-drop-file': {
+        const fileId = previewId(args.id)
+        const file = fileId.length === 32 ? await sharing.read(fileId, AbortSignal.timeout(20_000)) : await store.file(fileId)
+        check()
+        const result = await readDroppedPresentation(file.document, args.label, 'data' in file ? file.data : file.path)
+        check()
+        return result
       }
       case 'open-file-in-editor': {
         const fromSession = typeof args.sessionId === 'string' && args.sessionId.length <= 256 ? args.sessionId : undefined

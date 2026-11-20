@@ -86,7 +86,7 @@ export async function openHomePresentationReference(document,fileId,{waitFor,cue
   await click(item,'打开知识库')
  }
  const row=()=>library()?.querySelector('.knowledge-panel-rows[data-ready=true] > [draggable=true]:first-child[data-knowledge-file-id="'+fileId+'"]')
- return {file: await target(row,'知识库首位的参考 PDF 尚未就绪，请重试。'),row}
+ return {file: await target(row,'知识库中的示例文件尚未就绪，请重试。'),row}
 }
 
 /** Disable only this demo's composer action tips; keep the real buttons intact. */

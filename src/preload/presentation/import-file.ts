@@ -1,7 +1,10 @@
+import type { Deck } from '../../main/presentation/store'
+
 const editorOrigin = 'odyssey-presentation://editor'
 
 /** Parse with the same sandboxed PPTist importer before registering an editable session. */
-export function parsePresentationFile(document: Document, bytes: Uint8Array, title: string): Promise<unknown> {
+export function parsePresentationFile(document: Document, bytes: Uint8Array, title: string, signal?: AbortSignal): Promise<Deck> {
+  signal?.throwIfAborted()
   const win = document.defaultView!
   const frame = document.createElement('iframe')
   frame.setAttribute('sandbox', 'allow-scripts allow-same-origin')
@@ -10,14 +13,16 @@ export function parsePresentationFile(document: Document, bytes: Uint8Array, tit
   frame.src = editorOrigin + '/index.html?host=' + encodeURIComponent(win.location.origin)
   const importId = crypto.randomUUID()
   return new Promise((resolve, reject) => {
-    const finish = (result?: unknown, reason = '演示文件解析失败。') => {
+    const finish = (result?: Deck, reason = '演示文件解析失败。') => {
       win.clearTimeout(timer)
       win.removeEventListener('message', receive)
       document.removeEventListener('sherlock:knowledge-identity-changed', cancel)
+      signal?.removeEventListener('abort', abort)
       frame.remove()
       if (result) resolve(result)
       else reject(new Error(reason))
     }
+    const abort = () => finish(undefined, '演示导入已取消。')
     const cancel = () => finish(undefined, '当前账号已变化，请重新打开文件。')
     const receive = (event: MessageEvent) => {
       const data = event.data
@@ -32,6 +37,7 @@ export function parsePresentationFile(document: Document, bytes: Uint8Array, tit
     const timer = win.setTimeout(() => finish(undefined, '演示文件解析超时。'), 120_000)
     win.addEventListener('message', receive)
     document.addEventListener('sherlock:knowledge-identity-changed', cancel)
+    signal?.addEventListener('abort', abort, { once: true })
     document.body.append(frame)
   })
 }

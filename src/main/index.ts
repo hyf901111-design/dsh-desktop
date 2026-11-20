@@ -1389,16 +1389,21 @@ async function bootstrap(): Promise<void> {
       sendKnowledgeChange()
     }, 150)
   })
-  registerTrustedMainWindowHandler(ipcMain, 'knowledge:presentation-guide-source', () => mainWindow, async () => {
+  registerTrustedMainWindowHandler(ipcMain, 'knowledge:presentation-guide-source', () => mainWindow, async (_event, asset?: unknown) => {
+    const identity = knowledgeIdentity()
+    const companyDeck = asset === 'delivered-pptx'
     const directory = join(app.getAppPath(), 'node_modules/dsh-research-task-runtime/assets/home-presentation')
     const [manifest, source] = await Promise.all([
       readFile(join(directory, 'source-metadata.json'), 'utf8'),
-      readFile(join(directory, 'source-report.pdf'))
+      readFile(join(directory, companyDeck ? 'company-research-briefing.pptx' : 'source-report.pdf'))
     ])
-    if (source.subarray(0, 5).toString() !== '%PDF-' ||
-        createHash('sha256').update(source).digest('hex') !== JSON.parse(manifest).sourceSha256)
-      throw Error('演示参考 PDF 校验失败。')
-    return knowledge.ensurePresentationGuideSource('Vanguard-2026经济与市场展望.pdf', source)
+    const metadata = JSON.parse(manifest)
+    if ((!companyDeck && source.subarray(0, 5).toString() !== '%PDF-') ||
+        createHash('sha256').update(source).digest('hex') !== (companyDeck ? metadata.presentationSha256 : metadata.sourceSha256))
+      throw Error(companyDeck ? '公司风格演示文稿校验失败。' : '演示参考 PDF 校验失败。')
+    const current = knowledgeIdentity()
+    if (identity.owner !== current.owner || identity.generation !== current.generation) throw Error('当前账号已变化，请重试。')
+    return knowledge.ensurePresentationGuideSource(companyDeck ? '人工智能周期与资产配置.pptx' : 'Vanguard-2026经济与市场展望.pdf', source, companyDeck)
   })
   const factoryCanvases = new ImageFactoryCanvases(join(app.getPath('userData'), 'image-factory-canvases'), () => {
     const owner = integrationOwner()
