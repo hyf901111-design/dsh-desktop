@@ -177,7 +177,7 @@ it('lets normal agent tools page through slide content and change a chart type w
   const deck = blankDeck('汇报')
   deck.slides = Array.from({ length: 7 }, (_, i) => ({ id: 'slide-' + i, elements: [
     { id: 'title-' + i, type: 'text', left: 20, top: 20, width: 400, height: 60, content: '<p>经营回顾 ' + i + '</p>' },
-    { id: 'chart-' + i, type: 'chart', left: 20, top: 100, width: 500, height: 260, chartType: 'column', data: { labels: ['一月'], legends: ['营收'], series: [[42]] } }
+    { id: 'chart-' + i, type: 'chart', left: 20, top: 100, width: 500, height: 260, chartType: 'bar', data: { labels: ['一月'], legends: ['营收'], series: [[42]] } }
   ] }))
   store.save(key, 0, deck, true)
   const first = store.inspect(key, undefined, undefined, 1)
@@ -187,10 +187,10 @@ it('lets normal agent tools page through slide content and change a chart type w
   expect(store.inspect(key, undefined, undefined, first.nextPage!).nextPage).toBeNull()
   store.apply(key, { revision: 1, operations: [
     ...deck.slides.map(s => ({ op: 'notes', slideId: s.id, text: '逐字稿 ' + s.id })),
-    { op: 'chartType', slideId: 'slide-3', elementId: 'chart-3', chartType: 'bar' },
+    { op: 'chartType', slideId: 'slide-3', elementId: 'chart-3', chartType: 'column' },
     { op: 'text', slideId: 'slide-0', elementId: 'title-0', text: '一月营收为 42' }
   ] })
   const saved = store.read(key).deck!
   expect(saved.slides.every(s => s.remark?.includes(s.id))).toBe(true)
-  expect(saved.slides[3]!.elements[1]).toEqual({ ...deck.slides[3]!.elements[1], chartType: 'bar' })
+  expect(saved.slides[3]!.elements[1]).toEqual({ ...deck.slides[3]!.elements[1], chartType: 'column' })
 })
