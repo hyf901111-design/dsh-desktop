@@ -22,7 +22,7 @@ export function installWorkbenchStructureReading(root=document.documentElement){
  const schedule=()=>{if(pending===undefined)pending=requestAnimationFrame(measure)}
  const scan=()=>{
   for(const svg of root.querySelectorAll('svg[viewBox]')){
-   if(graphs.has(svg)||svg.querySelectorAll('[data-sherlock-structure]').length<2)continue
+   if(graphs.has(svg)||svg.hasAttribute('data-sherlock-structure-fit')||svg.querySelectorAll('[data-sherlock-structure]').length<2)continue
    const box=svg.parentElement
    if(!box||box===document.body||box===document.documentElement||box.namespaceURI==='http://www.w3.org/2000/svg')continue
    graphs.set(svg,box);resize.observe(box)
