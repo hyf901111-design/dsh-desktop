@@ -18,6 +18,7 @@ type Shape = {
   [key: string]: any
 }
 type Slide = { id: string; elements: Shape[]; remark?: string; marks?: Marker[]; [key: string]: any }
+type ReferenceRange = { kind: string; slideId: string; start?: number; quote?: string }
 type Marker = {
   id: string
   ordinal: number
@@ -252,7 +253,7 @@ export class PresentationStore {
       }
     }
   }
-  apply(key: Key, args: { revision: number; operations: Record<string, any>[]; createName?: string }) {
+  apply(key: Key, args: { revision: number; operations: Record<string, any>[]; createName?: string }, references: readonly ReferenceRange[] = []) {
     const { revision, deck: existing } = this.read(key)
     if (revision !== args.revision) throw Error('文稿版本已变化，请重新读取。')
     if (!existing && !args.createName) throw Error('空工作区需要指定 createName。')
@@ -282,16 +283,21 @@ export class PresentationStore {
       if (op.op === 'notes') {
         const original = visibleText(slide.remark),
           text = validText(op.text, '备注')
-        if (op.quote !== undefined) {
-          if (
-            !Number.isInteger(op.start) ||
-            !op.quote ||
-            original.slice(op.start, op.start + op.quote.length) !== op.quote
-          )
-            throw Error('备注选区已变化。')
-          slide.remark = paragraphs(
-            original.slice(0, op.start) + text + original.slice(op.start + op.quote.length)
-          )
+        const selected = references.filter(ref => ref.kind === 'notes' && ref.slideId === slide.id)
+        const partial = op.quote !== undefined || op.start !== undefined
+        if (selected.length || partial) {
+          const range = partial ? op : selected.length === 1 ? selected[0] : undefined
+          if (!range || !Number.isInteger(range.start) || range.start < 0 || typeof range.quote !== 'string' || !range.quote ||
+              original.slice(range.start, range.start + range.quote.length) !== range.quote ||
+              (selected.length && !selected.some(ref => ref.start === range.start && ref.quote === range.quote)))
+            throw Error('备注选区已变化。请重新读取并使用本轮引用的原文。')
+          const before = original.slice(0, range.start)
+          const after = original.slice(range.start + range.quote.length)
+          const preservesContext = text.length >= before.length + after.length && text.startsWith(before) && text.endsWith(after)
+          if (!partial && !preservesContext) throw Error('整页备注须完整保留选区前后的原文。')
+          if (selected.length && partial && (before || after) && preservesContext)
+            throw Error('text 已包含选区外上下文。如提交完整备注，请省略 quote 和 start；局部替换只填写选区内的新文字。')
+          slide.remark = paragraphs(partial ? before + text + after : text)
         } else slide.remark = paragraphs(text)
         continue
       }
