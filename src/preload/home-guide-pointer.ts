@@ -11,7 +11,7 @@ export type HomeGuidePointerAction={
 }
 type Options={runId:string;signal:AbortSignal;initialPosition?:Point;wait(ms:number):Promise<void>;waitUntilPlaying():Promise<void>}
 
-export function homeGuideTargetPoint(document:Document,target:HTMLElement):Point{
+export function homeGuideTargetPoint(document:Document,target:HTMLElement,center=false):Point{
  const win=document.defaultView!
   if(!target?.isConnected||target.ownerDocument!==document||(target as HTMLButtonElement).disabled||target.getAttribute('aria-disabled')==='true'||target.closest('[hidden],[inert]')||['hidden','collapse'].includes(win.getComputedStyle(target).visibility))throw Error('操作目标不可用，请重新打开。')
   const box=target.getBoundingClientRect();let left=Math.max(0,box.left),top=Math.max(0,box.top),right=Math.min(win.innerWidth,box.right),bottom=Math.min(win.innerHeight,box.bottom)
@@ -36,8 +36,25 @@ export function homeGuideTargetPoint(document:Document,target:HTMLElement):Point
    throw Error('文字标记尚未完整显示，请先滚动到标记。')
   }
   const text=target.matches('textarea,input:not([type=button]):not([type=checkbox]),[contenteditable=true]')
-  return text?{x:left+Math.min(22,(right-left)/3),y:top+Math.min(18,(bottom-top)/3)}:{x:(left+right)/2,y:(top+bottom)/2}
+  return text&&!center?{x:left+Math.min(22,(right-left)/3),y:top+Math.min(18,(bottom-top)/3)}:{x:(left+right)/2,y:(top+bottom)/2}
  }
+
+function createKnowledgeDragPreview(document: Document, source: HTMLElement, runId: string) {
+ const preview = document.createElement('div')
+ const row = source.cloneNode(true) as HTMLElement
+ for (const attribute of ['data-home-guide-cue-target', 'data-home-guide-file-source', 'data-knowledge-file-id', 'draggable'])
+  row.removeAttribute(attribute)
+ row.dataset.homeGuideHover = runId
+ preview.className = 'knowledge-panel odyssey-home-guide-drag-file'
+ preview.dataset.homeGuideDragFile = runId
+ preview.setAttribute('aria-hidden', 'true')
+ preview.inert = true
+ const bounds = source.getBoundingClientRect()
+ Object.assign(preview.style, { left: bounds.left + 'px', top: bounds.top + 'px', width: bounds.width + 'px' })
+ preview.append(row)
+ document.body.append(preview)
+ return preview
+}
 
 /** Visual cursor; the owning scenario handles native gestures through frame callbacks. */
 export function createHomeGuidePointer(document:Document,options:Options){
@@ -60,19 +77,28 @@ export function createHomeGuidePointer(document:Document,options:Options){
   win.queueMicrotask(()=>{if(menu.isConnected&&menu.matches('[popover=manual]:popover-open'))raiseLayer(true)})
  }
  if(topLayer)document.addEventListener('beforetoggle',beforeToggle,true)
- let draggedFile:{node:HTMLElement;origin:Point;transform:string}|undefined
+ let draggedFile:{node:HTMLElement;origin:Point}|undefined
+ const clearDraggedFile=()=>{draggedFile?.node.remove();draggedFile=undefined}
  let onFrame:HomeGuidePointerAction['onFrame'],validateDrag:(()=>void)|undefined
  let hoverMode:HomeGuidePointerAction['hover']
  const aborted=()=>Object.assign(Error('操作已取消。'),{name:'AbortError'})
  let rejectInterrupt!:(error:Error)=>void
  const interrupted=new Promise<never>((_resolve,reject)=>{rejectInterrupt=reject});void interrupted.catch(()=>{})
- const stop=()=>{if(closed)return;closed=true;hideLayer();element.hidden=true;hover.dispose();document.removeEventListener('beforetoggle',beforeToggle,true);rejectInterrupt(aborted())}
+ const stop=()=>{if(closed)return;closed=true;hideLayer();element.hidden=true;clearDraggedFile();hover.dispose();document.removeEventListener('beforetoggle',beforeToggle,true);rejectInterrupt(aborted())}
  options.signal.addEventListener('abort',stop,{once:true});if(options.signal.aborted)stop()
  const ensure=()=>{if(closed||options.signal.aborted)throw aborted()}
  const gate=async()=>{ensure();await Promise.race([options.waitUntilPlaying(),interrupted]);ensure()}
  const wait=async(ms:number)=>{await gate();await Promise.race([options.wait(ms),interrupted]);await gate()}
  const point=(target:HTMLElement):Point=>homeGuideTargetPoint(document,target)
- const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{validateDrag?.();if(!hoverMode||hoverMode==='target'&&phase!=='moving'&&phase!=='dragging')hover.update(next.x,next.y);if(draggedFile){if(!draggedFile.node.isConnected)throw aborted();draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`}position=next;state=phase;element.hidden=false;raiseLayer();element.dataset.state=phase;element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})}
+ const paint=(next:Point,phase:HomeGuidePointerFrame['phase'])=>{
+  validateDrag?.()
+  if(draggedFile){
+   draggedFile.node.hidden=false
+   draggedFile.node.style.transform=`translate3d(${next.x-draggedFile.origin.x}px,${next.y-draggedFile.origin.y}px,0)`
+  }else if(!hoverMode||hoverMode==='target'&&phase!=='moving'&&phase!=='dragging')hover.update(next.x,next.y)
+  position=next;state=phase;element.hidden=false;raiseLayer();element.dataset.state=phase
+  element.style.transform=`translate3d(${next.x}px,${next.y}px,0)`;onFrame?.({...next,phase})
+ }
  const reduced=()=>win.matchMedia?.('(prefers-reduced-motion: reduce)').matches===true
  const travel=async(readPoint:()=>Point,duration:number,phase:HomeGuidePointerFrame['phase']='moving')=>{
   duration*=1.3
@@ -90,7 +116,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
  }
  return{
   snapshot:()=>({...position,state}),
-  hide(){hideLayer();element.hidden=true;hover.clear()},
+  hide(){hideLayer();element.hidden=true;if(draggedFile)draggedFile.node.hidden=true;hover.clear()},
   async perform(action:HomeGuidePointerAction){
    ensure();if(busy)throw Error('上一项指针操作尚未完成。');busy=true;onFrame=action.onFrame;hoverMode=action.hover
    if(hoverMode==='none')hover.clear()
@@ -105,7 +131,8 @@ export function createHomeGuidePointer(document:Document,options:Options){
    }
    // A menu or ribbon can replace a button while the cursor is traveling.
    // Coordinate resolvers validate the live control they currently point to.
-   const readTarget=()=>action.targetPoint?viewportPoint(action.targetPoint()):action.canvasPoints?readCanvasPoint(action.canvasPoints.to):point(action.target)
+   const knowledgeDrag=action.action==='drag'&&action.fromTarget?.dataset.homeGuideFileSource===options.runId
+   const readTarget=()=>action.targetPoint?viewportPoint(action.targetPoint()):action.canvasPoints?readCanvasPoint(action.canvasPoints.to):homeGuideTargetPoint(document,action.target,knowledgeDrag)
    let clickPosition:Point|undefined
    try{
     await gate();const target=readTarget()
@@ -115,9 +142,14 @@ export function createHomeGuidePointer(document:Document,options:Options){
      const readSource=()=>action.canvasPoints?readCanvasPoint(action.canvasPoints.from):point(source)
      if(source.dataset.financialPort==='output'&&action.target.dataset.financialPort==='input'&&guide?.dataset.homeGuide===options.runId){const target=action.target;validateDrag=()=>{point(source);point(target);if(document.documentElement.dataset.homeGuidePointerRun&&document.documentElement.dataset.homeGuidePointerRun!==options.runId||source.closest('[data-research-canvas]')!==canvas||target.closest('[data-research-canvas]')!==canvas||guide.dataset.homeGuide!==options.runId)throw aborted()}}
      await travel(readSource,320)
-     if(source.dataset.homeGuideDragFile===options.runId)draggedFile={node:source,origin:readSource(),transform:source.style.transform}
      paint(readSource(),'pressed');await wait(reduced()?0:104)
-     await travel(readTarget,780,'dragging');paint(readTarget(),'released');await wait(reduced()?0:208)
+     if(knowledgeDrag){
+      const origin=readSource()
+      draggedFile={node:createKnowledgeDragPreview(document,source,options.runId),origin}
+      hover.clear()
+      validateDrag=()=>{if(!source.isConnected||source.dataset.homeGuideFileSource!==options.runId)throw aborted()}
+     }
+     await travel(readTarget,780,'dragging');clearDraggedFile();paint(readTarget(),'released');await wait(reduced()?0:208)
     }else{
      const distance=position?Math.hypot(target.x-position.x,target.y-position.y):120
      await travel(readTarget,Math.max(280,Math.min(620,230+distance*.4)))
@@ -130,7 +162,7 @@ export function createHomeGuidePointer(document:Document,options:Options){
      }
     }
     ensure();paint(clickPosition??readTarget(),'idle');completed=true
-   }finally{onFrame=undefined;validateDrag=undefined;hoverMode=undefined;if(!completed)hover.clear();if(draggedFile&&!completed)draggedFile.node.style.transform=draggedFile.transform;draggedFile=undefined;busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
+   }finally{onFrame=undefined;validateDrag=undefined;hoverMode=undefined;if(!completed)hover.clear();clearDraggedFile();busy=false;if(!closed){state='idle';element.dataset.state='idle'}}
   },
   dispose(){stop();options.signal.removeEventListener('abort',stop);element.remove()}
  }

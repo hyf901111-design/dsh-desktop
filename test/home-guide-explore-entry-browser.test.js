@@ -7,19 +7,26 @@ beforeAll(async()=>{
  const result=await build({stdin:{resolveDir:process.cwd(),loader:'ts',contents:`
  import{playExploreHomeGuideEntry}from'./src/preload/home-guide-explore-entry';import{createHomeGuidePointer}from'./src/preload/home-guide-pointer';import{installResidentEntryFixture}from'./test/fixtures/home-guide-resident-entry-browser';window.installResidentEntryFixture=installResidentEntryFixture;
  import{WorkspaceSurfaceHost}from'./src/preload/workspace-surface-host';
- import{createHomePresentationFileGhost}from'./scripts/lib/home-guide-presentation-native.mjs';
  window.presentationDragProbe=async()=>{
   document.querySelector('dialog')?.close()
   const row=document.createElement('div')
   row.style.cssText='position:fixed;top:200px;left:850px;width:140px;height:32px'
+  row.className='knowledge-panel-row'
+  row.dataset.homeGuideFileSource='ppt-file-drag'
+  row.innerHTML='<span class="knowledge-file-icon">PDF</span><span class="knowledge-panel-name">参考.pdf</span>'
   document.body.append(row)
-  const input=document.querySelector('textarea'),ghost=createHomePresentationFileGhost(document,row,'参考.pdf','ppt-file-drag')
+  const input=document.querySelector('textarea')
   const controller=new AbortController(),frames=[]
   const pointer=createHomeGuidePointer(document,{runId:'ppt-file-drag',signal:controller.signal,wait:()=>Promise.resolve(),waitUntilPlaying:()=>Promise.resolve()})
   try{
-   await pointer.perform({target:input,fromTarget:ghost,action:'drag',onFrame:frame=>frames.push(frame.phase)})
-   return {frames,buttons:ghost.querySelectorAll('button').length,label:ghost.textContent}
-  }finally{pointer.dispose();ghost.remove();row.remove()}
+   let label
+   await pointer.perform({target:input,fromTarget:row,action:'drag',onFrame:frame=>{
+    frames.push(frame.phase)
+    const preview=document.querySelector('[data-home-guide-drag-file="ppt-file-drag"]')
+    if(preview)label=preview.textContent
+   }})
+   return {frames,label}
+  }finally{pointer.dispose();row.remove()}
  };
 
  window.entryFixture=(page,kind)=>{
@@ -104,7 +111,7 @@ it('animates the PPT reference PDF ghost into the real composer hit target',asyn
  const{context,page}=await fixture('home','ppt')
  try{
   const result=await page.evaluate(()=>window.presentationDragProbe())
-  expect(result).toMatchObject({buttons:0,label:'PDF参考.pdf'})
+  expect(result).toMatchObject({label:'PDF参考.pdf'})
   expect(result.frames).toEqual(expect.arrayContaining(['pressed','dragging','released']))
  }finally{await context.close()}
 })

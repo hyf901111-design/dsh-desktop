@@ -34,7 +34,7 @@ beforeAll(async () => {
       import { mountKnowledgePanels } from './src/preload/knowledge/panel'
       import { createHomeGuidePointer } from './src/preload/home-guide-pointer'
       import guideStyles from './src/preload/home-guides.css?raw'
-      import { createHomePresentationFileGhost, openHomePresentationReference } from './scripts/lib/home-guide-presentation-native.mjs'
+      import { openHomePresentationReference } from './scripts/lib/home-guide-presentation-native.mjs'
       import { installKnowledgeSidebar, installKnowledgeSourceNavigation } from './scripts/lib/knowledge-client.mjs'
       import React from 'react'
       import { Menu } from '@deepseek-ai/dsh-client-ui-primitives'
@@ -211,7 +211,7 @@ beforeAll(async () => {
         const style = document.createElement('style')
         style.textContent = guideStyles
         document.head.append(style)
-        window.presentationReplay = { createHomeGuidePointer, createHomePresentationFileGhost, openHomePresentationReference }
+        window.presentationReplay = { createHomeGuidePointer, openHomePresentationReference }
         window.renderPresentationTabMenu = (host, onOpen, onSelect) => {
           const h = React.createElement
           function Tabs() {
@@ -344,7 +344,7 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
   try {
     await page.setContent(`
       <style>body > [role="menu"] { position:fixed; z-index:10; background:white; padding:8px }</style>
-      <body data-test-ppt-reference>
+      <body data-test-ppt-reference data-ds-dark-theme>
         <button data-odyssey-panel-entry="right" aria-expanded="false">展开右侧栏</button>
         <section data-home-guide="ppt-run" data-kind="ppt"><div id="guide"></div></section>
         <textarea style="position:fixed;left:20px;top:260px;width:400px;height:100px"></textarea>
@@ -383,7 +383,7 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
         host.dataset.knowledgePanelSession = 'ppt-session'
         panel.append(host)
       })
-      const { createHomeGuidePointer, createHomePresentationFileGhost, openHomePresentationReference } = window.presentationReplay
+      const { createHomeGuidePointer, openHomePresentationReference } = window.presentationReplay
       const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
       const waitFor = async predicate => {
         const deadline = performance.now() + 3500
@@ -407,16 +407,48 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
       const format = 'application/x-ework-knowledge-file'
       const dataTransfer = new DataTransfer()
       file.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer }))
-      const shadow = createHomePresentationFileGhost(document, file, label, 'ppt-run')
+      const findPreview = () => document.querySelector('[data-home-guide-drag-file="ppt-run"]')
+      const originalTitle = file.querySelector('.knowledge-panel-name span')
+      const originalIcon = file.querySelector('.knowledge-file-icon')
+      const originalWidth = file.getBoundingClientRect().width
+      const beforeDrag = {
+        preview: !!findPreview(),
+        size: getComputedStyle(file.querySelector('.knowledge-panel-action small')).opacity,
+        title: originalTitle?.textContent
+      }
       const target = document.querySelector('textarea')
-      let dropped
+      const inputBounds = target.getBoundingClientRect()
+      const phasesWithPreview = new Set()
+      let dropped, previewStyle, release
       target.addEventListener('drop', event => { dropped = JSON.parse(event.dataTransfer.getData(format)) })
-      await pointer.perform({ target, action: 'drag', fromTarget: shadow })
+      file.dataset.homeGuideFileSource = 'ppt-run'
+      await pointer.perform({ target, action: 'drag', fromTarget: file, onFrame: frame => {
+        const preview = findPreview()
+        if (preview) {
+          phasesWithPreview.add(frame.phase)
+          const clonedIcon = preview.querySelector('.knowledge-file-icon')
+          previewStyle = {
+            title: preview.querySelector('.knowledge-panel-name span')?.textContent,
+            subtitle: preview.querySelector('.knowledge-panel-name small')?.textContent,
+            sourceSubtitle: file.querySelector('.knowledge-panel-name small')?.textContent,
+            referenceButton: preview.querySelector('.knowledge-panel-action button')?.textContent,
+            buttonOpacity: getComputedStyle(preview.querySelector('.knowledge-panel-action button')).opacity,
+            iconMatches: clonedIcon.isEqualNode(originalIcon),
+            width: preview.getBoundingClientRect().width,
+            inert: preview.inert
+          }
+        }
+        if (frame.phase === 'released') release = {
+          dx: frame.x - (inputBounds.left + inputBounds.width / 2),
+          dy: frame.y - (inputBounds.top + inputBounds.height / 2)
+        }
+      } })
       target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }))
       pointer.dispose()
-      shadow.remove()
       return {
-        labels, dropped, portalAtBody, firstId: file.parentElement.firstElementChild.dataset.knowledgeFileId,
+        labels, dropped, portalAtBody, beforeDrag, previewStyle, originalWidth, release,
+        phasesWithPreview: [...phasesWithPreview], previewAfterDrop: !!findPreview(),
+        firstId: file.parentElement.firstElementChild.dataset.knowledgeFileId,
         otherFirstId: document.querySelector('#other .knowledge-panel-row').dataset.knowledgeFileId,
         transitionDelay: plusAt - openAt
       }
@@ -427,6 +459,15 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
     expect(result.otherFirstId).toBe('c')
     expect(result.dropped).toEqual({ id: result.firstId, label: 'Vanguard-2026经济与市场展望.pdf' })
     expect(result.transitionDelay).toBeGreaterThanOrEqual(220)
+    expect(result.beforeDrag).toEqual({ preview: false, size: '1', title: result.dropped.label })
+    expect(result.phasesWithPreview).toEqual(['dragging'])
+    expect(result.previewStyle).toMatchObject({
+      title: result.dropped.label, iconMatches: true, referenceButton: '@文件', buttonOpacity: '1',
+      width: result.originalWidth, inert: true
+    })
+    expect(result.previewStyle.subtitle).toBe(result.previewStyle.sourceSubtitle)
+    expect(result.previewAfterDrop).toBe(false)
+    expect(result.release).toEqual({ dx: 0, dy: 0 })
   } finally {
     await page.close()
   }

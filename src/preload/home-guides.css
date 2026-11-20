@@ -12,10 +12,12 @@
 .odyssey-home-guide-mode-notice{position:absolute;z-index:61;top:14px;left:50%;transform:translateX(-50%);max-width:calc(100% - 40px);box-sizing:border-box;padding:9px 15px;border-radius:10px;background:rgb(245 247 250 / .94);color:#4b535d;box-shadow:0 4px 18px #00000014;font:13px/1.5 system-ui;white-space:nowrap;pointer-events:none;transition:opacity .18s ease}
 [data-ds-dark-theme] .odyssey-home-guide-mode-notice{background:rgb(45 47 51 / .94);color:#e1e4e9;box-shadow:0 4px 18px #0003}
 .odyssey-home-guide-mode-notice[data-leaving=true]{opacity:0}
-.odyssey-home-guide-drag-file{position:fixed;z-index:2147482999;display:flex;align-items:center;gap:9px;width:240px;box-sizing:border-box;padding:11px 12px;border-radius:9px;background:rgb(251 252 254 / .96);color:#35414d;box-shadow:0 8px 28px #0003;font:12px/1.4 system-ui;pointer-events:none;will-change:transform}
-.odyssey-home-guide-drag-file>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.odyssey-home-guide-drag-file-type{flex:none;display:grid;place-items:center;width:28px;height:34px;border-radius:4px;background:#e55a61;color:#fff;font:bold 9px/1 system-ui}
-[data-ds-dark-theme] .odyssey-home-guide-drag-file{background:rgb(48 51 57 / .97);color:#ebedf1}
+.knowledge-panel.odyssey-home-guide-drag-file {
+  position: fixed; z-index: 2147482999; height: auto; padding: 0; border-radius: 6px;
+  background: var(--knowledge-menu); opacity: .88; pointer-events: none; will-change: transform;
+}
+.odyssey-home-guide-drag-file[hidden] { display: none; }
+.odyssey-home-guide-drag-file :is(.knowledge-panel-name, .knowledge-panel-action button) { pointer-events: none; }
 .odyssey-home-guide-status{margin:0;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
 .odyssey-home-guide-fault button{flex:none;border:0;border-radius:4px;background:transparent;color:inherit;font:18px/20px system-ui;cursor:pointer;padding:0 2px}
 .odyssey-home-guide-fault button:focus-visible{outline:2px solid var(--primary-color,#628ee8);outline-offset:2px}
