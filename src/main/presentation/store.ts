@@ -121,6 +121,7 @@ export class PresentationStore {
     mkdirSync(root, { recursive: true })
     this.db = new DatabaseSync(join(root, 'presentations.sqlite'))
     this.db.exec(`PRAGMA journal_mode=WAL;
+      CREATE TABLE IF NOT EXISTS edit_locks(owner TEXT,session TEXT,PRIMARY KEY(owner,session));
       CREATE TABLE IF NOT EXISTS decks(owner TEXT,session TEXT,id TEXT,title TEXT,document TEXT,PRIMARY KEY(owner,session,id));
       CREATE TABLE IF NOT EXISTS positions(owner TEXT,session TEXT,id TEXT,slide TEXT,PRIMARY KEY(owner,session,id));
       CREATE TABLE IF NOT EXISTS recent_use(owner TEXT,session TEXT,id TEXT,revision INTEGER,PRIMARY KEY(owner,session,id));
@@ -133,13 +134,20 @@ export class PresentationStore {
   remove(key: Key) {
     this.db.exec('BEGIN IMMEDIATE')
     try {
-      for (const table of ['positions', 'recent_use', 'history', 'active', 'decks'])
+      for (const table of ['edit_locks', 'positions', 'recent_use', 'history', 'active', 'decks'])
         this.db.prepare('DELETE FROM ' + table + ' WHERE owner=? AND session=?').run(key.owner, key.sessionId)
       this.db.exec('COMMIT')
     } catch (error) {
       this.db.exec('ROLLBACK')
       throw error
     }
+  }
+  isLocked(key: Key) {
+    return !!this.db.prepare('SELECT 1 FROM edit_locks WHERE owner=? AND session=?').get(key.owner, key.sessionId)
+  }
+  setLocked(key: Key, locked: boolean) {
+    const sql = locked ? 'INSERT OR IGNORE INTO edit_locks VALUES (?,?)' : 'DELETE FROM edit_locks WHERE owner=? AND session=?'
+    this.db.prepare(sql).run(key.owner, key.sessionId)
   }
   recent(key: Key) {
     return this.db

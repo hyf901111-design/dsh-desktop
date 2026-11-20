@@ -1,4 +1,5 @@
 import {readFileSync} from 'node:fs'
+import {createHash} from 'node:crypto'
 import {it, expect} from 'vitest'
 import layouts from '../packages/presentation-editor/overlay/efund-layouts.json'
 import {applyMaster} from '../packages/presentation-editor/overlay/apply-layout'
@@ -10,11 +11,25 @@ it('ships each master with its original preview and usable native slots',()=>{
   for(const layout of layouts){
     const bytes=readFileSync(new URL('../packages/presentation-editor/layout-art/'+layout.art,import.meta.url))
     expect(bytes.toString('ascii',1,4)).toBe('PNG')
+    expect(bytes.readUInt32BE(16)).toBe(1280)
+    expect(createHash('sha256').update(bytes).digest('hex').slice(0,16)+'.png').toBe(layout.art)
     const slide=applyMaster(layout,'data:image/png;base64,test',{id:'page',elements:[]},960,9/16)
     expect(slide.elements.some(e=>e.odysseyLayoutSlot==='title')).toBe(true)
     expect(slide.elements.map(e=>e.odysseyLayoutSlot)).toEqual(layout.slots.map(s=>s.role))
     expect(slide.elements.every(e=>e.width>0&&e.height>0)).toBe(true)
   }
+})
+
+it('takes cover and content typography from the actual PowerPoint master', () => {
+  const apply = id => applyMaster(layouts.find(layout => layout.id === id), 'art',
+    { id: 'page', elements: [] }, 960, 9 / 16).elements[0]
+  const cover = apply('v6-1'), content = apply('v6-4')
+  expect(cover.content).toContain('#005096')
+  expect(cover.content).toContain('font-size:37.33px')
+  expect(content.content).toContain('#FFFFFF')
+  expect(content.content).toContain('font-size:30.67px')
+  expect(content.inset[0]).toBe(0)
+  expect(content.fixedHeight).toBe(true)
 })
 
 it('preserves editable content, notes, chart figures and object identities on repeated layout changes',()=>{

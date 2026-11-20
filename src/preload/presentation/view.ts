@@ -60,13 +60,16 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       switching = true
       paintHeader()
       try {
-        await flushEditor(e)
+        await flushEditor(e, !e.locked)
         const locked = await request(e, 'lock', { locked: !e.locked })
         if (current !== e) return
         e.locked = locked
         post(e, 'edit-mode', { editable: e.editable && !locked })
       } catch (err) {
-        if (current === e) post(e, 'error', { message: String(err) })
+        if (current === e) {
+          post(e, 'edit-mode', {editable: e.editable && !e.locked})
+          post(e, 'error', { message: String(err) })
+        }
       } finally {
         switching = false
         paintHeader()
@@ -123,8 +126,8 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       }
     }
   }
-  const barriers = new Map<string, () => void>()
-  async function flushEditor(e: Editor) {
+  const barriers = new Map<string, (error?: string) => void>()
+  async function flushEditor(e: Editor, locking = false) {
     if (!e.ready) throw Error('演示尚未就绪。')
     const id = win.crypto.randomUUID()
     await new Promise<void>((resolve, reject) => {
@@ -132,12 +135,13 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
         barriers.delete(id)
         reject(Error('演示编辑器尚未完成保存。'))
       }, 5000)
-      barriers.set(id, () => {
+      barriers.set(id, (error) => {
         win.clearTimeout(timer)
         barriers.delete(id)
-        resolve()
+        if (error) reject(Error(error))
+        else resolve()
       })
-      post(e, 'flush', { id })
+      post(e, 'flush', { id, locking })
     })
     await e.queue
     if (current !== e || e.failure) throw Error(e.failure || '演示页签已切换。')
@@ -205,7 +209,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     }
     if (!e.ready) return
     if (d.type === 'flushed') {
-      barriers.get(d.id)?.()
+      barriers.get(d.id)?.(d.error)
       return
     }
     if (d.type === 'selection') {

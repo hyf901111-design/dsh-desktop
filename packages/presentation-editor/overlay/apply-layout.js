@@ -1,6 +1,6 @@
 // The brand background and normalized placeholder bounds come from the PowerPoint masters.
 const uid = () => crypto.randomUUID()
-const font = '华文黑体'
+const font = '华文黑体_易方达'
 const blue = '#005298'
 
 export function slotLabel(layout, role) {
@@ -44,21 +44,26 @@ function createPlaceholder(layout, slot, box, width) {
       data: { labels: ['项目一', '项目二', '项目三'], legends: ['示例'], series: [[1, 2, 3]] }
     }
   const title = slot.role === 'title'
-  const color = title && slot.y < 0.12 ? '#ffffff' : blue
-  const size = Math.round(width * (title ? (slot.y < 0.12 ? 0.028 : 0.033) : 0.02))
+  const color = slot.color || (title && slot.y < 0.12 ? '#ffffff' : blue)
+  const family = slot.font || font
+  const size = +(width * (slot.size || (title ? (slot.y < 0.12 ? 0.028 : 0.033) : 0.02))).toFixed(2)
   return {
     ...common,
     type: 'text',
-    defaultFontName: font,
+    defaultFontName: family,
+    fixedHeight: true,
+    vAlign: slot.anchor || 'top',
+    inset: slot.inset?.map(fraction => fraction * width) || [0, 0, 0, 0],
+    paragraphSpace: 0,
     defaultColor: color,
     content:
       '<p><span style="color:' +
       color +
       ';font-family:' +
-      font +
+      family +
       ';font-size:' +
       size +
-      'px">' +
+      'px;font-weight:' + (slot.bold ? 'bold' : 'normal') + '">' +
       slotLabel(layout, slot.role) +
       '</span></p>'
   }
@@ -91,7 +96,7 @@ export function applyMaster(layout, image, page, width, ratio, titleId) {
       const mapped = { ...existing, ...box, odysseyLayoutSlot: slot.role }
       // Keep the title readable when moving between the blue band and a white cover.
       if (slot.role === 'title') {
-        const color = slot.y < 0.12 ? '#ffffff' : blue
+        const color = slot.color || (slot.y < 0.12 ? '#ffffff' : blue)
         const repaint = (html) => html?.replace(/(?<![-\w])color\s*:\s*[^;"']+/gi, 'color:' + color)
         if (mapped.type === 'shape')
           mapped.text = { ...mapped.text, defaultColor: color, content: repaint(mapped.text.content) }

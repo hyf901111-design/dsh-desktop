@@ -86,6 +86,12 @@ edit('src/hooks/useExport.ts', [
   ['for (const slide of _slides) {\n      const pptxSlide = pptx.addSlide()',
     "for (const slide of _slides) {\n      const masterName = 'OdysseyMaster' + (_slides.indexOf(slide)+1); const inherited = slide.elements.some(e=>e.odysseyMaster); if(inherited)pptx.defineSlideMaster({title:masterName,objects:[]}); const pptxSlide = inherited ? pptx.addSlide({masterName}) : pptx.addSlide()"],
   ['for (const el of slide.elements) {', 'for (const el of slide.elements) {\n        const beforeArtwork = pptxSlide._slideObjects.length'],
+  // clip.range is a percentage. Physical pixel density applies only when converting the result to inches.
+  ...['startX', 'startY', '(endX - startX)', '(endY - startY)'].map(value => [
+    value + ' / ratioPx2Inch.value', value + ' / 100'
+  ]),
+  ['pptxSlide.addChart(type, chartData, options)', "pptxSlide.addChart(type, chartData, {...options, objectName:'OdysseyChart-'+el.id})"],
+  ['pptxSlide.addTable(tableData, options)', "pptxSlide.addTable(tableData, {...options, objectName:'OdysseyTable-'+el.id, autoPage:false})"],
   ['pptxSlide.addMedia(options)\n          }\n        }\n      }',
     "pptxSlide.addMedia(options)\n          }\n        }\n        if(el.odysseyMaster)for(const object of pptxSlide._slideObjects.slice(beforeArtwork))object.options.objectName='OdysseyInheritedArtwork'\n      }"],
   [
@@ -114,8 +120,39 @@ edit('src/hooks/useGlobalHotkey.ts',[
   ['currentIndex >= currentSlide.value.elements.length - 1', 'currentIndex >= selectable.length - 1'],
   ['const nextElementId = currentSlide.value.elements[nextIndex].id', 'const nextElementId = selectable[nextIndex].id'],
   ['const { ctrlKey, shiftKey, altKey, metaKey } = e',
-    "if ((e.target as HTMLElement)?.closest?.('input,textarea,select,.style-popover,.theater')) return; const { ctrlKey, shiftKey, altKey, metaKey } = e"],
+    "if (document.querySelector('.deck-app[data-readonly]') || (e.target as HTMLElement)?.closest?.('input,textarea,select,[contenteditable=true],.selection-format,.style-popover,.theater')) return; const { ctrlKey, shiftKey, altKey, metaKey } = e"],
   ['e.preventDefault()\n      undo()', 'e.preventDefault()\n      if (shiftKey) redo(); else undo()']
+])
+edit('src/hooks/usePasteEvent.ts', [['if (!editorAreaFocus.value', "if (document.querySelector('.deck-app[data-readonly]')) return\n    if (!editorAreaFocus.value"]])
+edit('src/views/components/element/ProsemirrorEditor.vue', [
+  ['const handleBlur = () => {', "const flushText = () => handleInput.flush()\nonMounted(() => document.addEventListener('odyssey:flush-text', flushText))\nonUnmounted(() => {document.removeEventListener('odyssey:flush-text', flushText); handleInput.cancel()})\nconst handleBlur = () => {\n  handleInput.flush()"],
+])
+const officeArchive = join(source, 'vendor/office-renderer-1.2.4.tgz')
+if (createHash('sha256').update(readFileSync(officeArchive)).digest('hex') !== 'ce3ed6237030f52f9bab8e04f875434839fcd32ae656e3578f6e56cfcbd2b8c5') throw Error('Office renderer checksum mismatch')
+const officeEngine = join(work,'node_modules/@aiden0z/pptx-renderer')
+mkdirSync(officeEngine,{recursive:true})
+execFileSync('tar',['-xzf',officeArchive,'--strip-components=1','-C',officeEngine])
+edit('node_modules/@aiden0z/pptx-renderer/dist/aiden0z-pptx-renderer.es.js', [
+  ['const o = wo.init(t);', "const o = wo.init(t, undefined, {renderer:'svg'});"]
+])
+for (const file of ['index.vue','BaseChartElement.vue']) {
+  edit('src/views/components/element/ChartElement/'+file, [
+    ["import Chart from './Chart.vue'", "import Chart from '@/OfficeChart.vue'"],
+    [':options="elementInfo.options"', ':options="elementInfo.options" :source="elementInfo.officeChart"']
+  ])
+}
+// Imported tables keep Office row geometry and individual cell edges in both canvas renderers.
+edit('src/views/components/element/TableElement/utils.ts', [
+  ["borderWidth: outline.width + 'px',", "borderWidth: outline.width + 'px',\n    ...Object.fromEntries(Object.entries(style?.officeBorders || {}).map(([edge,css])=>['border'+edge,css])),"],
+  ["minHeight: (cellMinHeight - 4) + 'px',", "minHeight: cellMinHeight + 'px', boxSizing:'border-box',\n    ...(style?.officeInsets ? {padding:style.officeInsets.map(n=>n+'px').join(' '),lineHeight:1.05} : {}),"]
+])
+edit('src/hooks/useImport.ts', [
+  ["if (fixedViewBoxPresetShapeTypes.includes(el.shapType) && el.pathViewBox) {", "if (['circularArrow','leftCircularArrow','leftRightCircularArrow'].includes(el.shapType)) {\n                    element.viewBox = [originWidth,originHeight]\n                  } else if (fixedViewBoxPresetShapeTypes.includes(el.shapType) && el.pathViewBox) {"],
+  ['Math.max(height * ratio, cellMinHeight)', 'height * ratio'],
+  ['el.rowHeights[0] ? el.rowHeights[0] * ratio : 36', 'el.rowHeights.length ? Math.min(12, ...el.rowHeights.filter(h=>h>0).map(h=>h*ratio)) : 36'],
+  ['Math.floor(parseFloat(p1) * ratio)', 'Number((parseFloat(p1) * ratio).toFixed(2))'],
+  ['if (metrics.margin) textEl.paragraphSpace = metrics.margin','textEl.paragraphSpace = metrics.margin || 0'],
+  ['if (metrics.margin) element.text!.paragraphSpace = metrics.margin','element.text!.paragraphSpace = metrics.margin || 0']
 ])
 edit('src/main.ts', [["import '@/assets/styles/font.scss'", "import './odyssey.css'"]])
 cpSync(join(project, 'src/shared/presentation-slide-title.ts'), join(work, 'src/presentation-slide-title.ts'))
@@ -126,6 +163,7 @@ cpSync(join(project, 'scripts/lib/pptx-annotation-viewer.mjs'), join(work, 'src/
 cpSync(join(project, 'src/preload/pptx-annotations.css'), join(work, 'src/native-annotations.css'))
 cpSync(join(project, 'src/preload/pptx-annotation-icons'), join(work, 'public/markers'), { recursive: true })
 cpSync(join(source, 'layout-art'), join(work, 'public/layout-art'), {recursive:true})
+cpSync(join(project,'skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf'),join(work,'public/STHeiti_YFD.ttf'))
 cpSync(join(source, 'icons'), join(work, 'public/icons'), { recursive: true })
 cpSync(join(project, 'skills/efund-ppt-maker/assets/efund-template-v6.pptx'), join(work, 'public/efund.pptx'))
 cpSync(join(source, 'index.html'), join(work, 'index.html'))
@@ -136,6 +174,7 @@ execFileSync(process.execPath, [join(work, 'node_modules/vite/bin/vite.js'), 'bu
 rmSync(dest, { recursive: true, force: true })
 cpSync(join(work, 'dist'), dest, { recursive: true })
 cpSync(join(work, 'LICENSE'), join(dest, 'LICENSE.txt'))
+cpSync(join(officeEngine,'LICENSE'),join(dest,'office-renderer-LICENSE.txt'))
 // Ship the corresponding source of the embedded editor alongside its binary.
 mkdirSync(join(dest, 'source'), { recursive: true })
 execFileSync('tar', [
@@ -149,5 +188,6 @@ execFileSync('tar', [
   'scripts/lib/pptx-annotation-viewer.mjs',
   'src/preload/pptx-annotations.css',
   'src/preload/pptx-annotation-icons',
+  'skills/efund-ppt-maker/assets/fonts/STHeiti_YFD.ttf',
   'skills/efund-ppt-maker/assets/efund-template-v6.pptx'
 ])

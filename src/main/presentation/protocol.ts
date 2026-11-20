@@ -20,6 +20,7 @@ export async function handleEditorAsset(root: string, request: Request): Promise
     '.png': 'image/png',
     '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     '.webp': 'image/webp',
+    '.ttf': 'font/ttf',
     '.tgz': 'application/gzip'
   }
   try {
