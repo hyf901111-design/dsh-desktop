@@ -120,6 +120,8 @@ edit('src/hooks/useGlobalHotkey.ts',[
 edit('src/main.ts', [["import '@/assets/styles/font.scss'", "import './odyssey.css'"]])
 cpSync(join(project, 'src/shared/presentation-slide-title.ts'), join(work, 'src/presentation-slide-title.ts'))
 cpSync(join(source, 'overlay'), join(work, 'src'), { recursive: true })
+const appIcon = 'build/brand/odyssey-app-presentation.svg'
+cpSync(join(project, appIcon), join(work, 'src/presentation-app.svg'))
 cpSync(join(project, 'scripts/lib/pptx-annotation-viewer.mjs'), join(work, 'src/native-annotations.mjs'))
 cpSync(join(project, 'src/preload/pptx-annotations.css'), join(work, 'src/native-annotations.css'))
 cpSync(join(project, 'src/preload/pptx-annotation-icons'), join(work, 'public/markers'), { recursive: true })
@@ -142,6 +144,7 @@ execFileSync('tar', [
   '-C',
   project,
   'packages/presentation-editor',
+  appIcon,
   'src/shared/presentation-slide-title.ts',
   'scripts/lib/pptx-annotation-viewer.mjs',
   'src/preload/pptx-annotations.css',

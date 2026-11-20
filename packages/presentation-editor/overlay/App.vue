@@ -18,7 +18,7 @@
         <button v-for="d in recent" :key="d.id" @click="open(d.id)">{{ d.title }}</button>
       </div>
       <div class="empty-content">
-        <Glyph name="slide" />
+        <span class="presentation-app-icon" aria-hidden="true"></span>
         <h1>开始制作演示文稿</h1>
         <p>导入已有 PowerPoint，或在右侧对话里描述你要制作的演示文稿。</p>
         <div>

@@ -92,7 +92,9 @@ body:not([data-ds-dark-theme]) :is(.ribbon, .doc-line, .pages > header, footer, 
   gap: 12px;
   padding: 28px;
 }
-.empty-content > .glyph {
+.empty-content > .presentation-app-icon {
+  background-color: var(--muted);
+  mask: url('./presentation-app.svg') center / contain no-repeat;
   width: 28px;
   height: 28px;
   margin: 0 0 8px;
