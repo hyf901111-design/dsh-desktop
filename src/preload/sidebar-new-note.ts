@@ -11,8 +11,13 @@ export function createSidebarNewNoteAction(document:Document,beforeCreate:()=>Pr
   if(signal.aborted){abort();return}
   win.dispatchEvent(new CustomEvent('sherlock:sidebar-new-note-request',{detail:{requestId,phase,...kind==='spreadsheet'?{kind}:{},...token?{token}:{}}}))
  })
- const create=(signal?:AbortSignal)=>{
-  if(flight)return flight
+ const create=(signal?:AbortSignal):Promise<void>=>{
+  if(flight){
+   if(!controller?.signal.aborted)return flight
+   // A new launch after navigation owns a fresh request, even if the
+   // previous request has yet to run its cancellation cleanup.
+   return flight.catch(()=>{}).then(()=>create(signal))
+  }
   const owned=new AbortController();controller=owned
   const abort=()=>owned.abort()
   if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true})

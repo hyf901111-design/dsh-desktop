@@ -9,6 +9,38 @@ import { mountNavigationShortcuts } from '../src/preload/navigation-shortcuts'
 import { registerNavigationShortcutPreferences } from '../src/main/navigation-shortcut-preferences'
 import type { TrustedWindowEvent } from '../src/main/ipc-trust'
 
+it('joins repeated clicks on an opening app and clears stale errors on navigation', async () => {
+  const win = new Window()
+  const doc = win.document as unknown as Document
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><div class="hHd-Xa_newSessionGroup"></div></aside>'
+  let finish!: () => void
+  const open = vi.fn((_app: unknown, _signal: AbortSignal) => new Promise<void>(resolve => { finish = resolve }))
+  const manager = mountNavigationShortcuts(doc, {read: () => ({side: ['spreadsheet']}), save: () => true, open})
+  try {
+    const sheet = doc.querySelector<HTMLButtonElement>('[data-navigation-app=spreadsheet]')!
+    const status = doc.querySelector('[data-navigation-status]')!
+    sheet.click()
+    sheet.click()
+    expect(open).toHaveBeenCalledTimes(1)
+    expect(open.mock.calls[0]?.[1].aborted).toBe(false)
+    finish()
+    await Promise.resolve()
+    open.mockRejectedValueOnce(new win.DOMException('已切换', 'AbortError'))
+    sheet.click()
+    await Promise.resolve()
+    expect(status.textContent).toBe('')
+    open.mockRejectedValueOnce(new Error('Unavailable'))
+    sheet.click()
+    await Promise.resolve()
+    expect(status.textContent).toBe('应用打开失败')
+    doc.dispatchEvent(new win.Event('sherlock:sidebar-home-opened') as unknown as Event)
+    expect(status.textContent).toBe('')
+  } finally {
+    manager.dispose()
+    await win.happyDOM.abort()
+  }
+})
+
 it('normalizes six sidebar positions and retains legacy top preferences', () => {
   expect(normalizeNavigationShortcuts(undefined).side).toEqual(['research', 'spreadsheet', 'browser', 'note', 'knowledge', 'image-factory'])
   expect(normalizeNavigationShortcuts({ top: ['browser', 'browser', null, 'chat', 'note'], side: ['browser'] })).toEqual({

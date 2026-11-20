@@ -152,7 +152,10 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   homeIcon.setAttribute('aria-hidden', 'true')
   const homeLabel = document.createElement('span')
   homeTitle.append(homeIcon, homeLabel)
-  homeTopbar.append(homeTitle)
+  const homeDragArea = document.createElement('div')
+  homeDragArea.dataset.odysseyWindowMove = ''
+  homeDragArea.setAttribute('aria-hidden', 'true')
+  homeTopbar.append(homeTitle, homeDragArea)
   const controls = document.createElement('div')
   controls.className = 'eb-workspace-controls'
   controls.dataset.sessionWorkspaceControls = ''
@@ -252,7 +255,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     if (!header) return
     if (onHome && homeTopbar.parentElement !== header) header.append(homeTopbar)
     const container = onHome ? homeTopbar : header
-    if (controls.parentElement !== container) container.append(controls)
+    if (controls.parentElement !== container) container.insertBefore(controls, onHome ? homeDragArea : null)
     const language = english() ? 'en' : 'zh'
     const native = session?.querySelector('[data-srb-tabs]')
     const availability = buttons.map(({ view }) => Boolean(onHome && !id || (native && (

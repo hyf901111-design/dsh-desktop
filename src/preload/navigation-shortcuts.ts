@@ -72,7 +72,7 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   let tooltipTimer = 0
   let menu: HTMLElement | undefined
   let menuAnchor: HTMLElement | undefined
-  let pending: AbortController | undefined
+  let pending: { app: NavigationShortcut; controller: AbortController } | undefined
   let frame = 0
   const deleteButtons = new Map<HTMLButtonElement, HTMLButtonElement>()
   const english = () => doc.documentElement.dataset.odysseyLocale === 'en'
@@ -451,15 +451,25 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
     }
     const app = button.dataset.navigationApp
     if (!isNavigationShortcut(app)) return
+    if (pending?.app === app) return
     doc.documentElement.removeAttribute(workspaceModeNavigationAttribute)
-    pending?.abort()
+    pending?.controller.abort()
     const controller = new AbortController()
-    pending = controller
+    const attempt = pending = { app, controller }
     status.textContent = ''
-    const report = () => {
-      if (!controller.signal.aborted) status.textContent = english() ? 'Could not open app' : '应用打开失败'
+    const open = async () => {
+      try {
+        await bridge.open(app, controller.signal, 'side')
+      } catch (error) {
+        const cancelled = typeof error === 'object' && error !== null && 'name' in error && error.name === 'AbortError'
+        if (pending === attempt && !controller.signal.aborted && !cancelled) {
+          status.textContent = english() ? 'Could not open app' : '应用打开失败'
+        }
+      } finally {
+        if (pending === attempt) pending = undefined
+      }
     }
-    try { void Promise.resolve(bridge.open(app, controller.signal, 'side')).catch(report) } catch { report() }
+    void open()
   }
   function onKey(event: KeyboardEvent) {
     if (event.key === 'Escape' && !menu && doc.querySelector('.st-menu[data-sidebar-more]')) return
@@ -502,6 +512,9 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
   win.addEventListener('click', onClick, options)
   win.addEventListener('keydown', onKey, options)
   win.addEventListener('dragstart', onDragStart, options)
+  const clearOpenStatus = () => { status.textContent = '' }
+  doc.addEventListener('sherlock:sidebar-home-opened', clearOpenStatus, { signal: lifetime.signal })
+  doc.addEventListener('sherlock:workspace-surface-change', clearOpenStatus, { signal: lifetime.signal })
   const observer = new win.MutationObserver(sync)
   observer.observe(doc.documentElement, {
     subtree: true, childList: true, attributes: true,
@@ -528,7 +541,9 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       if (index !== undefined) update(replaceNavigationShortcut(value, 'side', index, app))
     },
     reload() {
-      pending?.abort()
+      pending?.controller.abort()
+      pending = undefined
+      clearOpenStatus()
       stopPointer()
       closeMenu()
       setEditing(false)
@@ -542,7 +557,8 @@ export function mountNavigationShortcuts(doc: Document, bridge: Bridge) {
       observer.disconnect()
       resize?.disconnect()
       hideTooltip()
-      pending?.abort()
+      pending?.controller.abort()
+      pending = undefined
       stopPointer()
       closeMenu()
       setEditing(false)
