@@ -1,4 +1,4 @@
-/** Invisible insets extend macOS's narrow native resize border without covering content. */
+/** Forward the macOS window's resize borders and the home header's blank drag area. */
 export function mountWindowResize(doc: Document, send: (edge: string | null) => void): () => void {
   const win = doc.defaultView
   if (!win) return () => {}
@@ -11,21 +11,40 @@ export function mountWindowResize(doc: Document, send: (edge: string | null) => 
   shadow.append(style)
   let active = false
   const stop = () => { if (active) { active = false; send(null) } }
+  const start = (target: HTMLElement, operation: string, event: PointerEvent) => {
+    if (active || !event.isTrusted || event.button !== 0) return
+    event.preventDefault()
+    event.stopPropagation()
+    active = true
+    target.setPointerCapture(event.pointerId)
+    target.addEventListener('lostpointercapture', stop, { once: true })
+    send(operation)
+  }
   for (const edge of ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']) {
     const handle = doc.createElement('div')
     handle.dataset.edge = edge
-    handle.addEventListener('pointerdown', event => {
-      if (!event.isTrusted || event.button !== 0) return
-      event.preventDefault(); event.stopPropagation()
-      active = true; handle.setPointerCapture(event.pointerId); send(edge)
-    })
-    handle.addEventListener('lostpointercapture', stop)
+    handle.addEventListener('pointerdown', event => start(handle, edge, event))
     shadow.append(handle)
   }
   win.addEventListener('pointerup', stop, true)
   win.addEventListener('pointercancel', stop, true)
   win.addEventListener('blur', stop)
+  const move = (event: PointerEvent) => {
+    const target = event.target instanceof win.Element ? event.target.closest<HTMLElement>('[data-odyssey-window-move]') : undefined
+    if (!target || win.getComputedStyle(target).getPropertyValue('--odyssey-popup-window-drag').trim() === 'no-drag') return
+    start(target, 'move', event)
+  }
+  doc.documentElement.setAttribute('data-odyssey-native-window-move', '')
+  doc.addEventListener('pointerdown', move)
   // The application can replace body children during its initial React mount.
   doc.documentElement.append(host)
-  return () => { stop(); host.remove(); win.removeEventListener('pointerup', stop, true); win.removeEventListener('pointercancel', stop, true); win.removeEventListener('blur', stop) }
+  return () => {
+    stop()
+    host.remove()
+    doc.documentElement.removeAttribute('data-odyssey-native-window-move')
+    doc.removeEventListener('pointerdown', move)
+    win.removeEventListener('pointerup', stop, true)
+    win.removeEventListener('pointercancel', stop, true)
+    win.removeEventListener('blur', stop)
+  }
 }

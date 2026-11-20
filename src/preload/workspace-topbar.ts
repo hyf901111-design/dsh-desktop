@@ -73,6 +73,8 @@ body{
 }
 .workspace-home-topbar .eb-workspace-controls,.workspace-home-topbar .eb-workspace-tabs{-webkit-app-region:var(--odyssey-popup-window-drag,drag)}
 .workspace-home-topbar .eb-workspace-controls button{-webkit-app-region:no-drag}
+.workspace-home-topbar [data-odyssey-window-move]{flex:1 0 0;align-self:stretch;min-width:0}
+html[data-odyssey-native-window-move] [data-odyssey-window-move]{-webkit-app-region:no-drag;touch-action:none}
 .workspace-home-topbar .workspace-app-title{flex:0 1 auto;min-width:24px}
 .workspace-home-topbar .workspace-app-title>span{overflow:hidden;text-overflow:ellipsis}
 .workspace-home-topbar .workspace-app-title>i{mask-image:${chatTitleIcon}}
@@ -153,6 +155,7 @@ ${workspaceDotSelectors}{content:"";position:absolute;inset:4px 3px auto auto;wi
 html[data-workspace-tabs-switching] :is(.eb-workspace-tabs,.eb-workspace-toggle>i){transition:none}
 body .eb-workspace-edit{display:grid;place-items:center;flex:none;width:28px;height:28px;padding:0!important;-webkit-app-region:no-drag}
 .eb-workspace-edit>i{width:16px;height:16px;background:currentColor;mask:url('${workspaceSettingsIcon.replaceAll("'", '%27')}') center/contain no-repeat}
+body:has(>.workspace-view-settings[open]){--odyssey-popup-window-drag:no-drag}
 body:has(>.workspace-view-settings[open]) :is(.wSkVaW_header,.wSkVaW_titleRow,.workspace-app-topbar,.workspace-app-title,.workspace-app-title *){
   -webkit-app-region:no-drag;
 }
