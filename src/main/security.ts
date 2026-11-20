@@ -109,7 +109,13 @@ export function secureWindow(
       )
   )
   window.webContents.session.setPermissionRequestHandler(
-    (_webContents, permission, callback, details) => {
+    (requester, permission, callback, details) => {
+      if (permission === 'fullscreen' && requester === window.webContents && !details.isMainFrame &&
+          isPresentationEditorUrl(details.requestingUrl, requester.mainFrame.url) &&
+          requester.mainFrame.frames.some(frame => frame.url === details.requestingUrl)) {
+        callback(true)
+        return
+      }
       callback(
         canGrantWindowPermission(permission, details.requestingUrl, details.isMainFrame)
       )

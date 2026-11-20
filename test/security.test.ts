@@ -170,6 +170,21 @@ describe('main-window navigation security', () => {
     }
   })
 
+  it('grants fullscreen to the packaged presentation editor in the active main window', () => {
+    const {webContents, mainFrame} = secureWindowFixture()
+    const handler = webContents.session.setPermissionRequestHandler.mock.calls[0]![0]
+    const url = 'odyssey-presentation://editor/index.html?host=' + encodeURIComponent(new URL(mainFrame.url).origin)
+    Object.assign(mainFrame, {frames:[{url}]})
+    for (const [requester, requestingUrl, isMainFrame, allowed] of [
+      [webContents,url,false,true], [null,url,false,false], [webContents,url,true,false],
+      [webContents,'https://example.com',false,false]
+    ] as const) {
+      const callback = vi.fn()
+      handler(requester, 'fullscreen', callback, {requestingUrl,isMainFrame})
+      expect(callback).toHaveBeenCalledWith(allowed)
+    }
+  })
+
   it('does not turn sidebar preview admission into access to other local origins, routes or generated documents', () => {
     const { listeners, mainFrame } = secureWindowFixture()
     for (const url of [
