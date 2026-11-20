@@ -208,7 +208,7 @@ export function patchCalendarToolClient(source){
  if(!collaborationCanWrite())return null;const id=createResearchCanvasArtifactId(),point=researchCanvasViewportPlacement(snapshot,'generated-container',0);if(!point)return null;
  const spec={version:1,type:'calendar-tool',title:'日历'},node=canonicalResearchCanvasArtifactNode({id,messageId:id,kind:'generated-container',title:spec.title,excerpt:spec.title,containerPrompt:sherlockShared(sessionId)?'协作看板日历':'个人日历工具',containerSpec:spec,generationStatus:'completed',generationLastSeq:0,refreshMinutes:0,sizeMode:'manual',...point,width:Math.min(620,Math.max(240,(snapshot.canvasSize.availableWidth||1000)-24)),height:420});if(!node)return null;commitUpdate({artifacts:boundedResearchCanvasArtifactNodes([...snapshot.artifacts,node]),selection:{selectedNodeIds:[id],orderedFileIds:[]}},true);return snapshot.artifacts.find(n=>n.id===id);
  },\ncreateFinancialWidget(widget){`)
- const adapterPattern=/sherlockBoardsAdapter = sherlockBoardsPage\.createResearchBoardsPage\(\{sessions,workspaces,researchWorkspaces,inputHub,(?:chatStore,(?:researchSidebar,)?getInput:[\s\S]*?,)?slots,bridge:window\.dshDesktop\.researchBoards\}\);/g
+ const adapterPattern=/sherlockBoardsAdapter = sherlockBoardsPage\.createResearchBoardsPage\(\{sessions,workspaces,researchWorkspaces,inputHub,[^\r\n]*?slots,bridge:window\.dshDesktop\.researchBoards\}\);/g
  const adapters=source.match(adapterPattern)??[]
  if(adapters.length!==1)throw Error('Calendar adapter anchor missing or ambiguous')
  const adapter=adapters[0]
