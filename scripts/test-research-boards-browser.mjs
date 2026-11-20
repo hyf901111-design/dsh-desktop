@@ -753,6 +753,13 @@ if (process.argv.includes('--serve')) {
         ['组织架构', 'organization', '登记清算岗', 2, 'organization'],
         ['易招聘', 'offer', '44.4%', 4, 'hiring']
       ]
+      const tree = content('organization').locator('[data-organization-layout="horizontal"]')
+      const treeViewport = content('organization').locator('.manager-tree-viewport')
+      const treeSize = () => tree.evaluate(element => {
+        const { width, height } = element.getBoundingClientRect()
+        return { width, height }
+      })
+      let wideTree
       for (const [tab, card, value, count, screenshot] of tabs) {
         const target = canvas.getByRole('tab', { name: tab, exact: true })
         await target.click()
@@ -760,6 +767,7 @@ if (process.argv.includes('--serve')) {
         const panel = card === 'organization'
           ? content(card).locator('[data-organization-layout="horizontal"]') : content(card)
         await panel.getByText(value, { exact: true }).waitFor()
+        if (card === 'organization') wideTree = await treeSize()
         if (card === 'people') {
           assert.equal(await content('residences').locator('.manager-province').count(), 34)
           assert.equal(await content('residences').locator('.manager-province-reported').count(), 5)
@@ -797,11 +805,15 @@ if (process.argv.includes('--serve')) {
       ]) {
         await canvas.getByRole('tab', { name: tab, exact: true }).click()
         if (tab === '组织架构') {
-          const compact = content('organization').locator('[data-organization-layout="compact"]')
-          await compact.waitFor()
-          assert.equal(await compact.locator('.manager-org-roles li').count(), 9)
-          assert.equal(await compact.getByRole('region', { name: '研发部', exact: true }).locator('.manager-org-roles li').count(), 2)
-          assert.equal(await content('organization').locator('[data-organization-layout="horizontal"]').isVisible(), false)
+          await tree.waitFor()
+          assert.equal(await tree.locator('.manager-tree-label').count(), 4)
+          assert.equal(await tree.locator('.manager-role').count(), 9)
+          assert.equal(await tree.locator('.manager-tree-link').count(), 1)
+          const fitted = await treeSize()
+          assert.ok(fitted.width < wideTree.width, 'default window scales the same tree')
+          assert.ok(Math.abs(fitted.width / fitted.height - wideTree.width / wideTree.height) < .02)
+          const fitWidths = await treeViewport.evaluate(element => ({ scroll: element.scrollWidth, available: element.clientWidth }))
+          assert.ok(fitWidths.scroll <= fitWidths.available + 1, JSON.stringify(fitWidths))
         }
         for (const node of nodes) {
           await until(async () => {
@@ -818,10 +830,23 @@ if (process.argv.includes('--serve')) {
       }
       await page.setViewportSize({ width: 1024, height: 900 })
       await canvas.getByRole('tab', { name: '组织架构', exact: true }).click()
-      await until(async () => await content('organization').locator('.manager-org-branches').evaluate(
-        element => getComputedStyle(element).gridTemplateColumns.trim().split(/\s+/).length === 1
-      ), 'single-column organizational chart')
-      console.log('MANAGER_WORKBENCH_PASSED personal-board/native-cards/four-tabs/four-themes/reload/map/adaptive-organization')
+      await tree.waitFor()
+      await until(async () => await treeViewport.evaluate(element => element.scrollWidth > element.clientWidth + 1),
+        'a narrow chart scrolls inside the card')
+      await treeViewport.focus()
+      await page.keyboard.press('ArrowRight')
+      await until(async () => await treeViewport.evaluate(element => element.scrollLeft > 0), 'keyboard pans the same tree')
+      assert.equal(await tree.locator('.manager-role').count(), 9)
+
+      await page.setViewportSize({ width: 2000, height: 1120 })
+      await page.evaluate(id => {
+        const workspace = window.fixture.registry.for(id)
+        workspace.applyWorkbenchCells(workspace.getWorkbenchCells().map(cell =>
+          cell.id.endsWith(':organization') ? { ...cell, h: 8 } : cell), true)
+      }, managerId)
+      await until(async () => (await treeSize()).height < wideTree.height - 10, 'tree scales when only the card height is reduced')
+      assert.equal(await tree.locator('.manager-role').count(), 9)
+      console.log('MANAGER_WORKBENCH_PASSED personal-board/native-cards/four-tabs/four-themes/reload/map/tree-fit-scroll')
       break focusedFlow
     }
     if (process.argv.includes('--shared-queue-focus')) {

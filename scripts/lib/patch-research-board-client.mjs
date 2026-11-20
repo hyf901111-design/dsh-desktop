@@ -51,7 +51,7 @@ function replace(source, anchor, next, label = anchor.slice(0, 80)) {
 }
 async function pageModule() {
   const result = await build({
-    stdin: { contents: "export * from './src/preload/research-boards-ui.ts'; export { installSkillComposer,serializeSharedSkillDraft } from './src/preload/integrations/skill-composer.ts'; export {installSkillCommand} from './src/preload/integrations/skill-command.ts'; export {installHomeOperationsNavigation} from './src/preload/home-operations-navigation.ts';", resolveDir: root, loader: 'ts' },
+    stdin: { contents: "export * from './src/preload/research-boards-ui.ts'; export {upgradeManagerWorkbenchArtifacts} from './src/preload/manager-workbench/canvas.ts'; export { installSkillComposer,serializeSharedSkillDraft } from './src/preload/integrations/skill-composer.ts'; export {installSkillCommand} from './src/preload/integrations/skill-command.ts'; export {installHomeOperationsNavigation} from './src/preload/home-operations-navigation.ts';", resolveDir: root, loader: 'ts' },
     bundle: true,
     platform: 'browser',
     format: 'cjs',
@@ -548,6 +548,10 @@ export async function installResearchBoardClientPatches(cwd = process.cwd()) {
 }
 
 function polishPatch(source) {
+  const restoredArtifacts = 'const artifacts = loadResearchCanvasArtifacts(storage, sessionId);'
+  if (!source.includes('sherlockBoardsPage.upgradeManagerWorkbenchArtifacts(sessionId,'))
+    source = replace(source, restoredArtifacts,
+      'const artifacts = sherlockBoardsPage.upgradeManagerWorkbenchArtifacts(sessionId, loadResearchCanvasArtifacts(storage, sessionId));')
   source = patchIntegrationSkillComposer(source)
   source = patchSharedNativeConversation(sharedQueuePatch(source))
   if (!source.includes('applyDirectoryCanvas(canvas) {')) source = replace(source, 'setCollaborationAccess(edit) {', `                applyDirectoryCanvas(canvas) {

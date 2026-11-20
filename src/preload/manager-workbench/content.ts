@@ -37,6 +37,8 @@ const candidateRows = [
 ].map((row, index) => ['候选人 A0' + (index + 1), ...row])
 
 const snapshotSource = '高管驾驶舱 2.0'
+const issuedOffers = 27
+const offerOutcomes = [['接受', 5, 'manager-teal'], ['拒绝', 12, 'manager-rose']] as const
 const number = (value: number | string, unit = '') =>
   `<span class="manager-value"><strong>${value}</strong><span class="manager-unit">${unit}</span></span>`
 const caption = (text: string) => `<p class="manager-caption">${text}</p>`
@@ -75,13 +77,15 @@ function overview() {
 
 function residences() {
   const countsByProvince = new Map(locations.map(({ code, count }) => [code, count]))
+  const ranked = [...locations].sort((a, b) => b.count - a.count)
+  const largest = ranked[0]!.count
   return `<div class="manager-location">
     <figure class="manager-map" aria-label="全国常驻地分布地图">
       <svg viewBox="0 0 406 248" role="img" aria-label="全国省级行政区及五个常驻地">
         ${Object.entries(chinaProvinces).map(([code, path]) => {
           const count = countsByProvince.get(code)
           return `<path class="manager-province${count ? ' manager-province-reported' : ''}" d="${path}"
-            ${count ? `style="--province-strength:${Math.round(count / 109 * 64)}%"` : ''} />`
+            ${count ? `style="--province-strength:${Math.round(count / largest * 72)}%"` : ''} />`
         }).join('')}
         <g class="manager-map-inset"><rect x="337" y="166" width="59" height="76" rx="2"/>
           <path d="${southChinaSea}"/><text x="366.5" y="239" text-anchor="middle">南海诸岛</text></g>
@@ -91,14 +95,14 @@ function residences() {
           return `<g class="manager-place-marker">
             <title>${name} ${count} 人</title>
             <path d="M${x} ${y}L${labelX - side * 3} ${labelY - 4}"/>
-            <circle cx="${x}" cy="${y}" r="${(Math.sqrt(count) * .65).toFixed(1)}" class="manager-place-radius"/>
+            <circle cx="${x}" cy="${y}" r="${(Math.sqrt(count) * .61).toFixed(1)}" class="manager-place-radius"/>
             <circle cx="${x}" cy="${y}" r="3.2" class="manager-place-pin"/>
             <text x="${labelX}" y="${labelY}" text-anchor="${side === -1 ? 'end' : 'start'}">${label}</text></g>`
         }).join('')}
       </svg>
       <figcaption class="manager-map-legend"><span>底稿列出的常驻地</span><span>底稿未列出</span></figcaption>
     </figure>
-    <div class="manager-locations-data">${caption('常驻地人数 · 人')}${barList(locations.map(({ name, count }) => [name, count]), 109)}</div>
+    <div class="manager-locations-data">${caption('常驻地人数 · 人')}${barList(ranked.map(({ name, count }) => [name, count]), largest)}</div>
   </div>`
 }
 
@@ -153,12 +157,18 @@ function interviewChart(summary = false) {
   </figure>`
 }
 
-function offerOutcome(label: string, value: number, color: string) {
-  const share = value / 27 * 100
-  return `<div class="manager-tile">
-    <h3 class="manager-legend ${color}">${label}</h3>
-    <div class="manager-between">${number(value, '份')}<span class="manager-offer-rate ${color}" style="--share:${share}%"
-      aria-label="占已发 Offer ${share.toFixed(1)}%"><small>${share.toFixed(1)}%</small></span></div></div>`
+function offers() {
+  const reported = offerOutcomes.reduce((sum, [, count]) => sum + count, 0)
+  return `<div class="manager-offer">${hero('已发 Offer', issuedOffers, '份')}
+    ${section('反馈占已发 Offer')}
+    <div class="manager-offer-distribution" aria-hidden="true">${offerOutcomes.map(([, count, color]) =>
+      `<span class="${color}" style="width:${count / issuedOffers * 100}%"></span>`).join('')}</div>
+    <div class="manager-two">${offerOutcomes.map(([label, count, color]) => `<div class="manager-tile">
+      <h3 class="manager-legend ${color}">${label}</h3>
+      <div class="manager-between">${number(count, '份')}<small>${(count / issuedOffers * 100).toFixed(1)}%</small></div>
+    </div>`).join('')}</div>
+    <div class="manager-offer-unlisted"><span class="manager-legend">底稿未列出反馈</span><small>${issuedOffers - reported} 份</small></div>
+  </div>`
 }
 
 function organization() {
@@ -191,34 +201,19 @@ function organization() {
         connectors.add(`M${start} ${from}V${elbow}`)
         connectors.add(`M${start} ${elbow}H${node.x}V${y}`)
       }
-      return `<g ${i <= 1 ? `data-sherlock-structure="${i === 0 ? 'primary' : 'node'}"` : ''} class="${['manager-root', 'manager-department'][i] ?? ''}">
+      return `<g ${i <= 1 ? `data-sherlock-structure="${i === 0 ? 'primary' : 'node'}"` : ''} class="${['manager-root', 'manager-department', 'manager-project', 'manager-role'][i]}">
         <rect x="${node.x - w / 2}" y="${y}" width="${w}" height="${h}"/>
-        <text x="${node.x}" y="${y + (i === 0 ? 19 : h / 2 + 4)}" text-anchor="middle">${node.label}</text>
+        <text x="${node.x}" y="${y + (i === 0 ? 18 : h / 2 + 6)}" text-anchor="middle">${node.label}</text>
         ${i === 0 && index === 0 ? `<text class="manager-tree-subtitle" x="${node.x}" y="${y + 36}" text-anchor="middle">总经理</text>` : ''}</g>`
     }).join('')
-    return `<text class="manager-tree-label" x="0" y="${y + h / 2 + 4}">${title}</text>${rectangles}`
+    return `<text class="manager-tree-label" x="0" y="${y + h / 2 + 6}">${title}</text>${rectangles}`
   })
-  const roles = layers[3]!.nodes
-  const groups = layers[2]!.nodes
-  const roleList = (people: typeof roles) =>
-    `<ul class="manager-org-roles">${people.map(role => `<li>${role.label}</li>`).join('')}</ul>`
-  const departments = layers[1]!.nodes.map((dept, index) => {
-    const direct = roles.filter(role => 'direct' in role && role.parent === index)
-    return `<section class="manager-org-branch" aria-label="${dept.label}">
-      <h3 data-sherlock-structure="node">${dept.label}</h3>
-      ${groups.map((group, groupIndex) => group.parent === index
-        ? `<div class="manager-org-subgroup"><h4>${group.label}</h4>${roleList(roles.filter(role => !('direct' in role) && role.parent === groupIndex))}</div>`
-        : '').join('')}
-      ${direct.length ? `<div class="manager-org-subgroup"><h4>直属岗位</h4>${roleList(direct)}</div>` : ''}
-    </section>`
-  }).join('')
   return `${caption('投资顾问板块')}
-    <svg viewBox="0 0 1304 285" role="img" aria-label="投资顾问板块四级组织架构" data-organization-layout="horizontal">
-      <path data-sherlock-structure="connector" class="manager-tree-link" d="${[...connectors].join(' ')}"/>
-      ${rows.join('')}</svg>
-    <div class="manager-org-compact" aria-label="投资顾问板块组织架构" data-organization-layout="compact">
-      <div class="manager-org-root" data-sherlock-structure="primary"><strong>${layers[0]!.nodes[0]!.label}</strong><small>总经理</small></div>
-      <div class="manager-org-branches">${departments}</div>
+    <div class="manager-tree-viewport" role="region" aria-label="组织架构图" tabindex="0">
+      <svg viewBox="0 0 1304 274" role="img" aria-label="投资顾问板块四级组织架构" data-organization-layout="horizontal" data-sherlock-structure-fit>
+        <path data-sherlock-structure="connector" class="manager-tree-link" d="${[...connectors].join(' ')}"/>
+        ${rows.join('')}
+      </svg>
     </div>`
 }
 
@@ -229,7 +224,7 @@ export const managerPanels = {
   changes: { body: peopleChanges() },
   interviewSummary: {
     body: `<div class="manager-interview-summary">${interviewChart(true)}<div class="manager-mini-offers">${caption('Offer 情况')}<dl>
-      ${([['已发', 27], ['接受', 5], ['拒绝', 12]] as const).map(([label, value]) => `<div class="manager-between"><dt>${label}</dt><dd>${number(value, '份')}</dd></div>`).join('')}
+      ${([['已发', issuedOffers], ...offerOutcomes] as const).map(([label, value, color]) => `<div class="manager-between"><dt class="manager-legend ${color ?? ''}">${label}</dt><dd>${number(value, '份')}</dd></div>`).join('')}
       </dl></div></div>`,
     note: '面试进度与 Offer 反馈分别统计'
   },
@@ -248,7 +243,7 @@ export const managerPanels = {
   departments: {
     body: `<div class="manager-departments"><div class="manager-between">${caption('底稿列出的部门')}<small>统一刻度 0–400 人</small></div>
       <div class="manager-three">${departments.map(([name, count]) => `<div class="manager-tile">
-        <div class="manager-between"><h3>${name}</h3>${number(count, '人')}</div>${track(count / 400 * 100, '', true)}</div>`).join('')}</div></div>`,
+        <h3>${name}</h3>${number(count, '人')}${track(count / 400 * 100, '', true)}</div>`).join('')}</div></div>`,
     note: '各部门按底稿统计范围展示'
   },
   interview: {
@@ -257,8 +252,7 @@ export const managerPanels = {
         `<div class="manager-tile manager-between"><h3>${label}</h3>${number(count, '份')}</div>`).join('')}</div></div></div>${interviewChart()}`,
     note: '简历总量与各阶段按底稿分别展示'
   },
-  offer: { body: `<div class="manager-offer">${hero('已发 Offer', 27, '份')}
-    ${section('反馈占已发 Offer')}<div class="manager-two">${offerOutcome('接受', 5, 'manager-teal')}${offerOutcome('拒绝', 12, 'manager-rose')}</div></div>` },
+  offer: { body: offers() },
   candidates: {
     body: caption('招聘进度  ·  样例记录') + table(['候选人', '招聘岗位', '部门', '当前阶段'], candidateRows),
     note: '候选人编号和岗位为设计样例'
@@ -273,5 +267,5 @@ export function managerPanelHtml(panel: keyof typeof managerPanels, minimumHeigh
     source, note, ...(map ? { sources: [{ label: 'DataV GeoAtlas', url: 'https://help.aliyun.com/zh/datav/datav-7-0/user-guide/datav-geoatlas-widgets/' }] } : {})
   } })
   return `<body data-readable-snapshot><style>${managerPanelCss}</style><script id="sherlock-template-data" type="application/json">${metadata}</script>
-    <article class="manager-panel" data-workbench-content-fit style="min-height:${minimumHeight}px"><div class="manager-body ${className}">${body}</div></article></body>`
+    <article class="manager-panel" data-workbench-content-fit style="min-height:${panel === 'organization' ? 0 : minimumHeight}px"><div class="manager-body ${className}">${body}</div></article></body>`
 }
