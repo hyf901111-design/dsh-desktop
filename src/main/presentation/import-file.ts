@@ -5,6 +5,8 @@ import { extname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { promisify } from 'node:util'
 
+import { validOfficePackage } from '../state/research-file-preview'
+
 const limit = 64 * 1024 * 1024
 const run = promisify(execFile)
 
@@ -35,4 +37,13 @@ export async function presentationFileBytes(name: string, size: number, source: 
     if ((await stat(output)).size > limit) throw Error('转换后的演示文件超过 64 MB。')
     return await readFile(output)
   } finally { await rm(dir, { recursive: true, force: true }) }
+}
+
+export async function readDroppedPresentation(document: { name: string; size: number }, label: unknown, source: Uint8Array | string) {
+  const { name, size } = document
+  if (name !== label || !/\.pptx$/iu.test(name))
+    throw Error('文件已变化，或不是 .pptx 格式。请从知识库重新拖入。')
+  const bytes = await presentationFileBytes(name, size, source)
+  if (!validOfficePackage(bytes, 'pptx')) throw Error('无法读取此 PowerPoint 文件，请检查是否损坏或已加密。')
+  return { bytes, name }
 }

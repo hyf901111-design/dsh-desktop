@@ -1053,7 +1053,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     if (raw) {
       const value = JSON.parse(raw)
       if (value?.version !== 1 || value.scope !== owner || !Array.isArray(value.entries)) throw Error('示例记录暂时无法读取。')
-      entries = value.entries.filter((entry: GuideSession) => entry && ['board', 'note', 'ppt', 'report', 'workbench', 'spreadsheet'].includes(entry.kind) && typeof entry.sessionId === 'string' && typeof entry.cwd === 'string' && typeof entry.title === 'string' && Number.isFinite(entry.createdAt))
+      entries = value.entries.filter((entry: GuideSession) => entry && ['board', 'note', 'ppt', 'report', 'workbench', 'spreadsheet', 'presentation-edit'].includes(entry.kind) && typeof entry.sessionId === 'string' && typeof entry.cwd === 'string' && typeof entry.title === 'string' && Number.isFinite(entry.createdAt))
     }
     guideRecords.set(owner, entries)
     return entries
@@ -1196,7 +1196,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         if (previous) { await ensureGuideWorkspace(previous, valid); return previous }
         const sourceSession = current()
         let sourceModel: ComposerModelSnapshot | undefined
-        if (kind === 'ppt' || kind === 'report') {
+        if (kind === 'ppt' || kind === 'report' || kind === 'presentation-edit') {
           sourceModel = (sourceSession ? readGuideModel(sourceSession) : undefined) ?? deps.composerModel?.(sourceSession)
           if (sourceSession && !sourceModel?.current) sourceModel = deps.composerModel?.()
         }
@@ -1207,7 +1207,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         const binding = deps.sessions.binding(sessionId)
         if (!binding?.session?.rename) throw Error('示例会话尚未就绪，请稍后重试。')
         const original=binding.session.projections?.faceOf?.('title')?.getSnapshot?.()??deps.sessions.list.getSnapshot().byId[sessionId]?.title??''
-        const placeholder=doc.documentElement.dataset.odysseyLocale==='en'?{board:'New Research',workbench:'New Research',note:'New Note',ppt:'New Session',report:'New Session',spreadsheet:'New Spreadsheet'}[kind]:{board:'新研究',workbench:'新研究',note:'新笔记',ppt:'新会话',report:'新会话',spreadsheet:'新表格'}[kind]
+        const placeholder=doc.documentElement.dataset.odysseyLocale==='en'?{board:'New Research',workbench:'New Research',note:'New Note',ppt:'New Session',report:'New Session',spreadsheet:'New Spreadsheet','presentation-edit':'New Presentation'}[kind]:{board:'新研究',workbench:'新研究',note:'新笔记',ppt:'新会话',report:'新会话',spreadsheet:'新表格','presentation-edit':'新演示'}[kind]
         // Native summaries otherwise fall back to the reserved directory name
         // as soon as composing begins. Keep the normal empty-session label.
         if(!original.trim()){
@@ -1261,7 +1261,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const stale = value.ok === true && record && (record.owner !== guideOwner() || record.generation !== state.account.generation || record.revision !== guideIdentityRevision)
       win.dispatchEvent(new win.CustomEvent('sherlock:home-guide-session-reply', { detail: { requestId, ...(stale ? { ok: false, message: '账号或页面已变化，请重新打开示例。' } : value) } }))
     }
-    if (!['board','note','ppt','report','workbench','spreadsheet'].includes(kind) || !['prepare','open','activate-title'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command !== 'prepare' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
+    if (!['board','note','ppt','report','workbench','spreadsheet','presentation-edit'].includes(kind) || !['prepare','open','activate-title'].includes(command) || Object.keys(request).some(key => !['requestId','kind','command','replay','sessionId'].includes(key)) || request.replay !== undefined && typeof request.replay !== 'boolean' || command !== 'prepare' && (typeof request.sessionId !== 'string' || !request.sessionId)) { reply({ ok: false, message: '示例请求无效，请重新打开。' }); return }
     const fingerprint = JSON.stringify([kind, command, request.replay === true, request.sessionId])
     const prior = guideRequests.get(requestId)
     if (prior) { if (prior.fingerprint !== fingerprint) reply({ ok: false, message: '示例请求标识已使用。' }); else void prior.promise.then(value => reply(value, prior)); return }

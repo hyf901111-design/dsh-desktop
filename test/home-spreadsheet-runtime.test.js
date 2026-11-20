@@ -12,6 +12,7 @@ import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
 import { createHomeSpreadsheetRuntime } from '../packages/dsh-research-task-runtime/home-spreadsheet-runtime.js'
+import { createPresentationEditGuideChat } from '../packages/dsh-research-task-runtime/presentation-edit-guide-chat.js'
 import { HOME_SPREADSHEET_GUIDE_PROMPTS } from '../packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js'
 
 const cleanups = []
@@ -19,7 +20,7 @@ afterEach(async () => {
   for (const cleanup of cleanups.splice(0).reverse()) await cleanup()
 })
 
-async function fixture(title = '利润涨了，现金去哪了？（演示案例）') {
+async function fixture(title = '利润涨了，现金去哪了？（演示案例）', create = createHomeSpreadsheetRuntime) {
   const directory = await mkdtemp(join(tmpdir(), 'odyssey-sheet-replay-'))
   const cwd = join(directory, 'sheet')
   await mkdir(cwd)
@@ -45,7 +46,7 @@ async function fixture(title = '利润涨了，现金去哪了？（演示案例
   }
   ctx.llm.registerAdapter(['outside'], new Outside())
   const { agent } = await ctx.agents.create({ sessionId: 'demo', meta: { cwd }, agentOptions: { provider: 'outside', model: 'normal', maxTokens: 512 } })
-  const runtime = createHomeSpreadsheetRuntime(ctx, { env: { DSH_HOME: directory } })
+  const runtime = create(ctx, { env: { DSH_HOME: directory } })
   cleanups.push(async () => {
     await runtime.dispose()
     await ctx.fiber.dispose()
@@ -125,4 +126,53 @@ it('blocks an in-flight native demo send after disposal and releases ordinary fo
   f.submit('打开我的另一个工作簿。')
   await f.agent.whenIdle()
   expect(f.outside).toHaveLength(1)
+})
+
+it('saves all three presentation turns in the native session with their original references and model', async () => {
+  const f = await fixture('把研究简报讲给投资委员会（演示案例）', createPresentationEditGuideChat)
+  await f.runtime.prepare(f.input)
+  const rows = [
+    ['notes', '请准备演讲稿。', undefined, '逐页备注已保存。'],
+    ['chart', '按批注重排图表。', '第 10 页 · 批注', '两根数据柱已突出。'],
+    ['title', '修改所选标题。', '第 13 页 · 标题', '标题已更新。']
+  ]
+  for (const [stage, prompt, referenceLabel, reply] of rows) {
+    await f.runtime.arm({ ...f.input, prompt, referenceLabel })
+    f.submit(referenceLabel ? '〔演示引用 ' + JSON.stringify(referenceLabel) + ' #123456abcdef〕' + prompt : prompt)
+    await f.runtime.accepted(f.input)
+    expect(JSON.stringify(f.agent.session.events)).not.toContain(reply)
+    await f.runtime.advance({ ...f.input, stage, reply })
+    await f.runtime.flush(f.input)
+  }
+  const history = JSON.stringify(await f.ctx.sessionPersistence.inspect('demo'))
+  for (const [,prompt,label,reply] of rows) {
+    expect(history).toContain(prompt)
+    if (label) expect(history).toContain(label)
+    expect(history).toContain(reply)
+  }
+  expect(f.agent.session.events.filter(event => event.type === 'user/message')).toHaveLength(3)
+  expect(f.agent.session.events.filter(event => event.type === 'assistant/message')).toHaveLength(3)
+  expect(f.outside).toEqual([])
+  expect(f.agent.session.requestHeader().config.provider).toBe('outside')
+  await f.runtime.disposeRun(f.input)
+  f.submit('继续编辑这份简报。')
+  await f.agent.whenIdle()
+  expect(f.outside).toHaveLength(1)
+})
+
+it('refuses a different chart selection and never sends a cancelled presentation demo to the original model', async () => {
+  const f = await fixture('把研究简报讲给投资委员会（演示案例）', createPresentationEditGuideChat)
+  await f.runtime.prepare(f.input)
+  await f.runtime.arm({ ...f.input, prompt: '准备备注' })
+  f.submit('准备备注')
+  await f.runtime.accepted(f.input)
+  await f.runtime.advance({ ...f.input, stage: 'notes', reply: '备注已保存。' })
+  await f.runtime.flush(f.input)
+  await expect(f.runtime.arm({ ...f.input, prompt: '改图' })).rejects.toThrow('选区')
+  await f.runtime.arm({ ...f.input, prompt: '改图', referenceLabel: '第 10 页 · 批注' })
+  const failed = expect(f.runtime.accepted(f.input)).rejects.toThrow('示例需求')
+  f.submit('〔演示引用 "第 12 页 · 批注" #123456abcdef〕改图')
+  await failed
+  await f.runtime.disposeRun(f.input)
+  expect(f.outside).toHaveLength(0)
 })

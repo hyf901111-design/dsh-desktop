@@ -200,11 +200,11 @@ it.each([true,false])('matches the R7 glass account menu and copies the actual p
 it('keeps the public ID after clipboard failure without adding a feedback row',async()=>{
  const f=await fixture();try{await open(f.page);await f.page.getByRole('button',{name:'研究员，打开账户菜单',exact:true}).click();const menu=f.page.getByRole('menu');await uiExpect(menu.getByRole('menuitem',{name:'复制用户 ID',exact:true})).toBeEnabled();await f.page.evaluate(()=>(window as any).copyFailure=true);await menu.getByRole('menuitem',{name:'复制用户 ID',exact:true}).click();await uiExpect(menu).toContainText('用户 ID：1234567890');await uiExpect(menu.getByRole('menuitem',{name:'复制用户 ID',exact:true})).toHaveAttribute('title','复制失败，请重试');await uiExpect(menu).toContainText('复制失败，请重试');expect((await menu.boundingBox()).height).toBe(88);await uiExpect(menu).toContainText('用户 ID：1234567890',{timeout:2500});await f.page.getByRole('button',{name:'关闭探索',exact:true}).click();await uiExpect(menu).not.toBeVisible();expect(await f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.action==='logout'))).toEqual([]);expect(f.errors).toEqual([])}finally{await f.close()}
 },15000)
-it('hands quick actions and all six example selections to the existing action adapters after dismissing the menu',async()=>{
+it('hands quick actions and all seven example selections to the existing action adapters after dismissing the menu',async()=>{
  const f=await fixture();try{for(const card of ['board','note','ppt','report']){await open(f.page);await f.page.locator('[data-explore-card="'+card+'"]').click();await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible();if(card==='board'||card==='note')await uiExpect(f.page.locator('[data-conversation-view-id="'+(card==='board'?'research':'notes')+'"]').first()).toHaveAttribute('aria-selected','true')}
   expect((await f.page.evaluate(()=>(window as any).calls)).filter((row:any)=>row.skill).map((row:any)=>row.skill)).toEqual(['builtin:efund-ppt-maker','builtin:ework-equity-research'])
-  for(let index=0;index<6;index++){await open(f.page);await f.page.locator('.odyssey-explore-pages button').nth(index).click();await f.page.locator('.odyssey-explore-example').click();await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.example).length)).toBe(index+1)}
-  expect((await f.page.evaluate(()=>(window as any).calls)).filter((row:any)=>row.example).map((row:any)=>row.example)).toEqual(['board','note','ppt','report','workbench','spreadsheet']);expect(f.errors).toEqual([])
+  for(let index=0;index<7;index++){await open(f.page);await f.page.locator('.odyssey-explore-pages button').nth(index).click();await f.page.locator('.odyssey-explore-example').click();await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.example).length)).toBe(index+1)}
+  expect((await f.page.evaluate(()=>(window as any).calls)).filter((row:any)=>row.example).map((row:any)=>row.example)).toEqual(['board','note','ppt','report','workbench','spreadsheet','presentation-edit']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
 it('cancels pending search opening when the menu closes and ignores late replies or a changed account owner',async()=>{
@@ -223,9 +223,9 @@ it('keeps only the latest rapid carousel selection and supports reduced-motion k
   await open(f.page);const pages=f.page.locator('.odyssey-explore-pages button')
   await pages.nth(1).click();await pages.nth(4).click();await pages.nth(2).click()
   await uiExpect(pages.nth(2)).toHaveAttribute('aria-current','true')
-  await pages.nth(2).press('End');await uiExpect(pages.nth(5)).toBeFocused();await uiExpect(pages.nth(5)).toHaveAttribute('aria-current','true')
+  await pages.nth(2).press('End');await uiExpect(pages.nth(6)).toBeFocused();await uiExpect(pages.nth(6)).toHaveAttribute('aria-current','true')
   expect(await f.page.locator('[data-odyssey-operations-case-layer]').count()).toBe(1)
-  await f.page.waitForTimeout(100);await uiExpect(pages.nth(5)).toHaveAttribute('aria-current','true');expect(f.errors).toEqual([])
+  await f.page.waitForTimeout(100);await uiExpect(pages.nth(6)).toHaveAttribute('aria-current','true');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
@@ -273,7 +273,7 @@ it.each([540,760,1380])('keeps the sixth card subtitle and both description line
  }finally{await f.close()}
 },15000)
 
-it('advances all six cases on the existing clock and pauses only while their card is being read',async()=>{
+it('advances all seven cases on the existing clock and pauses only while their card is being read',async()=>{
  const f=await fixture({reduced:false,clock:true});try{
   await open(f.page);await f.page.clock.pauseAt(new Date(await f.page.evaluate(()=>Date.now())+50))
   const pages=f.page.locator('.odyssey-explore-pages button');await f.page.mouse.move(10,10)
@@ -281,7 +281,7 @@ it('advances all six cases on the existing clock and pauses only while their car
   const card=await f.page.locator('.odyssey-explore-example').boundingBox();await f.page.mouse.move(card.x+30,card.y+30);await f.page.clock.fastForward(7000);await uiExpect(pages.nth(1)).toHaveAttribute('aria-current','true')
   await f.page.mouse.move(10,10);await f.page.clock.fastForward(6400);await uiExpect(pages.nth(2)).toHaveAttribute('aria-current','true')
   await f.page.getByRole('tab',{name:'主题壁纸',exact:true}).evaluate((node:HTMLButtonElement)=>node.click());await f.page.clock.fastForward(7000);await uiExpect(pages.nth(2)).toHaveAttribute('aria-current','true')
-  await f.page.getByRole('tab',{name:'快速开始',exact:true}).evaluate((node:HTMLButtonElement)=>node.click());await f.page.clock.fastForward(6400);await uiExpect(pages.nth(3)).toHaveAttribute('aria-current','true');await f.page.clock.fastForward(12000);await uiExpect(pages.nth(5)).toHaveAttribute('aria-current','true');expect(f.errors).toEqual([])
+  await f.page.getByRole('tab',{name:'快速开始',exact:true}).evaluate((node:HTMLButtonElement)=>node.click());await f.page.clock.fastForward(6400);await uiExpect(pages.nth(3)).toHaveAttribute('aria-current','true');await f.page.clock.fastForward(12000);await uiExpect(pages.nth(5)).toHaveAttribute('aria-current','true');await f.page.clock.fastForward(6000);await uiExpect(pages.nth(6)).toHaveAttribute('aria-current','true');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 

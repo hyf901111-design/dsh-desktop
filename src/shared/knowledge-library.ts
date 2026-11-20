@@ -57,7 +57,7 @@ export interface KnowledgeDocument {
   folderId?: string
   sessionId?: string
   sessionTitle?: string
-  generatedBy?: 'image-factory'
+  generatedBy?: 'image-factory' | 'presentation-guide'
   imageProject?: { canvasId: string; scope: import('./image-factory-canvas').CanvasScope }
   saved: boolean
   starred: boolean

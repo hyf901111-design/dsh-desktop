@@ -4,6 +4,7 @@ import { link, mkdir, open, readFile, realpath, rename, rm, stat } from 'node:fs
 import { basename, extname, isAbsolute, join } from 'node:path'
 import { canAutomaticallyCollect, knowledgeFormat, maxEditableKnowledgeBytes, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFolder, type KnowledgeImportProgress, type KnowledgeImportResult, type KnowledgeSnapshot } from '../../shared/knowledge-library'
 import { atomicWrite } from '../integrations/store'
+import { isHomeGuideSessionTitle } from '../../../packages/dsh-research-task-runtime/home-guide-session-titles.js'
 import type { KnowledgeSessionShare } from '../../shared/knowledge-sessions'
 import { maximumCanvasImageBytes, type CanvasRead, type StoredCanvas } from '../../shared/image-factory-canvas'
 import { copyResearchFile } from '../state/research-owned-files'
@@ -295,12 +296,14 @@ export class KnowledgeStore {
     return document
   }
 
-  ensurePresentationGuideSource(name: string, bytes: Buffer) {
+  ensurePresentationGuideSource(name: string, bytes: Buffer, companyDeck = false) {
     return this.run(async (state, directory, current) => {
       const hash = hashBytes(bytes)
       const origin = digest('bundled-presentation-guide:' + hash)
-      for (const row of state.documents) {
-        if (row.origin !== origin || row.name !== name) continue
+      const candidates = state.documents.filter(row => row.name === name && row.size === bytes.length)
+      const generated = companyDeck ? candidates.filter(row => row.source === 'generated' &&
+        row.sessionId && isHomeGuideSessionTitle('ppt', row.sessionTitle)).sort((a, b) => b.updatedAt - a.updatedAt) : []
+      for (const row of [...generated, ...candidates.filter(row => row.origin === origin)]) {
         const path = join(directory, 'files', row.id, row.storageName)
         if (await hashFile(path).catch(() => '') === hash) {
           current()
@@ -309,7 +312,7 @@ export class KnowledgeStore {
       }
       const id = randomUUID(), target = join(directory, 'files', id)
       const row: StoredDocument = {
-        id, name, storageName: name, origin, source: 'upload',
+        id, name, storageName: name, origin, source: 'upload', ...(companyDeck ? { generatedBy: 'presentation-guide' as const } : {}),
         saved: false, starred: false, size: bytes.length, updatedAt: Date.now()
       }
       current()

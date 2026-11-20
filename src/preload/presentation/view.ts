@@ -1,4 +1,6 @@
 import type { IpcRenderer } from 'electron'
+import { mountPresentationKnowledgeDrop } from './knowledge-drop'
+import { parsePresentationFile } from './import-file'
 import { presentationHeader } from './header'
 import styles from './view.css?raw'
 import icon from '../../../build/brand/odyssey-app-presentation.svg?raw'
@@ -18,6 +20,7 @@ type Editor = {
   locked: boolean
   editable: boolean
   queue: Promise<void>
+  disposeDrop?: () => void
   failure?: string
 }
 export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener'>) {
@@ -95,8 +98,10 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
   })
   const hydrate = (e: Editor, record: any, recent?: unknown) => {
     e.revision = record.revision
+    delete e.host.dataset.presentationDisplayedDocument
     e.documentId = record.deck?.id ?? null
     e.failure = undefined
+    e.host.dataset.presentationEmptyReady = String(e.ready && !e.documentId)
     paintHeader()
     post(e, 'load', { record, recent, dark: dark(), editable: e.editable && !e.locked, slideId: e.slideId })
   }
@@ -149,6 +154,9 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
   const reset = () => {
     if (current) {
       publishSelection(current)
+      current.disposeDrop?.()
+      delete current.host.dataset.presentationDisplayedDocument
+      delete current.host.dataset.presentationEmptyReady
       current.frame.remove()
     }
     current = undefined
@@ -184,6 +192,37 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     }
     doc.body.dataset.eworkPresentationSession = current.sessionId
     host.append(frame)
+    const e = current
+    e.disposeDrop = mountPresentationKnowledgeDrop(host, {
+      empty: () => current === e && e.ready && !e.documentId,
+      writable: () => e.editable && !e.locked && !switching,
+      status: message => post(e, 'status', { message }),
+      async importFile(file, signal) {
+        const revision = e.revision
+        const check = () => {
+          signal.throwIfAborted()
+          if (current !== e || !host.isConnected || e.revision !== revision || e.documentId)
+            throw Error('演示页签或文稿已变化，请重新拖入。')
+          if (!e.editable || e.locked || switching) throw Error('当前演示文稿只读。')
+        }
+        check()
+        frame.inert = true
+        try {
+          await flushEditor(e)
+          check()
+          const { bytes, name } = await ipc.invoke('knowledge:request', 'presentation-drop-file', file)
+          check()
+          const deck = await parsePresentationFile(doc, bytes, name, signal)
+          check()
+          const slideId = deck.slides[0]?.id
+          const saved = await request(e, 'save', { revision, deck, create: true, slideId })
+          if (current !== e || !host.isConnected) throw Error('演示页签已切换。')
+          e.slideId = slideId
+          hydrate(e, { revision: saved, deck })
+          markSaved(e)
+        } finally { frame.inert = false }
+      }
+    })
   }
   const dismissEditorMenus = () => {
     if (current?.ready) post(current, 'dismiss-menus')
@@ -221,6 +260,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       return
     }
     if (d.type === 'position') {
+      if (d.documentId === e.documentId && d.slideId) e.host.dataset.presentationDisplayedDocument = d.documentId
       e.slideId = d.slideId
       void request(e, 'position', { documentId: d.documentId, slideId: d.slideId }).catch(() => {})
       return
@@ -238,6 +278,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
             slideId: d.slideId
           })
           e.documentId = d.deck.id
+          e.host.dataset.presentationEmptyReady = 'false'
           paintHeader()
           markSaved(e)
           post(e, 'saved', { revision: e.revision })

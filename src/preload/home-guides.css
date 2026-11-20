@@ -2,11 +2,11 @@
 [data-ds-dark-theme] .odyssey-home-guide{background:#111214;color:#eceef2}
 .odyssey-home-guide[data-kind="note"]{background:var(--odyssey-workspace,#f2f2f2);border-radius:0 0 16px 16px}
 [data-ds-dark-theme] .odyssey-home-guide[data-kind="note"]{background:var(--odyssey-workspace,#1f1f1f)}
-.odyssey-home-guide:is([data-kind="ppt"],[data-kind="report"],[data-kind="workbench"],[data-kind="spreadsheet"]){background:transparent;pointer-events:none}
+.odyssey-home-guide:is([data-kind="ppt"],[data-kind="report"],[data-kind="workbench"],[data-kind="spreadsheet"],[data-kind="presentation-edit"]){background:transparent;pointer-events:none}
 .odyssey-home-guide-content{position:absolute;inset:0;min-width:0;min-height:0;overflow:hidden;isolation:isolate}
 .odyssey-home-guide-content.en-root{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;min-height:0!important;overflow:hidden!important;background:transparent!important;box-sizing:border-box!important}
-.odyssey-home-guide:is([data-kind="ppt"],[data-kind="report"],[data-kind="workbench"],[data-kind="spreadsheet"]) .odyssey-home-guide-content{pointer-events:none}
-.odyssey-home-guide:is([data-kind="ppt"],[data-kind="report"],[data-kind="workbench"],[data-kind="spreadsheet"]) .odyssey-home-guide-content>*{pointer-events:auto}
+.odyssey-home-guide:is([data-kind="ppt"],[data-kind="report"],[data-kind="workbench"],[data-kind="spreadsheet"],[data-kind="presentation-edit"]) .odyssey-home-guide-content{pointer-events:none}
+.odyssey-home-guide:is([data-kind="ppt"],[data-kind="report"],[data-kind="workbench"],[data-kind="spreadsheet"],[data-kind="presentation-edit"]) .odyssey-home-guide-content>*{pointer-events:auto}
 .odyssey-home-guide-fault{position:absolute;right:14px;top:10px;z-index:60;display:flex;align-items:flex-start;gap:10px;max-width:min(360px,calc(100% - 28px));box-sizing:border-box;padding:10px 12px;border-radius:8px;background:var(--background-raised,#282b31);color:var(--text-error,#f98e8e);box-shadow:0 4px 20px #0004;pointer-events:auto}
 .odyssey-home-guide-fault[hidden]{display:none}
 .odyssey-home-guide-mode-notice{position:absolute;z-index:61;top:14px;left:50%;transform:translateX(-50%);max-width:calc(100% - 40px);box-sizing:border-box;padding:9px 15px;border-radius:10px;background:rgb(245 247 250 / .94);color:#4b535d;box-shadow:0 4px 18px #00000014;font:13px/1.5 system-ui;white-space:nowrap;pointer-events:none;transition:opacity .18s ease}
