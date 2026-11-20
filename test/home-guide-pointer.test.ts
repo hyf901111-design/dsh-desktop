@@ -127,16 +127,22 @@ test('approaches controls along a small smooth arc with slower endpoints while k
  const dragFrames:Array<{x:number;y:number;phase:string}>=[],drag=f.pointer.perform({target:f.target,fromTarget:f.source,action:'drag',onFrame:frame=>dragFrames.push(frame)})
  await vi.runAllTimersAsync();await drag;expect(Math.max(...dragFrames.filter(frame=>frame.phase==='dragging').map(offset))).toBeLessThan(.01)
 })
-test('carries an owned PDF tile with the virtual pointer before the drop is acknowledged',async()=>{
- const f=fixture();f.source.dataset.homeGuideDragFile='run'
- const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source})
- await vi.advanceTimersByTimeAsync(600)
- const first=f.source.style.transform
+test.each(['drop','abort'])('carries a copy of the knowledge row and removes it on %s',async outcome=>{
+ const f=fixture();f.source.dataset.homeGuideFileSource='run'
+ const preview=()=>document.querySelector<HTMLElement>('[data-home-guide-drag-file="run"]')
+ const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source}).catch(error=>error.name)
+ await vi.advanceTimersByTimeAsync(480)
+ expect(preview()).toBeNull()
+ await vi.advanceTimersByTimeAsync(120)
+ const first=preview()?.style.transform
  expect(first).toContain('translate3d');expect(first).not.toBe('translate3d(0px,0px,0)')
- await vi.advanceTimersByTimeAsync(100);expect(f.source.style.transform).not.toBe(first)
- await vi.runAllTimersAsync();await action
- expect(f.pointer.snapshot()).toMatchObject({x:360,y:240,state:'idle'})
+ await vi.advanceTimersByTimeAsync(100);expect(preview()?.style.transform).not.toBe(first)
+ if(outcome==='abort')f.abort.abort()
+ await vi.runAllTimersAsync()
+ expect(await action).toBe(outcome==='abort'?'AbortError':undefined)
+ expect(preview()).toBeNull()
  expect(f.source.isConnected).toBe(true)
+ expect(f.source.style.transform).toBe('')
 })
 test('pauses mid-travel and only finishes the same action after resume',async()=>{
  const f=fixture();let finished=false;const action=f.pointer.perform({target:f.target,action:'drag',fromTarget:f.source}).then(()=>{finished=true})

@@ -46,17 +46,6 @@ function HomePresentationSubmittedUser({entry,loadImage,openFile,t}){
  return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-home-guide-user-submission':entry.rpcId},react.createElement(UserStyleBubble,{content:entry.content,imageLoader:loadImage,openFile,t}))
 }
 
-export function createHomePresentationFileGhost(document,file,label,runId){
- const shadow=document.createElement('div'),badge=document.createElement('span'),name=document.createElement('span')
- shadow.className='odyssey-home-guide-drag-file';shadow.dataset.homeGuideDragFile=runId;shadow.setAttribute('aria-hidden','true')
- badge.className='odyssey-home-guide-drag-file-type';badge.textContent='PDF';name.textContent=label
- shadow.append(badge,name)
- const bounds=file.getBoundingClientRect()
- shadow.style.cssText='left:'+bounds.left+'px;top:'+bounds.top+'px;width:'+bounds.width+'px'
- document.body.append(shadow)
- return shadow
-}
-
 /** Wait until the real right panel and its next control have settled inside the viewport. */
 export async function openHomePresentationReference(document,fileId,{waitFor,cue}){
  const win=document.defaultView,sidebar='#odyssey-right-workspace-panel'
@@ -247,7 +236,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      file.dispatchEvent(drag('dragstart'))
      const selected=JSON.parse(transfer.getData(format)||'null')
      if(selected?.id!==source.fileId||selected.label!==expectedName)throw Error('演示参考资料已变化，请重试。')
-     const shadow=createHomePresentationFileGhost(document,file,selected.label,ticket.detail.runId)
+     file.dataset.homeGuideFileSource=ticket.detail.runId
      const drop=event=>{
       if(event.dataTransfer!==transfer)return
       event.preventDefault();event.stopImmediatePropagation()
@@ -256,11 +245,11 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      }
      input.addEventListener('drop',drop,true)
      try{
-      await cue(ticket,input,'把知识库里的参考 PDF 拖入输入框','drag',shadow)
+      await cue(ticket,input,'把知识库里的参考 PDF 拖入输入框','drag',file)
       if(!unchanged()||row()!==file||inputFor(ticket)!==input)throw changed()
       input.dispatchEvent(drag('drop'))
      }finally{
-      input.removeEventListener('drop',drop,true);shadow.remove();file.dispatchEvent(drag('dragend'))
+      input.removeEventListener('drop',drop,true);delete file.dataset.homeGuideFileSource;file.dispatchEvent(drag('dragend'))
      }
      if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='chat-file'&&JSON.parse(ref.ref).path===ticket.prepared.sourcePath))throw Error('研报附件未能加入原生输入框。')
      }
@@ -403,7 +392,7 @@ export function stripHomeGuidePresentationNative(source){
 
 export function patchHomeGuidePresentationNative(source){
  source=stripHomeGuidePresentationNative(source)
- const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,useHomePresentationTooltipSuppressed,createHomePresentationFileGhost,openHomePresentationReference,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
+ const definitions=START+'\nlet HomePresentationNativeDeps=null;\n'+[createHomePresentationSubmissionStore,useHomePresentationSubmission,HomePresentationSubmittedUser,useHomePresentationTooltipSuppressed,openHomePresentationReference,NativeHomePresentationPortal,NativePresentationConversationRoot].map(fn=>fn.toString()).join('\n')+'\nconst HomePresentationSubmissions=createHomePresentationSubmissionStore();\nconst HomePresentationOriginalConversationRoot=ConversationRoot;\nConversationRoot=NativePresentationConversationRoot;\n'+END
  const inputBar=source.match(/function InputBar\([^\n]+\) \{/g)
  if(inputBar?.length!==1)throw Error('Home presentation composer hook anchor drifted')
  source=one(source,inputBar[0],inputBar[0]+INPUT_TIP_HOOK)
