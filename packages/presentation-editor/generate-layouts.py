@@ -72,8 +72,10 @@ def get_slots(layout, width, height):
             role = "table"
         else:
             role = "body"
-        slots.append(dict(role=role, x=x, y=y, w=min(w, 1-x), h=min(h, 1-y),
-                          **placeholder_style(ph, layout, width)))
+        style = placeholder_style(ph, layout, width)
+        if role == "body" and y > .18 and style.get("color") == "#FFFFFF":
+            style.update(color="#005096", bold=False, inset=[0, 0, 0, 0])
+        slots.append(dict(role=role, x=x, y=y, w=min(w, 1-x), h=min(h, 1-y), **style))
     if not any(slot["role"] == "title" for slot in slots):
         slots.insert(0, dict(role="title", x=.036, y=.025, w=.68, h=.074))
     if "图形内容" in layout.name:
@@ -92,9 +94,21 @@ def render(group, filename, temp):
         slide_ids.remove(item)
     layouts = sorted((layout for master in deck.slide_masters for layout in master.slide_layouts),
                      key=lambda item: int(re.search(r"(\d+)\.xml$", str(item.part.partname))[1]))
+    def page_number(layout):
+        for owner in (layout, layout.slide_master):
+            for shape in owner.shapes:
+                if not shape._element.xpath('.//a:fld[@type="slidenum"]'):
+                    continue
+                if not (shape.width and shape.height):
+                    continue
+                return dict(x=shape.left/deck.slide_width, y=shape.top/deck.slide_height,
+                            w=shape.width/deck.slide_width, h=shape.height/deck.slide_height)
+        return None
+    fields = [page_number(layout) for layout in layouts]
     for owner in [*deck.slide_masters, *layouts]:
         for shape in list(owner.shapes):
-            if shape.is_placeholder and shape.placeholder_format.type.name == "SLIDE_NUMBER":
+            if ((shape.is_placeholder and shape.placeholder_format.type.name == "SLIDE_NUMBER")
+                    or shape._element.xpath('.//a:fld[@type="slidenum"]')):
                 shape._element.getparent().remove(shape._element)
     for layout in layouts:
         slide = deck.slides.add_slide(layout)
@@ -131,7 +145,8 @@ end run
         art = sha256(png).hexdigest()[:16] + ".png"
         (OUTPUT / art).write_bytes(png)
         result.append(dict(id=f"{group}-{number}", group=group, name=layout.name.split("，")[0],
-                           art=art, slots=get_slots(layout, deck.slide_width, deck.slide_height)))
+                           art=art, slots=get_slots(layout, deck.slide_width, deck.slide_height),
+                           **({"pageNumber": fields[number-1]} if fields[number-1] else {})))
     return result
 
 

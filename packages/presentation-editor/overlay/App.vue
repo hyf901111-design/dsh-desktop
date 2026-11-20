@@ -289,7 +289,7 @@ import { computed, defineComponent, h, nextTick, onMounted, onUnmounted, ref, wa
 import { useSlidesStore, useMainStore, useSnapshotStore } from '@/store'
 import CommandMenu from './CommandMenu.vue'
 import LayoutGallery from './LayoutGallery.vue'
-import { applyMaster } from './apply-layout'
+import { applyMaster, layoutImage, updatePageNumbers, upgradeLayoutArtwork } from './apply-layout'
 import ShapePool from '@/views/Editor/CanvasTool/ShapePool.vue'
 import ChartPool from '@/views/Editor/CanvasTool/ChartPool.vue'
 import TableGenerator from '@/views/Editor/CanvasTool/TableGenerator.vue'
@@ -398,6 +398,7 @@ const origin = new URLSearchParams(location.search).get('host') || '*'
 function send(type, data = {}) {
   window.parent.postMessage({ channel: 'odyssey-presentation', type, ...data }, origin)
 }
+watch(() => store.slides.map(s => s.id), () => updatePageNumbers(store.slides), { flush: 'sync' })
 const snapshot = () => ({
   id: docId.value,
   title: store.title,
@@ -444,7 +445,8 @@ async function hydrate(d) {
   if (deck) {
     migrated = await protectMaster(deck.slides, deck.viewportSize, deck.viewportRatio, true)
     const upgraded = await upgradeEfundTemplate(deck).catch(error => { console.warn('Template typography upgrade', error); return false })
-    migrated ||= upgraded
+    const layoutsUpgraded = await upgradeLayoutArtwork(deck).catch(error => { console.warn('Layout artwork update', error); return false })
+    migrated ||= upgraded || layoutsUpgraded
     if (seq !== hydration) return
     store.setSlides(deck.slides)
     store.updateSlideIndex(
@@ -886,15 +888,7 @@ async function chooseLayout(layout, action) {
     pageId = slide.value?.id
   menu.value = ''
   try {
-    const response = await fetch('./layout-art/' + layout.art)
-    if (!response.ok) throw Error('版式未能读取')
-    const blob = await response.blob()
-    const image = await new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
+    const image = await layoutImage(layout.art)
     if (docId.value !== documentId || slide.value?.id !== pageId || !editable.value || freeze) return
     const page = action === 'new' ? { id: crypto.randomUUID(), elements: [] } : slide.value
     const title = caption(page)
@@ -907,7 +901,8 @@ async function chooseLayout(layout, action) {
           .slice(0, 120) === title
     )?.id
     snapshots.addSnapshot()
-    const next = applyMaster(layout, image, page, store.viewportSize, store.viewportRatio, titleId)
+    const firstPage = store.slides.flatMap(s => s.elements).find(e => typeof e.odysseyPageNumber === 'number')?.odysseyPageNumber ?? 1
+    const next = applyMaster(layout, image, page, store.viewportSize, store.viewportRatio, titleId, firstPage)
     main.setActiveElementIdList([])
     if (action === 'new') store.addSlide(next)
     else store.updateSlide(next, page.id)

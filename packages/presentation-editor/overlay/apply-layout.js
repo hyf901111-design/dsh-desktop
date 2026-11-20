@@ -1,4 +1,65 @@
 // The brand background and normalized placeholder bounds come from the PowerPoint masters.
+import catalog from './efund-layouts.json'
+import previousArt from './legacy-layout-art.json'
+
+export async function layoutImage(art) {
+  const response = await fetch('./layout-art/' + art)
+  if (!response.ok) throw Error('版式未能读取')
+  const blob = await response.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+export async function upgradeLayoutArtwork(deck) {
+  const first =
+    deck.slides.flatMap((s) => s.elements).find((e) => typeof e.odysseyPageNumber === 'number')
+      ?.odysseyPageNumber ?? 1
+  const images = new Map()
+  let changed = false
+  for (const page of deck.slides) {
+    const layout = catalog.find((item) => item.id === page.odysseyLayoutId)
+    const src = page.background?.image?.src
+    if (
+      !layout ||
+      page.odysseyLayoutVersion === 2 ||
+      typeof src !== 'string' ||
+      !src.startsWith('data:image/png;base64,')
+    )
+      continue
+    const bytes = Uint8Array.from(atob(src.slice(src.indexOf(',') + 1)), (c) => c.charCodeAt(0))
+    const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)).slice(0, 8), (n) =>
+      n.toString(16).padStart(2, '0')
+    ).join('')
+    if (!previousArt[layout.id]?.includes(hash)) continue
+    if (layout.art !== hash + '.png') {
+      if (!images.has(layout.art)) images.set(layout.art, await layoutImage(layout.art))
+      page.background = { ...page.background, image: { ...page.background.image, src: images.get(layout.art) } }
+    }
+    if (!page.elements.some((e) => e.odysseyPageNumber !== undefined))
+      page.elements.unshift(...layoutNumber(layout, page.id, deck.viewportSize, deck.viewportRatio, first))
+    for (const el of page.elements) {
+      if (el.odysseyLayoutSlot !== 'body' || el.defaultColor?.toUpperCase() !== '#FFFFFF') continue
+      const slot = layout.slots.find((s) => s.role === 'body' && s.color === '#005096')
+      if (
+        !slot ||
+        new DOMParser().parseFromString(el.content, 'text/html').body.textContent.trim() !==
+          slotLabel(layout, 'body')
+      )
+        continue
+      el.content = el.content.replace(/color:\s*#ffffff/gi, 'color:#005096')
+      el.defaultColor = '#005096'
+    }
+    page.odysseyLayoutVersion = 2
+    changed = true
+  }
+  if (changed) updatePageNumbers(deck.slides)
+  return changed
+}
+
 const uid = () => crypto.randomUUID()
 const font = '华文黑体_易方达'
 const blue = '#005298'
@@ -53,7 +114,7 @@ function createPlaceholder(layout, slot, box, width) {
     defaultFontName: family,
     fixedHeight: true,
     vAlign: slot.anchor || 'top',
-    inset: slot.inset?.map(fraction => fraction * width) || [0, 0, 0, 0],
+    inset: slot.inset?.map((fraction) => fraction * width) || [0, 0, 0, 0],
     paragraphSpace: 0,
     defaultColor: color,
     content:
@@ -63,13 +124,56 @@ function createPlaceholder(layout, slot, box, width) {
       family +
       ';font-size:' +
       size +
-      'px;font-weight:' + (slot.bold ? 'bold' : 'normal') + '">' +
+      'px;font-weight:' +
+      (slot.bold ? 'bold' : 'normal') +
+      '">' +
       slotLabel(layout, slot.role) +
       '</span></p>'
   }
 }
 
-export function applyMaster(layout, image, page, width, ratio, titleId) {
+export function updatePageNumbers(slides) {
+  slides.forEach((slide, index) => {
+    for (const field of slide.elements) {
+      if (typeof field.odysseyPageNumber !== 'number' || !field.odysseyMaster) continue
+      const content = field.content.replace(/>\s*\d+\s*</, '>' + (index + field.odysseyPageNumber) + '<')
+      if (content !== field.content) field.content = content
+    }
+  })
+}
+
+function layoutNumber(layout, id, width, ratio, first) {
+  const slot = layout.pageNumber
+  if (!slot) return []
+  return [
+    {
+      id: id + '-page',
+      type: 'text',
+      odysseyMaster: true,
+      lock: true,
+      odysseyPageNumber: first,
+      rotate: 0,
+      left: slot.x * width,
+      top: slot.y * width * ratio,
+      width: slot.w * width,
+      height: slot.h * width * ratio,
+      fixedHeight: true,
+      vAlign: 'top',
+      inset: [0, 0, 0, 0],
+      paragraphSpace: 0,
+      defaultColor: '#505050',
+      defaultFontName: 'Arial',
+      content:
+        '<p style="text-align:right"><span style="font-family:Arial;font-size:' +
+        width / 90 +
+        'px;color:#505050">' +
+        first +
+        '</span></p>'
+    }
+  ]
+}
+
+export function applyMaster(layout, image, page, width, ratio, titleId, firstPage = 1) {
   page = { ...page, elements: page.elements.filter((e) => !e.odysseyMaster) }
   const remaining = new Set(page.elements.filter((e) => !e.lock))
   const elements = []
@@ -114,8 +218,10 @@ export function applyMaster(layout, image, page, width, ratio, titleId) {
     ...page,
     odysseyMasterVersion: 1,
     odysseyLayoutId: layout.id,
+    odysseyLayoutVersion: 2,
     background: { type: 'image', image: { src: image, size: 'cover' } },
     elements: [
+      ...layoutNumber(layout, page.id, width, ratio, firstPage),
       ...page.elements.map((e) => replacements.get(e.id) || e),
       ...elements.filter((e) => !page.elements.some((old) => old.id === e.id))
     ]

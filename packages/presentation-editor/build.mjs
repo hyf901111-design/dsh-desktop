@@ -93,7 +93,7 @@ edit('src/hooks/useExport.ts', [
   ['pptxSlide.addChart(type, chartData, options)', "pptxSlide.addChart(type, chartData, {...options, objectName:'OdysseyChart-'+el.id})"],
   ['pptxSlide.addTable(tableData, options)', "pptxSlide.addTable(tableData, {...options, objectName:'OdysseyTable-'+el.id, autoPage:false})"],
   ['pptxSlide.addMedia(options)\n          }\n        }\n      }',
-    "pptxSlide.addMedia(options)\n          }\n        }\n        if(el.odysseyMaster)for(const object of pptxSlide._slideObjects.slice(beforeArtwork))object.options.objectName='OdysseyInheritedArtwork'\n      }"],
+    "pptxSlide.addMedia(options)\n          }\n        }\n        if(el.odysseyMaster)for(const object of pptxSlide._slideObjects.slice(beforeArtwork))object.options.objectName=typeof el.odysseyPageNumber==='number' ? 'OdysseyPageNumber' : 'OdysseyInheritedArtwork'\n      }"],
   [
     "styleAttr.value.split(';')",
     "styleAttr.value.replace(/&quot;|&#34;|&#x22;/gi, '\"').replace(/&apos;|&#39;|&#x27;/gi, \"'\").split(';')"
