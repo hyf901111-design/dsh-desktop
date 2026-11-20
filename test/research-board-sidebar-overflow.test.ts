@@ -17,7 +17,7 @@ import { translateUiCopy } from '../src/preload/ui-localization'
 
 const cleanup: Array<() => Promise<void>> = []
 afterEach(async () => { for (const fn of cleanup.splice(0)) await fn(); vi.unstubAllGlobals() })
-async function fixture(privateCount = 8, sharedCount = 7,options:{current?:string;collapsed?:boolean;groups?:string[]}={}) {
+async function fixture(privateCount = 8, sharedCount = 7,options:{current?:string;collapsed?:boolean;groups?:string[];managerEntry?:boolean}={}) {
   const w = new Window({ url: 'https://ework.local/' })
   vi.stubGlobal('window', w); vi.stubGlobal('document', w.document)
   vi.stubGlobal('localStorage', w.localStorage); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.stubGlobal('Event', w.Event)
@@ -40,6 +40,8 @@ async function fixture(privateCount = 8, sharedCount = 7,options:{current?:strin
     subscribeActivity: () => () => {}, isRunning: () => false, getView: () => null,
     openPersonal: vi.fn(async (id: string) => { current = id }),
     openBoard: vi.fn(async (id: string) => { current = state.boards.find(b => b.boardId === id)!.localSessionId }),
+    showManagerWorkbenchEntry: () => options.managerEntry ?? false,
+    openManagerWorkbench: vi.fn(async () => {}),
     showError: vi.fn()
   }
   const host = w.document.createElement('div'); w.document.body.append(host)
@@ -118,4 +120,13 @@ it('看板展开按钮的英文文案处理数量，保持与工作区的收起�
   expect(translateUiCopy('展开其余 1 个看板')).toBe('Show 1 more board')
   expect(translateUiCopy('展开其余 3 个看板')).toBe('Show 3 more boards')
   expect(translateUiCopy('收起')).toBe('Collapse')
+})
+
+it('管理者工作台入口位于个人看板，计入首屏条目，不挤占协作看板', async () => {
+  const f = await fixture(6, 1, { managerEntry: true })
+  expect(f.titles('private')).toEqual(['管理者工作台', '个人0', '个人1', '个人2', '个人3'])
+  expect(f.titles('shared')).toEqual(['协作0'])
+  expect(f.group('private').querySelector('[data-srb-board-overflow]')?.textContent).toBe('展开其余 2 个看板')
+  await f.click(f.group('private').querySelector('[title="管理者工作台"]'))
+  expect(f.page.openManagerWorkbench).toHaveBeenCalledTimes(1)
 })

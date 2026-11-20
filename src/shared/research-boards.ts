@@ -255,3 +255,5 @@ export function boardsError(error: unknown): BoardsError {
     retryable: true
   }
 }
+
+export const managerWorkbenchInstallKey = 'ework.research.manager-workbench.v1'

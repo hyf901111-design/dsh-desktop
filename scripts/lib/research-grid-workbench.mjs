@@ -156,6 +156,12 @@ try{const saved=storage?.getItem(responsiveArrangeKey);if(saved==='auto'||saved=
     getWorkbenchVisibleCells:()=>workbenchGrid.visible(),
     setWorkbenchContentHeight(id,value){if(workbenchGrid.contentHeight(id,value)){update({},false);return true}return false},
     getWorkbenchDocument:()=>workbenchGrid.document(snapshot),
+    initializeWorkbenchDocument(canvas){
+      if(!collaborationCanWrite()||sherlockShared(sessionId))return false;
+      workbenchGrid.enable(1000);
+      workbenchGrid.receiveCanonical([...canvas.files,...canvas.artifacts]);
+      return persistSnapshot();
+    },
     getWorkbenchPlanningNodes:()=>workbenchGrid.planningNodes(),
     reserveWorkbenchPlanning(intent,position){if(workbenchGrid.reservePlanning(intent,snapshot,position)){update({},false);return true}return false},
     releaseWorkbenchPlanning(id){if(workbenchGrid.releasePlanning(id)){update({},false);return true}return false},

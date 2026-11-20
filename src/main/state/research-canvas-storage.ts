@@ -9,8 +9,11 @@ import {
 } from 'node:fs'
 import path from 'node:path'
 
+import { managerWorkbenchInstallKey } from '../../shared/research-boards'
+
 const RESEARCH_CANVAS_STORAGE_DIRECTORY = 'research-canvas'
 const HOME_GUIDE_SESSION_PREFIX = 'sherlock.home-guide.sessions.v1:'
+const MANAGER_WORKBENCH_MARKER = /^[a-zA-Z0-9:_-]{1,256}$/
 const WORKBENCH_TRIAL_KEY = 'ework.research.openterminal-trial.v1'
 const RESPONSIVE_ARRANGE_PREFIX = 'ework.research.responsive-arrange.v1:'
 const RESEARCH_CANVAS_STORAGE_PREFIXES = [
@@ -41,7 +44,7 @@ export const RESEARCH_CANVAS_STORAGE_MAX_VALUE_LENGTH = 8 * 1024 * 1024
 function validResearchCanvasStorageKey(value: unknown): value is string {
   return typeof value === 'string' &&
     value.length <= RESEARCH_CANVAS_STORAGE_MAX_KEY_LENGTH &&
-    (value === WORKBENCH_TRIAL_KEY || RESEARCH_CANVAS_STORAGE_PREFIXES.some(
+    (value === WORKBENCH_TRIAL_KEY || value === managerWorkbenchInstallKey || RESEARCH_CANVAS_STORAGE_PREFIXES.some(
       (prefix) => value.startsWith(prefix) && value.length > prefix.length
     ))
 }
@@ -130,6 +133,7 @@ export class ResearchCanvasStorage {
       return false
     }
     if (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, value)) return false
+    if (key === managerWorkbenchInstallKey && !MANAGER_WORKBENCH_MARKER.test(value)) return false
     if (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(value)) return false
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
     if (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(value)) return false
@@ -177,6 +181,7 @@ export class ResearchCanvasStorage {
       if (record.key !== key || !validResearchCanvasStorageValue(record.value) ||
           (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, record.value)) ||
           (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(record.value)) ||
+          (key === managerWorkbenchInstallKey && !MANAGER_WORKBENCH_MARKER.test(record.value)) ||
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
           (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(record.value)) ||
           (key.startsWith(RESPONSIVE_ARRANGE_PREFIX) && record.value !== 'auto' && record.value !== 'manual') ||
