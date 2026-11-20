@@ -9,17 +9,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "顶栏更多按钮图标居中",
+        "featureName": "统一顶栏标题与展开按钮间距",
         "branch": "codex/feat/navigation-shortcuts-20261119",
-        "baseCommit": "cb789e3fced87d78ac9a11b7da02aba446b68ac8",
-        "tipCommit": "8029ccd00df0b551557f6547caa107fdfe648db4",
+        "baseCommit": "8029ccd00df0b551557f6547caa107fdfe648db4",
+        "tipCommit": "250311417ea45cdf97de23f8fec3bd823c32b657",
         "commits": [
           {
-            "commit": "8029ccd00df0b551557f6547caa107fdfe648db4",
+            "commit": "250311417ea45cdf97de23f8fec3bd823c32b657",
             "parents": [
-              "cb789e3fced87d78ac9a11b7da02aba446b68ac8"
+              "8029ccd00df0b551557f6547caa107fdfe648db4"
             ],
-            "subject": "修复顶栏更多按钮内的图标偏移"
+            "subject": "统一长短标题与顶栏展开按钮的间距"
           }
         ],
         "files": [
@@ -29,7 +29,7 @@
           },
           {
             "status": "M",
-            "path": "test/knowledge-workspace-rendered.test.js"
+            "path": "test/browser-app-rendered.test.js"
           }
         ],
         "checks": [
@@ -41,8 +41,8 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 类型检查",
-            "verifiedCommit": "8029ccd00df0b551557f6547caa107fdfe648db4",
-            "completedAt": "2026-11-19T23:56:02.892Z",
+            "verifiedCommit": "250311417ea45cdf97de23f8fec3bd823c32b657",
+            "completedAt": "2026-11-20T00:15:18.743Z",
             "timeoutMs": 90000
           },
           {
@@ -56,30 +56,30 @@
               "test/browser-app-rendered.test.js",
               "test/knowledge-workspace-rendered.test.js",
               "-t",
-              "keeps the shared switcher expanded|keeps workspace modes|opens workspace tabs on click|workspace width and opacity|sizes top-bar labels|keeps the full top-bar editor|across the draggable knowledge header",
+              "aligns the browser title|keeps the workspace toggle equally close|keeps the shared switcher expanded|keeps workspace modes|opens workspace tabs on click|workspace width and opacity|sizes top-bar labels|keeps the full top-bar editor|across the draggable knowledge header",
               "--testTimeout",
               "20000"
             ],
             "outcome": "passed",
-            "summary": "9 项工作区顶栏渲染验证",
-            "verifiedCommit": "8029ccd00df0b551557f6547caa107fdfe648db4",
-            "completedAt": "2026-11-19T23:56:02.892Z",
+            "summary": "12 项工作区顶栏渲染验证",
+            "verifiedCommit": "250311417ea45cdf97de23f8fec3bd823c32b657",
+            "completedAt": "2026-11-20T00:15:18.743Z",
             "timeoutMs": 90000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "窄版知识库明暗主题均验证三个点在按钮内水平、垂直居中，顶栏专项检查通过。"
+          "summary": "常规、紧凑、窄三种宽度下短标题与长标题的展开按钮间距一致。"
         },
         "acceptanceCriteria": [
-          "窄版知识库的三个点图标居中",
-          "更多菜单可点击打开",
-          "内联标签完整显示"
+          "问候等短标题与长标题的按钮间距一致",
+          "窄栏长标题仍按现有宽度省略",
+          "工作区页签继续正常展开收起"
         ],
         "risks": [
           "本地构建后复测 macOS 界面"
         ],
-        "generatedAt": "2026-11-19T23:56:02.892Z"
+        "generatedAt": "2026-11-20T00:15:18.743Z"
       }
     }
   ],
