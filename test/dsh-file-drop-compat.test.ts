@@ -285,12 +285,18 @@ describe('dsh-file-drop Research canvas compatibility', () => {
     expect(runtime.snapshot().phase).toBe('failed')
   })
 
-  it.each(['previous desktop', 'Research-only'])('upgrades the %s compatibility patch in place', async (version) => {
+  it.each(['drop only', 'previous desktop', 'Research-only'])('upgrades the %s compatibility patch in place', async (version) => {
     const { dshHome, clientPath } = await makeDshHome()
     expect((await ensureDshFileDropResearchCanvasCompatibility(dshHome)).status)
       .toBe('patched')
     const current = await readFile(clientPath, 'utf8')
-    const previous = current
+    const dropOnly = current
+      .replace(/\n        const onPaste = \(event\) => \{[\s\S]*?\n        \}/, '')
+      .replace("\n        card.addEventListener('paste', onPaste, true)", '')
+      .replace("\n          card.removeEventListener('paste', onPaste, true)", '')
+      .replace(/    const visionImageTypes = new Set\([^\n]*\)\n\n/, '')
+      .replaceAll('visionImageTypes.has(file.type)', "file.type?.startsWith('image/')")
+    const previous = dropOnly
       .replace(/\n      React\.useEffect\(\(\) => \{\n        const picker = pickRef\.current[\s\S]*?\n      \}, \[\]\)/, '')
       .replace(
         `          depthRef.current = 0
@@ -306,7 +312,7 @@ describe('dsh-file-drop Research canvas compatibility', () => {
           setDrag(false)
           void handleDrop(e)`
       )
-    const legacy = version === 'previous desktop' ? previous : previous
+    const legacy = version === 'drop only' ? dropOnly : version === 'previous desktop' ? previous : previous
       .replace(/\n *\/\/ odyssey:image-file-(?:intake|drop):start[\s\S]*?\/\/ odyssey:image-file-(?:intake|drop):end/g, '')
       .replace("(node.hasAttribute('data-research-canvas') || node.hasAttribute('data-note-file-drop-owner') || node.hasAttribute('data-knowledge-file-drop-owner'))", "node.hasAttribute('data-research-canvas')")
       .replace(

@@ -22,7 +22,8 @@ const PRE_IMAGE_PATCHED_CLIENT_SHA256 =
   'a466fa44bef9ab34fe42346f4afd6759d123009e7bc657e73194346f6ed49770'
 const PRE_KNOWLEDGE_PATCHED_CLIENT_SHA256 = '840ab68b054c85d91757b5be4db2cd82ab3575f98f81118982923d547da58a0f'
 const PRE_COMPOSER_DROP_PATCHED_CLIENT_SHA256 = 'da01d68b87a2db68f8f5d4353a6f8da6b34f709b204a389fbee2d2e864d00dbf'
-const PATCHED_CLIENT_SHA256 = '2d25cb007e4216623032f3aa14a13bd16b3815006c15e58b9a0afe61818acba1'
+const COMPOSER_DROP_PATCHED_CLIENT_SHA256 = '2d25cb007e4216623032f3aa14a13bd16b3815006c15e58b9a0afe61818acba1'
+const PATCHED_CLIENT_SHA256 = '740bf1a2505c006c46a6f4d61f8d5592dfe4e832dae2494a9416583ff01876b3'
 const PRE_NOTES_PATCHED_CLIENT_SHA256 =
   '333b2a3b543af91176cd5ff7d56163290d15b84861fbd6dcc59d45c24c18e1c9'
 const ORIGINAL_FILE_GUARD = '          if (!hasFiles(e)) return'
@@ -195,12 +196,46 @@ function patchComposerCardDrop(source: string): string | undefined {
           e.preventDefault()
           e.stopPropagation()
           void handleDrop(e)`)
+  return sourceIdentity(patched) === COMPOSER_DROP_PATCHED_CLIENT_SHA256
+    ? patchComposerFilePaste(patched)
+    : undefined
+}
+
+function patchComposerFilePaste(source: string): string | undefined {
+  const patched = source
+    .replace('    // 共用处理：壳路径优先，其余走上传兜底', `    const visionImageTypes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+
+    // 共用处理：壳路径优先，其余走上传兜底`)
+    .replace("files.filter(file => file.type?.startsWith('image/'))", "files.filter(file => visionImageTypes.has(file.type))")
+    .replace("files.some(file => file.type?.startsWith('image/'))", "files.some(file => visionImageTypes.has(file.type))")
+    .replace("        picker.setAttribute('data-odyssey-composer-file-drop', '')", `        const onPaste = (event) => {
+          const clipboard = event.clipboardData
+          if (!clipboard) return
+          const files = Array.from(clipboard.files)
+          if (!files.length) {
+            for (const item of clipboard.items) {
+              if (item.kind !== 'file') continue
+              const file = item.getAsFile()
+              if (file) files.push(file)
+            }
+          }
+          if (!files.length) return
+          event.preventDefault()
+          event.stopPropagation()
+          void processFiles(files, optsRef.current)
+        }
+        picker.setAttribute('data-odyssey-composer-file-drop', '')`)
+    .replace("        card.addEventListener('drop', onDrop, true)", `        card.addEventListener('drop', onDrop, true)
+        card.addEventListener('paste', onPaste, true)`)
+    .replace("          card.removeEventListener('drop', onDrop, true)", `          card.removeEventListener('drop', onDrop, true)
+          card.removeEventListener('paste', onPaste, true)`)
   return sourceIdentity(patched) === PATCHED_CLIENT_SHA256 ? patched : undefined
 }
 
 export function patchDshFileDropClientSource(source: string): string | undefined {
   const identity = sourceIdentity(source)
   if (identity === PATCHED_CLIENT_SHA256) return source
+  if (identity === COMPOSER_DROP_PATCHED_CLIENT_SHA256) return patchComposerFilePaste(source)
   if (identity === PRE_COMPOSER_DROP_PATCHED_CLIENT_SHA256) return patchComposerCardDrop(source)
   if (identity === PRE_KNOWLEDGE_PATCHED_CLIENT_SHA256) return patchWorkspaceDropOwnership(source)
   const legacy = patchLegacyDshFileDropClientSource(source)
@@ -355,7 +390,8 @@ export async function ensureDshFileDropResearchCanvasCompatibility(
     identity !== PRE_NOTES_PATCHED_CLIENT_SHA256 &&
     identity !== PRE_IMAGE_PATCHED_CLIENT_SHA256 &&
     identity !== PRE_KNOWLEDGE_PATCHED_CLIENT_SHA256 &&
-    identity !== PRE_COMPOSER_DROP_PATCHED_CLIENT_SHA256
+    identity !== PRE_COMPOSER_DROP_PATCHED_CLIENT_SHA256 &&
+    identity !== COMPOSER_DROP_PATCHED_CLIENT_SHA256
   ) {
     return {
       status: 'unsupported',
