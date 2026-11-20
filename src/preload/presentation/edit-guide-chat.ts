@@ -42,11 +42,19 @@ export async function mountPresentationEditGuideChat(document: Document, options
   // Hit-test its actual viewport position before pointing or submitting.
   const point = (target: HTMLElement) => {
     const box = target.getBoundingClientRect()
-    const x = (Math.max(0, box.left) + Math.min(win.innerWidth, box.right)) / 2
-    const y = (Math.max(0, box.top) + Math.min(win.innerHeight, box.bottom)) / 2
-    if (!target.isConnected || target.matches(':disabled,[aria-disabled=true]') ||
-        !box.width || !box.height || !target.contains(document.elementFromPoint(x, y))) return
-    return { x, y }
+    if (!target.isConnected || target.matches(':disabled,[aria-disabled=true]')) return
+    const left = Math.max(0, box.left), right = Math.min(win.innerWidth, box.right)
+    const top = Math.max(0, box.top), bottom = Math.min(win.innerHeight, box.bottom)
+    if (right <= left || bottom <= top) return
+    // An inline title can cover the middle of the textarea. Aim beside its chip,
+    // or on the next line when it wraps in a narrow conversation pane.
+    const offsets: [number, number][] = target instanceof win.HTMLTextAreaElement
+      ? [[.5,.5],[.94,.27],[.94,.78],[.14,.78],[.5,.86],[.04,.95]]
+      : [[.5,.5]]
+    for (const [u, v] of offsets) {
+      const x = left + (right-left)*u, y = top + (bottom-top)*v
+      if (target.contains(document.elementFromPoint(x, y))) return {x, y}
+    }
   }
   const click = async (target: HTMLElement, commit: () => void) => {
     const where = () => { check(); const result = point(target); if (!result) throw Error('对话控件已变化。'); return result }
@@ -55,7 +63,7 @@ export async function mountPresentationEditGuideChat(document: Document, options
   }
   const composer = () => {
     const inputs = [...document.querySelectorAll<HTMLTextAreaElement>('[data-research-composer-host] textarea[data-odyssey-file-reference-session]')]
-      .filter(el => el.dataset.odysseyFileReferenceSession === options.sessionId && !el.readOnly && point(el))
+      .filter(el => el.dataset.odysseyFileReferenceSession === options.sessionId && !el.readOnly && el.getClientRects().length && el.checkVisibility({checkVisibilityCSS:true}))
     return inputs.length === 1 ? inputs[0] : undefined
   }
   const prefix = (input: HTMLTextAreaElement, referenceLabel?: string): string | undefined => {
