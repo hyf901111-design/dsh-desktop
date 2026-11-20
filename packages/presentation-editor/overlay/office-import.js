@@ -74,6 +74,25 @@ function tableMetrics(table, model, scale) {
   }
 }
 
+// The importer sometimes turns a trailing Office spacer into a nested numbered item.
+export function trimEmptyOfficeSublists(slides) {
+  let changed = false
+  for (const slide of slides) {
+    for (const el of slide.elements) {
+      if (el.type !== 'text' || !el.content?.includes('data-pptx-level')) continue
+      const body = new DOMParser().parseFromString(el.content, 'text/html').body
+      const empty = [...body.querySelectorAll('li > ol:last-child, li > ul:last-child')].filter(list =>
+        !list.textContent.trim() && list.querySelector('li[data-pptx-level]') && !list.querySelector('img,svg,video,math,br')
+      )
+      if (!empty.length) continue
+      empty.forEach(list => list.remove())
+      el.content = body.innerHTML
+      changed = true
+    }
+  }
+  return changed
+}
+
 export async function restoreOfficeFormatting(input, slides, viewportSize, eligible = () => true) {
   const zip = await JSZip.loadAsync(input),
     docPath = 'ppt/presentation.xml'

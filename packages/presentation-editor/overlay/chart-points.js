@@ -6,13 +6,16 @@ export function visibleBars(chart, host, data) {
   const bars = []
   chart.getModel().eachSeries((series) => {
     if (series.subType !== 'bar') return
+    const nameIndex = data.legends?.indexOf(series.name) ?? -1
+    const seriesIndex =
+      nameIndex >= 0 && data.legends.lastIndexOf(series.name) === nameIndex ? nameIndex : series.seriesIndex
     const values = series.getData()
     values.eachItemGraphicEl((element, index) => {
       const bounds = element.getBoundingRect().clone()
       const transform = element.getComputedTransform()
       if (transform) bounds.applyTransform(transform)
       bars.push({
-        seriesIndex: series.seriesIndex,
+        seriesIndex,
         pointIndex: index,
         label: data.labels[index],
         left: viewport.left + bounds.x * scaleX,

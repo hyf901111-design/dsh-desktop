@@ -313,7 +313,7 @@ import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
 import emitter, { EmitterEvents } from '@/utils/emitter'
 import { slideTitle } from './presentation-slide-title'
-import {restoreOfficeFormatting, exportOfficeFormatting} from './office-import'
+import {restoreOfficeFormatting, exportOfficeFormatting, trimEmptyOfficeSublists} from './office-import'
 import { upgradeEfundTemplate } from './legacy-office'
 import { protectMaster } from './master-protection'
 import { exportMasterArtwork } from './powerpoint-masters'
@@ -446,7 +446,8 @@ async function hydrate(d) {
     migrated = await protectMaster(deck.slides, deck.viewportSize, deck.viewportRatio, true)
     const upgraded = await upgradeEfundTemplate(deck).catch(error => { console.warn('Template typography upgrade', error); return false })
     const layoutsUpgraded = await upgradeLayoutArtwork(deck).catch(error => { console.warn('Layout artwork update', error); return false })
-    migrated ||= upgraded || layoutsUpgraded
+    const listsTrimmed = trimEmptyOfficeSublists(deck.slides)
+    migrated ||= upgraded || layoutsUpgraded || listsTrimmed
     if (seq !== hydration) return
     store.setSlides(deck.slides)
     store.updateSlideIndex(
@@ -941,6 +942,7 @@ watch(importer.exporting, async (busy) => {
     return
   }
   await protectMaster(store.slides, store.viewportSize, store.viewportRatio, false)
+  trimEmptyOfficeSublists(store.slides)
   await reconcilePointColors(job.file, store.slides).catch(() => {})
   await restoreOfficeFormatting(job.file, store.slides, store.viewportSize).catch(error => console.warn('PowerPoint formatting',error))
   if (importing !== job) return

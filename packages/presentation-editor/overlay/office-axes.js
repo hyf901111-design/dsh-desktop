@@ -32,6 +32,47 @@ function layoutLegend(chart, plot, legend, grid) {
   return { [side]: Math.max(Number(grid[side]) || 0, gap), containLabel: true }
 }
 
+function calendarTicks(values, epoch, step, unit) {
+  if (!Number.isInteger(step) || step <= 0 || !['days', 'months', 'years'].includes(unit)) return
+  const sorted = [...values].map(([index, raw]) => [index, Number(raw)])
+  if (
+    !sorted.length ||
+    sorted.some(
+      ([, date], i) => !Number.isFinite(date) || date < 0 || date > 2958465 || (i && date < sorted[i - 1][1])
+    )
+  )
+    return
+  const firstDay = sorted[0][1]
+  const start = new Date(epoch + firstDay * 86400000)
+  const labels = new Map()
+  let count = 0,
+    next = firstDay
+  const nextTick = () => {
+    if (unit === 'days') return firstDay + count * step
+    const month = start.getUTCMonth() + count * step * (unit === 'years' ? 12 : 1)
+    const day = Math.min(
+      start.getUTCDate(),
+      new Date(Date.UTC(start.getUTCFullYear(), month + 1, 0)).getUTCDate()
+    )
+    return (Date.UTC(start.getUTCFullYear(), month, day) - epoch) / 86400000
+  }
+  for (const [index, serial] of sorted) {
+    if (serial < next) continue
+    labels.set(index, next)
+    const actual = new Date(epoch + serial * 86400000)
+    const months =
+      12 * (actual.getUTCFullYear() - start.getUTCFullYear()) + actual.getUTCMonth() - start.getUTCMonth()
+    const elapsed = unit === 'days' ? serial - firstDay : unit === 'years' ? months / 12 : months
+    count = Math.max(count + 1, Math.floor(elapsed / step))
+    next = nextTick()
+    if (next <= serial) {
+      count++
+      next = nextTick()
+    }
+  }
+  return labels
+}
+
 function dateTicks(doc, axis, series, availableWidth, compact) {
   const cat = child(series, 'cat')
   const values = new Map(
@@ -40,19 +81,29 @@ function dateTicks(doc, axis, series, availableWidth, compact) {
       first(pt, 'v')?.textContent
     ])
   )
-  const format = child(axis, 'numFmt')?.getAttribute('formatCode') || ''
+  const format = (child(axis, 'numFmt')?.getAttribute('formatCode') || '').split(';')[0]
   const epoch =
     first(doc, 'date1904')?.getAttribute('val') === '1' ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30)
   const font = axisFont(axis) || 11
   const rotation = Number(first(child(axis, 'txPr'), 'bodyPr')?.getAttribute('rot'))
-  const rotate = rotation ? -rotation / 60000 : compact ? 90 : 35
+  const calendar = calendarTicks(
+    values,
+    epoch,
+    Number(val(axis, 'majorUnit')),
+    val(axis, 'majorTimeUnit') || val(axis, 'baseTimeUnit')
+  )
+  const rotated = rotation && Math.abs(rotation) <= 90 * 60000
+  const labelCount = calendar?.size || values.size
+  const fitsHorizontal = labelCount * font * (format.length * 0.55 + 1) < availableWidth
+  const rotate = rotated ? -rotation / 60000 : fitsHorizontal ? 0 : compact ? 90 : 35
   const pitch = Math.abs(rotate) === 90 ? font * 1.35 : 32
   const units = val(axis, 'baseTimeUnit') === val(axis, 'majorTimeUnit') ? Number(val(axis, 'majorUnit')) : 0
   const interval = Math.max(1, units || 0, Math.ceil(values.size / Math.max(2, availableWidth / pitch))) - 1
   const labels = { show: true, interval, hideOverlap: true, rotate, fontSize: font, margin: 5 }
+  if (calendar) labels.interval = (index) => calendar.has(index)
   if (/y/i.test(format) && !/[\[;h]/i.test(format)) {
     labels.formatter = (fallback, index) => {
-      const raw = values.get(index)
+      const raw = calendar?.get(index) ?? values.get(index)
       if (!/^\d+(\.\d+)?$/.test(raw || '')) return fallback
       const date = new Date(epoch + Number(raw) * 86400000)
       if (!Number.isFinite(date.getTime())) return fallback
@@ -105,16 +156,18 @@ export function applyOfficeAxes(chart, doc, option) {
       .map((s) => first(child(s, 'tx'), 'v')?.textContent)
     const match = option.series.find((s) => names.includes(s.name))
     if (match && position) {
+      const step = Number(val(axis, 'majorUnit'))
       const line = first(child(axis, 'spPr'), 'ln')
       const font = axisFont(axis)
       yAxis[match.yAxisIndex || 0] = {
         position,
+        ...(step > 0 ? { interval: step } : {}),
         ...(font ? { axisLabel: { fontSize: font } } : {}),
         ...(child(line, 'noFill') ? { axisLine: { show: false } } : {})
       }
     }
   }
-  const grid = dual && layoutLegend(chart, plot, first(doc, 'legend'), option.grid?.[0])
+  const grid = layoutLegend(chart, plot, first(doc, 'legend'), option.grid?.[0])
   const updates = {}
   if (dual) updates.yAxis = yAxis
   if (grid) {
@@ -128,6 +181,41 @@ export function applyOfficeAxes(chart, doc, option) {
       )
     }
     updates.grid = grid
+  }
+  const inner = first(child(plot, 'layout'), 'manualLayout')
+  if (val(inner, 'layoutTarget') === 'inner')
+    updates.grid = { ...updates.grid, outerBoundsMode: 'none', containLabel: false }
+  if (option.series.some((s) => s.type === 'scatter') && option.xAxis[0].type === 'value') {
+    for (const axis of axisById.values()) {
+      if (axis.localName !== 'valAx') continue
+      const vertical = ['l', 'r'].includes(val(axis, 'axPos'))
+      const title = child(axis, 'title')
+      const name = Array.from(title?.getElementsByTagNameNS('*', 't') || [], (t) => t.textContent).join('')
+      const eastAsian = first(title, 'bodyPr')?.getAttribute('vert') === 'eaVert'
+      const step = Number(val(axis, 'majorUnit'))
+      const conf = vertical ? option.yAxis[0] : option.xAxis[0]
+      const patch = {}
+      if (step > 0) {
+        patch.interval = step
+        const data = option.series
+          .flatMap((s) => s.data.map((p) => (p.value || p)?.[vertical ? 1 : 0]))
+          .filter(Number.isFinite)
+        if (data.length && val(child(axis, 'scaling'), 'min') == null)
+          patch.min = Math.min(
+            0,
+            Math.floor(data.reduce((min, n) => Math.min(min, n), Infinity) / step) * step
+          )
+      }
+      if (name && eastAsian)
+        Object.assign(patch, {
+          name: [...name].join('\n'),
+          nameRotate: 0,
+          nameGap: Math.max(20, chart.getWidth() * Number(val(inner, 'x') || 0) - 10),
+          nameTextStyle: { lineHeight: conf.axisLabel.fontSize || 10 }
+        })
+      if (name && !vertical) patch.nameGap = Math.min(conf.nameGap || 30, chart.getHeight() * 0.16)
+      updates[vertical ? 'yAxis' : 'xAxis'] = patch
+    }
   }
   if (date) {
     const available = chart.getWidth() - (grid?.left || 0) - (grid?.right || 0)
