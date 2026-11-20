@@ -1,3 +1,8 @@
+@font-face {
+  font-family: '华文黑体_易方达';
+  src: local('华文黑体_易方达'), url('/STHeiti_YFD.ttf') format('truetype');
+  font-display: swap;
+}
 html,
 body,
 #app,
@@ -496,13 +501,8 @@ footer > span {
   }
 }
 
-.deck-app[data-readonly]
-  .ribbon
-  :is(button, select, label):not([aria-label='菜单'], [aria-label='从当前页放映'], [aria-label='更多']),
-.deck-app[data-readonly] .pages header button,
-.edit-col[data-readonly] .slide-area {
-  pointer-events: none;
-}
+.ribbon select:disabled {opacity:.4}
+.locked-state {color:var(--ink);font-weight:500}
 
 .menu button {
   min-height: 32px;

@@ -1,11 +1,12 @@
 """Regenerate the offline layout gallery from the two PPT masters bundled with the skill.
 
-Maintenance only: python-pptx, Pillow, LibreOffice and Poppler are needed here.
+Maintenance only: python-pptx, Pillow, PowerPoint for macOS and Poppler are needed here.
 The desktop build uses the checked-in PNGs and layout coordinates.
 """
 from hashlib import sha256
 from io import BytesIO
 import json
+from lxml import etree
 from pathlib import Path
 import re
 import subprocess
@@ -18,6 +19,41 @@ ROOT = Path(__file__).resolve().parent
 ASSETS = ROOT.parents[1] / "skills/efund-ppt-maker/assets"
 OUTPUT = ROOT / "layout-art"
 SOURCES = {"v6": "efund-template-v6.pptx", "master": "efund-master-skeleton.pptx"}
+
+
+def placeholder_style(ph, layout, width):
+    """Read the editable placeholder's first-level typography from the master and layout."""
+    master = layout.slide_master
+    family = "titleStyle" if ph.placeholder_format.type.name in {"TITLE", "CENTER_TITLE"} else "bodyStyle"
+    nodes = list(master._element.xpath(f"./p:txStyles/p:{family}/a:lvl1pPr/a:defRPr"))
+    nodes.extend(ph._element.xpath("./p:txBody/a:lstStyle/a:lvl1pPr/a:defRPr"))
+    nodes.extend(ph._element.xpath("./p:txBody/a:p[1]/a:pPr/a:defRPr|./p:txBody/a:p[1]/a:r[1]/a:rPr"))
+    theme = etree.fromstring(master.part.part_related_by(
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme").blob)
+    colors = {etree.QName(n).localname: n[0].get("lastClr") or n[0].get("val")
+              for n in theme.xpath("/*/*[local-name()='themeElements']/*[local-name()='clrScheme']/*")}
+    mapping = master._element.xpath("./p:clrMap")[0]
+    result = {}
+    for node in nodes:
+        if node.get("sz"):
+            result["size"] = round(int(node.get("sz")) * 127 / width, 7)
+        if node.get("b") is not None:
+            result["bold"] = node.get("b") in {"1", "true"}
+        fonts = node.xpath("./a:ea")
+        if fonts and not fonts[0].get("typeface", "").startswith("+"):
+            result["font"] = fonts[0].get("typeface")
+        for fill in node.xpath("./a:solidFill/*"):
+            value = fill.get("val")
+            if etree.QName(fill).localname == "schemeClr":
+                value = colors.get(mapping.get(value, value))
+            if value and re.fullmatch(r"[0-9a-fA-F]{6}", value):
+                result["color"] = "#" + value
+    props = ph._element.xpath("./p:txBody/a:bodyPr")
+    if props:
+        result["inset"] = [round(int(props[0].get(key, default)) / width, 7)
+                           for key, default in (("tIns",45720),("rIns",91440),("bIns",45720),("lIns",91440))]
+        result["anchor"] = {"ctr":"middle","b":"bottom"}.get(props[0].get("anchor"), "top")
+    return result
 
 
 def get_slots(layout, width, height):
@@ -36,7 +72,8 @@ def get_slots(layout, width, height):
             role = "table"
         else:
             role = "body"
-        slots.append(dict(role=role, x=x, y=y, w=min(w, 1-x), h=min(h, 1-y)))
+        slots.append(dict(role=role, x=x, y=y, w=min(w, 1-x), h=min(h, 1-y),
+                          **placeholder_style(ph, layout, width)))
     if not any(slot["role"] == "title" for slot in slots):
         slots.insert(0, dict(role="title", x=.036, y=.025, w=.68, h=.074))
     if "图形内容" in layout.name:
@@ -46,6 +83,9 @@ def get_slots(layout, width, height):
 
 def render(group, filename, temp):
     deck = Presentation(ASSETS / filename)
+    # Section lists refer to the source slide IDs, which the gallery replaces.
+    for obsolete in deck._element.xpath('./p:extLst|./p:custShowLst'):
+        deck._element.remove(obsolete)
     slide_ids = deck.slides._sldIdLst
     for item in list(slide_ids):
         deck.part.drop_rel(item.rId)
@@ -62,8 +102,23 @@ def render(group, filename, temp):
             shape._element.getparent().remove(shape._element)
     ppt = temp / f"{group}.pptx"
     deck.save(ppt)
-    subprocess.run(["soffice", f"-env:UserInstallation={(temp/'lo').as_uri()}", "--headless",
-                    "--convert-to", "pdf", "--outdir", str(temp), str(ppt)], check=True)
+    subprocess.run(["osascript", "-", str(ppt), str(ppt.with_suffix(".pdf"))], check=True, input="""
+on run argv
+    set src to POSIX file (item 1 of argv)
+    set dest to POSIX file (item 2 of argv)
+    tell application "Microsoft PowerPoint"
+        open src
+        set p to active presentation
+        try
+            save p in dest as save as PDF
+        on error reason
+            close p saving no
+            error reason
+        end try
+        close p saving no
+    end tell
+end run
+""", text=True)
     subprocess.run(["pdftoppm", "-scale-to", "1280", "-png", str(ppt.with_suffix(".pdf")), str(temp/group)], check=True)
     pictures = sorted(temp.glob(f"{group}-*.png"))
     assert len(layouts) == len(pictures)
@@ -82,6 +137,9 @@ def render(group, filename, temp):
 
 if __name__ == "__main__":
     OUTPUT.mkdir(exist_ok=True)
-    with TemporaryDirectory() as work:
+    previous = {item["art"] for item in json.loads((ROOT / "overlay/efund-layouts.json").read_text())}
+    with TemporaryDirectory(prefix='odyssey-layouts-', dir='/tmp') as work:
         catalog = [item for group, source in SOURCES.items() for item in render(group, source, Path(work))]
+    for stale in previous - {item["art"] for item in catalog}:
+        (OUTPUT / stale).unlink(missing_ok=True)
     (ROOT / "overlay/efund-layouts.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2) + "\n")

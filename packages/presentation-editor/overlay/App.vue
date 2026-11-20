@@ -10,7 +10,7 @@
     <input ref="fileInput" type="file" accept=".pptx" hidden @change="importFile" />
     <input ref="imageInput" type="file" accept="image/*" hidden @change="insertImage" />
     <div v-if="!docId" class="empty">
-      <button v-if="recent.length" class="recent" @click="toggle('recent')">
+      <button v-if="recent.length" class="recent" :disabled="!editable" @click="toggle('recent')">
         最近使用
         <Glyph name="down" />
       </button>
@@ -22,13 +22,13 @@
         <h1>开始制作演示文稿</h1>
         <p>导入已有 PowerPoint，或在右侧对话里描述你要制作的演示文稿。</p>
         <div>
-          <button class="primary" :disabled="!ready" @click="create">
+          <button class="primary" :disabled="!ready || !editable" @click="create">
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
               <path d="M12 5v14M5 12h14" />
             </svg>
             新建空白演示文稿
           </button>
-          <button class="outline" :disabled="!ready" @click="fileInput.click()">导入 PowerPoint</button>
+          <button class="outline" :disabled="!ready || !editable" @click="fileInput.click()">导入 PowerPoint</button>
         </div>
       </div>
       <p v-if="notice" class="empty-notice" role="status">{{ notice }}</p>
@@ -41,39 +41,35 @@
           <Glyph name="down" />
         </button>
         <i />
-        <button title="撤销" aria-label="撤销" @click="undoEdit"><Glyph name="undo" /></button>
-        <button title="重做" aria-label="重做" @click="hist.redo"><Glyph name="redo" /></button>
+        <button :disabled="!editable" title="撤销" aria-label="撤销" @click="undoEdit"><Glyph name="undo" /></button>
+        <button :disabled="!editable" title="重做" aria-label="重做" @click="hist.redo"><Glyph name="redo" /></button>
         <i />
-        <button title="新建幻灯片" @click="slideActions.createSlide">
+        <button :disabled="!editable" title="新建幻灯片" @click="slideActions.createSlide">
           <Glyph name="newslide" />
           <span>新建幻灯片</span>
         </button>
-        <button title="版式" @click="toggle('layout')">
+        <button :disabled="!editable" title="版式" @click="toggle('layout')">
           <Glyph name="layout" />
           <span>版式</span>
           <Glyph name="down" />
         </button>
         <i />
-        <select aria-label="字体" :value="selectedFont" @change="command('fontname', $event.target.value)">
+        <select :disabled="!editable" aria-label="字体" :value="selectedFont" @change="command('fontname', $event.target.value)">
           <option v-for="f in fontOptions" :key="f" :value="f">{{ f }}</option>
         </select>
-        <select aria-label="字号" :value="selectedSize" @change="command('fontsize', $event.target.value + 'px')">
+        <select :disabled="!editable" aria-label="字号" :value="selectedSize" @change="command('fontsize', $event.target.value + 'px')">
           <option v-for="s in sizeOptions" :key="s" :value="s">{{ s }}</option>
         </select>
         <button
-          aria-label="加粗"
+          :disabled="!editable" aria-label="加粗"
           :aria-pressed="Boolean(main.richTextAttrs.bold)"
           @mousedown.prevent
           @click="command('bold')"
         >
           <b>B</b>
         </button>
-        <button aria-label="斜体" @mousedown.prevent @click="command('em')"><em>I</em></button>
-        <button aria-label="下划线" @mousedown.prevent @click="command('underline')"><u>U</u></button>
-        <label class="color" title="文字颜色">
-          A
-          <input type="color" aria-label="文字颜色" @input="command('color', $event.target.value)" />
-        </label>
+        <button :disabled="!editable" aria-label="斜体" @mousedown.prevent @click="command('em')"><em>I</em></button>
+        <button :disabled="!editable" aria-label="下划线" @mousedown.prevent @click="command('underline')"><u>U</u></button>
         <button
           v-if="main.activeElementIdList.length"
           title="对象样式"
@@ -83,18 +79,18 @@
         >
           <Glyph name="menu-shape" /><span>样式</span>
         </button>
-        <button aria-label="对齐" @click="toggle('align')"><Glyph name="align" /></button>
-        <button aria-label="项目符号" @mousedown.prevent @click="command('bulletList')">
+        <button :disabled="!editable" aria-label="对齐" @click="toggle('align')"><Glyph name="align" /></button>
+        <button :disabled="!editable" aria-label="项目符号" @mousedown.prevent @click="command('bulletList')">
           <Glyph name="list" />
         </button>
         <i />
-        <button title="插入" @click="toggle('insert')">
+        <button :disabled="!editable" title="插入" @click="toggle('insert')">
           <Glyph name="insert" />
           <span>插入</span>
           <Glyph name="down" />
         </button>
         <div class="grow" />
-        <button aria-label="标注" :aria-pressed="marking" @click="marking = !marking">
+        <button :disabled="!editable" aria-label="标注" :aria-pressed="marking" @click="marking = !marking">
           <Glyph name="mark" />
           <span>标注</span>
         </button>
@@ -104,6 +100,7 @@
         </button>
         <button aria-label="更多" @click="toggle('more')"><Glyph name="more" /></button>
       </nav>
+      <SelectionFormatBar v-if="editable" />
       <CommandMenu
         v-if="menu === 'commands'"
         :anchor="menuPos"
@@ -143,6 +140,8 @@
             <Glyph name="menu-shape" />
             形状
           </button>
+          <button @click="insert('line')"><Glyph name="line" />直线</button>
+          <button @click="insert('arrow')"><Glyph name="arrow" />箭头</button>
           <button @click="chooseFile(imageInput)">
             <Glyph name="menu-image" />
             图片…
@@ -179,7 +178,7 @@
         <aside class="pages">
           <header>
             幻灯片
-            <button title="新建幻灯片" @click="slideActions.createSlide"><Glyph name="plus" /></button>
+            <button title="新建幻灯片" :disabled="!editable" @click="slideActions.createSlide"><Glyph name="plus" /></button>
           </header>
           <button
             v-for="(page, i) in store.slides"
@@ -230,7 +229,8 @@
                 '--page-h': store.viewportSize * store.viewportRatio + 'px'
               }"
             >
-              <Canvas />
+              <Canvas v-if="editable" />
+              <ReadOnlySlide v-else :slide="slide" />
             </div>
           </div>
           <div class="notes" :style="{ height: noteHeight + 'px' }">
@@ -251,7 +251,8 @@
       <footer>
         <span>第 {{ index + 1 }} 页，共 {{ store.slides.length }} 页</span>
         <span>{{ ratio }}</span>
-        <span role="status">{{ notice || '已保存' }}</span>
+        <span v-if="!editable" class="locked-state">已锁定 · 只读</span>
+        <span role="status">{{ !editable && ['只读','已锁定','已保存'].includes(notice) ? '' : notice || (editable ? '已保存' : '') }}</span>
         <div class="grow" />
         <button title="缩小" @click="zoom.scaleCanvas('-')"><Glyph name="minus" /></button>
         <button title="适合窗口" @click="zoom.resetCanvas">适合</button>
@@ -299,6 +300,8 @@ import useCombineElement from '@/hooks/useCombineElement'
 import ElementStylePanel from '@/views/Editor/Toolbar/ElementStylePanel/index.vue'
 import MultiStylePanel from '@/views/Editor/Toolbar/MultiStylePanel.vue'
 import Canvas from '@/views/Editor/Canvas/index.vue'
+import ReadOnlySlide from './ReadOnlySlide.vue'
+import SelectionFormatBar from './SelectionFormatBar.vue'
 import ThumbnailSlide from '@/views/components/ThumbnailSlide/index.vue'
 import useImport from '@/hooks/useImport'
 import useExport from '@/hooks/useExport'
@@ -310,6 +313,8 @@ import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
 import emitter, { EmitterEvents } from '@/utils/emitter'
 import { slideTitle } from './presentation-slide-title'
+import {restoreOfficeFormatting, exportOfficeFormatting} from './office-import'
+import { upgradeEfundTemplate } from './legacy-office'
 import { protectMaster } from './master-protection'
 import { exportMasterArtwork } from './powerpoint-masters'
 import { reconcilePointColors } from './powerpoint-point-colors'
@@ -374,6 +379,7 @@ function plain(html) {
 }
 const canUndoAI = ref(false)
 function undoEdit() {
+  if (!editable.value) return
   menu.value = ''
   if (canUndoAI.value) send('undo')
   else hist.undo()
@@ -437,6 +443,8 @@ async function hydrate(d) {
   main.setActiveElementIdList([])
   if (deck) {
     migrated = await protectMaster(deck.slides, deck.viewportSize, deck.viewportRatio, true)
+    const upgraded = await upgradeEfundTemplate(deck).catch(error => { console.warn('Template typography upgrade', error); return false })
+    migrated ||= upgraded
     if (seq !== hydration) return
     store.setSlides(deck.slides)
     store.updateSlideIndex(
@@ -461,6 +469,15 @@ async function hydrate(d) {
     send('position', { documentId: docId.value, slideId: slide.value.id })
   }
 }
+function setEditMode(value) {
+  editable.value = !!value
+  menu.value = ''
+  stylesOpen.value = false
+  marking.value = false
+  main.setActiveElementIdList([])
+  main.setEditorareaFocus(false)
+  notice.value = editable.value ? '已保存' : '已锁定'
+}
 function receive(event) {
   if (
     event.source !== parent ||
@@ -474,20 +491,18 @@ function receive(event) {
     stylesOpen.value = false
   } else if (d.type === 'load') void hydrate(d)
   else if (d.type === 'flush') {
+    if (d.locking && (importing || loading)) return send('flushed', { id: d.id, error: '文稿正在载入，请稍后锁定。' })
+    document.dispatchEvent(new Event('odyssey:flush-text'))
     nextTick(() => {
       save()
+      if (d.locking) setEditMode(false)
       send('flushed', { id: d.id })
     })
   } else if (d.type === 'referenced-marks') {
     committedMarkIds = new Set(d.ids)
     markViewer?.redraw()
   } else if (d.type === 'edit-mode') {
-    editable.value = !!d.editable
-    menu.value = ''
-    stylesOpen.value = false
-    marking.value = false
-    main.setActiveElementIdList([])
-    notice.value = editable.value ? '已保存' : '已锁定'
+    setEditMode(d.editable)
   } else if (d.type === 'header-export') {
     if (docId.value) exportDeck()
   } else if (d.type === 'header-import') {
@@ -529,7 +544,7 @@ const open = (id) => {
   send('open', { id })
 }
 const row = (id, label, icon, children) => ({ id, label, icon, children })
-const commandTree = computed(() => [
+const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen','全屏','fit')] : [
   row('file', '演示文稿', 'menu-slide', [
     row('import', '导入 PowerPoint…', 'menu-upload'),
     row('export', '导出演示文稿', 'menu-download', [row('pptx', 'PowerPoint 演示文稿 (.pptx)', 'menu-file')]),
@@ -554,6 +569,8 @@ const commandTree = computed(() => [
   row('insert', '插入', 'menu-plus', [
     row('text', '文本框', 'menu-text'),
     row('shape', '形状', 'menu-shape'),
+    row('line', '直线', 'line'),
+    row('arrow', '箭头', 'arrow'),
     row('image', '图片…', 'menu-image'),
     row('chart', '图表…', 'insert'),
     row('table', '表格', 'layout')
@@ -774,6 +791,7 @@ function noteReference(event) {
   reference(quote ? { kind: 'notes', start: t.selectionStart, quote, label: quote.slice(0, 40) } : null)
 }
 function editNotes(e) {
+  if (!editable.value) return
   slide.value.remark = e.target.value
     .split('\n')
     .map((s) => '<p>' + escape(s) + '</p>')
@@ -781,6 +799,21 @@ function editNotes(e) {
   hist.addHistorySnapshot()
 }
 function protectReadOnly(event) {
+  if (event.type === 'keydown' && !event.isComposing && docId.value && !playing.value) {
+    if (event.key === 'F5' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (!event.shiftKey) selectSlide(0)
+      play()
+      return
+    }
+    if (editable.value && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'm') {
+      event.preventDefault()
+      event.stopPropagation()
+      slideActions.createSlide()
+      return
+    }
+  }
   if (editable.value && event.type === 'keydown' && event.target.closest('textarea,input,[contenteditable=true]'))
     return
   if (
@@ -821,6 +854,12 @@ function insert(kind) {
   menu.value = ''
   if (['shape', 'table', 'chart'].includes(kind)) {
     toggle(kind + '-pool')
+    return
+  }
+  if (kind === 'line' || kind === 'arrow') {
+    const width = store.viewportSize
+    elements.createLineElement({ left: width * 0.35, top: width * store.viewportRatio / 2, start: [0,0], end: [width * 0.3,0] },
+      { style: 'solid', points: ['', kind === 'arrow' ? 'arrow' : ''] })
     return
   }
   if (kind === 'text')
@@ -882,7 +921,8 @@ function insertImage(e) {
   e.target.value = ''
   if (!f) return
   const r = new FileReader()
-  r.onload = () => elements.createImageElement(r.result)
+  const pageId = slide.value?.id
+  r.onload = () => { if (editable.value && pageId === slide.value?.id) elements.createImageElement(r.result) }
   r.readAsDataURL(f)
 }
 function readFile(file, importId, parseOnly = false) {
@@ -907,6 +947,7 @@ watch(importer.exporting, async (busy) => {
   }
   await protectMaster(store.slides, store.viewportSize, store.viewportRatio, false)
   await reconcilePointColors(job.file, store.slides).catch(() => {})
+  await restoreOfficeFormatting(job.file, store.slides, store.viewportSize).catch(error => console.warn('PowerPoint formatting',error))
   if (importing !== job) return
   docId.value = crypto.randomUUID()
   store.setTitle(job.title)
@@ -943,7 +984,7 @@ async function exported(event) {
       store.slides,
       true
     )
-    send('export', { bytes, title: store.title, format: 'pptx' })
+    send('export', { bytes: await exportOfficeFormatting(bytes, store.slides, store.viewportSize), title: store.title, format: 'pptx' })
   } catch {
     notice.value = '文稿导出失败，请重试。'
   }

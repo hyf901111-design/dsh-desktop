@@ -117,7 +117,7 @@ export function presentationHeader(doc: Document, actions: Actions) {
       lock.title = named[en ? 'en' : 'zh']
       lock.setAttribute('aria-label', lock.title)
       lock.setAttribute('aria-pressed', String(locked))
-      lock.disabled = !state.writable || state.busy || !state.hasDeck
+      lock.disabled = !state.writable || state.busy
       more.title = en ? 'More presentation actions' : '更多演示操作'
       more.setAttribute('aria-label', more.title)
     },

@@ -32,6 +32,23 @@ it('keeps each deck, its current slide and the recent order across launches', ()
   expect(store.read({ ...key, sessionId: 'another' }).deck).toBeNull()
 })
 
+it('persists edit locks per account and session, including empty sessions', () => {
+  const other = { ...key, sessionId: 'other' }
+  store.setLocked(key, true)
+  store.setLocked(key, true)
+  store.close()
+  store = new PresentationStore(directory)
+  expect(store.isLocked(key)).toBe(true)
+  expect(store.isLocked(other)).toBe(false)
+  expect(store.isLocked({ ...key, owner: 'bob' })).toBe(false)
+  store.setLocked(other, true)
+  store.remove(key)
+  expect(store.isLocked(key)).toBe(false)
+  expect(store.isLocked(other)).toBe(true)
+  store.setLocked(other, false)
+  expect(store.isLocked(other)).toBe(false)
+})
+
 it('preserves surrounding notes when the assistant supplies the finished paragraph', () => {
   const deck = blankDeck()
   const slide = deck.slides[0]!
