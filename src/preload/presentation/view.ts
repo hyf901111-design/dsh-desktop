@@ -251,7 +251,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     },
     async flush(sessionId: string) {
       const e = current
-      if (e?.sessionId !== sessionId) return
+      if (!e?.ready || e.sessionId !== sessionId) return
       await flushEditor(e)
     },
     async admit(sessionId: string, prompt: string, references: unknown, useSlide = true) {

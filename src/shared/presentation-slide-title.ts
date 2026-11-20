@@ -1,14 +1,17 @@
 /** PowerPoint masters may contain footers or off-page instructions ahead of the title in XML order. */
 export function slideTitle(
-  slide: { elements: { type: string; left: number; top: number; content?: string }[] },
+  slide: {
+    elements: { type: string; left: number; top: number; content?: string; text?: { content: string } }[]
+  },
   width: number,
   ratio: number,
   toText: (html: string) => string
 ) {
   const candidates = slide.elements
+    .map((e) => ({ ...e, content: e.type === 'shape' ? e.text?.content : e.content }))
     .filter(
       (e) =>
-        e.type === 'text' &&
+        (e.type === 'text' || e.type === 'shape') &&
         e.content &&
         e.left >= -1 &&
         e.left < width &&

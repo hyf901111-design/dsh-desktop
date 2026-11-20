@@ -18,7 +18,7 @@ import { registerHomeSpreadsheetRuntime } from './home-spreadsheet-runtime.js'
 import {registerSpreadsheetSessions,registerDocumentSessions} from './spreadsheet-sessions.js'
 import { registerResearchSessionTitles } from './research-session-title.js'
 import {registerKnowledgeSessions} from './knowledge-sessions.js'
-import {readSpreadsheetReference,registerClientTools} from './client-tools.js'
+import {readWorkspaceReference,registerClientTools} from './client-tools.js'
 import {registerResearchReportTool} from './research-report-tool.js'
 import {registerPresentationFiles} from './presentation-files.js'
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
@@ -3732,7 +3732,7 @@ export async function apply(ctx) {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence })
-    const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readSpreadsheetReference})
+    const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readWorkspaceReference})
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)

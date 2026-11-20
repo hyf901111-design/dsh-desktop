@@ -36,13 +36,17 @@ export class ClientCapabilityService{
   return binding?{ownerAccountId:binding.owner,sessionId:binding.sessionId,mode:binding.mode,generation:binding.generation}:undefined
  }
  async request(input:any,signal?:AbortSignal){
-  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference'].includes(input.method)||['catalog','spreadsheet-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
+  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference','workspace-reference'].includes(input.method)||['catalog','spreadsheet-reference','workspace-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
   if(input.sourceInstruction!==undefined&&(typeof input.sourceInstruction!=='string'||input.sourceInstruction.length>8000)||input.authorityId!==undefined&&!validId(input.authorityId)||(input.authorityId===undefined)!==(input.sourceInstruction===undefined)||(input.authorityId===undefined)!==(input.authoritySeq===undefined)||input.authoritySeq!==undefined&&(!Number.isSafeInteger(input.authoritySeq)||input.authoritySeq<0))throw Error('客户端请求来源无效。')
   if(input.sourceInstructionDigest!==undefined&&(input.sourceInstruction!==''||typeof input.sourceInstructionDigest!=='string'||!/^[a-f0-9]{64}$/.test(input.sourceInstructionDigest)))throw Error('客户端请求来源无效。')
   signal?.throwIfAborted()
-  if(input.method==='spreadsheet-reference'){
+  if(input.method==='spreadsheet-reference'||input.method==='workspace-reference'){
    const binding=this.current(input.sessionId)
-   if(binding?.mode!=='spreadsheet'||input.authorityId===undefined)return {}
+   if(!binding||input.authorityId===undefined)return {}
+   if(input.method==='workspace-reference'&&binding.mode==='presentation'){
+    return this.options.presentation?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest)??{}
+   }
+   if(binding.mode!=='spreadsheet')return {}
    return this.options.spreadsheet?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest)??{}
   }
   if(input.method==='receipt')return this.recoverReceipt(input,signal)

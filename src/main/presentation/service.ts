@@ -200,11 +200,16 @@ export function installPresentation(options: {
       throw Error('未知演示操作。')
     }
   )
+  const admissionFor = (key: Key, instruction: string, digest?: string) =>
+    admissions.get(who(key))?.get(digest ?? hash(canvasHumanText(instruction) ?? instruction))
   return {
+    referenceSettings(key: Key, instruction: string, digest?: string) {
+      const ref = admissionFor(key, instruction, digest)
+      if (!ref) return {}
+      return { mode: 'presentation', referenceScope: ref.references.length ? 'selection' : ref.useSlide ? 'slide' : 'none' }
+    },
     handlers(key: Key, current: () => boolean, instruction: string, digest?: string) {
-      const admitted = admissions
-        .get(who(key))
-        ?.get(digest ?? hash(canvasHumanText(instruction) ?? instruction))
+      const admitted = admissionFor(key, instruction, digest)
       const documentId = admitted ? admitted.documentId : store.read(key).deck?.id
       let createdId: string | undefined
       const guard = () => {

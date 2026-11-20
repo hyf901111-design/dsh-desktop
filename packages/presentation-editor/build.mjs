@@ -45,6 +45,7 @@ function edit(path, edits) {
   writeFileSync(target, text)
 }
 // Start each document with its own undo stack in the embedded editor.
+edit('src/assets/styles/variable.scss', [['$themeColor: #d14424;', '$themeColor: #588afa;']])
 edit('src/store/snapshot.ts', [
   [
     'await db.snapshots.add(newFirstSnapshot)',
