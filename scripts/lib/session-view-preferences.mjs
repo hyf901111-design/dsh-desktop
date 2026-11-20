@@ -19,7 +19,7 @@ export function hasSessionViewPreference(sessionId, view) {
 
 // The workspace flow can reuse a blank scope which is not currently rendered.
 // Record the explicit intent before open; a component-local event alone loses it.
-export function installInitialChatViewIntent(chatStore, sessions, researchWorkspaces, recordNewChatActivity) {
+export function installInitialChatViewIntent(chatStore, sessions, researchWorkspaces, recordSessionActivity) {
   const key = Symbol.for('sherlock:initial-chat-reuse')
   const policy = { canReuse: id => {
     const page = sherlockBoardsAdapter
@@ -42,13 +42,16 @@ export function installInitialChatViewIntent(chatStore, sessions, researchWorksp
     chatStore.create(id).actions.setView('chat')
     // New Chat can reopen an unnamed draft. Its original creation time is
     // older, so record this explicit action for the sidebar's local ordering.
-    recordNewChatActivity?.(id)
+    recordSessionActivity?.(id)
   }
   const research = event => {
     const id = event.detail?.sessionId
     explicitHomeViewSessions.delete(id)
-    if (event.detail?.newResearch === true && typeof id === 'string' && sessions.list.getSnapshot().ids.includes(id))
+    if (event.detail?.newResearch === true && typeof id === 'string' && sessions.list.getSnapshot().ids.includes(id)) {
+      // Like New Chat, New Research can reuse a draft with an older timestamp.
+      recordSessionActivity?.(id)
       researchWorkspaces?.for(id)?.initializeWorkbenchResponsiveArrange?.()
+    }
   }
   window.addEventListener('sherlock:conversation-initial-chat', chat)
   window.addEventListener('sherlock:conversation-initial-research', research)
