@@ -437,12 +437,6 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
    if(imageFactoryActive)document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-selected',{detail:workspaceId}));
   }catch(error){sherlockBoardsAdapter?.showError(error)}
  };
- const rightProjectHint=rightProjectDraft&&(rightProjectMode!=='browser'||rightWorkspaceId!==rightProjectContext?.workspaceId)&&react.createElement('div',{
-  'data-right-project-draft-hint':'',role:'status',
-  children:document.documentElement.dataset.odysseyLocale==='en'
-   ? (rightWorkspaceLabel?'Sending starts a new conversation in '+rightWorkspaceLabel+'.':'Sending starts a new conversation without a project.')
-   : (rightWorkspaceLabel?'发送后在「'+rightWorkspaceLabel+'」新建会话':'发送后新建独立会话')
- });
  const rightWorkspaceRow=sidebarMode&&rightProjectContext?react_jsx_runtime.jsxs('div',{
   className:ConversationRoot_module_css_default.heroWorkspaceRow,
   'data-odyssey-composer-workspace':'','data-research-empty-workspace-row':true,
@@ -459,7 +453,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace(composerSession,composerSession.replace('pending,','pending:rightProjectDraft?[]:pending,').replace('session,','session:rightProjectDraft?undefined:session,'));
  const composerProps='\n\t\t\t\tzone,\n\t\t\t\thero,\n\t\t\t\tresearchEmpty,';
  replace(composerProps,composerProps.replace('zone,','zone:rightProjectDraft?undefined:zone,'));
- replace('\n\t\t\t\theroWorkspaceRow,\n\t\t\t\trenderSlot,','\n\t\t\t\theroWorkspaceRow:sidebarMode?(rightProjectHint?react.createElement(react.Fragment,null,rightProjectHint,rightWorkspaceRow):rightWorkspaceRow):heroWorkspaceRow,\n\t\t\t\trenderSlot,');
+ replace('\n\t\t\t\theroWorkspaceRow,\n\t\t\t\trenderSlot,','\n\t\t\t\theroWorkspaceRow:sidebarMode?rightWorkspaceRow:heroWorkspaceRow,\n\t\t\t\trenderSlot,');
  replace(inputRow,inputRow+`
  pendingConversation:pendingConversation||!!rightProjectDraft,rightProjectDraft,eworkImageFactory:imageFactoryActive,`)
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
