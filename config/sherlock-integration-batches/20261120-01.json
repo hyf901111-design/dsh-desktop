@@ -11,25 +11,41 @@
         "schemaVersion": 1,
         "featureName": "探索演示入口、PPT 资料与回放恢复",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "ae61b2812a64060ae1de59f8d134ac16b9c2b88e",
-        "tipCommit": "65d4bd5f943e7a2b7780a3efbefee5f4751f2ec0",
+        "baseCommit": "65d4bd5f943e7a2b7780a3efbefee5f4751f2ec0",
+        "tipCommit": "0b56aa355f39139bf0f20510897ece35ae19b361",
         "commits": [
           {
-            "commit": "65d4bd5f943e7a2b7780a3efbefee5f4751f2ec0",
+            "commit": "0b56aa355f39139bf0f20510897ece35ae19b361",
             "parents": [
-              "ae61b2812a64060ae1de59f8d134ac16b9c2b88e"
+              "65d4bd5f943e7a2b7780a3efbefee5f4751f2ec0"
             ],
-            "subject": "修复折叠侧栏启动笔记演示时被取消"
+            "subject": "统一演示文稿和研究报告入口并修复参考 PDF 拖动中断"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
           {
             "status": "M",
             "path": "src/preload/home-guide-entry-native.ts"
           },
           {
             "status": "M",
+            "path": "src/preload/home-guide-explore-entry.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.css"
+          },
+          {
+            "status": "M",
             "path": "test/home-guide-entry-native.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-explore-entry-browser.test.js"
           }
         ],
         "checks": [
@@ -39,62 +55,48 @@
               "test",
               "--",
               "test/home-guide-entry-native.test.ts",
+              "test/home-guide-presentation-adapter.test.ts",
               "--testTimeout",
               "10000"
             ],
             "outcome": "passed",
-            "summary": "55 项入口测试通过，新增固定在侧栏的笔记入口回归",
-            "verifiedCommit": "65d4bd5f943e7a2b7780a3efbefee5f4751f2ec0",
-            "completedAt": "2026-11-20T01:39:25.537238+00:00",
-            "timeoutMs": 90000
-          }
-        ],
-        "uiVerification": {
-          "outcome": "not-applicable",
-          "summary": "已根据现有客户端取消日志及实际侧栏事件处理复现，并通过入口回归检查。"
-        },
-        "acceptanceCriteria": [
-          "折叠侧栏上固定的笔记图标可以启动已准备的笔记演示会话",
-          "更多菜单和普通笔记新建入口继续按原路径工作"
-        ],
-        "risks": [],
-        "generatedAt": "2026-11-20T01:39:25.537238+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3c5f41818f0b15eda1ab0ef649daee5cb668000f",
-        "verificationCommit": "3c5f41818f0b15eda1ab0ef649daee5cb668000f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "3c5f41818f0b15eda1ab0ef649daee5cb668000f",
-            "completedAt": "2026-11-20T01:39:28.601Z",
+            "summary": "59 项原生演示入口及演示文稿请求检查",
+            "verifiedCommit": "0b56aa355f39139bf0f20510897ece35ae19b361",
+            "completedAt": "2026-11-20T01:43:09.947813+00:00",
             "timeoutMs": 90000
           },
           {
             "argv": [
+              "env",
+              "SHERLOCK_TEST_PLAYWRIGHT=/Users/heyafeng/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs",
               "npm",
-              "run",
-              "typecheck"
+              "test",
+              "--",
+              "test/home-guide-explore-entry-browser.test.js",
+              "-t",
+              "visible Home button|mode tabs are collapsed|animates the PPT reference|preserves a nonempty homepage draft|uses the named More menu",
+              "--testTimeout",
+              "10000"
             ],
             "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3c5f41818f0b15eda1ab0ef649daee5cb668000f",
-            "completedAt": "2026-11-20T01:39:28.601Z",
+            "summary": "9 项渲染检查覆盖折叠侧栏、首页输入、独立草稿和 PDF 拖动",
+            "verifiedCommit": "0b56aa355f39139bf0f20510897ece35ae19b361",
+            "completedAt": "2026-11-20T01:43:09.947813+00:00",
             "timeoutMs": 90000
           }
         ],
-        "recordedAt": "2026-11-20T01:39:28.601Z"
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证两种演示启动路径和 PDF 拖动动画；本地包由用户验收。"
+        },
+        "acceptanceCriteria": [
+          "首页从当前可见输入框进入演示文稿或研究报告的独立会话",
+          "折叠侧栏直接演示点击主页",
+          "右侧知识库里的 PPT 参考 PDF 可拖到输入框",
+          "固定笔记图标成功接管已准备的会话"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-20T01:43:09.947813+00:00"
       }
     }
   ],
