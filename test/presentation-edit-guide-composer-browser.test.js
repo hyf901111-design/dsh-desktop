@@ -38,7 +38,7 @@ it('types beside a long presentation chip that covers the textarea midpoint and 
         }
       })
       let covered=false
-      for(const [label,prompt] of [['','撰写讲稿'],['标注 1','调整图表'],['AI 投资回报的 NPV 敏感性','把标题改为结论']]){
+      for(const [label,prompt] of [['','撰写讲稿'],['标注 1','调整图表'],['AI 投资回报的 NPV 敏感性','把标题改为结论'],['这里请大家记住一个门槛','优化选中讲稿']]){
         if(label){
           const chip=document.createElement('span')
           chip.dataset.referenceSource='presentation-reference';chip.textContent=label
@@ -47,12 +47,13 @@ it('types beside a long presentation chip that covers the textarea midpoint and 
           const b=textarea.getBoundingClientRect()
           if(label.length>7)covered=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)===chip
         }
-        await guide.draft(prompt);await guide.send();await guide.reply('已完成。')
+        if(label==='标注 1') textarea.value += prompt
+        await guide.draft(prompt,{existing:label==='标注 1'});await guide.send();await guide.reply('已完成。')
       }
       guide.dispose();return {submitted,covered}
     })
     expect(result.covered).toBe(true)
-    expect(result.submitted).toEqual(['撰写讲稿','\uE001 调整图表','\uE001 把标题改为结论'])
-    expect(messages.at(-1)).toEqual(['把标题改为结论','AI 投资回报的 NPV 敏感性'])
+    expect(result.submitted).toEqual(['撰写讲稿','\uE001 调整图表','\uE001 把标题改为结论','\uE001 优化选中讲稿'])
+    expect(messages.at(-1)).toEqual(['优化选中讲稿','这里请大家记住一个门槛'])
   } finally {await browser.close()}
 })

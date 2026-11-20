@@ -8,7 +8,7 @@ export function editGuideDocument(
   store: PresentationStore,
   key: Key,
   input: {
-    stage?: 'notes' | 'chart' | 'title'
+    stage?: 'notes' | 'chart' | 'title' | 'notes-selection'
     documentId?: string
     referenceId?: string
   }
@@ -42,6 +42,11 @@ export function editGuideDocument(
     )
     if (page !== content.title.page || !title) throw Error('标题引用已变化。')
     operations = [{ op: 'text', slideId: slide.id, elementId: title.id, text: content.title.replacement }]
+  } else if (input.stage === 'notes-selection') {
+    const selection = content.notesSelection
+    if (page !== selection.page || slide.notes.slice(selection.start, selection.start + selection.quote.length) !== selection.quote)
+      throw Error('演讲稿选区已变化。')
+    operations = [{ op: 'notes', slideId: slide.id, start: selection.start, quote: selection.quote, text: selection.replacement }]
   } else throw Error('未知演示步骤。')
   store.apply(key, { revision: state.revision, operations })
   return { documentId: state.documentId, count: state.slides.length, page }

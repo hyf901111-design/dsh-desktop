@@ -128,13 +128,14 @@ it('blocks an in-flight native demo send after disposal and releases ordinary fo
   expect(f.outside).toHaveLength(1)
 })
 
-it('saves all three presentation turns in the native session with their original references and model', async () => {
+it('saves all four presentation turns in the native session with their original references and model', async () => {
   const f = await fixture('把研究简报讲给投资委员会（演示案例）', createPresentationEditGuideChat)
   await f.runtime.prepare(f.input)
   const rows = [
     ['notes', '请准备演讲稿。', undefined, '逐页备注已保存。'],
     ['chart', '按批注重排图表。', '第 10 页 · 批注', '两根数据柱已突出。'],
-    ['title', '修改所选标题。', '第 13 页 · 标题', '标题已更新。']
+    ['title', '修改所选标题。', '第 13 页 · 标题', '标题已更新。'],
+    ['notes-selection', '优化选中的逐字稿。', '第 13 页 · 备注选段', '所选逐字稿已优化。']
   ]
   for (const [stage, prompt, referenceLabel, reply] of rows) {
     await f.runtime.arm({ ...f.input, prompt, referenceLabel })
@@ -150,8 +151,8 @@ it('saves all three presentation turns in the native session with their original
     if (label) expect(history).toContain(label)
     expect(history).toContain(reply)
   }
-  expect(f.agent.session.events.filter(event => event.type === 'user/message')).toHaveLength(3)
-  expect(f.agent.session.events.filter(event => event.type === 'assistant/message')).toHaveLength(3)
+  expect(f.agent.session.events.filter(event => event.type === 'user/message')).toHaveLength(4)
+  expect(f.agent.session.events.filter(event => event.type === 'assistant/message')).toHaveLength(4)
   expect(f.outside).toEqual([])
   expect(f.agent.session.requestHeader().config.provider).toBe('outside')
   await f.runtime.disposeRun(f.input)

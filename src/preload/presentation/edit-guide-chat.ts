@@ -1,6 +1,6 @@
 import type { HomeGuideMountOptions } from '../home-guides'
 
-const stages = ['notes', 'chart', 'title'] as const
+const stages = ['notes', 'chart', 'title', 'notes-selection'] as const
 
 /** Uses the resident InputBar and its real submission. Only the sample Agent supplies the recorded answer. */
 export async function mountPresentationEditGuideChat(document: Document, options: HomeGuideMountOptions) {
@@ -100,7 +100,7 @@ export async function mountPresentationEditGuideChat(document: Document, options
   document.addEventListener('pointerdown', takeover, true)
   document.addEventListener('beforeinput', takeover, true)
   return {
-    async draft(text: string) {
+    async draft(text: string, { existing = false } = {}) {
       check()
       if (!text.trim() || !stages[index] || pending || sent) throw Error('演示对话步骤已变化。')
       if (!prepared) {
@@ -119,7 +119,8 @@ export async function mountPresentationEditGuideChat(document: Document, options
         if (initial[0]?.hasAttribute('data-provisional') && document.activeElement === input) input.blur()
         input.focus({ preventScroll: true })
       })
-      await waitFor(() => matches(input, '', referenceLabel) ? true : undefined, '输入框已有草稿，或选区尚未就绪。')
+      await waitFor(() => matches(input, existing ? text : '', referenceLabel) ? true : undefined, '输入框已有草稿，或选区尚未就绪。')
+      if (existing) { pending = { input, text, referenceLabel }; return }
       const setValue = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value')!.set!
       let written = ''
       for (const chunk of text.match(/.{1,2}/gsu) ?? []) {

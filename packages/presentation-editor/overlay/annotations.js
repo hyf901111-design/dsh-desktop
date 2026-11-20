@@ -94,6 +94,7 @@ export function attachEditorMarks(host, store, documentId, reference, snapshot, 
       const mark = find(id)
       if (mark) {
         mark.comment = text
+        reference({ kind: 'mark-comment', slideId: store.slides.find(s => s.marks?.some(m => m.id === id))?.id, id, comment: text })
         redraw()
         snapshot()
       }

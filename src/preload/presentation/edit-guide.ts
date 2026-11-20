@@ -16,6 +16,7 @@ type EditorState = {
   markId?: string
   comment?: string
   marking: boolean
+  playing?: boolean
 }
 
 export async function mountPresentationEditGuide(
@@ -175,10 +176,9 @@ export async function mountPresentationEditGuide(
       await command('comment', { target: 'comment', text: text.slice(0, i) })
       await wait(84)
     }
-    await command('comment', { target: 'comment', text, commit: true })
+    await command('comment', { target: 'comment', text })
     await until((s) => s.comment === text, '图表批注尚未保存。')
-    await wait(1100)
-    await hit('close')
+    await wait(1500)
   }
   async function openChat() {
     const sidebar = doc.getElementById('odyssey-right-workspace-panel')
@@ -190,11 +190,12 @@ export async function mountPresentationEditGuide(
     chat ??= await mountPresentationEditGuideChat(doc, options)
     return chat
   }
-  const request = async (prompt: string) => {
+  const request = async (prompt: string, existing = false) => {
     const c = chat ?? (await openChat())
-    await c.draft(prompt)
-    await wait(650)
+    await c.draft(prompt, { existing })
+    await wait(1200)
     await c.send()
+    await wait(content.executionMs)
   }
   const dispose = () => {
     if (closed) return
@@ -265,7 +266,8 @@ export async function mountPresentationEditGuide(
           await selectChart()
           break
         case 'revise-chart':
-          await request(content.chart.prompt)
+          await request(content.chart.comment, true)
+          await hit('close')
           await native('chart', markId)
           await until((s) => s.page === content.chart.page && !s.marking, '图表调整尚未显示。')
           await chat!.reply(content.replies.chart)
@@ -275,6 +277,7 @@ export async function mountPresentationEditGuide(
           await hit('title', { title: content.title.original })
           const s = await until((s) => s.title?.trim() === content.title.original, '没有选中本页标题。')
           titleId = s.selected!
+          await wait(1400)
           break
         }
         case 'revise-title':
@@ -282,12 +285,46 @@ export async function mountPresentationEditGuide(
           await native('title', titleId)
           await chat!.reply(content.replies.title)
           break
+        case 'select-notes': {
+          await command('expand-notes')
+          await hit('notes')
+          const selection = content.notesSelection
+          const bounds = await command<{ start: Position; end: Position }>('notes-selection-bounds', selection)
+          if (point) await point({
+            target: frame()!, fromTarget: frame()!, action: 'drag', hover: 'none',
+            canvasPoints: { from: () => screenPoint(bounds.start), to: () => screenPoint(bounds.end) },
+            onFrame: ({ phase, x, y }) => {
+              const from = screenPoint(bounds.start), to = screenPoint(bounds.end)
+              const dx = to.x - from.x, dy = to.y - from.y
+              const fraction = ((x - from.x) * dx + (y - from.y) * dy) / (dx * dx + dy * dy || 1)
+              if (phase === 'dragging') post('select-notes', { target: 'notes', ...selection, fraction })
+            }
+          })
+          await command('select-notes', { target: 'notes', ...selection, commit: true })
+          await wait(1700)
+          break
+        }
+        case 'revise-notes':
+          await request(content.notesSelection.prompt)
+          await native('notes-selection')
+          await until(s => s.notes.includes(content.notesSelection.replacement), '所选逐字稿尚未优化。')
+          await chat!.reply(content.replies['notes-selection'])
+          await wait(2400)
+          break
+        case 'return-first':
+          await page(1)
+          await wait(1500)
+          break
+        case 'play':
+          await hit('play')
+          await until(s => s.page === 1 && s.playing === true, '首页放映尚未开始。')
+          await wait(2200)
+          break
         case 'finish':
           await until(
-            (s) => s.page === content.title.page && s.notes === content.notes[content.title.page - 1],
+            (s) => s.page === 1 && s.playing === true,
             '演示结果尚未保存。'
           )
-          await command('bounds', { target: 'title', title: content.title.replacement })
           break
         default:
           throw Error('未知演示场景。')
