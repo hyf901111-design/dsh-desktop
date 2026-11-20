@@ -5,6 +5,7 @@ import { load } from 'cheerio'
 import { strFromU8, unzipSync } from 'fflate'
 import { expect, it } from 'vitest'
 import { blankDeck, PresentationStore } from '../src/main/presentation/store'
+import { editGuideDocument } from '../src/main/presentation/edit-guide'
 import { createPresentationGuideChartOperations, PRESENTATION_EDIT_GUIDE_CONTENT as guide } from '../src/shared/presentation-edit-guide-content'
 
 const asset = new URL('../packages/dsh-research-task-runtime/assets/home-presentation/company-research-briefing.pptx', import.meta.url)
@@ -33,7 +34,7 @@ it('has an original spoken script for every physical page, including all four ch
   expect(titleSlide('[name="page-title"]').closest('p\\:sp').find('a\\:t').text()).toBe(guide.title.original)
 })
 
-it('reflows the marked native chart and writes notes through the store without changing any of its eight source values', () => {
+it('changes only the marked chart type, preserving layout, palette and all eight source values', () => {
   const path = slideFiles[guide.chart.page - 1]!
   const slideXml = xml(path)
   const chartRelationship = slideXml('c\\:chart').attr('r:id')
@@ -62,7 +63,7 @@ it('reflows the marked native chart and writes notes through the store without c
       id: slideXml(node).find('p\\:cNvPr').attr('name')!, type: 'text', ...bounds,
       content: '<p>' + slideXml(node).find('a\\:t').text() + '</p>'
     }))
-    slide.elements.push({ id: 'marked-chart', type: 'chart', chartType: 'column', data, ...bounds })
+    slide.elements.push({ id: 'marked-chart', type: 'chart', chartType: 'bar', data, themeColors: ['#1EB9E1', '#005096'], ...bounds })
     store.save(key, 0, deck, true)
     const original = store.inspect(key).currentSlide!
     expect(original.elements.find(el => el.text === guide.chart.titleHint)).toBeDefined()
@@ -76,16 +77,30 @@ it('reflows the marked native chart and writes notes through the store without c
     expect(edited.notes).toBe(guide.notes[guide.chart.page - 1])
     expect(createPresentationGuideChartOperations(edited, deck.viewportSize, 'marked-chart')).toEqual(operations)
     const chart = edited.elements.find(el => el.id === 'marked-chart')!
-    expect(chart.left).toBeCloseTo(28.8)
-    expect(chart).toMatchObject({
-      width: 450,
-      data: { ...data, pointColors: { 1: { 0: '#CB482A', 2: '#CB482A' } } }
-    })
-    expect(edited.elements.find(el => el.text === guide.chart.caption)).toBeDefined()
-    expect(edited.elements.find(el => el.text.includes('相差 3.1 个百分点'))!.left).toBeGreaterThan(chart.left + chart.width)
-    expect(edited.elements.find(el => el.id === 'source-10')).toEqual(original.elements.find(el => el.id === 'source-10'))
+    const before = original.elements.find(el => el.id === 'marked-chart')!
+    expect(chart).toEqual({ ...before, chartType: 'column' })
+    expect(edited.elements.filter(el => el.id !== chart.id)).toEqual(original.elements.filter(el => el.id !== chart.id))
+    expect(guide.notes[guide.notesSelection.page - 1]!.slice(guide.notesSelection.start, guide.notesSelection.start + guide.notesSelection.quote.length)).toBe(guide.notesSelection.quote)
+
   } finally {
     store.close()
     rmSync(directory, { recursive: true, force: true })
   }
+})
+
+it('rewrites only the selected passage in the speaker notes and rejects an outdated selection', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'presentation-guide-notes-'))
+  const store = new PresentationStore(directory)
+  try {
+    const key = { owner: 'reader', sessionId: 'guide-notes' }, deck = blankDeck(guide.filename.replace(/\.pptx$/, ''))
+    deck.slides = guide.notes.map((text, i) => ({ id: 'page-' + i, elements: [], remark: text.split('\n').map(p => '<p>' + p + '</p>').join('') }))
+    store.save(key, 0, deck, true)
+    const selection = guide.notesSelection, slide = deck.slides[selection.page - 1]!
+    store.setPosition(key, deck.id, slide.id)
+    editGuideDocument(store, key, { documentId: deck.id, stage: 'notes-selection' })
+    const changed = store.inspect(key, slide.id).currentSlide!
+    expect(changed.notes).toBe(guide.notes[selection.page - 1]!.replace(selection.quote, selection.replacement))
+    expect(store.inspect(key, deck.slides[0]!.id).currentSlide!.notes).toBe(guide.notes[0])
+    expect(() => editGuideDocument(store, key, { documentId: deck.id, stage: 'notes-selection' })).toThrow('选区已变化')
+  } finally { store.close(); rmSync(directory, { recursive: true, force: true }) }
 })

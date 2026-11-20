@@ -216,18 +216,27 @@ export function chartAppearance(chart) {
   return JSON.stringify([chart.options || null, chart.textColor || null, chart.lineColor || null])
 }
 export function liveChartXml(source, data, type, palette, appearance) {
-  if (!source || type !== source.type || !same(source.original.palette, palette)) return null
+  if (!source || !same(source.original.palette, palette)) return null
+  const turnBars = type !== source.type && ['bar', 'column'].includes(type) && ['bar', 'column'].includes(source.type)
+  if (type !== source.type && !turnBars) return null
   const original = source.original
   if (original.appearance && appearance !== original.appearance) return null
   if (
     same(data.series, original.series) &&
     same(data.labels, original.labels) &&
     same(data.legends, original.legends) &&
-    !data.pointColors
+    !data.pointColors && !turnBars
   )
     return source.xml
   const doc = xml(source.xml),
     series = parts(doc, 'ser')
+  if (turnBars) {
+    const bars = parts(doc, 'barChart')
+    if (bars.length !== 1 || parts(doc, 'ser').length !== children(bars[0], 'ser').length) return null
+    child(bars[0], 'barDir')?.setAttribute('val', type === 'column' ? 'bar' : 'col')
+    for (const axis of parts(doc, 'catAx')) child(axis, 'axPos')?.setAttribute('val', type === 'column' ? 'l' : 'b')
+    for (const axis of parts(doc, 'valAx')) child(axis, 'axPos')?.setAttribute('val', type === 'column' ? 'b' : 'l')
+  }
   if (series.length !== data.series.length) return null
   for (const [i, s] of series.entries()) {
     if (!same(data.series[i], original.series[i]) && !replaceCache(doc, child(s, 'val'), data.series[i]))

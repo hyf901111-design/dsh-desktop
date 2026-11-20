@@ -18,8 +18,12 @@ export function presentationCodec() {
 // pins it at the caret through the same InputMachine used by Notes and Research.
 export function installPresentationReferences({ win, doc, sessions, getInput }) {
   const carets = new WeakMap()
+  const comments = new Map()
   let pending, ghost, shellOff, observed
   const publish = () => {
+    for (const [id, value] of comments) {
+      if (value.shell.disposed || !value.shell.snapshot.occurrences.some(o => o.occurrenceId === id)) comments.delete(id)
+    }
     const sessionId = doc.body.dataset.eworkPresentationSession
     if (!sessionId || !observed) return
     const ids = observed.snapshot.occurrences.flatMap((o) => {
@@ -106,10 +110,27 @@ export function installPresentationReferences({ win, doc, sessions, getInput }) 
     }
   }
   const select = (event) => {
-    clear()
+    if (event.detail?.kind !== 'mark-comment') clear()
     const raw = event.detail,
       state = active(raw)
     if (!state) return
+    if (raw.kind === 'mark-comment') {
+      if (typeof raw.comment !== 'string' || raw.comment.length > 1000) return
+      const { shell } = state
+      const occurrence = shell.snapshot.occurrences.find(o => {
+        if (o.source !== 'presentation-reference') return false
+        try { const r = JSON.parse(o.ref); return r.kind === 'mark' && r.id === raw.id && r.documentId === raw.documentId && r.slideId === raw.slideId } catch { return false }
+      })
+      if (!occurrence) return
+      const prior = comments.get(occurrence.occurrenceId)
+      const start = occurrence.offset + 1 + (shell.snapshot.draft[occurrence.offset + 1] === ' ' ? 1 : 0)
+      const end = start + (prior?.text.length ?? 0)
+      // Own only the comment inserted for this native reference. Preserve other drafts and later user edits.
+      if (prior && (prior.shell !== shell || shell.snapshot.draft.slice(start, end) !== prior.text)) return
+      if (shell.insertText(raw.comment, { start, end, draftRev: shell.snapshot.draftRev }))
+        comments.set(occurrence.occurrenceId, { shell, text: raw.comment })
+      return
+    }
     if (raw.kind === 'removed-mark') {
       const { shell } = state
       const matches = shell.snapshot.occurrences.filter((o) => {
@@ -188,6 +209,7 @@ export function installPresentationReferences({ win, doc, sessions, getInput }) 
   return () => {
     off()
     shellOff?.()
+    comments.clear()
     clear()
     win.removeEventListener('sherlock:presentation-selection', select)
     doc.removeEventListener('focusin', confirm, true)

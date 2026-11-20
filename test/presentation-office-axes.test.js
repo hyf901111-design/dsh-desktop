@@ -5,7 +5,7 @@ import JSZip from 'jszip'
 import { it, expect } from 'vitest'
 import { applyOfficeAxes } from '../packages/presentation-editor/overlay/office-axes'
 
-import { trimEmptyOfficeSublists } from '../packages/presentation-editor/overlay/office-import'
+import { trimEmptyOfficeSublists, liveChartXml } from '../packages/presentation-editor/overlay/office-import'
 import { applyOfficeSeries } from '../packages/presentation-editor/overlay/office-series'
 
 async function chartSource(number) {
@@ -15,6 +15,21 @@ async function chartSource(number) {
   const source = await zip.file('ppt/charts/chart' + number + '.xml').async('string')
   return new DOMParser().parseFromString(source, 'application/xml')
 }
+
+it('turns the sample chart horizontally while retaining native series, blue fills and labels', async () => {
+  const zip = await JSZip.loadAsync(readFileSync(resolve('packages/dsh-research-task-runtime/assets/home-presentation/company-research-briefing.pptx')))
+  const source = await zip.file('ppt/charts/chart16.xml').async('string')
+  const data = { labels: ['就业增长·高AI敞口','就业增长·其他职业','实际工资·高AI敞口','实际工资·其他职业'], legends: ['疫情前（2015—2019）','疫情后（2023Q2—2025Q2）'], series: [[1,1.1,.1,.5],[1.7,.8,3.8,.7]] }
+  const palette = ['#1EB9E1','#005096'], original = { ...data, palette }
+  const result = liveChartXml({ xml: source, type: 'bar', original }, data, 'column', palette)
+  const before = new DOMParser().parseFromString(source, 'application/xml')
+  const after = new DOMParser().parseFromString(result, 'application/xml')
+  const nodes = (doc, name) => [...doc.getElementsByTagNameNS('*', name)]
+  expect(nodes(after, 'barDir')[0].getAttribute('val')).toBe('bar')
+  expect(nodes(after, 'ser').map(s => new XMLSerializer().serializeToString(s))).toEqual(nodes(before, 'ser').map(s => new XMLSerializer().serializeToString(s)))
+  expect(nodes(after, 'catAx')[0].getElementsByTagNameNS('*','axPos')[0].getAttribute('val')).toBe('l')
+  expect(nodes(after, 'valAx')[0].getElementsByTagNameNS('*','axPos')[0].getAttribute('val')).toBe('b')
+})
 
 it.each([11, 12])(
   'retains the visible date axis and both scales of the EFund combination chart %s',

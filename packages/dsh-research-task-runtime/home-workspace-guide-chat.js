@@ -127,11 +127,22 @@ export function createWorkspaceGuideChat(ctx, spec, { env = process.env } = {}) 
       turn.acceptance.resolve()
       const intro = spec.intro(run.locale, index)
       yield { type: 'block-start', index: 0, blockType: 'text' }
-      if (intro) yield { type: 'text-delta', index: 0, text: intro }
+      const chunks = text => spec.textChunkSize ? text.match(new RegExp('.{1,' + spec.textChunkSize + '}', 'gsu')) ?? [] : [text]
+      for (const text of chunks(intro)) {
+        if (spec.textChunkMs) await waitFor(new Promise(resolve => setTimeout(resolve, spec.textChunkMs)), request.signal)
+        request.signal?.throwIfAborted()
+        current(run)
+        if (text) yield { type: 'text-delta', index: 0, text }
+      }
       const update = await waitFor(turn.saved.promise, request.signal)
       request.signal?.throwIfAborted()
       current(run)
-      yield { type: 'text-delta', index: 0, text: update }
+      for (const text of chunks(update)) {
+        if (spec.textChunkMs) await waitFor(new Promise(resolve => setTimeout(resolve, spec.textChunkMs)), request.signal)
+        request.signal?.throwIfAborted()
+        current(run)
+        yield { type: 'text-delta', index: 0, text }
+      }
       turn.replied.resolve()
       yield { type: 'block-end', index: 0, block: { type: 'text', text: intro + update } }
       turn.finished = true

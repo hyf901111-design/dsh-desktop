@@ -25,21 +25,8 @@ const notes: string[] = [
 const chart = {
   page: 10,
   titleHint: '劳动力市场数据反证悲观预期',
-  comment: '图放大到左边，标出疫情后高 AI 敞口职业的两根柱子。',
-  prompt: '按批注调整，右边用两句话讲清差距，原数据保留。',
-  caption: '2023 年二季度至 2025 年二季度，高 AI 敞口职业两项增速均较高（年化，%）',
-  highlights: [
-    { seriesIndex: 1, pointIndex: 0, color: '#CB482A' },
-    { seriesIndex: 1, pointIndex: 2, color: '#CB482A' }
-  ],
-  // All coordinates are on a 1000-unit wide slide, including vertical coordinates.
-  layout: {
-    chart: { left: 40, top: 140, width: 625, height: 325 },
-    caption: { left: 40, top: 105, width: 625, height: 33 },
-    heading: { left: 690, top: 105, width: 269, height: 35 },
-    body: { left: 690, top: 153, width: 269, height: 150 },
-    takeaway: { left: 690, top: 319, width: 269, height: 142 }
-  }
+  comment: '把框选图表改成分组横向条形图，保留原位置、大小和易方达蓝色配色，原数据与页面布局不变。',
+  chartType: 'column'
 }
 
 export const PRESENTATION_EDIT_GUIDE_CONTENT = {
@@ -54,10 +41,19 @@ export const PRESENTATION_EDIT_GUIDE_CONTENT = {
     replacement: '五种情景中，仅一种净现值为正',
     prompt: '把这个标题改成一句结论，说清几种情景里净现值为正。'
   },
+  notesSelection: {
+    page: 13,
+    start: notes[12]!.indexOf('五种情景里'),
+    quote: '五种情景里，只有同时具备强护城河、又按 10% 的低折现率估值时，净现值才转为正 4.1 万亿美元。企业能留住多少收益，和资金有多贵，都直接影响结果。',
+    replacement: '这里请大家记住一个门槛：五种情景中，只有企业能长期守住竞争优势、同时按 10% 的较低折现率估值，净现值才达到正 4.1 万亿美元。能不能留住利润，以及资金成本高不高，决定了这笔 AI 投资是否划算。',
+    prompt: '优化这段框选的逐字稿，讲给投资委员会听时更自然、更容易理解，保留数字和判断条件，只改选中这段。'
+  },
+  executionMs: 3000,
   replies: {
     notes: '20 页的逐字稿已写入演讲者备注。翻到任意一页，都可以在画布下方查看这一页怎么讲。',
-    chart: '图已移到左侧放大，并标出了高 AI 敞口职业的两根柱子。右侧列出两组职业的年化增速差距，就业为 0.9 个百分点，实际工资为 3.1 个百分点。',
-    title: '第 13 页的标题已改为“五种情景中，仅一种净现值为正”。'
+    chart: '框选区域已改为横向条形图。图表保持原位置、大小及易方达配色，八个数值和其余页面内容均已保留。',
+    title: '第 13 页的标题已改为“五种情景中，仅一种净现值为正”。',
+    'notes-selection': '选中的逐字稿已优化为更自然的口头表达，原始数字、判断条件和选区外的备注均已保留。'
   }
 }
 
@@ -70,41 +66,5 @@ export function createPresentationGuideChartOperations(slide: InspectedSlide, vi
   if (!Number.isFinite(viewportSize) || viewportSize <= 0 || !slide.elements.some(el => el.id === chartId && el.type === 'chart'))
     throw Error('未找到批注引用的图表。')
 
-  const compact = (text: string) => text.replace(/\s+/g, '')
-  const matchText = (prefix: string, replacement: string) => {
-    const matches = slide.elements.filter(el => {
-      const text = compact(el.text ?? '')
-      return text.startsWith(compact(prefix)) || text === compact(replacement)
-    })
-    if (matches.length !== 1) throw Error('未找到唯一的图表解读文字：' + prefix)
-    return matches[0]!.id
-  }
-  const move = (elementId: string, box: typeof chart.layout.chart) => {
-    const scale = viewportSize / 1000
-    return {
-      op: 'move', slideId: slide.id, elementId,
-      left: box.left * scale, top: box.top * scale, width: box.width * scale, height: box.height * scale
-    }
-  }
-  const rewrites = [
-    { prefix: '就业与实际工资年化增速', box: chart.layout.caption, text: chart.caption },
-    { prefix: '高 AI 敞口职业反而', box: chart.layout.heading, text: '实际工资增速差距更大' },
-    {
-      prefix: '约 140 个 AI 敞口最高的职业', box: chart.layout.body,
-      text: '高 AI 敞口职业的实际工资年化增长 3.8%，其他职业为 0.7%，相差 3.1 个百分点。'
-    },
-    {
-      prefix: '含义：AI 目前总体', box: chart.layout.takeaway,
-      text: '同期就业年化增速分别为 1.7% 和 0.8%，相差 0.9 个百分点。'
-    }
-  ]
-  const textChanges = rewrites.flatMap(({ prefix, box, text }) => {
-    const elementId = matchText(prefix, text)
-    return [move(elementId, box), { op: 'text', slideId: slide.id, elementId, text }]
-  })
-  return [
-    move(chartId, chart.layout.chart),
-    ...textChanges,
-    ...chart.highlights.map(highlight => ({ op: 'chartPointColor', slideId: slide.id, elementId: chartId, ...highlight }))
-  ]
+  return [{ op: 'chartType', slideId: slide.id, elementId: chartId, chartType: chart.chartType }]
 }

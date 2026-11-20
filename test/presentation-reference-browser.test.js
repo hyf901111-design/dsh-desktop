@@ -98,6 +98,14 @@ it('inserts slide, notes and marker references at the caret in the native conver
     expect(
       (await page.evaluate(() => window.draft())).occurrences.map((o) => JSON.parse(o.ref).kind)
     ).toEqual(['element', 'notes', 'mark'])
+    const unmodified = (await page.evaluate(() => window.draft())).draft
+    await page.evaluate(() => window.select({ kind: 'mark-comment', id: 'm1', comment: '保留布局' }))
+    expect((await page.evaluate(() => window.draft())).draft).toContain('保留布局')
+    await page.evaluate(() => window.select({ kind: 'mark-comment', id: 'm1', comment: '保留布局，改成横向图表' }))
+    const synced = (await page.evaluate(() => window.draft())).draft
+    expect(synced.replace('保留布局，改成横向图表', '')).toBe(unmodified)
+    await page.evaluate(() => window.select({ kind: 'mark-comment', id: 'm1', comment: '错误会话', sessionId: 'other' }))
+    expect((await page.evaluate(() => window.draft())).draft).toBe(synced)
     await page.evaluate(() => window.select({ kind: 'removed-mark', id: 'm1' }))
     expect((await page.evaluate(() => window.draft())).occurrences).toHaveLength(2)
     await page.evaluate(() =>

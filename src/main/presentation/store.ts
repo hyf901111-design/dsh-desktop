@@ -379,6 +379,9 @@ export class PresentationStore {
             [seriesIndex]: { ...colors[seriesIndex], [pointIndex]: color.toUpperCase() }
           }
         }
+      } else if (op.op === 'chartType' && el.type === 'chart') {
+        if (!['bar', 'column', 'line', 'area'].includes(op.chartType)) throw Error('图表类型无效。')
+        el.chartType = op.chartType
       } else if (op.op === 'chartData' && el.type === 'chart') {
         const d = op.data
         if (
