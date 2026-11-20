@@ -154,6 +154,42 @@
           "预置执行器受当前独立演示会话约束。"
         ],
         "generatedAt": "2026-11-20T01:23:11.055624+00:00"
+      },
+      "merged": {
+        "mergeCommit": "824b20cfaa02ad860fbe833dc8e69868789fea54",
+        "verificationCommit": "824b20cfaa02ad860fbe833dc8e69868789fea54",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-timeline.test.ts",
+              "test/spreadsheet-cash-flow-playback.test.ts",
+              "--testTimeout",
+              "10000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
+            "verifiedCommit": "824b20cfaa02ad860fbe833dc8e69868789fea54",
+            "completedAt": "2026-11-20T01:23:43.113Z",
+            "timeoutMs": 90000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "824b20cfaa02ad860fbe833dc8e69868789fea54",
+            "completedAt": "2026-11-20T01:23:43.113Z",
+            "timeoutMs": 90000
+          }
+        ],
+        "recordedAt": "2026-11-20T01:23:43.113Z"
       }
     }
   ],
