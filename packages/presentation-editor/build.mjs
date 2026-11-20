@@ -55,6 +55,28 @@ edit('src/store/snapshot.ts', [
     'const snapshot = snapshots[snapshotCursor]; if (!snapshot) return'
   ]
 ])
+edit('src/views/components/element/ChartElement/Chart.vue', [
+  [
+    "import tinycolor from 'tinycolor2'",
+    "import tinycolor from 'tinycolor2'\nimport { visibleBars } from '@/chart-points'"
+  ],
+  [
+    '  updateOption()\n\n  const resizeListener',
+    '  chartRef.value.odysseyBars = () => visibleBars(chart, chartRef.value, props.data)\n  updateOption()\n\n  const resizeListener'
+  ]
+])
+edit('src/views/components/element/ChartElement/chartOption.ts', [
+  [
+    'const seriesItem: BarSeriesOption = {\n          data: item,',
+    'const seriesItem: BarSeriesOption = {\n          data: item.map((value, point) => data.pointColors?.[index]?.[point] ? {value, itemStyle:{color:data.pointColors[index][point]}} : value),'
+  ]
+])
+edit('src/types/slides.ts', [
+  [
+    'export interface ChartData {',
+    'export interface ChartData {\n  pointColors?: Record<number, Record<number,string>>'
+  ]
+])
 edit('src/views/Editor/Canvas/EditableElement.vue', [
   [
     ':id="`editable-element-${elementInfo.id}`"',
@@ -67,6 +89,14 @@ edit('src/hooks/useImport.ts', [
   ["audioMode: 'blob'", "audioMode: 'base64'"]
 ])
 edit('src/hooks/useExport.ts', [
+  [
+    "styleAttr.value.split(';')",
+    "styleAttr.value.replace(/&quot;|&#34;|&#x22;/gi, '\"').replace(/&apos;|&#39;|&#x27;/gi, \"'\").split(';')"
+  ],
+  [
+    "options.fontFace = styleObj['font-family']",
+    "options.fontFace = styleObj['font-family'].split(',')[0].trim().replace(/^[\"']|[\"']$/g, '')"
+  ],
   [
     'pptx.writeFile({ fileName: `${title.value}.pptx` }).then(() => exporting.value = false).catch',
     "pptx.write({ outputType: 'arraybuffer' }).then(bytes => { window.dispatchEvent(new CustomEvent('odyssey:export', {detail:bytes})); exporting.value=false }).catch"

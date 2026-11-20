@@ -83,3 +83,43 @@ it('supports a blank first page followed by an AI-created content slide', () => 
   expect(deck.slides.map((s) => s.elements.length)).toEqual([0, 2])
   expect(store.inspect(key, deck.slides[1]!.id).currentSlide?.elements[0]?.text).toBe('季度经营表现')
 })
+
+it('colors individual chart bars and preserves neighboring series, values and undo', () => {
+  const deck = blankDeck()
+  const slide = deck.slides[0]!
+  const data = {
+    labels: ['七月', '八月', '九月'],
+    legends: ['营收', '预算'],
+    series: [
+      [2380, 2600, 2960],
+      [2400, 2500, 2700]
+    ]
+  }
+  slide.elements.push({
+    id: 'chart',
+    type: 'chart',
+    chartType: 'column',
+    left: 100,
+    top: 100,
+    width: 500,
+    height: 300,
+    data
+  })
+  store.save(key, 0, deck, true)
+  const point = {
+    op: 'chartPointColor',
+    slideId: slide.id,
+    elementId: 'chart',
+    seriesIndex: 0,
+    pointIndex: 2,
+    color: '#99ccee'
+  }
+  store.apply(key, { revision: 1, operations: [point] })
+  expect(store.read(key).deck!.slides[0]!.elements[0]!.data).toEqual({
+    ...data,
+    pointColors: { 0: { 2: '#99CCEE' } }
+  })
+  expect(() => store.apply(key, { revision: 2, operations: [point, { ...point, seriesIndex: 2 }] })).toThrow()
+  store.undo(key, 2)
+  expect(store.read(key).deck).toEqual(deck)
+})
