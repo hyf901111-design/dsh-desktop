@@ -2,6 +2,7 @@ import {installImageFactoryContext,imageFactoryNativeSource} from './image-facto
 import {createRightProjectDrafts,installSidebarWorkspaceHandoff} from './right-project-drafts.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
 import {createPendingConversation,EWorkPendingInputBar,EWorkPendingHomeHeader,browserPromptReference} from './pending-conversation.mjs'
+import {initializeWorkspaceSession} from './sidebar-new-note.mjs'
 /** Keep the native session and view underneath a sequence of workspace apps. */
 export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSession,viewFor,showError,doc=document}) {
  const apps=new Set(['browser','image-factory','knowledge'])
@@ -298,6 +299,10 @@ ctx.effect(()=>{
   standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),
   currentSurface:()=>document.body.dataset.workspaceSurface,
   setView:(id,view)=>chatStore.create(id).actions.setView(view),
+ initializeWorkspaceSession:async (id,view)=>{
+  await (${initializeWorkspaceSession.toString()})(sessions,id,view,document.documentElement.dataset.odysseyLocale==='en'?'en':'zh');
+  if(view==='spreadsheet')sessions.retainSpreadsheetSession(id);
+ },
   onCreated:(id,context,detached)=>{
    if(!detached||detached.sessionId===undefined)window.dispatchEvent(new CustomEvent('sherlock:pending-conversation-created',{detail:{sessionId:id}}));
    chatStore.create(id).actions.setView('chat');
@@ -311,7 +316,7 @@ ctx.effect(()=>{
  const pending=makePending(conversationOptions);
  const right=(${createRightProjectDrafts.toString()})({globalDraft:pending,getInput:conversationOptions.getInput,makeDraft(entry,ownership){
    const draft=makePending({...conversationOptions,initialWorkspace:entry.workspaceId,detached:{
-     ...ownership,sessionId:entry.sessionId,mode:['notes','research','spreadsheet'].includes(entry.mode)?entry.mode:'chat',
+     ...ownership,get sessionId(){return entry.sessionId},mode:['notes','research','spreadsheet'].includes(entry.mode)?entry.mode:'chat',
      isCommandCurrent:()=>!entry.tabId||document.body.dataset.browserActiveTab===entry.tabId,
      open:id=>{
        const images=entry.mode==='image-factory';
@@ -421,6 +426,9 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  }:undefined,[canChooseRightProject,sessionId,rightProjectMode,browserTabId,launchWorkspaceId,browserAppActive,sessionScopedWorkspace,sessionWorkspace,cwd,workspaces.items,pendingChatState?.workspaceId]);
  const rightDraft=react.useSyncExternalStore(eworkRightProjects?.subscribe||(()=>()=>{}),eworkRightProjects?.getSnapshot||(()=>undefined));
  const rightProjectDraft=rightProjectContext&&rightDraft?.sessionId===sessionId&&rightDraft?.mode===rightProjectMode&&rightDraft?.tabId===browserTabId?rightDraft:undefined;
+ const rightPending=rightProjectDraft?.pending;
+ const rightPendingState=react.useSyncExternalStore(rightPending?.subscribe||(()=>()=>{}),rightPending?.getSnapshot||(()=>undefined));
+ const switchingRightWorkspace=rightPendingState?.activating||pendingConversation&&pendingChatState?.activating;
  react.useLayoutEffect(()=>{
   if(subagentPanel)return;
   if(rightProjectLocked&&sessionId!==undefined)eworkRightProjects?.lockToSession(sessionId,rightProjectMode);
@@ -428,14 +436,15 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  },[subagentPanel,rightProjectContext,rightProjectLocked,sessionId,rightProjectMode]);
  const rightWorkspaceId=rightProjectDraft?rightProjectDraft.workspaceId:rightProjectContext?.workspaceId;
  const rightWorkspaceLabel=rightProjectDraft?workspaces.items.find(item=>item.workspaceId===rightWorkspaceId)?.title:chipTitle;
- const pickRightWorkspace=workspaceId=>{
+ const pickRightWorkspace=async workspaceId=>{
   setPickerOpen(false);
   pickerAnchor.current?.focus({preventScroll:true});
   if(!rightProjectContext||locksRightProject&&(directoryLocked||sessionId!==undefined&&localStorage.getItem(directoryLockKey)==='true'))return;
   try{
-   if(!browserTabId&&(sessionId===undefined||workspaceId===rightWorkspaceId))eworkPendingConversation?.selectWorkspace(workspaceId);
-   else eworkRightProjects?.select(rightProjectContext,workspaceId);
    if(imageFactoryActive)document.dispatchEvent(new CustomEvent('sherlock:image-factory-project-selected',{detail:workspaceId}));
+   if(workspaceId!==null)await eworkRightProjects?.switchWorkspace(rightProjectContext,workspaceId);
+   else if(!browserTabId&&(sessionId===undefined||workspaceId===rightWorkspaceId))eworkPendingConversation?.selectWorkspace(workspaceId);
+   else eworkRightProjects?.select(rightProjectContext,workspaceId);
   }catch(error){sherlockBoardsAdapter?.showError(error)}
  };
  const rightWorkspaceRow=sidebarMode&&rightProjectContext?react_jsx_runtime.jsxs('div',{
@@ -443,9 +452,9 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
   'data-odyssey-composer-workspace':'','data-research-empty-workspace-row':true,
   children:[react_jsx_runtime.jsx(ComposerWorkLocation,{}),
    react_jsx_runtime.jsx(ComposerProjectPicker,{buttonRef:pickerAnchor,label:rightWorkspaceLabel,menuOpen:pickerOpen,
-    disabled:imageTaskCreating,onClear:rightWorkspaceLabel===undefined?undefined:()=>pickRightWorkspace(null),
+    disabled:imageTaskCreating||switchingRightWorkspace,onClear:rightWorkspaceLabel===undefined?undefined:()=>pickRightWorkspace(null),
     onClick:()=>setPickerOpen(open=>!open),t}),
-   renderSlot('conversation.hero.workspace',{open:pickerOpen&&!imageTaskCreating,anchorRef:pickerAnchor,
+   renderSlot('conversation.hero.workspace',{open:pickerOpen&&!imageTaskCreating&&!switchingRightWorkspace,anchorRef:pickerAnchor,
     selectedId:rightWorkspaceId,allowStandalone:true,onPick:pickRightWorkspace,onClose:()=>setPickerOpen(false)})
   ]
  }):null;

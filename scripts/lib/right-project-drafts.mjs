@@ -67,7 +67,7 @@ export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
   }
   const open = workspaceId => {
     if (!visible || workspaceId === undefined) return
-    const id = JSON.stringify([visible.key, workspaceId])
+    const id = JSON.stringify([visible.tabId ? ['browser', visible.tabId] : visible.key, workspaceId])
     if (active?.id === id) return
     leave()
     let entry = drafts.get(id)
@@ -82,6 +82,9 @@ export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
         settled: () => { if (active !== entry && (!hasContent(entry) || isClosed(entry)) && drafts.get(id) === entry) discard(entry) }
       })
       drafts.set(id, entry)
+    } else {
+      entry.sessionId = visible.sessionId
+      entry.key = visible.key
     }
     publish(entry)
   }
@@ -147,6 +150,22 @@ export function createRightProjectDrafts({ globalDraft, makeDraft, getInput }) {
       if (context.tabId && !adopted) browserProjects.set(context.tabId, { workspaceId })
       if (adopted || context.useSharedSession && workspaceId === context.workspaceId) leave()
       else open(workspaceId)
+    },
+    switchWorkspace(context, workspaceId) {
+      const state = active?.pending.getSnapshot() ?? globalDraft.getSnapshot()
+      if (state?.busy || state?.activating) return
+      if (context.sessionId === undefined && !context.tabId) {
+        globalDraft.selectWorkspace(workspaceId)
+        return globalDraft.activate({ workspaceSwitch: true })
+      }
+      if (context.sessionId !== undefined && workspaceId === context.workspaceId) {
+        globalDraft.selectWorkspace(workspaceId)
+        if (context.tabId) browserProjects.set(context.tabId, { workspaceId, sessionId: context.sessionId })
+        leave()
+        return
+      }
+      this.select(context, workspaceId)
+      return active?.pending.activate({ workspaceSwitch: true })
     },
     reset() {
       visible = undefined

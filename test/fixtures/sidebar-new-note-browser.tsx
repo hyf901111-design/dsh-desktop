@@ -6,6 +6,7 @@ import {createPortal} from 'react-dom'
 import * as primitiveIcons from '@deepseek-ai/dsh-client-ui-primitives'
 import {ScheduledTaskView} from '../../src/preload/scheduled/view'
 import {createSidebarNewNoteAction} from '../../src/preload/sidebar-new-note'
+import {initializeWorkspaceSession} from '../../scripts/lib/sidebar-new-note.mjs'
 import {mountUiLocalization} from '../../src/preload/ui-localization'
 import {mountNotes} from '../../src/preload/notes/mount'
 import {BlockNoteEditor} from '@blocknote/core'
@@ -39,7 +40,7 @@ const host={register:(_kind:string,surface:HTMLElement)=>{Object.assign(surface.
 const notes=mountNotes(document,{request:async(method:string,value:any)=>{events.push({type:'notes',method,sessionId:value?.sessionId});if(method==='load')return{saved:saved[value.sessionId]??{title:value.sessionId==='old'?'原有笔记':'',blocks:value.sessionId==='old'?[{id:'old-paragraph',type:'paragraph',content:'保留旧笔记正文😀'}]:[],yjs:null,revision:0},draft:null};if(method==='save'){saved[value.sessionId]={...value.content,revision:(saved[value.sessionId]?.revision??0)+1};return{status:'saved',saved:saved[value.sessionId]}}if(method==='draftPut')drafts[value.sessionId]=value.snapshot;if(method==='draftClear')delete drafts[value.sessionId];return{}} ,draft:async(value:any)=>{drafts[value.sessionId]=value.content}} as any,host as any)
 const action=createSidebarNewNoteAction(document,async()=>{events.push({type:'flush-start'});await notes.flushCurrent();events.push({type:'flush-end'})})
 const spreadsheet=createSidebarNewNoteAction(document,()=>notes.flushCurrent(),'spreadsheet')
-const stop=new Function('return ('+input.install+')')()({sessions,workspaces,chatStore,getInput:shellFor})
+const stop=new Function('return ('+input.install+')')()({sessions,workspaces,chatStore,getInput:shellFor,initializeSession:initializeWorkspaceSession})
 const scheduled=new ScheduledTaskView(document,{list:async()=>[],workspaces:async()=>[],save:async()=>{throw Error('unused')},action:async()=>{throw Error('unused')}},host as any,undefined,{newNote:action.create,newSpreadsheet:spreadsheet.create})
 function App(){const state=React.useSyncExternalStore(sessions.list.subscribe,sessions.list.getSnapshot),id=state.current,view=id?chatStore.create(id).getSnapshot().view:null
  React.useLayoutEffect(()=>{if(view!=='notes')host.close()},[id,view])
