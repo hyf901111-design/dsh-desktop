@@ -37,10 +37,17 @@ const use=(store:any)=>(select:any)=>select(React.useSyncExternalStore(store.sub
 let collapsed=false,locale='zh',activeNotes=false
 const t=(module:any)=>(key:string)=>(locale==='en'?module.__testen:module.__testzh)[key]??key
 const host={register:(_kind:string,surface:HTMLElement)=>{Object.assign(surface.style,{position:'fixed',left:'280px',top:'0',right:'0',bottom:'0'});document.body.append(surface)},open:()=>{activeNotes=true;document.body.dataset.workspaceSurface='notes'},close:()=>{activeNotes=false;delete document.body.dataset.workspaceSurface},current:()=>activeNotes?{surface:'notes' as const}:undefined}
-const notes=mountNotes(document,{request:async(method:string,value:any)=>{events.push({type:'notes',method,sessionId:value?.sessionId});if(method==='load')return{saved:saved[value.sessionId]??{title:value.sessionId==='old'?'原有笔记':'',blocks:value.sessionId==='old'?[{id:'old-paragraph',type:'paragraph',content:'保留旧笔记正文😀'}]:[],yjs:null,revision:0},draft:null};if(method==='save'){saved[value.sessionId]={...value.content,revision:(saved[value.sessionId]?.revision??0)+1};return{status:'saved',saved:saved[value.sessionId]}}if(method==='draftPut')drafts[value.sessionId]=value.snapshot;if(method==='draftClear')delete drafts[value.sessionId];return{}} ,draft:async(value:any)=>{drafts[value.sessionId]=value.content}} as any,host as any)
+let projectionSeq=0
+const projectTitle=(sessionId:string,title:string)=>{
+ sessions.manager.handleMuxEnvelope({payload:{type:'session/projection',sessionId,key:'title',value:title,seq:++projectionSeq}})
+}
+const notes=mountNotes(document,{request:async(method:string,value:any)=>{events.push({type:'notes',method,sessionId:value?.sessionId});if(method==='load')return{saved:saved[value.sessionId]??{title:value.sessionId==='old'?'原有笔记':'',blocks:value.sessionId==='old'?[{id:'old-paragraph',type:'paragraph',content:'保留旧笔记正文😀'}]:[],yjs:null,revision:0},draft:null};if(method==='save'){saved[value.sessionId]={...value.content,revision:(saved[value.sessionId]?.revision??0)+1};return{status:'saved',saved:saved[value.sessionId]}}if(method==='engage'&&value.title)projectTitle(value.sessionId,value.title);if(method==='draftPut')drafts[value.sessionId]=value.snapshot;if(method==='draftClear')delete drafts[value.sessionId];return{}} ,draft:async(value:any)=>{drafts[value.sessionId]=value.content}} as any,host as any)
 const action=createSidebarNewNoteAction(document,async()=>{events.push({type:'flush-start'});await notes.flushCurrent();events.push({type:'flush-end'})})
 const spreadsheet=createSidebarNewNoteAction(document,()=>notes.flushCurrent(),'spreadsheet')
-const stop=new Function('return ('+input.install+')')()({sessions,workspaces,chatStore,getInput:shellFor,initializeSession:initializeWorkspaceSession})
+const stop=new Function('return ('+input.install+')')()({sessions,workspaces,chatStore,getInput:shellFor,initializeSession:async(s:any,id:string,mode:string,locale:string)=>{
+ await initializeWorkspaceSession(s,id,mode,locale)
+ if(mode==='notes')projectTitle(id,locale==='en'?'New Note':'新笔记')
+}})
 const scheduled=new ScheduledTaskView(document,{list:async()=>[],workspaces:async()=>[],save:async()=>{throw Error('unused')},action:async()=>{throw Error('unused')}},host as any,undefined,{newNote:action.create,newSpreadsheet:spreadsheet.create})
 function App(){const state=React.useSyncExternalStore(sessions.list.subscribe,sessions.list.getSnapshot),id=state.current,view=id?chatStore.create(id).getSnapshot().view:null
  React.useLayoutEffect(()=>{if(view!=='notes')host.close()},[id,view])

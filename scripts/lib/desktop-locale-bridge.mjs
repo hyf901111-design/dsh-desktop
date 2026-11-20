@@ -18,7 +18,9 @@ export function patchDesktopResearchDefaults(source) {
 export function patchEmptyHeaderTitles(source) {
  const marker='/* odyssey:localized-empty-header:v1 */'
  if(source.includes(marker))return source
+  .replace("research:'New Research',notes:", "research:'New Board',notes:")
+  .replace("research:'新研究',notes:", "research:'新看板',notes:")
  const before='{ chat: "新会话", research: "新研究", trajectory: "新轨迹" }[active?.id]'
  if(source.split(before).length!==2)throw Error('Empty header title anchor missing')
- return source.replace(before,`(document.documentElement.dataset.odysseyLocale==='en'?{chat:'New Session',research:'New Research',trajectory:'New Trajectory'}:{chat:'新会话',research:'新研究',trajectory:'新轨迹'})[active?.id] ${marker}`)
+ return source.replace(before,`(document.documentElement.dataset.odysseyLocale==='en'?{chat:'New Session',research:'New Board',trajectory:'New Trajectory'}:{chat:'新会话',research:'新看板',trajectory:'新轨迹'})[active?.id] ${marker}`)
 }

@@ -224,7 +224,7 @@ describe('Figma shell patch installation', () => {
   })
 
   it('uses view-specific empty titles while preserving existing session titles', async () => {
-    const installed = patchFigmaFinalConversation(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8'))
+    const installed = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
     const extract = (name: string) => {
       const start = installed.indexOf(`function ${name}(`)
       const end = installed.indexOf('\n\t\t}', start) + '\n\t\t}'.length
@@ -232,7 +232,7 @@ describe('Figma shell patch installation', () => {
     }
     const element = (type: unknown, props: Record<string, unknown>) => ({ type, props })
     const header = runInNewContext(`${extract('deriveAncestry')}\n${extract('equalBreadcrumbs')}\n${extract('conversationViewTabProps')}\n${extract('ConversationSessionHeader')}\nConversationSessionHeader`, {
-      react: { useSyncExternalStore() {}, useEffect() {}, useCallback: (fn: unknown) => fn, useRef: () => ({ current: 'current' }), Fragment: 'fragment' },
+      react: { useSyncExternalStore() {}, useEffect() {}, useLayoutEffect() {}, createElement: element, useCallback: (fn: unknown) => fn, useRef: () => ({ current: 'current' }), Fragment: 'fragment' },
       EditableSessionTitle: "button",
       useSkillPresentation: () => (text: unknown) => text,
       projectSkillText: (text: unknown) => text,
@@ -241,6 +241,9 @@ describe('Figma shell patch installation', () => {
       clsx: (...values: unknown[]) => values.filter(Boolean).join(' '),
       document: { documentElement: { dataset: { odysseyLocale: "zh" } } },
       useSherlockBoardOnly: () => false,
+      useInitialChatSessionView: (_id: string, view: string) => view,
+      hasSessionViewPreference: () => false,
+      sherlockBoardsAdapter: null,
       isInitialResearchSession: () => false,
       isPersistedResearchSession: () => false,
       explicitResearchViewSessions: new Set(),
@@ -248,20 +251,21 @@ describe('Figma shell patch installation', () => {
       resolveActiveView: (tabs: { id: string }[], selected: string) => tabs.find(tab => tab.id === selected)
     })
     for (const [view, blank, phase, title, displayTitle, expected] of [
-      ['research', true, 'blank', undefined, '测试集', '新研究'],
+      ['research', true, 'blank', undefined, '测试集', '新看板'],
       ['research', true, 'blank', '我的研究', '我的研究', '我的研究'],
       ['research', false, 'active', undefined, '已有研究', '已有研究'],
       ['research', true, 'sending', undefined, '正在研究', '正在研究'],
       ['chat', false, 'active', undefined, '原对话标题', '原对话标题'],
       ['chat', true, 'blank', undefined, '测试集', '新会话'],
-      ['trajectory', true, 'blank', undefined, '测试集', '新轨迹']
+      ['trajectory', true, 'blank', undefined, '测试集', '新轨迹'],
+      ['spreadsheet', true, 'blank', undefined, '测试集', '新表格']
     ] as const) {
       const tree = header({
         sessionId: 'current',
         useSession: (select: (s: unknown) => unknown) => select({ blank, composerPhase: phase }),
         useSessions: (select: (s: unknown) => unknown) => select({ byId: { current: { id: 'current', displayTitle, title } } }),
         useStore: (select: (s: unknown) => unknown) => select({ view }),
-        views: { subscribe() {}, version: () => 1, list: () => [{ id: 'chat' }, { id: 'research' }, { id: 'trajectory' }] },
+        views: { subscribe() {}, version: () => 1, list: () => [{ id: 'chat' }, { id: 'research' }, { id: 'trajectory' }, { id: 'spreadsheet' }] },
         actions: {}, renderSlot: () => null, open() {}, t: (key: string) => key
       })
       expect(tree.props['aria-hidden']).toBeUndefined()

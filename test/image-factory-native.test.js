@@ -60,6 +60,17 @@ function fixture(taskStorage, removeProvisionalReference, workspace = () => 'tes
   return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank, sessionCatalog, setView, handoff }
 }
 
+it('keeps an image request out of the board while its application conversation opens', async () => {
+  const f = fixture(undefined, undefined, undefined, { isBoardOnly: id => id === 'native-session' })
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    await expect(f.binding.prompt(f.session, [{ type: 'text', text: '总结这张图' }], 'queue'))
+      .rejects.toThrow('看板工作区会话尚在打开')
+    expect(f.session.prompt).not.toHaveBeenCalled()
+    expect(f.shell.snapshot.draft).toBe('保留未发送的文字')
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('keeps one tab when its project changes and creates additional projectless tasks in their own directory', async () => {
   const f = fixture(undefined, undefined, () => null)
   let tasks

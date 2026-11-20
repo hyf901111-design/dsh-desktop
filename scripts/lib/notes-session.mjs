@@ -27,7 +27,9 @@ export function patchNoteSessionClient(source) {
     if (source.split(anchor).length !== 2) throw Error('笔记无法定位原生会话服务。')
     source = source.replace(anchor, anchor + '\n' + block)
   }
-  return source.replaceAll("research:'新研究',trajectory:'新轨迹'", "research:'新研究',notes:'新笔记',trajectory:'新轨迹'").replaceAll("research:'New Research',trajectory:'New Trajectory'", "research:'New Research',notes:'New Note',trajectory:'New Trajectory'")
+  return source.replaceAll("research:'新看板',trajectory:'新轨迹'", "research:'新看板',notes:'新笔记',trajectory:'新轨迹'")
+    .replaceAll("research:'New Board',trajectory:'New Trajectory'", "research:'New Board',notes:'New Note',trajectory:'New Trajectory'")
+    .replaceAll("research:'新研究',trajectory:'新轨迹'", "research:'新研究',notes:'新笔记',trajectory:'新轨迹'").replaceAll("research:'New Research',trajectory:'New Trajectory'", "research:'New Research',notes:'New Note',trajectory:'New Trajectory'")
 }
 
 export function patchNoteSessionRuntime(source) {
@@ -68,7 +70,7 @@ export function patchNoteSessionHost(source) {
 /** Register the EWork event in both bundled and unbundled native readers. */
 export function patchNoteSessionCatalog(source) {
   const marker = '/* ework:note-event-catalog:v1 */'
-  const events = ['"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-spreadsheet/edited",','"workspace-knowledge/copied",']
+  const events = ['"workspace-note/created",','"workspace-note/conversation",','"workspace-spreadsheet/created",','"workspace-spreadsheet/edited",','"workspace-knowledge/copied",','"workspace-research/title-context",']
   if (source.includes(marker)) {
     const missing = events.filter(event=>!source.includes(event))
     return missing.length ? source.replace(marker, marker+'\n'+missing.join('\n')) : source

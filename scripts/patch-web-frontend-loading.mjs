@@ -39,7 +39,7 @@ import {patchHomeWorkbenchClient,stripHomeWorkbenchClient} from './lib/home-work
 import {patchHomeGuideWorkbenchNative,stripHomeGuideWorkbenchNative} from './lib/home-guide-workbench-native.mjs'
 import {patchAttachmentClient} from './lib/attachment-client.mjs'
 import {patchImagePreviewGallery} from './lib/image-preview-gallery.mjs'
-import {patchSessionTitleSubject,patchSessionTitleLlmSubject} from './lib/session-title-subject.mjs'
+import {patchSessionTitleSubject,patchSessionTitleLlmSubject,patchResearchSessionTitle} from './lib/session-title-subject.mjs'
 import {patchDerivedPresetClient} from './lib/derived-preset-client.mjs'
 import {patchAudioClient} from './lib/audio-client.mjs'
 import {patchYoutubeClient} from './lib/youtube-client.mjs'
@@ -109,7 +109,7 @@ const assetsDirectory = join(
   'assets'
 )
 const historyRuntimeBundlePath=join(process.cwd(),'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
-for(const [name,patch] of [['dsh-session-title',patchSessionTitleSubject],['dsh-session-title-llm',patchSessionTitleLlmSubject]]){
+for(const [name,patch] of [['dsh-session-title',source=>patchResearchSessionTitle(patchSessionTitleSubject(source))],['dsh-session-title-llm',patchSessionTitleLlmSubject]]){
  const path=join(process.cwd(),'node_modules/@deepseek-ai',name,'lib/index.js')
  writeFileSync(path,patch(readFileSync(path,'utf8')))
 }
@@ -311,15 +311,16 @@ import { patchPrototypeSourceTool } from './lib/prototype-source-tool.mjs'
 writeFileSync(fsRuntimePath, patchPrototypeSourceTool(patchFileRecovery(readFileSync(fsRuntimePath, 'utf8'))))
 writeFileSync(conversationPath, patchTaskProgressClient(readFileSync(conversationPath, 'utf8')))
 
-// Dedicated new boards and knowledge copies have their own durable titles.
+// Desktop boards use the Host title service. Keep legacy browser fallback and copied names.
 {
   const path = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
   let source = readFileSync(path, 'utf8')
   const before = 'if (!research.engaged) continue;'
   const legacy = 'if (!research.engaged || window.localStorage.getItem("sherlock.research.intent-title.v1:" + id) === "true") continue;'
-  const after = 'if (!research.engaged || window.localStorage.getItem("sherlock.research.intent-title.v1:" + id) === "true" || window.dshDesktop?.researchCanvasStorage?.getItem("sherlock.knowledge.copy-title.v1:" + id)) continue;'
+  const copied = 'if (!research.engaged || window.localStorage.getItem("sherlock.research.intent-title.v1:" + id) === "true" || window.dshDesktop?.researchCanvasStorage?.getItem("sherlock.knowledge.copy-title.v1:" + id)) continue;'
+  const after = 'if (!research.engaged || window.dshDesktop?.researchBoards || window.dshDesktop?.researchCanvasStorage?.getItem("sherlock.knowledge.copy-title.v1:" + id)) continue;'
   if (!source.includes(after)) {
-    const anchor = source.includes(legacy) ? legacy : before
+    const anchor = [copied, legacy, before].find(value => source.includes(value))
     if (!source.includes(anchor)) throw Error('Research intent title anchor missing')
     source = source.replace(anchor, after)
     writeFileSync(path, source)

@@ -1,17 +1,21 @@
-export async function initializeWorkspaceSession(sessions,id,view,locale) {
-  if(view==='spreadsheet'){
-    const response=await fetch('/sherlock/spreadsheet/session',{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:id,locale})
-    })
-    const result=await response.json()
-    if(!response.ok||result.ok!==true)throw Error(result.error||'新表格未能保存。')
-    return
+export async function initializeWorkspaceSession(_sessions,id,view,locale) {
+  const routes = {
+    notes: '/sherlock/notes/session',
+    research: '/sherlock/research/session-title',
+    spreadsheet: '/sherlock/spreadsheet/session'
   }
-  const names=locale==='en'?{notes:'New Note',research:'New Research'}:{notes:'新笔记',research:'新研究'}
-  if(!Object.hasOwn(names,view))return
-  const result=await sessions.binding(id)?.session.rename(names[view])
-  if(result?.ok!==true)throw Error(result?.error?.message||'新会话名称未能保存。')
+  if (!Object.hasOwn(routes,view)) return
+  const endpoint = routes[view]
+  const body = { sessionId: id, locale }
+  if (view === 'notes') body.action = 'initialize'
+  if (view === 'research') body.components = []
+  const response = await fetch(endpoint, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+  })
+  const result = await response.json()
+  if (!response.ok || result.ok !== true) throw Error(result.error || '新会话名称未能保存。')
 }
+
 
 // Serialized into the native conversation plugin. The preload first reserves
 // this exact owner, flushes its Note, then commits the same ticket.
@@ -79,11 +83,9 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
       if(typeof id!=='string'||!id||ticket.ids.has(id)||!sessions.list.getSnapshot().ids.includes(id))throw Error('新'+noun+'会话未能创建。')
       const binding=sessions.binding(id)
       if(!binding||binding.state==='removed'||binding.kind==='subagent')throw Error('新'+noun+'会话不可用。')
-      if(spreadsheet){
-        await initializeSession(sessions,id,'spreadsheet',document.documentElement.dataset.odysseyLocale==='en'?'en':'zh')
-        if(!valid(ticket))throw abort()
-      }
       const view=spreadsheet?'spreadsheet':'notes'
+      await initializeSession(sessions,id,view,document.documentElement.dataset.odysseyLocale==='en'?'en':'zh')
+      if(!valid(ticket))throw abort()
       chatStore.create(id).actions.setView(view)
       // Release the overlay before the selection update reaches its subscribers.
       document.dispatchEvent(new CustomEvent('sherlock:sidebar-document-will-open',{detail:{view}}))

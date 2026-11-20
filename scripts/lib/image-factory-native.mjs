@@ -180,7 +180,8 @@ export function installImageFactoryContext({
     const { parts, layers, hasInstructions } = bindImageLayerReferences(content)
     const targeted = layers.length > 0
     if (isActive() && tasks.isCreating()) throw Error('正在创建图片任务，输入已保留。')
-    if (!isActive() || currentId() !== sessionId || isBoardOnly(sessionId)) {
+    if (isActive() && isBoardOnly(sessionId)) throw Error('看板工作区会话尚在打开，输入已保留。')
+    if (!isActive() || currentId() !== sessionId) {
       if (action || targeted) throw Error('当前会话或画布已切换。')
       return { content }
     }

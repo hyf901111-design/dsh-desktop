@@ -3,6 +3,25 @@ import { bindCanvasChild } from './canvas-tools.js'
 import { randomUUID } from 'node:crypto'
 import { captureSharedWorkbenchPlan } from './workbench.js'
 
+// The collaboration request already carries authoritative board discussion.
+// Keep native tool/delegation exchanges for this task, including its resumed attempts.
+function sharedRequestMessages(messages, requestId) {
+  if (!messages.some(message => message.role === 'user' && message.id === requestId))
+    throw Error('SHARED_REQUEST_CONTEXT_MISSING')
+  const resume = /^(.*):resume:([1-9]\d*)$/.exec(requestId)
+  const logicalId = resume?.[1] ?? requestId
+  let inside = false
+  return messages.filter(message => {
+    if (message.role === 'user' && message.source?.kind === 'user') {
+      const prior = /^(.*):resume:([1-9]\d*)$/.exec(message.id)
+      inside = message.id === requestId || Boolean(resume && (
+        message.id === logicalId || prior?.[1] === logicalId && Number(prior[2]) < Number(resume[2])
+      ))
+    }
+    return inside && message.source?.plugin !== 'dsh-memory-runtime'
+  })
+}
+
 /** Drive the account's existing board main agent with its native tools and delegation. */
 export function createSharedMainAgentAdapter(ctx) {
   const active = new Set()
@@ -13,7 +32,15 @@ export function createSharedMainAgentAdapter(ctx) {
       if (!agent || agent.id !== parentSessionId || ctx.agents.get(parentSessionId) !== agent) throw Error('PARENT_NOT_LIVE')
       signal.throwIfAborted()
       if (agent.status !== 'idle') throw Error('MAIN_AGENT_BUSY')
+      const requestId = 'shared-board-task:' + (executionId ?? randomUUID())
       const descendants = new Set(), bindings = [], runs = new Set()
+      bindings.push(ctx.on('agent/request-context', async ({ agent: owner, signal: requestSignal }, next) => {
+        const request = await next()
+        if (owner !== agent) return request
+        signal.throwIfAborted()
+        requestSignal?.throwIfAborted()
+        return { ...request, messages: sharedRequestMessages(request.messages, requestId) }
+      }, { prepend: true }))
       const waiters = new Set()
       const started = info => {
         if (!info?.runId || runs.has(info.runId)) return
@@ -98,7 +125,7 @@ export function createSharedMainAgentAdapter(ctx) {
         off(); offChildren(); offStart(); offEnd(); offStatus(); for (const unbind of bindings.reverse()) unbind(); release?.(); signal.removeEventListener('abort', cancel); active.delete(cancel)
       }
       try {
-        agent.send({ id: executionId ? `shared-board-task:${executionId}` : randomUUID(), role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: prompt }] }, 'next-turn', true)
+        agent.send({ id: requestId, role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: prompt }] }, 'next-turn', true)
         return { result: settle().then(() => {
           signal.throwIfAborted()
           if (failure) throw failure

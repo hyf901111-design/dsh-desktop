@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 import {runInNewContext} from 'node:vm'
 import {parse} from '@babel/parser'
 import {it,expect} from 'vitest'
-import {sessionTitleSubject,sessionTitleFallbackSubject,sessionTitleFramedMessages,sessionTitlePrompt,patchSessionTitleSubject,patchSessionTitleLlmSubject} from '../scripts/lib/session-title-subject.mjs'
+import {sessionTitleSubject,sessionTitleFallbackSubject,sessionTitleFramedMessages,sessionTitlePrompt,patchSessionTitleSubject,patchSessionTitleLlmSubject,patchResearchSessionTitle} from '../scripts/lib/session-title-subject.mjs'
 
 it('summarizes a supplied subject without skill commands, paths and opaque attachment IDs taking over',()=>{
  const prompt='/efund-ppt-maker 📎文件: "/Users/test/Downloads/events_jxp26_sessions_jxp26_11a_4977122_15812636.pdf" 把这个pdf材料做成符合公司模板要求的ppt，目的是我下周的分享要用'
@@ -22,8 +22,9 @@ it('keeps meaningful topic words, quotes and endpoint notation while limiting on
 })
 
 async function core(){
- const source=patchSessionTitleSubject(await readFile('node_modules/@deepseek-ai/dsh-session-title/lib/index.js','utf8'))
- parse(source,{sourceType:'module'});expect(patchSessionTitleSubject(source)).toBe(source)
+ const patch=source=>patchResearchSessionTitle(patchSessionTitleSubject(source))
+ const source=patch(await readFile('node_modules/@deepseek-ai/dsh-session-title/lib/index.js','utf8'))
+ parse(source,{sourceType:'module'});expect(patch(source)).toBe(source)
  let schema;schema=new Proxy(()=>schema,{get:()=>schema,apply:()=>schema})
  const plain=source.replace(/^import .*;\n/gm,'').replace(/^export .*;$/gm,'')
  return runInNewContext(plain+'\n;({SessionTitleService,fallbackSessionTitle,normalizeSessionTitle,collectSessionTitleMessages})',{Service:class{},z:schema,z$1:schema,deepFreeze:x=>x,assertNever:()=>{throw Error('Unexpected')},AbortController,AbortSignal,Buffer,Map,Set,Promise})
@@ -104,4 +105,47 @@ it('passes the exact edit to the title model and discards a completion after a m
  await service.drain(service.inFlight)
  expect(request.signal.aborted).toBe(true)
  expect(service.get(session)).toMatchObject({title:'投委会现金流模型',source:{kind:'user'}})
+})
+
+
+it('uses a provisional board title and refreshes it for added components, generated components and chat',async()=>{
+ const {SessionTitleService}=await core()
+ const session={id:'board',header:{},events:[],append(type,data){const event={seq:this.events.length,type,data,time:0};this.events.push(event);return event}}
+ const service=Object.create(SessionTitleService.prototype)
+ service.config={fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256}
+ service.serviceActive=()=>true
+ service.work=new Map()
+ service.inFlight=new Set()
+ service.lifetime=new AbortController()
+ service.ctx={sessions:{get:()=>session}}
+ const titles=[]
+ const route={provider:'test',model:'test'}
+ service.registration={active:new Set(),closing:false,provider:{id:'test',async generate({messages}){
+  titles.push(messages[0].text)
+  return {title:['沪深300行情','指数行情与估值','指数估值与回撤'][titles.length-1],messageSeqs:[messages[0].seq]}
+ }}}
+ const sheet=service.rename(session,'新表格')
+ session.append('workspace-spreadsheet/created',{titleSeq:sheet.eventSeq,provisional:true})
+ const update=async components=>{
+  service.updateResearchTitle(session,{locale:'zh',components},route)
+  await service.drain(service.inFlight)
+ }
+ await update([])
+ expect(service.get(session).title).toBe('新看板')
+ await update(['沪深300行情'])
+ expect(service.get(session).title).toBe('沪深300行情')
+ await update(['沪深300行情','指数估值趋势'])
+ expect(titles[1]).toContain('指数估值趋势')
+ expect(service.get(session).title).toBe('指数行情与估值')
+ const message=session.append('user/message',{source:{kind:'user'},content:[{type:'text',text:'补充最大回撤'}]})
+ service.onUserMessage(session,message)
+ service.onRequestHeader(session,{seq:message.seq+1,data:{header:{config:route}}})
+ await service.drain(service.inFlight)
+ expect(titles[2]).toContain('指数估值趋势')
+ expect(titles[2]).toContain('补充最大回撤')
+ expect(service.get(session).title).toBe('指数估值与回撤')
+ service.rename(session,'我的指数看板')
+ await update(['沪深300行情','指数估值趋势','波动率'])
+ expect(titles).toHaveLength(3)
+ expect(service.get(session).title).toBe('我的指数看板')
 })

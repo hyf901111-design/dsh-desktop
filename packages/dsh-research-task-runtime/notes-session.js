@@ -1,6 +1,7 @@
 import {releaseNoteGenerationRoute} from './notes-generation-route.js'
 import {capabilityReceiptText} from './client-capabilities.js'
 export const NOTE_SESSION_EVENT = 'workspace-note/edited'
+const NOTE_CREATED_EVENT = 'workspace-note/created'
 export const NOTE_CONVERSATION_EVENT = 'workspace-note/conversation'
 const activeNoteRequests=new WeakMap(),capabilityLeases=new WeakMap()
 export function setNoteConversationRunning(session,requestId,running){
@@ -49,16 +50,46 @@ export function registerNoteConversationContext(ctx){
  }})
 }
 
+async function initializeNoteSession(ctx, input) {
+  const { sessionId, locale } = input
+  if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 256 || !['zh', 'en'].includes(locale)) {
+    throw Error('笔记会话参数无效。')
+  }
+  const session = ctx.sessions.get(sessionId)
+  if (!session || session.header?.origin === 'subagent') throw Error('笔记会话不可用。')
+  if (!session.events.some(event => event.type === NOTE_CREATED_EVENT)) {
+    if (session.events.some(event => [
+      'session/title', 'turn/start', 'user/message', NOTE_SESSION_EVENT, 'workspace-spreadsheet/created', 'workspace-research/title-context'
+    ].includes(event.type))) throw Error('仅可初始化刚创建的笔记会话。')
+    ctx.sessionTitle.rename(session, locale === 'en' ? 'New Note' : '新笔记')
+    const titleEvent = session.events.findLast(event => event.type === 'session/title')
+    session.append(NOTE_CREATED_EVENT, { titleSeq: titleEvent.seq })
+  }
+  if (await ctx.sessions.flush(session) !== true) throw Error('新笔记尚未保存，请重试。')
+  return { ok: true }
+}
+
 /** Native events retain note-only sessions and remember title ownership on replay. */
 export function engageNoteSession(ctx, input) {
   if (typeof input?.sessionId !== 'string' || input.sessionId.length > 256 || typeof input.title !== 'string' || input.title.length > 1000) throw Error('笔记会话参数无效。')
   const session = ctx.sessions.get(input.sessionId)
   if (!session) throw Error('笔记会话不可用。')
   const titleEvent = session.events.findLast(e => e.type === 'session/title')
+  const created = session.events.find(e => e.type === NOTE_CREATED_EVENT)
   const previous = session.events.findLast(e => e.type === NOTE_SESSION_EVENT)?.data
-  let automatic = previous ? previous.automatic === true : !titleEvent?.data.title?.trim()
-  if (previous && automatic && (titleEvent?.seq ?? -1) !== previous.lastAutoSeq) automatic = false
-  let lastAutoSeq = previous?.lastAutoSeq ?? -1, lastAutoTitle = previous?.lastAutoTitle ?? ''
+  let lastAutoSeq = previous?.lastAutoSeq ?? created?.data.titleSeq ?? -1
+  let lastAutoTitle = previous?.lastAutoTitle ?? ''
+  let automatic = previous ? previous.automatic === true : !titleEvent || !!created
+  // Earlier workspace switches saved the default label as the only title
+  // before the first note edit. A subsequent rename still disables updates.
+  if (!created && !automatic && titleEvent && ['新笔记', 'New Note'].includes(titleEvent.data.title) &&
+      session.events.find(event => event.type === 'session/title') === titleEvent &&
+      (session.events.find(event => event.type === NOTE_SESSION_EVENT)?.seq ?? Infinity) > titleEvent.seq) {
+    automatic = true
+    lastAutoSeq = titleEvent.seq
+  }
+  if (automatic && (titleEvent?.seq ?? -1) !== lastAutoSeq) automatic = false
+  if (automatic && titleEvent && !lastAutoTitle) lastAutoTitle = titleEvent.data.title
   // Publish participation before a title change; this is genuine note activity,
   // without manufacturing a conversation turn or an assistant message.
   if (!previous) session.append(NOTE_SESSION_EVENT, { automatic, lastAutoSeq, lastAutoTitle })
@@ -83,6 +114,7 @@ export function registerNoteSessions(ctx, { isTrustedRequest, readJsonBody }) {
     if (req.method !== 'POST' || !isTrustedRequest(req, true)) return send(403, { error: 'Request rejected' })
     try {
       const input=await readJsonBody(req)
+      if (input.action === 'initialize') return send(200, await initializeNoteSession(ctx, input))
       if(input.action==='conversation-native-begin'||input.action==='conversation-native-end'){
         const session=ctx.sessions.get(input.sessionId)
         if(!session||typeof input.requestId!=='string'||!input.requestId||input.requestId.length>128)throw Error('原生笔记会话记录无效。')

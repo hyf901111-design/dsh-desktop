@@ -39,7 +39,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
    const canOpen=()=>ownsProject()&&[before,id].includes(sessions.list.getSnapshot().current);
    if(!canOpen())throw Error('当前会话已变化，输入已保留。');
    const view=control?.view??detached?.mode;
-   if(control?.workspaceSwitch){
+   if(control?.workspaceSwitch||view==='notes'){
     await initializeWorkspaceSession?.(id,view);
     if(!canOpen())throw Error('当前会话已变化，输入已保留。');
    }

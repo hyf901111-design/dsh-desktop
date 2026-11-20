@@ -13,6 +13,7 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
+import { createSharedMainAgentAdapter } from '../packages/dsh-research-task-runtime/shared-main-agent.js'
 
 const runtimeModule = await import('../packages/dsh-memory-runtime/index.js').catch(() => ({}))
 const patchModule = await import('../scripts/lib/memory-request-context.mjs').catch(() => ({}))
@@ -215,6 +216,26 @@ it('does not extract shared, child, scheduled, or plugin-origin turns', async ()
   expect(f.calls.filter(call => call.purpose === 'memory-extraction')).toHaveLength(0)
   expect(f.calls.filter(call => call.sessionId === 'shared-session' || call.sessionId === 'child-session').some(call => call.messages.some(message => message.source.plugin === 'dsh-memory-runtime'))).toBe(false)
   expect(f.warnings).toEqual([])
+})
+
+it('isolates a shared board summary at the actual model request boundary', async () => {
+ const f = await fixture()
+ await f.turn('图片工作区：调整银色按压泵瓶海报的标题')
+ const before = f.wire.length
+ const adapter = createSharedMainAgentAdapter(f.ctx)
+ const handle = await adapter.start({
+  parentSessionId: f.agent.id, executionId: 'current-page', signal: new AbortController().signal,
+  prompt: '总结下这页。市场概览：244 只产品。'
+ })
+ try {
+  expect((await handle.result).stopReason).toBe('completed')
+  await f.runtime.idle()
+  const request = f.calls.filter(call => !call.purpose).at(-1)
+  expect(JSON.stringify(request.messages)).toContain('244 只产品')
+  expect(JSON.stringify(request.messages)).not.toMatch(/按压泵瓶|dsh-memory-runtime/)
+  expect(f.wire.slice(before).some(entry => ['/recall','/capture'].includes(entry.path))).toBe(false)
+  expect(f.agent.session.events.some(event => event.type === 'user/message' && JSON.stringify(event.data).includes('按压泵瓶'))).toBe(true)
+ } finally { await handle.dispose(); await adapter.dispose() }
 })
 
 it('bounds one failed extraction to one retry and reports a non-plaintext failure without commit', async () => {

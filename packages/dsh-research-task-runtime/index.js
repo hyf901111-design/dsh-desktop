@@ -16,6 +16,7 @@ import { registerHomeBoardSmartRuntime } from './home-board-smart-runtime.js'
 import { registerHomeWorkbenchRuntime } from './home-workbench-runtime.js'
 import { registerHomeSpreadsheetRuntime } from './home-spreadsheet-runtime.js'
 import {registerSpreadsheetSessions} from './spreadsheet-sessions.js'
+import { registerResearchSessionTitles } from './research-session-title.js'
 import {registerKnowledgeSessions} from './knowledge-sessions.js'
 import {readSpreadsheetReference,registerClientTools} from './client-tools.js'
 import {registerResearchReportTool} from './research-report-tool.js'
@@ -3742,6 +3743,7 @@ export async function apply(ctx) {
     const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeSpreadsheetSessions = registerSpreadsheetSessions(ctx, {isTrustedRequest, readJsonBody})
+    const disposeResearchSessionTitles = registerResearchSessionTitles(ctx, {isTrustedRequest, readJsonBody})
     const disposeKnowledgeSessions = registerKnowledgeSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomePresentation = registerHomePresentationRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomeReport = registerHomeReportRuntime(ctx, {isTrustedRequest, readJsonBody})
@@ -3775,7 +3777,7 @@ export async function apply(ctx) {
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
-      disposeNoteSessions();disposeSpreadsheetSessions();disposeKnowledgeSessions()
+      disposeNoteSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeKnowledgeSessions()
       void disposeHomePresentation()
       void disposeHomeReport()
       void disposeHomeNotes()
@@ -3807,7 +3809,7 @@ export async function apply(ctx) {
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
-      disposeNoteSessions();disposeSpreadsheetSessions();disposeKnowledgeSessions()
+      disposeNoteSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeKnowledgeSessions()
       await disposeHomePresentation()
       await disposeHomeReport()
       await disposeHomeNotes()

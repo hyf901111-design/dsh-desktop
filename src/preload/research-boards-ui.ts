@@ -1,3 +1,5 @@
+import { watchResearchSessionTitle } from './research-session-title'
+import { sharedPageContext } from './research-board-page-context'
 import { ResearchBoardHeaderMenu } from './research-board-header-menu'
 import headerEditLock from '../shared/header-edit-lock.json'
 import { HeaderViewModeIcon } from './header-view-mode-icon'
@@ -173,6 +175,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     revision = 0,
     activeSession: string | null = null,
     navigation = 0
+  const researchTitles = new Map<string, () => void>()
   const activations = new Map<string, Promise<void>>()
   const activationErrors = new Map<string, string>()
   const listeners = new Set<() => void>(),
@@ -797,7 +800,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       next.account.generation < state.account.generation
     )
       return
-    if (next.account.generation !== state.account.generation || next.account.user?.userId !== state.account.user?.userId) { guideIdentityRevision++; guideRequests.clear(); guidePendingTitles.clear(); clearGuideModel() }
+    const identityChanged = next.account.generation !== state.account.generation || next.account.user?.userId !== state.account.user?.userId
+    if (identityChanged) { guideIdentityRevision++; guideRequests.clear(); guidePendingTitles.clear(); clearGuideModel() }
     if (next.account.generation !== state.account.generation) {
       clearEditors()
       activeSession = null
@@ -816,6 +820,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
     eventSeq = next.eventSeq
     state = next
+    if (identityChanged) for (const id of researchTitles.keys()) stopResearchTitle(id)
+    const currentId = current()
+    if (currentId && activeResearch.has(currentId)) startResearchTitle(currentId)
     if (state.account.status !== 'loading') { for (const waiter of guideReadyWaiters) waiter.resolve(); guideReadyWaiters.clear() }
     watchFavoriteDeletion()
     if (next.current) acceptView(next.current)
@@ -925,7 +932,6 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const directory = await call<{ directoryId: string; path: string }>('local.directory', { mode: 'reserve', title, basePath: await defaultDirectory() })
     const id = await deps.sessions.create({ cwd: directory.path })
     if (shared || title !== '新研究看板') await deps.sessions.binding(id)?.session.rename(title)
-    else win.localStorage.setItem('sherlock.research.intent-title.v1:' + id, 'true')
     await call('local.directory', { mode: 'bind', directoryId: directory.directoryId, sessionId: id })
     if (shared) await call('local.directory', {mode:'ensure',sessionId:id})
     return id
@@ -1331,9 +1337,30 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (opening.get(boardId) === pending) opening.delete(boardId)
     }
   }
+  function stopResearchTitle(id: string) {
+    researchTitles.get(id)?.()
+    researchTitles.delete(id)
+  }
+  function startResearchTitle(id: string) {
+    if (researchTitles.has(id) || state.account.status === 'loading' || isShared(id) || getHomeGuideSession(id)) return
+    const generation = state.account.generation, accountId = state.account.user?.userId
+    const workspace = deps.researchWorkspaces.for(id)
+    const eligible = () => !disposed && generation === state.account.generation && accountId === state.account.user?.userId && !isShared(id) && !getHomeGuideSession(id)
+    researchTitles.set(id, watchResearchSessionTitle(win, id, {
+      subscribe: listener => workspace.subscribe(listener),
+      getSnapshot: () => {
+        const { files, artifacts } = workspace.getSnapshot()
+        return { files: files ?? [], artifacts: artifacts ?? [] }
+      }
+    }, eligible))
+  }
+  cleanups.push(() => { for (const id of researchTitles.keys()) stopResearchTitle(id) })
   async function activate(id: string, active: boolean) {
-    if (active) activeResearch.add(id)
-    else {
+    if (active) {
+      activeResearch.add(id)
+      startResearchTitle(id)
+    } else {
+      stopResearchTitle(id)
       activeResearch.delete(id)
       if (activeSession !== id) {
         notify()
@@ -1588,7 +1615,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     context: SharedRequestContext,
     imageIds: string[],
     mode: string,
-    retryDraft?: string
+    retryDraft?: string,
+    inspectReferences = context.scope === 'references'
   ) {
     const shell = deps.inputHub.shells.get(sessionId),
       v = view(sessionId)
@@ -1615,6 +1643,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       shell?.notify('error', '请先将图片加入共享画板后引用，输入已保留。')
       return
     }
+    const workspace = deps.researchWorkspaces.for(sessionId)
+    context = sharedPageContext(workspace, context)
     const before = shell?.snapshot,
       draft = before?.draft ?? text,
       key = signature([text, context, mode])
@@ -1629,7 +1659,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       sends.set(sessionId, request)
     }
     request.retry = () =>
-      submitShared(sessionId, text, context, imageIds, mode, retryDraft ?? draft)
+      submitShared(sessionId, text, context, imageIds, mode, retryDraft ?? draft, inspectReferences)
     request.text = text
     request.busy = true
     notify()
@@ -1644,8 +1674,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     shell?.setResearchContextPreparing?.(true)
     try {
       const inspect = (win as any).dshDesktop?.researchLinkFrame?.inspect
-      if (inspect && context.references?.length) {
-        const workspace = deps.researchWorkspaces.for(sessionId)
+      if (inspect && inspectReferences && context.references.length) {
         await Promise.all(context.references.filter(ref => ref.collection === 'artifacts').map(async ref => {
           const node = workspace.getSnapshot().artifacts.find((n: LegacyNode) => n.id === ref.nodeId)
           if (node?.kind !== 'web-link' || new URL(node.url).hostname === 'mp.weixin.qq.com') return
@@ -1655,7 +1684,10 @@ export function createResearchBoardsPage(deps: PageDependencies) {
           workspace.applyWebLinkInspection(node.id, node.url, inspection)
         }))
       }
-      await (win as any).dshDesktop?.researchCanvasActions?.bind({sessionId,selectedIds:context.references?.length?context.references.map(ref=>ref.nodeId):deps.researchWorkspaces.for(sessionId).getSnapshot().selection.selectedNodeIds})
+      const selectedIds = inspectReferences
+        ? context.references.map(ref => ref.nodeId)
+        : workspace.getSnapshot().selection.selectedNodeIds
+      await (win as any).dshDesktop?.researchCanvasActions?.bind({ sessionId, selectedIds })
       const current = await flushCanvas(sessionId, { recover: true })
       if (generation !== state.account.generation) return
       if (!current.permissions.execute || current.boardId !== v.boardId || current.epoch !== v.epoch)
@@ -1823,7 +1855,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       if (pending) return pending
       const generation = state.account.generation
       const check = () => {
-        if (disposed || generation !== state.account.generation || !boardOnlySession(state, id))
+        if (disposed || generation !== state.account.generation || !(isShared(id) || boardOnlySession(state, id)))
           throw new DOMException('看板已切换，请重新打开。', 'AbortError')
       }
       const resolve = async () => {
@@ -1917,7 +1949,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.researchWorkspaces.for(id).persist?.()
       const wasTemporary = temporaryBoards.keep(id)
       const nextId = await deps.sessions.create({ cwd })
-      await deps.sessions.binding(nextId)?.session.rename(f.title)
+      if (!['新看板', 'New Board', '新研究看板'].includes(f.title)) await deps.sessions.binding(nextId)?.session.rename(f.title)
       try {
         await call('local.directory', { mode: 'associate', sessionId: id, targetSessionId: nextId, ...(workspace ? { workspaceId: workspace.workspaceId, workspaceTitle: workspace.title } : {}) })
       } catch (error) { await deps.workspaces.archiveSession(nextId); throw error }
@@ -1931,7 +1963,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       const id = await freshBoard('新研究看板')
       const i = identity(id)
       if (!i) throw Error('研究看板尚未就绪')
-      await call('favorite.add', { identity: { ...i, title: '新研究看板' }, dedicated: true })
+      const title = doc.documentElement.dataset.odysseyLocale === 'en' ? 'New Board' : '新看板'
+      await call('favorite.add', { identity: { ...i, title }, dedicated: true })
       deps.researchWorkspaces.for(id).initializeWorkbenchResponsiveArrange?.()
       await api.openPersonal(id)
       selectBoardSession(id)
