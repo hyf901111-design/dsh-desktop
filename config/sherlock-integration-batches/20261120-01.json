@@ -11,15 +11,15 @@
         "schemaVersion": 1,
         "featureName": "应用入口与首页原生拖窗",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d",
-        "tipCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
+        "baseCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
+        "tipCommit": "e05dfc62b449516030e1014921f77e164606bc0e",
         "commits": [
           {
-            "commit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
+            "commit": "e05dfc62b449516030e1014921f77e164606bc0e",
             "parents": [
-              "bcfe2085a6a8101cfa9cc0ee00eeb3c61dafed8d"
+              "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d"
             ],
-            "subject": "修复连续打开应用报错并接通首页原生拖窗"
+            "subject": "用鼠标屏幕坐标驱动首页原生拖窗"
           }
         ],
         "files": [
@@ -29,27 +29,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/navigation-shortcuts.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/sidebar-new-note.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/window-resize.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-topbar.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/workspace-view-shortcuts.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/navigation-shortcuts.test.ts"
           },
           {
             "status": "M",
@@ -68,23 +48,8 @@
             ],
             "outcome": "passed",
             "summary": "覆盖重复点击、取消、状态清理与真实指针事件",
-            "verifiedCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
-            "completedAt": "2026-11-20T04:42:35.174Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npx",
-              "vitest",
-              "run",
-              "test/sidebar-new-note-browser.test.js",
-              "-t",
-              "spreadsheet|cancel"
-            ],
-            "outcome": "passed",
-            "summary": "验证表格和笔记原生入口",
-            "verifiedCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
-            "completedAt": "2026-11-20T04:42:35.174Z",
+            "verifiedCommit": "e05dfc62b449516030e1014921f77e164606bc0e",
+            "completedAt": "2026-11-20T04:48:03.985Z",
             "timeoutMs": 90000
           },
           {
@@ -95,57 +60,21 @@
             ],
             "outcome": "passed",
             "summary": "TypeScript 检查通过",
-            "verifiedCommit": "db6b0fa5ff5eb87c1a8c6bb79c38bfdde97a9c5d",
-            "completedAt": "2026-11-20T04:42:35.174Z",
+            "verifiedCommit": "e05dfc62b449516030e1014921f77e164606bc0e",
+            "completedAt": "2026-11-20T04:48:03.985Z",
             "timeoutMs": 90000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际客户端复现连续点击报错；在 Chromium 用指针事件验证首页留白向原生窗口发出移动操作"
+          "summary": "验证浏览器真实指针事件发送屏幕位移，打开菜单时仍允许点击留白关闭"
         },
         "acceptanceCriteria": [
           "连续点击应用入口只启动一次，正常取消不弹出打开失败",
           "首页页签右侧留白移动原生窗口，菜单和按钮照常响应"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T04:42:35.174Z"
-      },
-      "merged": {
-        "mergeCommit": "c6031d8af00da0a768b63241720aae6aec128b7b",
-        "verificationCommit": "c6031d8af00da0a768b63241720aae6aec128b7b",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "c6031d8af00da0a768b63241720aae6aec128b7b",
-            "completedAt": "2026-11-20T04:42:47.174Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "c6031d8af00da0a768b63241720aae6aec128b7b",
-            "completedAt": "2026-11-20T04:42:47.174Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-20T04:42:47.174Z"
+        "generatedAt": "2026-11-20T04:48:03.985Z"
       }
     }
   ],
