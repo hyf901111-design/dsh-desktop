@@ -33,10 +33,11 @@ it('forwards the macOS home header space to window movement and skips it when a 
   await page.mouse.down()
   await page.mouse.move(handle.x+90,handle.y+40)
   await page.mouse.up()
-  expect(await page.evaluate(()=>window.operations)).toEqual(['move',null])
+  const completed=['move',{dx:40,dy:20},null]
+  expect(await page.evaluate(()=>window.operations)).toEqual(completed)
   await page.evaluate(()=>{const menu=document.createElement('div');menu.setAttribute('role','menu');document.body.append(menu)})
   await drag.click()
-  expect(await page.evaluate(()=>window.operations)).toEqual(['move',null])
+  expect(await page.evaluate(()=>window.operations)).toEqual(completed)
  } finally {await page.close()}
 })
 it.each(['home', 'research'])('keeps the portaled panel button clickable over the %s drag header', async view => {
