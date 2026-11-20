@@ -132,22 +132,9 @@
           </button>
         </template>
         <template v-if="menu === 'insert'">
-          <button @click="insert('text')">
-            <Glyph name="menu-text" />
-            文本框
+          <button v-for="item in insertCommands" :key="item.id" @click="runCommand(item.id)">
+            <Glyph :name="item.icon" />{{ item.label }}
           </button>
-          <button @click="insert('shape')">
-            <Glyph name="menu-shape" />
-            形状
-          </button>
-          <button @click="insert('line')"><Glyph name="line" />直线</button>
-          <button @click="insert('arrow')"><Glyph name="arrow" />箭头</button>
-          <button @click="chooseFile(imageInput)">
-            <Glyph name="menu-image" />
-            图片…
-          </button>
-          <button @click="insert('chart')">图表…</button>
-          <button @click="insert('table')">表格</button>
         </template>
         <ShapePool v-if="menu === 'shape-pool'" @select="(shape) => insertObject('shape', shape)" />
         <ChartPool v-if="menu === 'chart-pool'" @select="(chart) => insertObject('chart', chart)" />
@@ -555,6 +542,15 @@ const open = (id) => {
   send('open', { id })
 }
 const row = (id, label, icon, children) => ({ id, label, icon, children })
+const insertCommands = [
+  row('text', '文本框', 'menu-text'),
+  row('shape', '形状', 'menu-shape'),
+  row('line', '直线', 'line'),
+  row('arrow', '箭头', 'arrow'),
+  row('image', '图片…', 'menu-image'),
+  row('chart', '图表…', 'chart'),
+  row('table', '表格', 'layout')
+]
 const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen','全屏','fit')] : [
   row('file', '演示文稿', 'menu-slide', [
     row('import', '导入 PowerPoint…', 'menu-upload'),
@@ -577,15 +573,7 @@ const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerP
     row('undo', '撤销编辑', 'undo'),
     row('redo', '重做编辑', 'redo')
   ]),
-  row('insert', '插入', 'menu-plus', [
-    row('text', '文本框', 'menu-text'),
-    row('shape', '形状', 'menu-shape'),
-    row('line', '直线', 'line'),
-    row('arrow', '箭头', 'arrow'),
-    row('image', '图片…', 'menu-image'),
-    row('chart', '图表…', 'insert'),
-    row('table', '表格', 'layout')
-  ]),
+  row('insert', '插入', 'menu-plus', insertCommands),
   row('format', '格式', 'menu-text', [
     { ...row('styles', '对象样式', 'menu-shape'), disabled: !main.activeElementIdList.length },
     { ...row('position', '排列与尺寸', 'align'), disabled: !main.activeElementIdList.length },
