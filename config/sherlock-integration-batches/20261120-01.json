@@ -9,17 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "移除右侧对话切换工作区后的重复提示",
+        "featureName": "修复会话顶栏拖动、统一背景并恢复右侧斜杠命令",
         "branch": "codex/feat/home-demo-interrupt-20261120",
-        "baseCommit": "592b5c8adbb8eed120af71debffdb4de826a237b",
-        "tipCommit": "8dd903ddfca6b482eaf91de07665ad5eb651d7ca",
+        "baseCommit": "8dd903ddfca6b482eaf91de07665ad5eb651d7ca",
+        "tipCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
         "commits": [
           {
-            "commit": "8dd903ddfca6b482eaf91de07665ad5eb651d7ca",
+            "commit": "f3abd5faf185b48316bd5d650017810241555ac6",
             "parents": [
-              "592b5c8adbb8eed120af71debffdb4de826a237b"
+              "8dd903ddfca6b482eaf91de07665ad5eb651d7ca"
             ],
-            "subject": "移除右侧对话切换工作区后的重复提示"
+            "subject": "修复会话顶栏空白拖窗并统一表格底色"
+          },
+          {
+            "commit": "46b405f3556a6fc9bdc8fac133b2837be40c51c3",
+            "parents": [
+              "f3abd5faf185b48316bd5d650017810241555ac6"
+            ],
+            "subject": "将探索页背景调整为中性灰"
+          },
+          {
+            "commit": "18f77f9e460c90127c62c131a01590e14956dc30",
+            "parents": [
+              "46b405f3556a6fc9bdc8fac133b2837be40c51c3"
+            ],
+            "subject": "接通右侧工作区草稿的斜杠命令菜单"
           }
         ],
         "files": [
@@ -29,7 +43,43 @@
           },
           {
             "status": "M",
-            "path": "src/preload/figma-panels.css"
+            "path": "scripts/lib/notes-composer.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/right-project-drafts.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/window-resize.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-topbar.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/pending-conversation-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/panel-toggle-drag-region.test.js"
           },
           {
             "status": "M",
@@ -42,14 +92,57 @@
               "npx",
               "vitest",
               "run",
-              "test/pending-conversation-rendered.test.js",
-              "-t",
-              "changes only the right project|keeps the research welcome|keeps the active|hides the right project picker"
+              "test/panel-toggle-drag-region.test.js",
+              "test/window-resize.test.ts"
             ],
             "outcome": "passed",
-            "summary": "实际渲染验证切换和清除工作区、首次发送归属及编辑后锁定，17 项通过",
-            "verifiedCommit": "8dd903ddfca6b482eaf91de07665ad5eb651d7ca",
-            "completedAt": "2026-11-20T05:06:57.243Z",
+            "summary": "会话顶栏拖动、按钮命中、弹窗和表格底色，14 项通过",
+            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
+            "completedAt": "2026-11-20T05:26:07.464Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/explore-menu-browser.test.ts",
+              "-t",
+              "backdrop neutral|limits Explore window dragging"
+            ],
+            "outcome": "passed",
+            "summary": "探索页明暗背景和顶栏命中，8 项通过",
+            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
+            "completedAt": "2026-11-20T05:26:07.464Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/pending-conversation-rendered.test.js",
+              "-t",
+              "native command menu for a selected browser project|hands the first home|restores the chosen project|changes only the right project|renders native welcome|hides the right project picker"
+            ],
+            "outcome": "passed",
+            "summary": "右侧和首页命令交接、项目选择和草稿，11 项通过",
+            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
+            "completedAt": "2026-11-20T05:26:07.464Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npx",
+              "vitest",
+              "run",
+              "test/pending-conversation.test.js",
+              "test/pending-conversation-panel.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "待创建会话和右侧对话，17 项通过",
+            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
+            "completedAt": "2026-11-20T05:26:07.464Z",
             "timeoutMs": 120000
           },
           {
@@ -59,58 +152,24 @@
               "scripts/verify-frontend-patch-reentry.mjs"
             ],
             "outcome": "passed",
-            "summary": "验证客户端补丁重复应用结果一致且语法有效",
-            "verifiedCommit": "8dd903ddfca6b482eaf91de07665ad5eb651d7ca",
-            "completedAt": "2026-11-20T05:06:57.243Z",
+            "summary": "客户端补丁重复应用结果一致且语法有效",
+            "verifiedCommit": "18f77f9e460c90127c62c131a01590e14956dc30",
+            "completedAt": "2026-11-20T05:26:07.464Z",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际渲染覆盖六种应用模式及表格明暗主题，选中项目直接显示在选择栏"
+          "summary": "Chromium 验证会话标题栏拖动事件、明暗主题以及浏览器右侧原生命令菜单"
         },
         "acceptanceCriteria": [
-          "切换或清除右侧对话工作区后移除额外的发送提示",
-          "切换后在选择栏显示当前工作区，首次发送按当前选择归属"
+          "从空白会话顶栏拖动 macOS 窗口，顶栏按钮可点击",
+          "表格的顶栏和内容区使用同一底色",
+          "探索页明暗主题背景无色相",
+          "浏览器右侧所选工作区可打开命令菜单并保留草稿"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T05:06:57.243Z"
-      },
-      "merged": {
-        "mergeCommit": "21d7d39bf32451fd47aba0bdb2ecd16885707f7f",
-        "verificationCommit": "21d7d39bf32451fd47aba0bdb2ecd16885707f7f",
-        "checks": [
-          {
-            "argv": [
-              "npm",
-              "test",
-              "--",
-              "test/home-guide-entry-native.test.ts",
-              "test/home-guide-timeline.test.ts",
-              "test/spreadsheet-cash-flow-playback.test.ts",
-              "--testTimeout",
-              "10000"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm test -- test/home-guide-entry-native.test.ts test/home-guide-timeline.test.ts test/spreadsheet-cash-flow-playback.test.ts --testTimeout 10000",
-            "verifiedCommit": "21d7d39bf32451fd47aba0bdb2ecd16885707f7f",
-            "completedAt": "2026-11-20T05:07:09.109Z",
-            "timeoutMs": 90000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "21d7d39bf32451fd47aba0bdb2ecd16885707f7f",
-            "completedAt": "2026-11-20T05:07:09.109Z",
-            "timeoutMs": 90000
-          }
-        ],
-        "recordedAt": "2026-11-20T05:07:09.109Z"
+        "generatedAt": "2026-11-20T05:26:07.464Z"
       }
     }
   ],
