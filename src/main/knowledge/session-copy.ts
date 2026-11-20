@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises'
 import type { SessionSummary } from '@deepseek-ai/dsh-host-apiproxy/api'
 import { knowledgeSessionLabels, type KnowledgeSessionMode, type SharedKnowledgeSession } from '../../shared/knowledge-sessions'
 import type { NotesStore } from '../notes/store'
+import type { Deck, PresentationStore } from '../presentation/store'
 import type { SpreadsheetStore } from '../spreadsheet/store'
 import type { ResearchCanvasStorage } from '../state/research-canvas-storage'
 import type { ImageFactoryCanvases } from '../state/image-factory-canvases'
@@ -13,6 +14,8 @@ type Workspace = { workspaceId: string; sessionIds: string[] }
 type RetainCopy = (id: string, title: string, existing?: boolean, imported?: boolean) => Promise<void>
 export type KnowledgeSessionSeed = SharedKnowledgeSession | {
   mode: 'notes'; title: string; note: Pick<import('../../shared/workspace-notes').NoteContent, 'title' | 'blocks'>
+} | {
+  mode: 'presentation'; title: string; deck: Deck
 } | {
   mode: 'image-factory'; title: string; epoch: number
 } & ({ canvas: StoredCanvas; image?: Uint8Array } | { image: Uint8Array; width: number; height: number })
@@ -69,6 +72,7 @@ export function createKnowledgeSessionCopier(options: {
   rpc: Rpc
   retain: RetainCopy
   notes: NotesStore
+  presentations: PresentationStore
   workbooks: SpreadsheetStore
   research: ResearchCanvasStorage
   canvases: ImageFactoryCanvases
@@ -115,6 +119,12 @@ export function createKnowledgeSessionCopier(options: {
             title: source.note.title, blocks: source.note.blocks, yjs: ''
           }).status !== 'saved') throw Error('笔记副本无法保存。')
           break
+        case 'presentation': {
+          const key = { owner, sessionId }
+          options.presentations.save(key, 0, { ...source.deck, id: randomUUID(), title }, true)
+          undo.push(() => options.presentations.remove(key))
+          break
+        }
         case 'spreadsheet': {
           const key = { owner, sessionId }
           undo.push(() => workbooks.remove(key))

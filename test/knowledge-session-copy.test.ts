@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { expect, test, vi } from 'vitest'
 import { createKnowledgeSessionCopier, retainExistingKnowledgeCopies } from '../src/main/knowledge/session-copy'
 import { NotesStore } from '../src/main/notes/store'
+import { blankDeck, PresentationStore } from '../src/main/presentation/store'
 import { SpreadsheetStore } from '../src/main/spreadsheet/store'
 import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 import { ImageFactoryCanvases } from '../src/main/state/image-factory-canvases'
@@ -26,20 +27,46 @@ const sources: SharedKnowledgeSession[] = [
 ]
 
 async function fixture(run: (stores: {
-  notes: NotesStore; workbooks: SpreadsheetStore; research: ResearchCanvasStorage
+  notes: NotesStore; presentations: PresentationStore; workbooks: SpreadsheetStore; research: ResearchCanvasStorage
   canvases: ImageFactoryCanvases; fallbackWorkspacePath: string
 }) => Promise<void>) {
   const root = await mkdtemp(join(tmpdir(), 'ework-session-copy-'))
+  const presentations = new PresentationStore(root)
   try {
     await run({
+      presentations,
       notes: new NotesStore(join(root, 'notes')),
       workbooks: new SpreadsheetStore(root),
       research: new ResearchCanvasStorage(root),
       canvases: new ImageFactoryCanvases(join(root, 'studio'), () => ({ owner: 'recipient', generation: 5 })),
       fallbackWorkspacePath: join(root, 'default-workspace')
     })
-  } finally { await rm(root, { recursive: true, force: true }) }
+  } finally { presentations.close(); await rm(root, { recursive: true, force: true }) }
 }
+
+test('registers a knowledge PowerPoint with its imported slides and notes in the source workspace', async () => {
+  await fixture(async stores => {
+    const deck = blankDeck('原文件')
+    deck.slides[0]!.remark = '保留源文件的备注'
+    const rpc: Rpc = async <T>(method: string, input: unknown) => {
+      if (method === 'workspace.list') return { items: [{ workspaceId: 'work', sessionIds: ['origin'] }] } as T
+      const { sessionId, workspaceId } = input as { sessionId: string; workspaceId: string }
+      expect(method).toBe('session.create')
+      expect(workspaceId).toBe('work')
+      const saved = stores.presentations.read({ owner: 'reader', sessionId })
+      expect(saved.deck?.slides).toEqual(deck.slides)
+      expect(saved.deck?.id).not.toBe(deck.id)
+      expect(saved.deck?.title).toBe('业务汇报')
+      return {} as T
+    }
+    const retain = vi.fn(async () => {})
+    const copy = await createKnowledgeSessionCopier({ ...stores, rpc, retain })('reader', {
+      mode: 'presentation', title: '业务汇报', deck
+    }, 'origin', () => {}, true)
+    expect(copy.mode).toBe('presentation')
+    expect(retain).toHaveBeenCalledWith(copy.id, '业务汇报', undefined, true)
+  })
+})
 
 test.each(sources)('seeds the $mode mode before publishing the personal copy to the catalog', async source => {
   await fixture(async stores => {

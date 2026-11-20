@@ -2,10 +2,10 @@ import { fileEditorLabel, fileEditorMode, type FileEditorMode, type FileEditorSo
 import { sharedKnowledgeSessionFile, knowledgeSessionLabels as sharedModeLabels } from '../../shared/knowledge-sessions'
 import { openSharedKnowledgeSession } from './session-directory'
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import { flushSync } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import {
-  knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, knowledgeSharedCatalogError, listKnowledgeDocuments,
+  canOpenKnowledgeImage, knowledgeCategories, knowledgeFormat, knowledgeFormats, knowledgeSources, knowledgeSharedCategories, knowledgeSharedCatalogError, listKnowledgeDocuments,
   type KnowledgeCategory, type KnowledgeDocument, type KnowledgeEdit, type KnowledgeFilter,
   type KnowledgeImportProgress, type KnowledgeSnapshot
 } from '../../shared/knowledge-library'
@@ -160,9 +160,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const [recent, setRecent] = useState<string[]>([])
   const searchSequence = useRef(0)
   const [menu, setMenu] = useState<{ id: string; top: number; left: number; folder?: boolean; pointer: boolean }>()
+  const [panelMenu, setPanelMenu] = useState<{
+    host: HTMLElement; row: KnowledgeListRow; folders: KnowledgeSnapshot['folders']; shares: KnowledgeSnapshot['sessionShares']
+  }>()
   const [dialog, setDialog] = useState<DialogState>()
   const sessionShare = dialog?.type === 'share-session'
-    ? local.sessionShares?.[knowledgeSessionShareKey(dialog.mode, dialog.row.id)] : undefined
+    ? (panelMenu?.shares ?? local.sessionShares)?.[knowledgeSessionShareKey(dialog.mode, dialog.row.id)] : undefined
   const [value, setValue] = useState('')
   const [preview, setPreview] = useState<KnowledgePreview & { native?: boolean; loading?: boolean }>()
   const [dragging, setDragging] = useState(false)
@@ -194,9 +197,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     .sort((a, b) => a.localeCompare(b))
   const filterCount = countFileFacets(filter)
   const narrowed = Boolean(filter.query || filterCount)
-  const target = menu && snapshot.documents.find(row => row.id === menu.id)
+  const panelRow = panelMenu?.row.id === menu?.id ? panelMenu?.row : undefined
+  const target = menu && !panelRow?.publishedSession ? panelRow ?? snapshot.documents.find(row => row.id === menu.id) : undefined
   const editorMode = target && bridge.openFileInEditor ? fileEditorMode(target.name) : undefined
-  const targetSession = menu && publishedSessions.find(row => row.id === menu.id)?.publishedSession
+  const targetSession = menu && (panelRow?.publishedSession ?? publishedSessions.find(row => row.id === menu.id)?.publishedSession)
   const targetFolder = menu?.folder && snapshot.folders.find(row => row.id === menu.id)
   const filterButton = useRef<HTMLButtonElement>(null)
   const actionMenu = useRef<HTMLDivElement>(null)
@@ -240,6 +244,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     const popup = actionMenu.current
     const view = document.defaultView
     if (!menu || !popup || !view) return
+    if (panelMenu) {
+      popup.setAttribute('popover', 'manual')
+      if (!popup.matches(':popover-open')) popup.showPopover()
+    } else popup.removeAttribute('popover')
     const position = () => {
       const { width, height } = popup.getBoundingClientRect()
       const maxLeft = view.innerWidth - width - 8
@@ -253,7 +261,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     if (menu.pointer) popup.focus({ preventScroll: true })
     view.addEventListener('resize', position)
     return () => view.removeEventListener('resize', position)
-  }, [document, menu, target?.sessionId])
+  }, [document, menu, panelMenu, target?.sessionId])
 
   useLayoutEffect(() => {
     if (previousResultScope.current === resultScope) return
@@ -322,6 +330,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     const surface = () => {
       const active = host.current()?.surface === 'knowledge'
       if (active !== wasActive) {
+        setPanelMenu(undefined)
+        setMenu(undefined)
+        setDialog(undefined)
         filterState.current = { ...filterState.current, revision: crypto.randomUUID() }
         wasActive = active
       }
@@ -335,6 +346,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       }
     }
     const reset = () => {
+      setPanelMenu(undefined)
+      setMenu(undefined)
       currentEpoch.current++
       refreshSequence.current++
       previewRequest.current++
@@ -443,9 +456,12 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       setDraftFilter(undefined)
       setMenu(undefined)
     }
+    const closeFromEditor = () => { setMenu(undefined); setDraftFilter(undefined) }
+    document.addEventListener('sherlock:workspace-pointerdown', closeFromEditor)
     document.addEventListener('pointerdown', close)
     document.addEventListener('keydown', escape)
     return () => {
+      document.removeEventListener('sherlock:workspace-pointerdown', closeFromEditor)
       document.removeEventListener('pointerdown', close)
       document.removeEventListener('keydown', escape)
     }
@@ -557,6 +573,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
 
   function openDialog(next: DialogState) {
     setMenu(undefined)
+    if (next.type === 'create-folder') setPanelMenu(undefined)
     setValue(next.type === 'rename' ? next.row.name.replace(/\.[^.]+$/u, '') :
       next.type === 'rename-folder' ? next.name : next.type === 'move' ? next.row.folderId ?? '' :
       next.type === 'share' ? next.row.share?.category ?? knowledgeSharedCategories[0] :
@@ -741,7 +758,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
 
   async function openPreview(row: KnowledgeDocument) {
     if (row.imageProject && bridge.openImageProject) {
-      await openImageCanvas(() => bridge.openImageProject!(row.id))
+      await runFileAction(() => bridge.openImageProject!(row.id))
       return
     }
     if (openSharedKnowledgeSession(document, row)) return
@@ -776,10 +793,27 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     setPreview(undefined)
   }
 
+  useEffect(() => {
+    const showPanelMenu = (event: Event) => {
+      const element = event.target as HTMLElement
+      const host = element.closest<HTMLElement>('.knowledge-panel')
+      const detail = (event as CustomEvent).detail
+      if (busy || !host || !detail?.row || detail.row.id !== element.dataset.knowledgeFileId) return
+      setPanelMenu({ host, row: detail.row, folders: detail.folders, shares: detail.shares })
+      setDraftFilter(undefined)
+      setDialog(undefined)
+      setNotice(undefined)
+      setMenu({ id: detail.row.id, left: detail.left, top: detail.top, pointer: true })
+    }
+    document.addEventListener('sherlock:knowledge-panel-file-menu', showPanelMenu)
+    return () => document.removeEventListener('sherlock:knowledge-panel-file-menu', showPanelMenu)
+  }, [document, busy])
+
   function showMenu(event: React.MouseEvent<HTMLElement>, id: string, folder?: boolean) {
     const pointer = event.type === 'contextmenu'
     if (pointer) event.preventDefault()
     if (busy) return
+    setPanelMenu(undefined)
     const bounds = event.currentTarget.getBoundingClientRect()
     const atCursor = pointer && (event.clientX !== 0 || event.clientY !== 0)
     const top = atCursor ? event.clientY : bounds.bottom + 4
@@ -807,7 +841,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     if (!await openSession(session.entry.id, session.mode)) setNotice({ text: '来源会话已不可用。', error: true })
   }
 
-  async function openImageCanvas(open: () => Promise<void>) {
+  async function runFileAction(open: () => Promise<void>) {
     if (busy) return
     const epoch = currentEpoch.current
     setMenu(undefined)
@@ -819,6 +853,19 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
       if (epoch === currentEpoch.current) setBusy(false)
     }
   }
+
+  function inActionHost(content: React.ReactNode) {
+    return panelMenu ? createPortal(content, panelMenu.host) : content
+  }
+
+  const openInEditor = target && editorMode && <button type="button" disabled={busy} onClick={() =>
+    void runFileAction(() => bridge.openFileInEditor!({
+      id: target.id, sessionId: target.sessionId || findWorkspaceSession(document)?.dataset.eworkNotesSession
+    }, editorMode))
+  }>{fileEditorLabel(editorMode, document.documentElement.dataset.odysseyLocale === 'en')}</button>
+
+  const openImageCopy = target && !target.imageProject && canOpenKnowledgeImage(target.name) && bridge.openImageFactoryCopy &&
+    <button type="button" disabled={busy} onClick={() => void runFileAction(() => bridge.openImageFactoryCopy!(target.id))}>在「图像」中编辑副本</button>
 
   function submitDialog(event: React.FormEvent) {
     event.preventDefault()
@@ -1051,11 +1098,11 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                     const updatedAt = new Date(row.updatedAt)
                     const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
                     return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
-                      data-knowledge-file-context-menu={row.received ? undefined : true} data-image-project={!!row.imageProject || undefined}
+                      data-knowledge-file-context-menu data-image-project={!!row.imageProject || undefined}
                       onClick={row.imageProject ? event => {
                         if (!(event.target as Element).closest('button, a, input') && !busy) void openPreview(row)
                       } : undefined}
-                      onContextMenu={row.received ? undefined : event => showMenu(event, row.id)}>
+                      onContextMenu={event => showMenu(event, row.id)}>
                       <td><button className="knowledge-file-name" type="button" title={title}
                         onClick={event => {
                           if (published) { void openPublishedSession(published); return }
@@ -1090,10 +1137,10 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                       </button></td>
                       <td>{bytes}</td>
                       <td>{row.updatedAt ? <time dateTime={updatedAt.toISOString()}>{date}</time> : '—'}</td>
-                      <td title={row.received?.owner}>{row.received ? row.received.owner :
+                      <td title={row.received?.owner}>{row.received?.owner}
                         <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
                           aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
-                          onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button>}</td>
+                          onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button></td>
                     </tr>
                   })}
                 </tbody>
@@ -1128,28 +1175,36 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <KnowledgePreviewContent file={preview} loading={preview.loading} />
       </aside>}
     </div>}
+    {inActionHost(<>
     {notice && !dialog && <div className="knowledge-toast" role={notice.error ? 'alert' : 'status'}>{notice.text}</div>}
-    {tab === 'files' && menu && (target || targetFolder || targetSession) && <div ref={actionMenu} className="knowledge-popup knowledge-action-menu"
+    {(tab === 'files' || panelMenu) && menu && (target || targetFolder || targetSession) && <div ref={actionMenu} className="knowledge-popup knowledge-action-menu"
       role="group" tabIndex={-1} aria-label="更多操作">
-      {target && <>
+      {target?.received && <>
+        <button type="button" onClick={() => {
+          setMenu(undefined)
+          if (panelMenu) {
+            if (!openSharedKnowledgeSession(document, target)) document.dispatchEvent(new CustomEvent('sherlock:knowledge-preview-file', { detail: { id: target.id, name: target.name } }))
+          } else void openPreview(target)
+        }}>{sharedKnowledgeSessionFile(target.name, target.source) ? '打开共享会话' : '预览文件'}</button>
+        {!sharedKnowledgeSessionFile(target.name, target.source) && <>
+          {openInEditor}
+          {openImageCopy}
+          <button type="button" onClick={() => void runFileAction(async () => { await bridge.request('download', { id: target.id }) })}>下载共享文件</button>
+        </>}
+      </>}
+      {target && !target.received && <>
         <button type="button" onClick={() => openDialog({ type: 'move', row: target })}>移动到文件夹…</button>
         {target.imageProject && bridge.openImageProject &&
-          <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageProject!(target.id))}>在「图像」中继续编辑</button>}
-        {!target.imageProject && target.generatedBy === 'image-factory' && bridge.openImageFactoryCopy &&
-          <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageFactoryCopy!(target.id))}>在「图像」中编辑副本</button>}
+          <button type="button" disabled={busy} onClick={() => void runFileAction(() => bridge.openImageProject!(target.id))}>在「图像」中继续编辑</button>}
+        {openImageCopy}
         {!target.imageProject && target.generatedBy === 'image-factory' && target.sessionId && bridge.openImageFactorySource &&
-          <button type="button" disabled={busy} onClick={() => void openImageCanvas(() => bridge.openImageFactorySource!(target.sessionId!))}>打开来源画布</button>}
+          <button type="button" disabled={busy} onClick={() => void runFileAction(() => bridge.openImageFactorySource!(target.sessionId!))}>打开来源画布</button>}
         {target.sessionId && <button type="button" onClick={async () => {
           setMenu(undefined)
           if (!await openSession(target.sessionId!, 'chat')) setNotice({ text: '来源会话已不可用。', error: true })
         }}>跳转至会话</button>}
         <button type="button" onClick={() => void fileAction('open', target)}>打开文件</button>
-        {editorMode && <button type="button" onClick={() => {
-          setMenu(undefined)
-          const sessionId = target.sessionId || findWorkspaceSession(document)?.dataset.eworkNotesSession
-          void bridge.openFileInEditor?.({ id: target.id, sessionId }, editorMode)
-            .catch(error => setNotice({ text: message(error), error: true }))
-        }}>{fileEditorLabel(editorMode, document.documentElement.dataset.odysseyLocale === 'en')}</button>}
+        {openInEditor}
         <button type="button" onClick={() => void fileAction('reveal', target)}>在文件夹中显示</button>
         <hr />
         <button type="button" onClick={() => void edit({ type: 'save', id: target.id, value: !target.saved })}>
@@ -1196,7 +1251,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
           <div className="knowledge-dialog-select">
             <select autoFocus aria-label="目标文件夹" value={value} onChange={event => setValue(event.target.value)}>
               <option value="">未分组</option>
-              {snapshot.folders.map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
+              {(panelMenu?.folders ?? snapshot.folders).map(folder => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
             </select>
             <KnowledgeIcon name="chevron" />
           </div>
@@ -1216,6 +1271,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         </footer>
       </form>
     </div>}
+    </>)}
   </>
 }
 

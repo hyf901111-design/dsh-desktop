@@ -495,7 +495,7 @@ function receive(event) {
       send('import-error', { importId: d.importId })
       return
     }
-    readFile(new File([d.bytes], d.title), d.importId)
+    readFile(new File([d.bytes], d.title), d.importId, d.parseOnly === true)
   } else if (d.type === 'theme') document.body.toggleAttribute('data-ds-dark-theme', d.dark)
   else if (d.type === 'saved' && d.revision === revision) {
     notice.value = '已保存'
@@ -883,14 +883,14 @@ function insertImage(e) {
   r.onload = () => elements.createImageElement(r.result)
   r.readAsDataURL(f)
 }
-function readFile(file, importId) {
+function readFile(file, importId, parseOnly = false) {
   if (!file || !editable.value || importing) return
   if (file.size > 64 * 1024 * 1024) {
     notice.value = '文件超过 64 MB。'
     return
   }
   const before = store.slides
-  importing = { before, file, importId, title: file.name.replace(/\.pptx$/i, '') }
+  importing = { before, file, importId, parseOnly, title: file.name.replace(/\.pptx$/i, '') }
   notice.value = '正在导入…'
   importer.importPPTXFile([file], { cover: true })
 }
@@ -913,7 +913,7 @@ watch(importer.exporting, async (busy) => {
   main.setActiveElementIdList([])
   importing = null
   save(true, job.importId)
-  void snapshots.initSnapshotDatabase()
+  if (!job.parseOnly) void snapshots.initSnapshotDatabase()
 })
 function importFile(e) {
   readFile(e.target.files[0])
