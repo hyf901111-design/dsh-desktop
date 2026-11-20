@@ -83,7 +83,11 @@ ${workspaceSessionHeader}:has([data-conversation-view-id=notes][aria-selected=tr
 body[data-workspace-surface=notes] ${workspaceSessionHeader}{--workspace-title-icon:${navigationAppIcon('note')};--workspace-title-art-size:auto 14px}
 ${workspaceSessionHeader} .wSkVaW_crumbs{display:flex;align-items:center;gap:var(--odyssey-app-title-gap)}
 ${workspaceSessionHeader} .wSkVaW_crumb{display:block}
-body ${workspaceSessionHeader}:has([data-session-workspace-controls]) .wSkVaW_crumbs{min-width:min(68px,25%)}
+body ${workspaceSessionHeader}:has([data-session-workspace-controls]) .wSkVaW_crumbs{
+  flex:0 1 auto;
+  /* Reserve room for long titles without adding space after a short title. */
+  min-width:calc-size(max-content,min(size,68px,25%));
+}
 ${workspaceSessionHeader} .wSkVaW_crumbs::before{
   content:"";display:block;width:var(--odyssey-app-title-icon-size);height:var(--odyssey-app-title-icon-size);flex:none;
   background:currentColor;mask:var(--workspace-title-icon) center/var(--workspace-title-art-size,contain) no-repeat;

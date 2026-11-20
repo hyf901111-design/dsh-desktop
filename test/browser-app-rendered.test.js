@@ -741,6 +741,41 @@ it.each([600, 1280])('aligns the browser title with native workspace titles at w
   for (const layout of layouts) expect(layout).toEqual(browserLayout)
  } finally { await page.close() }
 })
+it('keeps the workspace toggle equally close to short and long conversation titles', async () => {
+ const { page } = await fixture(1280, 800)
+ try {
+  await page.evaluate(() => {
+   window.browserView.close()
+   const pane = document.querySelector('.pI_x6G_centerCol')
+   pane.innerHTML = `<div class="wSkVaW_root" data-odyssey-page="conversation">
+    <header class="wSkVaW_header" data-srb-session-header data-ework-notes-session="session-A">
+     <div class="wSkVaW_crumbs"><span class="wSkVaW_crumbSeg"><span class="wSkVaW_crumb">问候</span></span></div>
+    </header>
+   </div>`
+   window.mountSessionWorkspaceViewShortcuts(document, () => {})
+  })
+  const header = page.locator('[data-srb-session-header]')
+  const toggle = header.getByRole('button', { name: '展开工作区页签' })
+  await toggle.waitFor()
+  for (const [layout, width] of [['regular', 760], ['compact', 540], ['narrow', 390]]) {
+   const { short, long } = await header.evaluate((element, { layout, width }) => {
+    element.dataset.odysseyHeaderLayout = layout
+    element.style.boxSizing = 'border-box'
+    element.style.width = width + 'px'
+    const title = element.querySelector('.wSkVaW_crumb')
+    const toggle = element.querySelector('.eb-workspace-toggle')
+    const gap = text => {
+     title.textContent = text
+     return toggle.getBoundingClientRect().left - title.getBoundingClientRect().right
+    }
+    return { short: gap('问候'), long: gap('客户工作区回归验证记录') }
+   }, { layout, width })
+   expect(long, layout).toBeGreaterThan(0)
+   expect(short, layout).toBeCloseTo(long)
+  }
+ } finally { await page.close() }
+})
+
 it('places the shared workspace back button before the browser title and leaves the web tabs intact',async()=>{
  const {page,errors}=await fixture(1440,900,true);try{
   await liveWebsite(page)
