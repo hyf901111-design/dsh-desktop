@@ -1,0 +1,319 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261121-01",
+  "branch": "codex/integration/20261121-01",
+  "baseMainCommit": "9844dc5fd8c90259a30d9762899cdc065e3265b5",
+  "expectedMainCommit": "9844dc5fd8c90259a30d9762899cdc065e3265b5",
+  "createdAt": "2026-11-21T05:20:49.368Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究看板基金公司角色组件生成和历史交付恢复",
+        "branch": "codex/feat/research-generation-20261121",
+        "baseCommit": "9844dc5fd8c90259a30d9762899cdc065e3265b5",
+        "tipCommit": "718150d61e81b25d342c412ed80f1004757e7ae6",
+        "commits": [
+          {
+            "commit": "03f4711ee3a11e98ef74167b8b9a33fba65712a6",
+            "parents": [
+              "9844dc5fd8c90259a30d9762899cdc065e3265b5"
+            ],
+            "subject": "修复历史任务过期阻断看板交付和混合面板重试"
+          },
+          {
+            "commit": "8b8d1e9927e9433d1ea5e10bc9f36ecea3de4932",
+            "parents": [
+              "03f4711ee3a11e98ef74167b8b9a33fba65712a6"
+            ],
+            "subject": "按投资、经营和风险决策选择对比图并校正指标模板"
+          },
+          {
+            "commit": "a72500b4f8cd6910479c114a1a6b0d816555af44",
+            "parents": [
+              "8b8d1e9927e9433d1ea5e10bc9f36ecea3de4932"
+            ],
+            "subject": "改善净值刻度和窄卡排名标签并区分分组柱图的零值与缺报"
+          },
+          {
+            "commit": "af523e16445dca14b7d171239e76c6f4c874955d",
+            "parents": [
+              "a72500b4f8cd6910479c114a1a6b0d816555af44"
+            ],
+            "subject": "将横轴分类标签对齐对应的分组柱中心"
+          },
+          {
+            "commit": "a8c92123daa857671650a49bca1bf7ec0b6a8c41",
+            "parents": [
+              "af523e16445dca14b7d171239e76c6f4c874955d"
+            ],
+            "subject": "复用 Excel 原表生成原生看板并修复时间线与图表参数重试"
+          },
+          {
+            "commit": "920a6b0716f1f6962c27bdcbbdb9cfe8992d2c4a",
+            "parents": [
+              "a8c92123daa857671650a49bca1bf7ec0b6a8c41"
+            ],
+            "subject": "兼容回车分行和跨行首列表头的粘贴表格"
+          },
+          {
+            "commit": "718150d61e81b25d342c412ed80f1004757e7ae6",
+            "parents": [
+              "920a6b0716f1f6962c27bdcbbdb9cfe8992d2c4a"
+            ],
+            "subject": "修复历史计划缺少原始消息时无法补交组件"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/cartesian-chart-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/chart-template-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-content.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-metric-view.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-provenance.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/delimited-evidence.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/delimited-row.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/market-trend-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-design-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-native-presentation.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-composer.mjs"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-workbench-components/references/runtime-v1.md"
+          },
+          {
+            "status": "C050",
+            "path": "src/preload/notes/cartesian-navigation-1.6.9.js",
+            "previousPath": "test/fixtures/notes-native-chart-point-navigation.html"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/chart-navigation-display.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/chart-navigation.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/cartesian-chart-label-spacing.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/cartesian-chart-template.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-provenance-compatibility.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/component-reading-footer-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/market-trend-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-chart-navigation.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-market-artifact.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-deferred.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-delivery-recovery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-execution-policy.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-fund-decisions.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-pasted-spreadsheet.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-pasted-spreadsheet.test.js",
+              "test/workbench-fund-decisions.test.js",
+              "test/workbench-delivery-recovery.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-delimited-evidence.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-content-metric-view.test.js",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/workbench-public-data.test.js",
+              "test/workbench-deferred.test.js",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "Test Files  11 passed (11)，Tests  286 passed (286)",
+            "verifiedCommit": "718150d61e81b25d342c412ed80f1004757e7ae6",
+            "completedAt": "2026-11-21T05:20:47.289215+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/cartesian-chart-template.test.js",
+              "test/cartesian-chart-label-spacing.test.js",
+              "test/component-provenance-compatibility.test.js",
+              "test/market-trend-presentation-browser.test.js",
+              "test/component-reading-footer-browser.test.js",
+              "-t",
+              "grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "Test Files  5 passed (5)，Tests  39 passed | 115 skipped (154)",
+            "verifiedCommit": "718150d61e81b25d342c412ed80f1004757e7ae6",
+            "completedAt": "2026-11-21T05:20:47.289857+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在 320 和 656 像素宽度检查净值刻度、分类标签、缺失柱与真零的独立读数。"
+        },
+        "acceptanceCriteria": [
+          "以原表一次准备经营双指标、风险敞口、投研日程和转化漏斗",
+          "旧会话未确认计划可再次取回，重试仅补交缺少的卡片",
+          "窄图标签可分辨，真实零值和缺失值有区别"
+        ],
+        "risks": [
+          "在线来源的时效与模型首轮输出仍取决于所选服务"
+        ],
+        "generatedAt": "2026-11-21T05:20:47.289863+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-pasted-spreadsheet.test.js",
+        "test/workbench-fund-decisions.test.js",
+        "test/workbench-delivery-recovery.test.js",
+        "test/workbench-execution-policy.test.js",
+        "test/workbench-delimited-evidence.test.js",
+        "test/dataset-view-contract.test.js",
+        "test/workbench-content-metric-view.test.js",
+        "test/workbench-content-delivery.test.js",
+        "test/workbench-dataset-view.test.js",
+        "test/workbench-public-data.test.js",
+        "test/workbench-deferred.test.js",
+        "--maxWorkers=2",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/cartesian-chart-template.test.js",
+        "test/cartesian-chart-label-spacing.test.js",
+        "test/component-provenance-compatibility.test.js",
+        "test/market-trend-presentation-browser.test.js",
+        "test/component-reading-footer-browser.test.js",
+        "-t",
+        "grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels",
+        "--maxWorkers=2",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    }
+  ],
+  "mainSynchronizations": []
+}
