@@ -6,6 +6,7 @@ import {runInNewContext} from 'node:vm'
 import {pathToFileURL} from 'node:url'
 import {createRequire} from 'node:module'
 import {build} from 'esbuild'
+import {Window} from 'happy-dom'
 import {createHash} from 'node:crypto'
 import {readPptxScene} from '../src/main/pptx/scene'
 import {PptxAnnotationService} from '../src/main/pptx/annotations'
@@ -66,7 +67,8 @@ async function fixture(width=620,dark=false,backend){
 async function durableBackend(){
  const root=await mkdtemp(path.join(tmpdir(),'pptxa-bubble-delete-')),workspace=path.join(root,'workspace');await mkdir(workspace);await writeFile(path.join(workspace,'review.pptx'),bytes)
  let fake;fake=new Proxy(function(){},{get:()=>fake,apply:()=>fake,construct:()=>({})})
- const load=async(name,deps={})=>{let descriptor;runInNewContext(await readFile('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),{window:{__ModuleLoader__:{load:value=>descriptor=value}},AbortController,AbortSignal,queueMicrotask,setTimeout,clearTimeout,console,crypto});return descriptor.factory(id=>deps[id]??fake)}
+ const nativeWindow=new Window()
+ const load=async(name,deps={})=>{let descriptor;runInNewContext(await readFile('node_modules/@deepseek-ai/'+name+'/lib/client.js','utf8'),{window:{__ModuleLoader__:{load:value=>descriptor=value}},document:nativeWindow.document,AbortController,AbortSignal,queueMicrotask,setTimeout,clearTimeout,console,crypto});return descriptor.factory(id=>deps[id]??fake)}
  const runtime=await load('dsh-client-runtime'),native=await load('dsh-client-ui-conversation',{'@deepseek-ai/dsh-client-runtime/client':runtime})
  const shell=new native.SessionInputShell({actx:{},defaultSink(){throw Error('Deleting a mark must never send a prompt')}})
  shell.setDraft('整体要求📌与用户正文保持不变');shell.insertReference({source:'chat-file',ref:'foreign-file',label:'原附件',clipboardText:'原附件'},{start:0,end:0,draftRev:shell.snapshot.draftRev})
@@ -74,7 +76,7 @@ async function durableBackend(){
  const options={root:path.join(root,'state'),owner:()=> 'test-owner',resolveWorkspace:async id=>allowed&&id==='actual-session'?workspace:null,resolveAuthorizedSource:async()=>null,readHistory:async()=>({events:[],hasMore:false})}
  const service=new PptxAnnotationService(options),source={sessionId:'actual-session',source:{kind:'workspace',relativePath:'review.pptx'}},identity={sessionId:'actual-session',shell,ordinary:true}
  const coordinator=createPptxAnnotationCoordinator({bridge:service,resolveInput:async()=>identity,isCurrent:()=>true}),handle=await coordinator.open(source,{viewerKey:'actual-viewer'})
- return{root,workspace,options,service,source,shell,coordinator,handle,deny(){allowed=false},async close(){coordinator.dispose();shell.dispose();await rm(root,{recursive:true,force:true})}}
+ return{root,workspace,options,service,source,shell,coordinator,handle,deny(){allowed=false},async close(){coordinator.dispose();shell.dispose();await nativeWindow.happyDOM.close();await rm(root,{recursive:true,force:true})}}
 }
 for(const english of [false,true])it(`deletes only the open mark from the ${english?'English dark':'Chinese light'} bubble through durable Main and the real native input transaction`,async()=>{
  const backend=await durableBackend(),f=await fixture(620,english,backend)
