@@ -29,6 +29,15 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* Long option lists keep wheel, touch and keyboard scrolling within the menu. */
+.deck-app :is(.toolbar-popup,.shape-pool,.chart-pool,.table-generator,.layout-grid,.format-palette,.style-popover),
+.deck-choice-list {
+  scrollbar-width: none;
+}
+.deck-app :is(.toolbar-popup,.shape-pool,.chart-pool,.table-generator,.layout-grid,.format-palette,.style-popover)::-webkit-scrollbar,
+.deck-choice-list::-webkit-scrollbar {
+  display: none;
+}
 .deck-app .shape-pool .category-name {
   box-sizing: border-box;
   padding: 4px 6px;
@@ -191,10 +200,6 @@ body[data-ds-dark-theme] .tippy-box[data-theme~='popover'] .popover-content {
 }
 body[data-ds-dark-theme] .tippy-box[data-theme~='popover'] :is(.options,.option,.selector,.input) {color: var(--ink);}
 body[data-ds-dark-theme] .tippy-box[data-theme~='popover'] .option:is(.selected,:hover) {background: var(--hover);color:var(--ink);}
-.deck-app :is(.toolbar-popup,.style-popover,.shape-pool,.layout-grid),.deck-choice-list {
-  scrollbar-color: var(--muted) transparent;
-  scrollbar-width: thin;
-}
 .deck-app .shape-list .shape-item .shape-content:hover .shape-path:not(.outlined) {stroke: var(--ink);}
 .deck-app .shape-list .shape-item .shape-content:hover .shape-path.outlined {fill: var(--ink);}
 .deck-app .table-generator [role='button'] {padding: 0 3px;cursor:pointer;border-radius:3px;}
