@@ -80,6 +80,38 @@ it('uses one model answer for discussion and honors strict output even on comple
   expect(tools[0].parameters.properties.capability.enum).toContain('spreadsheet.apply')
 })
 
+it('opens an explicit research board from the supplied quarterly holdings despite the analysis scope', async () => {
+  const text = `我是指数投资部的组合经理，晨会上要判断易方达沪深300 ETF（510310）这五项季末重仓有多集中。请把下面的持仓做成研究看板，让我一眼比较五家公司的净值占比和排名，知道前五合计多少。会上会追问第一名比第二名高多少个百分点，结果要能回到五个披露数复核。只分析这五项，百分比按季报披露的精度。
+
+来源为上交所披露的《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》，持仓日2025-12-31，第10页第5.3.1节前五行。
+https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf
+
+序号	股票代码	股票名称	数量（股）	公允价值（元）	占基金资产净值比例（%）
+1	300750	宁德时代	31173566	11448803849.16	3.81
+2	600519	贵州茅台	7377868	10160652252.24	3.38
+3	601318	中国平安	125580047	8589675214.80	2.86
+4	300308	中际旭创	13089026	7984305860.00	2.66
+5	601899	紫金矿业	194034163	6688357598.61	2.23`
+  const session = turn(text,'research')
+  const profile = clientModeTurn(session)
+  expect(profile.readOnly).toBe(true)
+  expect(wantsTaskOpening(profile)).toBe(true)
+  const hooks = {}
+  const ctx = {on:(name,fn)=>{hooks[name]=fn},llm:{resolveModelInfo:async()=>({reasoning:{}})}}
+  registerFirstResponseEffort(ctx)
+  registerModelTaskReplies(ctx)
+  const args = {agent:{session},step:1,turn:1,supportsTaskOpening:true}
+  await hooks['agent/request'](args,async()=>({provider:'ework-ark',model:'deepseek-v4.1-flash'}))
+  const request = {provider:'ework-ark',model:'deepseek-v4.1-flash',messages:[session.events[0].data],tools:[{name:'research_workbench_create'}]}
+  const intro = await hooks['agent/request-context'](args,async()=>request)
+  expect(intro[Symbol.for('ework.model-task-opening')]).toBe(true)
+  expect(intro.tools).toEqual([])
+  expect(wantsTaskOpening(clientModeTurn(turn(text+'\n只返回最终结果。','research')))).toBe(false)
+  for (const discussion of ['请只讨论如何把这五项持仓做成研究看板，不用操作。', '客户说“把这些做成研究看板”，这是什么意思？只讨论。', '我只分析现有研究看板，结果要如何解释？不要新建。']) {
+    expect(wantsTaskOpening(clientModeTurn(turn(discussion,'research')))).toBe(false)
+  }
+})
+
 it('stages a substantive read-only document review without adding any write capabilities', () => {
   const deck = '请逐页核对这份美国财政部收益率演示的图表、正文与备注，比较不同期限在 12 月 27 日和 31 日的变化，指出不一致并注明页码。不要修改演示。'
   const workbook = '只分析当前工作簿。先核对各工作表的美国国债原始收益率，再比较两年期至三十年期的利差，列出异常日期和对应单元格。'
