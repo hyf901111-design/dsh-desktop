@@ -18,6 +18,15 @@ it.each(['别给我弄个看板','给我别弄个新看板','我刚弄了个看�
  expect(workbenchCreationRequest(session(text))).toBeNull()
 })
 const publicTableRequests=JSON.parse(readFileSync(new URL('./fixtures/workbench-public-table-requests.json',import.meta.url),'utf8'))
+const layoutRequests=JSON.parse(readFileSync(new URL('./fixtures/workbench-layout-delivery-requests.json',import.meta.url),'utf8'))
+it.each(Object.entries(layoutRequests))('keeps a specifically named research destination outside the research composer: %s',(_name,text)=>{
+ expect(classifyResearchCreationRequest(text)?.kind).toBe('workbench')
+ expect(workbenchCreationRequest(session(text))?.target).toBe('workbench')
+})
+it('keeps a note without a board destination in its active workspace',()=>{
+ expect(classifyResearchCreationRequest('留一张交接便签')).toBeNull()
+ expect(workbenchCreationRequest(session('给个人笔记留一张交接便签'))).toBeNull()
+})
 it.each(Object.entries(publicTableRequests))('plans the entire board from the published %s data in the original request',(_role,text)=>{
  expect(classifyResearchCreationRequest(text)?.kind).toBe('workbench')
  expect(workbenchCreationRequest(session(text))).toMatchObject({target:'workbench',text})
