@@ -1,4 +1,5 @@
 import {claimedWorkspaceMessage,clientModeTurn} from './client-mode-profile.js'
+import {classifyResearchCreationRequest} from './component-delivery-intent.js'
 import {pastedWorkbenchInput} from './workbench-pasted-tables.js'
 
 const publicOpening = Symbol.for('ework.model-task-opening')
@@ -8,13 +9,22 @@ const opened = new WeakSet()
 // Only stage an executable request with substantial work ahead. An ordinary
 // question, tightly formatted result or small edit still takes one model call.
 export function wantsTaskOpening(turn) {
-  if (!turn?.text || turn.simple) return false
-  const prose = turn.text.split(/\n\s*(?:\S+\t|\|)/u)[0]
+  if (!turn?.text) return false
+  const prose = turn.text.split(/\r?\n/u).filter(line => !line.includes('\t') && !/^\s*\|/u.test(line)).join('\n')
   if (/(?:只|仅)(?:需|要)?(?:返回|输出|给出|给我|提供)(?:最后|最终|结果|答案|代码|指令|公式|原文|译文|数字|JSON|CSV|SQL)|(?:不要|无需|跳过)(?:解释|说明|过程|进度|开场|回复)|\b(?:(?:json|csv|code|result|answer)[ -]only|(?:only|just) (?:return|output|give) (?:the )?(?:answer|result|code|json)|no (?:commentary|preamble))\b/iu.test(prose)) return false
+  // A limit on the analysis (e.g. "only analyse these holdings") can
+  // accompany an explicit request to build a board. Apply the same creation
+  // intent as the research planner, using only the user's unquoted prose.
+  if (turn.mode === 'research' && turn.readOnly) {
+    const instruction = prose.replace(/```[\s\S]*?```|^>[^\n]*|“[^”]*”|「[^」]*」|『[^』]*』|‘[^’]*’|"[^"\n]*"|'[^'\n]*'/gmu, ' ')
+    if (classifyResearchCreationRequest(instruction, 'research')?.kind === 'workbench') return true
+  }
+  if (turn.simple) return false
   const multiStep = /(?:先.{2,60}(?:再|然后)|(?:然后|接着|最后|随后).{1,30}(?:查|写|算|建|画|比较|核|验证|输出|导出)|\b(?:then|followed by|afterwards)\b)/iu.test(prose)
+  const asksForMethod = /(?:只|仅)(?:想|需|要)?讨论|(?:如何|怎么|怎样)(?:逐|跨|去|核对|检查|审阅|分析|比较|解释)|(?:讲解|介绍).{0,12}(?:方法|流程)|\b(?:how (?:to|can I|do I|should I)|just discuss)\b/iu.test(prose)
+  if (turn.mode === 'research' && !turn.create && asksForMethod && !multiStep) return false
   if (turn.readOnly) {
     if (!turn.appRead && !turn.hasFile) return false
-    const asksForMethod = /(?:只|仅)(?:想|需|要)?讨论|(?:如何|怎么|怎样)(?:逐|跨|去|核对|检查|审阅|分析|比较)|(?:讲解|介绍).{0,12}(?:方法|流程)|\b(?:how (?:to|can I|do I|should I)|just discuss)\b/iu.test(prose)
     const multipleSections = /逐[页表笔项章节条]|跨[表页期章]|各(?:工作表|章节|页)|每(?:一)?(?:页|个工作表|个章节)|\b(?:page[- ]by[- ]page|(?:each|every|across|all) (?:the )?(?:pages?|slides?|worksheets?|sheets?|sections?))\b/iu.test(prose)
     const review = /核对|复核|稽核|审阅|查验|检查|分析|比较|对比|归因|汇总|\b(?:cross[- ]check|audit|review|verify|analy[sz]e|compare|reconcile)\b/iu.test(prose)
     return !asksForMethod && review && (multiStep || multipleSections)
