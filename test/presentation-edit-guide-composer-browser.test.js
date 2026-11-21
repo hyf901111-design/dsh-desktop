@@ -2,7 +2,7 @@ import { build } from 'esbuild'
 import { pathToFileURL } from 'node:url'
 import { expect, it } from 'vitest'
 
-it('types beside a long presentation chip that covers the textarea midpoint and preserves its native marker', async () => {
+it('clicks the editable line below a long presentation chip that covers the textarea midpoint and preserves its native marker', async () => {
   const { chromium } = process.env.PLAYWRIGHT_MODULE_PATH
     ? await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE_PATH).href)
     : await import('playwright')
@@ -34,6 +34,11 @@ it('types beside a long presentation chip that covers the textarea midpoint and 
         point:async action=>{
           const p=action.targetPoint()
           if(!action.target.contains(document.elementFromPoint(p.x,p.y)))throw Error('pointer missed the native control')
+          const chip=action.target.parentElement.querySelector('[data-reference-source]')
+          if(action.target===textarea && chip){
+            const rect=chip.getBoundingClientRect()
+            if(p.y <= rect.bottom || p.x > rect.left+24)throw Error('cursor did not land at the beginning of the editable line below the chip')
+          }
           action.onClick()
         }
       })

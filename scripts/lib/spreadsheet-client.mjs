@@ -241,9 +241,11 @@ ${welcomeAnchor}`,'right pane welcome component')
  `,'sent range chip')
  const commit='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
  change(commit,`if(!ownsWorkspaceDraft())return;
+                let presentationMarks;
                 if(document.body.dataset.eworkPresentationSession===session.sessionId){
                   try{
                     const refs=attempt.draftState.occurrences.filter(o=>o.source==='presentation-reference').map(o=>JSON.parse(o.ref));
+                    presentationMarks=refs.filter(ref=>ref.kind==='mark');
                     await window.dshDesktop.presentationAdmission(session.sessionId,attempt.text,refs,!eworkPresentationContextOptOut.has(shell));
                     if(!ownsWorkspaceDraft()||document.body.dataset.eworkPresentationSession!==session.sessionId||this.researchSendAttempts.get(session.sessionId)!==sendAttempt)return;
                   }catch(error){shell?.notify('error',error?.message??'演示尚未同步，草稿已保留。');return}
@@ -262,6 +264,13 @@ ${welcomeAnchor}`,'right pane welcome component')
                 }
                 if(!ownsWorkspaceDraft())return;
                 `+commit,'capture before composer commits')
+ const acceptedCleanup='if (this.researchSendAttempts.get(session.sessionId) === sendAttempt) {\n\t\t\t\t\t\tthis.researchContextRetries.delete(session.sessionId);'
+ change(acceptedCleanup,`if(presentationMarks?.length && document.body.dataset.eworkPresentationSession===session.sessionId){
+                  window.dispatchEvent(new CustomEvent('sherlock:presentation-marks-submitted',{detail:{
+                    sessionId:session.sessionId,documentId:presentationMarks[0].documentId,ids:presentationMarks.map(ref=>ref.id)
+                  }}));
+                }
+                `+acceptedCleanup,'dismiss accepted presentation mark comments')
  return source+'\n'+restore+JSON.stringify(entries).replaceAll('*/','*\\/')+' */'
 }
 

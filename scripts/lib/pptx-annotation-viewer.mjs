@@ -19,6 +19,7 @@ export function attachPptxAnnotationViewer(host,options){
  const toolbar=node('div','pptxa-toolbar',uiRoot);toolbar.dataset.pptxAnnotationToolbar='';toolbar.setAttribute('role','toolbar');toolbar.setAttribute('aria-label','标注工具');toolbar.tabIndex=-1
  uiRoot.insertBefore(toolbar,host)
  const rectTool=action('框选',()=>setTool('rect'),toolbar,'pptxa-tool'),pointTool=action('点选',()=>setTool('point'),toolbar,'pptxa-tool')
+ rectTool.dataset.pptxTool='rect';pointTool.dataset.pptxTool='point'
  rectTool.prepend(image('rect14-selected',null,14));pointTool.prepend(image('point14-normal',null,14));const count=action('',()=>toggleMarkList(),toolbar,'pptxa-count');count.setAttribute('aria-label','标注列表');count.setAttribute('aria-haspopup','menu');count.setAttribute('aria-expanded','false')
  const bubble=node('section','pptxa-bubble',doc.body);bubble.hidden=true;bubble.dataset.noteExportOmit='';bubble.setAttribute('aria-label','标注备注')
  const header=node('header','pptxa-bubble-header',bubble),badge=node('span','pptxa-bubble-pin',header);image('pin20-selected',badge,20);const ordinal=node('span','',badge),title=node('span','pptxa-bubble-title',header)
@@ -184,5 +185,5 @@ export function attachPptxAnnotationViewer(host,options){
  const destroy=()=>{if(disposed)return;options.signal?.removeEventListener('abort',destroy);cancelGesture();disposed=true;stop.abort();if(frame)win.cancelAnimationFrame(frame);off?.();observer.disconnect();resize?.disconnect();host.removeEventListener('pointerdown',down,true);host.removeEventListener('pointermove',move,true);host.removeEventListener('pointerup',up,true);host.removeEventListener('pointercancel',cancel,true);host.removeEventListener('lostpointercapture',cancel,true);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('focusin',focusChanged,true);doc.removeEventListener('keydown',key);win.removeEventListener('blur',cancel);win.removeEventListener('blur',focusChanged);win.removeEventListener('resize',geometryChanged);doc.removeEventListener('scroll',geometryChanged,true);for(const[wrapper,layer]of layers){layer.element.remove();if(layer.parent.style.position==='relative'&&layer.position!=='relative')layer.parent.style.position=layer.position}layers.clear();listItems.clear();toolbar.remove();bubble.remove();menu.remove();list.remove();style.remove()}
  if(options.signal){if(options.signal.aborted)destroy();else options.signal.addEventListener('abort',destroy,{once:true})}
  if(!disposed)render()
- return{destroy,setTool,closeBubble}
+ return{destroy,setTool,closeBubble,dismissSubmitted(ids){if(bubbleId && ids.includes(bubbleId))closeBubble()}}
 }

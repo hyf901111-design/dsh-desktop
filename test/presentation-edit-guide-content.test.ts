@@ -29,7 +29,7 @@ it('has an original spoken script for every physical page, including all four ch
   }
   expect(guide.notes[0]).toContain('Vanguard')
   expect(guide.notes[19]).toContain('第 13 页')
-  expect(guide.reviewPages.every(page => Number.isInteger(page) && page >= 1 && page <= slideFiles.length)).toBe(true)
+  expect(guide.reviewPages).toEqual([4, 8])
   const titleSlide = xml(slideFiles[guide.title.page - 1]!)
   expect(titleSlide('[name="page-title"]').closest('p\\:sp').find('a\\:t').text()).toBe(guide.title.original)
 })
