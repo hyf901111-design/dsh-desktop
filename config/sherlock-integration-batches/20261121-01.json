@@ -2496,6 +2496,67 @@
         ],
         "generatedAt": "2026-11-21T12:49:52.746945+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "笔记侧栏用本轮已给数字回答单项换算",
+        "branch": "codex/feat/notes-self-contained-conversions-20261121",
+        "baseCommit": "e1b086d8d1615396d80e8b8211bc941f08b2a7a1",
+        "tipCommit": "c138d287448b486fdd3837a8011501b09285ca74",
+        "commits": [
+          {
+            "commit": "c138d287448b486fdd3837a8011501b09285ca74",
+            "parents": [
+              "e1b086d8d1615396d80e8b8211bc941f08b2a7a1"
+            ],
+            "subject": "让笔记侧栏用本轮百分比直接回答基点换算"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-sidebar-intent.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-ai.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-ai.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "指定笔记、引用和附页与只询问已经明示的单个数字分别保留有效证据。",
+            "verifiedCommit": "c138d287448b486fdd3837a8011501b09285ca74",
+            "completedAt": "2026-11-21T12:51:12.995239+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "原生笔记右侧曾夹带美债文稿，复验用基金提问与真实不同主题笔记。"
+        },
+        "acceptanceCriteria": [
+          "单个自含问题在笔记右栏直接回应",
+          "保留真实编辑与引用功能"
+        ],
+        "risks": [
+          "其他数据源及问题的图形选择仍由相应任务决定。"
+        ],
+        "generatedAt": "2026-11-21T12:51:12.995239+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2821,6 +2882,17 @@
         "run",
         "test/workbench-disclosed-split-unit.test.js",
         "test/workbench-pasted-spreadsheet.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/notes-ai.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
