@@ -14,7 +14,10 @@ function indicatorRuntime(){
  addEventListener('message',event=>{if(event.source!==parent)return;const d=event.data;if(d?.type==='sherlock-component-context'){shared=d.shared===true;paint();}if(d?.type==='sherlock-kpi-refresh-result'&&d.requestId===request){busy=false;status.textContent=d.error||d.message||'刷新请求已提交，结果见组件数据提示';paint();}});
  button.onclick=event=>{if(!event.isTrusted||button.disabled)return;busy=true;request=crypto.randomUUID();const current=request;status.textContent='正在请求刷新…';paint();parent.postMessage({type:'sherlock-kpi-refresh-request',requestId:request,action:'refresh'},'*');setTimeout(()=>{if(busy&&request===current){busy=false;status.textContent='刷新请求尚未确认，原数据保留';paint();}},15000);};
 }
-export function renderKpiArtifact(spec){if(kpiDataIssue(spec))return null;
+export function renderKpiArtifact(spec,provenance){if(kpiDataIssue(spec))return null;
+ // Native publication renders the complete source list in a shared footer.
+ // A per-metric attribution is redundant only if the same footer row covers it.
+ const footerSources=[...(spec.sources??[]),...(provenance?.sources??[]),...(provenance?.source?[provenance.source]:[])];
  const fieldLabels={value:'原始数值',change:'原始变化',detail:'完整口径',source:'来源'};
  const rounded=(value,digits)=>value!==null&&Number.isFinite(Number(value))&&Number(displayKpiValue(value,'','',digits).replaceAll(',',''))!==Number(value);
  const longSubject=typeof spec.subject==='string'&&spec.subject.length>48;
@@ -22,18 +25,20 @@ export function renderKpiArtifact(spec){if(kpiDataIssue(spec))return null;
   const longValue=typeof item.value==='string'&&item.value.length>32;
   // Each visible metric already contains its name, value, unit and change.
   // Details retain only additional information, including lost display precision.
+  const sharedSource=footerSources.some(source=>
+   (!item.source||[source.name,source.label,source.title].includes(item.source))&&(!item.url||source.url===item.url));
   const fields=Object.entries(item).filter(([key,value])=>{
    if(['label','unit','missing','url','minimumFractionDigits'].includes(key))return false;
    if(key==='value')return longValue||rounded(value,item.minimumFractionDigits);
    if(key==='change')return rounded(value);
-   if(key==='source'&&spec.sources?.some(source=>source.name===value))return false;
+   if(key==='source'&&sharedSource)return false;
    if(key==='detail'){
     const compact=text=>String(text).replace(/[\s,:：，]/gu,'');
     if(compact(value)===compact(item.label+String(item.value)+(item.unit??'')))return false;
    }
    return value!==null&&String(value).trim()!=='';
   });
-  const url=item.url&&!spec.sources?.some(source=>source.url===item.url)?item.url:null;
+  const url=item.url&&!sharedSource?item.url:null;
   const details=fields.length>0||url,tag=details?'details':'article',summary=details?'summary':'div';
   const change=item.change!==undefined?displayNumber(item.change):item.missing;
   return `<${tag} class="indicator-tile"${details?' open':''}><${summary} class="indicator-summary"${details?' aria-label="'+esc(item.label)+'，查看完整口径"':''}><span class="indicator-label">${esc(item.label)}</span><strong class="indicator-value${longValue?' indicator-value-text':''}" data-refresh-key="kpi-${index}" data-refresh-value="${esc(item.value===null?'—':String(item.value)+(item.unit?' '+item.unit:''))}">${esc(displayKpiValue(item.value,item.label,item.unit,item.minimumFractionDigits))}${item.value!==null&&item.unit?' <span class="indicator-unit">'+esc(item.unit)+'</span>':''}</strong>${change!==undefined?'<span class="indicator-change">'+esc(change)+'</span>':''}</${summary}>${details?'<div class="indicator-fields">'+fields.map(([key,value])=>'<p>'+esc(fieldLabels[key]??key)+'：'+esc(value)+'</p>').join('')+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">原文来源 ↗</a>':'')+'</div>':''}</${tag}>`;

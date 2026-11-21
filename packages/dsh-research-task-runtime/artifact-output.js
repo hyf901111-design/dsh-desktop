@@ -165,7 +165,7 @@ export function acceptArtifactOutput(text,{normalizeChartGeometry=true}={}) {
    if(parsed)return JSON.stringify(retainTemplateModel(appendProvenance(parsed,provenance.html),{...candidate,...provenance.metadata}));
    continue;
   }
-  const spec=parseResearchContainerSpec(renderDatasetViewArtifact(candidate) ?? renderTimelineArtifact(candidate) ?? renderKpiArtifact(candidate) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
+  const spec=parseResearchContainerSpec(renderDatasetViewArtifact(candidate) ?? renderTimelineArtifact(candidate) ?? renderKpiArtifact(candidate,provenance.metadata) ?? renderRssArtifact(candidate) ?? renderNoteArtifact(candidate) ?? renderClockArtifact(candidate) ?? renderInputArtifact(candidate) ?? renderWorkflowArtifact(candidate) ?? renderOperationsArtifact(candidate) ?? renderMarketArtifact(candidate) ?? renderInteractiveArtifact(candidate) ?? renderGanttArtifact(candidate) ?? candidate);
   if(!spec)continue;
   if(spec.type==='table' && !spec.rows.length)continue;
   // Require first-paint content; JS-only blank shells are repaired before publishing.

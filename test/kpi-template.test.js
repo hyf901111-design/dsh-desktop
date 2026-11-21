@@ -90,3 +90,25 @@ it('removes only exact repeated detail without confusing total revenue with reve
  const data={...source,items:[{label:'规模',value:1234.56,unit:'亿元',detail:'规模：1,234.56 亿元'},{label:'营业总收入',value:149.55,unit:'亿元',detail:'营业收入 149.55亿元'},{label:'规模',value:1234.56,unit:'亿元',detail:'两期匹配产品规模：1,234.56亿元'}]},w=new Window();w.document.write(JSON.parse(acceptArtifactOutput(JSON.stringify(data))).html);
  const tiles=w.document.querySelectorAll('.indicator-tile');expect(tiles[0].tagName).toBe('ARTICLE');expect(tiles[1].textContent).toContain('营业收入 149.55亿元');expect(tiles[2].textContent).toContain('两期匹配');w.close();
 })
+
+it('retains the real quarter-report URL once for two metrics and keeps distinct per-metric references',()=>{
+ const quarter='https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf'
+ const publication='易方达沪深300ETF 2025年第4季度报告'
+ const data={version:1,type:'kpi',title:'前五大持仓集中度',sources:[{name:publication,url:quarter}],items:[
+  {label:'前五合计',value:14.94,unit:'%',source:publication,url:quarter},
+  {label:'首两位占比差',value:0.43,unit:'个百分点',source:publication,url:quarter}
+ ]}
+ const render=spec=>{const w=new Window();w.document.write(JSON.parse(acceptArtifactOutput(JSON.stringify(spec))).html);return w}
+ const first=render(data)
+ expect([...first.document.querySelectorAll('.indicator-tile')].map(n=>n.tagName)).toEqual(['ARTICLE','ARTICLE'])
+ expect(first.document.querySelectorAll('a[href="'+quarter+'"]')).toHaveLength(1)
+ first.close()
+ const alternate=quarter+'#page=10'
+ const other={...data,items:[{...data.items[0],url:alternate,detail:'逐项复核前五行'},{...data.items[1],source:'另一个核对口径'}]}
+ const second=render(other)
+ const [one,two]=second.document.querySelectorAll('.indicator-tile')
+ expect(one.querySelector('a').getAttribute('href')).toBe(alternate)
+ expect(one.textContent).toContain('逐项复核前五行')
+ expect(two.textContent).toContain('另一个核对口径')
+ second.close()
+})
