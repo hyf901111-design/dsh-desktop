@@ -2329,6 +2329,77 @@
         ],
         "generatedAt": "2026-11-21T12:22:43.074005+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按真实持仓原值计算晨会合计与首两名百分点差",
+        "branch": "codex/feat/holding-concentration-summary-20261121",
+        "baseCommit": "e1b086d8d1615396d80e8b8211bc941f08b2a7a1",
+        "tipCommit": "b0b2bc992934729c1b29842be686b5b8f2e9cb80",
+        "commits": [
+          {
+            "commit": "b0b2bc992934729c1b29842be686b5b8f2e9cb80",
+            "parents": [
+              "e1b086d8d1615396d80e8b8211bc941f08b2a7a1"
+            ],
+            "subject": "从同一份持仓披露生成集中度指标、排名与可复核明细"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/holding-weight-ranking.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-holding-concentration.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-holding-weight-ranking.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-holding-weight-ranking.test.js",
+              "test/workbench-role-source-first-calls.test.js",
+              "test/workbench-execution-policy.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "相同季报的集中度、不同查询范围和完整保存重载通过。",
+            "verifiedCommit": "b0b2bc992934729c1b29842be686b5b8f2e9cb80",
+            "completedAt": "2026-11-21T12:46:37.195443+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "实际客户端曾漏报百分点差，最终包将原生重投。"
+        },
+        "acceptanceCriteria": [
+          "保留权重比较和核账需要的明细",
+          "仅精简明确同用途的额外排名，保留全部原始金额及官方出处"
+        ],
+        "risks": [
+          "其他数据源及问题的图形选择仍由相应任务决定。"
+        ],
+        "generatedAt": "2026-11-21T12:46:37.195443+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2629,6 +2700,19 @@
         "run",
         "test/knowledge-local-search.test.js",
         "test/client-mode-profile.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-holding-weight-ranking.test.js",
+        "test/workbench-role-source-first-calls.test.js",
+        "test/workbench-execution-policy.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
