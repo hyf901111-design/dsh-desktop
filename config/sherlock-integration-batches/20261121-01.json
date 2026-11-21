@@ -82,6 +82,114 @@
           "未经声明的金额单位不作推断"
         ],
         "generatedAt": "2026-11-21T05:41:58.385278+00:00"
+      },
+      "merged": {
+        "mergeCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+        "verificationCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-pasted-spreadsheet.test.js",
+              "test/workbench-fund-decisions.test.js",
+              "test/workbench-delivery-recovery.test.js",
+              "test/workbench-execution-policy.test.js",
+              "test/workbench-delimited-evidence.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/workbench-content-metric-view.test.js",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-dataset-view.test.js",
+              "test/workbench-public-data.test.js",
+              "test/workbench-deferred.test.js",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-pasted-spreadsheet.test.js test/workbench-fund-decisions.test.js test/workbench-delivery-recovery.test.js test/workbench-execution-policy.test.js test/workbench-delimited-evidence.test.js test/dataset-view-contract.test.js test/workbench-content-metric-view.test.js test/workbench-content-delivery.test.js test/workbench-dataset-view.test.js test/workbench-public-data.test.js test/workbench-deferred.test.js --maxWorkers=2 --reporter=dot",
+            "verifiedCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+            "completedAt": "2026-11-21T05:42:02.570Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/cartesian-chart-template.test.js",
+              "test/cartesian-chart-label-spacing.test.js",
+              "test/component-provenance-compatibility.test.js",
+              "test/market-trend-presentation-browser.test.js",
+              "test/component-reading-footer-browser.test.js",
+              "-t",
+              "grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/component-provenance-compatibility.test.js test/market-trend-presentation-browser.test.js test/component-reading-footer-browser.test.js -t grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels --maxWorkers=2 --reporter=dot",
+            "verifiedCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+            "completedAt": "2026-11-21T05:42:02.570Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "packages/presentation-editor/build.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node packages/presentation-editor/build.mjs",
+            "verifiedCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+            "completedAt": "2026-11-21T05:42:02.570Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-empty-layout-browser.test.js",
+              "test/presentation-toolbar-popovers-browser.test.ts",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workspace-empty-layout-browser.test.js test/presentation-toolbar-popovers-browser.test.ts --maxWorkers=1 --reporter=dot",
+            "verifiedCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+            "completedAt": "2026-11-21T05:42:02.570Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "管理者工作台",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-board-sidebar-overflow.test.ts -t 管理者工作台 --reporter=dot",
+            "verifiedCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+            "completedAt": "2026-11-21T05:42:02.570Z",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "5c5861fc8e66389b06a2585b6ac43469a26d6f10",
+            "completedAt": "2026-11-21T05:42:02.570Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "recordedAt": "2026-11-21T05:42:02.570Z"
       }
     },
     {
