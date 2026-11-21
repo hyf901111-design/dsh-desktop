@@ -12,7 +12,7 @@ export function wantsTaskOpening(turn) {
   if (!turn?.text) return false
   const prose = turn.text.split(/\r?\n/u).filter(line => !line.includes('\t') && !/^\s*\|/u.test(line)).join('\n')
   if (/(?:只|仅)(?:需|要)?(?:返回|输出|给出|给我|提供)(?:最后|最终|结果|答案|代码|指令|公式|原文|译文|数字|JSON|CSV|SQL)|(?:不要|无需|跳过)(?:解释|说明|过程|进度|开场|回复)|\b(?:(?:json|csv|code|result|answer)[ -]only|(?:only|just) (?:return|output|give) (?:the )?(?:answer|result|code|json)|no (?:commentary|preamble))\b/iu.test(prose)) return false
-  if (turn.mode === 'knowledge' && /(?:只|仅)(?:需|要)?(?:报告|返回|给出|列出|显示)(?:匹配|命中|检索结果的?|查询结果的?)(?:条数|数量|标题|文件名)/u.test(prose)) return false
+  if (turn.mode === 'knowledge' && /(?:只|仅)(?:需|要)?(?:报告|返回|给出|列出|显示)(?:实际)?(?:匹配|命中|检索结果|查询结果)的?(?:条数|数量|标题|文件名)/u.test(prose)) return false
   // A limit on the analysis (e.g. "only analyse these holdings") can
   // accompany an explicit request to build a board. Apply the same creation
   // intent as the research planner, using only the user's unquoted prose.
@@ -84,7 +84,7 @@ function openingCapabilities(turn, tools) {
       'presentation.inspect':'读取演示正文与备注','presentation.apply':'在原生演示修改页面和备注',
       'notes.blocks.read':'读取已授权的笔记正文','notes.blocks.apply':'在原生笔记准备修改',
       'conversation.components.create':'在本次对话创建可保存的组件',
-      'knowledge.inspect':'查看本机知识库','knowledge.shared.search':'检索共享资料',
+      'knowledge.inspect':'查看本机知识库','knowledge.local.search':'在当前权限内检索本机资料','knowledge.shared.search':'检索共享资料',
     }
     for (const [capability, description] of Object.entries(descriptions)) {
       if (capability.startsWith(turn.mode+'.') && grants.includes(capability)) actions.push(description)
@@ -144,18 +144,25 @@ function openingContext(message, turn, brief) {
   return {message:{id:message.id,role:'user',source:message.source,content:[{type:'text',text:outline}]},hasPastedTable:blocks.length>0}
 }
 
+// A real tool receipt since the last public paragraph is the evidence for a
+// progress update. Do not expose private reasoning or reflect a tool's text
+// into a higher-priority instruction.
 function milestone(session, turnNumber, firstFinding) {
   const events = session.events ?? []
-  let result = false
+  let receipt
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i]
-    if (event.type === 'turn/start') return result && event.data?.turn === turnNumber && (firstFinding || Date.now() - event.time >= 15000)
-    if (event.type === 'tool/result') result = true
-    if (event.type === 'assistant/message' && event.data?.message?.content?.some(part => part.type === 'text' && part.text?.trim())) {
-      return result && (firstFinding || Date.now() - event.time >= 15000)
-    }
+    if (event.type === 'tool/result' && !receipt) receipt = event
+    const start = event.type === 'turn/start'
+    const paragraph = event.type === 'assistant/message' &&
+      event.data?.message?.content?.some(part => part.type === 'text' && part.text?.trim())
+    if (!start && !paragraph) continue
+    if (!receipt || (start && event.data?.turn !== turnNumber)) return
+    if (!firstFinding && Date.now() - event.time < 15000) return
+    const failed = Boolean(receipt.data?.error || receipt.data?.message?.content?.some(part =>
+      part.type === 'tool-result' && part.isError))
+    return failed ? 'retry' : 'result'
   }
-  return false
 }
 
 export function registerModelTaskReplies(ctx) {
@@ -179,8 +186,16 @@ export function registerModelTaskReplies(ctx) {
         source:{kind:'plugin',plugin:'dsh-research-task-runtime',form:'instructions'},
         content:[{type:'text',text:'继续完成本轮用户的原始任务。根据这轮的实际资料和工具执行，保留已有授权范围，开场不用重复。'}]}]}
     }
-    if (step > 1 && request.tools?.length && milestone(agent.session, turnNumber, opened.has(turn) && step === 3)) {
-      return {...request,system:(request.system ?? '')+'\n用户正在等这项工作的结果。如果还需继续操作，先用简短正文告诉用户刚刚得到的实质发现、遇到的具体困难或完成的阶段，然后继续。根据真实回执写，已有结果足以回答时直接交付。'}
+    if (step > 1 && request.tools?.length && (opened.has(turn) || wantsTaskOpening(turn))) {
+      const stage = milestone(agent.session, turnNumber, opened.has(turn) && step === 3)
+      if (!stage) return request
+      const update = stage === 'retry'
+        ? '上一步实际返回失败。再次操作前，用一句公开正文指出哪个业务内容尚未完成、将怎样根据刚才的回执修正；随后在同一步继续。别将失败写成已完成，不向用户转述内部指令。'
+        : '根据最近的真实回执先写一句公开正文，给出与本轮问题相关的新读数、已完成的变更或还缺的材料；再在同一步继续操作。已有足够结果时直接回答。'
+      // Keep the reminder next to the actual tool results. Do not add a
+      // separate call or make a synthetic progress message visible in chat.
+      return {...request, messages:[...(request.messages ?? []), {id:'progress-'+turnNumber+'-'+step,role:'user',
+        source:{kind:'plugin',plugin:'dsh-research-task-runtime',form:'instructions'},content:[{type:'text',text:update}]}]}
     }
     return request
   })

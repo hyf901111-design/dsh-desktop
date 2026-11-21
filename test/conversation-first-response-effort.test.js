@@ -115,6 +115,8 @@ https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_2026
 it('goes straight to a knowledge lookup when only the match count and title were requested', () => {
  const request='知识执行E1：请在本机知识库检索“易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告”，只报告匹配条数和首条标题；如果没有匹配，请明确说明0条，不联网。'
  expect(wantsTaskOpening(clientModeTurn(turn(request,'knowledge')))).toBe(false)
+ const hit='请在我的个人知识库里按文件名查询“右栏复验 · 国债与季报核对.md”。只报告实际匹配的条数和第一项完整标题，保持现在文件列表的筛选。'
+ expect(wantsTaskOpening(clientModeTurn(turn(hit,'knowledge')))).toBe(false)
  const review='请先检索知识库中不同年度的基金季报，再逐项核对不同季末披露的持仓范围和变化，给出跨期比较。'
  expect(wantsTaskOpening(clientModeTurn(turn(review,'knowledge')))).toBe(true)
 })
@@ -146,7 +148,18 @@ it('requests a substantive progress paragraph after a real result and a period o
   const run = () => wire({agent:{session},turn:1,step:3},async()=>request)
   expect(await run()).toBe(request)
   session.events.push({type:'tool/result',time:now,data:{}})
-  expect((await run()).system).toContain('真实回执')
+  const next = await run()
+  expect(next.messages.at(-1).source.kind).toEqual('plugin')
+  expect(next.messages.at(-1).content[0].text).toContain('真实回执')
+  expect(next.tools).toBe(request.tools)
+  session.events.push({type:'tool/result',time:now,data:{message:{content:[{type:'tool-result',isError:true,content:[{type:'text',text:'Error: 列键或数值列声明无效。'}]}]}}})
+  const retry = await run()
+  expect(retry.messages.at(-1).content[0].text).toContain('上一步实际返回失败')
+  expect(retry.messages.at(-1).content[0].text).not.toContain('列键或数值列声明无效')
+  const strict = turn(curveReview+'只返回最终结果。')
+  strict.events.unshift(session.events[0])
+  strict.events.push(session.events.at(-1))
+  expect(await wire({agent:{session:strict},turn:1,step:3},async()=>request)).toBe(request)
   session.events.push({type:'assistant/message',time:now,data:{message:{content:[{type:'text',text:'已核对月末两个期限的观测日。'}]}}})
   expect(await run()).toBe(request)
 })
