@@ -1,6 +1,6 @@
 // A no-tool opening should contain a public introduction. Some compatible
 // providers serialize their internal call envelope as ordinary text instead.
-export function taskOpeningText() {
+export function taskOpeningText(componentOpening = false, onSource) {
   const callHeader = '<｜｜DSML｜｜ calls>'
   const asciiStart = '<|tool_call_start|>'
   const asciiName = /^<\|tool_call_start\|>[a-zA-Z_][a-zA-Z0-9_.:-]{0,127}<\|tool_call_end\|>(?:\r?\n)?$/u
@@ -43,6 +43,19 @@ export function taskOpeningText() {
             }
           }
           const delimiter = /^(`{3,}|~{3,})/u.exec(head)?.[1]
+          if (componentOpening) {
+            const lower=head.toLowerCase()
+            const starts=['<!doctype html','<html','<head','<body','<table','<div','<svg','<section','<style','<script']
+            if (delimiter || starts.some(tag=>lower.startsWith(tag) && /^[\s/>]/u.test(lower.slice(tag.length)))) {
+              hidden = true
+              onSource?.()
+              break
+            }
+            if (!complete && !final && lower.startsWith('<') && starts.some(tag=>tag.startsWith(lower))) {
+              prefix=line
+              break
+            }
+          }
           const unfinishedDelimiter = /^[`~]+$/u.test(head)
           if (!complete && !final && (!head || unfinishedDelimiter ||
               !fence && head !== callHeader && callHeader.startsWith(head))) {
@@ -66,7 +79,7 @@ export function taskOpeningText() {
   }
 }
 
-export async function* publicTaskOpeningStream(stream) {
+export async function* publicTaskOpeningStream(stream, componentOpening = false, onSource) {
   const blocks = new Map()
   let edited = false, protocolIndex
   for await (const chunk of stream) {
@@ -78,7 +91,7 @@ export async function* publicTaskOpeningStream(stream) {
     }
     if (chunk.type === 'text-delta') {
       if (protocolIndex !== undefined) continue
-      if (!blocks.has(chunk.index)) blocks.set(chunk.index, taskOpeningText())
+      if (!blocks.has(chunk.index)) blocks.set(chunk.index, taskOpeningText(componentOpening,onSource))
       const state = blocks.get(chunk.index)
       const text = state.read(chunk.text)
       if (state.hidden) { edited = true; protocolIndex = chunk.index }
@@ -92,7 +105,7 @@ export async function* publicTaskOpeningStream(stream) {
       if (suffix) yield {type:'text-delta', index:chunk.index, text:suffix}
       blocks.delete(chunk.index)
       // The SDK treats block-end as authoritative, including snapshot-only streams.
-      const final = taskOpeningText()
+      const final = taskOpeningText(componentOpening,onSource)
       const text = final.read(chunk.block.text, true)
       if (final.hidden) { edited = true; protocolIndex = chunk.index }
       yield {...chunk, block:{...chunk.block, text}}
@@ -130,7 +143,9 @@ export async function* boundedTaskOpeningStream(llm, prepared, request, signal, 
       await llm.prepareCall({...prepared.config, maxTokens}, signal))
     signal.throwIfAborted()
     const opening = request.maxTokens === maxTokens ? request : mark(freeze({...request,maxTokens,...capped?.config}))
-    const stream = publicTaskOpeningStream(capped?.stream(opening) ?? llm.stream(opening))
+    let draftedSource = false
+    const stream = publicTaskOpeningStream(capped?.stream(opening) ?? llm.stream(opening),
+      request[Symbol.for('ework.native-component-opening')] === true, () => { draftedSource = true })
     let publicText = false
     const pending = []
     for await (const chunk of stream) {
@@ -141,7 +156,7 @@ export async function* boundedTaskOpeningStream(llm, prepared, request, signal, 
       } else if (chunk.type === 'finish') {
         // Only retry actual token exhaustion with zero words. Never repeat a
         // public introduction, transport error or cancelled request.
-        if (chunk.reason.kind === 'max-tokens' && !publicText && attempt + 1 < budgets.length) break
+        if (chunk.reason.kind === 'max-tokens' && !publicText && !draftedSource && attempt + 1 < budgets.length) break
         if (Object.keys(usage).length) yield {type:'usage',usage}
         yield chunk
         return
