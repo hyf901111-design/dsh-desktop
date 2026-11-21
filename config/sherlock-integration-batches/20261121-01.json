@@ -3269,6 +3269,118 @@
         ],
         "generatedAt": "2026-11-21T13:56:58.755899+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图像与浏览真实工具首响、研究已给原表和演示追加",
+        "branch": "codex/feat/ground-image-model-reply-20261121",
+        "baseCommit": "48c29f9a883512b2235ece2874fa0c91fc3fc256",
+        "tipCommit": "291bd8e65641d53a74f15ec0a5a823f973bd9e69",
+        "commits": [
+          {
+            "commit": "f7c168e1b0c07bd14385ee2bdf11b99c8e2b6b4c",
+            "parents": [
+              "48c29f9a883512b2235ece2874fa0c91fc3fc256"
+            ],
+            "subject": "图像执行首步保留原生生图工具并展示成品回执尺寸"
+          },
+          {
+            "commit": "3fcd6d428f83c2f3018b9b9648bab2b6702ca7ee",
+            "parents": [
+              "f7c168e1b0c07bd14385ee2bdf11b99c8e2b6b4c"
+            ],
+            "subject": "完整小表开场提供相关实值并区分缺项与摘要截取"
+          },
+          {
+            "commit": "3906c4d910cad7aa0207c797e050a7c07a579f92",
+            "parents": [
+              "3fcd6d428f83c2f3018b9b9648bab2b6702ca7ee"
+            ],
+            "subject": "演示末尾追加幻灯片时允许真实写入和页码回读"
+          },
+          {
+            "commit": "7ea48281f12ca8247d6f73ee955fbe7867323939",
+            "parents": [
+              "3906c4d910cad7aa0207c797e050a7c07a579f92"
+            ],
+            "subject": "区分禁止改动整个演示与保留原有页面的约束"
+          },
+          {
+            "commit": "291bd8e65641d53a74f15ec0a5a823f973bd9e69",
+            "parents": [
+              "7ea48281f12ca8247d6f73ee955fbe7867323939"
+            ],
+            "subject": "明确访问网页时首轮保留真实浏览器并按回执答复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-mode-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/model-task-replies.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-generation-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/client-mode-profile.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-ui.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/model-task-opening-context.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/model-task-opening-context.test.js",
+              "test/image-generation-client.test.js",
+              "test/image-generation-ui.test.js",
+              "test/conversation-first-response-effort.test.js",
+              "test/image-generation-tool.test.js",
+              "test/task-opening-sdk-recovery.test.js",
+              "test/client-mode-profile.test.js",
+              "test/client-mode-workspace-reference.test.js",
+              "test/pending-conversation.test.js",
+              "test/browser-app-native.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "10个直接相关文件155项通过，含生图与浏览首步、成品回执、短原表、追加幻灯片与加载中提问。",
+            "verifiedCommit": "291bd8e65641d53a74f15ec0a5a823f973bd9e69",
+            "completedAt": "2026-11-21T13:58:28.421383+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "正式 G 同轮认领复放：图像执行首步仅 image_generate、讨论零工具；持仓首提5家公司和3.81/3.38/2.86/2.66/2.23全部入开场；演示实际先读4页，6次拒绝写入，新路由在原8次工具时刻均保有正确的读写授权。下一签名包需验证模型选择及真实成果。 浏览G实际userSeq的execute回合成功读到财政部官方4.25%和4.58%；修改后首步即有真实browser_use。"
+        },
+        "acceptanceCriteria": [
+          "已授权的生图或编辑首步保有原模型、工具及画布引用，成品卡显示实际附件的尺寸和比例。",
+          "短原表的相关字段逐行可见，真实缺项保留原标记，较长表仅作摘要。",
+          "明确追加后可读取并修改原生演示，禁止改动、纯讨论、原文转述不授权写入。",
+          "明确请求访问指定页面时，首步即可读取真实页面；禁止访问、讨论及不涉及网页问答继续遵守原意图。"
+        ],
+        "risks": [
+          "真实在线模型首句和新增页均需在后继签名包复验。"
+        ],
+        "generatedAt": "2026-11-21T13:58:28.421383+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3735,6 +3847,26 @@
         "node_modules/vitest/vitest.mjs",
         "run",
         "test/presentation-toolbar-popovers-browser.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/model-task-opening-context.test.js",
+        "test/image-generation-client.test.js",
+        "test/image-generation-ui.test.js",
+        "test/conversation-first-response-effort.test.js",
+        "test/image-generation-tool.test.js",
+        "test/task-opening-sdk-recovery.test.js",
+        "test/client-mode-profile.test.js",
+        "test/client-mode-workspace-reference.test.js",
+        "test/pending-conversation.test.js",
+        "test/browser-app-native.test.js",
+        "--maxWorkers=1",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
