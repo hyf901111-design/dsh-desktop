@@ -1,0 +1,235 @@
+{
+  "requestId": "etf-510310-2025q4-top5-holdings",
+  "title": "易方达沪深300ETF（510310）2025Q4 前五行持仓逐笔勾稽",
+  "dataMode": "source",
+  "sharedContext": "来源：《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》，上交所披露，持仓日/报告期末2025-12-31，第10页第5.3.1节「报告期末按公允价值占基金资产净值比例大小排序的前十名股票投资明细」前五行。网址 https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf 。口径：公允价值单位为人民币元，保留至分（含末尾零，如 8589675214.80、7984305860.00）；数量单位股；占比为占基金资产净值比例（%），与公允价值同源于同一基金同一日净值，故五行占比可直接横向比较。共5笔，序号1–5即报告披露顺序。",
+  "sharedDatasets": [
+    {
+      "id": "etf-holdings-top5",
+      "label": "510310 2025Q4 前五大股票持仓（披露原表）",
+      "pastedTable": {
+        "block": 1,
+        "header": true,
+        "identity": "seq",
+        "numericFields": [
+          "shares",
+          "weight"
+        ],
+        "fields": [
+          {
+            "key": "seq",
+            "label": "序号"
+          },
+          {
+            "key": "code",
+            "label": "股票代码"
+          },
+          {
+            "key": "name",
+            "label": "股票名称"
+          },
+          {
+            "key": "shares",
+            "label": "数量（股）",
+            "unit": "股"
+          },
+          {
+            "key": "value",
+            "label": "公允价值（元）",
+            "unit": "元"
+          },
+          {
+            "key": "weight",
+            "label": "占基金资产净值比例（%）",
+            "unit": "%"
+          }
+        ]
+      }
+    }
+  ],
+  "panels": [
+    {
+      "title": "五笔持仓逐笔勾稽总表（按披露顺序）",
+      "type": "view",
+      "size": "wide",
+      "layout": "wide",
+      "note": "按报告披露顺序排列，可切换筛选按股票代码或名称快速定位托管同事报来的代码；公允价值按原文保留两位小数（含末尾零）。",
+      "view": {
+        "dataset": "etf-holdings-top5",
+        "filters": [
+          "code",
+          "name"
+        ],
+        "sections": [
+          {
+            "kind": "records",
+            "title": "第5.3.1节前五行明细",
+            "fields": [
+              "seq",
+              "code",
+              "name",
+              "shares",
+              "value",
+              "weight"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "第1笔 · 300750 宁德时代",
+      "type": "view",
+      "size": "medium",
+      "note": "公允价值 11448803849.16 元，数量 31173566 股，占基金资产净值 3.81%。",
+      "view": {
+        "dataset": "etf-holdings-top5",
+        "where": [
+          {
+            "field": "seq",
+            "op": "in",
+            "values": [
+              1
+            ]
+          }
+        ],
+        "sections": [
+          {
+            "kind": "records",
+            "fields": [
+              "seq",
+              "code",
+              "name",
+              "shares",
+              "value",
+              "weight"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "第2笔 · 600519 贵州茅台",
+      "type": "view",
+      "size": "medium",
+      "note": "公允价值 10160652252.24 元，数量 7377868 股，占基金资产净值 3.38%。",
+      "view": {
+        "dataset": "etf-holdings-top5",
+        "where": [
+          {
+            "field": "seq",
+            "op": "in",
+            "values": [
+              2
+            ]
+          }
+        ],
+        "sections": [
+          {
+            "kind": "records",
+            "fields": [
+              "seq",
+              "code",
+              "name",
+              "shares",
+              "value",
+              "weight"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "第3笔 · 601318 中国平安",
+      "type": "view",
+      "size": "medium",
+      "note": "公允价值 8589675214.80 元（末尾零已保留），数量 125580047 股，占基金资产净值 2.86%。",
+      "view": {
+        "dataset": "etf-holdings-top5",
+        "where": [
+          {
+            "field": "seq",
+            "op": "in",
+            "values": [
+              3
+            ]
+          }
+        ],
+        "sections": [
+          {
+            "kind": "records",
+            "fields": [
+              "seq",
+              "code",
+              "name",
+              "shares",
+              "value",
+              "weight"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "第4笔 · 300308 中际旭创",
+      "type": "view",
+      "size": "medium",
+      "note": "公允价值 7984305860.00 元（末尾零已保留），数量 13089026 股，占基金资产净值 2.66%。",
+      "view": {
+        "dataset": "etf-holdings-top5",
+        "where": [
+          {
+            "field": "seq",
+            "op": "in",
+            "values": [
+              4
+            ]
+          }
+        ],
+        "sections": [
+          {
+            "kind": "records",
+            "fields": [
+              "seq",
+              "code",
+              "name",
+              "shares",
+              "value",
+              "weight"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "第5笔 · 601899 紫金矿业",
+      "type": "view",
+      "size": "medium",
+      "note": "公允价值 6688357598.61 元，数量 194034163 股，占基金资产净值 2.23%。",
+      "view": {
+        "dataset": "etf-holdings-top5",
+        "where": [
+          {
+            "field": "seq",
+            "op": "in",
+            "values": [
+              5
+            ]
+          }
+        ],
+        "sections": [
+          {
+            "kind": "records",
+            "fields": [
+              "seq",
+              "code",
+              "name",
+              "shares",
+              "value",
+              "weight"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -51,3 +51,16 @@ it('starts a complete published concentration request with its source rows and k
   expect(names(await planning(originalRequest+'\n'+extra).wire())).toContain('web_fetch')
  }
 })
+
+it('offers a single original-order ledger for a valuation reconciliation with local code or name search',async()=>{
+ const {request}=fixture('workbench-disclosed-split-unit-submission.json')
+ for(const extra of ['', '同时支持按代码搜索。', '另外支持按证券代码或股票名称快速定位。', '还要支持按代码查找。', '分别核对每笔。']){
+  const first=await planning(extra+request).wire()
+  expect(names(first)).toEqual(['research_workbench_create','web_search'])
+  const schema=first.tools[0].parameters.properties.panels
+  expect(schema).toMatchObject({minItems:1,maxItems:1,items:{properties:{type:{enum:['view']}}}})
+ }
+ for(const extra of ['另外需要同业平均值。','还要从官网检索这只基金的最新净值。']){
+  expect(names(await planning(extra+request).wire())).toContain('web_fetch')
+ }
+})
