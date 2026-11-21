@@ -71,3 +71,23 @@ it('reserves the compact holdings contract for an exact complete scope and a sin
     '需要一张网页做归因。'+originalRequest, originalRequest.replace(official,'')])
    expect(holdingConcentrationInput(text)).toBeUndefined()
 })
+
+it('accepts either location for disclosed columns and recognises their exact header in valuation reconciliation',()=>{
+ const request='请按披露顺序逐笔核对这五项，公允价值保留到分。\n'+originalRequest.slice(originalRequest.indexOf('来源为'))
+ const columns=['seq','code','name','shares','fairValue','weightPct']
+ const labels=request.split('\n').find(line=>line.startsWith('序号\t')).split('\t')
+ const fields=columns.map((key,index)=>({key,label:labels[index]}))
+ const pastedTable={block:1,identity:'code',numericFields:['shares','weightPct']}
+ const create=dataset=>validateWorkbench({
+  originalRequest:request,requestId:'valuation-disclosure',title:'逐笔勾稽',dataMode:'source',
+  sharedDatasets:[{id:'holdings',label:'季报五项持仓',...dataset}],
+  panels:[{type:'view',title:'按披露顺序逐笔核对',view:{dataset:'holdings',filters:['code','name'],sections:[{kind:'records',fields:columns}]}}]
+ })
+ for(const dataset of [{fields,pastedTable},{pastedTable:{...pastedTable,fields}}]){
+  const {records}=create(dataset).panels[0].artifact.dataset
+  expect(records.map(row=>row.id)).toEqual(['300750','600519','601318','300308','601899'])
+  expect(records[3]).toMatchObject({seq:'4',fairValue:'7984305860.00',weightPct:2.66})
+ }
+ expect(()=>create({fields,pastedTable:{...pastedTable,header:false}})).toThrow(/数值/)
+ expect(()=>create({fields,pastedTable:{...pastedTable,fields}})).toThrow(/声明一次/)
+})
