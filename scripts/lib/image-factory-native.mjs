@@ -3,12 +3,13 @@ export { imageFactoryNeedsCanvas }
 import { imageLayerReferenceCodec, imageLayerReferenceParts, bindImageLayerReferences, isImageLayerPreview, readImageLayerReference, readImageLayerReceipts } from './image-factory-layer-references.mjs'
 import { imageGenerationCalls } from './image-generation-client.mjs'
 import { imageFactoryPrompt, readImageFactoryContext, stripImageFactoryContext } from '../../packages/dsh-research-task-runtime/image-factory-context.js'
+import { installImageHistoryNavigation } from './image-history-navigation.mjs'
 import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
 export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
-  getTaskWorkspace, getDefaultWorkspace, standaloneDirectory, setTaskView, taskStorage, archiveTask, removeProvisionalReference, isBoardOnly = () => false,
+  getTaskWorkspace, getDefaultWorkspace, standaloneDirectory, setTaskView, getTaskView, taskStorage, archiveTask, removeProvisionalReference, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false, switchingWorkspace: false }
@@ -425,6 +426,7 @@ export function installImageFactoryContext({
     publishedScope = sessionId
     signal('session', { sessionId })
   }
+  const offHistory = installImageHistoryNavigation({ doc, win, sessions, storage:taskStorage, historyTab:tasks.historyTab, isBoardOnly, viewFor:getTaskView })
   const offSession = sessions.list.subscribe?.(() => { tasks.observe(); syncSession(); syncLayerPreview() })
   const reset = () => {
     for (const id of jobs.keys()) finish(id, false)
@@ -463,6 +465,7 @@ export function installImageFactoryContext({
     prompt, fill, focus, switchWorkspace, confirmLayerPreview, clearLayerPreview, action: kind => { if (!tasks.isCreating()) signal('action', { kind }) },
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {
+      offHistory()
       offSession?.()
       doc.removeEventListener('sherlock:workspace-surface-change', surfaceChange)
       doc.removeEventListener('keydown', cancelPreview, true)
@@ -539,6 +542,7 @@ ${readImageFactoryContext.toString()}
 ${stripImageFactoryContext.toString()}
 ${imageFactoryPrompt.toString()}
 ${createImageFactoryTasks.toString()}
+${installImageHistoryNavigation.toString()}
 ${imageBriefText.toString()}
 ${imageFactoryNeedsCanvas.toString()}
 ${imageLayerReferenceCodec.toString()}

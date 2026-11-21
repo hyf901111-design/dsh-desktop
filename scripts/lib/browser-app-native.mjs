@@ -247,6 +247,7 @@ ctx.effect(()=>{
      return selected===undefined?getTaskWorkspace():selected;
    },
    archiveTask:id=>workspaces.archiveSession(id),
+   getTaskView:id=>slots.resolveStore(chatStore,id).getSnapshot().view,
    standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),
    setTaskView:id=>slots.resolveStore(chatStore,id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
    send:(session,content,mode,action)=>factory.prompt(session,content,mode,action)

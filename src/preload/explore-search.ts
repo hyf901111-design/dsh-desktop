@@ -23,7 +23,7 @@ export function installExploreSearch(doc:Document,source:ExploreSearchSource) {
     if(pending.has(requestId)||completed.has(requestId))return
     pending.add(requestId)
     const finish=(extra:Record<string,unknown>)=>{if(!pending.delete(requestId))return;completed.add(requestId);if(completed.size>128)completed.delete(completed.values().next().value!);reply(extra)}
-    void Promise.resolve().then(()=>{if(!pending.has(requestId)||source.generation()!==generation)return;return source.open(row)}).then(()=>finish({ok:true}),error=>finish({ok:false,error:error instanceof Error?error.message:'暂时无法打开此会话。'}))
+    void Promise.resolve().then(()=>{if(!pending.has(requestId)||source.generation()!==generation)return;return source.open(row)}).then(()=>finish({ok:true,...(row.kind==='session' && {sessionId:row.sessionId})}),error=>finish({ok:false,error:error instanceof Error?error.message:'暂时无法打开此会话。'}))
   }
   const off=source.subscribe(()=>{const ownerChanged=owner!==source.generation();if(ownerChanged){owner=source.generation();if(pending.size)source.cancelOpen?.();pending.clear();completed.clear()}doc.dispatchEvent(new win.CustomEvent('sherlock:explore-search-changed',{detail:{ownerChanged}}))})
   doc.addEventListener('sherlock:explore-search-request',receive)

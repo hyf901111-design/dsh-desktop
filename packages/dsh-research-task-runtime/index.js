@@ -17,6 +17,7 @@ import { registerHomeWorkbenchRuntime } from './home-workbench-runtime.js'
 import { registerPresentationEditGuideChat } from './presentation-edit-guide-chat.js'
 import { registerHomeSpreadsheetRuntime } from './home-spreadsheet-runtime.js'
 import {registerSpreadsheetSessions,registerDocumentSessions} from './spreadsheet-sessions.js'
+import { registerImageHistoryMode } from './image-history-mode.js'
 import { registerImageSessionTitle } from './image-session-title.js'
 import { registerResearchSessionTitles } from './research-session-title.js'
 import {registerKnowledgeSessions} from './knowledge-sessions.js'
@@ -3750,6 +3751,7 @@ export async function apply(ctx) {
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposePresentationSessions = registerDocumentSessions(ctx,{isTrustedRequest, readJsonBody},'presentation')
     const disposeSpreadsheetSessions = registerSpreadsheetSessions(ctx, {isTrustedRequest, readJsonBody})
+    const disposeImageHistoryMode = registerImageHistoryMode(ctx, {isTrustedRequest, readJsonBody})
     const disposeImageSessionTitle = registerImageSessionTitle(ctx, {isTrustedRequest, readJsonBody})
     const disposeResearchSessionTitles = registerResearchSessionTitles(ctx, {isTrustedRequest, readJsonBody})
     const disposeKnowledgeSessions = registerKnowledgeSessions(ctx, {isTrustedRequest, readJsonBody})
@@ -3788,7 +3790,7 @@ export async function apply(ctx) {
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
-      disposeNoteSessions();disposePresentationSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeImageSessionTitle();disposeKnowledgeSessions()
+      disposeNoteSessions();disposePresentationSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeImageSessionTitle();disposeImageHistoryMode();disposeKnowledgeSessions()
       void disposeHomePresentation()
       void disposeHomeReport()
       void disposeHomeNotes()
@@ -3823,7 +3825,7 @@ export async function apply(ctx) {
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
-      disposeNoteSessions();disposePresentationSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeImageSessionTitle();disposeKnowledgeSessions()
+      disposeNoteSessions();disposePresentationSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeImageSessionTitle();disposeImageHistoryMode();disposeKnowledgeSessions()
       await disposeHomePresentation()
       await disposeHomeReport()
       await disposeHomeNotes()

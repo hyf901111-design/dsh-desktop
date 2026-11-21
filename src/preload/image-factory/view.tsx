@@ -1825,6 +1825,13 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     }
   }
+  const restoreHistory = (event: Event) => {
+    const id = (event as CustomEvent).detail?.sessionId
+    if (typeof id !== 'string' || !validCanvasScope(id)) return
+    open(id)
+    doc.dispatchEvent(new Event('sherlock:image-factory-show-canvas'))
+  }
+  doc.addEventListener('sherlock:image-factory-restore-history', restoreHistory)
   render()
   return {
     open: () => open(undefined, true),
@@ -1859,6 +1866,7 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
       doc.dispatchEvent(new Event('sherlock:image-factory-reset')); render()
     },
     dispose() {
+      doc.removeEventListener('sherlock:image-factory-restore-history', restoreHistory)
       doc.removeEventListener('sherlock:image-factory-rebind-canvas', rebind)
       doc.removeEventListener('sherlock:image-factory-session', select)
       doc.removeEventListener('sherlock:image-factory-adopt', adopt)

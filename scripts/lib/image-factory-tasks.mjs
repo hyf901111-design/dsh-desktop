@@ -424,6 +424,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = entryProject = undefined
     publish()
   }
+  const historyTab = id => ({ epoch, tab: [...tabs, ...closed].find(item => item.scope === id) })
   function leave() { navigation++; observe() }
-  return { load, sync, action, enterFresh, leave, admission, observe, registerReplacement, releaseReplacement, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
+  return { historyTab, load, sync, action, enterFresh, leave, admission, observe, registerReplacement, releaseReplacement, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
 }

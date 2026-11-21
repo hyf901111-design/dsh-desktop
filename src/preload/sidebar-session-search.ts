@@ -48,7 +48,7 @@ export function showSidebarSessionSearch(doc: Document, source: { results(query:
     const success = await ui.run(async () => { await source.open(result); return true }, '正在打开…')
     opening = false
     if (success) {
-      doc.dispatchEvent(new (doc.defaultView!.CustomEvent)('sherlock:search-session-opened'))
+      doc.dispatchEvent(new (doc.defaultView!.CustomEvent)('sherlock:search-session-opened', { detail: { sessionId: result.area === 'workspaces' ? result.sessionId : undefined } }))
       ui.close()
     }
   }
