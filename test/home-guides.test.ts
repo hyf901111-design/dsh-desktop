@@ -447,7 +447,7 @@ test('pauses and resumes the independent presentation editor, preserving the cro
  control('暂停演示')!.click();await vi.advanceTimersByTimeAsync(30000)
  expect(f.runStep.mock.calls.flat()).toEqual(['enter'])
  control('继续播放演示')!.click();await vi.advanceTimersByTimeAsync(32000)
- expect(f.runStep.mock.calls.flat()).toEqual(['enter','library','drag-import','ask-notes','notes','review-notes','mark-chart','mark-table','revise-chart','review-chart','select-title','revise-title','select-notes','revise-notes','return-first','play','finish'])
+ expect(f.runStep.mock.calls.flat()).toEqual(['enter','library','drag-import','ask-notes','notes','review-notes','mark-chart','mark-table','revise-chart','review-chart','select-title','revise-title','select-notes','revise-notes','return-first','play','narrate','finish'])
  expect(f.requests.filter(row=>row.command==='activate-title')).toHaveLength(1)
  expect(f.flush).toHaveBeenCalledOnce();expect(f.release).toHaveBeenCalledOnce()
  expect(document.querySelector('[data-home-guide]')).toBeNull()

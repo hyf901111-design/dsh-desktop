@@ -26,6 +26,12 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     ARK_AGENT_PLAN_KEY: key, ARK_ENABLE_SEEDREAM: 'true', ARK_ENABLE_OPENVIKING: 'true',
     OPENVIKING_USER_KEYS: JSON.stringify({alice:'synthetic-viking-user-key'}) },
   outboundService: async request => {
+    if (request.url === 'https://openspeech.bytedance.com/api/v3/plan/tts/unidirectional') {
+      assert.equal(request.headers.get('X-Api-Key'), key)
+      assert.equal(request.headers.get('X-Api-Resource-Id'), 'seed-tts-2.0')
+      assert.equal((await request.json()).req_params.speaker, 'zh_male_yuanboxiaoshu_uranus_bigtts')
+      return new Response('{"code":0,"data":"SUQz"}\n{"code":20000000,"usage":{"text_words":2}}')
+    }
     if (request.url === imageUrl) {
       downloads++
       assert.equal(request.headers.get('authorization'), null)
@@ -138,7 +144,7 @@ try {
     ...(body ? { body: JSON.stringify(body) } : {})
   })
   const chat = (content = 'chat') => ({ model: 'doubao-seed-2.1-lite', stream: true, messages: [{ role: 'user', content }], upstream: 'https://untrusted.invalid/' })
-  for (const path of ['catalog','quota','chat/completions','images','memory']) {
+  for (const path of ['catalog','quota','chat/completions','images','memory','speech']) {
     assert.equal((await send(path, undefined, ['catalog','quota'].includes(path) ? undefined : chat())).status,401)
   }
   // Directory and memory access must stay available without querying usage history.
@@ -305,6 +311,12 @@ try {
   assert.equal(capped.week.limit,300)
   await db.prepare('UPDATE ai_quota_user_settings SET five_hour_limit_units=?,weekly_limit_units=?,version=version+1 WHERE user_id=?')
     .bind(1_000_000_000, 1_000_000_000, 'alice').run()
+  assert.equal((await send('speech', token, { text: ' ' })).status, 400)
+  const narration = await send('speech', token, { text: '你好' }, 'narration')
+  assert.equal(narration.status, 200)
+  assert.equal(narration.headers.get('content-type'), 'audio/mpeg')
+  assert.equal(await narration.text(), 'ID3')
+  assert.equal((await send('speech', token, { text: '你好' }, 'narration')).status, 409)
   const beforeDelivery = (await (await send('quota',token)).json()).quota.fiveHour
   const beforeDownloads = downloads
   for (const [requestId, prompt] of [

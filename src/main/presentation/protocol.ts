@@ -17,6 +17,7 @@ export async function handleEditorAsset(root: string, request: Request): Promise
     '.css': 'text/css',
     '.svg': 'image/svg+xml',
     '.txt': 'text/plain',
+    '.mp3': 'audio/mpeg',
     '.png': 'image/png',
     '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     '.webp': 'image/webp',

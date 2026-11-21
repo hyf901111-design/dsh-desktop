@@ -1,6 +1,6 @@
 // The home player lives outside the editor origin. Resolve its finite set of
 // targets against the current PPTist viewport so zoom and sidebar width apply.
-export function runEditGuideAction(d, { store, documentId, editable, activeIds, plain, resizeNotes }) {
+export function runEditGuideAction(d, { store, documentId, editable, activeIds, plain, enableDemoNarration, resizeNotes }) {
   if (!documentId || documentId !== d.documentId || !editable) throw Error('演示文稿已切换或锁定。')
   const slide = store.currentSlide
   const box = (rect) => ({
@@ -42,7 +42,8 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
       comment: '.pptxa-bubble:not([hidden]) textarea',
       close: '.pptxa-bubble:not([hidden]) .pptxa-bubble-close',
       notes: '.notes textarea',
-      play: '.ribbon button[aria-label="从当前页放映"]'
+      narrate: '.theater .narration-button',
+      play: 'footer button[aria-label="播放演示文稿"]'
     }[d.target]
     let el = selector && document.querySelector(selector)
     if (el?.hasAttribute('data-ribbon-folded') && d.target !== 'overflow')
@@ -50,15 +51,23 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
     if (!el || !el.getBoundingClientRect().width) throw Error('操作控件尚未显示。')
     return el
   }
+  if (d.command === 'directory-position' || d.command === 'scroll-directory') {
+    const list = document.querySelector('.pages')
+    if (!list?.clientHeight) throw Error('幻灯片目录尚未显示。')
+    if (d.command === 'directory-position') return { ...box(list.getBoundingClientRect()), scrollTop: list.scrollTop }
+    if (!Number.isFinite(d.top) || d.top < 0) throw Error('目录滚动位置无效。')
+    list.scrollTo({ top: d.top, behavior: 'instant' })
+    return
+  }
   if (d.command === 'in-overflow') {
-    const label = {mark: '标注', play: '从当前页放映'}[d.target]
-    return !!label && !!document.querySelector('.ribbon [data-ribbon-folded][aria-label="' + label + '"]')
+    return d.target === 'mark' && !!document.querySelector('.ribbon [data-ribbon-folded][aria-label="标注"]')
   }
   if (d.command === 'state')
     return {
       page: store.slideIndex + 1,
       notes: plain(slide.remark),
       playing: !!document.querySelector('.theater'),
+      narrating: document.querySelector('.theater .narration-button')?.dataset.state === 'playing',
       count: store.slides.length,
       title: (() => {
         const e = slide.elements.find((el) => el.id === activeIds.at(-1))
@@ -100,6 +109,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
           })
         )
     } else {
+      if (d.target === 'narrate') enableDemoNarration()
       const el = control()
       el.focus({ preventScroll: true })
       el.click()
