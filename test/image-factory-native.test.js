@@ -123,6 +123,23 @@ it('updates only the selected image tab and restores each tab’s project and dr
   }
 })
 
+it('keeps a committed template, restored canvas or admitted chat in its owner workspace after a stale picker selection', async () => {
+  const f = fixture()
+  try {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('state', {current:true,busy:false})
+    await f.binding.switchWorkspace('elsewhere', null)
+    f.events('state', {current:false,busy:false})
+    f.win.localStorage.setItem('sherlock.research.directory-locked.v1:native-session', 'true')
+    await f.binding.switchWorkspace('elsewhere', null)
+    f.win.localStorage.removeItem('sherlock.research.directory-locked.v1:native-session')
+    f.session.getSnapshot().chat.order.push('sent')
+    await f.binding.switchWorkspace('elsewhere', null)
+    expect(f.sessionCatalog.create).not.toHaveBeenCalled()
+    expect(f.sessionsState.current).toBe('native-session')
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('creates a fresh gallery scope per task, switches the native conversation and persists the open tabs', async () => {
   const storage = { read: vi.fn(async () => ({ epoch: 4, tabs: [] })), write: vi.fn(async () => {}) }
   const f = fixture(storage)

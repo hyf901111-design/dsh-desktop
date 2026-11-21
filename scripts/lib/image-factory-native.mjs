@@ -342,13 +342,21 @@ export function installImageFactoryContext({
   async function switchWorkspace(workspaceId, currentWorkspaceId) {
     if (!isActive() || workspaceChange || state.busy || workspaceId === currentWorkspaceId) return
     const before = currentId(), previous = canvasScope()
+    // The picker can close while an async selection is pending. Respect the
+    // same canvas ownership and conversation boundary as the rendered control.
+    const committed = () => {
+      const session = before && sessions.binding(before)?.session?.getSnapshot?.()
+      return canvasState.current || !!session?.running || !!session?.chat?.order?.length ||
+        (before && win.localStorage?.getItem('sherlock.research.directory-locked.v1:' + before) === 'true')
+    }
+    if (committed()) return
     const pending = before === undefined ? getPending() : undefined
     const pendingState = pending?.getSnapshot?.()
     if (pendingState?.busy || pendingState?.activating) return
     const source = nativeInput()
     const token = workspaceChange = {}
     const validate = () => {
-      if (workspaceChange !== token || !isActive() || currentId() !== before || state.busy ||
+      if (workspaceChange !== token || !isActive() || currentId() !== before || state.busy || committed() ||
           source?.disposed || source?.snapshot.researchContextPreparing)
         throw Error('当前图片任务已变化，草稿已保留。')
     }
