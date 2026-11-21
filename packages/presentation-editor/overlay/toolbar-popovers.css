@@ -1,0 +1,206 @@
+/* The editor lives in an iframe. Size command surfaces against its viewport. */
+.deck-app .toolbar-popup {
+  position: fixed;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: calc(100vw - 16px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.deck-app .toolbar-popup:is([data-tool-menu$='-pool'], .layout-menu) {
+  background: var(--bar);
+  color: var(--ink);
+  overflow: hidden;
+}
+.deck-app .toolbar-popup .shape-pool, .deck-app .toolbar-popup .chart-pool,
+.deck-app .toolbar-popup .table-generator {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+}
+.deck-app .toolbar-popup .shape-pool,
+.deck-app .toolbar-popup .table-generator,
+.deck-app .toolbar-popup .chart-pool {
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.deck-app .shape-pool .category-name {
+  box-sizing: border-box;
+  padding: 4px 6px;
+  margin-bottom: 5px;
+  border: 0;
+  color: var(--muted);
+  background: var(--sub);
+  border-radius: 3px;
+}
+.deck-app .shape-pool .shape-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(min(28px,100%),1fr));
+  gap: 2px;
+}
+.deck-app .shape-list .shape-item,.deck-app .chart-pool .chart-item {
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+.deck-app .shape-list .shape-item {
+  height: 28px;
+  border-radius: 4px;
+}
+.deck-app .shape-item:hover, .deck-app .chart-content:hover {
+  color: var(--ink);
+  background: var(--hover);
+}
+.deck-app .shape-content .shape-path:not(.outlined) { stroke: var(--ink); }
+.deck-app .shape-content .shape-path.outlined { fill: var(--ink); }
+.deck-app .toolbar-popup .chart-pool {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 3px;
+}
+.deck-app .chart-pool .chart-item { height: 54px; }
+.deck-app .chart-pool .chart-content { color: var(--ink); border-radius: 4px; }
+.deck-app .table-generator .title {
+  margin: 0 0 6px;
+  padding: 0 4px;
+  color: var(--ink);
+  background: transparent;
+}
+.deck-app .table-generator table {
+  width: 100%;
+  table-layout: fixed;
+  border-spacing: 2px;
+}
+.deck-app .table-generator td {
+  padding: 0;
+  height: auto;
+  line-height: normal;
+  border: 0;
+  background: transparent;
+}
+.deck-app .table-generator .cell {
+  box-sizing: border-box;
+  height: auto;
+  aspect-ratio: 1;
+  border-color: var(--line);
+  border-radius: 2px;
+  background: var(--sub);
+}
+.deck-app .table-generator .cell.active {
+  border-color: var(--muted);
+  background: var(--hover);
+}
+.deck-app .table-generator .custom { width: 100%; }
+.deck-app .table-generator .btns { display: flex; justify-content: flex-end; gap: 6px; }
+.deck-app .table-generator .btns .btn { width: auto; margin: 0; }
+.deck-app .table-generator .btn.primary { background: var(--ink); color: var(--bg); }
+
+.deck-app .deck-choice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+.deck-app .deck-choice:is(:hover,[aria-expanded='true']) {background: var(--hover);}
+.deck-app .deck-choice .choice-value {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.deck-app .deck-choice svg { flex: none; }
+.deck-app .ribbon-font { max-width: 108px; }
+.deck-app .selection-format .format-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.deck-app .selection-format .deck-choice { background: var(--sub); }
+.deck-app .layout-library header { flex-wrap: wrap; gap: 4px; }
+.deck-app .layout-library .deck-choice { min-height: 28px; }
+.deck-app .layout-library { min-height: 0; }
+.deck-app .layout-grid { min-height: 0; overflow-x: hidden; overflow-y: auto; }
+.deck-app .format-palette { position: fixed; box-sizing: border-box; max-width: calc(100vw - 8px); overflow-x: hidden; }
+.deck-choice-list {
+  position: fixed;
+  z-index: 140;
+  box-sizing: border-box;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  box-shadow: 0 5px 24px #0004;
+  color: var(--ink);
+  background: var(--bar);
+  font: 13px/1.4 -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;
+  outline: none;
+}
+.deck-choice-list [role='option'] {
+  box-sizing: border-box;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.deck-choice-list [data-active] { background: var(--hover); }
+.deck-choice-list [role='option'] span:first-child { overflow-wrap: anywhere; }
+
+.deck-app :is(.ribbon,.selection-format,.toolbar-popup,.command-column,.style-popover) :is(button,[tabindex]):focus:not(:focus-visible) {
+  outline: none;
+}
+.deck-app :is(.ribbon,.selection-format,.toolbar-popup,.command-column,.style-popover) :is(button,[tabindex]):focus-visible {
+  outline: 1px solid var(--muted);
+  outline-offset: -2px;
+}
+.deck-app .overflow-choice-value {margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted);}
+.deck-app .style-popover { color-scheme: inherit; overflow-x: hidden; }
+.deck-app :is(.style-popover,.table-generator) :is(.input,.select,.number-input,.handlers,.input-wrap,input:not([type=color])) {
+  background-color: var(--sub);
+  border-color: var(--line);
+  color: var(--ink);
+}
+body[data-ds-dark-theme] .tippy-box[data-theme~='popover'] .popover-content {
+  color: var(--ink);
+  background: var(--bar);
+  border-color: var(--line);
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+}
+body[data-ds-dark-theme] .tippy-box[data-theme~='popover'] :is(.options,.option,.selector,.input) {color: var(--ink);}
+body[data-ds-dark-theme] .tippy-box[data-theme~='popover'] .option:is(.selected,:hover) {background: var(--hover);color:var(--ink);}
+.deck-app :is(.toolbar-popup,.style-popover,.shape-pool,.layout-grid),.deck-choice-list {
+  scrollbar-color: var(--muted) transparent;
+  scrollbar-width: thin;
+}
+.deck-app .shape-list .shape-item .shape-content:hover .shape-path:not(.outlined) {stroke: var(--ink);}
+.deck-app .shape-list .shape-item .shape-content:hover .shape-path.outlined {fill: var(--ink);}
+.deck-app .table-generator [role='button'] {padding: 0 3px;cursor:pointer;border-radius:3px;}
+.deck-app .table-generator [role='button']:hover {background:var(--hover);}
+body[data-ds-dark-theme] :is(.style-popover, .table-generator, .tippy-box[data-theme~='popover']) :is(.button:not(.primary),.checkbox,.radio-button,.popover-menu-item) {
+  color:var(--ink);
+  background-color:var(--sub);
+  border-color:var(--line);
+}

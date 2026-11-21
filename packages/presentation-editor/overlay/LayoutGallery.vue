@@ -1,14 +1,8 @@
 <template>
   <section class="layout-library" aria-label="幻灯片版式">
     <header>
-      <select v-model="group" aria-label="版式库">
-        <option value="v6">易方达 V6</option>
-        <option value="master">易方达经典母版</option>
-      </select>
-      <select v-model="action" aria-label="应用方式">
-        <option value="current">应用到当前页</option>
-        <option value="new">新建幻灯片</option>
-      </select>
+      <ToolbarSelect label="版式库" v-model="group" :options="[{value:'v6',label:'易方达 V6'},{value:'master',label:'易方达经典母版'}]" />
+      <ToolbarSelect label="应用方式" v-model="action" :options="[{value:'current',label:'应用到当前页'},{value:'new',label:'新建幻灯片'}]" />
     </header>
     <div class="layout-grid">
       <button
@@ -40,6 +34,7 @@
 </template>
 <script setup>
 import { computed, ref } from 'vue'
+import ToolbarSelect from './ToolbarSelect.vue'
 import catalog from './efund-layouts.json'
 const props = defineProps({ active: String })
 defineEmits(['choose'])
@@ -72,15 +67,6 @@ const displayNames = computed(() => {
   padding: 6px 8px 10px;
   border-bottom: 1px solid var(--line);
 }
-.layout-library select {
-  max-width: 52%;
-  background: var(--bar);
-  color: var(--ink);
-  font: inherit;
-  border: 0;
-  padding: 4px;
-  cursor: pointer;
-}
 .layout-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 94px), 1fr));
@@ -100,8 +86,7 @@ const displayNames = computed(() => {
 }
 .layout-grid button[aria-pressed='true'] {
   background: var(--hover);
-  outline: 1px solid #80a6ec;
-  outline-offset: -1px;
+  box-shadow: inset 0 0 0 1px var(--muted);
 }
 .layout-preview {
   display: block;
