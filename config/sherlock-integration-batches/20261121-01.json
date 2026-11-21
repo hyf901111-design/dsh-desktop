@@ -826,6 +826,99 @@
         ],
         "recordedAt": "2026-11-21T08:20:41.882Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "仅展示模型实际发出的答复，工具状态来自本轮事件",
+        "branch": "codex/feat/right-side-status-20261121",
+        "baseCommit": "efe42b733b751a76392597e7f42dbc54d9face5f",
+        "tipCommit": "3ad2654b341e53818e31ec5d1edf473db70b70f2",
+        "commits": [
+          {
+            "commit": "3ad2654b341e53818e31ec5d1edf473db70b70f2",
+            "parents": [
+              "efe42b733b751a76392597e7f42dbc54d9face5f"
+            ],
+            "subject": "右侧对话按真实模型首段和工具事件展示，移除模板开场"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-locale.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-status-presentation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/conversation-response-progress-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/strip-conversation-transient-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-send-preview.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "test/notes-activity.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=20000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "Test Files  3 passed (3) Tests  45 passed (45)",
+            "verifiedCommit": "3ad2654b341e53818e31ec5d1edf473db70b70f2",
+            "completedAt": "2026-11-21T08:21:44.517460+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "通过包内客户端入口及真实答复事件逐段复核，区分模型正文与工具执行状态。"
+        },
+        "acceptanceCriteria": [
+          "复杂任务的模型开场与后续正文按流逐段可读",
+          "等待期间不插入模板代替模型回复",
+          "真实工具运行的状态、取消及重新打开仍可读"
+        ],
+        "risks": [
+          "模型首段耗时仍随选定模型及上游网络变化"
+        ],
+        "generatedAt": "2026-11-21T08:21:44.517460+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -929,6 +1022,20 @@
         "--reporter=dot"
       ],
       "timeoutMs": 360000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-live-activity.test.js",
+        "test/conversation-live-activity-browser.test.js",
+        "test/notes-activity.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=20000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
     }
   ],
   "mainSynchronizations": []
