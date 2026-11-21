@@ -1,5 +1,6 @@
 import {classifyResearchCreationRequest} from './component-delivery-intent.js'
 import {isAdmittedResearchMessage} from './workbench-webpage-delivery.js'
+import {workbenchPlanningSession} from './workbench-prototype-evidence.js'
 import {canvasHumanRequest} from './canvas-task-routing.js'
 import {COMPONENT_SURFACE_STYLE_RULES,PANEL_COLOR_INSTRUCTION} from './design-policy.js'
 import {TRUSTED_TYPES_COMPONENT_INSTRUCTION} from './html-trusted-types-validation.js'
@@ -10,25 +11,30 @@ import {spreadsheetQuickPrompt} from './spreadsheet-quick-prompts.js'
 // the planning policy, rather than adding it only after an initial tool batch.
 export function planningHumanRequest(session) {
   for (const event of [...(session?.events ?? [])].reverse()) {
-    if (event.type === 'user/message' && event.data?.source?.kind === 'user')
-      return canvasHumanRequest({ events: [event] })
-    if (event.type === 'agent/inbox/spliced') {
-      const message = [...(event.data?.inserted ?? [])].reverse().find(value => value.source?.kind === 'user')
-      if (message) return canvasHumanRequest({ events: [{ type: 'user/message', data: message }] })
+    const message = event.type === 'user/message' && event.data?.source?.kind === 'user' ? event.data
+      : event.type === 'agent/inbox/spliced' ? event.data?.inserted?.findLast(value => value.source?.kind === 'user') : null
+    if (message) {
+      const human = canvasHumanRequest({events:[{type:'user/message', data:message}]})
+      return human && message.source.clientMode === 'research' ? {...human, researchComposer:true} : human
     }
   }
   return null
 }
 
 function documentOnly(session) {
-  return classifyResearchCreationRequest(planningHumanRequest(session)?.text, 'document')
+  return classifyResearchCreationRequest(planningHumanRequest(workbenchPlanningSession(session))?.text, 'document')
 }
 
 export function componentCreationRequest(session) {
   if (session?.header?.origin === 'subagent' || (session?.header?.delegationDepth ?? 0) > 0) return null
+  session = workbenchPlanningSession(session)
   const human = planningHumanRequest(session)
-  const intent = classifyResearchCreationRequest(human?.text)
-  if(intent)return {...human, target:isAdmittedResearchMessage(session,human.messageId)?'workbench':intent.kind}
+  const sentFromBoard = human?.researchComposer || isAdmittedResearchMessage(session,human?.messageId)
+  const researchComposer = sentFromBoard || latestClientModeForAuthority(session) === 'research'
+  const delivery = (intent, text) => ({...human, text, target:sentFromBoard ? 'workbench' : intent.kind, ...(researchComposer && {researchComposer:true})})
+  const scope = researchComposer ? 'research' : 'creation'
+  const intent = classifyResearchCreationRequest(human?.text, scope)
+  if(intent)return delivery(intent, human.text)
   // A short steering correction retains this active turn's deliverable. It
   // cannot revive completed rounds, override cancellation or authorize writes.
   const events=session?.events??[],start=events.findLastIndex(event=>event.type==='turn/start')
@@ -39,8 +45,8 @@ export function componentCreationRequest(session) {
     if(event.type!=='user/message'||event.data?.source?.kind!=='user')continue
     const prior=canvasHumanRequest({events:[event]})
     if(prior?.messageId===human?.messageId)continue
-    const previous=classifyResearchCreationRequest(prior?.text)
-    if(previous)return {...human,text:prior.text+'\n用户本轮补充（优先）：'+human.text,target:previous.kind}
+    const previous=classifyResearchCreationRequest(prior?.text, scope)
+    if(previous)return delivery(previous, prior.text+'\n用户本轮补充（优先）：'+human.text)
   }
   return null
 }
@@ -137,6 +143,7 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
   // A narrow intent classifier can miss natural language; no unrequested
   // canvas may bypass the mode boundary merely because intent was unknown.
   if(request?.target==='workbench')return
+  if(!request && planningHumanRequest(workbenchPlanningSession(session))?.researchComposer)return '本轮没有请求新增研究组件；按用户问题回复，已指定的组件或手动容器使用原有工具。'
   if(!request&&classifyResearchCreationRequest(planningHumanRequest(session)?.text, 'read-only'))return '当前请求只读查看已有组件或工作台，不授权新建研究画布。另需创建时先 client_capabilities；对话组件使用 conversation.components.create。'
   const mode=latestClientModeForAuthority(session)
   if(!mode)return CATALOG_FIRST

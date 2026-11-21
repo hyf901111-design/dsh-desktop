@@ -1,5 +1,6 @@
 import {describe,it,expect,vi} from 'vitest'
 import {registerWorkbenchExecutionPolicy,workbenchCreationRequest} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import {admittedResearchTurn} from '../packages/dsh-research-task-runtime/workbench-webpage-delivery.js'
 import {SPREADSHEET_QUICK_PROMPTS} from '../packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js'
 import {PANEL_COLOR_INSTRUCTION,designPolicyIssue} from '../packages/dsh-research-task-runtime/design-policy.js'
 const policy=await import('../packages/dsh-research-task-runtime/conversation-components-policy.js').catch(()=>null)
@@ -65,10 +66,28 @@ describe('direct conversation component routing',()=>{
   expect(h.guards.map(fn=>fn({agent:h.agent,name:'client_action',arguments:{capability:'conversation.components.create'},callId:'create'})).filter(Boolean)).toEqual([])
   expect(h.startSubagent).not.toHaveBeenCalled();h.dispose()
  })
+ it('uses the admitted right-side caller before the first catalog and scopes queued messages to their own turn',async()=>{
+  const text='画一下这三个点'
+  const s=session(text),h=harness(s)
+  s.header.cwd='/fixture'
+  s.events[0].time=100
+  s.events[1].time=101
+  expect(workbenchCreationRequest(s)).toBeNull()
+  admittedResearchTurn(s,{request:text,startedAt:100})
+  const queued={...s.events[1].data,id:'queued',source:{kind:'user',clientMode:'research'},content:[{type:'text',text:'请制作一份PDF文件'}]}
+  s.events.push({type:'agent/inbox/spliced',data:{target:'next-turn',start:0,removedCount:0,inserted:[queued]}})
+  expect(workbenchCreationRequest(s)).toMatchObject({messageId:'human',researchComposer:true})
+  const tools=(await h.wire()).tools.map(tool=>tool.name)
+  expect(tools).toContain('research_workbench_create');expect(tools).not.toContain('client_capabilities')
+  s.events.push({type:'agent/inbox/spliced',data:{target:'next-turn',start:0,removedCount:1,inserted:[]}})
+  expect(workbenchCreationRequest(s)).toBeNull()
+  expect((await h.wire()).tools.map(tool=>tool.name)).not.toContain('research_workbench_create')
+  h.dispose()
+ })
  it('research keeps its existing planning route and budget while notes keeps its capability',async()=>{
   const s=session('创建一个模拟柱状图组件');catalog(s,'research');const h=harness(s)
   expect(workbenchCreationRequest(s)?.text).toContain('柱状图');expect(await h.config()).toMatchObject({reasoningEffort:'high',maxTokens:16000})
-  expect((await h.wire()).tools.map(v=>v.name)).toEqual(schemas.map(v=>v.name));h.dispose()
+  expect((await h.wire()).tools.map(v=>v.name)).toEqual(schemas.map(v=>v.name).filter(name=>!['client_capabilities','client_action'].includes(name)));h.dispose()
   const n=session('创建一个表格组件');catalog(n,'notes');const notes=harness(n)
   expect(workbenchCreationRequest(n)).toBeNull();expect(await notes.config()).toMatchObject({maxTokens:16000})
   expect(notes.prompt()).toContain('notes.components.create');expect(notes.prompt()).not.toContain('capability:"conversation.components.create"');notes.dispose()

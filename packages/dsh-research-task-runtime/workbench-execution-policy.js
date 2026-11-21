@@ -3,7 +3,7 @@ import {workbenchPomodoroSettings} from './workbench-pomodoro.js';
 import { isDeepStrictEqual } from 'node:util'
 import {simpleNewsBrief, WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
 import {WORKBENCH_TABS_GUIDANCE} from './workbench-tabs.js'
-import {componentCreationRequest,latestClientModeForAuthority,planningHumanRequest} from './conversation-components-policy.js'
+import {componentCreationRequest,planningHumanRequest} from './conversation-components-policy.js'
 import { generalFuturesWorkbench, workbenchPlanningContext } from './workbench-planning-context.js'
 import { LIVE_WORKBENCH_PRESETS } from './live-workbench-presets.js'
 import {MAX_PROTOTYPE_WINDOWS,planningPrototypeEvidence,prototypeEvidenceCall,prototypeEvidenceSchema,prototypeEvidenceProgress,prototypeEvidenceGuidance,prototypeEvidenceRequestCurrent,workbenchPlanningSession} from './workbench-prototype-evidence.js'
@@ -25,9 +25,12 @@ const builtinTushareRead=Symbol.for('ework.builtin-tushare.read')
 const builtinTushareCatalog=Symbol.for('ework.builtin-tushare.catalog')
 
 export function workbenchCreationRequest(session) {
-  const request=componentCreationRequest(workbenchPlanningSession(session))
-  return request && (request.target==='workbench' || latestClientModeForAuthority(session)==='research') ? request : null
+  const request=componentCreationRequest(session)
+  return request?.target==='workbench' || request?.researchComposer ? request : null
 }
+
+const DIRECT_BOARD_PLANNING = '研究看板的新组件由主代理调用 research_workbench_create 一次提交，宿主负责分发并直接挂载。单卡只交一个面板，多卡按原需求保留数量。'
+const manualCanvasTool = name => name.startsWith('research_canvas_') || ['research_component_data','client_capabilities','client_action'].includes(name)
 
 export const WORKBENCH_EARLY_PLAN = '【工作台生成】先理解用户问题、范围与交互，再通过已有授权工具取得、解析或计算所需内容，最后调用 research_workbench_create 一次提交完整 panels。需要把现有网页放到当前看板时读取那份文件，把原文交给 files 面板的 htmlFile；收到组件回执后再交付。同批对象只取数一次，多卡复用 sharedDatasets+view；普通内容可提交 panel.content，已有完整组件保留 artifact，不逐卡重新取数。仅在用户明确允许模拟时使用 dataMode:"simulated"，显著标明模拟；缺完整模拟内容可沿 generationMode:"deferred" 与 sharedContext 路径继续。保留用户要求的数量和范围，按实际内容选择原生组件或自包含 HTML，不用固定行业样例替代。没有取得的事实保持缺失，不以占位或受理状态声称完成。'
 const WORKBENCH_CONTENT_GUIDANCE = '新增1–30个独立面板，不替换已有卡；编辑用已有编辑工具。先理解需求，复用已经取得的记录与计算结果，再调用 research_workbench_create 提交 title 与完整 panels。普通内容用 panel.content:{title?,body?,rows?,columns?,visualization?,sources?,asOf?,note?}，rows 为对象数组，columns 为 {key,label} 数组，visualization 为 {kind,label?,values?}；保留真实来源、日期、单位和缺失。多卡共用完整 sharedDatasets+view，已有组件可交 artifact；需求匹配时也可使用 library/publicData/preset。保留原范围，按内容选择视图和尺寸，必要时自定义 HTML。requestId 重试保持一致；accepted 是受理，prepared 才是已准备好，incomplete 要说明真实缺口。'
@@ -131,7 +134,9 @@ export function workbenchOfflineRequest(text) {
     /联网|(?:补充|结合|查询|获取|核对|抓取)[^。；;\n]{0,18}(?:外部(?:数据|来源)|公开(?:市场|行情|数据|资料|来源)|最新(?:净值|行情|公告|报价))/u.test(clause))
   if (supplemental) return false
   if (/只用.{0,8}(?:资料|记录)/u.test(text)) return true
+  const qualifier = /(?:只用|仅用|只使用|仅使用)(?:(?:这段|这份|所附|下面|下方|以下)(?:的)?(?:已核对的?|已披露的?|附带的?|提供的?)?(?:公开|历史)?(?:原表|表格|数据))/u.exec(text)
   const table = /(?:只用|仅用|仅使用)(?:下表|此表|以下表格|下面的表格)/u.exec(text)
+    ?? (qualifier && pastedWorkbenchBlocks(text).length ? qualifier : null)
   if (!table) return false
   const rest = text.slice(table.index + table[0].length)
   return !/^(?:中|里|上)?(?:列出|提供|指定|包含)?的?(?:基金|股票|证券|产品|渠道|机构)?(?:代码|名单|名称|分组|标的|分类)/u.test(rest)
@@ -204,6 +209,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
         sourceProgress: workbenchSourceProgress(human.text), abort: () => releasePlanning(agent) }
       planningScopes.set(agent, state); activeScopes.add(state)
     }
+    state.directBoard = Boolean(human.researchComposer)
     // Human steering wraps each generation step in a fresh child signal.
     // The owning human and turn retain their observations across those steps.
     if (state.signal !== signal) {
@@ -219,12 +225,19 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
   // retain the authority granted by the existing runtime.
   const disposeGuard = ctx.tools?.guard?.(exec => {
     const state = currentPlanning(exec.agent)
-    if (!state) return
+    if (!state) {
+      if (exec.name === 'research_canvas_use') {
+        const human = workbenchCreationRequest(exec.agent?.session)
+        if (human?.researchComposer && hasAcceptedPlan(exec.agent.session, human.messageId)) return DIRECT_BOARD_PLANNING
+      }
+      return
+    }
     if (exec.name === CREATE_TOOL) {
       const {inspected,failed}=prototypeEvidenceProgress(state.session,state.messageId,state.evidenceTargets)
       if([...state.evidenceReadable].some(resource=>!inspected.has(resource)&&!failed.has(resource)))return '先读取本轮可读的用户原型/附件内容，再提交工作台规划；读取失败或格式不支持时保留缺失，只据可读资料继续，不使用固定样例代替。'
       return
     }
+    if (state.directBoard && manualCanvasTool(exec.name)) return DIRECT_BOARD_PLANNING
     const evidence=state.evidenceTools.has(exec.name)&&prototypeEvidenceCall(exec.name,exec.arguments,state.evidenceTargets)
     if(evidence&&isWorkbenchPrototypeTableRead(exec))return
     if(evidence&&!state.evidenceUsed.has(evidence.key)&&[...state.evidenceUsed.values()].filter(resource=>resource===evidence.resource).length<MAX_PROTOTYPE_WINDOWS){state.evidenceUsed.set(evidence.key,evidence.resource);return}
@@ -333,7 +346,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       if (!accepted) {
         const { simulation } = planningDataIntent(human.text)
         const evidence=planningPrototypeEvidence(agent.session,human)
-        const context=workbenchPlanningContext(undefined,human.text)
+        const context=[human.researchComposer && DIRECT_BOARD_PLANNING,workbenchPlanningContext(undefined,human.text)].filter(Boolean).join('\n')
         if (!simulation && readDocumentEvidence && workbenchDocumentScope(human.text, evidence)) return context + '\n' + DOCUMENT_WORKBENCH_PLANNING
         if(evidence.required.length&&!simulation)return context+'\n'+PROTOTYPE_PLANNING_GUIDANCE+'\n'+prototypeEvidenceGuidance(evidence)
         return context + '\n' + (simulation ? WORKBENCH_EARLY_PLAN : SOURCE_PLANNING_TOOL_GUIDANCE + '\n' + OBSERVED_SOURCE_GUIDANCE) + (evidence.required.length ? '\n' + prototypeEvidenceGuidance(evidence) : '')
@@ -386,8 +399,13 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       releasePlanning(agent)
       throw new Error('工作台需求已更新，上一条规划不再发送；请按当前消息继续。')
     }
-    if (!human || hasAcceptedPlan(agent.session, human.messageId) || !request.tools?.some(tool => tool.name === CREATE_TOOL)) {
-      releasePlanning(agent); return request
+    const accepted = human && hasAcceptedPlan(agent.session, human.messageId)
+    if (!human || accepted || !request.tools?.some(tool => tool.name === CREATE_TOOL)) {
+      releasePlanning(agent)
+      // The host owns the accepted creation. Data binding may still inspect or
+      // refresh the delivered nodes, but a second manual draft has no role.
+      return accepted && human.researchComposer && request.tools?.some(tool => tool.name === 'research_canvas_use')
+        ? {...request, tools:request.tools.filter(tool => tool.name !== 'research_canvas_use')} : request
     }
     const state = enterPlanning(agent, human, turn, signal ?? request.signal)
     state.evidenceTargets=planningPrototypeEvidence(agent.session,human,request)
@@ -435,7 +453,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     const tools = request.tools.flatMap(tool => {
       if (tool.name === CREATE_TOOL) return [{ ...tool, description: documentPaths ? DOCUMENT_WORKBENCH_PLANNING : observedSourceGuidance+'优先评估组件库原生能力，已覆盖的面板用library:{id,options}直接挂载，其余按实际数据生成；links关联兼容节点，tabs组织真实页签，具体能力与配置见本轮系统说明。'+(prototypeSource ? PROTOTYPE_PLANNING_GUIDANCE : sourcePlanning ? SOURCE_PLANNING_TOOL_GUIDANCE : WORKBENCH_PLANNING_TOOL_GUIDANCE)+prototypeEvidenceGuidance(state.evidenceTargets),
         ...(sourcePlanning ? { parameters: prototypeSource ? prototypeCreationParameters(tool.parameters, !documentPaths) : sourceCreationParameters(tool.parameters) } : {}) }]
-      if (documentExclusive) return []
+      if (documentExclusive || state.directBoard && manualCanvasTool(tool.name)) return []
       if (tool.name === OBSERVED_SOURCES_TOOL && simulation) return []
       const evidence=prototypeEvidenceSchema(tool,state.evidenceTargets)
       if(evidence){

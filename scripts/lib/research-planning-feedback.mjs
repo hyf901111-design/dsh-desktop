@@ -61,7 +61,7 @@ export function researchPlanningRequest(order,nodeStore,turn,classify,readText,r
   const text=readText(node.data?.content||[])
   // Match the runtime's coding boundary even when an older classifier is installed.
   if(!/工作台|看板|仪表盘|\b(?:workbench|dashboard)\b/iu.test(text)&&/\b(?:React|Vue|Svelte|SwiftUI|Angular|TSX|JSX)\b|\.[cm]?[jt]sx?\b|(?:组件|卡片).{0,12}(?:源码|源代码)/iu.test(text))return null
-  const request=classify(text)
+  const request=classify(text,research?'research':'creation')
   return request?.kind==='workbench'||research&&request?.kind==='component'?request:null
  }
  return null
