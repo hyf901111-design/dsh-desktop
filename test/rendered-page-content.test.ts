@@ -281,3 +281,12 @@ it('does not certify clipped JSON or an oversized structured response as complet
   expect(result.complete).toBe(false);expect(result.sourceText.length).toBeLessThanOrEqual(120000)
  }
 })
+
+it('reads the US Treasury rate table in the main region after its navigation articles', async()=>{
+ window=new Window({url:'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView'})
+ window.document.body.innerHTML='<header><article class="node--type-mega_menu_panel">About Treasury · General Information</article></header><div id="main-content" role="main"><table><tr><th>Date</th><th>2 Yr</th><th>5 Yr</th><th>10 Yr</th><th>30 Yr</th></tr><tr><td>12/31/2024</td><td>4.25</td><td>4.38</td><td>4.58</td><td>4.78</td></tr></table></div>'
+ const result=await window.eval(renderedPageContentScript(400))
+ expect(result.sourceText).toContain('12/31/2024')
+ for(const rate of ['4.25','4.38','4.58','4.78'])expect(result.sourceText).toContain(rate)
+ expect(result.sourceText).not.toContain('General Information')
+})
