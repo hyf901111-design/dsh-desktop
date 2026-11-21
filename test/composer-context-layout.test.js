@@ -21,3 +21,41 @@ for(const dark of [false,true])it(`centers the actual native context ring inside
     const boxes=await page.evaluate(()=>['.JObwrW_trigger','.JObwrW_trigger>svg'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}}));expect(boxes[0]).toMatchObject({width:30,height:30});expect(boxes[1]).toMatchObject({width:14,height:14});expect(boxes[0].x).toBe(boxes[1].x);expect(boxes[0].y).toBe(boxes[1].y)
   }finally{await page.close()}
 })
+
+it('keeps a fixed reading gap below workspace reference buttons while the draft scrolls', async () => {
+  const page = await browser.newPage({viewport: {width: 372, height: 900}})
+  try {
+    await page.setContent(`<section class="sRp_composer">
+      <div data-composer-card class="uV2eYG_card" style="display:flex;flex-direction:column">
+        <div data-research-context-anchor><button>参考当前画板资料 · 1个组件</button></div>
+        <div data-input-scroll class="uV2eYG_scroll">
+          <div class="uV2eYG_mirror" style="white-space:pre-wrap"></div>
+        </div>
+        <div class="uV2eYG_row"></div>
+      </div>
+    </section>`)
+    await page.addStyleTag({content: css + await readFile('src/preload/figma-reading.css', 'utf8')})
+    const scroller = page.locator('[data-input-scroll]')
+    const reference = page.locator('button')
+    const writingLayer = page.locator('.uV2eYG_mirror')
+    const inset = () => writingLayer.evaluate(el => parseFloat(getComputedStyle(el).paddingTop))
+    const gap = async () => (await scroller.boundingBox()).y - (await reference.boundingBox()).y - (await reference.boundingBox()).height
+    expect(await gap() + await inset()).toBe(15)
+    await writingLayer.evaluate(el => {
+      el.textContent = [
+        'Treasury Par Yield Curve Rates 的真实年化收益率（%），默认比较12月27日至31日，保留来源和全部精度。',
+        'https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202412',
+        '日期 2年 5年 10年 30年', '2024-12-27  4.31 4.45 4.62 4.82',
+        '2024-12-30  4.24 4.37 4.55 4.77', '2024-12-31  4.25 4.38 4.58 4.78'
+      ].join('\n')
+    })
+    await scroller.evaluate(el => { el.style.height = '120px'; el.scrollTop = el.scrollHeight })
+    expect(await scroller.evaluate(el => el.scrollTop)).toBeGreaterThan(0)
+    expect(await gap()).toBeGreaterThanOrEqual(8)
+    await reference.evaluate(el => el.remove())
+    expect(await scroller.evaluate(el => getComputedStyle(el).marginBlockStart)).toBe('0px')
+    expect(await inset()).toBe(15)
+  } finally {
+    await page.close()
+  }
+})

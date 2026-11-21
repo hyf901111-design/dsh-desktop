@@ -14,10 +14,15 @@ body .sRp_composer .uV2eYG_input::placeholder {
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_card {
   min-height:126px; max-height:min(368px,50vh); padding:0; gap:0;
 }
+/* Keep part of the first-line inset outside the scrolling draft. */
+body .sRp_composer [data-composer-card]:has(> :is([data-research-context-anchor],[data-note-context-anchor],[data-sheet-context-anchor]) > button):not(:has(.ew-sheet-pending-reference)) {
+  --odyssey-reference-gap:8px;
+}
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_scroll {
+  margin-block-start:var(--odyssey-reference-gap,0px);
   min-height:78px; max-height:min(320px,calc(50vh - 48px)); flex:0 1 auto; overflow-y:auto; overscroll-behavior:contain;
 }
-body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) { padding:15px 17px 0; font-size:16px; line-height:24px; }
+body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) :is(.uV2eYG_input,.uV2eYG_mirror,.uV2eYG_backdrop) { padding:calc(15px - var(--odyssey-reference-gap,0px)) 17px 0; font-size:16px; line-height:24px; }
 body :is(.wSkVaW_root[data-odyssey-page=conversation],.sRp_composer) .uV2eYG_row { min-height:48px; flex:0 0 48px; box-sizing:border-box; padding:8px 11px 8px 8px; }
 body .wSkVaW_root[data-odyssey-page=conversation] > [data-center-composer-host] {
   position:relative; inset:auto; flex:0 0 auto; background:transparent; pointer-events:auto; padding:4px 0 12px;
