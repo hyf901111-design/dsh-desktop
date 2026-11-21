@@ -3661,6 +3661,64 @@
         ],
         "generatedAt": "2026-11-21T14:32:21.142743+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图像会话保留自然中文短题",
+        "branch": "codex/feat/image-title-clause-20261121",
+        "baseCommit": "1ebfb04ed73dfd85d49dd00d3b599929f4924f68",
+        "tipCommit": "fbd67a78683c69cc66d573c27d73c97bcc098b41",
+        "commits": [
+          {
+            "commit": "fbd67a78683c69cc66d573c27d73c97bcc098b41",
+            "parents": [
+              "1ebfb04ed73dfd85d49dd00d3b599929f4924f68"
+            ],
+            "subject": "图像对话自动短标题保留完整中文主题短语"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/session-title-subject.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/session-title-subject.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/session-title-subject.test.js",
+              "test/image-session-title.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "2个直接相关测试文件共13项通过，覆盖真实首句、短题、并列主题、正常英文、其他模式、手动命名和模型命名排队。",
+            "verifiedCommit": "fbd67a78683c69cc66d573c27d73c97bcc098b41",
+            "completedAt": "2026-11-21T14:37:28.946917+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "H原生消息用真实标题服务回放，从国债收益率晨会封面，标题放改为完整主题国债收益率晨会封面。干净rc.7 SDK与H已安装输入经补丁后逐字相等，再安装幂等。签名后由操作者复验自然原句。"
+        },
+        "acceptanceCriteria": [
+          "只在中文图像消息的默认短题切入设计要求时收束为完整主题",
+          "保留短句、英文、手动名称和服务端后续模型命名入口"
+        ],
+        "risks": [
+          "无独立语义分隔的长标题继续依现有UTF-8字节上限处理。"
+        ],
+        "generatedAt": "2026-11-21T14:37:28.946917+00:00"
+      }
     }
   ],
   "integrationChecks": [
