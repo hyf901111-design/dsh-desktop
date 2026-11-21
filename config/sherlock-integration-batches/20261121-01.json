@@ -2646,6 +2646,67 @@
         ],
         "generatedAt": "2026-11-21T13:07:51.353933+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按原披露列绑定逐笔核算表",
+        "branch": "codex/feat/pasted-column-refs-20261121",
+        "baseCommit": "b085896ed031af4c8476b37ee96e3c2870716ad0",
+        "tipCommit": "75cc361caf71eddb528efc872d7f384eae2cdcb6",
+        "commits": [
+          {
+            "commit": "75cc361caf71eddb528efc872d7f384eae2cdcb6",
+            "parents": [
+              "b085896ed031af4c8476b37ee96e3c2870716ad0"
+            ],
+            "subject": "修复季报逐笔勾稽时粘贴表列定义与表头识别"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-holding-weight-ranking.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-holding-weight-ranking.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "支持原生逐笔表在数据集或表段内声明字段，同时按完整原表头精确匹配以保留原值。",
+            "verifiedCommit": "75cc361caf71eddb528efc872d7f384eae2cdcb6",
+            "completedAt": "2026-11-21T13:12:42.531946+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "回放原生右栏的两次退回调用；两种声明均输出真实5行、保留到分。"
+        },
+        "acceptanceCriteria": [
+          "真实调用的两种字段层级均可用",
+          "显式无表头仍保持原始第一行"
+        ],
+        "risks": [
+          "没有明确列定义的非标准表头仍需按原始数据核对。"
+        ],
+        "generatedAt": "2026-11-21T13:12:42.531946+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3009,6 +3070,17 @@
         "--maxWorkers=1",
         "-t",
         "keeps a committed template|updates only the selected image tab|hides the right project picker|keeps the active .*image-factory",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-holding-weight-ranking.test.js",
+        "--maxWorkers=1",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
