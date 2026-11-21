@@ -600,6 +600,7 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
     application:document.body.dataset.workspaceSurface,
     page:document.querySelector('#app [data-odyssey-page]')?.dataset.odysseyPage
    }));
+   if(image)await expect.poll(async()=>(await center()).owner).toMatch(/^image-task-/);
    const original=await center();
    await chip.click();
    const project=page.getByRole('menuitem',{name:'研究项目 B',exact:true});
@@ -626,6 +627,7 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
     expect(await center()).toEqual({...original,owner:nextOwner});
     expect(await page.locator('.image-factory .eb-tab').count()).toBe(1);
     expect(events.filter(event=>event.type==='create')).toEqual([
+     {type:'create',sessionId:original.owner,workspaceId:'A'},
      {type:'create',sessionId:firstOwner,workspaceId:'B'},{type:'create',sessionId:nextOwner,cwd:'/tmp/standalone/outputs'},
     ]);
     expect(errors).toEqual([]);
