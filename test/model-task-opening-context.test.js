@@ -158,3 +158,14 @@ it('distinguishes a complete supplied column, a retained missing value and a pre
  const long=await opening([...rows,...rows])
  expect(long).toContain('原文已包含这10行，仅摘首行示例');expect(long).not.toContain('贵州茅台 /')
 })
+
+it('keeps an explicit live page visit executable on the first call and keeps independent conversation and visiting advice outside that path',async()=>{
+ const actual='浏览执行E1：请在当前浏览器打开美国财政部这个正式月度页面，告诉我实际页面标题，并读出 2024-12-31 的两年、十年国债收益率。https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value_month=202412'
+ for(const [text,grant,live] of [[actual,true,true],[actual,false,false],['只讨论如何打开网站，不实际访问。',true,false],['不用打开网站，直接告诉我这两个数的差。',true,false],['收益率从4.62%到4.58%，变化多少个基点？',true,false]]){
+  const {current,run}=requests(text,{mode:'browser'})
+  const request={...current,tools:[{name:grant?'browser_use':'existingTool'}]}
+  const first=await run(1,request)
+  expect(first.system.includes('直接使用本轮提供的浏览器')).toBe(live)
+  if(live){expect(first.tools).toBe(request.tools);expect(first.messages).toBe(request.messages);expect(first[Symbol.for('ework.model-task-opening')]).toBeUndefined()}
+ }
+})

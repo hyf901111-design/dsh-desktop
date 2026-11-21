@@ -185,6 +185,12 @@ export function registerModelTaskReplies(ctx) {
     if (step === 1 && turn.mode === 'image' && turn.image && request.tools?.some(tool => tool.name === 'image_generate')) {
       return {...request, system:request.system+'\n结合本轮画面的用途与约束，可以先简短说明构图取舍。按当前服务与图层状态在这一步执行，使用用户指定的参考图，交付结果以图片附件回执为准。'}
     }
+    if (step === 1 && turn.mode === 'browser' && !turn.readOnly && request.tools?.some(tool => tool.name === 'browser_use') &&
+        turn.text.split(/[。？！；，,;!?\n]/u).some(clause =>
+          /(?:打开|访问|前往|\b(?:open|visit|navigate to)\b).{0,48}(?:https?:\/\/|网页|页面|网址|网站|官网|\b(?:webpage|website|page|url)\b)/iu.test(clause) &&
+          !/(?:不要|不用|别|不必|无需|禁止|如何|怎样|怎么|do not|don't|how to).{0,14}(?:打开|访问|前往|open|visit|navigate)/iu.test(clause))) {
+      return {...request, system:request.system+'\n直接使用本轮提供的浏览器读取指定页面，按实际返回的标题和内容答复。页面无法打开时说明真实错误。'}
+    }
     if (firstTaskOpening(agent.session, step) && request.tools?.length) {
       const {message} = claimedWorkspaceMessage(agent.session,turn.mode) ?? {}
       if (!message) return request
