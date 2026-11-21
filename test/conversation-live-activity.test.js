@@ -13,6 +13,15 @@ it('installs one reversible activity footer on both native conversation hosts',a
  expect(next.match(/react.createElement\(ConversationLiveActivity,/g)).toHaveLength(2)
  expect(()=>stripConversationLiveActivity(next.replace('2.4s linear infinite','1s linear infinite'))).toThrow(/drifted/)
 })
+it('upgrades the exact installed calendar classifier and rejects changes elsewhere in the same layer',async()=>{
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const current=patchConversationLiveActivity(source)
+ const block=current.match(/\/\* ework:conversation-live-activity:v\d+ \*\/[\s\S]*?\/\* ework:conversation-live-activity:end \*\/\n/u)[0]
+ const prior=block.replace('|指标卡|日历|组件|卡片)$/u.test(object)','|指标卡|组件|卡片)$/u.test(object)')
+ expect(prior).not.toBe(block)
+ expect(patchConversationLiveActivity(current.replace(block,prior))).toBe(current)
+ expect(()=>stripConversationLiveActivity(current.replace(block,prior.replace('2.4s linear infinite','1s linear infinite')))).toThrow('definition drifted')
+})
 it('shows immediate preparation and never mistakes old completed tools for current work',()=>{
  expect(activity()).toEqual({kind:'thinking',label:'正在思考…'})
  expect(activity([tool('read',true),tool('bash',false,1)])).toEqual({kind:'thinking',label:'正在思考…'})

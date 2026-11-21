@@ -182,7 +182,15 @@ export function stripConversationLiveActivity(source){
  const priorDefinition = v8 ? '12d9afa15d1f08695143aadb6495f4ea412bf6a196f0e621bbd9ec19f28826e3' : v7 ? 'af63ec1fd79c2cb7c12b9ca5eb74e57d15ea632dce92c7f7b29afda3565e5d9f' :
   v6 ? 'b6d3b84c7dac71733130add9aacac7cca15dd104037f40afc8b4d76747e50e8f' : historicalHash
  const exactDefinition=v5 ? previousV5.includes(digest) : priorDefinition ? digest===priorDefinition : block===definition()
- if(source.split(marker).length!==2||source.split(END).length!==2||end<a||!exactDefinition)throw Error('Live activity definition drifted')
+ // The research classifier is inlined in the owned block. Previously
+ // installed SDKs may carry its exact pre-calendar bytes under the same marker.
+ const installedClassifier = marker === START && [
+  'c87623c1985c9006059264fcb21393529ff8b2082b412f4935f228a827153b3e',
+  '050873044e0ba02164c7d72b1342f8c3582a577b639271e23c6a215c8a3af89c',
+  '55474292313d356cad43df26274c7c48c0bb6338e71c201aa7c192f6f7828c0e',
+  '466f797dde689f581b7b466aff92a721c3e4b64e1904ac66d3aec9817f3e4308',
+ ].includes(digest)
+ if(source.split(marker).length!==2||source.split(END).length!==2||end<a||(!exactDefinition&&!installedClassifier))throw Error('Live activity definition drifted')
  if(v4||!historicalHash)source=transformWorkbenchConversationPresentation(source,true)
  if(!legacy)source=transformStatusPresentation(source,true)
  source=scope(source,'function ChatView(',CHAT_NEXT,CHAT_END)
