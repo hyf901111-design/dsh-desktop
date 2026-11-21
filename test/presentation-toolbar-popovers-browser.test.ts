@@ -62,7 +62,42 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
         expect(await ruler.locator('.h .ruler-marker-100').first().evaluate(el => getComputedStyle(el, '::before').backgroundColor)).toBe('rgb(170, 170, 170)')
         expect(await context.locator('.sub-text').first().evaluate(el => getComputedStyle(el).color)).toBe('rgb(170, 170, 170)')
       }
-      await page.mouse.click(bounds.x + 25, bounds.y + 24)
+      const boxes = await submenu.evaluate(el => {
+        const root = el.closest('.contextmenu')!.getBoundingClientRect()
+        const sub = el.getBoundingClientRect()
+        return { margins: [root, sub].flatMap(r => [r.left, r.top, innerWidth - r.right, innerHeight - r.bottom]),
+          flipped: sub.right <= root.left + 3 }
+      })
+      expect(Math.min(...boxes.margins)).toBeGreaterThanOrEqual(0)
+      expect(boxes.flipped).toBe(true)
+      const size = dark ? '大' : '小'
+      await submenu.getByText(size, { exact: true }).click()
+      await context.waitFor({ state: 'hidden' })
+      await canvas.click({ button: 'right', position: { x: 20, y: 20 } })
+      await context.getByText('网格线', { exact: true }).hover()
+      const leftSub = context.locator('.sub-menu:visible').first()
+      expect(await leftSub.evaluate(el => {
+        const root = el.closest('.contextmenu')!.getBoundingClientRect()
+        const child = el.getBoundingClientRect()
+        return child.left >= root.right - 3 && child.right <= innerWidth && child.bottom <= innerHeight
+      })).toBe(true)
+      expect(await leftSub.getByText(size, { exact: true }).locator('..').innerText()).toContain('√')
+      await leftSub.getByText(size, { exact: true }).click()
+      await context.waitFor({ state: 'hidden' })
+      if (!dark) {
+        await page.setViewportSize({ width: 1080, height: 200 })
+        await canvas.click({ button: 'right', position: { x: 18, y: 8 } })
+        await context.getByText('网格线', { exact: true }).hover()
+        const fitsShortEditor = await submenu.evaluate(el => {
+          const child = el.getBoundingClientRect()
+          const row = el.closest('li')!.getBoundingClientRect()
+          return child.top < row.top - 6 && child.bottom <= innerHeight - 4
+        })
+        expect(fitsShortEditor).toBe(true)
+        await submenu.getByText('大', { exact: true }).click()
+        await context.waitFor({ state: 'hidden' })
+        await page.setViewportSize({ width: 1080, height: 650 })
+      }
     }
     await openContext()
     await context.getByText('标尺', { exact: true }).click()

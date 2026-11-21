@@ -39,6 +39,15 @@ body[data-ds-dark-theme] {
   color-scheme: dark;
 }
 /* The canvas menu is mounted on the iframe body, outside .deck-app. */
+.contextmenu .menu-content {
+  box-sizing: border-box;
+  max-width: calc(100vw - 8px);
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+}
+.contextmenu .menu-item .menu-item-content.has-children.opens-left::before {
+  transform: translateY(-50%) rotate(-135deg);
+}
 body[data-ds-dark-theme] .contextmenu .menu-content {
   background: var(--bar);
   border-color: var(--line);
