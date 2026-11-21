@@ -2923,6 +2923,61 @@
         ],
         "generatedAt": "2026-11-21T13:15:15.156462+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "覆盖图像入口建会话和工作区切换的联合验证",
+        "branch": "codex/feat/image-picker-entry-case-20261121",
+        "baseCommit": "79304bc6f6989fd381068e8f69bf5bf15112fb46",
+        "tipCommit": "5ba49994060156b5da0f188613e1b8828b725b42",
+        "commits": [
+          {
+            "commit": "5ba49994060156b5da0f188613e1b8828b725b42",
+            "parents": [
+              "79304bc6f6989fd381068e8f69bf5bf15112fb46"
+            ],
+            "subject": "校验图像从当前工作区新建后再切换目录的完整路径"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/pending-conversation-rendered.test.js",
+              "-t",
+              "hides the right project picker|keeps the active .*image-factory",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "在同一次渲染操作中核验初次会话、切换归属和有内容后的隐藏。",
+            "verifiedCommit": "5ba49994060156b5da0f188613e1b8828b725b42",
+            "completedAt": "2026-11-21T13:18:33.347845+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "已在当前客户端复现；下一签名构建直接复验。"
+        },
+        "acceptanceCriteria": [
+          "空白图像可选择工作区，已编辑或已有用户对话时收起工作区选择器",
+          "旧菜单回调不得迁移已编辑的会话"
+        ],
+        "risks": [
+          "其他数据源及问题的图形选择仍由相应任务决定。"
+        ],
+        "generatedAt": "2026-11-21T13:18:33.347845+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3325,6 +3380,19 @@
         "run",
         "test/task-opening-sdk-recovery.test.js",
         "test/conversation-first-response-effort.test.js",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/pending-conversation-rendered.test.js",
+        "-t",
+        "hides the right project picker|keeps the active .*image-factory",
+        "--maxWorkers=1",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
