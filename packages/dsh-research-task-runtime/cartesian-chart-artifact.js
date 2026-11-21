@@ -13,18 +13,26 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   const stacked = ['stackedArea','stackedBar','percentBar'].includes(kind);
   const percent = kind === 'percentBar';
   const w = Math.max(280, width), h = horizontal ? Math.max(160, n <= 6 ? n * 24 + 46 : n * 30 + 50, Math.min(240, availableHeight)) : Math.max(160, Math.min(240, availableHeight));
-  const left = horizontal ? Math.min(110, w * .27) : 48, right = 16, top = 16, bottom = 30;
+  const glyphWidth=c=>/[MW@%]/u.test(c)?11:/[\x00-\x7f]/u.test(c)?6.8:11;
+  const textWidth=text=>Array.from(text).reduce((width,c)=>width+glyphWidth(c),0);
+  const left=horizontal?Math.min(w*.36,180,Math.max(40,...spec.labels.map(label=>textWidth(label)+14))):48;
+  const right=16,top=16,bottom=30;
   const pw = w-left-right, ph = h-top-bottom;
-  const totals = spec.labels.map((_, i) => spec.series.reduce((sum,s,si) => sum + (visible[si]?s.values[i]:0), 0));
+  const totals = percent ? spec.labels.map((_, i) => spec.series.reduce((sum,s,si) => sum + (visible[si]?s.values[i]:0), 0)) : [];
   const values = spec.series.map(s => s.values.map((v,i) => percent ? (totals[i] ? v / totals[i] * 100 : 0) : v));
   const positive = Array(n).fill(0), negative = Array(n).fill(0);
   const ranges = values.map((series,si) => series.map((value,i) => {
+    if (value===null) return null;
     if (!stacked) return [0,value];
     const sums = value >= 0 ? positive : negative, start = sums[i];
     if(visible[si])sums[i] += value; return [start,sums[i]];
   }));
-  const fullPositive=spec.labels.map((_,i)=>spec.series.reduce((sum,s)=>sum+Math.max(0,s.values[i]),0)),fullNegative=spec.labels.map((_,i)=>spec.series.reduce((sum,s)=>sum+Math.min(0,s.values[i]),0));
-  const all = stacked ? [...fullPositive,...fullNegative] : values.flat();
+  const all = stacked
+    ? spec.labels.flatMap((_,i)=>[
+        spec.series.reduce((sum,s)=>sum+Math.max(0,s.values[i]),0),
+        spec.series.reduce((sum,s)=>sum+Math.min(0,s.values[i]),0)
+      ])
+    : values.flat().filter(value=>value!==null);
   let low = Math.min(0,...all), high = Math.max(0,...all);
   // Lines and paired dots compare positions, so fit the observed range. Bars,
   // stems and filled areas measure distance from zero and retain that baseline.
@@ -59,12 +67,24 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   // before placing interior ticks, so it cannot overlap a nearby penultimate one.
   const tickCount=horizontal?n:Math.min(5,n);
   const indices=Array.from({length:tickCount},(_,i)=>tickCount===1?0:Math.round(i*(n-1)/(tickCount-1)));
-  const textWidth=text=>[...text].reduce((sum,c)=>sum+(/[\x00-\x7f]/u.test(c)?6.8:11),0);
+  // Fund share classes and sales desks often differ only at the end of a name.
+  // Keep both ends when the category gutter cannot fit the full label.
+  const fitCategory=label=>{
+    const budget=left-14;
+    if(textWidth(label)<=budget)return label;
+    const chars=Array.from(label),edgeBudget=(budget-glyphWidth('…'))/2;
+    const edge=characters=>{
+      let width=0,count=0;
+      for(const c of characters){width+=glyphWidth(c);if(width>edgeBudget)break;count++;}
+      return characters.slice(0,count);
+    };
+    return edge(chars).join('')+'…'+edge(chars.reverse()).reverse().join('');
+  };
   const lastLabel=spec.labels[n-1],lastShort=lastLabel.length>10?lastLabel.slice(0,9)+'…':lastLabel;
   const lastStart=w-right-textWidth(lastShort);
   let previousEnd=-Infinity;
   for (const i of indices) {
-    const label=spec.labels[i], short=label.length>(horizontal?12:10)?label.slice(0,horizontal?11:9)+'…':label;
+    const label=spec.labels[i], short=horizontal?fitCategory(label):label.length>10?label.slice(0,9)+'…':label;
     const size=textWidth(short),x=n===1?left+pw/2:i===0?left:i===n-1?w-right:cat(i);
     const anchor=n===1?'middle':i===0?'start':i===n-1?'end':'middle';
     const start=x-(anchor==='start'?0:anchor==='end'?size:size/2),end=start+size;
@@ -96,6 +116,7 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
     } else {
       const band=(horizontal?ph:pw)/n*.7, thickness=band/(stacked?1:count), offset=stacked?0:barIndex*thickness;
       for(let i=0;i<n;i++) {
+        if(ranges[si][i]===null)continue;
         const [a,b]=ranges[si][i], p=pos(a), q=pos(b), at=cat(i)-band/2+offset;
         const signColors=spec.colorBySign===true||spec.colorBySign===undefined&&['bar','horizontal','lollipop'].includes(kind)&&/正绿负红/u.test(spec.subtitle??'');
         const fill=signColors?`var(--sherlock-${b>0?'market-positive':b<0?'market-negative':'muted'})`:color(si);
@@ -140,8 +161,13 @@ export function cartesianChartRuntime(spec, geometry) {
     if(button?.hasAttribute('aria-label'))button.setAttribute('aria-label','按'+label+'排序');
   });
   const describe=()=>{
-    const total=spec.series.reduce((sum,s,i)=>sum+(visible[i]?s.values[selected]:0),0);
-    const parts=spec.series.flatMap((s,i)=>visible[i]?[seriesName(s.name)+' '+s.values[selected]+(spec.unit?' '+spec.unit:'')+(spec.variant==='percentBar'?' ('+(total?s.values[selected]/total*100:0).toFixed(1)+'%)':'')]:[]);
+    const total=spec.variant==='percentBar'?spec.series.reduce((sum,s,i)=>sum+(visible[i]?s.values[selected]:0),0):0;
+    const parts=spec.series.flatMap((s,i)=>{
+      if(!visible[i])return [];
+      const raw=s.values[selected],value=raw===null?'—':raw+(spec.unit?' '+spec.unit:'');
+      const percent=spec.variant==='percentBar'?' ('+(total?raw/total*100:0).toFixed(1)+'%)':'';
+      return [seriesName(s.name)+' '+value+percent];
+    });
     readout.textContent=spec.labels[selected]+' · '+parts.join(' · ');
     svg.setAttribute('aria-label',readout.textContent+'；左右方向键查看相邻数据');
     if(size){const p=size.categoryStart+(selected+.5)*size.categorySize,cursor=svg.querySelector('.chart-cursor');for(const key of size.horizontal?['y1','y2']:['x1','x2'])cursor.setAttribute(key,String(p));}
@@ -284,7 +310,7 @@ export function cartesianChartReadingRuntime(spec, geometry, presentation) {
   readoutContent.className='chart-readout-content';
   readout.replaceChildren(readoutContent);
   const describe=()=>{
-    const total=spec.series.reduce((sum,s,i)=>sum+(visible[i]?s.values[selected]:0),0);
+    const total=spec.variant==='percentBar'?spec.series.reduce((sum,s,i)=>sum+(visible[i]?s.values[selected]:0),0):0;
     const category=document.createElement('span');
     category.className='chart-readout-category';category.textContent=spec.labels[selected];
     const fields=[category];
@@ -292,9 +318,9 @@ export function cartesianChartReadingRuntime(spec, geometry, presentation) {
       if(!visible[i])continue;
       const field=document.createElement('span'),value=document.createElement('strong');
       const raw=series.values[selected];
-      field.className='chart-readout-series';value.textContent=String(raw);
+      field.className='chart-readout-series';value.textContent=raw===null?'—':String(raw);
       const percent=spec.variant==='percentBar'?' ('+(total?raw/total*100:0).toFixed(1)+'%)':'';
-      field.append(' · '+seriesNames[i]+' ',value,(unit?' '+unit:'')+percent);
+      field.append(' · '+seriesNames[i]+' ',value,(unit&&raw!==null?' '+unit:'')+percent);
       fields.push(field);
     }
     readoutContent.replaceChildren(...fields);
@@ -428,7 +454,7 @@ export function cartesianChartAxisPrecision(base) {
       const table=document.querySelector('details table tbody');
       if(table&&!table.children.length)for(let i=0;i<spec.labels.length;i++) {
         const row=document.createElement('tr');
-        for(const value of [spec.labels[i],...spec.series.map(series=>series.values[i])]){const cell=document.createElement('td');cell.textContent=String(value).replace(/\r\n?/g,'\n').replace(/\0/g,'\ufffd');row.append(cell);}
+        for(const value of [spec.labels[i],...spec.series.map(series=>series.values[i])]){const cell=document.createElement('td');cell.textContent=String(value??'—').replace(/\r\n?/g,'\n').replace(/\0/g,'\ufffd');row.append(cell);}
         table.append(row);
       }
       const highlight=()=>{

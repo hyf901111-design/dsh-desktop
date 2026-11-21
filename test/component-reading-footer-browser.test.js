@@ -321,3 +321,24 @@ it('packs twelve financial metrics without oversized gaps, clipped dates or deta
   }finally{await page.close();}
  }
 },20000);
+
+it('leaves an unreported channel value blank in grouped bars and distinguishes zero in the readout and table',async()=>{
+ const input={version:1,type:'chart',variant:'groupedBar',title:'渠道实际与目标',asOf:'模拟经营周报 · 2026-11-20',unit:'亿元',labels:['直销','银行','互联网'],series:[{name:'实际',values:[null,0,-.4]},{name:'目标',values:[2.2,1.3,.5]}]}
+ const artifact=JSON.parse(acceptArtifactOutput(JSON.stringify(input)))
+ const page=await browser.newPage({viewport:{width:320,height:380},reducedMotion:'reduce'})
+ try{
+  await page.setContent(buildResearchHtmlPreview(artifact.html,input.title,'light',{workbench:true,notoFont:'runtime'}))
+  const frame=page.frameLocator('iframe'),svg=frame.locator('.template-chart')
+  await svg.waitFor()
+  await page.evaluate(()=>document.querySelector('iframe').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'))
+  await svg.focus();await page.keyboard.press('Home')
+  expect(await frame.locator('.chart-readout').textContent()).toContain('实际 — · 目标 2.2 亿元')
+  expect(await svg.locator('g[data-series="0"] [data-point="0"]').count()).toBe(0)
+  expect(await svg.locator('g[data-series="0"] [data-point="1"]').getAttribute('height')).toBe('0')
+  await page.keyboard.press('ArrowRight')
+  expect(await frame.locator('.chart-readout').textContent()).toContain('实际 0 亿元')
+  await frame.getByRole('tab',{name:'完整数据'}).click()
+  expect(await frame.locator('tbody tr').first().locator('td').allTextContents()).toEqual(['直销','—','2.2'])
+  expect(await frame.locator('tbody tr').nth(1).locator('td').allTextContents()).toEqual(['银行','0','1.3'])
+ }finally{await page.close()}
+},20000)

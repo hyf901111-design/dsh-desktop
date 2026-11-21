@@ -111,3 +111,16 @@ it('recognizes only the exact optional precision program and still rejects modif
  expect(noteChartNavigationAllowed(html.replace('"axisDecimals":2','"axisDecimals":5'),navigation)).toBe(false)
  expect(noteChartNavigationAllowed(html.replace('"axisDecimals":2,',''),navigation)).toBe(false)
 })
+
+it.each([false,true])('retains read-only navigation for the exact saved 1.6.9 chart program (precision %s)',precise=>{
+ const release=readFileSync(resolve('src/preload/notes/cartesian-navigation-1.6.9.js'),'utf8')
+ const functions=release.split('\nexport ').slice(1).map(text=>text.trim())
+ const [geometry,runtime,precision]=functions
+ const model={version:1,type:'chart',variant:'line',title:'债基净值',unit:'元',labels:['A','B'],series:[{name:'净值',values:[1.001,1.002]}],...(precise?{axisDecimals:3}:{})}
+ const geometryProgram=precise?'('+precision+')('+geometry+')':geometry
+ const program='('+runtime+')('+JSON.stringify(model)+','+geometryProgram+');'
+ const html='<figure><svg class="template-chart"></svg></figure><script>'+program+'</script>'
+ const route=routedClick(html,'svg')
+ expect(noteChartNavigationAllowed(html,route)).toBe(true)
+ expect(noteChartNavigationAllowed(html.replace('const fmt =','const unused = 1; const fmt ='),route)).toBe(false)
+})

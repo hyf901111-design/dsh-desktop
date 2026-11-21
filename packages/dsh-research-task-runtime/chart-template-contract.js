@@ -142,7 +142,7 @@ export function chartTemplateSchema(variant) {
   if(SPECIAL_CHART_VARIANTS.includes(variant))return specialChartSchema(variant);
   return JSON.stringify({version:1,type:'chart',title:'标题',variant:variant ?? CARTESIAN_CHART_TEMPLATES.map(t=>t.variant).join('|'),
     labels:['标签1','标签2'],series:[{name:'系列',values:[12,18]}],unit:'相同数值单位',asOf:'来源及数据时点'}) +
-    '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长、只用有限数值，不能用0替代缺失数据。asOf、subtitle、unit 各最多256字，完整来源和计算说明放 note（最多2000字），不要把长篇解读写进 asOf。' +
+    '；labels 为1–366项，series 为1–12项，总数据点不超过600；values 与 labels 等长且为有限数值。仅 groupedBar 允许用 null 表示某分类未提供的数值，整图至少有一个实测值；缺失不补0。asOf、subtitle、unit 各最多256字，完整来源和计算说明放 note（最多2000字），不要把长篇解读写进 asOf。' +
     'percentBar 仅非负原值，由宿主计算各分类百分比；unit 必须是原值单位（如百万元、件），不能把金额原值标为 %，不要在 unit 中填写说明文字；dumbbell 恰好两组配对值；combo 每组可指定 kind:"bar"或"line"，默认第一组柱、其余折线。同轴仅放同单位序列。bar/horizontal/lollipop 可设 colorBySign:true 按金融正负值配色（正绿负红，零中性）；其他图保持系列配色。可选 subtitle、note，原始单位和来源保留。'+
     '可选 detailColumns:["分类","代码","规模（亿元）"] 与 detailRows:[["标签1","代码1",120],["标签2","代码2",null]] 同时提供；2–20列、最多4000格，行数和顺序与 labels 一致，每行首格必须等于对应标签，余格为文字、有限数值、布尔或 null。补充字段随完整数据表按需展开，宿主自动加入绘图数值列，无需重复提供。'+(variant?'':'；其他已实现图表：'+specialChartSchema()+'；'+advancedChartSchema());
 }
@@ -179,9 +179,10 @@ export function chartDataIssue(spec) {
   for (const [i, s] of spec.series.entries()) {
     if (!s || !string(s.name,128) || Object.keys(s).some(k => !['name','values','kind'].includes(k)) ||
       !Array.isArray(s.values) || s.values.length !== spec.labels.length ||
-      !s.values.every(v => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= 1e12)) return `series[${i}] 的数值必须与 labels 等长且有限`;
+      !s.values.every(v => (v === null && spec.variant === 'groupedBar') || (Number.isFinite(v) && Math.abs(v) <= 1e12))) return `series[${i}] 的数值必须与 labels 等长且有限`;
     if (s.kind !== undefined && (spec.variant !== 'combo' || !['bar','line'].includes(s.kind))) return `series[${i}].kind 仅用于柱线组合图`;
   }
+  if (spec.variant === 'groupedBar' && !spec.series.some(s => s.values.some(Number.isFinite))) return '分组柱图至少需要一个已提供的有限数值';
   if (spec.variant === 'dumbbell' && spec.series.length !== 2) return '哑铃图必须恰好有两组配对数据';
   if (spec.variant === 'percentBar' && spec.series.some(s => s.values.some(v => v < 0))) return '百分比堆叠柱图不接受负值';
   if (spec.variant === 'percentBar' && /[%％]|百分比/u.test(spec.unit ?? '') &&

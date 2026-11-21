@@ -12,7 +12,7 @@ import {FINANCIAL_PERFORMANCE_RUNTIME} from './financial-series.js';
 import {priceVolumeRuntime} from './market-price-volume.js';
 import {valuationBandRuntime} from './market-valuation-band.js';
 import {equityDrawdownRuntime} from './market-equity-drawdown.js';
-import {trendRuntime} from './market-trend-runtime.js';
+import {trendRuntime,trendAxisLabels} from './market-trend-runtime.js';
 import {refineTrendPresentation} from './market-trend-presentation.js';
 import {marketSeriesViewport,observeMarketSeries} from './market-series-viewport.js';
 import {FEED_CONTEXT_CSS as FEED_CONTEXT_STYLE} from './feed-context.js';
@@ -27,7 +27,7 @@ export const CARTESIAN_GEOMETRY=cartesianChartSvg.toString();
 export const CARTESIAN_AXIS_PRECISION=cartesianChartAxisPrecision.toString();
 export const CARTESIAN_PRESENTATION=cartesianChartPresentation.toString();
 
-export const MARKET_SERIES_RUNTIME={'price-volume':priceVolumeRuntime.toString(),trend:trendRuntime.toString(),'valuation-band':valuationBandRuntime.toString(),'equity-drawdown':equityDrawdownRuntime.toString()};
+export const MARKET_SERIES_RUNTIME={'price-volume':priceVolumeRuntime.toString(),trend:trendRuntime.toString(),trendAxisLabels:trendAxisLabels.toString(),'valuation-band':valuationBandRuntime.toString(),'equity-drawdown':equityDrawdownRuntime.toString()};
 export const MARKET_SERIES_VIEWPORT_RUNTIME=marketSeriesViewport.toString();
 export const MARKET_SERIES_OBSERVE_RUNTIME=observeMarketSeries.toString();
 
@@ -74,7 +74,10 @@ export function refineStoredTemplateHtml(html){
  const cartesianBody=html.match(/<body data-research-kind="chart" data-chart-template="(line|bar|horizontal|step|dumbbell|lollipop|stackedArea|stackedBar|percentBar|area|combo|groupedBar)"[^>]*>/);
  if(cartesianBody&&model.version==='22a-20260930'&&model.templateId==='chart.'+cartesianBody[1]&&model.data.type==='chart'&&model.data.version===1&&model.data.variant===cartesianBody[1]){
   const {labels,series}=model.data;
-  if(!Array.isArray(labels)||!labels.length||labels.length>366||labels.some(v=>typeof v!=='string'||!v.trim()||v.length>128)||!Array.isArray(series)||!series.length||series.length>12||labels.length*series.length>600||series.some(s=>typeof s?.name!=='string'||!s.name.trim()||s.name.length>128||!Array.isArray(s.values)||s.values.length!==labels.length||s.values.some(v=>typeof v!=='number'||!Number.isFinite(v)||Math.abs(v)>1e12)))return html;
+  const grouped=model.data.variant==='groupedBar';
+  const validPoint=value=>Number.isFinite(value)&&Math.abs(value)<=1e12||grouped&&value===null;
+  if(!Array.isArray(labels)||!labels.length||labels.length>366||labels.some(v=>typeof v!=='string'||!v.trim()||v.length>128)||!Array.isArray(series)||!series.length||series.length>12||labels.length*series.length>600||series.some(s=>typeof s?.name!=='string'||!s.name.trim()||s.name.length>128||!Array.isArray(s.values)||s.values.length!==labels.length||!s.values.every(validPoint)))return html;
+  if(grouped&&!series.some(s=>s.values.some(Number.isFinite)))return html;
   const script=/<script>\(function cartesianChart(?:Reading)?Runtime\(spec, geometry(?:, presentation)?\)[^]*?<\/script>/;
   if(!script.test(html)||!html.includes('class="template-chart"'))return html;
   const data=JSON.stringify(model.data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
@@ -106,7 +109,8 @@ export function refineStoredTemplateHtml(html){
    if(!values(data.equity)||!values(data.benchmark)||[...data.equity,...data.benchmark].some(x=>x<=0)||!unit(data.unit))return html;
    args=[labels,data.equity,data.benchmark,data.unit];
   }
-  const script=`(${MARKET_SERIES_RUNTIME[seriesVariant]})(${args.map(x=>JSON.stringify(x).replace(/</g,'\\u003c')).join(',')},${MARKET_SERIES_VIEWPORT_RUNTIME},${MARKET_SERIES_OBSERVE_RUNTIME});`;
+  const trendFormatter=seriesVariant==='trend'?','+MARKET_SERIES_RUNTIME.trendAxisLabels:'';
+  const script=`(${MARKET_SERIES_RUNTIME[seriesVariant]})(${args.map(x=>JSON.stringify(x).replace(/</g,'\\u003c')).join(',')},${MARKET_SERIES_VIEWPORT_RUNTIME},${MARKET_SERIES_OBSERVE_RUNTIME}${trendFormatter});`;
   if(!script)return html;
   return html.replace(oldScript,()=>`<script>${script}</script>`).replace(/<svg\b([^>]*)>/,(match,attrs)=>'<svg'+attrs.replace(/\s*preserveAspectRatio="[^"]*"/,'').replace(/\s*data-series-viewport="[^"]*"/,'')+' preserveAspectRatio="xMidYMid meet" data-series-viewport="v2">');
  }

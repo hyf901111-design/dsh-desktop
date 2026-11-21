@@ -17,3 +17,14 @@ it.each([1,2,3,5,60,63,100,366])('keeps endpoint labels inside the plot with sep
  // Resizing only changes visibility/position; passive routes remain stable.
  expect(ticks(cartesianChartSvg(spec,320)).map(el=>el.children)).toEqual(ticks(cartesianChartSvg(spec,880)).map(el=>el.children));
 });
+
+it.each(['horizontal','lollipop','dumbbell'])('fits long Chinese organization names in the %s chart gutter while retaining their distinguishing suffixes',variant=>{
+ const labels=['华东分公司机构直销客户一部','华东分公司机构直销客户二部','华南分公司银行渠道客户部']
+ const spec={version:1,type:'chart',variant,title:'渠道净申购排名',labels,series:[{name:'本期',values:[2.6,1.2,-.7]},{name:'上期',values:[1.8,.7,-.5]}]}
+ for(const width of [280,320,656]){
+  const parts=ticks(cartesianChartSvg(spec,width))
+  expect(parts.map(el=>el.children[0].children[0])).toEqual(labels)
+  expect(new Set(parts.map(el=>el.children.at(-1))).size).toBe(labels.length)
+  for(const el of parts)expect(el.attributes.x-Array.from(el.children.at(-1)).length*11).toBeGreaterThanOrEqual(0)
+ }
+})

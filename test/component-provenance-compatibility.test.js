@@ -40,3 +40,17 @@ it('accepts arbitrary nonempty bounded event ids safely and still rejects duplic
  expect(readTemplateModel(output).data.items[0].id).toBe(input.items[0].id)
  expect(timelineDataIssue({...input,items:[input.items[0],input.items[0]]})).toBeTruthy()
 })
+
+it('retains a named internal source without a URL and never treats an empty URL as a source by itself',()=>{
+ const source={label:'内部估值表',url:''}
+ const output=JSON.parse(acceptArtifactOutput(JSON.stringify({...timeline,source})))
+ expect(readTemplateModel(output).data.source).toEqual(source)
+ expect(output.html).toContain('<p>内部估值表</p>')
+ expect(acceptArtifactOutput(JSON.stringify({...timeline,source:{url:''}}))).toBeUndefined()
+})
+
+it('treats an explicitly empty optional source list as having no citation',()=>{
+ const output=JSON.parse(acceptArtifactOutput(JSON.stringify({...timeline,sources:[]})))
+ expect(readTemplateModel(output).data.sources).toEqual([])
+ expect(output.html).not.toContain('data-component-source-info')
+})
