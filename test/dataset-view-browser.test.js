@@ -315,3 +315,33 @@ it('filters the original six disclosure columns and keeps keyboard selection aft
   await expect.poll(()=>row.getAttribute('aria-selected')).toBe('true')
  }finally{await c.close()}
 })
+
+it('keeps the E Fund disclosure headers and their sort indicators white in every sort state', async () => {
+ const {frame,close} = await open(audit.view,{dataset:audit.dataset,width:860,mode:'enterprise'})
+ try {
+  const column = frame.getByRole('columnheader').filter({has:frame.getByRole('button',{name:'按股票代码排序',exact:true})})
+  const sort = column.getByRole('button')
+  const ink = () => sort.evaluate(button => ({
+   label:getComputedStyle(button).color,
+   arrow:getComputedStyle(button,'::after').color,
+   arrowOpacity:getComputedStyle(button,'::after').opacity
+  }))
+  const white = {label:'rgb(255, 255, 255)',arrow:'rgb(255, 255, 255)',arrowOpacity:'1'}
+  await expect.poll(ink).toEqual(white)
+  const whiteContrast = await column.evaluate(cell => {
+   const channels = getComputedStyle(cell).backgroundColor.match(/\d+/g).slice(0,3)
+   const linear = channels.map(n => Number(n)/255).map(n => n<=0.04045 ? n/12.92 : ((n+0.055)/1.055)**2.4)
+   return 1.05/(0.05+0.2126*linear[0]+0.7152*linear[1]+0.0722*linear[2])
+  })
+  expect(whiteContrast).toBeGreaterThanOrEqual(4.5)
+  await sort.hover()
+  expect(await ink()).toEqual(white)
+  for(const direction of ['ascending','descending']){
+   await sort.click()
+   await expect.poll(()=>column.getAttribute('aria-sort')).toBe(direction)
+   expect(await ink()).toEqual(white)
+  }
+  await frame.locator('html').evaluate(el=>el.dataset.workbenchStyle='light')
+  await expect.poll(async()=>(await ink()).label).not.toBe(white.label)
+ } finally { await close() }
+})
