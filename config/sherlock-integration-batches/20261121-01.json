@@ -1515,17 +1515,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复材料约束使真实看板需求丢失早期模型开场",
+        "featureName": "用当前用户的目标与数据生成首段模型回复",
         "branch": "codex/feat/ark-opening-thinking-20261121",
-        "baseCommit": "b4bff597c3c7daa3eadc92c82e1a236960831dee",
-        "tipCommit": "e6a8775c245c07bb73f1a5e1892c10690029bfdb",
+        "baseCommit": "e6a8775c245c07bb73f1a5e1892c10690029bfdb",
+        "tipCommit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
         "commits": [
           {
-            "commit": "e6a8775c245c07bb73f1a5e1892c10690029bfdb",
+            "commit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
             "parents": [
-              "b4bff597c3c7daa3eadc92c82e1a236960831dee"
+              "e6a8775c245c07bb73f1a5e1892c10690029bfdb"
             ],
-            "subject": "为限定原表分析范围的看板创建请求启用模型首段"
+            "subject": "让模型依据当轮事实或交付取舍自然开场"
           }
         ],
         "files": [
@@ -1535,7 +1535,7 @@
           },
           {
             "status": "M",
-            "path": "test/conversation-first-response-effort.test.js"
+            "path": "test/model-task-opening-context.test.js"
           }
         ],
         "checks": [
@@ -1546,28 +1546,29 @@
               "run",
               "test/conversation-first-response-effort.test.js",
               "test/model-task-opening-context.test.js",
+              "test/task-opening-sdk-recovery.test.js",
               "--maxWorkers=1",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "带完整季报与限定范围的原文及只求结果、只讨论等负例。",
-            "verifiedCommit": "e6a8775c245c07bb73f1a5e1892c10690029bfdb",
-            "completedAt": "2026-11-21T12:00:05.429279+00:00",
+            "summary": "同一模型在短上下文中用数据事实与工作目标自由回答，保持流式开场、断流修复和工具执行门禁。",
+            "verifiedCommit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
+            "completedAt": "2026-11-21T12:13:36.401227+00:00",
             "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "在原生右侧输入复现，签名构建后重跑相同原文。"
+          "summary": "首轮右栏实测多次出现重复的先核对套话，签名客户端将从原文验证。"
         },
         "acceptanceCriteria": [
-          "长任务首句由所选模型先回应实际需求",
-          "只要求结果的输入不插入额外开场"
+          "允许有数据的任务直接说出一个可靠事实、或贴合用户目标的具体判断",
+          "不声称执行过尚未发生的动作，继续执行真实工具"
         ],
         "risks": [
-          "线上模型响应时间受服务延迟影响。"
+          "模型自由措辞与托管服务响应时间随运行而变。"
         ],
-        "generatedAt": "2026-11-21T12:00:05.429279+00:00"
+        "generatedAt": "2026-11-21T12:13:36.401227+00:00"
       }
     },
     {
