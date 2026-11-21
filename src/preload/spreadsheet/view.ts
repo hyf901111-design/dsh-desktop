@@ -16,6 +16,7 @@ import type {HomeGuidePointerAction} from '../home-guide-pointer'
 import { markWorkspaceProjectEdited } from '../workspace-project-lock'
 import { setWorkspaceSidebars, type WorkspaceSidebars } from '../workspace-sidebars'
 import css from './view.css?raw'
+import workspaceEmptyCss from '../../shared/workspace-empty.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
 type Selection={sheetId:string;range:string}
@@ -111,7 +112,7 @@ class SpreadsheetView{
   this.doc=host.ownerDocument;this.win=this.doc.defaultView!
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
   for(const [key,value] of enterpriseChartColors)this.root.style.setProperty('--sheet-efund-'+key,value)
-  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden><div class="ew-sheet-component-tabbar" hidden><div class="ew-sheet-component-tabs" role="tablist" aria-label="侧栏组件"></div>'+button('menu','',{glyph:'more',label:'更多组件页签',value:'component-tabs'})+'</div><div class="ew-sheet-component-panels"></div></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty ew-workspace-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden><div class="ew-sheet-component-tabbar" hidden><div class="ew-sheet-component-tabs" role="tablist" aria-label="侧栏组件"></div>'+button('menu','',{glyph:'more',label:'更多组件页签',value:'component-tabs'})+'</div><div class="ew-sheet-component-panels"></div></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
   this.componentDivider.setAttribute('aria-controls',this.components.id)
   this.modal.id=crypto.randomUUID()
   try{
@@ -391,9 +392,18 @@ class SpreadsheetView{
   this.chrome.hidden=!book;this.grid.hidden=!book;this.foot.hidden=!book;this.empty.hidden=!!book
   if(!book){
    const recent=this.recent.slice(0,6)
+   const disabled=!this.editable||this.busy
    this.empty.innerHTML=!this.ready?
-    '<div class="ew-sheet-empty-inner"><p role="status">'+text(this.notice||'正在打开表格…')+'</p>'+(this.error?button('reload','重试'):'')+'</div>':
-    '<div class="ew-sheet-empty-inner"><div class="ew-sheet-empty-icon">'+icon('grid',36)+'</div><h1>把分析，放进表格。</h1><p>从 Excel 继续工作，或让 AI 帮你搭起第一张分析表。</p><div class="ew-sheet-empty-actions">'+button('new','新建空白工作簿',{glyph:'plus',className:'primary',withLabel:true,disabled:!this.editable||this.busy})+button('import','导入 Excel / CSV',{glyph:'upload',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>'+(this.record.canRedoAI?'<div class="ew-sheet-empty-actions">'+button('redo-ai','重新应用 AI 修改',{glyph:'redo',className:'outlined',withLabel:true,disabled:!this.editable||this.busy})+'</div>':'')+(recent.length?'<div class="ew-sheet-recent"><div>最近在此会话中使用</div>'+recent.map(b=>'<button data-action="activate" data-value="'+text(b.id)+'"'+(!this.editable||this.busy?' disabled':'')+'>'+icon('grid')+'<span><strong data-ui-preserve>'+text(b.name)+'</strong><small>'+b.sheetCount+' 个工作表</small></span>'+icon('link',14)+'</button>').join('')+'</div>':'')+'<p class="ew-sheet-empty-notice" role="status" data-error="'+this.error+'">'+text(this.notice)+'</p></div>'
+    '<div class="ew-workspace-empty-hero"><p role="status">'+text(this.notice||'正在打开表格…')+'</p>'+(this.error?button('reload','重试'):'')+'</div>':
+    '<div class="ew-workspace-empty-hero"><div class="ew-sheet-empty-icon ew-workspace-empty-icon">'+icon('grid',32)+'</div>'+
+    '<h1>把分析，放进表格。</h1><p>从 Excel 继续工作，或让 AI 帮你搭起第一张分析表。</p>'+
+    '<div class="ew-sheet-empty-actions ew-workspace-empty-actions">'+
+    button('new','新建空白工作簿',{glyph:'plus',className:'primary',withLabel:true,disabled})+
+    button('import','导入 Excel / CSV',{glyph:'upload',className:'outlined',withLabel:true,disabled})+
+    '</div></div><div class="ew-sheet-empty-extra">'+
+    (this.record.canRedoAI?'<div class="ew-sheet-empty-actions">'+button('redo-ai','重新应用 AI 修改',{glyph:'redo',className:'outlined',withLabel:true,disabled})+'</div>':'')+
+    (recent.length?'<div class="ew-sheet-recent"><div>最近在此会话中使用</div>'+recent.map(b=>'<button data-action="activate" data-value="'+text(b.id)+'"'+(disabled?' disabled':'')+'>'+icon('grid')+'<span><strong data-ui-preserve>'+text(b.name)+'</strong><small>'+b.sheetCount+' 个工作表</small></span>'+icon('link',14)+'</button>').join('')+'</div>':'')+
+    '<p class="ew-sheet-empty-notice" role="status" data-error="'+this.error+'">'+text(this.notice)+'</p></div>'
    return
   }
   const current=this.current()
@@ -2385,7 +2395,7 @@ class SpreadsheetView{
 
 export function mountSpreadsheet(doc:Document,bridge:Bridge){
  let view:SpreadsheetView|undefined,anchor:HTMLElement|undefined,queued=false,disposed=false
- const style=doc.createElement('style');style.id='ework-spreadsheet-style';style.textContent=css;doc.head.append(style)
+ const style=doc.createElement('style');style.id='ework-spreadsheet-style';style.textContent=css+workspaceEmptyCss;doc.head.append(style)
  const scan=()=>{
   queued=false;if(disposed)return
   const next=!doc.body.dataset.workspaceSurface?doc.querySelector<HTMLElement>('[data-odyssey-page=spreadsheet] [data-ework-spreadsheet-view]')??undefined:undefined

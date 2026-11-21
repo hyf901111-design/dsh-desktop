@@ -86,13 +86,11 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome,.presentation-header-me
 .ew-sheet-status .ew-sheet-button{height:21px;min-width:23px;padding:0 4px}
 .ew-sheet-status .ew-sheet-button svg{width:11px}
 .ew-sheet-selection-count{margin-right:8px}
-.ew-sheet-empty{display:grid;flex:1;place-items:center;padding:28px;min-height:0;overflow:auto}
-.ew-sheet-empty-inner{width:min(100%,490px);text-align:center;transform:translateY(-12px)}
-.ew-sheet-empty-icon{margin-bottom:18px;color:var(--ss-icon)}
-.ew-sheet-empty h1{margin:0 0 15px;font-size:27px;line-height:1.35;font-weight:600}
-.ew-sheet-empty p{margin:0;color:var(--ss-muted);font-size:13px}
-.ew-sheet-empty-actions{margin-top:20px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
-.ew-sheet .ew-sheet-empty-actions .ew-sheet-button{height:34px;padding:0 12px;line-height:16px;gap:7px}
+.ew-sheet-empty{flex:1}
+.ew-sheet-empty-icon{color:var(--ss-icon)}
+.ew-sheet-empty p{color:var(--ss-muted)}
+.ew-sheet-empty-extra{grid-row:3;width:min(490px,calc(100% - 32px))}
+.ew-sheet-empty-extra .ew-sheet-empty-actions{margin-top:16px;display:flex;justify-content:center}
 .ew-sheet-empty-actions .ew-sheet-button svg{width:16px;height:16px}
 .ew-sheet-empty-actions .ew-sheet-button span{display:block;line-height:16px}
 .ew-sheet-recent{margin:35px 0 0;text-align:left;color:var(--ss-muted);font-size:11px}
@@ -101,7 +99,8 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome,.presentation-header-me
 .ew-sheet-recent button span{display:flex;flex:1;flex-direction:column;color:var(--ss-text);min-width:0}
 .ew-sheet-recent strong{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:500}
 .ew-sheet-recent small{color:var(--ss-muted)}
-.ew-sheet .ew-sheet-empty-notice{min-height:20px;margin-top:12px}
+.ew-sheet .ew-sheet-empty-notice{margin:12px 0}
+.ew-sheet .ew-sheet-empty-notice:empty{display:none}
 .ew-sheet-menu{position:absolute;z-index:15;width:max-content;min-width:min(154px,calc(100% - 20px));max-width:calc(100% - 20px);max-height:calc(100% - 16px);overflow:auto;padding:6px;box-sizing:border-box;background:var(--odyssey-menu,var(--ss-menu));border:1px solid var(--odyssey-menu-border,var(--ss-border));border-radius:10px;box-shadow:var(--odyssey-menu-shadow,0 8px 24px #0003);backdrop-filter:var(--odyssey-menu-blur,none)}
 .ew-sheet-menu:is([data-menu=book],[data-menu=export]){min-width:min(204px,calc(100% - 20px))}
 .ew-sheet-menu:is([data-menu=commands],[data-menu=edit],[data-menu=insert],[data-menu=format],[data-menu=data],[data-menu=formulas],[data-menu=view]){min-width:min(176px,calc(100% - 20px))}

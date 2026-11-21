@@ -193,6 +193,7 @@ edit('src/main.ts', [
   ["import App from './App.vue'", "import App from './App.vue'\nimport ArchiveSurface from './ArchiveSurface.vue'"],
   ['const app = createApp(App)', "const app = createApp(location.search === '?archive' ? ArchiveSurface : App)"],
   ["import '@/assets/styles/font.scss'", "import './odyssey.css'"]])
+cpSync(join(project, 'src/shared/workspace-empty.css'), join(work, 'src/workspace-empty.css'))
 cpSync(join(project, 'src/shared/presentation-slide-title.ts'), join(work, 'src/presentation-slide-title.ts'))
 cpSync(join(source, 'overlay'), join(work, 'src'), { recursive: true })
 const appIcon = 'build/brand/odyssey-app-presentation.svg'

@@ -1,3 +1,5 @@
+@import './workspace-empty.css';
+
 @font-face {
   font-family: '华文黑体_易方达';
   src: local('华文黑体_易方达'), url('/STHeiti_YFD.ttf') format('truetype');
@@ -85,43 +87,18 @@ body:not([data-ds-dark-theme]) :is(.ribbon, .doc-line, .pages > header, footer, 
   filter: brightness(0.4);
 }
 .empty {
-  display: grid;
-  place-items: center;
   height: 100%;
-  position: relative;
-  text-align: center;
 }
-.empty-content {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  padding: 28px;
-}
-.empty-content > .presentation-app-icon {
+.empty .presentation-app-icon {
   background-color: var(--muted);
   mask: url('./presentation-app.svg') center / contain no-repeat;
-  width: 28px;
-  height: 28px;
-  margin: 0 0 8px;
-}
-.empty h1 {
-  font-size: 24px;
-  margin: 0;
-  font-weight: 600;
 }
 .empty p {
   color: var(--muted);
-  margin: 0;
-}
-.empty-content > div {
-  display: flex;
-  gap: 10px;
-  margin-top: 6px;
 }
 .empty button.primary,
 .empty button.outline {
   border-radius: 6px;
-  padding: 7px 12px;
 }
 .empty button.primary {
   background: var(--ink);
@@ -263,6 +240,16 @@ footer button:hover,
   padding: 0 7px 10px;
   background: var(--bg);
   border-right: 1px solid var(--line);
+}
+/* The editor runs in an iframe, outside the native client's scrollbar styles. */
+body[data-ds-dark-theme] .pages::-webkit-scrollbar-thumb {
+  background-color: var(--ework-scroll-thumb, #333333);
+}
+body[data-ds-dark-theme] .pages::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ework-scroll-hover, #444444);
+}
+body[data-ds-dark-theme] .pages::-webkit-scrollbar-thumb:active {
+  background-color: var(--ework-scroll-active, #555555);
 }
 .pages header {
   height: 40px;

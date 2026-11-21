@@ -9,7 +9,7 @@
   >
     <input ref="fileInput" type="file" accept=".pptx" hidden @change="importFile" />
     <input ref="imageInput" type="file" accept="image/*" hidden @change="insertImage" />
-    <div v-if="!docId" class="empty">
+    <div v-if="!docId" class="empty ew-workspace-empty">
       <button v-if="recent.length" class="recent" :disabled="!editable" @click="toggle('recent')">
         最近使用
         <Glyph name="down" />
@@ -17,11 +17,11 @@
       <div v-if="menu === 'recent'" class="menu recent-menu">
         <button v-for="d in recent" :key="d.id" @click="open(d.id)">{{ d.title }}</button>
       </div>
-      <div class="empty-content">
-        <span class="presentation-app-icon" aria-hidden="true"></span>
+      <div class="ew-workspace-empty-hero">
+        <span class="presentation-app-icon ew-workspace-empty-icon" aria-hidden="true"></span>
         <h1>开始制作演示文稿</h1>
         <p>导入已有 PowerPoint，或在右侧对话里描述你要制作的演示文稿。</p>
-        <div>
+        <div class="ew-workspace-empty-actions">
           <button class="primary" :disabled="!ready || !editable" @click="create">
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
               <path d="M12 5v14M5 12h14" />
