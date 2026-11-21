@@ -171,7 +171,10 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
   if(turn){
    const claimed=request.messages?.findLast(message=>message.role==='user'&&message.source?.kind==='user')
    if(claimed&&claimed.id!==turn.messageId)throw Error('当前输入已变化，等待本轮消息后继续。')
-   return routeModeTools(request,turn)
+   request=routeModeTools(request,turn)
+   if(request.tools?.some(tool=>tool.name==='research_workbench_create')&&denial(session))
+    return {...request,tools:request.tools.filter(tool=>tool.name!=='research_workbench_create')}
+   return request
   }
   if(readWorkspaceReference&&request.tools?.some(tool=>tool.name==='client_capabilities')){
    const reference=await readWorkspaceReference(agent,signal)
