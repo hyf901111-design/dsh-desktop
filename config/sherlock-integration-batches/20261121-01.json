@@ -4424,23 +4424,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复关闭图像页签后的宽度恢复",
+        "featureName": "修复图像页签挂载时错过宽度监听及关闭后残留宽度",
         "branch": "codex/feat/image-responsive-tabs-20261122",
-        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
-        "tipCommit": "8c1a8db5a1ac24c006420a22dc5cbdebc5144167",
+        "baseCommit": "8c1a8db5a1ac24c006420a22dc5cbdebc5144167",
+        "tipCommit": "0d32f845fb5b94666a7d27b3e6c3cc960489c4aa",
         "commits": [
           {
-            "commit": "8c1a8db5a1ac24c006420a22dc5cbdebc5144167",
+            "commit": "0d32f845fb5b94666a7d27b3e6c3cc960489c4aa",
             "parents": [
-              "216fb30180c5941ccf8f1be873948762e933ea40"
+              "8c1a8db5a1ac24c006420a22dc5cbdebc5144167"
             ],
-            "subject": "在窗口或面板宽度变化时恢复图像页签自适应"
+            "subject": "修复图像页签关闭后持续锁定窄宽度"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "src/preload/image-factory/task-tabs.tsx"
+          },
+          {
+            "status": "A",
+            "path": "test/image-task-tab-layout-browser.test.js"
           }
         ],
         "checks": [
@@ -4449,29 +4453,31 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/image-task-tab-layout-browser.test.js",
               "test/image-factory-native.test.js",
               "test/image-factory.test.js",
               "--maxWorkers=1",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "图像任务和页签布局聚焦验证通过。",
-            "verifiedCommit": "8c1a8db5a1ac24c006420a22dc5cbdebc5144167",
-            "completedAt": "2026-11-21T16:18:15.406314+00:00",
+            "summary": "真实 Chromium 关闭动画、窗口变宽、持续悬停、退出和卸载均可解除行内尺寸，63项聚焦检查。",
+            "verifiedCommit": "0d32f845fb5b94666a7d27b3e6c3cc960489c4aa",
+            "completedAt": "2026-11-21T16:52:53.330189+00:00",
             "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "not-applicable",
-          "summary": "原签名客户端确认关页签后五张卡锁在32–45px。新包集成后复验。"
+          "summary": "签名包实测旧修复会在可用宽度761像素时将5个页签锁在86.9像素；交付包按同一组系统窗口尺寸复验。"
         },
         "acceptanceCriteria": [
-          "窗口或面板改变可用宽度时页签恢复布局"
+          "真实窗口宽度改变时重新分配页签宽度",
+          "鼠标持续悬停或移出及切换图像页均可恢复自然尺寸"
         ],
         "risks": [
-          "宽度极窄时页签仍应保留图标。"
+          "关闭后短暂保留点击位置，随后自动恢复布局。"
         ],
-        "generatedAt": "2026-11-21T16:18:15.406314+00:00"
+        "generatedAt": "2026-11-21T16:52:53.330189+00:00"
       }
     },
     {
