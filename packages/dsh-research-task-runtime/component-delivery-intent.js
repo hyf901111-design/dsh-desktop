@@ -121,11 +121,30 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   // A short imperative can name a new chart without saying “组件”. Strip only
   // the destination board, so “在这张卡片中” continues to address an existing card.
   const boardPrefix = /^(?:(?:请|麻烦|帮我|给我|我想|想|先|再|另外)\s*)*(?:(?:在|往|给)(?:当前|这个|现有|已有)?(?:的)?(?:研究)?(?:看板|工作台|画布)(?:上|里|内|中)?\s*)?(?:再|另外)?/u
-  const shortBoardCard = scope === 'research' && authoredClauses.some(clause => {
+  // A destination and a requested card can surround a business recipient or
+  // a colon introducing the data question. Inspect the request head only.
+  const placementSurface = /(?:研究看板|研究工作台|研究画布)/u
+  const namedBoard = authoredClauses.some(clause => !clause.includes('\t') && !/[“”「」『』"‘’]/u.test(clause) && placementSurface.test(clause))
+  const boardPlacement = (scope === 'research' || namedBoard) &&
+    !authoredClauses.some(clause => /(?:不要|不用|无需|不需要|别|禁止|暂不|先不)(?:再|额外)?(?:创建|新建|新增|生成)(?:任何|新的?)?(?:卡片?|组件|便签|看板)?$/u.test(clause)) &&
+    authoredClauses.some(clause => {
+      if (clause.includes('\t') || /[“”「」『』"‘’]/u.test(clause)) return false
+      const head = clause.split(/[：:]/u, 1)[0].trim()
+      if (/(?:如何|怎么|怎样|假如|假设|如果|讨论|解释|建议|意味着|是否|引用|个人笔记|我的笔记)/u.test(head)) return false
+      const command = head.replace(/^(?:(?:请|麻烦|帮我|先|再)\s*)*给[\p{L}\d ·-]{1,20}?(?=在(?:当前|这个)?(?:研究)?(?:看板|工作台|画布))/u, '').replace(boardPrefix, '')
+      const placed = /^(?:留(?:下)?|放(?:上)?)(?:一[张个份]|[张个份])([\p{L}\d ·%-]{1,36}?)(?:吧|即可)?$/u.exec(command)
+      if (placed && !/(?:[这那][张个]|同一|原来|现成|已有|现有|既有|原有|当前|选中|刚才|之前)/u.test(placed[1]) &&
+          /(?:明细|交接便签|便签|卡片|卡|组件|图表|表格|明细表|折线图|柱[状形]图|条形图|散点图|趋势图|日历)$/u.test(placed[1])) return true
+      // A requested ordering of supplied rows can specify the result inside an
+      // unnamed card. A referenced, selected or existing card retains its owner.
+      if (/(?:已有|现有|既有|原有|当前|选中|刚才|之前|原来|这[张个]|那[张个])[^，：:]{0,20}(?:卡片?|组件)(?:内|里|中|上)$/u.test(command)) return false
+      return /^(?:(?:请|麻烦|帮我|先)\s*)*(?:让|把|将).{1,48}?(?:出现|显示|呈现|展示)在[^这那]{0,24}?(?:组件|卡片)(?:内|里|中|上)$/u.test(command)
+    })
+  const shortBoardCard = boardPlacement || scope === 'research' && authoredClauses.some(clause => {
     if (clause.includes('\t') || /[“”「」『』"‘’]/u.test(clause)) return false
     const action = clause.replace(boardPrefix, '').replace(/(?:吧|即可)$/u, '')
     if (/^画(?:一下|出)?(?:这|那)(?:组|些|几|[一二两三四五六七八九十\d]+个)?(?:数据点|点|读数|数值)(?:的图)?$/u.test(action)) return true
-    const object = /^(?:(?:画|放|加|补|新增|添加|创建|做|生成)(?:一[个张份]|张|个)|绘制|画出)(.+)$/u.exec(action)?.[1]
+    const object = /^(?:(?:画|加|补|新增|添加|创建|做|生成)(?:一[个张份]|张|个)|绘制|画出)(.+)$/u.exec(action)?.[1]
     return object && object.length <= 64 && /(?:明细(?:表|卡)?|折线(?:图|卡)|柱(?:状|形)?图|条形图|散点图|趋势图|图表|表格|指标卡|日历|组件|卡片)$/u.test(object)
   })
   // Inspect only affirmative action clauses. Generation status is a noun,
@@ -134,7 +153,7 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   const boardVisual = /折线卡|柱状卡|行情卡|净值卡|指标卡|数据卡|条形图|柱图|曲线图|饼图|环形图|瀑布图|漏斗图|雷达图|箱线图|桑基图|时间线|热图|独立明细|交互网页|复盘网页|自包含网页/u
   const otherDeliverable = /(?:代码(?:片段|示例)?|脚本|图片|图像|插画|照片|海报|摘要|名称)(?:给我)?(?:吧|即可)?$/u
   const creationQuestion = /(?:生成|创建|绘制|制作)[^，。；;\n]{0,50}(?:需要多久|要多久|多长时间|要几分钟|要多少时间|为什么.{0,6}慢|的成功率(?:是|有)?多少)/u
-  const targets=shortBoardCard ? ['component'] : []
+  const targets=shortBoardCard ? [boardPlacement && namedBoard && scope === 'creation' ? 'workbench' : 'component'] : []
   const text = deliveryClauses(request).filter(clause => {
     // Past creation describes an existing object; it is not a new action.
     const action = normalizeComponentClause(clause).replace(/已(?:经)?(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版]))/gu, '')

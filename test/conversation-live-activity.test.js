@@ -1,6 +1,7 @@
 import {it,expect} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
+import {gunzipSync} from 'node:zlib'
 // Strict installation bytes must use Node's untransformed function source.
 const require=createRequire(import.meta.url)
 const {conversationLiveActivity,patchConversationLiveActivity,stripConversationLiveActivity,workbenchConversationUpdate}=require('../scripts/lib/conversation-live-activity.mjs')
@@ -17,7 +18,7 @@ it('upgrades the exact installed calendar classifier and rejects changes elsewhe
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const current=patchConversationLiveActivity(source)
  const block=current.match(/\/\* ework:conversation-live-activity:v\d+ \*\/[\s\S]*?\/\* ework:conversation-live-activity:end \*\/\n/u)[0]
- const prior=block.replace('|指标卡|日历|组件|卡片)$/u.test(object)','|指标卡|组件|卡片)$/u.test(object)')
+ const prior=gunzipSync(await readFile('test/fixtures/conversation-live-activity-v9-before-calendar.txt.gz')).toString('utf8')
  expect(prior).not.toBe(block)
  expect(patchConversationLiveActivity(current.replace(block,prior))).toBe(current)
  expect(()=>stripConversationLiveActivity(current.replace(block,prior.replace('2.4s linear infinite','1s linear infinite')))).toThrow('definition drifted')

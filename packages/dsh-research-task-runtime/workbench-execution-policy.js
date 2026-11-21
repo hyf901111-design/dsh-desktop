@@ -134,6 +134,7 @@ export function workbenchOfflineRequest(text) {
     !/(?:禁止|不要|不需要|无需|无须|不用|不必|不能|不得|不许|不允许|别)/u.test(clause) &&
     /联网|(?:补充|结合|查询|获取|核对|抓取)[^。；;\n]{0,18}(?:外部(?:数据|来源)|公开(?:市场|行情|数据|资料|来源)|最新(?:净值|行情|公告|报价))/u.test(clause))
   if (supplemental || /(?:到|去|从)(?:官方(?:网站)?|官网|外部)[^。；;，,\n]{0,12}(?:核对|核实|复查|补充|校验)|(?:核对|核实|校验)(?:官方原文|官网原文|链接中的原始数据)/u.test(text)) return false
+  if (/(?:只用|仅用|只使用|仅使用)(?:下列|下表|以下|所附)[^，。；;\t\n]{0,60}(?:定稿|核定|已核对)[^，。；;\t\n]{0,24}(?:记录|数据|原表)/u.test(text) && pastedWorkbenchBlocks(text).length) return true
   if (hasCompletePastedSnapshot(text)) return true
   if (/只用.{0,8}(?:资料|记录)/u.test(text)) return true
   const qualifier = /(?:只用|仅用|只使用|仅使用)(?:(?:这段|这份|所附|下面|下方|以下)(?:的)?(?:已核对的?|已披露的?|附带的?|提供的?)?(?:公开|历史)?(?:原表|表格|数据))/u.exec(text)
