@@ -61,6 +61,7 @@ it('dispatches independent source panels on failure and retries only the unstart
         const exec = {agent:{session:{id:'owner'}}};
         const first = await tool.execute(request,exec);
         expect(first.status).toBe('incomplete');
+        expect(prepare).toHaveBeenCalledTimes(1);
         expect(launch).toHaveBeenCalledTimes(1);
         const before = JSON.parse(await readFile(filePath,'utf8'))[0];
         expect(before.panels[0].error).toContain('重试');

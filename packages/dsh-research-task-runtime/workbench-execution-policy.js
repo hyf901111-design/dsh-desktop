@@ -120,7 +120,8 @@ export function planningDataIntent(text) {
   const source = /真实(?:的)?(?:数据|来源|记录|资料|行情)|实际(?:取得|获取|采集|提供|测得|记录)|\b(?:real|actual|verified|authentic)\s+(?:data|sources?|records?|quotes?)\b/iu.test(text)
   return { simulation, sourceOnly: !simulation && (source || affirmative !== text) }
 }
-export function workbenchOfflineRequest(text = '') {
+export function workbenchOfflineRequest(text) {
+  if (typeof text !== 'string') return false
   if (/(?:禁止|严禁|不要|无需|无须|不用|不必|不能|不得|不许|不允许|别|不)\s*联网|别[^，。；\n]{1,20}或联网/u.test(text)) return true
   // "Use only the fund codes in this table" limits the universe, not the
   // sources for the requested NAVs. An explicit network ban above prevails.
