@@ -3896,6 +3896,76 @@
         ],
         "generatedAt": "2026-11-21T15:08:35.568811+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "逐笔勾稽首段保留小表全部字段",
+        "branch": "codex/feat/ledger-opening-columns-20261121",
+        "baseCommit": "01e481a2532b35af05048a2aa1d75b4e4fee5aec",
+        "tipCommit": "fbb863c5e0c15ed8d2ab7456a8af66e9bade488f",
+        "commits": [
+          {
+            "commit": "bf92fcba05ab513fd342298cff7b72cc411a4c99",
+            "parents": [
+              "01e481a2532b35af05048a2aa1d75b4e4fee5aec"
+            ],
+            "subject": "逐笔核对的小表在首段保留全部实际原列"
+          },
+          {
+            "commit": "fbb863c5e0c15ed8d2ab7456a8af66e9bade488f",
+            "parents": [
+              "bf92fcba05ab513fd342298cff7b72cc411a4c99"
+            ],
+            "subject": "向组件规划器明确披露字段别名与原表头的对应关系"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/model-task-replies.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "test/model-task-opening-context.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/model-task-opening-context.test.js",
+              "test/workbench-planning-phase.test.js",
+              "-t",
+              "keeps identifiers|first ETF holdings submission",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "以上交所季报5行6列完整披露作首轮传输和规划验证。",
+            "verifiedCommit": "fbb863c5e0c15ed8d2ab7456a8af66e9bade488f",
+            "completedAt": "2026-11-21T15:08:46.527226+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "以上交所季报5行6列完整披露作首轮传输和规划验证。"
+        },
+        "acceptanceCriteria": [
+          "在有界的小型逐笔核算请求中保留原表完整代码、股数、金额、日期和百分比",
+          "表头别名使用时区分业务首行，保留缺失和精度"
+        ],
+        "risks": [
+          "签名客户端按原问题再次验收。"
+        ],
+        "generatedAt": "2026-11-21T15:08:46.527226+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4470,6 +4540,19 @@
         "test/dataset-view-browser.test.js",
         "-t",
         "E Fund disclosure headers",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/model-task-opening-context.test.js",
+        "test/workbench-planning-phase.test.js",
+        "-t",
+        "keeps identifiers|first ETF holdings submission",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
