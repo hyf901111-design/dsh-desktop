@@ -3,6 +3,7 @@ import {constants} from 'node:fs'
 import {link, open, realpath, unlink} from 'node:fs/promises'
 import {isAbsolute, join} from 'node:path'
 import {parse} from 'parse5'
+import {observationComparison,renderObservationComparison} from './workbench-observation-page.js'
 import {compactWebpageCss, compactWebpageGuidance, webpageControlGuidance} from './workbench-webpage-compact.js'
 import {costComparisonGuidance, costComparisonSchema, renderCostComparison} from './workbench-cost-page.js'
 
@@ -25,6 +26,7 @@ export const WEBPAGE_SCHEMA = {
     name:{type:'string',required:true,description:'简短、可读的 .html 文件名，不含目录。'},
     stylePreset:{type:'string',enum:['compact-v1'],description:COMPACT_PAGE_GUIDANCE+'用户指定其他设计时可省略并自定义样式。'},
     costComparison:costComparisonSchema,
+    observationComparison:{type:'boolean',enum:[true],description:'宿主已识别原表中的日期、各列百分率及明确点名的利差组合时使用。基准日与观察日可以在离线网页切换，曲线、明细与基点差同时更新。'},
     html:{type:'string',description:'与 costComparison 二选一。完整自包含 HTML 文档，含正文和所需内嵌脚本、样式。无需另行写文件。'+webpageControlGuidance}
   }
 }
@@ -76,14 +78,20 @@ export function prepareWorkbenchWebpages(args, sessionId, request) {
     const {htmlFile, ...rest} = panel
     if (rest.type !== 'files' || ['content','artifact','publicData','library','view','sourceView','profile','requests','intervalMinutes','hierarchy'].some(key => rest[key] !== undefined))
       throw Error('网页文件用 type:"files" 和 htmlFile；需持续更新的信息放在绑定数据源的原生卡上。')
-    const {name, stylePreset, costComparison} = htmlFile ?? {}
-    if (!htmlFile || Object.keys(htmlFile).some(key => !['name','html','stylePreset','costComparison'].includes(key)) || typeof name !== 'string' ||
+    const {name, stylePreset, costComparison, observationComparison:compare} = htmlFile ?? {}
+    if (!htmlFile || Object.keys(htmlFile).some(key => !['name','html','stylePreset','costComparison','observationComparison'].includes(key)) || typeof name !== 'string' ||
         name !== name.trim() || !/^[^./\\:\p{Cc}\p{Cf}][^/\\:\p{Cc}\p{Cf}]*\.html?$/iu.test(name) || Buffer.byteLength(name) > 150)
       throw Error('网页文件名须是当前项目中的一个 .html 文件名，不含目录。')
     if (costComparison !== undefined && htmlFile.html !== undefined)
       throw Error('费用比较用 costComparison，自定义网页用 html，请只提交其中一项。')
-    const html = costComparison === undefined ? preparePageHtml(htmlFile.html, stylePreset) :
-      preparePageHtml(renderCostComparison(costComparison, rest.title || name, request), stylePreset ?? 'compact-v1')
+    let document=htmlFile.html
+    if (compare!==undefined) {
+      const observations=compare===true && observationComparison(request)
+      if (!observations || document!==undefined || costComparison!==undefined)
+        throw Error('此离线比较需要用户原表、两个日期选择及明确的百分率列差值组合。其他比较请直接提交完整网页。')
+      document=renderObservationComparison(observations,rest.title || name)
+    } else if (costComparison!==undefined) document=renderCostComparison(costComparison,rest.title || name,request)
+    const html=preparePageHtml(document,stylePreset ?? (compare||costComparison?'compact-v1':undefined))
     const digest = createHash('sha256').update(sessionId).update('\0').update(args.requestId ?? '').update('\0').update(html).digest('hex').slice(0,16)
     const relativePath = name.replace(/\.html?$/iu, '') + '-' + digest + '.workbench.html'
     const item = {id:'page', name, relativePath, mimeType:'text/html', sizeBytes:Buffer.byteLength(html)}

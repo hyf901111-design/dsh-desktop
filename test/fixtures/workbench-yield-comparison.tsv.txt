@@ -1,0 +1,6 @@
+给基金公司固收组创建一个研究工作台，在画布上放一张断网也能带走的美债收益率复盘网页。会上要切换基准日、观察日以及利差组合（10年减2年、30年减5年）；联动两条曲线、四个期限的明细、两日的利差及其变化（bp）。只用摘自美国财政部 Daily Treasury Par Yield Curve Rates 的真实历史数据，利率单位 %，保留出处和精度。
+来源：https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202412
+日期	2年	5年	10年	30年
+2024-12-27	4.31	4.45	4.62	4.82
+2024-12-30	4.24	4.37	4.55	4.77
+2024-12-31	4.25	4.38	4.58	4.78

@@ -18,6 +18,7 @@ import {isWorkbenchPrototypeTableRead} from './prototype-source-authority.js'
 import {pastedWorkbenchBlocks} from './workbench-pasted-tables.js'
 import {newsRecordTableGuidance} from './news-source-scope.js'
 import {WEBPAGE_GUIDANCE} from './workbench-webpage.js'
+import {observationComparison} from './workbench-observation-page.js'
 import {portableUnitCostRequest} from './workbench-cost-page.js'
 
 const builtinTushareRead=Symbol.for('ework.builtin-tushare.read')
@@ -459,6 +460,18 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       '明细用 type:"view"，view:{dataset,sections:[{kind:"records",fields:[字段键]}]}。同类别多个同单位指标对比用 type:"chart"，view:{dataset,variant:"groupedBar",unit,sections:[{kind:"records",label:分类键,fields:[数值键1,数值键2]}]}。比较两个端点可用 dumbbell。同一批客户从接触到签约的漏斗用 type:"chart" 和 variant:"funnel"，label 引用阶段列、fields 仅引用人数列，按原顺序绘制。按用户要求保留明细、单位、空值和其他交互。',
       '差额或比率可在 pastedTable.derive 中声明 {key,label,op:"subtract|percent",left,right,unit?,digits?}。子集用 view.where。跨行汇总用 aggregate 的 groupBy、sum 或 percent，总体比率按汇总分子分母计算；指标卡引用单条汇总，时间线用 type:"timeline"，view.sections 放一个 {kind:"schedule",label:事件标题列,start:日期列,owner:负责人列,fields:[其他明细列]}。'
     ].join(' ');
+    if (!simulation && !prototypeSource && !documentPaths && hasPastedTable && observationComparison(human.text)) {
+      const create=tools.find(tool=>tool.name===CREATE_TOOL)
+      if (create) {
+        const parameters={type:'object',additionalProperties:false,required:['title','panels'],properties:{
+          title:{type:'string'},panels:{type:'array',minItems:1,maxItems:1,items:{type:'object',additionalProperties:false,
+            required:['type','title','htmlFile'],properties:{type:{type:'string',enum:['files']},title:{type:'string'},
+              htmlFile:{type:'object',additionalProperties:false,required:['name'],
+                properties:{name:{type:'string'},observationComparison:{type:'boolean',enum:[true]},html:{type:'string',description:'仅当另有宿主比较视图无法表达的操作或算式时，直接提交完整自包含 HTML。与 observationComparison 互斥。'}}}}}}}}
+        return {...request,tools:[{...create,parameters,description:'用本轮已核实的原表和指标组合创建一张可离线操作的比较网页。'}],
+          system:[request.system,'宿主已从本轮消息绑定日期、原表、来源、利差组合与单位，负责生成完整可带走网页。直接调用 research_workbench_create，传 title 和一个 panel，如 {"title":"收益率曲线复盘","panels":[{"type":"files","title":"收益率曲线复盘","htmlFile":{"name":"收益率曲线复盘.html","observationComparison":true}}]}，标题可按用户主题命名。无需编写前端、重抄数据或计算结果。根据实际回执回复。'].join('\n')}
+      }
+    }
     if (hasPastedTable && offline && !simulation && !documentPaths && !state.evidenceTargets.required.length) {
       return {...request,tools:tools.map(tool=>tool.name===CREATE_TOOL?
         {...tool,description:'使用当轮提供的表格和所要求的展示、交互创建看板。多卡引用同一份数据，受理后的结果以回执为准。'}:tool),
