@@ -1,4 +1,5 @@
-import {clientModeTurn} from './client-mode-profile.js'
+import {claimedWorkspaceMessage,clientModeTurn} from './client-mode-profile.js'
+import {pastedWorkbenchInput} from './workbench-pasted-tables.js'
 
 const publicOpening = Symbol.for('ework.model-task-opening')
 const supported = new WeakSet()
@@ -33,6 +34,50 @@ export function allowTaskOpening(turn) {
   if (turn) supported.add(turn)
 }
 
+// The opening is its own model call, with no ability to act. Keep the user's
+// goals on both sides of pasted tables, without making the model solve the
+// entire analysis or inspect documents before it can acknowledge the task.
+function openingMessage(message, turn) {
+  const authored = turn.text.replace(/```[\s\S]*?(?:```|$)/gu, ' ')
+  const {blocks,context} = pastedWorkbenchInput(authored)
+  const lines = (blocks.length ? context : authored)
+    .replace(/https?:\/\/[^\s<>"'（）]+/giu, value => {
+      try { return new URL(value).hostname } catch { return '' }
+    })
+    .split(/\r\n?|\n/u)
+    .map(line => line.trim())
+  const numericCsv = lines.map(line => {
+    const cells = line.split(',')
+    return cells.length > 1 && cells.slice(1).every(cell => /^[-+−]?(?:\d+(?:\.\d+)?%?|\d{4}-\d\d-\d\d)$/u.test(cell.trim()))
+  })
+  const csvHeader = lines.map((line,i)=>numericCsv[i+1] && line.includes(',') &&
+    line.split(',').every(cell=>cell.length<=24) && line.split(',').length===lines[i+1].split(',').length)
+  const prose = lines.filter((line,i) => line && !/^[{[<]/u.test(line) && !csvHeader[i] &&
+    !(numericCsv[i] && (numericCsv[i-1] || numericCsv[i+1] || csvHeader[i-1]))).join(' ')
+  const goal = prose.length > 640 ? prose.slice(0, 480) + ' … ' + prose.slice(-156) : prose
+  const labels = blocks.slice(0,2).map(rows=>rows[0].slice(0,8)
+    .filter(cell=>/[\p{L}]/u.test(cell))
+    .map(cell=>cell.replace(/\s+/gu,' ').slice(0,24)).join('、')).filter(Boolean)
+  const references = []
+  if (turn.workspaceTagged) {
+    // Keep a short label/range, not the host ID or the contents of a selection.
+    for (const block of message.content ?? []) {
+      if (block.type !== 'text') continue
+      for (const match of block.text.matchAll(/〔(?:表格选区|演示引用) ("(?:[^"\\]|\\.)*")(?:!([A-Z0-9:]+))? #[a-f0-9]{12}〕/gu)) {
+        references.push(match[1].slice(0,72)+(match[2]?'!'+match[2].slice(0,24):''))
+        if (references.length===3) break
+      }
+      if (references.length===3) break
+    }
+  }
+  const scope = [
+    references.length && '用户选定的内容引用：'+references.join('、'),
+    message.content?.some(part=>part.type==='image') && '本轮附有图片。',
+    ...labels.map(header=>'原表字段：'+header),
+  ].filter(Boolean).join('\n')
+  return {id:message.id,role:'user',source:message.source,content:[{type:'text',text:[goal,scope].filter(Boolean).join('\n')}]}
+}
+
 function milestone(session, turnNumber, firstFinding) {
   const events = session.events ?? []
   let result = false
@@ -54,9 +99,11 @@ export function registerModelTaskReplies(ctx) {
     const turn = clientModeTurn(agent?.session)
     if (!turn) return request
     if (firstTaskOpening(agent.session, step) && request.tools?.length) {
+      const {message} = claimedWorkspaceMessage(agent.session,turn.mode) ?? {}
+      if (!message) return request
       opened.add(turn)
-      return {...request, tools:[], [publicOpening]:true,
-        system:(request.system ?? '')+'\n本次先流式答复这位用户，随后同一轮会继续执行。用一两句自然的话回应其具体目标、资料或限制，并说明准备先解决哪个实际问题。尚未读取的内容不得声称已经看过。直接写给用户，不复述流程、套用示范语或展开完整分析。'}
+      return {...request, tools:[], [publicOpening]:true, messages:[openingMessage(message,turn)],
+        system:'用用户的语言或指定的语言写一句简短的开场白。点出其本轮具体目标、资料范围或优先核对的问题。稍后才会实际执行；这一句只回应任务，不解题、不写代码、调用格式或内部步骤，不声称已经读取、计算或保存。'}
     }
     if (step === 2 && opened.has(turn) && request.messages?.at(-1)?.role === 'assistant') {
       // Wire-only instruction. The actual user's message and its permissions
