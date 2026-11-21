@@ -100,6 +100,24 @@ it('protects partial markers without swallowing Markdown examples or unrelated i
  expect(truncated.filter(c=>c.type==='text-delta').map(c=>c.text).join('')).toBe('首句。\n')
 })
 
+it('filters the hosted workbook opening’s paired ASCII controls from every split without hiding quoted protocol examples',async()=>{
+ const begin='<|tool_call_start|>bash<|tool_call_end|>'
+ const arg='<|tool_call_argument_start|>{"cmd": "ls -la && find . -maxdepth 2 -type f", "workdir": "/workspace", "timeout": 10000}<|tool_call_argument_end|>'
+ const prefix='我先定位并打开工作簿，核对 2024 年 12 月美债曲线所在的表头与日期范围，再在 F、G 列写入可复算的基点利差公式。\n\n'
+ const wire=prefix+begin+'\n'+arg+'\n'+begin+'\n'+arg
+ const project=async deltas=>{
+  const response=[]
+  for await(const event of publicTaskOpeningStream(textStream(deltas)))response.push(event)
+  return [response.filter(e=>e.type==='text-delta').map(e=>e.text).join(''),response.find(e=>e.type==='block-end').block.text]
+ }
+ for(let split=0;split<=wire.length;split++) expect(await project([wire.slice(0,split),wire.slice(split)])).toEqual([prefix,prefix])
+ expect(await project([...wire])).toEqual([prefix,prefix])
+ expect(await project([prefix+begin+'\n<|tool_call_argument_s'])).toEqual([prefix,prefix])
+ expect(await project([prefix+'<|tool_call_sta'])).toEqual([prefix,prefix])
+ const examples=['三反引号内的示例', '```text',begin,arg,'```','> '+begin,'句内 '+begin,'    '+begin,begin,'这是标记举例。'].join('\n')
+ expect(await project([...examples])).toEqual([examples,examples])
+})
+
 it('honors a smaller explicit output budget and explicit reasoning setting without rebinding the prepared adapter',async()=>{
  const request={maxTokens:128,reasoningEffort:'high'},calls=[]
  const prepared={stream:wire=>{calls.push(wire);return textStream(['已确认目标。'])}}

@@ -2,6 +2,9 @@
 // providers serialize their internal call envelope as ordinary text instead.
 export function taskOpeningText() {
   const callHeader = '<｜｜DSML｜｜ calls>'
+  const asciiStart = '<|tool_call_start|>'
+  const asciiName = /^<\|tool_call_start\|>[a-zA-Z_][a-zA-Z0-9_.:-]{0,127}<\|tool_call_end\|>(?:\r?\n)?$/u
+  const argumentsStart = '<|tool_call_argument_start|>'
   let prefix = '', atLineStart = true, fence = '', hidden = false
   return {
     get hidden() { return hidden },
@@ -10,11 +13,35 @@ export function taskOpeningText() {
       let output = ''
       const lines = (prefix + text).split(/(?<=\n)/u)
       prefix = ''
-      for (const line of lines) {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
         const complete = line.endsWith('\n')
         if (atLineStart) {
           // Four-space code and quoted/inline examples cannot be protocol.
           const head = line.replace(/^ {0,3}/u, '')
+          // The paired ASCII control lines can straddle arbitrary deltas.
+          // Keep a lone literal header when the following text is ordinary prose.
+          if (!fence && (asciiStart.startsWith(head) || head.startsWith(asciiStart)) && head.length <= 172) {
+            if (!complete && !final) {
+              prefix = line
+              break
+            }
+            if (final && !complete && head.startsWith('<|tool_call_') && asciiStart.startsWith(head)) {
+              hidden = true
+              break
+            }
+            if (asciiName.test(head)) {
+              const next = (lines[i + 1] ?? '').replace(/^ {0,3}/u,'')
+              if (next.startsWith(argumentsStart) || final && argumentsStart.startsWith(next)) {
+                hidden = true
+                break
+              }
+              if (!final && argumentsStart.startsWith(next)) {
+                prefix = lines.slice(i).join('')
+                break
+              }
+            }
+          }
           const delimiter = /^(`{3,}|~{3,})/u.exec(head)?.[1]
           const unfinishedDelimiter = /^[`~]+$/u.test(head)
           if (!complete && !final && (!head || unfinishedDelimiter ||
