@@ -9,7 +9,7 @@
   >
     <input ref="fileInput" type="file" accept=".pptx" hidden @change="importFile" />
     <input ref="imageInput" type="file" accept="image/*" hidden @change="insertImage" />
-    <div v-if="!docId" class="empty">
+    <div v-if="!docId" class="empty ew-workspace-empty">
       <button v-if="recent.length" class="recent" :disabled="!editable" @click="toggle('recent')">
         最近使用
         <Glyph name="down" />
@@ -17,11 +17,11 @@
       <div v-if="menu === 'recent'" class="menu recent-menu">
         <button v-for="d in recent" :key="d.id" @click="open(d.id)">{{ d.title }}</button>
       </div>
-      <div class="empty-content">
-        <span class="presentation-app-icon" aria-hidden="true"></span>
+      <div class="ew-workspace-empty-hero">
+        <span class="presentation-app-icon ew-workspace-empty-icon" aria-hidden="true"></span>
         <h1>开始制作演示文稿</h1>
         <p>导入已有 PowerPoint，或在右侧对话里描述你要制作的演示文稿。</p>
-        <div>
+        <div class="ew-workspace-empty-actions">
           <button class="primary" :disabled="!ready || !editable" @click="create">
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
               <path d="M12 5v14M5 12h14" />
@@ -35,7 +35,7 @@
     </div>
     <template v-else-if="slide">
       <nav ref="ribbon" class="ribbon" aria-label="演示编辑工具">
-        <button aria-label="菜单" @click="toggle('commands')">
+        <button aria-label="菜单" @click="toggle('commands', $event.currentTarget)">
           <Glyph name="menu" />
           <span>菜单</span>
           <Glyph name="down" />
@@ -51,18 +51,16 @@
           <Glyph name="newslide" />
           <span>新建幻灯片</span>
         </button>
-        <button :disabled="!editable" title="版式" @click="toggle('layout')">
+        <button :disabled="!editable" title="版式" @click="toggle('layout', $event.currentTarget)">
           <Glyph name="layout" />
           <span>版式</span>
           <Glyph name="down" />
         </button>
         <i />
-        <select :disabled="!editable" aria-label="字体" :value="selectedFont" @change="command('fontname', $event.target.value)">
-          <option v-for="f in fontOptions" :key="f" :value="f">{{ f }}</option>
-        </select>
-        <select :disabled="!editable" aria-label="字号" :value="selectedSize" @change="command('fontsize', $event.target.value + 'px')">
-          <option v-for="s in sizeOptions" :key="s" :value="s">{{ s }}</option>
-        </select>
+        <ToolbarSelect label="字体" class="ribbon-font" :disabled="!editable" :options="fontOptions"
+          :model-value="selectedFont" @open="menu = ''" @update:model-value="command('fontname', $event)" />
+        <ToolbarSelect label="字号" class="ribbon-size" :disabled="!editable" :options="sizeOptions"
+          :model-value="selectedSize" @open="menu = ''" @update:model-value="command('fontsize', $event + 'px')" />
         <button
           :disabled="!editable" aria-label="加粗"
           :aria-pressed="Boolean(main.richTextAttrs.bold)"
@@ -82,12 +80,12 @@
         >
           <Glyph name="menu-shape" /><span>样式</span>
         </button>
-        <button :disabled="!editable" aria-label="对齐" @click="toggle('align')"><Glyph name="align" /></button>
+        <button :disabled="!editable" aria-label="对齐" @click="toggle('align', $event.currentTarget)"><Glyph name="align" /></button>
         <button :disabled="!editable" aria-label="项目符号" @mousedown.prevent @click="command('bulletList')">
           <Glyph name="list" />
         </button>
         <i />
-        <button :disabled="!editable" title="插入" @click="toggle('insert')">
+        <button :disabled="!editable" title="插入" @click="toggle('insert', $event.currentTarget)">
           <Glyph name="insert" />
           <span>插入</span>
           <Glyph name="down" />
@@ -101,7 +99,7 @@
           <span>放映</span>
         </button>
         <button data-ribbon-more data-ribbon-folded aria-label="更多工具" title="更多工具" aria-haspopup="menu" aria-controls="ribbon-overflow" @keydown.down.prevent="focusOverflow"
-          :aria-expanded="menu === 'overflow'" @click="toggle('overflow')"><Glyph name="more" /></button>
+          :aria-expanded="menu === 'overflow'" @click="toggle('overflow', $event.currentTarget)"><Glyph name="more" /></button>
       </nav>
       <SelectionFormatBar v-if="editable" />
       <CommandMenu
@@ -120,27 +118,21 @@
       />
       <div
         v-else-if="menu && menu !== 'recent'"
-        class="menu"
+        class="menu toolbar-popup" :data-tool-menu="menu"
         :id="menu === 'overflow' ? 'ribbon-overflow' : undefined"
         :role="menu === 'overflow' ? 'menu' : undefined"
-        @keydown="overflowKeys"
+        @keydown="toolbarMenuKeys"
         :class="{ 'layout-menu': menu === 'layout', 'ribbon-overflow': menu === 'overflow' }"
         :style="menuPos"
       >
         <template v-if="menu === 'overflow'">
           <template v-for="tool in overflowTools" :key="toolLabel(tool)">
-            <label v-if="tool.tagName === 'SELECT'" class="overflow-select">
-              <span>{{ toolLabel(tool) }}</span>
-              <select :aria-label="toolLabel(tool)" :value="tool.value" :disabled="tool.disabled"
-                @change="chooseOverflowValue(tool, $event.target.value)">
-                <option v-for="option in Array.from(tool.options)" :key="option.value" :value="option.value">{{ option.text }}</option>
-              </select>
-            </label>
-            <button v-else role="menuitem" :data-ribbon-command="toolLabel(tool)" :disabled="tool.disabled"
+            <button role="menuitem" :data-ribbon-command="toolLabel(tool)" :disabled="tool.disabled"
               :aria-pressed="tool.getAttribute('aria-pressed')" @mousedown.prevent @click="runOverflowTool(tool)">
               <img v-if="tool.querySelector('.glyph')" class="glyph" alt="" :src="tool.querySelector('.glyph').src" />
-              <span v-else class="overflow-letter" aria-hidden="true">{{ tool.textContent.trim() }}</span>
+              <span v-else-if="!tool.classList.contains('deck-choice')" class="overflow-letter" aria-hidden="true">{{ tool.textContent.trim() }}</span>
               {{ toolLabel(tool) }}
+              <span v-if="tool.classList.contains('deck-choice')" class="overflow-choice-value">{{ tool.querySelector('.choice-value')?.textContent }}</span>
             </button>
           </template>
         </template>
@@ -292,6 +284,8 @@ import { computed, defineComponent, h, nextTick, onMounted, onUnmounted, ref, wa
 import { useSlidesStore, useMainStore, useSnapshotStore } from '@/store'
 import CommandMenu from './CommandMenu.vue'
 import LayoutGallery from './LayoutGallery.vue'
+import ToolbarSelect from './ToolbarSelect.vue'
+import './toolbar-popovers.css'
 import { applyMaster, layoutImage, updatePageNumbers, upgradeLayoutArtwork } from './apply-layout'
 import ShapePool from '@/views/Editor/CanvasTool/ShapePool.vue'
 import ChartPool from '@/views/Editor/CanvasTool/ChartPool.vue'
@@ -367,18 +361,17 @@ const overflowTools = useRibbonOverflow(ribbon, (more, count) => {
   else menu.value = ''
 })
 function focusOverflow() {
-  if (menu.value !== 'overflow') toggle('overflow')
-  nextTick(() => document.querySelector('#ribbon-overflow :is(button,select):enabled')?.focus())
+  if (menu.value !== 'overflow') toggle('overflow', ribbon.value.querySelector('[data-ribbon-more]'))
+  nextTick(() => document.querySelector('#ribbon-overflow button:enabled')?.focus())
 }
-function overflowKeys(event) {
-  if (menu.value !== 'overflow') return
+function toolbarMenuKeys(event) {
   if (event.key === 'Escape') {
     event.preventDefault()
     menu.value = ''
-    ribbon.value.querySelector('[data-ribbon-more]').focus()
-  } else if (event.target.tagName !== 'SELECT' && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+    visibleMenuAnchor(menuAnchor)?.focus({preventScroll: true})
+  } else if (['overflow', 'align', 'insert'].includes(menu.value) && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
     event.preventDefault()
-    const items = [...event.currentTarget.querySelectorAll(':is(button,select):enabled')]
+    const items = [...event.currentTarget.querySelectorAll('button:enabled')]
     if (items.length) items[(items.indexOf(event.target) + items.length + (event.key === 'ArrowDown' ? 1 : -1)) % items.length].focus()
   }
 }
@@ -388,12 +381,6 @@ function runOverflowTool(tool) {
   if (!tool.isConnected || tool.disabled) return
   ribbon.value.querySelector('[data-ribbon-more]').focus({preventScroll: true})
   tool.click()
-}
-function chooseOverflowValue(tool, value) {
-  if (tool.disabled) return
-  tool.value = value
-  tool.dispatchEvent(new Event('change', {bubbles: true}))
-  menu.value = ''
 }
 const slide = computed(() => store.currentSlide),
   index = computed(() => store.slideIndex)
@@ -814,18 +801,33 @@ function alignText(alignment) {
   menu.value = ''
   command('align', alignment)
 }
-function toggle(name) {
+let menuAnchor
+function toggle(name, trigger) {
   if (menu.value === name) {
     menu.value = ''
     return
   }
-  menuPos.value = menuPosition(name, document.activeElement)
+  if (trigger) menuAnchor = trigger
+  const keyboard = document.activeElement?.matches(':focus-visible')
+  menuPos.value = menuPosition(name, menuAnchor)
   menu.value = name
+  if (keyboard) nextTick(() => document.querySelector('.toolbar-popup :is(button:enabled,[tabindex="0"])')?.focus({preventScroll: true}))
+}
+function visibleMenuAnchor(anchor) {
+  if (anchor?.isConnected && anchor.getClientRects().length) return anchor
+  return ribbon.value?.querySelector('[data-ribbon-more]')
 }
 function menuPosition(name, anchor) {
-  const rect = anchor?.getBoundingClientRect()
-  const width = name === 'layout' ? Math.min(520, innerWidth - 16) : 210
-  return { left: Math.max(8, Math.min(rect?.left || 8, innerWidth - width - 8)) + 'px', top: '40px' }
+  const rect = visibleMenuAnchor(anchor)?.getBoundingClientRect()
+  const preferredWidth = {layout: 520, 'shape-pool': 356, 'chart-pool': 264, 'table-pool': 266}[name] || 210
+  const width = Math.min(innerWidth - 16, preferredWidth)
+  const top = Math.min((rect?.bottom || 36) + 4, innerHeight - 20)
+  return {
+    left: Math.max(8, Math.min(rect?.left || 8, innerWidth - width - 8)) + 'px',
+    top: top + 'px',
+    width: width + 'px',
+    maxHeight: Math.max(12, Math.min(name === 'layout' ? 440 : 520, innerHeight - top - 8)) + 'px'
+  }
 }
 function rename(input) {
   const title = input.value.trim()
@@ -1099,6 +1101,7 @@ function observeThumbnail(node) {
   thumbnailObserver.observe(node)
 }
 function resize() {
+  if (menu.value && !['pages', 'recent'].includes(menu.value)) menuPos.value = menuPosition(menu.value, menuAnchor)
   screenWidth.value = Math.min(innerWidth, innerHeight / store.viewportRatio)
 }
 function stopPlaying() {
@@ -1137,7 +1140,7 @@ const fsChanged = () => {
 }
 const outside = (e) => {
   send('pointerdown', {trusted: e.isTrusted})
-  if (!e.target.closest('.ribbon,.menu,.recent')) menu.value = ''
+  if (!e.target.closest('.ribbon,.menu,.recent,.deck-choice-list')) menu.value = ''
 }
 onMounted(() => {
   window.addEventListener('message', receive)

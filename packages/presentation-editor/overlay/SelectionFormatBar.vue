@@ -26,28 +26,11 @@
       {{ tool.label }}
     </button>
     <template v-if="outlineTargets.length">
-      <label
-        >线宽<select
-          aria-label="描边粗细"
-          :value="width"
-          @change="applyOutline('width', Number($event.target.value))"
-        >
-          <option v-if="width === ''" value="" disabled>混合</option>
-          <option v-for="n in widths" :key="n" :value="n">{{ n }} px</option>
-        </select></label
-      >
-      <label
-        >线型<select
-          aria-label="描边线型"
-          :value="lineStyle"
-          @change="applyOutline('style', $event.target.value)"
-        >
-          <option v-if="!lineStyle" value="" disabled>混合</option>
-          <option value="solid">实线</option>
-          <option value="dashed">虚线</option>
-          <option value="dotted">点线</option>
-        </select></label
-      >
+      <span class="format-field">线宽<ToolbarSelect label="描边粗细" :model-value="width" @open="close"
+        :options="widths.map(value=>({value,label:value+' px'}))" @update:model-value="applyOutline('width',$event)" /></span>
+      <span class="format-field">线型<ToolbarSelect label="描边线型" :model-value="lineStyle" @open="close"
+        :options="[{value:'solid',label:'实线'},{value:'dashed',label:'虚线'},{value:'dotted',label:'点线'}]"
+        @update:model-value="applyOutline('style',$event)" /></span>
     </template>
     <div v-if="palette" class="format-palette menu" :style="position" role="group" :aria-label="paletteLabel">
       <div class="format-swatches">
@@ -76,6 +59,7 @@
 </template>
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import ToolbarSelect from './ToolbarSelect.vue'
 import tinycolor from 'tinycolor2'
 import { useMainStore, useSlidesStore } from '@/store'
 import useHistorySnapshot from '@/hooks/useHistorySnapshot'
@@ -179,7 +163,7 @@ function applyColor(value) {
   }
 }
 const outside = (e) => {
-  if (!e.target.closest('.selection-format')) close()
+  if (!e.target.closest('.selection-format,.deck-choice-list')) close()
 }
 watch(() => targets.value.map((e) => e.id).join(' '), close)
 onMounted(() => {
@@ -205,8 +189,7 @@ onUnmounted(() => {
   border-top: 1px solid var(--line);
   flex-wrap: wrap;
 }
-.selection-format .format-color,
-.selection-format select {
+.selection-format .format-color {
   height: 28px;
   padding: 0 6px;
   border-radius: 5px;
@@ -214,8 +197,7 @@ onUnmounted(() => {
   font-size: 12px;
   white-space: nowrap;
 }
-.format-color:where(:hover, [aria-expanded='true']),
-.selection-format select:hover {
+.format-color:where(:hover, [aria-expanded='true']) {
   background: var(--hover);
 }
 .selection-format label {
@@ -224,10 +206,6 @@ onUnmounted(() => {
   gap: 4px;
   font-size: 12px;
   color: var(--muted);
-}
-.selection-format select {
-  background: var(--sub);
-  border: 0;
 }
 .format-palette {
   width: 210px;
@@ -246,7 +224,7 @@ onUnmounted(() => {
   border-radius: 3px;
 }
 .format-swatches button:hover {
-  outline: 2px solid var(--accent);
+  outline: 1px solid var(--muted);
 }
 .format-palette .custom-color {
   display: flex;

@@ -45,6 +45,27 @@ function edit(path, edits) {
   }
   writeFileSync(target, text)
 }
+// The upstream pickers listen for pointer events. Expose the same selection
+// actions to the keyboard without changing the shape/chart/table definitions.
+edit('src/views/Editor/CanvasTool/ShapePool.vue', [
+  ['class="shape-item"', 'class="shape-item" role="button" tabindex="0" :aria-label="shape.title || shape.pptxShapeType || item.type + (index + 1)" @keydown.enter.prevent.stop="selectShape(shape)" @keydown.space.prevent.stop="selectShape(shape)"']
+])
+edit('src/views/Editor/CanvasTool/ChartPool.vue', [
+  ['class="chart-content" @click', 'class="chart-content" role="button" tabindex="0" :aria-label="CHART_TYPE_MAP[chart]" @keydown.enter.prevent.stop="selectChart(chart)" @keydown.space.prevent.stop="selectChart(chart)" @click']
+])
+edit('src/views/Editor/CanvasTool/TableGenerator.vue', [
+  ['class="right" @click', 'class="right" role="button" tabindex="0" @keydown.enter.prevent.stop="isCustom = !isCustom" @keydown.space.prevent.stop="isCustom = !isCustom" @click'],
+  ['@click="handleClickTable()"', `@click="handleClickTable()" tabindex="0" :aria-label="endCell.length ? endCell[0] + '行 ' + endCell[1] + '列；回车插入' : '选择表格大小，方向键调整，回车插入'" @focus="endCell = endCell.length ? endCell : [1,1]" @keydown="gridKey"`],
+  ['const insertCustomTable = () => {', `const gridKey = (event: KeyboardEvent) => {
+  if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', ' '].includes(event.key)) return
+  event.preventDefault(); event.stopPropagation()
+  const [row, col] = endCell.value.length ? endCell.value : [1, 1]
+  if (event.key === 'Enter' || event.key === ' ') return emit('insert', { row, col })
+  endCell.value = [Math.max(1, Math.min(10, row + Number(event.key === 'ArrowDown') - Number(event.key === 'ArrowUp'))),
+    Math.max(1, Math.min(10, col + Number(event.key === 'ArrowRight') - Number(event.key === 'ArrowLeft')))]
+}
+const insertCustomTable = () => {`]
+])
 // Start each document with its own undo stack in the embedded editor.
 edit('src/assets/styles/variable.scss', [['$themeColor: #d14424;', '$themeColor: #588afa;']])
 writeFileSync(join(work, 'src/store/snapshot.ts'), "export { useSnapshotStore } from '../editor-history'\n")
@@ -193,6 +214,7 @@ edit('src/main.ts', [
   ["import App from './App.vue'", "import App from './App.vue'\nimport ArchiveSurface from './ArchiveSurface.vue'"],
   ['const app = createApp(App)', "const app = createApp(location.search === '?archive' ? ArchiveSurface : App)"],
   ["import '@/assets/styles/font.scss'", "import './odyssey.css'"]])
+cpSync(join(project, 'src/shared/workspace-empty.css'), join(work, 'src/workspace-empty.css'))
 cpSync(join(project, 'src/shared/presentation-slide-title.ts'), join(work, 'src/presentation-slide-title.ts'))
 cpSync(join(source, 'overlay'), join(work, 'src'), { recursive: true })
 const appIcon = 'build/brand/odyssey-app-presentation.svg'
