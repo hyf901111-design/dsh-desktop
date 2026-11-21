@@ -3782,6 +3782,62 @@
         ],
         "generatedAt": "2026-11-21T14:38:13.761939+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "右侧对话引用按钮与长草稿滚动间距",
+        "branch": "codex/feat/composer-reference-spacing-20261121",
+        "baseCommit": "1ebfb04ed73dfd85d49dd00d3b599929f4924f68",
+        "tipCommit": "db5be4a51d9479cdd5a3133fe3c17aeee2ebbd2a",
+        "commits": [
+          {
+            "commit": "db5be4a51d9479cdd5a3133fe3c17aeee2ebbd2a",
+            "parents": [
+              "1ebfb04ed73dfd85d49dd00d3b599929f4924f68"
+            ],
+            "subject": "给右栏引用按钮和滚动正文保留固定间距"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/figma-reading.css"
+          },
+          {
+            "status": "M",
+            "path": "test/composer-context-layout.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/composer-context-layout.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "真实财政部文本、372px右栏、滚到底、无引用、基础输入上沿实测。",
+            "verifiedCommit": "db5be4a51d9479cdd5a3133fe3c17aeee2ebbd2a",
+            "completedAt": "2026-11-21T14:44:16.062547+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "修前客户端长文底部留白0像素，修后Chromium 8像素，签名预览再核对。"
+        },
+        "acceptanceCriteria": [
+          "滚动长草稿后引用按钮和正文仍有8像素固定留白",
+          "短文的首行位置与内联标签行为保持一致"
+        ],
+        "risks": [
+          "需要复核签名客户端真实文字边界。"
+        ],
+        "generatedAt": "2026-11-21T14:44:16.062547+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4334,6 +4390,16 @@
         "test/workbench-role-source-first-calls.test.js",
         "test/workbench-pasted-spreadsheet.test.js",
         "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/composer-context-layout.test.js",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
