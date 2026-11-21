@@ -115,6 +115,8 @@ https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_2026
 it('goes straight to a knowledge lookup when only the match count and title were requested', () => {
  const request='知识执行E1：请在本机知识库检索“易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告”，只报告匹配条数和首条标题；如果没有匹配，请明确说明0条，不联网。'
  expect(wantsTaskOpening(clientModeTurn(turn(request,'knowledge')))).toBe(false)
+ const hit='请在我的个人知识库里按文件名查询“右栏复验 · 国债与季报核对.md”。只报告实际匹配的条数和第一项完整标题，保持现在文件列表的筛选。'
+ expect(wantsTaskOpening(clientModeTurn(turn(hit,'knowledge')))).toBe(false)
  const review='请先检索知识库中不同年度的基金季报，再逐项核对不同季末披露的持仓范围和变化，给出跨期比较。'
  expect(wantsTaskOpening(clientModeTurn(turn(review,'knowledge')))).toBe(true)
 })

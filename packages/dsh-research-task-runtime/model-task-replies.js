@@ -12,7 +12,7 @@ export function wantsTaskOpening(turn) {
   if (!turn?.text) return false
   const prose = turn.text.split(/\r?\n/u).filter(line => !line.includes('\t') && !/^\s*\|/u.test(line)).join('\n')
   if (/(?:只|仅)(?:需|要)?(?:返回|输出|给出|给我|提供)(?:最后|最终|结果|答案|代码|指令|公式|原文|译文|数字|JSON|CSV|SQL)|(?:不要|无需|跳过)(?:解释|说明|过程|进度|开场|回复)|\b(?:(?:json|csv|code|result|answer)[ -]only|(?:only|just) (?:return|output|give) (?:the )?(?:answer|result|code|json)|no (?:commentary|preamble))\b/iu.test(prose)) return false
-  if (turn.mode === 'knowledge' && /(?:只|仅)(?:需|要)?(?:报告|返回|给出|列出|显示)(?:匹配|命中|检索结果的?|查询结果的?)(?:条数|数量|标题|文件名)/u.test(prose)) return false
+  if (turn.mode === 'knowledge' && /(?:只|仅)(?:需|要)?(?:报告|返回|给出|列出|显示)(?:实际)?(?:匹配|命中|检索结果|查询结果)的?(?:条数|数量|标题|文件名)/u.test(prose)) return false
   // A limit on the analysis (e.g. "only analyse these holdings") can
   // accompany an explicit request to build a board. Apply the same creation
   // intent as the research planner, using only the user's unquoted prose.
@@ -84,7 +84,7 @@ function openingCapabilities(turn, tools) {
       'presentation.inspect':'读取演示正文与备注','presentation.apply':'在原生演示修改页面和备注',
       'notes.blocks.read':'读取已授权的笔记正文','notes.blocks.apply':'在原生笔记准备修改',
       'conversation.components.create':'在本次对话创建可保存的组件',
-      'knowledge.inspect':'查看本机知识库','knowledge.shared.search':'检索共享资料',
+      'knowledge.inspect':'查看本机知识库','knowledge.local.search':'在当前权限内检索本机资料','knowledge.shared.search':'检索共享资料',
     }
     for (const [capability, description] of Object.entries(descriptions)) {
       if (capability.startsWith(turn.mode+'.') && grants.includes(capability)) actions.push(description)
