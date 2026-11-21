@@ -90,7 +90,13 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
     await page.setViewportSize({ width: 800, height: 650 })
     const secondSlide = editor.locator('.page-row').nth(1)
     await secondSlide.click()
-    await editor.locator('footer').getByRole('button', { name: '播放演示文稿' }).click()
+    const footer = editor.locator('footer')
+    const footerInk = (label: string) => footer.getByRole('button', { name: label, exact: true }).locator('img').evaluate(async (img: HTMLImageElement) => {
+      const svg = new DOMParser().parseFromString(await (await fetch(img.src)).text(), 'image/svg+xml')
+      return [svg.querySelector('[stroke]')!.getAttribute('stroke'), getComputedStyle(img).filter]
+    })
+    expect(await footerInk('播放演示文稿')).toEqual(await footerInk('全屏'))
+    await footer.getByRole('button', { name: '播放演示文稿' }).click()
     expect(await nav.innerText()).toContain('2 / 4')
     await page.keyboard.press('Escape')
     await expect.poll(() => nav.count()).toBe(0)

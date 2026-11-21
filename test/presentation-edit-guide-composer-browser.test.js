@@ -30,15 +30,26 @@ it('clicks the editable line below a long presentation chip that covers the text
     await page.addStyleTag({content:await readFile('src/preload/presentation/view.css','utf8')})
     await page.addScriptTag({content:script.outputFiles[0].text})
     const result=await page.evaluate(async()=>{
-      const textarea=document.querySelector('textarea'), button=document.querySelector('button'), submitted=[]
-      button.onclick=()=>{submitted.push(textarea.value);textarea.value='';document.querySelectorAll('[data-reference-source]').forEach(el=>el.remove())}
+      let textarea=document.querySelector('textarea'), button=document.querySelector('button')
+      const submitted=[]
+      // The guide switches to its recorded agent before the native directory enables input.
+      textarea.disabled=true
+      let readyWaits=0, remounted=false
+      button.addEventListener('click', onSend)
+      function onSend(){submitted.push(textarea.value);textarea.value='';document.querySelectorAll('[data-reference-source]').forEach(el=>el.remove())}
       const guide=await guideFixture.mountPresentationEditGuideChat(document,{
         sessionId:'example',runId:'run',cwd:'/tmp/example',fresh:true,signal:new AbortController().signal,
-        wait:async()=>{},waitUntilPlaying:async()=>{},
+        wait:async()=>{if(textarea.disabled && ++readyWaits===3)textarea.disabled=false},waitUntilPlaying:async()=>{},
         point:async action=>{
+          if(!remounted && action.target===button){
+            const replacement=button.cloneNode(true)
+            button.replaceWith(replacement);button=replacement;button.addEventListener('click',onSend)
+            const next=textarea.cloneNode(true);next.value=textarea.value;textarea.replaceWith(next);textarea=next
+            remounted=true
+          }
           const p=action.targetPoint()
-          if(!action.target.contains(document.elementFromPoint(p.x,p.y)))throw Error('pointer missed the native control')
-          const chip=action.target.parentElement.querySelector('[data-reference-source]')
+          if(!(action.target.isConnected?action.target:button).contains(document.elementFromPoint(p.x,p.y)))throw Error('pointer missed the native control')
+          const chip=textarea.parentElement.querySelector('[data-reference-source]')
           if(action.target===textarea && chip){
             const rect=chip.getBoundingClientRect()
             if(p.y <= rect.bottom || p.x > rect.left+24)throw Error('cursor did not land at the beginning of the editable line below the chip')
@@ -63,8 +74,10 @@ it('clicks the editable line below a long presentation chip that covers the text
         }
         await guide.draft(prompt,{existing:label==='标注 1'});await guide.send();await guide.reply('已完成。')
       }
-      guide.dispose();return {submitted,covered}
+      guide.dispose();return {submitted,covered,readyWaits,remounted}
     })
+    expect(result.readyWaits).toBe(3)
+    expect(result.remounted).toBe(true)
     expect(result.covered).toBe(true)
     expect(result.submitted).toEqual(['撰写讲稿','\uE001 调整图表\uE002 表格文字上下居中','\uE001 把标题改为结论','\uE001 优化选中讲稿'])
     expect(messages.at(-1)).toEqual(['优化选中讲稿','这里请大家记住一个门槛'])
