@@ -143,6 +143,12 @@ it('counts the options in a portable budget when its workbench receipt checks th
 
 it('delivers a finished webpage to the board that sent the prompt, including after a tab switch and reopening',async()=>{
   const app=await host()
+  // Official FOMC calendar as observed on 2026-11-21. Keep this turn's
+  // source snapshot deterministic when the live calendar advances.
+  const official='https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm'
+  const meetings=['2026-12-08 至 2026-12-09','2027-01-26 至 2027-01-27','2027-03-16 至 2027-03-17']
+  const html='<!doctype html><html lang="zh"><body><h1>美联储议息日历</h1><p>截至 2026-11-21 的三次预定会议</p><ol>'+
+    meetings.map(dates=>'<li>'+dates+'</li>').join('')+'</ol><a href="'+official+'">美联储官方会议日历</a></body></html>'
   const request='做个美联储议息日历，我只想看接下来三次会议，能点到官网。'
   const delivery={request,startedAt:Date.now()}
   let time=delivery.startedAt
@@ -161,7 +167,10 @@ it('delivers a finished webpage to the board that sent the prompt, including aft
   expect(a.deliveryStatus).toBe('accepted')
   expect(b.plans[0].id).toBe(a.plans[0].id)
   expect(app.prepared[0].artifact.presentation).toBe('webpage')
-  expect(await readFile(join(app.root,app.prepared[0].artifact.items[0].relativePath),'utf8')).toBe(html)
+  const delivered=await readFile(join(app.root,app.prepared[0].artifact.items[0].relativePath),'utf8')
+  expect(delivered).toBe(html)
+  expect(delivered).toContain('href="'+official+'"')
+  for (const meeting of meetings) expect(delivered).toContain(meeting)
   await app.list({acknowledged:[a.plans[0].id]})
   expect(await app.list({delivery})).toMatchObject({plans:[],deliveryStatus:'mounted'})
   expect(app.prepared).toHaveLength(1)
