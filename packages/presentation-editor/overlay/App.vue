@@ -459,6 +459,9 @@ async function hydrate(d) {
   await nextTick()
   if (seq !== hydration) return
   loading = false
+  requestAnimationFrame(() => {
+    if (seq === hydration) send('painted', { documentId: docId.value })
+  })
   if (migrated && editable.value) save()
   if (deck) {
     void snapshots.initSnapshotDatabase()
@@ -502,6 +505,8 @@ function receive(event) {
       if (d.locking) setEditMode(false)
       send('flushed', { id: d.id })
     })
+  } else if (d.type === 'submitted-marks') {
+    if (d.documentId === docId.value && Array.isArray(d.ids)) markViewer?.dismissSubmitted(d.ids)
   } else if (d.type === 'referenced-marks') {
     committedMarkIds = new Set(d.ids)
     markViewer?.redraw()
@@ -525,6 +530,7 @@ function receive(event) {
   else if (d.type === 'error') {
     notice.value = d.message
     if (d.conflict) freeze = true
+    if (!ready.value) requestAnimationFrame(() => send('painted', { documentId: docId.value }))
   }
 }
 function create() {
