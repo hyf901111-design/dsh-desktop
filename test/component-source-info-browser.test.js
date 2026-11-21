@@ -52,6 +52,25 @@ it('opens the actual chat file card, all ambiguous file matches, preview and sys
   expect(await page.locator('#right').textContent()).toContain('核查说明及页码[P4]');expect(await page.locator('#right').textContent()).toContain('2026-11-05');expect(errors).toEqual([])
  }catch(e){console.error(await page.locator('body').innerText());throw e}finally{await page.close()}
 })
+it('opens the saved disclosure once while keeping separate pages and quoted passages',async()=>{
+ const {page}=await fixture()
+ try{
+  const url='https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf'
+  const label='上交所披露的《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》 · 表段 1'
+  const data={type:'kpi',sources:[{label:url,url},{label,url},{label:'报告第八页',url:url+'#page=8'},
+   {label:'托管行说明',url,text:'该口径采用报告日持仓。'},{label:'托管行说明',url,text:'估值币种为人民币。'}],note:label}
+  const html='<script id="sherlock-template-data" type="application/json">'+JSON.stringify({data})+'</script>'+
+    '<section class="source-info">'+label+' <a href="'+url+'">'+url+'</a></section>'
+  await page.evaluate(html=>show({id:'saved',title:'前五合计净值占比与首两名差值',containerSpec:{type:'html',html}}),html)
+  await page.getByRole('button',{name:'查看来源信息',exact:true}).click()
+  const panel=page.locator('#right'),links=panel.getByRole('link')
+  await expect.poll(()=>links.count()).toBe(4)
+  expect(await panel.getByRole('heading',{name:label,exact:true}).count()).toBe(1)
+  expect(await panel.getByRole('heading',{name:url,exact:true}).count()).toBe(0)
+  expect(await panel.locator('pre').allTextContents()).toEqual(['该口径采用报告日持仓。','估值币种为人民币。'])
+  expect(await panel.locator('a').nth(1).getAttribute('href')).toBe(url+'#page=8')
+ }finally{await page.close()}
+})
 it('retains every web citation and long source body in the right panel and opens the original URL',async()=>{
  const {page,errors}=await fixture()
  try{
