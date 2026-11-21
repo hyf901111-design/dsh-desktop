@@ -39,6 +39,12 @@
   border-bottom: 0 !important;
   box-shadow: none !important;
 }
+/* Keep the blank line below an inline reference inside the actual textarea. */
+body[data-ework-presentation-session]
+  [data-research-composer-host]:has([data-reference-source='presentation-reference'])
+  [data-input-scroll] > .uV2eYG_grow {
+  min-height: inherit;
+}
 body[data-ework-presentation-session]
   [data-research-composer-host]
   :has(> [data-input-backdrop] [data-reference-source='presentation-reference'])
