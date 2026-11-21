@@ -2578,6 +2578,74 @@
         ],
         "generatedAt": "2026-11-21T12:53:41.329637+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "对齐图像、表格与演示的工作区切换栏",
+        "branch": "codex/feat/image-workspace-picker-parity-20261121",
+        "baseCommit": "b085896ed031af4c8476b37ee96e3c2870716ad0",
+        "tipCommit": "b16c0636741aedc2871314e40f40ab9816b1d7e4",
+        "commits": [
+          {
+            "commit": "b16c0636741aedc2871314e40f40ab9816b1d7e4",
+            "parents": [
+              "b085896ed031af4c8476b37ee96e3c2870716ad0"
+            ],
+            "subject": "让图像编辑与对话沿用文稿工作区锁定和切换栏规则"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory-native.test.js",
+              "test/pending-conversation-rendered.test.js",
+              "--maxWorkers=1",
+              "-t",
+              "keeps a committed template|updates only the selected image tab|hides the right project picker|keeps the active .*image-factory",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "在实际客户端发现做同款后工作区仍可见。当前工作区锁与文稿使用相同判断，浅深色选择与清除、形成画布或已有消息后保护归属。",
+            "verifiedCommit": "b16c0636741aedc2871314e40f40ab9816b1d7e4",
+            "completedAt": "2026-11-21T13:07:51.353933+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "已在当前客户端复现；下一签名构建直接复验。"
+        },
+        "acceptanceCriteria": [
+          "空白图像可选择工作区，已编辑或已有用户对话时收起工作区选择器",
+          "旧菜单回调不得迁移已编辑的会话"
+        ],
+        "risks": [
+          "其他数据源及问题的图形选择仍由相应任务决定。"
+        ],
+        "generatedAt": "2026-11-21T13:07:51.353933+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2927,6 +2995,20 @@
         "test/browser-page-agent.test.ts",
         "test/browser-use-route.test.ts",
         "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-factory-native.test.js",
+        "test/pending-conversation-rendered.test.js",
+        "--maxWorkers=1",
+        "-t",
+        "keeps a committed template|updates only the selected image tab|hides the right project picker|keeps the active .*image-factory",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
