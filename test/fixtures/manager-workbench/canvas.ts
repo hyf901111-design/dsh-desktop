@@ -43,47 +43,6 @@ function managerCardHtml(panel: keyof typeof managerPanels, rows: number) {
   return managerPanelHtml(panel, Math.round(rows * design.rowStep - design.gap - componentChrome))
 }
 
-// Length and FNV-1a of the exact default HTML from the three shipped templates.
-const legacyCardSignatures: Readonly<Record<string, readonly string[]>> = {
-  people: ['14044:c81ba55f', '14632:1d3e0926', '18742:51208daa'],
-  residences: ['12024:5def6178', '12613:aa0cce73', '73722:be73d1d2'],
-  demographics: ['11136:bef7c177', '11725:1e40ac4e', '15940:36ef0a82'],
-  changes: ['10196:77902e7b', '10785:82fedb8', '15223:75c9fb42'],
-  'interview-summary': ['11722:c64b75ed', '12311:bbc67dc2', '16442:78ffe5ff'],
-  expenses: ['10299:694465d4', '10888:56d359ed', '15106:a7f68825'],
-  'team-overview': ['14044:c81ba55f', '14632:1d3e0926', '18742:51208daa'],
-  'team-roster': ['10608:efd2c1cd', '11197:6aae69af', '15900:3dbf5bf8'],
-  'team-changes': ['10196:77902e7b', '10785:82fedb8', '15223:75c9fb42'],
-  'team-tenure': ['10202:be5b629', '10791:f7f221f2', '14916:6ea16f71'],
-  organization: ['12993:d00a427b', '13582:d1aef57d', '18959:82873c99'],
-  'department-count': ['10436:8348dfc', '11025:957dafbf', '15135:85201c73'],
-  interview: ['11765:d902d1e3', '12354:e8b0de56', '16485:81af99bf'],
-  offer: ['10457:afe7c06a', '11046:7d3d4ebd', '15146:5b88925b'],
-  candidates: ['9941:4928608f', '10530:ea96d990', '14903:9b4679e5'],
-  stages: ['10326:845d827d', '10915:edab2f8e', '15025:282ead3a']
-}
-const cards = new Map(pages.flatMap(page => page.cards.map(card => [card[0], card] as const)))
-
-export function upgradeManagerWorkbenchArtifacts<T extends { id: string; containerSpec?: { type: string; html?: string } }>(
-  sessionId: string, artifacts: T[]
-): T[] {
-  const prefix = 'manager:' + sessionId + ':'
-  return artifacts.map(artifact => {
-    const spec = artifact.containerSpec
-    if (!artifact.id.startsWith(prefix) || spec?.type !== 'html' || typeof spec.html !== 'string') return artifact
-    const slug = artifact.id.slice(prefix.length)
-    const card = cards.get(slug)
-    if (!card) return artifact
-    const signatures = legacyCardSignatures[slug]!
-    const html = spec.html.trim()
-    if (!signatures.some(signature => signature.startsWith(html.length + ':'))) return artifact
-    let digest = 2166136261
-    for (let i = 0; i < html.length; i++) digest = Math.imul(digest ^ html.charCodeAt(i), 16777619)
-    if (!signatures.includes(html.length + ':' + (digest >>> 0).toString(16))) return artifact
-    return { ...artifact, containerSpec: { ...spec, html: managerCardHtml(card[2], card[3][3]) } }
-  })
-}
-
 export function createManagerWorkbenchCanvas(sessionId: string) {
   const idFor = (slug: string) => 'manager:' + sessionId + ':' + slug
   const spec: BoardTabsSpec = {

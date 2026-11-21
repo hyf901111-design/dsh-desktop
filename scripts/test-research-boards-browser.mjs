@@ -697,7 +697,6 @@ if (process.argv.includes('--serve')) {
     })
   const page = await context.newPage(),
     peer = await peerContext.newPage()
-  if (!focusManager) for (const user of users) user.storage.setItem('ework.research.manager-workbench.v1', 'installed')
   const errors = [],
     failedRequests = [],
     previewRequests = new Set()
@@ -733,15 +732,13 @@ if (process.argv.includes('--serve')) {
       await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''))
       const group = page.locator('[data-srb-board-group="private"]')
       const entry = group.getByRole('button', { name: '管理者工作台', exact: true })
+      await page.waitForFunction(() => window.fixture.page.getState().account.status === 'ready')
+      assert.equal(await entry.count(), 0)
+      const managerId = await page.evaluate(() => window.fixture.seedSavedManagerWorkbench())
       await entry.click()
       const canvas = page.locator('[data-research-canvas][data-ework-grid]')
       await canvas.locator('[role="tablist"]').waitFor()
-      const managerId = await page.evaluate(() => {
-        const { page } = window.fixture
-        return page.getState().favorites.find(item => item.title === '管理者工作台').sessionId
-      })
       assert.equal(await entry.count(), 1)
-      assert.equal(users[0].storage.peekItem('ework.research.manager-workbench.v1'), 'installed')
       assert.equal(await canvas.getAttribute('data-workbench-style'), 'dark')
       const overview = await canvas.locator('[data-research-node-id$=":people"]').boundingBox()
       assert.ok(overview && overview.height < 200, 'the overview remains a compact summary card')

@@ -5,6 +5,7 @@ import * as jsx from 'react/jsx-runtime'
 import * as ReactDOM from 'react-dom'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import * as slotModule from '@deepseek-ai/dsh-client-ui-slots'
+import { createManagerWorkbenchCanvas, managerWorkbenchTitle } from './manager-workbench/canvas'
 import { createResearchBoardsBridge } from '../../src/preload/research-boards'
 import { mountAccountUi } from '../../src/preload/account-ui'
 import { mountResearchBoardNotifications } from '../../src/preload/research-board-notifications-ui'
@@ -457,4 +458,19 @@ new MutationObserver(() => updater.mount()).observe(document.body, {
   subtree: true,
   childList: true
 })
-win.fixture = { page, registry, hub, sessions, updater, ready: true }
+async function seedSavedManagerWorkbench() {
+  const directory = await page.call('local.directory', {
+    mode: 'reserve', title: managerWorkbenchTitle, basePath: await rpc('fixture:default-directory')
+  })
+  const id = await sessions.create({cwd: directory.path})
+  await sessions.binding(id).session.rename(managerWorkbenchTitle)
+  await page.call('local.directory', {mode:'bind', directoryId:directory.directoryId, sessionId:id})
+  const canvas = createManagerWorkbenchCanvas(id)
+  const workspace = registry.for(id)
+  workspace.setWorkbenchStyle('dark', {scope:'board'})
+  workspace.applyDirectoryCanvas(canvas)
+  if (!workspace.initializeWorkbenchDocument(canvas)) throw Error('Unable to seed saved board')
+  await page.call('favorite.add', {identity: {...page.identity(id), title:managerWorkbenchTitle}, dedicated:true})
+  return id
+}
+win.fixture = { page, registry, hub, sessions, updater, ready: true, seedSavedManagerWorkbench }
