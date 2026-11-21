@@ -4042,6 +4042,89 @@
         ],
         "generatedAt": "2026-11-21T15:09:29.865293+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "持仓明细数值身份筛选与已存卡片展示恢复",
+        "branch": "codex/feat/disclosed-identity-filter-20261121",
+        "baseCommit": "ee45603163aa52edba2a546896b9b5ae41529860",
+        "tipCommit": "749ba909f25de7425799bdeee115b63e3dc032e2",
+        "commits": [
+          {
+            "commit": "749ba909f25de7425799bdeee115b63e3dc032e2",
+            "parents": [
+              "ee45603163aa52edba2a546896b9b5ae41529860"
+            ],
+            "subject": "修复研究明细按数值编号筛选时存量卡与新卡空白"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/stored-view-identity-filter.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/stored-view-id-filter.html.gz"
+          },
+          {
+            "status": "A",
+            "path": "test/stored-view-identity-filter.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/stored-view-identity-filter.test.js",
+              "test/stored-view-flow-signs.test.js",
+              "test/workbench-information-layout.test.js",
+              "test/dataset-view-contract.test.js",
+              "test/dataset-view-artifact.test.js",
+              "test/dataset-view-browser.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "6个直接相关文件83项通过。验证精确ID、前导零、正常金额、旧包客户端预载、新生成静态与运行时、原始来源、交互还原。",
+            "verifiedCommit": "749ba909f25de7425799bdeee115b63e3dc032e2",
+            "completedAt": "2026-11-21T15:36:00.662055+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "K签名桌面持久数据原五张HTML分别基于正常客户端双层iframe用真实Chromium验证。修前5张全空，修后各1行，共30格与原表完全对应。逐张筛选、重挂、清除、官方URL、交互版本与静态HTML均核验，证据在切换会话终验/研究/留存五条单笔修复。"
+        },
+        "acceptanceCriteria": [
+          "仅已知id字段的安全整数与规范字符串等价。",
+          "其他字段和有意义前导零保持精确匹配。",
+          "可信旧HTML重挂可读一条真实记录并保留来源、筛选与交互版本。"
+        ],
+        "risks": [
+          "保留自定义脚本或自定义静态正文；迁移仅对可辨识的已出货主机模板。"
+        ],
+        "generatedAt": "2026-11-21T15:36:00.662055+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4639,6 +4722,22 @@
         "node_modules/vitest/vitest.mjs",
         "run",
         "test/client-mode-lost-view.test.js",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/stored-view-identity-filter.test.js",
+        "test/stored-view-flow-signs.test.js",
+        "test/workbench-information-layout.test.js",
+        "test/dataset-view-contract.test.js",
+        "test/dataset-view-artifact.test.js",
+        "test/dataset-view-browser.test.js",
+        "--maxWorkers=1",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
