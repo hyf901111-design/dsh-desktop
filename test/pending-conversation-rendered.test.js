@@ -296,7 +296,7 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   await page.route('http://workspace.test/',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8">'}))
   await page.goto('http://workspace.test/')
   await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh;width:740px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');
-  await page.evaluate(input=>window.pendingInput=input,input);
+  await page.evaluate(input=>window.pendingInput={...input,recentWorkspaceId:'B'},input);
   await page.addScriptTag({content:script});
   const home=page.locator('#app [data-odyssey-page=home]');
   const center=home.locator('textarea');
@@ -309,8 +309,6 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   expect(await filesTab.getAttribute('aria-selected')).toBe('true');
   expect(await chatTab.count()).toBe(0);
   expect(await center.isVisible()).toBe(true);
-  await home.locator('.pXSMma_workspace').click()
-  await page.getByRole('menuitem',{name:'研究项目 B',exact:true}).click()
   await home.getByText('研究项目 B',{exact:true}).waitFor()
   await page.evaluate(()=>window.pendingFixture.openSurface('browser'))
   await chatTab.waitFor({state:'visible'});
@@ -644,3 +642,29 @@ it.each(projectModes.flatMap(mode=>[false,true].map(dark=>({mode,dark}))))(
  },
  15000
 );
+
+
+it('creates the selected workspace Chat immediately from the empty center and submits the original draft there',async()=>{
+ const page=await browser.newPage({viewport:{width:1100,height:800}})
+ try{
+  await page.route('http://workspace.test/',r=>r.fulfill({contentType:'text/html',body:'<meta charset="utf-8">'}))
+  await page.goto('http://workspace.test/')
+  await page.setContent('<style>'+css+'</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right"><div id="right-body"></div></aside>')
+  await page.evaluate(value=>window.pendingInput={...value,verifyHandoff:true},input)
+  await page.addScriptTag({content:script})
+  const home=page.locator('#app [data-odyssey-page=home]')
+  await home.locator('textarea').fill('保留原文，发到工作区 B')
+  expect(await page.evaluate(()=>window.pendingFixture.events)).toEqual([])
+  await home.locator('.pXSMma_workspace').click()
+  await page.getByRole('menuitem',{name:'研究项目 B',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events)).toEqual([
+   {type:'create',workspaceId:'B'},{type:'view',id:'new-session',view:'chat'},{type:'open',id:'new-session'}
+  ])
+  const composer=page.locator('[data-mounted-project=new-session]')
+  expect(await composer.locator('textarea').inputValue()).toBe('保留原文，发到工作区 B')
+  await page.evaluate(()=>window.pendingFixture.readySession())
+  await composer.getByRole('button',{name:'发送消息',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events.filter(e=>e.type==='send'))).toEqual([{type:'send',text:'保留原文，发到工作区 B',images:[]}])
+  expect(await page.evaluate(()=>window.pendingFixture.events.filter(e=>e.type==='create').length)).toBe(1)
+ }finally{await page.close()}
+},15000)
