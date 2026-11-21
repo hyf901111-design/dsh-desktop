@@ -36,16 +36,23 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
       return row
     }
     const selector = {
-      mark: 'button[aria-label="标注"]',
+      overflow: '.ribbon [data-ribbon-more]',
+      mark: '.ribbon button[aria-label="标注"]',
       rect: '.pptxa-tool[data-pptx-tool="rect"]',
       comment: '.pptxa-bubble:not([hidden]) textarea',
       close: '.pptxa-bubble:not([hidden]) .pptxa-bubble-close',
       notes: '.notes textarea',
-      play: 'button[aria-label="从当前页放映"]'
+      play: '.ribbon button[aria-label="从当前页放映"]'
     }[d.target]
-    const el = selector && document.querySelector(selector)
+    let el = selector && document.querySelector(selector)
+    if (el?.hasAttribute('data-ribbon-folded') && d.target !== 'overflow')
+      el = document.querySelector('.ribbon-overflow [data-ribbon-command="' + el.getAttribute('aria-label') + '"]')
     if (!el || !el.getBoundingClientRect().width) throw Error('操作控件尚未显示。')
     return el
+  }
+  if (d.command === 'in-overflow') {
+    const label = {mark: '标注', play: '从当前页放映'}[d.target]
+    return !!label && !!document.querySelector('.ribbon [data-ribbon-folded][aria-label="' + label + '"]')
   }
   if (d.command === 'state')
     return {
