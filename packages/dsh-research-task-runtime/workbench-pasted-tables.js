@@ -196,18 +196,27 @@ function pastedDisclosure(request,firstTableStart){
  return {source:labeledLine?new URL(url).hostname:label,url};
 }
 
-// Display labels may begin with a year or a tenor while persisted keys keep
-// their existing identifier contract. Only exact, unique original headers map.
-function inferredHeaderFields(labels,derivedKeys,aliases){
- if(!Array.isArray(labels)||new Set(labels).size!==labels.length)return;
- const reserved=new Set([...labels,...derivedKeys]);
- return labels.map((label,i)=>{
-  if(validKey(label))return {key:label,label};
-  if(label!==label.trim()||!/^\p{N}[\p{L}\p{N}\p{M} _()（）%％./-]{0,99}$/u.test(label))return;
-  let key='column'+(i+1);
+// A printed year, tenor or parenthesized unit can be part of a source heading,
+// while persisted keys retain the identifier contract. Resolve only exact,
+// unique source headers at their original positions.
+function pastedHeaderFields(labels,declared,derivedKeys,aliases){
+ if(!Array.isArray(labels)||new Set(labels).size!==labels.length)return declared;
+ const fields=declared??labels.map(label=>({key:label,label}));
+ if(!Array.isArray(fields))return fields;
+ const reserved=new Set([...labels,...derivedKeys,...fields.map(field=>field?.key)]);
+ let index=0;
+ return fields.map(field=>{
+  if(derivedKeys.has(field?.key))return field;
+  const sourceIndex=index++,label=labels[sourceIndex];
+  if(validKey(field?.key))return field;
+  if(typeof label!=='string'||field?.key!==label||field?.label!==label||label!==label.trim()||label.length>100)return declared?field:undefined;
+  const numbered=/^\p{N}[\p{L}\p{N}\p{M} _()（）%％./-]*$/u.test(label);
+  const withUnit=/^\p{L}[\p{L}\p{N}\p{M} _.-]*(?:\([\p{L}\p{N}\p{M} %％/.-]{1,32}\)|（[\p{L}\p{N}\p{M} %％/.-]{1,32}）)$/u.test(label);
+  if(!numbered&&!withUnit)return declared?field:undefined;
+  let key='column'+(sourceIndex+1);
   while(reserved.has(key))key+='_';
   reserved.add(key);aliases.set(label,key);
-  return {key,label};
+  return {...field,key};
  });
 }
 export function resolvePastedWorkbenchPlan(plan){
@@ -260,7 +269,7 @@ export function resolvePastedWorkbenchPlan(plan){
   const raw=Number.isInteger(block)&&blocks[block-1];
   const aliases=new Map();
   const derivedKeys=new Set(Array.isArray(pastedTable.derive)?pastedTable.derive.map(field=>field?.key):[]);
-  const sourceFields=declared===undefined&&header&&raw ? inferredHeaderFields(raw[0],derivedKeys,aliases) : declared;
+  const sourceFields=header&&raw ? pastedHeaderFields(raw[0],declared,derivedKeys,aliases) : declared;
   if(declared===undefined&&(!sourceFields||sourceFields.some(field=>!field)))
    fail('请按原表头的列顺序声明 fields，每列提供有效的 key 与原文 label。');
   let {identity,numericFields=[],derive=[]}=pastedTable;

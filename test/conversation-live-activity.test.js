@@ -18,10 +18,12 @@ it('upgrades the exact installed calendar classifier and rejects changes elsewhe
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
  const current=patchConversationLiveActivity(source)
  const block=current.match(/\/\* ework:conversation-live-activity:v\d+ \*\/[\s\S]*?\/\* ework:conversation-live-activity:end \*\/\n/u)[0]
- const prior=gunzipSync(await readFile('test/fixtures/conversation-live-activity-v10-before-calendar.txt.gz')).toString('utf8')
- expect(prior).not.toBe(block)
- expect(patchConversationLiveActivity(current.replace(block,prior))).toBe(current)
- expect(()=>stripConversationLiveActivity(current.replace(block,prior.replace('2.4s linear infinite','1s linear infinite')))).toThrow('definition drifted')
+ for (const version of ['v9','v10']) {
+  const prior=gunzipSync(await readFile(`test/fixtures/conversation-live-activity-${version}-before-calendar.txt.gz`)).toString('utf8')
+  expect(prior).not.toBe(block)
+  expect(patchConversationLiveActivity(current.replace(block,prior))).toBe(current)
+  expect(()=>stripConversationLiveActivity(current.replace(block,prior.replace('2.4s linear infinite','1s linear infinite')))).toThrow('definition drifted')
+ }
 })
 it('shows immediate preparation and never mistakes old completed tools for current work',()=>{
  expect(activity()).toEqual({kind:'thinking',label:'正在思考…'})

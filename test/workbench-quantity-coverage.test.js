@@ -197,3 +197,15 @@ it('preserves requirements for genuinely pending panels without claiming that a 
  const raw=input('simulated','32项任务');delete raw.sharedDatasets;raw.generationMode='deferred';raw.sharedContext='全部为明确模拟任务，保留32项范围。';raw.panels=[{title:'任务清单',type:'html',prompt:'完整任务清单。'}]
  const pending=validateWorkbench(raw);expect(pending.originalRequest).toBe(raw.originalRequest);expect(pending.panels[0]).not.toHaveProperty('artifact')
 })
+
+it('counts calendar dates independently of series, securities, reports or KPI rows',()=>{
+ const plan=artifact=>({panels:[{title:'收益率日期复核',prompt:'展示至少3个日期的收益率读数。',artifact}]})
+ const table={type:'table',version:1,title:'收益率',columns:['代码','日期','收益率'],rows:[['A','2024-12-31',4.58],['B','20241231',4.6],['A','2024/12/30',4.55]]}
+ expect(workbenchScopeDeficits(plan(table))[0]).toMatchObject({expected:3,actual:2})
+ expect(componentDeliveryScopeIssue(table,'至少3个日期的收益率')).toMatch(/实际交付2/)
+ expect(workbenchScopeDeficits(plan({...table,rows:table.rows.slice(0,1)}))[0]).toMatchObject({actual:1})
+ const chart={type:'chart',version:1,title:'收益率',variant:'groupedBar',labels:['2024-12-27','2024-12-30','2024-12-31'],series:[{name:'期限A',values:[4.62,null,4.58]},{name:'期限B',values:[0,null,null]}]}
+ expect(workbenchScopeDeficits(plan(chart))[0]).toMatchObject({expected:3,actual:2})
+ const kpi={type:'kpi',version:1,title:'当前收益率',items:[{label:'实际收益率',value:'4.58%'}]}
+ expect(workbenchScopeDeficits(plan(kpi))[0]).toMatchObject({expected:3,actual:null})
+})

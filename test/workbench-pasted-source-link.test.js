@@ -91,3 +91,29 @@ it('retains the one official locator for a finalized historical table and avoids
   expect(initialWorkbenchInformationPlan(parts)).toContain('按这次要求组织图表和明细')
   expect(initialWorkbenchInformationPlan(parts,true)).toContain('arrange the charts and details as requested')
 })
+
+it.each(fixture('workbench-etf-unit-header-first-calls.json').map((args,i)=>[i+1,args]))('binds literal unit headers from ETF submission %s to the exact original columns',(_,args)=>{
+  const originalRequest=requests.ETF持仓
+  const {sharedDatasets,panels}=validateWorkbench({...args,requestId:'unit-headers',originalRequest})
+  const sourceRows=originalRequest.trim().split('\n').slice(-5).map(line=>line.split('\t'))
+  const url=originalRequest.split('\n').find(line=>line.startsWith('https://'))
+  const dataset=sharedDatasets[0]
+  expect(dataset.sourceUrl).toBe(url)
+  expect(dataset.fields.filter(field=>field.key!=='id').map(field=>field.label)).toEqual(originalRequest.trim().split('\n').at(-6).split('\t'))
+  const [rank,code,name,qty,amount,weight]=dataset.fields.filter(field=>field.key!=='id')
+  expect(amount.minimumFractionDigits).toBe(2)
+  expect(dataset.records.map(row=>[row[rank.key],row[code.key],row[name.key],row[qty.key],row[amount.key],row[weight.key]])).toEqual(
+    sourceRows.map(([rank,code,name,qty,amount,weight])=>[rank,code,name,Number(qty),Number(amount),Number(weight)]))
+  expect(panels[0].artifact).toMatchObject({type:'chart',variant:'horizontal',unit:'%',labels:sourceRows.map(row=>row[2]),series:[{values:sourceRows.map(row=>Number(row[5]))}],sources:[{url}]})
+  const spec=JSON.parse(acceptArtifactOutput(JSON.stringify(panels[1].artifact)))
+  const doc=new DOMParser().parseFromString(spec.html,'text/html')
+  const cells=[...doc.querySelectorAll('table tbody td')].map(cell=>cell.textContent.replaceAll(',',''))
+  expect(cells.some(cell=>cell.includes('8589675214.80'))).toBe(true)
+  expect(cells.some(cell=>cell.includes('7984305860.00'))).toBe(true)
+  expect(getComponentSourceInfo({containerSpec:spec}).records.some(row=>row.url===url)).toBe(true)
+  const malformed=structuredClone(args)
+  if(malformed.sharedDatasets[0].fields)malformed.sharedDatasets[0].fields[4].label='其他金额（元）'
+  else malformed.sharedDatasets[0].pastedTable.numericFields[1]='其他金额（元）'
+  expect(()=>validateWorkbench({...malformed,requestId:'wrong-header',originalRequest})).toThrow()
+  expect(()=>validateWorkbench({...args,requestId:'duplicate-header',originalRequest:originalRequest.replace('数量（股）\t公允价值（元）','公允价值（元）\t公允价值（元）')})).toThrow()
+})

@@ -18,13 +18,27 @@ const dateKey=value=>String(value).replace(/[-/]/gu,'')
 export const isDecimalPrecisionScope=(unit,entity='')=>unit==='位'&&/^(?:小数|有效数字)/u.test(entity)
 export const isActionScope=(unit,entity='')=>unit==='个'&&/^(?:操作(?:按钮|控件)?|按钮|控件|交互(?:操作|控件)?)(?:$|[，。；和及])/u.test(entity)
 
-export function isDatedRecordScope(unit,entity='') {
- return unit==='条'&&/^(?:完整|真实|原始|实际)*(?:(?:净值|行情|价格|时序|时间序列|观测)(?:记录|数据|明细|点)|数据点|记录)/u.test(entity)||
-  unit==='个'&&/^(?:净值日|交易日|观测日)(?!历)/u.test(entity)
+export function isCalendarDateScope(unit,entity='') {
+ return unit==='个'&&/^(?:不同的?|独立的?)?(?:日期|净值日|交易日|观测日)(?!历)/u.test(entity)
 }
 
-export function datedRecordIdentities(data, rows=data?.rows) {
- if(data?.type==='chart'&&Array.isArray(data.labels)&&data.labels.length&&data.labels.every(datedLabel)){
+export function isDatedRecordScope(unit,entity='') {
+ return unit==='条'&&/^(?:完整|真实|原始|实际)*(?:(?:净值|行情|价格|时序|时间序列|观测)(?:记录|数据|明细|点)|数据点|记录)/u.test(entity)||
+  isCalendarDateScope(unit,entity)
+}
+
+export function datedRecordIdentities(data, rows=data?.rows, datesOnly=false) {
+ if(datesOnly&&['candlestick','ohlc'].includes(data?.variant)&&Array.isArray(data.candles)){
+  return data.candles.filter(item=>datedLabel(item?.date)&&['open','high','low','close'].every(key=>Number.isFinite(item[key]))).map(item=>dateKey(item.date))
+ }
+ if(datesOnly&&data?.type==='timeline'&&Array.isArray(data.items)){
+  return data.items.flatMap(item=>{
+   const time=String(item.time??'')
+   const day=/^(\d{4}[-/]?\d{2}[-/]?\d{2})(?:$|[ T])/u.exec(time)?.[1]??(/^\d{2}:\d{2}/u.test(time)?data.date:undefined)
+   return datedLabel(day)?[dateKey(day)]:[]
+  })
+ }
+ if((data?.type==='chart'||datesOnly&&data?.type==='market'&&data.variant==='trend')&&Array.isArray(data.labels)&&data.labels.length&&data.labels.every(datedLabel)){
   return data.labels.flatMap((label,index)=>data.series?.some(series=>Number.isFinite(series.values?.[index]))?[dateKey(label)]:[])
  }
  if(!Array.isArray(rows)||!Array.isArray(data?.columns))return
@@ -32,7 +46,7 @@ export function datedRecordIdentities(data, rows=data?.rows) {
  const date=columns.findIndex(label=>/^(?:日期|净值日期|交易日期|观测日期|(?:nav_|trade_|price_)?date)$/iu.test(label))
  if(date<0)return
  const entity=columns.findIndex(label=>/代码|编号|名称|简称|\b(?:id|code|name|symbol)\b/iu.test(label.replaceAll('_',' ')))
- return rows.flatMap(row=>Array.isArray(row)&&datedLabel(row[date])?[JSON.stringify([row[entity]??null,dateKey(row[date])])]:[])
+ return rows.flatMap(row=>Array.isArray(row)&&datedLabel(row[date])?[datesOnly?dateKey(row[date]):JSON.stringify([row[entity]??null,dateKey(row[date])])]:[])
 }
 
 export function componentDeliveryModel(candidate){
@@ -136,13 +150,13 @@ export function componentDeliveryScopeIssue(candidate,request='') {
   .map(m=>({minimum:number(m[1]),unit:m[2],entity:m[3],dated:isDatedRecordScope(m[2],m[3])}))
   .filter(({minimum})=>Number.isSafeInteger(minimum)&&minimum>1&&minimum<=2000)
  if(!minimums.length)return
- let identities,datedIdentities
+ let identities,datedIdentities,dateRows
  if((data?.type==='table'||data?.type==='market'&&data.variant==='table')&&Array.isArray(data.rows)&&Array.isArray(data.columns)&&data.columns.length&&data.rows.every(row=>Array.isArray(row)&&row.length===data.columns.length)){
   const columns=data.columns.map(columnLabel),identity=columns.findIndex(label=>/代码|编号|名称|简称|\b(?:id|code|name|symbol)\b/iu.test(label))
   const quantitative=/收益|回撤|波动|净值|规模|金额|预算|数量|指标|价格|收入|利润|比率|占比/u.test(request)
   const rows=data.rows.filter(row=>!quantitative||row.some((cell,i)=>!metadataColumn((columns[i]??'').replaceAll('_',' '))&&numericFact(cell)))
   identities=rows.map(row=>identity>=0?row[identity]:JSON.stringify(row))
-  datedIdentities=datedRecordIdentities(data,rows)
+  dateRows=rows;datedIdentities=datedRecordIdentities(data,rows)
  }else if(['news','reports','timeline'].includes(data?.type)&&Array.isArray(data.items))identities=data.items.map(item=>item.id??item.url??item.title)
  else if(data?.type==='market'&&data.variant==='scatter'&&Array.isArray(data.items)){
   identities=data.items.filter(item=>Number.isFinite(item?.x)&&Number.isFinite(item?.y)).map(item=>item.label)
@@ -157,7 +171,7 @@ export function componentDeliveryScopeIssue(candidate,request='') {
   datedIdentities=datedRecordIdentities(data)
  }
  for(const {minimum,dated,unit,entity} of minimums.sort((a,b)=>b.minimum-a.minimum)){
-  const observed=comparisonNamesForScope(data,unit,entity) ?? (dated?datedIdentities??identities:identities)
+  const observed=comparisonNamesForScope(data,unit,entity) ?? (isCalendarDateScope(unit,entity)?datedRecordIdentities(data,dateRows,true):dated?datedIdentities??identities:identities)
   if(!Array.isArray(observed))return `交付范围无法核验：本面板要求至少${minimum}个实际条目或对象。切换呈现方式不能取消范围要求；保留真实记录集合，原生模型直接提供 rows/items/series，自定义 HTML 用唯一的 script[type="application/json"][data-component-delivery-records] 保留同一 table/chart/timeline 数据模型并据此绘制，不能用摘要指标个数或自称完成代替对象数。`
   const actual=new Set(observed.filter(v=>v!==undefined&&v!==null&&String(v).trim())).size
   if(actual<minimum)return `交付范围未满足：当前面板要求至少${minimum}个实际条目或对象，实际交付${actual}。保留已取得数据并继续补齐目标集合；仅有代码、候选名称或全部缺失的量化指标不算实际交付，缺失说明不代表比较任务已完成，不能用单条样本替代完整范围。`
