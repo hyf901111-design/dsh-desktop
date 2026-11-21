@@ -2193,43 +2193,23 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "让带任务背景的直接生图请求在已有画布获得正确的新图操作",
+        "featureName": "验证实装对话模块中画布接入补丁可重入",
         "branch": "codex/feat/native-image-brief-20261121",
-        "baseCommit": "f50e52b25c16fdc4199148a98303c2d41b965752",
-        "tipCommit": "d216e426c86400a050df8f8c2c98e6d5c1b3b246",
+        "baseCommit": "d216e426c86400a050df8f8c2c98e6d5c1b3b246",
+        "tipCommit": "697c008e44e91dd53c6ea7b8a7e02be93abf66d2",
         "commits": [
           {
-            "commit": "d216e426c86400a050df8f8c2c98e6d5c1b3b246",
+            "commit": "697c008e44e91dd53c6ea7b8a7e02be93abf66d2",
             "parents": [
-              "f50e52b25c16fdc4199148a98303c2d41b965752"
+              "d216e426c86400a050df8f8c2c98e6d5c1b3b246"
             ],
-            "subject": "修复带任务标题的新图请求无法绑定原生画布"
+            "subject": "校验图像原生对话补丁时按实装顺序还原模式协议"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/image-canvas-intent.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-task-runtime/image-canvas-intent.js"
-          },
-          {
             "status": "M",
-            "path": "scripts/lib/image-factory-native.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/image-factory/view.tsx"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-layer-gesture.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/image-factory-native.test.js"
+            "path": "test/browser-app-native.test.js"
           }
         ],
         "checks": [
@@ -2238,17 +2218,16 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
+              "test/browser-app-native.test.js",
               "-t",
-              "labeled cover brief|ordinary messages|prepares a canvas request",
+              "registers the browser view with the actual",
               "--maxWorkers=1",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "实机原文和任务抬头的明确执行、普通讨论、显式编辑与现有画布复核通过。",
-            "verifiedCommit": "d216e426c86400a050df8f8c2c98e6d5c1b3b246",
-            "completedAt": "2026-11-21T12:09:59.386585+00:00",
+            "summary": "读取当前安装的完整对话模块，按产品顺序还原、重加图像原生补丁，语法与二次构建一致。",
+            "verifiedCommit": "697c008e44e91dd53c6ea7b8a7e02be93abf66d2",
+            "completedAt": "2026-11-21T12:14:31.112868+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -2263,7 +2242,7 @@
         "risks": [
           "图像模型与推理模型的可用性需在实际签名运行时另行核实。"
         ],
-        "generatedAt": "2026-11-21T12:09:59.386585+00:00"
+        "generatedAt": "2026-11-21T12:14:31.112868+00:00"
       }
     }
   ],
