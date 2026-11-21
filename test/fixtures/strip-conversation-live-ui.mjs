@@ -10,12 +10,13 @@ const {stripKnowledgeConversation}=require('../../scripts/lib/knowledge-client.m
 const {stripKnowledgeSharedResearch}=require('../../scripts/lib/knowledge-shared-research.mjs')
 const {stripConversationPermissionDefault}=require('../../scripts/lib/conversation-permission-default.mjs')
 const {stripResearchBoardHeaderClient}=require('../../scripts/lib/research-board-header-client.mjs')
+import {stripComposerWorkspaceBar} from '../../scripts/lib/patch-figma-final-shell.mjs'
 const {stripSpreadsheetClient}=require('../../scripts/lib/spreadsheet-client.mjs')
 
 // These resident wrappers are outside the submission/progress and grid layers.
 // Match patch-web-frontend-loading.mjs without weakening any inverse guard.
 export const stripConversationLiveUi=source=>{
- const outer=stripSpreadsheetClient(stripKnowledgeSharedResearch(source))
+ const outer=stripSpreadsheetClient(stripKnowledgeSharedResearch(stripComposerWorkspaceBar(source)))
  const workspace=stripKnowledgeConversation(stripBrowserAppNative(stripResearchBoardHeaderClient(stripConversationPermissionDefault(outer))))
  return stripComposerVoice(stripConversationLiveActivity(stripMessageEditClient(workspace)))
 }
