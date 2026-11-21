@@ -4676,6 +4676,96 @@
         ],
         "generatedAt": "2026-11-21T16:32:12.028040+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复图像回收和进入研究时的导航竞争",
+        "branch": "codex/feat/research-navigation-20261122",
+        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
+        "tipCommit": "c8191470d7c3c71e40174cb4ab43066d0fee7c6c",
+        "commits": [
+          {
+            "commit": "d165a9b72b5a8b1f175a34b90b29a61c772bc600",
+            "parents": [
+              "216fb30180c5941ccf8f1be873948762e933ea40"
+            ],
+            "subject": "修复空图像切入研究时归档会话并退回首页"
+          },
+          {
+            "commit": "c8191470d7c3c71e40174cb4ab43066d0fee7c6c",
+            "parents": [
+              "d165a9b72b5a8b1f175a34b90b29a61c772bc600"
+            ],
+            "subject": "独立放置看板接管清理与并发回归验证"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-surface-host.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/image-research-navigation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-research-navigation.test.js",
+              "test/image-factory-native.test.js",
+              "test/workspace-surface-host.test.ts",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "覆盖侧栏研究、会话内切换、撤销晚到导航和图像回收。",
+            "verifiedCommit": "c8191470d7c3c71e40174cb4ab43066d0fee7c6c",
+            "completedAt": "2026-11-21T16:33:18.511263+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "旧包的侧栏和顶栏两条错误路径均已真实复现，集成后跑相同操作。"
+        },
+        "acceptanceCriteria": [
+          "侧栏点击研究后新研究会话稳定可用",
+          "顶栏切研究保留原会话归属且不会回到对话首页"
+        ],
+        "risks": [
+          "保留已经有文稿、对话或画布的图像会话。"
+        ],
+        "generatedAt": "2026-11-21T16:33:18.511263+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5383,6 +5473,19 @@
         "--reporter=dot",
         "-t",
         "scoped offline model|serializes the native report skill"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-research-navigation.test.js",
+        "test/image-factory-native.test.js",
+        "test/workspace-surface-host.test.ts",
+        "--maxWorkers=1",
+        "--reporter=dot"
       ],
       "timeoutMs": 240000
     }
