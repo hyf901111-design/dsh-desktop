@@ -15,7 +15,7 @@ function requests(text,{mode='research',other=[]}={}){
  let middleware
  registerModelTaskReplies({on:(_,cb)=>{middleware=cb}})
  allowTaskOpening(clientModeTurn(session))
- return {message,current,run:(step,request=current)=>middleware({agent:{session},turn:2,step},async()=>request)}
+ return {message,current,session,run:(step,request=current)=>middleware({agent:{session},turn:2,step},async()=>request)}
 }
 it('sends only the real user task and column semantics for the opening, then restores the exact Treasury source, precision and tool authority',async()=>{
  const {message,current,run}=requests(treasuryLines.join('\n'))
@@ -168,4 +168,27 @@ it('keeps an explicit live page visit executable on the first call and keeps ind
   expect(first.system.includes('直接使用本轮提供的浏览器')).toBe(live)
   if(live){expect(first.tools).toBe(request.tools);expect(first.messages).toBe(request.messages);expect(first[Symbol.for('ework.model-task-opening')]).toBeUndefined()}
  }
+})
+
+it('works with the current native office file immediately and issues a public progress opportunity after its actual first read',async()=>{
+ const asks=[
+  ['spreadsheet','固收组收盘要复盘这张表里的 2024 年 12 月美国国债曲线。请把 10 年减 2 年、30 年减 5 年两组期限利差逐日写入右侧空白 F、G 列，单位基点，保留原来的观测值，用可以复算的公式。找出 10 年减 2 年利差单日变动绝对值最大的一次，并列的话都列出。最后用三句交接说明月初和月末两组利差各是多少、期间哪天变化最剧烈、怎样理解方向。只使用本工作簿的实际观察日，缺日期不要补。'],
+  ['presentation','晨会执行E1：在本验收演示末尾追加一页，标题“美国国债12月30日两年与十年”，正文仅“2年期4.24%，10年期4.55%，期限利差31个基点。”保留已有页面和备注。请回读确认新页页码。'],
+ ]
+ for(const [mode,text] of asks){
+  const {current,session,run}=requests(text,{mode})
+  const tools=[{name:'client_action',parameters:{properties:{capability:{enum:[mode+'.inspect',mode+'.apply']}}}}]
+  const first=await run(1,{...current,tools});expect(first.tools).toBe(tools);expect(first.messages).toBe(current.messages)
+  expect(first.system).toContain('在同一步读取实际文档');expect(first[Symbol.for('ework.model-task-opening')]).toBeUndefined()
+  const age=Date.now();session.events.push({type:'assistant/message',time:age,data:{message:{content:[{type:'text',text:'本轮公开分析。'}]}}})
+  expect((await run(2,{...current,tools})).messages).toBe(current.messages)
+  session.events.push({type:'tool/result',time:age,data:{message:{content:[{type:'tool-result',content:[{type:'text',text:'已读到文档'}]}]}}})
+  const after=await run(2,{...current,tools})
+  expect(after.tools).toBe(tools);expect(after.messages.at(-1).content[0].text).toContain('真实回执')
+ }
+ const h=requests(asks[0][1],{mode:'spreadsheet'})
+ const noWrite=[{name:'client_action',parameters:{properties:{capability:{enum:['spreadsheet.inspect']}}}}]
+ expect((await h.run(1,{...h.current,tools:noWrite})).system).not.toContain('在同一步读取实际文档')
+ const ordinary=requests('只在对话解释这张表，不要改当前工作簿。',{mode:'spreadsheet'})
+ expect((await ordinary.run(1)).system).not.toContain('在同一步读取实际文档')
 })

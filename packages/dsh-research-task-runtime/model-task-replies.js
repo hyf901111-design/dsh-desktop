@@ -5,6 +5,7 @@ import {pastedWorkbenchInput} from './workbench-pasted-tables.js'
 const publicOpening = Symbol.for('ework.model-task-opening')
 const supported = new WeakSet()
 const opened = new WeakSet()
+const workingInOffice = new WeakSet()
 
 // Only stage an executable request with substantial work ahead. An ordinary
 // question, tightly formatted result or small edit still takes one model call.
@@ -191,6 +192,14 @@ export function registerModelTaskReplies(ctx) {
           !/(?:不要|不用|别|不必|无需|禁止|如何|怎样|怎么|do not|don't|how to).{0,14}(?:打开|访问|前往|open|visit|navigate)/iu.test(clause))) {
       return {...request, system:request.system+'\n直接使用本轮提供的浏览器读取指定页面，按实际返回的标题和内容答复。页面无法打开时说明真实错误。'}
     }
+    if (firstTaskOpening(agent.session, step) && (turn.mode === 'spreadsheet' || turn.mode === 'presentation') &&
+        turn.appEdit && (turn.workspaceTagged || /(?:当前|本(?:验收)?|这[张份个页套]|选中).{0,8}(?:表|簿|演示|幻灯片|页|文稿)|(?:选区|当前页)|\b(?:this|current|selected|active) (?:workbook|sheet|slide|presentation)\b/iu.test(turn.text))) {
+      const grants = request.tools?.find(tool => tool.name === 'client_action')?.parameters?.properties?.capability?.enum
+      if (grants?.includes(turn.mode+'.inspect') && grants.includes(turn.mode+'.apply')) {
+        workingInOffice.add(turn)
+        return {...request, system:request.system+'\n用户指向当前原生文档。可简短说明这次变更的口径和要保留的范围，并在同一步读取实际文档。用回读结果确认对象和权限；只有读取失败且确需用户补充时才询问文件或路径。'}
+      }
+    }
     if (firstTaskOpening(agent.session, step) && request.tools?.length) {
       const {message} = claimedWorkspaceMessage(agent.session,turn.mode) ?? {}
       if (!message) return request
@@ -212,7 +221,7 @@ export function registerModelTaskReplies(ctx) {
         content:[{type:'text',text:'继续完成本轮用户的原始任务。根据这轮的实际资料和工具执行，保留已有授权范围，开场不用重复。'}]}]}
     }
     if (step > 1 && request.tools?.length && (opened.has(turn) || wantsTaskOpening(turn))) {
-      const stage = milestone(agent.session, turnNumber, opened.has(turn) && step === 3)
+      const stage = milestone(agent.session, turnNumber, opened.has(turn) && step === 3 || workingInOffice.has(turn) && step === 2)
       if (!stage) return request
       const update = stage === 'retry'
         ? '上一步实际返回失败。再次操作前，用一句公开正文指出哪个业务内容尚未完成、将怎样根据刚才的回执修正；随后在同一步继续。别将失败写成已完成，不向用户转述内部指令。'
