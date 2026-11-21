@@ -56,8 +56,18 @@ function openingTableScope(rows, goal) {
   const missing = /^(?:|[-—–…]|\.{3}|null|n\/?a|未披露|缺失)$/iu
   const numeric = /^[-+−]?\d+(?:,\d{3})*(?:\.\d+)?(?:[%％‰]| ?bps?)?$/iu
   const key = header.findIndex(label => /名称|类别|项目|日期|证券名|产品名|^(?:name|category|date)$/iu.test(label))
-  const supplied = records.some(row=>row.some(value=>missing.test(value.trim())))
+  const hasMissing = records.some(row=>row.some(value=>missing.test(value.trim())))
+  const supplied = hasMissing
     ? '原文含空值或缺失标记，不能按零补齐。' : ''
+  // A reconciliation needs every column, including identifiers and unit counts.
+  // Bound this preview by the actual text size before passing it to the opening.
+  const reconcile = /逐[笔行项].{0,16}(?:勾稽|核[对算验查]|复核)|勾稽|\b(?:reconcil\w*|line[- ]by[- ]line|row[- ]by[- ]row)\b/iu.test(goal)
+  if (reconcile && header.length <= 8 && records.length <= 6 &&
+      header.every((value,i)=>value===labels[i]) &&
+      rows.every(row=>row.every(value=>value.length<=32 && !/[\p{Cc}<>]/u.test(value)))) {
+    const table = rows.map(row=>row.join('\t')).join('\n')
+    if (table.length <= 900) return dimension+'。'+(hasMissing ? supplied : '已给出全部单元格。')+'原表逐行如下：\n'+table
+  }
   if (key<0 || !records.every(row=>/^[\p{L}\p{N} .·/−–-]{1,24}$/u.test(row[key]))) return dimension+(supplied?'。'+supplied:'')
   const columns = labels.flatMap((label,i) => {
     if (i===key || label!==header[i] || /(?:序号|编号|代码|日期|code|(?:^|\s)id$)/iu.test(label) || !/[（(][^()（）]{1,12}[）)]|[%％‰]|(?:bp|bps)$/iu.test(label)) return []
