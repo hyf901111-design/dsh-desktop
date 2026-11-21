@@ -322,6 +322,7 @@ import { protectMaster } from './master-protection'
 import { finalizePptx } from './finalize-pptx'
 import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
+import { replyTextBox } from './reply-text'
 import { useRibbonOverflow } from './ribbon-overflow'
 import { runEditGuideAction } from './edit-guide'
 
@@ -545,6 +546,22 @@ function receive(event) {
     stylesOpen.value = false
   } else if (d.type === 'workspace-focus') workspaceFocused.value = !!d.active
   else if (d.type === 'load') void hydrate(d)
+  else if (d.type === 'insert-reply') {
+    if (!editable.value || freeze || loading || importing || d.documentId !== docId.value ||
+        !slide.value || d.slideId !== slide.value.id || typeof d.text !== 'string' || !d.text.trim())
+      return send('flushed', {id:d.id, error:'当前页面已切换或不可编辑。'})
+    try {
+      if (playing.value) stopPlaying()
+      marking.value = false
+      menu.value = ''
+      const w = store.viewportSize
+      const {position, content} = replyTextBox(d.text, w, w * store.viewportRatio, store.theme?.fontName)
+      elements.createTextElement(position, {content})
+      nextTick(() => { save(); send('flushed', {id:d.id}) })
+    } catch (error) {
+      send('flushed', {id:d.id, error:String(error.message || error)})
+    }
+  }
   else if (d.type === 'flush') {
     if (d.locking && (importing || loading)) return send('flushed', { id: d.id, error: '文稿正在载入，请稍后锁定。' })
     document.dispatchEvent(new Event('odyssey:flush-text'))
