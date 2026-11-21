@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto'
 import {canonicalConversationComponentInput} from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js'
 import type {ConversationComponentCapabilityAdapter,ConversationComponentVisibleContext,ConversationComponentExecutionIdentity} from '../../../packages/dsh-research-task-runtime/conversation-component-contract.js'
+import {NO_VISIBLE_CLIENT,VISIBLE_MODE_CHANGED} from '../../../packages/dsh-research-task-runtime/client-visible-binding.js'
 import {createClientCapabilityHost} from '../../../packages/dsh-research-task-runtime/client-capability-host.js'
 import type {ClientCapabilityContext} from '../../../packages/dsh-research-task-runtime/client-capabilities.js'
 import type {NoteDocumentAdapter,NoteDocumentLease} from '../notes/document-capability-adapter'
@@ -53,8 +54,8 @@ export class ClientCapabilityService{
    return this.options.spreadsheet?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest,input.includeContent===true)??{}
   }
   if(input.method==='receipt')return this.recoverReceipt(input,signal)
-  const binding=this.current(input.sessionId);if(!binding)throw Error('当前会话未绑定可见客户端，请回到该会话后重试。')
-  if(input.expectedMode!==undefined&&binding.mode!==input.expectedMode)throw Error('当前客户端视图已切换，请在目标应用重新发送请求。')
+  const binding=this.current(input.sessionId);if(!binding)throw Error(NO_VISIBLE_CLIENT)
+  if(input.expectedMode!==undefined&&binding.mode!==input.expectedMode)throw Error(VISIBLE_MODE_CHANGED)
   const key=JSON.stringify([binding.owner,binding.sessionId,input.turnId])
   let turn=this.turns.get(key)
   const authorityId=input.authorityId,sequence=input.authoritySeq??-1,instruction=input.sourceInstruction??''

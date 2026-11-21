@@ -1,3 +1,4 @@
+import {isLostViewResult,isVisibleCapabilityTool} from './client-visible-binding.js'
 import {workspaceAuthoredText} from './client-mode-reference.js'
 import {canvasHumanText} from './canvas-task-routing.js'
 import {createClientCapabilityRegistry} from './client-capabilities.js'
@@ -25,13 +26,27 @@ export function clientModeTurn(session) {
   const events = session.events ?? []
   let state = projections.get(session)
   if (!state || state.end > events.length || state.last !== events[state.end - 1]) {
-    state = {end: 0, queues: {'next-turn': [], 'next-step': []}}
+    state = {end: 0, visibleCalls: new Map(), queues: {'next-turn': [], 'next-step': []}}
     projections.set(session, state)
   }
   for (; state.end < events.length; state.end++) {
     const event = events[state.end], data = event.data
     state.last = event
-    if (event.type === 'turn/start' || event.type === 'turn/end') state.message = undefined
+    if (event.type === 'turn/start' || event.type === 'turn/end') {
+      state.message = undefined
+      state.turnId = event.type === 'turn/start' ? data?.turn : undefined
+      state.viewLostFor = undefined
+      state.visibleCalls.clear()
+    }
+    if (event.type === 'tool/call' && state.message?.id && state.turnId !== undefined && data?.turn === state.turnId && typeof data.callId === 'string' && isVisibleCapabilityTool(data.name)) {
+      state.visibleCalls.set(data.callId, state.message.id)
+    }
+    if (event.type === 'tool/result' && state.turnId !== undefined && data?.turn === state.turnId) {
+      const callId = data.message?.source?.callId
+      const owner = state.visibleCalls.get(callId)
+      state.visibleCalls.delete(callId)
+      if (owner && owner === state.message?.id && isLostViewResult(data.message, callId)) state.viewLostFor = owner
+    }
     if (event.type === 'user/message' && data?.source?.kind === 'user') {
       state.message = data
       state.messageEvent = event
@@ -68,6 +83,10 @@ export function clientModeTurn(session) {
 
 // Before user/message is committed, the loop's actual claim identifies the
 // admitted draft. Queued or cancelled messages do not enter this projection.
+export function lostVisibleClientView(session, turn) {
+  return Boolean(turn?.messageId && projections.get(session)?.viewLostFor === turn.messageId)
+}
+
 export function claimedWorkspaceMessage(session, mode) {
   if (clientModeTurn(session)?.mode !== mode) return
   const state = projections.get(session)
