@@ -1,3 +1,4 @@
+import {allowTaskOpening,wantsTaskOpening} from './model-task-replies.js'
 import {clientModeTurn} from './client-mode-profile.js'
 
 // Keep analytical work at the selected model's normal depth. The short first
@@ -9,11 +10,13 @@ function quickFirstStep(profile) {
 }
 
 export function registerFirstResponseEffort(ctx) {
-  return ctx.on('agent/request', async ({agent, step, signal, suggestFirstResponseEffort}, next) => {
+  return ctx.on('agent/request', async ({agent, step, signal, suggestFirstResponseEffort, supportsTaskOpening}, next) => {
     const config = await next()
-    if (step !== 1 || config.reasoningEffort !== undefined || !suggestFirstResponseEffort) return config
+    if (step !== 1) return config
     const turn = clientModeTurn(agent?.session)
-    if (!quickFirstStep(turn)) return config
+    const staged = supportsTaskOpening && wantsTaskOpening(turn)
+    if (staged) allowTaskOpening(turn)
+    if (config.reasoningEffort !== undefined || !suggestFirstResponseEffort || !staged && !quickFirstStep(turn)) return config
     try {
       const info = await ctx.llm.resolveModelInfo(config.provider, config.model, signal)
       signal?.throwIfAborted()

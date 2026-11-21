@@ -82,7 +82,7 @@ const visualMake = /(?:生图|出图|创作|生成|制作|设计|绘制|做[一�
 const simpleConversation = /^(?:你是谁[？?。!！]*|你能做什么[？?。!！]*|(?:你好|您好|嗨|你好呀|谢谢|早上好|早安|晚安|hi|hello|hey|thanks)[呀啊哦!！。，.\s]*|(?:什么是|解释(?:下|一下)?|说说|聊聊|介绍一下|what is |explain ).{1,100})$/iu
 const externalEvidence = /(?:查(?:找|询|看|一?下)|联网|搜索|最新|今天|今日|实时|今年|最近|现在|本周|来源|网页|附件|文件|选区|知识库|共享|https?:\/\/|\b(?:look up|search|today|current|latest|this (?:workbook|document|page)|attachment|website)\b)/iu
 const nativeSubject = /(?:这(?:张|份|篇|页|个|段)|当前|选(?:中|区)|本(?:页|表|文)|工作簿|表格|单元格|工作表|幻灯片|演示文稿|笔记|知识库|共享资料|页面|网页|图层|工作台|看板|组件|\b(?:workbook|spreadsheet|sheet|slide|presentation|document|selection|knowledge base|shared (?:files|documents)|current page|this page|dashboard|component)\b)/iu
-const nativeEdit = /(?:改(?:成|为|写|下|一下|大|小)|设(?:为|成|置)|调(?:成|为|大|小)|加(?:入|上)|标(?:为|成)|变(?:大|小|为|成)|补上|换成|翻到|美化|润色|调整|修改|插入|新增|新建|创建|写入|补充|添加|删除|去重|整理|替换|移动|导入|导出|筛选|排序|撤销|保存|做(?:一|个|份|张)|翻译成|\b(?:add|insert|update|edit|create|make|build|filter|sort|rename|replace|remove|write|apply|undo|export|import)\b)/iu
+const nativeEdit = /(?:改(?:成|为|写|下|一下|大|小)|设(?:为|成|置)|调(?:成|为|大|小)|加(?:入|上)|标(?:为|成)|变(?:大|小|为|成)|补上|换成|翻到|美化|润色|调整|修改|插入|新增|新建|创建|制作|写入|补充|添加|删除|去重|整理|替换|移动|导入|导出|筛选|排序|撤销|保存|做(?:一|个|份|张)|翻译成|\b(?:add|insert|update|edit|create|make|build|filter|sort|rename|replace|remove|write|apply|undo|export|import)\b)/iu
 const nativeRead = /(?:读|看看|查看|什么|哪些|总结|摘要|概述|重点|讲了|在讲|分析|概括|讲.{0,8}内容|对比|比较|有几|列出|\b(?:inspect|read|summari[sz]e|check|list|what|show|compare)\b)/iu
 const sharedSearch = /(?:同事|共享|他人分享|\bshared (?:documents?|files?)\b)/iu
 const activeFile = /(?:附件|📎|https?:\/\/|\.xlsx?\b|\.pptx?\b|\.pdf\b|\.csv\b|\.html?\b|\battachment\b)/iu
@@ -117,7 +117,8 @@ function describeTurn(mode, text, factory) {
   const requestedSurface = /看板|工作台|组件|卡片|仪表盘|表格|图表|原型|页面|画布|\b(?:dashboard|workbench|component|widget|chart|table|prototype|canvas)\b/iu.test(actionable)
   const create = requestedSurface && !readOnly && !image && !promptRequest ? classifyResearchCreationRequest(text) : null
   const appRead = nativeSubject.test(text) && nativeRead.test(text)
-  const appEdit = !readOnly && coherentWrites && (nativeSubject.test(text) || ['presentation','spreadsheet','notes','knowledge'].includes(mode) && /(?:字[号体]|第.{1,6}[页行列]|颜色|单元格|标题|备注|行高|列宽|公式)/u.test(text))
+  const worksheetRequest = mode === 'spreadsheet' && /(?:[\p{Script=Han}]{1,10}(?:统计表|分析表|明细表|工资表|清单表|台账)|工资表|数据分析任务|\bpayroll\b)/iu.test(text)
+  const appEdit = !readOnly && coherentWrites && (worksheetRequest || nativeSubject.test(text) || ['presentation','spreadsheet','notes','knowledge'].includes(mode) && /(?:字[号体]|第.{1,6}[页行列]|颜色|单元格|标题|备注|行高|列宽|公式)/u.test(text))
   const direct = image || shared || appRead || appEdit || Boolean(create)
   const simple = !direct && !externalEvidence.test(text) && (simpleConversation.test(text) || readOnly)
   return {mode, text, factory, image, shared, create, readOnly, appRead, appEdit, simple, hasFile:activeFile.test(text)}
@@ -162,7 +163,7 @@ function nativeTool(tool, entries) {
 
 export function modeProfilePrompt(turn) {
   return '【本轮应用】' + modes[turn.mode] +
-    ' 当前界面只说明此刻能协作的对象，每种模式都能自由问答。普通问题直接作答。需要执行时可用一句话说清正在做什么，随即使用第一项实际有用的工具。宿主已提供当前模式和工具协议，直接读取用户指定的对象或执行明确操作，无需先探测界面、环境、源码或目录。只在用户要求改变内容时修改，依据真实回执说明完成状态。'
+    ' 当前界面只说明此刻能协作的对象，每种模式都能自由问答。普通问题直接作答。短任务可直接处理。复杂任务先用自己的话回应具体目标，再执行并根据新发现回报进展。宿主已提供当前模式和工具协议，直接读取用户指定的对象或执行明确操作，无需先探测界面、环境、源码或目录。只在用户要求改变内容时修改，依据真实回执说明完成状态。'
 }
 
 export function routeModeTools(request, turn) {
