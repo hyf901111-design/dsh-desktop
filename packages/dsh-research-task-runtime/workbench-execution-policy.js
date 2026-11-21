@@ -1,3 +1,4 @@
+import {holdingConcentrationInput} from './workbench-holding-concentration.js'
 import {firstTaskOpening} from './model-task-replies.js'
 import {HOME_WORKBENCH_PROVIDER} from './home-workbench-contract.js'
 import {workbenchPomodoroSettings} from './workbench-pomodoro.js';
@@ -511,6 +512,17 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       '明细用 type:"view"，view:{dataset,sections:[{kind:"records",fields:[字段键]}]}。同类别多个同单位指标对比用 type:"chart"，view:{dataset,variant:"groupedBar",unit,sections:[{kind:"records",label:分类键,fields:[数值键1,数值键2]}]}。比较两个端点可用 dumbbell。同一批客户从接触到签约的漏斗用 type:"chart" 和 variant:"funnel"，label 引用阶段列、fields 仅引用人数列，按原顺序绘制。按用户要求保留明细、单位、空值和其他交互。',
       '差额或比率可在 pastedTable.derive 中声明 {key,label,op:"subtract|percent",left,right,unit?,digits?}。子集用 view.where。跨行汇总用 aggregate 的 groupBy、sum 或 percent，总体比率按汇总分子分母计算；指标卡引用单条汇总，时间线用 type:"timeline"，view.sections 放一个 {kind:"schedule",label:事件标题列,start:日期列,owner:负责人列,fields:[其他明细列]}。'
     ].join(' ');
+    if ((offline || preferPasted) && !simulation && !prototypeSource && !documentPaths && holdingConcentrationInput(human.text,pasted)) {
+      const create = tools.find(tool => tool.name === CREATE_TOOL)
+      if (create) {
+        const parameters = {type:'object',additionalProperties:false,required:['title','panels'],properties:{
+          title:{type:'string'},panels:{type:'array',minItems:3,maxItems:3,items:{type:'object',additionalProperties:false,
+            required:['type','title'],properties:{type:{type:'string',enum:['kpi','chart','view']},title:{type:'string'},
+              size:{type:'string',enum:['small','medium','large']}}}}}}
+        return {...request,tools:tools.map(tool => tool === create ? {...tool,parameters,description:'从本轮季报原表直接生成持仓指标、排名和复核明细。'} : tool),
+          system:[request.system,'给三个不同用途各选一个恰当标题、顺序与尺寸，调用 research_workbench_create。kpi 从原表算累计权重和首两名百分点差，chart 比较披露比例，view 提供完整逐项复核。三种 type 各一次，只需提交 title、panels，来源与数值由宿主从当轮原表读取。'].join('\n')}
+      }
+    }
     if (!simulation && !prototypeSource && !documentPaths && hasPastedTable && observationComparison(human.text)) {
       const create=tools.find(tool=>tool.name===CREATE_TOOL)
       if (create) {

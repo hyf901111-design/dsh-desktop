@@ -50,3 +50,24 @@ it('rejects unclear citation adjacency and conflicting source declarations, and 
 it('recognizes a disclosure ledger task described with the accounting term 勾稽',()=>{
  expect(workbenchReadingPurpose('我是估值核算员，收盘后要照着季报和托管系统逐笔勾稽。')).toBe('reconcile')
 })
+
+it('binds the two requested decisions and all five original records to the published snapshot',()=>{
+ const panels=[{type:'kpi',title:'晨会指标'},{type:'chart',title:'权重比较'},{type:'view',title:'逐行复核'}]
+ const result=validateWorkbench({originalRequest,requestId:'weights',title:'持仓晨会',panels})
+ const [metrics,comparison,detail]=result.panels.map(panel=>panel.artifact)
+ expect(metrics.items.map(item=>[item.value,item.unit])).toEqual([[14.94,'%'],[0.43,'个百分点']])
+ expect(metrics.items[1].detail).toContain('贵州茅台')
+ expect(metrics.sources[0].url).toBe(official)
+ expect(comparison.series[0].values).toEqual([3.81,3.38,2.86,2.66,2.23])
+ expect(detail.dataset.records).toHaveLength(5)
+ expect(Object.values(detail.dataset.records[3])).toContain('7984305860.00')
+ expect(validateWorkbench(result).panels).toEqual(result.panels)
+})
+
+it('reserves the compact holdings contract for an exact complete scope and a single weighting question', async()=>{
+ const {holdingConcentrationInput}=await import('../packages/dsh-research-task-runtime/workbench-holding-concentration.js')
+ expect(holdingConcentrationInput(originalRequest)).toBeTruthy()
+ for (const text of [originalRequest.replace('前五合计','前三合计'), '另外需要绝对金额的排名。'+originalRequest,
+    '需要一张网页做归因。'+originalRequest, originalRequest.replace(official,'')])
+   expect(holdingConcentrationInput(text)).toBeUndefined()
+})
