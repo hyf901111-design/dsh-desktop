@@ -144,18 +144,25 @@ function openingContext(message, turn, brief) {
   return {message:{id:message.id,role:'user',source:message.source,content:[{type:'text',text:outline}]},hasPastedTable:blocks.length>0}
 }
 
+// A real tool receipt since the last public paragraph is the evidence for a
+// progress update. Do not expose private reasoning or reflect a tool's text
+// into a higher-priority instruction.
 function milestone(session, turnNumber, firstFinding) {
   const events = session.events ?? []
-  let result = false
+  let receipt
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i]
-    if (event.type === 'turn/start') return result && event.data?.turn === turnNumber && (firstFinding || Date.now() - event.time >= 15000)
-    if (event.type === 'tool/result') result = true
-    if (event.type === 'assistant/message' && event.data?.message?.content?.some(part => part.type === 'text' && part.text?.trim())) {
-      return result && (firstFinding || Date.now() - event.time >= 15000)
-    }
+    if (event.type === 'tool/result' && !receipt) receipt = event
+    const start = event.type === 'turn/start'
+    const paragraph = event.type === 'assistant/message' &&
+      event.data?.message?.content?.some(part => part.type === 'text' && part.text?.trim())
+    if (!start && !paragraph) continue
+    if (!receipt || (start && event.data?.turn !== turnNumber)) return
+    if (!firstFinding && Date.now() - event.time < 15000) return
+    const failed = Boolean(receipt.data?.error || receipt.data?.message?.content?.some(part =>
+      part.type === 'tool-result' && part.isError))
+    return failed ? 'retry' : 'result'
   }
-  return false
 }
 
 export function registerModelTaskReplies(ctx) {
@@ -179,8 +186,16 @@ export function registerModelTaskReplies(ctx) {
         source:{kind:'plugin',plugin:'dsh-research-task-runtime',form:'instructions'},
         content:[{type:'text',text:'继续完成本轮用户的原始任务。根据这轮的实际资料和工具执行，保留已有授权范围，开场不用重复。'}]}]}
     }
-    if (step > 1 && request.tools?.length && milestone(agent.session, turnNumber, opened.has(turn) && step === 3)) {
-      return {...request,system:(request.system ?? '')+'\n用户正在等这项工作的结果。如果还需继续操作，先用简短正文告诉用户刚刚得到的实质发现、遇到的具体困难或完成的阶段，然后继续。根据真实回执写，已有结果足以回答时直接交付。'}
+    if (step > 1 && request.tools?.length && (opened.has(turn) || wantsTaskOpening(turn))) {
+      const stage = milestone(agent.session, turnNumber, opened.has(turn) && step === 3)
+      if (!stage) return request
+      const update = stage === 'retry'
+        ? '上一步实际返回失败。再次操作前，用一句公开正文指出哪个业务内容尚未完成、将怎样根据刚才的回执修正；随后在同一步继续。别将失败写成已完成，不向用户转述内部指令。'
+        : '根据最近的真实回执先写一句公开正文，给出与本轮问题相关的新读数、已完成的变更或还缺的材料；再在同一步继续操作。已有足够结果时直接回答。'
+      // Keep the reminder next to the actual tool results. Do not add a
+      // separate call or make a synthetic progress message visible in chat.
+      return {...request, messages:[...(request.messages ?? []), {id:'progress-'+turnNumber+'-'+step,role:'user',
+        source:{kind:'plugin',plugin:'dsh-research-task-runtime',form:'instructions'},content:[{type:'text',text:update}]}]}
     }
     return request
   })
