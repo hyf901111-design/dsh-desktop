@@ -510,7 +510,18 @@ it('keeps the shared switcher expanded and carries the current session through m
   })
   const controls=page.locator('[data-session-workspace-controls]')
   expect(await controls.count()).toBe(0)
+  // A fresh note retains the blank chat header presentation, but owns its own workspace.
   await page.evaluate(()=>{
+   document.body.dataset.workspaceSurface='notes'
+   document.querySelector('[data-conversation-view-id=notes]').setAttribute('aria-selected','true')
+   document.dispatchEvent(new Event('sherlock:workspace-surface-change'))
+  })
+  await controls.getByRole('button',{name:'展开工作区页签',exact:true}).click()
+  expect(await controls.getByRole('button',{name:'切换到笔记',exact:true}).getAttribute('aria-current')).toBe('true')
+  await controls.getByRole('button',{name:'收起工作区页签',exact:true}).click()
+  await page.evaluate(()=>{
+   delete document.body.dataset.workspaceSurface
+   document.querySelector('[data-conversation-view-id=notes]').setAttribute('aria-selected','false')
    const root=document.querySelector('.wSkVaW_root');root.dataset.odysseyPage='research'
    root.querySelector('header').dataset.odysseyHomeHeader='false'
    root.querySelector('[data-conversation-view-id=research]').setAttribute('aria-selected','true')

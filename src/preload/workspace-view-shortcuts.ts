@@ -207,7 +207,7 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
       if (home && !home.matches(boardOnlyRoot)) return home
     }
     const header = findWorkspaceSession(document)
-    if (!header || header.closest(boardOnlyRoot) || header.dataset.odysseyHomeHeader === 'true' ||
+    if (!header || header.closest(boardOnlyRoot) || (surface !== 'notes' && header.dataset.odysseyHomeHeader === 'true') ||
         header.getAttribute('aria-hidden') === 'true' ||
         header.closest('.wSkVaW_root')?.getAttribute('data-odyssey-page') === 'home') return undefined
     return header
