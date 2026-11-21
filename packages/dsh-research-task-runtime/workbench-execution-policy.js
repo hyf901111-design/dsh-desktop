@@ -16,8 +16,8 @@ import { fundComparisonCount, fundComparisonReader, observedFundComparison } fro
 import { captureWorkbenchObservedSources, clearWorkbenchPreSpillSources, retainWorkbenchPreSpillSource } from './workbench-observed-sources.js'
 import { workbenchSourceProgress, workbenchStructuredSourceGuidance } from './workbench-source-progress.js'
 import {isWorkbenchPrototypeTableRead} from './prototype-source-authority.js'
-import {workbenchReadingGuidance} from './workbench-reading-purpose.js'
-import {pastedWorkbenchBlocks,pastedWorkbenchInput,hasCompletePastedSnapshot} from './workbench-pasted-tables.js'
+import {workbenchReadingGuidance,workbenchReadingPurpose} from './workbench-reading-purpose.js'
+import {pastedWorkbenchBlocks,pastedWorkbenchInput,hasCompletePastedSnapshot,completePastedDisclosure} from './workbench-pasted-tables.js'
 import {newsRecordTableGuidance} from './news-source-scope.js'
 import {WEBPAGE_GUIDANCE} from './workbench-webpage.js'
 import {observationComparison} from './workbench-observation-page.js'
@@ -126,11 +126,26 @@ export function planningDataIntent(text) {
   const source = /真实(?:的)?(?:数据|来源|记录|资料|行情)|实际(?:取得|获取|采集|提供|测得|记录)|\b(?:real|actual|verified|authentic)\s+(?:data|sources?|records?|quotes?)\b/iu.test(text)
   return { simulation, sourceOnly: !simulation && (source || affirmative !== text) }
 }
-export function workbenchOfflineRequest(text) {
+// A reader comparing the pasted rows is different from a request to inspect
+// the linked report, reconcile against a second source, or obtain missing data.
+function needsSupplementalSource(narrative) {
+  const clauses = narrative.replace(/https?:\/\/\S+/gu,'').split(/[。；;，,\n]|但是|不过|但(?:请|要)|\bbut\b/iu)
+  return clauses.some(clause => {
+    if (/(?:无需|无须|不需要|不必|不用|不要|禁止|do not|no need to)\s*(?:再|另行)?(?:联网|查询|打开|核对|查验|读取|补)/iu.test(clause)) return false
+    const source = /原件|原文|年报|季报|PDF|官网|链接|外部|\b(?:filing|original report|website)\b/iu
+    const check = /打开|查阅|阅读|读取|核对|核实|核验|查验|比对|\b(?:open|read|verify|check)\b/iu
+    return source.test(clause) && check.test(clause) ||
+      /联网|(?:另外|另需|还要|还需|同时需要).{1,40}|(?:补充|补查|补上|调取).{0,24}(?:数据|指标|行情|收盘价|原件)|同业平均|行业平均|基准指数|定时刷新|自动刷新|每.{0,12}(?:刷新|更新|同步)|实时(?:行情|报价)|最新(?:价格|净值|市值|行情|数据|披露)|\b(?:look up|fetch|retrieve|benchmark|latest|live data)\b/iu.test(clause)
+  })
+}
+
+export function workbenchOfflineRequest(text, parsed) {
   if (typeof text !== 'string') return false
   if (/(?:禁止|严禁|不要|无需|无须|不用|不必|不能|不得|不许|不允许|别|不)\s*联网|别[^，。；\n]{1,20}或联网/u.test(text)) return true
   // "Use only the fund codes in this table" limits the universe, not the
   // sources for the requested NAVs. An explicit network ban above prevails.
+  parsed ??= pastedWorkbenchInput(text)
+  if (parsed.blocks.length && needsSupplementalSource(parsed.context)) return false
   const supplemental = text.split(/[。；;，,\n]/u).some(clause =>
     !/(?:禁止|不要|不需要|无需|无须|不用|不必|不能|不得|不许|不允许|别)/u.test(clause) &&
     /联网|(?:补充|结合|查询|获取|核对|抓取)[^。；;\n]{0,18}(?:外部(?:数据|来源)|公开(?:市场|行情|数据|资料|来源)|最新(?:净值|行情|公告|报价))/u.test(clause))
@@ -438,10 +453,20 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     // not permission to invent another dataset or present it as live data.
     const prototypeSource=state.evidenceTargets.required.length>0&&!simulation
     const sourcePlanning=sourceOnly||prototypeSource
-    const offline = workbenchOfflineRequest(human.text)
-    const {blocks:pastedBlocks,context:requestNarrative}=pastedWorkbenchInput(human.text)
+    const pasted=pastedWorkbenchInput(human.text)
+    const offline = workbenchOfflineRequest(human.text, pasted)
+    const {blocks:pastedBlocks,context:requestNarrative}=pasted
     const hasPastedTable=pastedBlocks.length>0&&pastedBlocks.every(block=>block.every(row=>row.length===block[0].length))
-    const observedSourceGuidance = !simulation && !documentPaths && !prototypeSource && !offline
+    // A source citation and a concrete reading task are a preference for using
+    // the table, not an exclusive-source instruction. A real search immediately
+    // restores the ordinary tools on the next step if the user needs more data.
+    const events=agent.session.events
+    const currentUser=events.findLastIndex(e=>e.type==='user/message' && e.data?.id===human.messageId)
+    const preferPasted = !offline && !simulation && !documentPaths && !prototypeSource && currentUser>=0 &&
+      request.tools.some(tool=>tool.name==='web_search') && workbenchReadingPurpose(requestNarrative) &&
+      completePastedDisclosure(human.text,pasted) && !needsSupplementalSource(requestNarrative) &&
+      !events.slice(currentUser+1).some(e=>e.type==='tool/call' && e.data?.name==='web_search')
+    const observedSourceGuidance = !simulation && !documentPaths && !prototypeSource && !offline && !preferPasted
       ? OBSERVED_SOURCE_GUIDANCE : ''
     const observedSources = observedSourceGuidance
       ? captureWorkbenchObservedSources({session:agent.session,messageId:human.messageId,schemas:request.tools,onRejected:()=>{}})
@@ -453,7 +478,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
         ...(code&&/^[A-Z0-9.-]{1,24}$/iu.test(code)?{code}:{}),
       }))
     ) : ''
-    state.restrictEvidence = Boolean(documentExclusive || state.evidenceTargets.required.length || offline)
+    state.restrictEvidence = Boolean(documentExclusive || state.evidenceTargets.required.length || offline || preferPasted)
     state.projectSources = Boolean(claimed?.id===human.messageId && !simulation && !state.restrictEvidence)
     state.fundComparisonCount = state.projectSources ? fundComparisonCount(human.text) : null
     state.allowedTools = new Set()
@@ -469,7 +494,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
         for(const value of evidence.parameters.properties[field].enum){const call=prototypeEvidenceCall(tool.name,{[field]:value},state.evidenceTargets);if(call)state.evidenceReadable.add(call.resource)}
         return[evidence]
       }
-      if (offline) return []
+      if (offline || preferPasted && tool.name!=='web_search') return []
       // Exact reference readers cannot widen to paths found inside the source.
       // Preserve other authorized data acquisition, including full query APIs.
       if (state.evidenceTargets.required.length && ['read','read_file','read_image','read_prototype','bash','shell','exec_command','run_code'].includes(tool.name.toLowerCase())) return []
@@ -500,10 +525,10 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
           system:[request.system,'宿主已从本轮消息绑定日期、原表、来源、利差组合与单位，负责生成完整可带走网页。直接调用 research_workbench_create，传 title 和一个 panel，如 {"title":"收益率曲线复盘","panels":[{"type":"files","title":"收益率曲线复盘","htmlFile":{"name":"收益率曲线复盘.html","observationComparison":true}}]}，标题可按用户主题命名。无需编写前端、重抄数据或计算结果。根据实际回执回复。'].join('\n')}
       }
     }
-    if (hasPastedTable && offline && !simulation && !documentPaths && !state.evidenceTargets.required.length) {
+    if (hasPastedTable && (offline || preferPasted) && !simulation && !documentPaths && !state.evidenceTargets.required.length) {
       return {...request,tools:tools.map(tool=>tool.name===CREATE_TOOL?
         {...tool,description:'使用当轮提供的表格和所要求的展示、交互创建看板。多卡引用同一份数据，受理后的结果以回执为准。'}:tool),
-        system:[request.system,pastedGuidance,readingGuidance,PLANNING_PROGRESS_GUIDANCE].join('\n')};
+        system:[request.system,pastedGuidance,readingGuidance,preferPasted&&'先按已给原表直接提交所需卡片，保留附带的出处链接。只有用户所需字段或证据确实不在表内时，才对该缺口发起 web_search；之后可继续用原有来源工具。',PLANNING_PROGRESS_GUIDANCE].filter(Boolean).join('\n')};
     }
     const standalone=!simulation && !documentPaths && !prototypeSource && !hasPastedTable
     const brief=standalone && !offline && simpleNewsBrief(human.text)

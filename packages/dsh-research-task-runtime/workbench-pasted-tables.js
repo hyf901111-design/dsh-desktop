@@ -164,14 +164,28 @@ function fixedSnapshotLanguage(prose){
   /(?:只用|仅用|仅使用|只使用)(?:摘自|摘录自|引自|来自)[^。；;，,\n]{1,120}的(?:真实|历史|已披露)/u.test(prose);
 }
 
+function completeNumericTable(blocks){
+ if(blocks.length!==1)return false;
+ const [headers,...rows]=blocks[0];
+ if(!rows.length||new Set(headers).size!==headers.length||!headers.every(Boolean)||!rows.every(row=>row.length===headers.length))return false;
+ return headers.some((header,index)=>!/(?:代码|编号|序号|日期|标识|^ID$|code$|date$)/iu.test(header)&&
+  rows.every(row=>row[index]===''||rawDecimal.test(row[index]))&&rows.some(row=>row[index]!==''));
+}
+
 export function hasCompletePastedSnapshot(request){
  if(!fixedSnapshotLanguage(request))return false;
  const {blocks,context}=scanPastedTables(request);
- if(blocks.length!==1||!fixedSnapshotLanguage(context))return false;
- const [headers,...rows]=blocks[0];
- if(new Set(headers).size!==headers.length||!headers.every(Boolean)||!rows.every(row=>row.length===headers.length))return false;
- return headers.some((header,index)=>!/(?:代码|编号|序号|日期|标识|^ID$|code$|date$)/iu.test(header)&&
-  rows.every(row=>row[index]===''||rawDecimal.test(row[index]))&&rows.some(row=>row[index]!==''));
+ return fixedSnapshotLanguage(context)&&completeNumericTable(blocks);
+}
+
+// More conservative than an explicit no-network instruction: infer a complete
+// disclosure only from an attributed table, with a populated measure on every row.
+export function completePastedDisclosure(request,{blocks,context,firstTableStart}){
+ if(!completeNumericTable(blocks)||blocks[0].length<3||!pastedDisclosure(request,firstTableStart))return false;
+ const [header,...rows]=blocks[0];
+ const disclosedPeriod=/(?:19|20)\d{2}\s*(?:年|[-/]\d|财年|Q[1-4])|\b(?:FY|Q[1-4])\s*(?:19|20)\d{2}\b/iu;
+ return disclosedPeriod.test([context.replace(/https?:\/\/\S+/gu,''),...header].join(' ')) &&
+  rows.every(row=>row.every(cell=>cell.trim()&&!/^(?:[-—–]+|N\/?A|NULL|待补|未知|缺失|未披露)$/iu.test(cell)));
 }
 function pastedDisclosure(request,firstTableStart){
  // The cited locator is on its own line between the source attribution and
