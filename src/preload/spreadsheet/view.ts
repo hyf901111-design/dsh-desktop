@@ -14,6 +14,7 @@ import {CASH_FLOW_GUIDE_ADJUSTMENTS,CASH_FLOW_GUIDE_ANALYSIS,CASH_FLOW_GUIDE_BOO
 import {HOME_SPREADSHEET_GUIDE_FILE} from '../../../packages/dsh-research-task-runtime/home-spreadsheet-guide-contract.js'
 import type {HomeGuidePointerAction} from '../home-guide-pointer'
 import { markWorkspaceProjectEdited } from '../workspace-project-lock'
+import { setWorkspaceSidebars, type WorkspaceSidebars } from '../workspace-sidebars'
 import css from './view.css?raw'
 
 type Recent={id:string;name:string;sheetCount:number}
@@ -100,7 +101,7 @@ class SpreadsheetView{
  private componentPicking=false
  private readonly releaseComponentProgress:()=>void
  private headerActions?:HTMLElement
- private focusLayout?:{left:boolean;right:boolean}
+ private focusLayout?:WorkspaceSidebars
  private readonly ribbonObserver:ResizeObserver
  private readonly toolbarCopyObserver:MutationObserver
  private readonly root:HTMLElement
@@ -484,14 +485,8 @@ class SpreadsheetView{
   return button('focus','',{glyph:this.focusLayout?'exit-focus':'focus',label:this.focusLayout?'退出专注表格':'专注表格',pressed:!!this.focusLayout})
  }
  private toggleFocus(){
-  const root=this.doc.querySelector<HTMLElement>('[data-dsh-sidebar-root]')
-  const left=root?.querySelector<HTMLButtonElement>('.hHd-Xa_toggle')
-  const right=this.doc.querySelector<HTMLButtonElement>('[data-odyssey-panel-entry="right"]')
-  const leftOpen=root?.dataset.dshSidebarWide==='true',rightOpen=right?.getAttribute('aria-expanded')==='true'
-  const target=this.focusLayout??{left:false,right:false}
-  this.focusLayout=this.focusLayout?undefined:{left:leftOpen,right:rightOpen}
-  if(leftOpen!==target.left)left?.click()
-  if(rightOpen!==target.right)right?.click()
+  const previous=setWorkspaceSidebars(this.doc,this.focusLayout??{left:false,right:false})
+  this.focusLayout=this.focusLayout?undefined:previous
   const control=this.chrome.querySelector<HTMLButtonElement>('[data-action=focus]')
   if(control){
    control.innerHTML=icon(this.focusLayout?'exit-focus':'focus')

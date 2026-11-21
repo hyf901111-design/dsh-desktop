@@ -236,15 +236,34 @@ export class PresentationStore {
     if (!row) throw Error('当前版本没有可撤销的 AI 修改。')
     return this.write(key, revision, JSON.parse(String(row.document)), false)
   }
-  inspect(key: Key, activeSlideId?: string, slideId?: string) {
+  inspect(key: Key, activeSlideId?: string, slideId?: string, startPage?: number) {
     const { revision, deck } = this.read(key)
     if (!deck) return { revision, deck: null }
     const current =
       deck.slides.find((s) => s.id === (slideId || activeSlideId)) ?? (!slideId ? deck.slides[0] : undefined)
     if (!current) throw Error('未找到指定幻灯片。')
+    if (startPage !== undefined && (!Number.isInteger(startPage) || startPage < 1 || startPage > deck.slides.length))
+      throw Error('请指定文稿范围内的起始页。')
+    const summaries = startPage === undefined ? undefined : deck.slides.slice(startPage - 1, startPage + 4).map((page, i) => {
+      const parts: string[] = []
+      for (const el of page.elements) {
+        if (el.odysseyMaster) continue
+        if (el.type === 'table') parts.push(...(el.data ?? []).map((row: any[]) => row.map(c => visibleText(c.text)).join(' ｜ ')))
+        else if (el.type === 'chart') parts.push(JSON.stringify({ labels: el.data?.labels, legends: el.data?.legends, series: el.data?.series }))
+        else {
+          const text = visibleText(el.content ?? el.text?.content)
+          if (text) parts.push(text)
+        }
+      }
+      const body = parts.join('\n')
+      return { page: startPage + i, id: page.id, content: body.slice(0, 2400),
+        notes: visibleText(page.remark).slice(0, 800), truncated: body.length > 2400 }
+    })
     return {
       revision,
       documentId: deck.id,
+      pages: summaries,
+      nextPage: summaries && startPage !== undefined ? (startPage + summaries.length <= deck.slides.length ? startPage + summaries.length : null) : undefined,
       title: deck.title,
       slides: deck.slides.map((s) => ({
         id: s.id,

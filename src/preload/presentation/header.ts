@@ -3,7 +3,7 @@ import { browserIcons } from '../browser/icons'
 import { sheetIcon } from '../spreadsheet/icons'
 
 type State = { hasDeck: boolean; writable: boolean; locked: boolean; busy: boolean }
-type Actions = { toggle(): Promise<void>; import(file: File): void; export(): void }
+type Actions = { toggle(): Promise<void>; import(file: File): void; export(): void; archive(): void }
 
 export function presentationHeader(doc: Document, actions: Actions) {
   const lock = doc.createElement('button'),
@@ -42,7 +42,7 @@ export function presentationHeader(doc: Document, actions: Actions) {
     menu = doc.createElement('div')
     menu.className = 'presentation-header-menu'
     menu.role = 'menu'
-    const item = (title: string, icon: 'external' | 'download', disabled: boolean, run: () => void) => {
+    const item = (title: string, icon: 'external' | 'download' | 'book', disabled: boolean, run: () => void) => {
       const b = doc.createElement('button')
       b.type = 'button'
       b.role = 'menuitem'
@@ -65,6 +65,7 @@ export function presentationHeader(doc: Document, actions: Actions) {
       () => file.click()
     )
     item(en ? 'Export PowerPoint…' : '导出 PowerPoint…', 'download', !state.hasDeck || state.busy, actions.export)
+    item(en ? 'Save to Knowledge…' : '保存至知识库…', 'book', !state.hasDeck || state.busy, actions.archive)
     doc.body.append(menu)
     const rect = more.getBoundingClientRect()
     menu.style.left = Math.max(6, rect.right - menu.offsetWidth) + 'px'

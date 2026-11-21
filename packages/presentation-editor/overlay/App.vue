@@ -5,7 +5,7 @@
     @cut.capture="protectReadOnly"
     class="deck-app"
     :data-readonly="!editable || undefined"
-    @keydown.esc="menu = ''"
+    @keydown.esc="escapeEditor"
   >
     <input ref="fileInput" type="file" accept=".pptx" hidden @change="importFile" />
     <input ref="imageInput" type="file" accept="image/*" hidden @change="insertImage" />
@@ -41,6 +41,9 @@
           <Glyph name="down" />
         </button>
         <i />
+        <button aria-label="保存至知识库" title="保存至知识库" @click="openArchive">
+          <Glyph name="library" /><span>保存至知识库</span>
+        </button>
         <button :disabled="!editable" title="撤销" aria-label="撤销" @click="undoEdit"><Glyph name="undo" /></button>
         <button :disabled="!editable" title="重做" aria-label="重做" @click="hist.redo"><Glyph name="redo" /></button>
         <i />
@@ -132,22 +135,9 @@
           </button>
         </template>
         <template v-if="menu === 'insert'">
-          <button @click="insert('text')">
-            <Glyph name="menu-text" />
-            文本框
+          <button v-for="item in insertCommands" :key="item.id" @click="runCommand(item.id)">
+            <Glyph :name="item.icon" />{{ item.label }}
           </button>
-          <button @click="insert('shape')">
-            <Glyph name="menu-shape" />
-            形状
-          </button>
-          <button @click="insert('line')"><Glyph name="line" />直线</button>
-          <button @click="insert('arrow')"><Glyph name="arrow" />箭头</button>
-          <button @click="chooseFile(imageInput)">
-            <Glyph name="menu-image" />
-            图片…
-          </button>
-          <button @click="insert('chart')">图表…</button>
-          <button @click="insert('table')">表格</button>
         </template>
         <ShapePool v-if="menu === 'shape-pool'" @select="(shape) => insertObject('shape', shape)" />
         <ChartPool v-if="menu === 'chart-pool'" @select="(chart) => insertObject('chart', chart)" />
@@ -258,11 +248,12 @@
         <button title="适合窗口" @click="zoom.resetCanvas">适合</button>
         <button title="放大" @click="zoom.scaleCanvas('+')"><Glyph name="plus" /></button>
         <button
-          :title="editorFullscreen ? '退出全屏' : '全屏'"
-          :aria-pressed="editorFullscreen"
+          :title="focusLabel"
+          :aria-label="focusLabel"
+          :aria-pressed="workspaceFocused"
           @click="fullscreen"
         >
-          <Glyph name="fit" />
+          <Glyph :name="focusIcon" />
         </button>
       </footer>
     </template>
@@ -313,10 +304,10 @@ import useGlobalHotkey from '@/hooks/useGlobalHotkey'
 import usePasteEvent from '@/hooks/usePasteEvent'
 import emitter, { EmitterEvents } from '@/utils/emitter'
 import { slideTitle } from './presentation-slide-title'
-import {restoreOfficeFormatting, exportOfficeFormatting, trimEmptyOfficeSublists} from './office-import'
+import {restoreOfficeFormatting, trimEmptyOfficeSublists} from './office-import'
 import { upgradeEfundTemplate } from './legacy-office'
 import { protectMaster } from './master-protection'
-import { exportMasterArtwork } from './powerpoint-masters'
+import { finalizePptx } from './finalize-pptx'
 import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
 import { runEditGuideAction } from './edit-guide'
@@ -337,7 +328,7 @@ const importer = useImport(),
 useGlobalHotkey()
 usePasteEvent()
 const editable = ref(true)
-const editorFullscreen = ref(false)
+const workspaceFocused = ref(false)
 const stylesOpen = ref(false),
   styleTab = ref('style')
 const grouping = useCombineElement()
@@ -433,6 +424,7 @@ async function hydrate(d) {
   menu.value = ''
   canUndoAI.value = !!d.record.canUndoAI
   revision = d.record.revision
+  workspaceFocused.value = !!d.focused
   editable.value = d.editable
   ready.value = true
   document.body.toggleAttribute('data-ds-dark-theme', d.dark)
@@ -500,7 +492,8 @@ function receive(event) {
   if (d.type === 'dismiss-menus') {
     menu.value = ''
     stylesOpen.value = false
-  } else if (d.type === 'load') void hydrate(d)
+  } else if (d.type === 'workspace-focus') workspaceFocused.value = !!d.active
+  else if (d.type === 'load') void hydrate(d)
   else if (d.type === 'flush') {
     if (d.locking && (importing || loading)) return send('flushed', { id: d.id, error: '文稿正在载入，请稍后锁定。' })
     document.dispatchEvent(new Event('odyssey:flush-text'))
@@ -555,8 +548,22 @@ const open = (id) => {
   send('open', { id })
 }
 const row = (id, label, icon, children) => ({ id, label, icon, children })
-const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen','全屏','fit')] : [
+const insertCommands = [
+  row('text', '文本框', 'menu-text'),
+  row('shape', '形状', 'menu-shape'),
+  row('line', '直线', 'line'),
+  row('arrow', '箭头', 'arrow'),
+  row('image', '图片…', 'menu-image'),
+  row('chart', '图表…', 'chart'),
+  row('table', '表格', 'layout')
+]
+function openArchive() { menu.value = ''; send('open-archive') }
+const archiveCommand = row('archive', '保存至知识库…', 'library')
+const focusLabel = computed(() => workspaceFocused.value ? '退出全屏' : '全屏')
+const focusIcon = computed(() => workspaceFocused.value ? 'exit-focus' : 'fit')
+const commandTree = computed(() => !editable.value ? [archiveCommand, row('pptx', '导出 PowerPoint…', 'menu-download'), row('first','从头放映','play'), row('fullscreen',focusLabel.value,focusIcon.value)] : [
   row('file', '演示文稿', 'menu-slide', [
+    archiveCommand,
     row('import', '导入 PowerPoint…', 'menu-upload'),
     row('export', '导出演示文稿', 'menu-download', [row('pptx', 'PowerPoint 演示文稿 (.pptx)', 'menu-file')]),
     row('create', '新建空白演示文稿', 'menu-plus'),
@@ -577,15 +584,7 @@ const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerP
     row('undo', '撤销编辑', 'undo'),
     row('redo', '重做编辑', 'redo')
   ]),
-  row('insert', '插入', 'menu-plus', [
-    row('text', '文本框', 'menu-text'),
-    row('shape', '形状', 'menu-shape'),
-    row('line', '直线', 'line'),
-    row('arrow', '箭头', 'arrow'),
-    row('image', '图片…', 'menu-image'),
-    row('chart', '图表…', 'insert'),
-    row('table', '表格', 'layout')
-  ]),
+  row('insert', '插入', 'menu-plus', insertCommands),
   row('format', '格式', 'menu-text', [
     { ...row('styles', '对象样式', 'menu-shape'), disabled: !main.activeElementIdList.length },
     { ...row('position', '排列与尺寸', 'align'), disabled: !main.activeElementIdList.length },
@@ -598,16 +597,17 @@ const commandTree = computed(() => !editable.value ? [row('pptx', '导出 PowerP
   row('view', '视图', 'menu-screen', [
     row('first', '从头放映', 'play'),
     row('play', '从当前页放映', 'play'),
-    row('fullscreen', '全屏', 'fit')
+    row('fullscreen', focusLabel.value, focusIcon.value)
   ])
 ])
 function runCommand(id) {
   menu.value = ''
-  if (!editable.value && !['pptx', 'play', 'first', 'fullscreen'].includes(id) && !id.startsWith('open:')) return
+  if (!editable.value && !['archive', 'pptx', 'play', 'first', 'fullscreen'].includes(id) && !id.startsWith('open:')) return
   if (id.startsWith('open:')) return open(id.slice(5))
   const actions = {
     import: () => chooseFile(fileInput.value),
     pptx: exportDeck,
+    archive: openArchive,
     create,
     template: importTemplate,
     'undo-ai': () => menuAction('undo'),
@@ -984,12 +984,8 @@ function exportDeck() {
 }
 async function exported(event) {
   try {
-    const bytes = await reconcilePointColors(
-      await exportMasterArtwork(event.detail, store.slides),
-      store.slides,
-      true
-    )
-    send('export', { bytes: await exportOfficeFormatting(bytes, store.slides, store.viewportSize), title: store.title, format: 'pptx' })
+    const bytes = await finalizePptx(event.detail, store.slides, store.viewportSize)
+    send('export', { bytes, title: store.title, format: 'pptx' })
   } catch {
     notice.value = '文稿导出失败，请重试。'
   }
@@ -1040,14 +1036,16 @@ function playKey(e) {
 }
 function fullscreen() {
   menu.value = ''
-  const root = document.querySelector('.deck-app')
-  const operation = document.fullscreenElement ? document.exitFullscreen() : root?.requestFullscreen()
-  void operation?.catch(() => {
-    notice.value = '未能切换全屏，请重试。'
-  })
+  send('workspace-focus', { active: !workspaceFocused.value })
+}
+function escapeEditor(event) {
+  if (event.defaultPrevented || event.isComposing || playing.value) return
+  if (menu.value) menu.value = ''
+  else if (workspaceFocused.value && !stylesOpen.value && !marking.value && !event.target.closest('input,textarea,[contenteditable=true],[role=dialog]')) {
+    send('workspace-focus', { active: false })
+  }
 }
 const fsChanged = () => {
-  editorFullscreen.value = document.fullscreenElement?.classList.contains('deck-app') || false
   if (playing.value && !document.fullscreenElement) playing.value = false
 }
 const outside = (e) => {

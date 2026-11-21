@@ -201,7 +201,7 @@ watch(
         }
       })
       const current = handle
-      current.ready.then(() => {
+      host.value.odysseyReady = current.ready.then(() => {
         if (current === handle)
           for (const chart of charts) if (!chart.isDisposed()) applyOfficeLabels(chart, native.value)
       })

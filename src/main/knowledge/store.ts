@@ -52,12 +52,16 @@ function validatedName(value: unknown): string {
   return name
 }
 
+function availableFilename(documents: readonly KnowledgeDocument[], stem: string, extension: string) {
+  const occupied = new Set(documents.map(row => row.name.normalize().toLowerCase()))
+  let name = stem + extension
+  for (let suffix = 2; occupied.has(name.toLowerCase()); suffix++) name = stem + '（' + suffix + '）' + extension
+  return name
+}
+
 function factoryFilename(documents: readonly KnowledgeDocument[], suggestion: string) {
   const stem = suggestion.replace(/[\\/\p{Cc}]/gu, ' ').trim().normalize().slice(0, 120) || '生成图片'
-  const occupied = new Set(documents.map(row => row.name.normalize().toLowerCase()))
-  let name = stem + '.png'
-  for (let suffix = 2; occupied.has(name.toLowerCase()); suffix++) name = stem + '（' + suffix + '）.png'
-  return name
+  return availableFilename(documents, stem, '.png')
 }
 
 function publicDocument({ storageName: _storage, origin: _origin, sourceVersion, ...row }: StoredDocument): KnowledgeDocument {
@@ -342,6 +346,45 @@ export class KnowledgeStore {
 
   collectGenerated(path: string, provenance: { sessionId: string; sessionTitle?: string; saved?: boolean; updatedAt?: number }) {
     return this.importOne(path, provenance)
+  }
+
+  savePresentationArchive(bytes: Buffer, input: {
+    sessionId: string; sessionTitle: string; documentId: string; name: string; format: 'pptx' | 'pdf'
+  }, guard: () => void) {
+    const stem = validatedName(input.name.replace(/\.(?:pptx?|pdf)$/iu, ''))
+    if (Buffer.byteLength(stem) > 235 || /[:*?"<>|]/u.test(stem)) throw Error('文件名过长或含有无效字符。')
+    const extension = '.' + input.format
+    const origin = digest(JSON.stringify(['presentation-archive', input.sessionId, input.documentId, stem.toLowerCase(), input.format]))
+    return this.run(async (state, directory, identityCurrent) => {
+      const current = () => { identityCurrent(); guard() }
+      current()
+      // A renamed, externally edited or shared archive is an independent file.
+      const previous = state.documents.find(row => row.origin === origin && !row.share &&
+        row.sourceVersion === 'presentation-archive:' + row.name)
+      const name = previous?.name ?? availableFilename(state.documents, stem, extension)
+      const id = previous?.id ?? randomUUID()
+      const target = join(directory, 'files', id)
+      const storageName = randomUUID() + extension
+      const row: StoredDocument = {
+        saved: false, starred: false, ...previous, id, origin, name, storageName,
+        source: 'generated', sessionId: input.sessionId, sessionTitle: input.sessionTitle,
+        sourceVersion: 'presentation-archive:' + name, size: bytes.length,
+        updatedAt: Math.max(Date.now(), (previous?.updatedAt ?? 0) + 1)
+      }
+      await mkdir(target, { recursive: true, mode: 0o700 })
+      const path = join(target, storageName)
+      try {
+        current()
+        await atomicWrite(path, bytes)
+        await this.persist(state, { ...state, documents: previous
+          ? state.documents.map(item => item === previous ? row : item) : [...state.documents, row] }, directory, current)
+      } catch (error) {
+        await rm(previous ? path : target, { force: true, recursive: !previous }).catch(() => {})
+        throw error
+      }
+      if (previous) await rm(join(target, previous.storageName), { force: true }).catch(() => {})
+      return { id, name, updated: !!previous }
+    })
   }
 
   saveImageProject(bytes: Buffer, snapshot: Pick<CanvasRead, 'image'> & { canvas: StoredCanvas },

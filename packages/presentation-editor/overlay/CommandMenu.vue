@@ -19,7 +19,7 @@
       @click="activate(item, level, $event.currentTarget)"
     >
       <img v-if="item.icon" class="glyph" alt="" :src="'./icons/' + item.icon + '.svg'" />
-      <span>{{ item.label }}</span
+      <span class="command-label" :title="item.label">{{ item.label }}</span
       ><img v-if="item.children" class="glyph end" :src="'./icons/menu-right.svg'" alt="" />
     </button>
   </div>
@@ -94,6 +94,14 @@ async function keys(e, level) {
   width: min(210px, calc(100vw - 16px));
   max-height: calc(100vh - 16px);
   box-sizing: border-box;
+}
+.command-column button {
+  flex: none;
+}
+.command-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .command-column button[aria-expanded='true'] {
   background: var(--hover, #80808022);
