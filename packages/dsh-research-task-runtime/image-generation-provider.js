@@ -1,3 +1,4 @@
+import sharp from 'sharp'
 /** Image providers own transport/authentication; the conversation owns delivery. */
 export class ImageGenerationError extends Error {}
 const fail=message=>{throw new ImageGenerationError(message)}
@@ -6,6 +7,21 @@ const pngSignature=Buffer.from([137,80,78,71,13,10,26,10])
 export function validateGeneratedImage(data,maxBytes){
  if(!(data instanceof Uint8Array)||data.byteLength<24||data.byteLength>maxBytes||!Buffer.from(data.subarray(0,8)).equals(pngSignature))fail('图片模型未返回有效的 PNG 图片。')
  return data
+}
+
+/** Match the canvas fit: keep the whole composition and extend its outside edge pixels into any margin. */
+export async function fitGeneratedImage(data, {width, height}) {
+ try {
+  const image=sharp(data,{limitInputPixels:32_000_000})
+  const source=await image.metadata()
+  if(source.width===width&&source.height===height)return data
+  const scale=Math.min(width/source.width,height/source.height)
+  const w=Math.max(1,Math.round(source.width*scale)),h=Math.max(1,Math.round(source.height*scale))
+  const left=Math.floor((width-w)/2),top=Math.floor((height-h)/2)
+  const resized=image.resize(w,h,{fit:'fill'})
+  if(w!==width||h!==height)resized.extend({top,bottom:height-h-top,left,right:width-w-left,extendWith:'copy'})
+  return await resized.png().toBuffer()
+ } catch { fail('图片服务返回的文件无法按指定尺寸生成有效 PNG。') }
 }
 
 export async function boundedImageJson(response,maxBytes){

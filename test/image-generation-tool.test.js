@@ -195,7 +195,8 @@ it('supports a future built-in provider without changing the tool or image UI',a
  const result=await f.call();expect(result.model).toBe('builtin-art');expect(generate).toHaveBeenCalledOnce();expect(f.request).not.toHaveBeenCalled()
 })
 it('preserves the requested factory aspect ratio when the hosted gateway maps fixed sizes to presets',async()=>{
- const generate=vi.fn(async()=>({data:png,mediaType:'image/png'}))
+ const providerImage=await sharp({create:{width:20,height:30,channels:3,background:'#eee'}}).png().toBuffer()
+ const generate=vi.fn(async()=>({data:providerImage,mediaType:'image/png'}))
  const hosted={available:()=>true,models:[{id:'seedream-flash',name:'Seedream Flash'}],generate}
  const f=fixture({hosted})
  const workspace={id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'留白海报',operation:'generate',
@@ -320,4 +321,28 @@ it('blocks model-initiated image generation on an image-workspace discussion bef
  await expect(f.call()).rejects.toThrow('没有要求生成或修改')
  expect(f.request).not.toHaveBeenCalled()
  expect(f.prompts[0].text({agent:f.agent})).toBe('')
+})
+
+it('saves an explicit 16:9 image at its requested aspect when a hosted preset returns 3:2',async()=>{
+ const raw=await sharp({create:{width:24,height:16,channels:4,background:'#112233'}}).png().toBuffer()
+ const generate=vi.fn(async()=>({data:raw,mediaType:'image/png'}))
+ const f=fixture({hosted:{available:()=>true,models:[{id:'doubao-seedream-5.5',name:'Seedream'}],generate}})
+ const user=f.agent.session.events[1].data
+ user.source.clientMode='image'
+ user.content[0].text='现在请生成一张 16:9 的研究晨会封面。'
+ await f.call({prompt:'蓝色研究封面',size:'1536x1024'})
+ expect(generate).toHaveBeenCalledTimes(1)
+ expect(generate.mock.calls[0][0]).toMatchObject({size:'auto',prompt:expect.stringContaining('16:9')})
+ expect(await sharp(f.saved[0].data).metadata()).toMatchObject({format:'png',width:1600,height:900})
+})
+
+it('keeps the full composition and alpha when fitting mismatched attachment dimensions',async()=>{
+ const {fitGeneratedImage}=await import('../packages/dsh-research-task-runtime/image-generation-provider.js')
+ const raw=Buffer.from([255,0,0,0,0,0,255,255,255,0,0,0,0,0,255,255])
+ const src=await sharp(raw,{raw:{width:2,height:2,channels:4}}).png().toBuffer()
+ const exact=await fitGeneratedImage(src,{width:2,height:2})
+ expect(exact).toBe(src)
+ const fit=await fitGeneratedImage(src,{width:4,height:2})
+ const pixels=await sharp(fit).ensureAlpha().raw().toBuffer()
+ expect([...pixels.subarray(0,16)]).toEqual([255,0,0,0,255,0,0,0,0,0,255,255,0,0,255,255])
 })
