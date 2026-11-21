@@ -12,6 +12,7 @@ export function wantsTaskOpening(turn) {
   if (!turn?.text) return false
   const prose = turn.text.split(/\r?\n/u).filter(line => !line.includes('\t') && !/^\s*\|/u.test(line)).join('\n')
   if (/(?:只|仅)(?:需|要)?(?:返回|输出|给出|给我|提供)(?:最后|最终|结果|答案|代码|指令|公式|原文|译文|数字|JSON|CSV|SQL)|(?:不要|无需|跳过)(?:解释|说明|过程|进度|开场|回复)|\b(?:(?:json|csv|code|result|answer)[ -]only|(?:only|just) (?:return|output|give) (?:the )?(?:answer|result|code|json)|no (?:commentary|preamble))\b/iu.test(prose)) return false
+  if (turn.mode === 'knowledge' && /(?:只|仅)(?:需|要)?(?:报告|返回|给出|列出|显示)(?:匹配|命中|检索结果的?|查询结果的?)(?:条数|数量|标题|文件名)/u.test(prose)) return false
   // A limit on the analysis (e.g. "only analyse these holdings") can
   // accompany an explicit request to build a board. Apply the same creation
   // intent as the research planner, using only the user's unquoted prose.

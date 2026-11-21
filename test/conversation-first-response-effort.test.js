@@ -112,6 +112,13 @@ https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_2026
   }
 })
 
+it('goes straight to a knowledge lookup when only the match count and title were requested', () => {
+ const request='知识执行E1：请在本机知识库检索“易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告”，只报告匹配条数和首条标题；如果没有匹配，请明确说明0条，不联网。'
+ expect(wantsTaskOpening(clientModeTurn(turn(request,'knowledge')))).toBe(false)
+ const review='请先检索知识库中不同年度的基金季报，再逐项核对不同季末披露的持仓范围和变化，给出跨期比较。'
+ expect(wantsTaskOpening(clientModeTurn(turn(review,'knowledge')))).toBe(true)
+})
+
 it('stages a substantive read-only document review without adding any write capabilities', () => {
   const deck = '请逐页核对这份美国财政部收益率演示的图表、正文与备注，比较不同期限在 12 月 27 日和 31 日的变化，指出不一致并注明页码。不要修改演示。'
   const workbook = '只分析当前工作簿。先核对各工作表的美国国债原始收益率，再比较两年期至三十年期的利差，列出异常日期和对应单元格。'
