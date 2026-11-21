@@ -1,3 +1,4 @@
+import {createChatWorkspaceSwitch} from '../../scripts/lib/chat-workspace-switch.mjs'
 import {createRightProjectDrafts,installSidebarWorkspaceHandoff} from '../../scripts/lib/right-project-drafts.mjs'
 import React from 'react'
 import * as jsx from 'react/jsx-runtime'
@@ -64,9 +65,12 @@ const sidebarWorkspace=installSidebarWorkspaceHandoff({
  sessions:{list:{getSnapshot:()=>({...current,byId:emptySessions.byId})}},workspaces:options.workspaces,pending:record,right,doc:document
 })
 native.__testSetSidebarWorkspace(sidebarWorkspace)
-const createConversationOptions = new Function('NS', 'ABSENT_BLOCK', 'researchWorkspaces', 'researchSidebar', 'eworkPendingConversation',
+const fixtureCenterChat=(id?:string)=>!document.body.dataset.workspaceSurface && (!id || (views.get(id)??'chat')==='chat')
+const switchCenterWorkspace=createChatWorkspaceSwitch({...options,pending:()=>record,shellFor:(id:string)=>imageInputs.get(id)??real,
+ viewFor:(id:string)=>views.get(id),isChat:fixtureCenterChat,beforeCreate:async()=>{},openChat:(id:string)=>options.setView(id,'chat')})
+const createConversationOptions = new Function('NS', 'ABSENT_BLOCK', 'researchWorkspaces', 'researchSidebar', 'eworkPendingConversation', 'isCenterChat', 'switchCenterChatWorkspace',
  data.conversationOptions + 'return odysseyConversationOptions;')
-const homeWorkspaceAction = createConversationOptions('conversation', {}, registry, coordinator, record).inject(undefined).selectWorkspace
+const homeWorkspaceAction = createConversationOptions('conversation', {}, registry, coordinator, record, fixtureCenterChat,switchCenterWorkspace).inject(undefined).selectWorkspace
 document.body.dataset.odysseyGlobalRightOpen='true';
 coordinator.service={getSnapshot:()=>sidebarStore.getSnapshot(),subscribeState:(fn:any)=>sidebarStore.subscribe(fn),
  openTab(){},updateTab(){},closeTab(){},activateTab(){},

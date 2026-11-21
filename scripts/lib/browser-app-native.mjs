@@ -1,3 +1,4 @@
+import {createChatWorkspaceSwitch} from './chat-workspace-switch.mjs'
 import {installImageFactoryContext,imageFactoryNativeSource} from './image-factory-native.mjs'
 import {createRightProjectDrafts,installSidebarWorkspaceHandoff} from './right-project-drafts.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
@@ -227,6 +228,17 @@ export function patchBrowserAppNative(input){
  replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nconst eworkBrowserTurnContext=${browserTurnContext.toString()};\nlet eworkPendingConversation=null,eworkRightProjects=null,eworkSidebarWorkspace=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkPendingHomeHeader.toString()}\n${imageFactoryNativeSource}\n`+root)
  const controller='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
  replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n
+const chatWorkspaceView=id=>id===undefined?undefined:slots.resolveStore(chatStore,id).getSnapshot().view;
+const isCenterChat=id=>!document.body.dataset.workspaceSurface && !sherlockShared(id) &&
+ (id===undefined || !sherlockBoardsAdapter?.isBoardOnly?.(id) && !sherlockBoardsAdapter?.directoryChoice?.(id) &&
+  localStorage.getItem('sherlock.research.directory-locked.v1:'+id)!=='true' && (chatWorkspaceView(id)??'chat')==='chat');
+const switchCenterChatWorkspace=(${createChatWorkspaceSwitch.toString()})({sessions,workspaces,
+ pending:()=>eworkPendingConversation,shellFor:id=>inputHub.shell(id),viewFor:chatWorkspaceView,isChat:isCenterChat,
+ beforeCreate:()=>permissionPreferences.ready(),openChat:id=>{
+  slots.resolveStore(chatStore,id).actions.setView('chat');
+  window.dispatchEvent(new CustomEvent('sherlock:conversation-initial-chat',{detail:{sessionId:id}}));
+ }});
+
 ctx.effect(()=>{
  const getTaskWorkspace=(scope=sessions.list.getSnapshot().current)=>{
      const state=workspaces.list.getSnapshot();
@@ -468,6 +480,9 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
  replace('selectWorkspace: async (workspaceId) => {',`selectWorkspace: async (workspaceId) => {
+ if(workspaceId!==null && workspaceId!=='::board-directory' && isCenterChat(sessionId)) {
+  return switchCenterChatWorkspace(sessionId,workspaceId);
+ }
  if(sessionId===undefined&&eworkPendingConversation){eworkPendingConversation.selectWorkspace(workspaceId);return;}
  if(workspaceId===null){
   const surface=document.body.dataset.workspaceSurface;

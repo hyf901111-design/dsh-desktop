@@ -9,7 +9,7 @@ const out='/tmp/release140-new-chat-view-20261027',base='node_modules/@deepseek-
 let browser,script,input,css
 const expose=(source,names)=>source.replace('exports.apply = apply;',`exports.apply = apply;${names.map(name=>`exports.__test${name}=typeof ${name}==='undefined'?undefined:${name};`).join('')}`)
 beforeAll(async()=>{
- await mkdir(out,{recursive:true});const rawRuntime=await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),runtime=patchNewChatSessionRuntime?patchNewChatSessionRuntime(rawRuntime):rawRuntime,conversation=expose(patchSessionViewPreferences(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')),['createChatStore','HomeGuideNativeOriginalConversationRoot','ConversationSessionHeader','ConversationSession','InputBar','installInitialChatViewIntent']),rawSidebar=await readFile(base+'dsh-client-ui-sidebar/lib/client.js','utf8'),sidebar=expose(patchSidebarNewNoteShell(patchNewChatSidebar?patchNewChatSidebar(stripSidebarNewNoteShell(rawSidebar)):stripSidebarNewNoteShell(rawSidebar)),['SidebarRoot','zh']),workspace=expose(patchFigmaWorkspaceMenus(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspaceBrowser','createWorkspaceViewStore','zh'])
+ await mkdir(out,{recursive:true});const rawRuntime=await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),runtime=patchNewChatSessionRuntime?patchNewChatSessionRuntime(rawRuntime):rawRuntime,conversation=expose(patchSessionViewPreferences(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')),['createChatStore','HomeGuideNativeOriginalConversationRoot','ConversationSessionHeader','ConversationSession','InputBar','installInitialChatViewIntent']),rawSidebar=await readFile(base+'dsh-client-ui-sidebar/lib/client.js','utf8'),sidebar=expose(patchSidebarNewNoteShell(patchNewChatSidebar?patchNewChatSidebar(stripSidebarNewNoteShell(rawSidebar)):stripSidebarNewNoteShell(rawSidebar)),['SidebarRoot','zh']),workspace=expose(patchFigmaWorkspaceMenus(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspaceBrowser','WorkspacePicker','createWorkspaceViewStore','zh'])
  input={runtime,conversation:conversation.replace('exports.__testHomeGuideNativeOriginalConversationRoot=', 'exports.__testNativeRoot=').replace('exports.apply = apply;','exports.apply = apply;exports.__testsetBoards=page=>{sherlockBoardsAdapter=page};'),sidebar,workspace};const built=await build({entryPoints:['test/fixtures/new-chat-view-browser.tsx'],bundle:true,platform:'browser',format:'iife',write:false,loader:{'.css':'empty','.svg':'dataurl'},define:{'process.env.NODE_ENV':'"production"'},logLevel:'silent'});script=built.outputFiles[0].text
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(name=>/^index-.*\.css$/.test(name));css=await readFile(require.resolve('@deepseek-ai/dsh-client-ui-theme/styles/design-platform.css'),'utf8')+'\n'+await readFile(assets+'/'+name,'utf8');css+='\n'+[conversation,sidebar,workspace].flatMap(source=>[...source.matchAll(/const css(?:\$\d+)? = ("(?:[^"\\]|\\.)*");/g)].map(m=>JSON.parse(m[1]))).join('\n')
  const pw=await import(pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.chromium??pw.default.chromium).launch({headless:true,executablePath:process.env.SHERLOCK_TEST_CHROMIUM||'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -122,3 +122,31 @@ it('keeps the current input and selection when the owned reuse predicate rejects
   expect(await page.evaluate(()=>window.newChatFixture.sessions.list.getSnapshot().current)).toBe('current');expect(await page.evaluate(()=>JSON.stringify(window.newChatFixture.shellFor('current').snapshot))).toBe(draft);expect(await page.evaluate(()=>window.newChatFixture.events)).toEqual([]);expect(errors).toEqual([])
  }finally{await page.close()}
 })
+
+
+it('opens an ordinary Chat in the chosen collapsed workspace beside a saved spreadsheet and keeps the selected row visible',async()=>{
+ const {page,errors}=await fixture({warm:true})
+ try {
+  await page.getByRole('button',{name:'新建对话',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.newChatFixture.sessions.list.getSnapshot().current)).toBe('target')
+  await page.evaluate(()=>{const f=window.newChatFixture;f.storeFor('elsewhere').actions.setView('spreadsheet');f.events.length=0})
+  const folder=page.locator('[aria-label="工作区“另一个工作区”的操作"]').locator('xpath=ancestor::*[@role="treeitem"][1]')
+  if(await folder.getAttribute('aria-expanded')==='true')await folder.click()
+  const picker=page.locator('main [data-odyssey-composer-workspace] .pXSMma_workspace')
+  await picker.click()
+  await page.getByRole('menuitem',{name:'另一个工作区',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.newChatFixture.sessions.list.getSnapshot().current)).toBe('fresh-1')
+  await expect.poll(()=>folder.getAttribute('aria-expanded')).toBe('true')
+  const row=page.locator('#sidebar [role=treeitem][aria-selected=true]')
+  expect(await row.count()).toBe(1)
+  await expect.poll(()=>page.locator('main [data-odyssey-page=home]').count()).toBe(1)
+  await picker.click();await page.getByRole('menuitem',{name:'另一个工作区',exact:true}).click()
+  const result=await page.evaluate(()=>{
+   const f=window.newChatFixture
+   return {created:f.events.filter(e=>e.create),opened:f.events.filter(e=>e.open),target:f.workspaces.list.getSnapshot().items.find(w=>w.workspaceId==='other').sessionIds,
+    view:f.storeFor('fresh-1').getSnapshot().view,oldView:f.storeFor('elsewhere').getSnapshot().view}
+  })
+  expect(result).toEqual({created:[{create:{workspaceId:'other'}}],opened:[{open:'fresh-1'}],target:['elsewhere','fresh-1'],view:'chat',oldView:'spreadsheet'})
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+},15000)
