@@ -1068,6 +1068,22 @@ it('creates each image entry in its selected workspace and archives only the aba
   } finally { await f.dispose() }
 })
 
+it.each([false,true])('transfers the native session to research while an image canvas check is pending (saved canvas %s)',async hasCanvas=>{
+  const f=imageSessionLifecycle();const {navigateWorkspaceView}=await import('../src/preload/workspace-view-shortcuts')
+  try {
+    f.open();const id=await f.created(1)
+    let finish;const check=new Promise(resolve=>{finish=resolve})
+    f.storage.hasCanvas.mockReturnValue(check)
+    f.doc.body.insertAdjacentHTML('beforeend','<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><div data-srb-session-header data-ework-notes-session="'+id+'"><div data-srb-tabs><button data-conversation-view-id="research">研究</button></div></div></div></main>')
+    const button=f.doc.querySelector('[data-conversation-view-id=research]');button.addEventListener('click',()=>button.setAttribute('aria-selected','true'))
+    const ok=navigateWorkspaceView(f.doc,id,'research',()=>{delete f.doc.body.dataset.workspaceSurface;f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change'))})
+    expect(ok).toBe(true);finish(hasCanvas)
+    if(hasCanvas)await vi.waitFor(()=>expect(f.storage.write.mock.lastCall[0].tabs).toEqual([{scope:id}]))
+    else await vi.waitFor(()=>expect(f.storage.write.mock.lastCall[0].tabs).toEqual([]))
+    expect(button.getAttribute('aria-selected')).toBe('true');expect(f.sessionsState.current).toBe(id);expect(f.archiveTask).not.toHaveBeenCalled()
+  } finally{await f.dispose()}
+})
+
 it('adopts the clicked template in the same empty task and follows its native conversation title thereafter', async () => {
   const f = imageSessionLifecycle()
   let state
@@ -1148,20 +1164,4 @@ it('abandons a late create after switching surfaces and keeps the next click tie
     await vi.waitFor(() => expect(f.archiveTask).toHaveBeenCalledWith(delayedId))
     expect(f.sessionCatalog.create.mock.calls[1][0]).toMatchObject({ sessionId: current, workspaceId: 'B' })
   } finally { await f.dispose() }
-})
-
-it.each([false,true])('transfers the native session to research while an image canvas check is pending (saved canvas %s)',async hasCanvas=>{
-  const f=imageSessionLifecycle();const {navigateWorkspaceView}=await import('../src/preload/workspace-view-shortcuts')
-  try {
-    f.open();const id=await f.created(1)
-    let finish;const check=new Promise(resolve=>{finish=resolve})
-    f.storage.hasCanvas.mockReturnValue(check)
-    f.doc.body.insertAdjacentHTML('beforeend','<main class="pI_x6G_centerCol"><div class="wSkVaW_root"><div data-srb-session-header data-ework-notes-session="'+id+'"><div data-srb-tabs><button data-conversation-view-id="research">研究</button></div></div></div></main>')
-    const button=f.doc.querySelector('[data-conversation-view-id=research]');button.addEventListener('click',()=>button.setAttribute('aria-selected','true'))
-    const ok=navigateWorkspaceView(f.doc,id,'research',()=>{delete f.doc.body.dataset.workspaceSurface;f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change'))})
-    expect(ok).toBe(true);finish(hasCanvas)
-    if(hasCanvas)await vi.waitFor(()=>expect(f.storage.write.mock.lastCall[0].tabs).toEqual([{scope:id}]))
-    else await vi.waitFor(()=>expect(f.storage.write.mock.lastCall[0].tabs).toEqual([]))
-    expect(button.getAttribute('aria-selected')).toBe('true');expect(f.sessionsState.current).toBe(id);expect(f.archiveTask).not.toHaveBeenCalled()
-  } finally{await f.dispose()}
 })

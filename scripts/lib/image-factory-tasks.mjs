@@ -423,10 +423,10 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     }
   }
   function reset() {
-    researchTransfers.clear()
     account = {}; navigation++; checking.clear(); replacements.clear(); sending.clear(); pendingFresh = false
     tabs = []
     closed = []
+    researchTransfers.clear()
     active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = entryProject = undefined
     publish()
   }
