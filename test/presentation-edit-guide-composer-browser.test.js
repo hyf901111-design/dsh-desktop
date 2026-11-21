@@ -32,9 +32,11 @@ it('clicks the editable line below a long presentation chip that covers the text
     const result=await page.evaluate(async()=>{
       const textarea=document.querySelector('textarea'), button=document.querySelector('button'), submitted=[]
       button.onclick=()=>{submitted.push(textarea.value);textarea.value='';document.querySelectorAll('[data-reference-source]').forEach(el=>el.remove())}
+      // prepare and the subscribed session.models update arrive independently.
+      textarea.disabled=true
       const guide=await guideFixture.mountPresentationEditGuideChat(document,{
         sessionId:'example',runId:'run',cwd:'/tmp/example',fresh:true,signal:new AbortController().signal,
-        wait:async()=>{},waitUntilPlaying:async()=>{},
+        wait:async()=>{if(textarea.disabled)textarea.disabled=false},waitUntilPlaying:async()=>{},
         point:async action=>{
           const p=action.targetPoint()
           if(!action.target.contains(document.elementFromPoint(p.x,p.y)))throw Error('pointer missed the native control')

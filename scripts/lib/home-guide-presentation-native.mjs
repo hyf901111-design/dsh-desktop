@@ -176,7 +176,12 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
     const ticket={detail,kind,skillId,host,shell,controller:new window.AbortController(),stage:-1,busy:false,playing:false};owned=ticket
     if(detail.fresh)HomePresentationSubmissions.watch({sessionId,session:deps.sessions?.binding?.(sessionId)?.session,signal:ticket.controller.signal,current:()=>check(ticket)})
     if(detail.fresh){if(shell.snapshot.draft.trim()||shell.snapshot.imageIds?.length||shell.snapshot.occurrences?.length)throw Error('示例会话中已有草稿，未替换。');ticket.prepared=await rpc(ticket,'prepare',{fresh:true,cwd:detail.cwd});if(typeof ticket.prepared.brief!=='string'||!ticket.prepared.brief||(kind==='report'?typeof ticket.prepared.htmlPath!=='string'||typeof ticket.prepared.pdfPath!=='string':typeof ticket.prepared.sourcePath!=='string'||typeof ticket.prepared.presentationPath!=='string'))throw Error('预制研究示例尚未就绪。')}
-    await waitFor(ticket,()=>!!inputFor(ticket),false);return
+    // The session-local replay route reaches the native model selector after prepare.
+    await waitFor(ticket,()=>{
+     const input=inputFor(ticket)
+     return input&&(!detail.fresh||!input.disabled&&!input.readOnly)
+    },false,'示例会话输入框尚未就绪，请重试。')
+    return
    }
    const ticket=owned
    if(!ticket||ticket.detail.runId!==detail.runId||ticket.detail.hostId!==detail.hostId)throw changed()
