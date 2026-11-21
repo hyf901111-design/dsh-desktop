@@ -2861,6 +2861,68 @@
         ],
         "generatedAt": "2026-11-21T13:14:54.487556+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "在真实模型独立开场隐藏成对工具标记",
+        "branch": "codex/feat/image-free-opening-protocol-20261121",
+        "baseCommit": "b085896ed031af4c8476b37ee96e3c2870716ad0",
+        "tipCommit": "a3263f0d5b0195cf209009e2536566c69d8a2746",
+        "commits": [
+          {
+            "commit": "a3263f0d5b0195cf209009e2536566c69d8a2746",
+            "parents": [
+              "b085896ed031af4c8476b37ee96e3c2870716ad0"
+            ],
+            "subject": "阻止独立开场泄漏托管模型的成对工具控制标记"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/first-response-effort.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-opening-stream.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/task-opening-sdk-recovery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/task-opening-sdk-recovery.test.js",
+              "test/conversation-first-response-effort.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "在完整签名包旧版 SDK、两步执行、逐字符分片、段末快照与普通 Markdown 样例分别核验。",
+            "verifiedCommit": "a3263f0d5b0195cf209009e2536566c69d8a2746",
+            "completedAt": "2026-11-21T13:15:15.156462+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "b085 真实原生表格公开了两组 ASCII 控制行。其57帧真实分片经后继过滤只余自然首段，持久快照与逐帧文字相同，不包含重放态；原会话随后有5次实际授权表格操作。正式新包由集成人验证。"
+        },
+        "acceptanceCriteria": [
+          "流式分片和最终持久正文均不能包含误发的协议/调用参数",
+          "合法围栏、引用、缩进、行内以及非开场的正常示例保留",
+          "原生工作簿后续工具和普通回答逻辑保持正常"
+        ],
+        "risks": [
+          "本次覆盖实测的两种泄漏格式。其它提供方协议需要独立证据。"
+        ],
+        "generatedAt": "2026-11-21T13:15:15.156462+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3252,6 +3314,17 @@
         "test/image-session-title.test.js",
         "test/session-title-subject.test.js",
         "--maxWorkers=3",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/task-opening-sdk-recovery.test.js",
+        "test/conversation-first-response-effort.test.js",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
