@@ -1532,6 +1532,7 @@ async function bootstrap(): Promise<void> {
       } catch (error) { console.warn('[session-notification] unable to show notification', error) }
     },
     canvasAction: (value:any,signal) => value?.method==='data' ? componentDataService ? componentDataService.request(value.sessionId,value.args) : Promise.reject(Error('数据刷新服务不可用')) : canvasActions.execute(value,signal),
+    imageTitleEvidence: id => factoryCanvases.titleEvidence(id),
     isSharedSession:id=>researchBoardsService?.isSharedSession(id)===true,
     additionalSources:id=>researchBoardIntegration?.personalContext(id)??[],
     readCanvas: (sessionId) => readActiveResearchCanvas(researchCanvasStorage, sessionId, researchBoardsService?.isSharedSession(sessionId)

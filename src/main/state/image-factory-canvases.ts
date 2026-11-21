@@ -183,6 +183,17 @@ export class ImageFactoryCanvases {
     })
   }
 
+  async titleEvidence(sessionId: string) {
+    const {tabs, closed, epoch} = await this.readTabs()
+    const tab = [...tabs, ...(closed ?? [])].find(item => item.scope === sessionId)
+    if (!tab) return {owned:false}
+    return this.run(async (owner, _epoch, current) => {
+      const canvas = await this.readCanvas(this.directory(owner, sessionId))
+      current()
+      return {owned:true, tabTitle:tab.title, canvasTitle:canvas?.title}
+    }, epoch)
+  }
+
   async writeTabs(value: unknown) {
     const input = value as { epoch?: number; tabs?: unknown; closed?: unknown } | undefined
     if (!input || typeof input.epoch !== 'number' || !Number.isSafeInteger(input.epoch)) throw Error('图片任务页签数据无效。')

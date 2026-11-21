@@ -183,3 +183,19 @@ it('restores ownership only for known new tasks and recovers interrupted canvas 
     expect(await restored.readTabs()).toEqual({ epoch: 4, tabs: [] })
   } finally { await rm(root, { force: true, recursive: true }) }
 })
+
+it('resolves title evidence only from the signed-in account and the named image task',async()=>{
+  const root=await mkdtemp(join(tmpdir(),'odyssey-image-titles-'))
+  let identity={owner:'account-a',generation:1}
+  const saved=new ImageFactoryCanvases(root,()=>identity), scope='image-task-'+randomUUID()
+  try {
+    await saved.writeTabs({epoch:1,tabs:[{scope,title:'主动有章法'}]})
+    expect(await saved.titleEvidence(scope)).toEqual({owned:true,tabTitle:'主动有章法',canvasTitle:undefined})
+    const image=canvas()
+    await saved.write({scope,epoch:1,canvas:image,image:png})
+    expect((await saved.titleEvidence(scope)).canvasTitle).toBe(image.title)
+    expect(await saved.titleEvidence('image-task-'+randomUUID())).toEqual({owned:false})
+    identity={owner:'account-b',generation:2}
+    expect(await saved.titleEvidence(scope)).toEqual({owned:false})
+  } finally { await rm(root,{recursive:true,force:true}) }
+})
