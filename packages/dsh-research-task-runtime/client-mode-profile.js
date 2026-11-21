@@ -124,7 +124,8 @@ function describeTurn(mode, text, factory) {
   const appendSlide = /(?:追加|加上?)(?:一(?:张|个)?|[两二三四五六七八九十\d]+(?:张|个)?|几(?:张|个)?)?(?:张|个|新)?(?:页|幻灯片)|\bappend (?:an? |one |\d+ |new )*(?:pages?|slides?)\b/iu
   const noAppend = /(?:不(?:要|用|必|许|需要)?|别|禁止|无需|暂缓)(?:实际|真的|直接)?(?:追加|增加|加页)|\b(?:do not|don't|never) append\b/iu
   const lastWriteLimit = mode === 'presentation' ? clauses.findLastIndex(part =>
-    /(?:只|仅)(?:需|要)?(?:讨论|分析|回答|给.{0,8}建议)|(?:本轮|这次|现在|先)?(?:不要|暂不|不必|不用|别)(?:实际|直接)?(?:修改|改动|写入|编辑|执行)(?:文稿|演示|文件|幻灯片)?[。！]?$|\b(?:just discuss|do not edit)\b/iu.test(part)) : -1
+    (explicitlyReadOnly.test(part) || /(?:暂不|不要|先不)(?:实际)?(?:执行|修改|写入)/u.test(part)) &&
+    !/(?:原有|已有|原来|现有|其他|其它).{0,8}(?:页|备注|内容|格式)/u.test(part)) : -1
   const presentationAppend = mode === 'presentation' && clauses.some((part,index) =>
     index > lastWriteLimit && appendSlide.test(part) && !noAppend.test(part) && !advice.test(part) && !/(?:如果|假设|是否|考虑|\b(?:what if|whether)\b)/iu.test(part))
   const coherentWrites = presentationAppend || clauses.some(part => nativeEdit.test(part) && !advice.test(part) && !denied.test(part) && !explicitlyReadOnly.test(part))
