@@ -3213,6 +3213,62 @@
         ],
         "generatedAt": "2026-11-21T13:55:36.226129+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "演示画布上下文菜单和标尺切换主题",
+        "branch": "codex/feat/slide-context-ruler-theme-20261121",
+        "baseCommit": "48c29f9a883512b2235ece2874fa0c91fc3fc256",
+        "tipCommit": "2c78ce777acb97465bb5a5af6d92cb96355d8370",
+        "commits": [
+          {
+            "commit": "2c78ce777acb97465bb5a5af6d92cb96355d8370",
+            "parents": [
+              "48c29f9a883512b2235ece2874fa0c91fc3fc256"
+            ],
+            "subject": "演示画布右键菜单、子菜单和双向标尺跟随深色主题"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/odyssey.css"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-toolbar-popovers-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/presentation-toolbar-popovers-browser.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "构建真实内嵌编辑器，点击右键、展开网格线、开关标尺，连续切换深浅深，原工具栏交互同时通过。",
+            "verifiedCommit": "2c78ce777acb97465bb5a5af6d92cb96355d8370",
+            "completedAt": "2026-11-21T13:56:58.755899+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "从实际客户端读出财政部收益率演示，在内嵌编辑器上记录同页深浅深与横纵标尺；签名后原生窗口再验。"
+        },
+        "acceptanceCriteria": [
+          "画布菜单、网格线子菜单、快捷键和指示符适配深色",
+          "水平与垂直标尺、刻度、选择范围在深色可见，浅色仍跟随切换"
+        ],
+        "risks": [
+          "不同显示器的物理观感由用户确认。"
+        ],
+        "generatedAt": "2026-11-21T13:56:58.755899+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3669,6 +3725,16 @@
         "test/explore-search.test.ts",
         "test/browser-app-native.test.js",
         "test/workspace-surface-host.test.ts",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/presentation-toolbar-popovers-browser.test.ts",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
