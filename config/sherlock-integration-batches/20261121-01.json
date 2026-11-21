@@ -4420,6 +4420,59 @@
         ],
         "generatedAt": "2026-11-21T16:17:10.222443+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复关闭图像页签后的宽度恢复",
+        "branch": "codex/feat/image-responsive-tabs-20261122",
+        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
+        "tipCommit": "8c1a8db5a1ac24c006420a22dc5cbdebc5144167",
+        "commits": [
+          {
+            "commit": "8c1a8db5a1ac24c006420a22dc5cbdebc5144167",
+            "parents": [
+              "216fb30180c5941ccf8f1be873948762e933ea40"
+            ],
+            "subject": "在窗口或面板宽度变化时恢复图像页签自适应"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/task-tabs.tsx"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory-native.test.js",
+              "test/image-factory.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "图像任务和页签布局聚焦验证通过。",
+            "verifiedCommit": "8c1a8db5a1ac24c006420a22dc5cbdebc5144167",
+            "completedAt": "2026-11-21T16:18:15.406314+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "原签名客户端确认关页签后五张卡锁在32–45px。新包集成后复验。"
+        },
+        "acceptanceCriteria": [
+          "窗口或面板改变可用宽度时页签恢复布局"
+        ],
+        "risks": [
+          "宽度极窄时页签仍应保留图标。"
+        ],
+        "generatedAt": "2026-11-21T16:18:15.406314+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5074,6 +5127,18 @@
         "test/image-factory-native.test.js",
         "test/image-session-title.test.js",
         "test/browser-app-native.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-factory-native.test.js",
+        "test/image-factory.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
