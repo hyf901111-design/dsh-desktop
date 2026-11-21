@@ -47,22 +47,22 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
     await context.getByText('标尺', { exact: true }).click()
     const ruler = frame.locator('.ruler')
     for (const dark of [true, false, true]) {
-      await page.evaluate(dark => document.querySelector('iframe')!.contentWindow!.postMessage(
+      await page.evaluate((dark: boolean) => document.querySelector('iframe')!.contentWindow!.postMessage(
         { channel: 'odyssey-presentation', type: 'theme', dark }, location.origin), dark)
       const background = dark ? 'rgb(36, 36, 36)' : 'rgb(255, 255, 255)'
-      await expect.poll(() => ruler.locator('.h').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(background)
-      expect(await ruler.locator('.v').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(background)
+      await expect.poll(() => ruler.locator('.h').evaluate((el: Element) => getComputedStyle(el).backgroundColor)).toBe(background)
+      expect(await ruler.locator('.v').evaluate((el: Element) => getComputedStyle(el).backgroundColor)).toBe(background)
       await openContext()
       await context.getByText('网格线', { exact: true }).hover()
       const submenu = context.locator('.sub-menu:visible').first()
       await submenu.waitFor()
-      expect(await submenu.evaluate(el => getComputedStyle(el).backgroundColor)).toBe(background)
-      expect(await context.locator('.menu-content').first().evaluate(el => getComputedStyle(el).backgroundColor)).toBe(background)
+      expect(await submenu.evaluate((el: Element) => getComputedStyle(el).backgroundColor)).toBe(background)
+      expect(await context.locator('.menu-content').first().evaluate((el: Element) => getComputedStyle(el).backgroundColor)).toBe(background)
       if (dark) {
-        expect(await ruler.locator('.h .ruler-marker-100').first().evaluate(el => getComputedStyle(el, '::before').backgroundColor)).toBe('rgb(170, 170, 170)')
-        expect(await context.locator('.sub-text').first().evaluate(el => getComputedStyle(el).color)).toBe('rgb(170, 170, 170)')
+        expect(await ruler.locator('.h .ruler-marker-100').first().evaluate((el: Element) => getComputedStyle(el, '::before').backgroundColor)).toBe('rgb(170, 170, 170)')
+        expect(await context.locator('.sub-text').first().evaluate((el: Element) => getComputedStyle(el).color)).toBe('rgb(170, 170, 170)')
       }
-      const boxes = await submenu.evaluate(el => {
+      const boxes = await submenu.evaluate((el: Element) => {
         const root = el.closest('.contextmenu')!.getBoundingClientRect()
         const sub = el.getBoundingClientRect()
         return { margins: [root, sub].flatMap(r => [r.left, r.top, innerWidth - r.right, innerHeight - r.bottom]),
@@ -76,7 +76,7 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
       await canvas.click({ button: 'right', position: { x: 20, y: 20 } })
       await context.getByText('网格线', { exact: true }).hover()
       const leftSub = context.locator('.sub-menu:visible').first()
-      expect(await leftSub.evaluate(el => {
+      expect(await leftSub.evaluate((el: Element) => {
         const root = el.closest('.contextmenu')!.getBoundingClientRect()
         const child = el.getBoundingClientRect()
         return child.left >= root.right - 3 && child.right <= innerWidth && child.bottom <= innerHeight
@@ -88,7 +88,7 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
         await page.setViewportSize({ width: 1080, height: 200 })
         await canvas.click({ button: 'right', position: { x: 18, y: 8 } })
         await context.getByText('网格线', { exact: true }).hover()
-        const fitsShortEditor = await submenu.evaluate(el => {
+        const fitsShortEditor = await submenu.evaluate((el: Element) => {
           const child = el.getBoundingClientRect()
           const row = el.closest('li')!.getBoundingClientRect()
           return child.top < row.top - 6 && child.bottom <= innerHeight - 4
