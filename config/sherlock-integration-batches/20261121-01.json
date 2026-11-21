@@ -643,17 +643,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "修复图像讨论与独立生图的历史上下文串用",
+        "featureName": "按当轮两期限报价区分百分点差和基点差",
         "branch": "codex/feat/mode-harness-20261121",
-        "baseCommit": "67b37f179b8957317f3f038e512020425a2be1fe",
-        "tipCommit": "90d1df15209ad4e94cd2f7bb7fe0b82c06836fed",
+        "baseCommit": "90d1df15209ad4e94cd2f7bb7fe0b82c06836fed",
+        "tipCommit": "5206945eb3921928c65aa009be8c7c84334d7bb8",
         "commits": [
           {
-            "commit": "90d1df15209ad4e94cd2f7bb7fe0b82c06836fed",
+            "commit": "5206945eb3921928c65aa009be8c7c84334d7bb8",
             "parents": [
-              "67b37f179b8957317f3f038e512020425a2be1fe"
+              "90d1df15209ad4e94cd2f7bb7fe0b82c06836fed"
             ],
-            "subject": "图像讨论直接回答并隔离明确新素材的旧画布上下文"
+            "subject": "明确两期限利差中百分点与基点的换算口径"
           }
         ],
         "files": [
@@ -679,8 +679,8 @@
             ],
             "outcome": "passed",
             "summary": "图像普通构图讨论、生成、显式点评与编辑引用保持各自上下文。",
-            "verifiedCommit": "90d1df15209ad4e94cd2f7bb7fe0b82c06836fed",
-            "completedAt": "2026-11-21T12:11:29.481656+00:00",
+            "verifiedCommit": "5206945eb3921928c65aa009be8c7c84334d7bb8",
+            "completedAt": "2026-11-21T12:50:29.977106+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -695,7 +695,7 @@
         "risks": [
           "托管模型可用性可能影响端到端速度。"
         ],
-        "generatedAt": "2026-11-21T12:11:29.481656+00:00"
+        "generatedAt": "2026-11-21T12:50:29.977106+00:00"
       }
     },
     {
