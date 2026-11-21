@@ -4261,6 +4261,84 @@
         ],
         "generatedAt": "2026-11-21T15:39:46.306516+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按用户原始色卡统一易方达表头",
+        "branch": "codex/feat/efund-swatch-table-header-20261121",
+        "baseCommit": "ee45603163aa52edba2a546896b9b5ae41529860",
+        "tipCommit": "cae7433a992cf7e74e843ba3183cf236edc149fe",
+        "commits": [
+          {
+            "commit": "cae7433a992cf7e74e843ba3183cf236edc149fe",
+            "parents": [
+              "ee45603163aa52edba2a546896b9b5ae41529860"
+            ],
+            "subject": "按原始色卡统一易方达模式表头蓝底白字"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget.css"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-client.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-native-table-theme-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-theme-export-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/openterminal-table-header-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/dataset-view-browser.test.js",
+              "-t",
+              "E Fund disclosure headers",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "上交所披露持仓数据六列表头 sRGB (0,190,230)，未排序、悬停、升序和降序均保留纯白列名和箭头。",
+            "verifiedCommit": "cae7433a992cf7e74e843ba3183cf236edc149fe",
+            "completedAt": "2026-11-21T15:40:46.765914+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "原图全部18009个像素同色，真实披露表在 Chromium 复验；原已保存持仓表另在签名客户端复验。"
+        },
+        "acceptanceCriteria": [
+          "易方达研究表头统一为 #00BEE6",
+          "六列白字及排序状态可用"
+        ],
+        "risks": [
+          "签名客户端按原问题再次验收。"
+        ],
+        "generatedAt": "2026-11-21T15:40:46.765914+00:00"
+      }
     }
   ],
   "integrationChecks": [
