@@ -1243,6 +1243,147 @@
         ],
         "generatedAt": "2026-11-21T01:53:51.461Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "白酒工作台演示完成回执与探索页用例顺序",
+        "branch": "codex/feat/workbench-replay-completion-20261121",
+        "baseCommit": "3f9e694907bc6a8ae8b0112392fc31639a9e5a2c",
+        "tipCommit": "43c0cd6bb9eb3438c6e6624143e219658bc1c3e9",
+        "commits": [
+          {
+            "commit": "e2997998053585259c9bf96f3e24d2dd9caed441",
+            "parents": [
+              "3f9e694907bc6a8ae8b0112392fc31639a9e5a2c"
+            ],
+            "subject": "修复白酒工作台演示完成后误报失败"
+          },
+          {
+            "commit": "43c0cd6bb9eb3438c6e6624143e219658bc1c3e9",
+            "parents": [
+              "e2997998053585259c9bf96f3e24d2dd9caed441"
+            ],
+            "subject": "调整探索页演示用例顺序并保留卡片样式"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-workbench-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-workbench-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-workbench-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-workbench-progress.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations-assets.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-operations.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/explore-menu-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/home-workbench-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-operations-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-workbench-progress.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-workbench-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-workbench-runtime.test.js",
+              "test/home-workbench-progress.test.js",
+              "test/workbench-execution-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "白酒演示原生对话正常结束，历史误报兼容及常规规划聚焦测试",
+            "verifiedCommit": "43c0cd6bb9eb3438c6e6624143e219658bc1c3e9",
+            "completedAt": "2026-11-21T02:44:44.617Z",
+            "timeoutMs": 45000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/home-operations-browser.test.js",
+              "test/explore-menu-browser.test.ts",
+              "-t",
+              "pages through .* use cases|workbench example|final report|trend arrow|hands quick actions and all|spreadsheet card subtitle|starts only the visible large-card|streams the .*demo notice|latest rapid carousel selection"
+            ],
+            "outcome": "passed",
+            "summary": "探索页顺序、键盘切换与演示入口的浏览器回归",
+            "verifiedCommit": "43c0cd6bb9eb3438c6e6624143e219658bc1c3e9",
+            "completedAt": "2026-11-21T02:44:44.617Z",
+            "timeoutMs": 85000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "桌面客户端类型检查",
+            "verifiedCommit": "43c0cd6bb9eb3438c6e6624143e219658bc1c3e9",
+            "completedAt": "2026-11-21T02:44:44.617Z",
+            "timeoutMs": 65000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证卡片顺序、文案、键盘与入口。签名客户端整轮播放和重开将在集成预览执行。"
+        },
+        "acceptanceCriteria": [
+          "白酒演示生成 15/15 后原生对话完成",
+          "重开后保留完成回复和进度，旧会话不再显示特定误报",
+          "探索页按产品指定顺序展示全部演示用例"
+        ],
+        "risks": [
+          "本地 main 尚无演示编辑卡，集成时需保留该用例并置于研究报告之前。"
+        ],
+        "generatedAt": "2026-11-21T02:44:44.617Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -1407,6 +1548,37 @@
         "test/pending-conversation-rendered.test.js"
       ],
       "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/home-workbench-runtime.test.js",
+        "test/home-workbench-progress.test.js",
+        "test/workbench-execution-policy.test.js"
+      ],
+      "timeoutMs": 45000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/home-operations-browser.test.js",
+        "test/explore-menu-browser.test.ts",
+        "-t",
+        "pages through .* use cases|workbench example|final report|trend arrow|hands quick actions and all|spreadsheet card subtitle|starts only the visible large-card|streams the .*demo notice|latest rapid carousel selection"
+      ],
+      "timeoutMs": 85000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 65000
     }
   ],
   "mainSynchronizations": [
