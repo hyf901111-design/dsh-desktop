@@ -508,7 +508,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     const readingGuidance=workbenchReadingGuidance(requestNarrative,pastedBlocks)
     const pastedGuidance=hasPastedTable && [
       '【直接复用消息原表】本轮有 '+pastedBlocks.length+' 个可绑定表段。用 sharedDatasets:[{id,label,pastedTable:{block:1,header:true,numericFields:[数值列名]}}]，引用本轮用户原行。不要重抄 records、asOf、note。',
-      '首行是表头且各列名可用作字段键时直接引用原列名。否则在数据集根部按原列顺序声明 fields:[{key,label,unit?}]；表头含空格、单位或标点时用简短 key 和原文 label。无表头时省略 header。数值列以外保留文本。唯一编号可在 pastedTable.identity 指定。',
+      '首行是表头且各列名可用作字段键时直接引用原列名。否则在数据集根部按原列顺序声明 fields:[{key,label,unit?}]；表头含空格、单位或标点时用简短 key 和原文 label。当首行与声明的字段标签逐列相同，保留 header:true；映射为简短 key 也要跳过该表头。只有首行确实是业务记录时才传 header:false。数值列以外保留文本。唯一编号可在 pastedTable.identity 指定。',
       '明细用 type:"view"，view:{dataset,sections:[{kind:"records",fields:[字段键]}]}。同类别多个同单位指标对比用 type:"chart"，view:{dataset,variant:"groupedBar",unit,sections:[{kind:"records",label:分类键,fields:[数值键1,数值键2]}]}。比较两个端点可用 dumbbell。同一批客户从接触到签约的漏斗用 type:"chart" 和 variant:"funnel"，label 引用阶段列、fields 仅引用人数列，按原顺序绘制。按用户要求保留明细、单位、空值和其他交互。',
       '差额或比率可在 pastedTable.derive 中声明 {key,label,op:"subtract|percent",left,right,unit?,digits?}。子集用 view.where。跨行汇总用 aggregate 的 groupBy、sum 或 percent，总体比率按汇总分子分母计算；指标卡引用单条汇总，时间线用 type:"timeline"，view.sections 放一个 {kind:"schedule",label:事件标题列,start:日期列,owner:负责人列,fields:[其他明细列]}。'
     ].join(' ');
