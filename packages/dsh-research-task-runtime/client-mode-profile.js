@@ -119,7 +119,16 @@ function describeTurn(mode, text, factory) {
     return visualObject.test(part) && (visualMake.test(part) || visualEdit.test(part)) ||
       mode === 'image' && (factory?.internalReference || factory?.targetLayers || factory?.targetLayer) && visualEdit.test(part)
   })
-  const coherentWrites = clauses.some(part => nativeEdit.test(part) && !advice.test(part) && !denied.test(part) && !explicitlyReadOnly.test(part))
+  // Appending slides is a write even when the same turn asks to read back
+  // the page number. A later discussion-only restriction scopes the request.
+  const appendSlide = /(?:追加|加上?)(?:一(?:张|个)?|[两二三四五六七八九十\d]+(?:张|个)?|几(?:张|个)?)?(?:张|个|新)?(?:页|幻灯片)|\bappend (?:an? |one |\d+ |new )*(?:pages?|slides?)\b/iu
+  const noAppend = /(?:不(?:要|用|必|许|需要)?|别|禁止|无需|暂缓)(?:实际|真的|直接)?(?:追加|增加|加页)|\b(?:do not|don't|never) append\b/iu
+  const lastWriteLimit = mode === 'presentation' ? clauses.findLastIndex(part =>
+    (explicitlyReadOnly.test(part) || /(?:暂不|不要|先不)(?:实际)?(?:执行|修改|写入)/u.test(part)) &&
+    !/(?:原有|已有|原来|现有|其他|其它).{0,8}(?:页|备注|内容|格式)/u.test(part)) : -1
+  const presentationAppend = mode === 'presentation' && clauses.some((part,index) =>
+    index > lastWriteLimit && appendSlide.test(part) && !noAppend.test(part) && !advice.test(part) && !/(?:如果|假设|是否|考虑|\b(?:what if|whether)\b)/iu.test(part))
+  const coherentWrites = presentationAppend || clauses.some(part => nativeEdit.test(part) && !advice.test(part) && !denied.test(part) && !explicitlyReadOnly.test(part))
   const readOnly = discussionAt >= 0 && !image || !coherentWrites && (advice.test(text) || explicitlyReadOnly.test(text))
   const offline = offlineOnly.test(actionable)
   const shared = !offline && sharedSearch.test(actionable) && (nativeRead.test(actionable) || externalEvidence.test(actionable))
@@ -132,7 +141,7 @@ function describeTurn(mode, text, factory) {
   const create = requestedSurface && !readOnly && !image && !promptRequest ? classifyResearchCreationRequest(text) : null
   const appRead = localSearch || nativeSubject.test(text) && nativeRead.test(text)
   const worksheetRequest = mode === 'spreadsheet' && /(?:[\p{Script=Han}]{1,10}(?:统计表|分析表|明细表|工资表|清单表|台账)|工资表|数据分析任务|\bpayroll\b)/iu.test(text)
-  const appEdit = !readOnly && coherentWrites && (worksheetRequest || nativeSubject.test(text) || ['presentation','spreadsheet','notes','knowledge'].includes(mode) && /(?:字[号体]|第.{1,6}[页行列]|颜色|单元格|标题|备注|行高|列宽|公式)/u.test(text))
+  const appEdit = !readOnly && coherentWrites && (presentationAppend || worksheetRequest || nativeSubject.test(text) || ['presentation','spreadsheet','notes','knowledge'].includes(mode) && /(?:字[号体]|第.{1,6}[页行列]|颜色|单元格|标题|备注|行高|列宽|公式)/u.test(text))
   const direct = image || shared || appRead || appEdit || Boolean(create)
   const simple = !direct && !externalEvidence.test(text) && (simpleConversation.test(text) || readOnly)
   return {mode, text, factory, image, shared, localSearch, localOnly, offlineLocal:localSearch && offline, offlineShared, create, readOnly, appRead, appEdit, simple, hasFile:activeFile.test(text)}

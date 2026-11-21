@@ -45,25 +45,34 @@ export function allowTaskOpening(turn) {
   if (turn) supported.add(turn)
 }
 
-// Describe what the user has already supplied. Only project a couple of scalar
-// values if their headers identify the measure and the row has a safe label.
-function openingTableScope(rows) {
+// Keep the compact first call grounded in the supplied rows. An omitted field
+// in this projection is different from a missing cell in the user's table.
+function openingTableScope(rows, goal) {
   const [header, ...records] = rows
   const labels = header.slice(0,8).map(cell => cell.replace(/\s+/gu,' ').slice(0,24))
   const dimension = '本轮原表已识别'+records.length+'行记录，表头'+header.length+'列：'+labels.join('、')
-  if (!records.length || records.some(row=>row.length!==header.length) || new Set(header).size!==header.length) return dimension
-  const row = records[0]
+  if (!records.length || records.some(row=>row.length!==header.length) || new Set(header).size!==header.length || header.some(value=>!value.trim())) return dimension+'。行列对应关系待核实。'
+  const missing = /^(?:|[-—–…]|\.{3}|null|n\/?a|未披露|缺失)$/iu
+  const numeric = /^[-+−]?\d+(?:,\d{3})*(?:\.\d+)?(?:[%％‰]| ?bps?)?$/iu
   const key = header.findIndex(label => /名称|类别|项目|日期|证券名|产品名|^(?:name|category|date)$/iu.test(label))
-  if (key<0 || !/^[\p{L}\p{N} .·/−–-]{1,24}$/u.test(row[key])) return dimension
-  const scalars = []
-  for (let i=0;i<labels.length;i++) {
-    const label=labels[i],value=row[i]
-    if (i===key || label!==header[i] || /(?:序号|编号|代码|日期|code|(?:^|\s)id$)/iu.test(label)) continue
-    if (!/[（(][^()（）]{1,12}[）)]|[%％‰]|(?:bp|bps)$/iu.test(label) || !/^[-+−]?\d+(?:,\d{3})*(?:\.\d+)?(?:[%％‰]| ?bps?)?$/iu.test(value) || value.length>24) continue
-    scalars.push(label+'='+value)
-  }
-  const facts=scalars.slice(-2)
-  return facts.length ? dimension+'。原表首行 '+row[key]+'：'+facts.join('，') : dimension
+  const supplied = records.some(row=>row.some(value=>missing.test(value.trim())))
+    ? '原文含空值或缺失标记，不能按零补齐。' : ''
+  if (key<0 || !records.every(row=>/^[\p{L}\p{N} .·/−–-]{1,24}$/u.test(row[key]))) return dimension+(supplied?'。'+supplied:'')
+  const columns = labels.flatMap((label,i) => {
+    if (i===key || label!==header[i] || /(?:序号|编号|代码|日期|code|(?:^|\s)id$)/iu.test(label) || !/[（(][^()（）]{1,12}[）)]|[%％‰]|(?:bp|bps)$/iu.test(label)) return []
+    if (!records.every(row=>row[i].length<=24 && (missing.test(row[i]) || numeric.test(row[i])))) return []
+    return [i]
+  })
+  const relevant = columns.filter(i => {
+    const name=labels[i].replace(/[（(].*$/u,'').trim()
+    return (name.length>=2 && goal.includes(name)) || (/(?:占比|比例|share|weight)/iu.test(name) && /(?:占比|比例|share|weight)/iu.test(goal))
+  })
+  const fields=(relevant.length ? relevant : columns).slice(-2)
+  if (!fields.length) return dimension+(supplied?'。'+supplied:'')
+  const preview = records.length<=6 ? records : records.slice(0,1)
+  const values = preview.map(row=>[row[key],...fields.map(i=>row[i] || '空白')].join(' / ')).join('；')
+  const scope = preview.length===records.length ? '以下列出所提供的全部'+records.length+'行，仅摘数值列' : '原文已包含这'+records.length+'行，仅摘首行示例'
+  return dimension+'。'+supplied+scope+'（'+fields.map(i=>labels[i]).join(' / ')+'）：'+values
 }
 
 // The opening itself is text-only. Describe an action only when the full
@@ -136,7 +145,7 @@ function openingContext(message, turn, brief) {
   const scope = [
     references.length && '用户选定的内容引用：'+references.join('、'),
     message.content?.some(part=>part.type==='image') && '本轮附有图片。',
-    ...blocks.slice(0,2).map(openingTableScope),
+    ...blocks.slice(0,2).map(rows=>openingTableScope(rows,goal)),
   ].filter(Boolean).join('\n')
   const outline = [goal,scope].filter(Boolean).join('\n')
   // Treat the original imperative as quoted material. The communication call
@@ -171,6 +180,17 @@ export function registerModelTaskReplies(ctx) {
     signal?.throwIfAborted()
     const turn = clientModeTurn(agent?.session)
     if (!turn) return request
+    // Image execution needs the actual provider, canvas and reference state already
+    // present in this request. A standalone text-only call sees a different toolset.
+    if (step === 1 && turn.mode === 'image' && turn.image && request.tools?.some(tool => tool.name === 'image_generate')) {
+      return {...request, system:request.system+'\n结合本轮画面的用途与约束，可以先简短说明构图取舍。按当前服务与图层状态在这一步执行，使用用户指定的参考图，交付结果以图片附件回执为准。'}
+    }
+    if (step === 1 && turn.mode === 'browser' && !turn.readOnly && request.tools?.some(tool => tool.name === 'browser_use') &&
+        turn.text.split(/[。？！；，,;!?\n]/u).some(clause =>
+          /(?:打开|访问|前往|\b(?:open|visit|navigate to)\b).{0,48}(?:https?:\/\/|网页|页面|网址|网站|官网|\b(?:webpage|website|page|url)\b)/iu.test(clause) &&
+          !/(?:不要|不用|别|不必|无需|禁止|如何|怎样|怎么|do not|don't|how to).{0,14}(?:打开|访问|前往|open|visit|navigate)/iu.test(clause))) {
+      return {...request, system:request.system+'\n直接使用本轮提供的浏览器读取指定页面，按实际返回的标题和内容答复。页面无法打开时说明真实错误。'}
+    }
     if (firstTaskOpening(agent.session, step) && request.tools?.length) {
       const {message} = claimedWorkspaceMessage(agent.session,turn.mode) ?? {}
       if (!message) return request

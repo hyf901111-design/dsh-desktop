@@ -37,6 +37,7 @@ export const IMAGE_GENERATION_CSS=`
 .odyssey-image-generation-result{border-radius:18px;overflow:hidden;max-width:100%}
 .odyssey-image-generation-result [data-align]{display:block;width:100%}
 .odyssey-image-generation-result button[data-variant=single]{width:100%!important;height:auto!important;aspect-ratio:var(--image-ratio,1);max-width:none;max-height:none;border-radius:18px}
+.odyssey-image-generation figcaption{margin-top:6px;font:400 12px/18px var(--odyssey-font-ui,system-ui,sans-serif);color:var(--dsw-alias-label-secondary,#6d6c73)}
 .odyssey-image-generation-result img{display:block;width:100%;max-width:100%;height:100%;object-fit:contain}
 body[data-ds-dark-theme] .odyssey-image-generation-stage{background:#202020}
 body[data-ds-dark-theme] .odyssey-image-generation[data-state=running] .odyssey-image-generation-stage::after{background:linear-gradient(to bottom,transparent,#202020b3)}
@@ -61,9 +62,20 @@ function GeneratedConversationImage({image,loadImage,t}){
 function ImageGenerationCards({calls,loadImage,t}){
  if(!calls.length)return null
  const jsx=react_jsx_runtime.jsx,jsxs=react_jsx_runtime.jsxs,en=document.documentElement.dataset.odysseyLocale==='en'
+ function completed(call){
+  const {image}=call
+  let caption
+  if(Number.isSafeInteger(image.width)&&image.width>0&&Number.isSafeInteger(image.height)&&image.height>0){
+   let a=image.width,b=image.height
+   while(b){const remainder=a%b;a=b;b=remainder}
+   const ratio=image.width/a+':'+image.height/a
+   caption=image.width+' × '+image.height+(en?' px':' 像素')+' · '+ratio
+  }
+  return jsxs(react_jsx_runtime.Fragment,{children:[jsx(GeneratedConversationImage,{image,loadImage,t}),caption&&jsx('figcaption',{children:caption})]})
+ }
  const labels=en?{running:'Creating your image',completed:'Image ready',cancelled:'Image generation cancelled',failed:'Image generation failed',interrupted:'Image generation interrupted'}:{running:'正在生成图片',completed:'图片已生成',cancelled:'已取消生成',failed:'图片生成失败',interrupted:'图片生成已中断'}
  return jsx('div',{className:'odyssey-image-generations',children:calls.map(call=>jsx('figure',{className:'odyssey-image-generation','data-state':call.state,'data-image-call-id':call.id,style:{'--image-ratio':call.ratio},'aria-label':labels[call.state],children:
-  call.state==='completed'?jsx(GeneratedConversationImage,{image:call.image,loadImage,t}):jsxs('div',{className:'odyssey-image-generation-stage','aria-busy':call.state==='running',children:[call.state==='running'&&jsx('canvas',{'data-odyssey-image-flow':'','aria-hidden':true}),jsxs('div',{className:'odyssey-image-generation-status',role:'status','aria-live':'polite',children:[jsx('svg',{viewBox:'0 0 24 24',fill:'currentColor','aria-hidden':true,children:jsx('path',{d:'M12 2C13.4 8.3 15.7 10.6 22 12C15.7 13.4 13.4 15.7 12 22C10.6 15.7 8.3 13.4 2 12C8.3 10.6 10.6 8.3 12 2Z'})}),labels[call.state]]})]})
+  call.state==='completed'?completed(call):jsxs('div',{className:'odyssey-image-generation-stage','aria-busy':call.state==='running',children:[call.state==='running'&&jsx('canvas',{'data-odyssey-image-flow':'','aria-hidden':true}),jsxs('div',{className:'odyssey-image-generation-status',role:'status','aria-live':'polite',children:[jsx('svg',{viewBox:'0 0 24 24',fill:'currentColor','aria-hidden':true,children:jsx('path',{d:'M12 2C13.4 8.3 15.7 10.6 22 12C15.7 13.4 13.4 15.7 12 22C10.6 15.7 8.3 13.4 2 12C8.3 10.6 10.6 8.3 12 2Z'})}),labels[call.state]]})]})
  },call.id))})
 }
 

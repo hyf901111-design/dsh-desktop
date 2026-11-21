@@ -84,7 +84,8 @@ it('carries the supplied row count, field units and two row-bound disclosed valu
  const first=await run(1,{...current,provider:'ework-ark',model:'deepseek-v4.1-flash'})
  const body=first.messages[0].content[0].text
  expect(body).toContain('已识别5行记录，表头6列')
- expect(body).toContain('原表首行 宁德时代：公允价值（元）=11448803849.16，占基金资产净值比例（%）=3.81')
+ expect(body).toContain('所提供的全部5行，仅摘数值列（公允价值（元） / 占基金资产净值比例（%））')
+ expect(body).toContain('宁德时代 / 11448803849.16 / 3.81');expect(body).toContain('中际旭创 / 7984305860.00 / 2.66')
  expect(body).not.toContain('601318')
  expect(first.system).toContain('无需用户重发')
  expect(first.tools).toEqual([])
@@ -102,8 +103,10 @@ it('describes only tools authorized on the execution request while the opening r
  const imageText='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，作为新素材加入这份验收画布。'
  const image=requests(imageText,{mode:'image'})
  const call=await image.run(1,{...image.current,tools:[{name:'image_generate'}]})
- expect(call.tools).toEqual([])
- expect(call.system).toContain('生成并交付实际图片')
+ expect(call.tools).toEqual([{name:'image_generate'}])
+ expect(call.messages).toBe(image.current.messages)
+ expect(call.system).toContain('在这一步执行')
+ expect(call[Symbol.for('ework.model-task-opening')]).toBeUndefined()
  expect((await image.run(1,{...image.current,tools:[{name:'existingTool'}]})).system).not.toContain('生成并交付实际图片')
  const office=requests('请核对工作簿的现有日期、再按实际观察日写入两组利差公式。',{mode:'spreadsheet'})
  const granted=ids=>[{name:'client_action',parameters:{properties:{capability:{enum:ids}}}}]
@@ -123,5 +126,46 @@ it('uses a prose-only first step only when the current request asks for an actio
   const first=await run(1)
   expect(first[Symbol.for('ework.native-component-opening')]===true).toBe(expected)
   if(expected){expect(first.system).toContain('只用自然语言');expect(first.tools).toEqual([]);expect((await run(2)).tools).toEqual(current.tools)}
+ }
+})
+
+it('preserves real service or reference status on an admitted image turn, and leaves independently discussed images alone',async()=>{
+ const source='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，整图不要出现任何文字、数字或水印。作为新素材加入这份验收画布。'
+ for(const text of [source,'请修改当前这张图片，把主建筑移到右侧，保留左侧标题空间。']){
+  const image=requests(text,{mode:'image'}),tools=[{name:'image_generate'}]
+  const request={...image.current,system:'套餐生图服务暂时不可用。',tools}
+  const first=await image.run(1,request)
+  expect(first.tools).toBe(tools);expect(first.messages).toBe(request.messages)
+  expect(first.system).toContain(request.system);expect(first.system).not.toContain('已具备')
+  expect(first[Symbol.for('ework.model-task-opening')]).toBeUndefined()
+ }
+ const discussion=requests('这轮只讨论构图，不生成或修改图片。',{mode:'image'})
+ const first=await discussion.run(1,{...discussion.current,tools:[{name:'image_generate'}]})
+ expect(first.system).not.toContain('在这一步执行')
+})
+
+it('distinguishes a complete supplied column, a retained missing value and a preview of a longer table',async()=>{
+ const goal='我是指数投资部的组合经理，请把下面的持仓做成研究看板，让我一眼比较五家公司的净值占比和排名，知道前五合计多少。'
+ const head='序号\t股票代码\t股票名称\t数量（股）\t公允价值（元）\t占基金资产净值比例（%）'
+ const rows=['1\t300750\t宁德时代\t31173566\t11448803849.16\t3.81','2\t600519\t贵州茅台\t7377868\t10160652252.24\t3.38','3\t601318\t中国平安\t125580047\t8589675214.80\t2.86','4\t300308\t中际旭创\t13089026\t7984305860.00\t2.66','5\t601899\t紫金矿业\t194034163\t6688357598.61\t2.23']
+ const opening=async rs=>(await requests([goal,head,...rs].join('\n')).run(1)).messages[0].content[0].text
+ const full=await opening(rows)
+ expect(full).toContain('所提供的全部5行，仅摘数值列（占基金资产净值比例（%））')
+ expect(full).toContain('宁德时代 / 3.81；贵州茅台 / 3.38；中国平安 / 2.86；中际旭创 / 2.66；紫金矿业 / 2.23')
+ expect(full).not.toContain('11448803849.16')
+ const absent=await opening(rows.map(r=>r.replace('2.86','—')))
+ expect(absent).toContain('原文含空值');expect(absent).toContain('中国平安 / —')
+ const long=await opening([...rows,...rows])
+ expect(long).toContain('原文已包含这10行，仅摘首行示例');expect(long).not.toContain('贵州茅台 /')
+})
+
+it('keeps an explicit live page visit executable on the first call and keeps independent conversation and visiting advice outside that path',async()=>{
+ const actual='浏览执行E1：请在当前浏览器打开美国财政部这个正式月度页面，告诉我实际页面标题，并读出 2024-12-31 的两年、十年国债收益率。https://home.treasury.gov/resource-center/data-chart-center/interest-rates/TextView?type=daily_treasury_yield_curve&field_tdr_date_value_month=202412'
+ for(const [text,grant,live] of [[actual,true,true],[actual,false,false],['只讨论如何打开网站，不实际访问。',true,false],['不用打开网站，直接告诉我这两个数的差。',true,false],['收益率从4.62%到4.58%，变化多少个基点？',true,false]]){
+  const {current,run}=requests(text,{mode:'browser'})
+  const request={...current,tools:[{name:grant?'browser_use':'existingTool'}]}
+  const first=await run(1,request)
+  expect(first.system.includes('直接使用本轮提供的浏览器')).toBe(live)
+  if(live){expect(first.tools).toBe(request.tools);expect(first.messages).toBe(request.messages);expect(first[Symbol.for('ework.model-task-opening')]).toBeUndefined()}
  }
 })

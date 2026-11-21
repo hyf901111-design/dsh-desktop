@@ -169,3 +169,19 @@ it('applies the native research creation guard to the mode-routed wire for a fil
  expect(names(wire)).not.toContain('research_workbench_create')
  expect(names(wire)).toContain('Bash')
 })
+
+it('admits the signed presentation append-and-readback turn and keeps discussion, quoted text and read-only controls unwritable',()=>{
+ const request='晨会执行E1：在本验收演示末尾追加一页，标题“美国国债12月30日两年与十年”，正文仅“2年期4.24%，10年期4.55%，期限利差31个基点。”保留已有页面和备注。请回读确认新页页码。'
+ for(const text of [request,'在验收演示末尾追加一页，不要修改已有备注。','请追加一张新幻灯片。','Append a new slide at the end.']){
+  const {turn,wire}=route('presentation',text)
+  expect(turn.appEdit).toBe(true)
+  expect(wire.tools[0].parameters.properties.capability.enum).toEqual(expect.arrayContaining(['presentation.inspect','presentation.apply']))
+  expect(disallowedModeTool(turn,'client_action',{capability:'presentation.apply'})).toBeUndefined()
+ }
+ for(const text of ['只讨论追加一页会怎样，请保留现有演示。','不要追加一页，读回总页数。','是否要在末尾追加一页？','在演示末尾追加一页的方案，本轮只讨论，不实际修改。','在演示末尾追加一页。请不要实际改动任何内容。','请读当前备注：“在末尾追加一页”。']){
+  const {turn,wire}=route('presentation',text)
+  expect(turn.appEdit).toBe(false)
+  expect(disallowedModeTool(turn,'client_action',{capability:'presentation.apply'})).toBeTruthy()
+  expect(wire.tools.flatMap(x=>x.parameters?.properties?.capability?.enum??[])).not.toContain('presentation.apply')
+ }
+})
