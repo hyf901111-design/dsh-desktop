@@ -1515,17 +1515,17 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "用当前用户的目标与数据生成首段模型回复",
+        "featureName": "单次只读取匹配数量与题名时直接检索",
         "branch": "codex/feat/ark-opening-thinking-20261121",
-        "baseCommit": "e6a8775c245c07bb73f1a5e1892c10690029bfdb",
-        "tipCommit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
+        "baseCommit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
+        "tipCommit": "13bcac01a9442f1dee257443736999f861aa74bb",
         "commits": [
           {
-            "commit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
+            "commit": "13bcac01a9442f1dee257443736999f861aa74bb",
             "parents": [
-              "e6a8775c245c07bb73f1a5e1892c10690029bfdb"
+              "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3"
             ],
-            "subject": "让模型依据当轮事实或交付取舍自然开场"
+            "subject": "对只要匹配条数的知识检索直接执行读取"
           }
         ],
         "files": [
@@ -1535,7 +1535,7 @@
           },
           {
             "status": "M",
-            "path": "test/model-task-opening-context.test.js"
+            "path": "test/conversation-first-response-effort.test.js"
           }
         ],
         "checks": [
@@ -1551,9 +1551,9 @@
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "同一模型在短上下文中用数据事实与工作目标自由回答，保持流式开场、断流修复和工具执行门禁。",
-            "verifiedCommit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
-            "completedAt": "2026-11-21T12:13:36.401227+00:00",
+            "summary": "明确仅要数量和首条标题的本机查找直接读一次，长篇文档比较和分析仍给出自然开场。",
+            "verifiedCommit": "13bcac01a9442f1dee257443736999f861aa74bb",
+            "completedAt": "2026-11-21T12:23:05.171278+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -1568,7 +1568,7 @@
         "risks": [
           "模型自由措辞与托管服务响应时间随运行而变。"
         ],
-        "generatedAt": "2026-11-21T12:13:36.401227+00:00"
+        "generatedAt": "2026-11-21T12:23:05.171278+00:00"
       }
     },
     {
