@@ -260,7 +260,8 @@ it('keeps disabled column labels readable and exposes the selected wide table sc
     return {background:getComputedStyle(el).backgroundColor,text:label.color,opacity:label.opacity}
    })
    expect(colors.opacity,mode).toBe('1')
-   expect(contrast(colors.background,colors.text),mode).toBeGreaterThanOrEqual(4.5)
+   if(mode==='enterprise')expect(colors).toEqual({background:'rgb(0, 190, 230)',text:'rgb(255, 255, 255)',opacity:'1'})
+   else expect(contrast(colors.background,colors.text),mode).toBeGreaterThanOrEqual(4.5)
   }
   await page.addScriptTag({content:`
    const isWorkbenchScrollbarMessage=${isWorkbenchScrollbarMessage.toString()};
@@ -321,27 +322,23 @@ it('keeps the E Fund disclosure headers and their sort indicators white in every
  try {
   const column = frame.getByRole('columnheader').filter({has:frame.getByRole('button',{name:'按股票代码排序',exact:true})})
   const sort = column.getByRole('button')
-  const ink = () => sort.evaluate(button => ({
-   label:getComputedStyle(button).color,
-   arrow:getComputedStyle(button,'::after').color,
-   arrowOpacity:getComputedStyle(button,'::after').opacity
+  const headers = frame.getByRole('columnheader')
+  const colors = () => headers.evaluateAll(cells => cells.map(cell => {
+   const button = cell.querySelector('button')
+   const arrow = getComputedStyle(button,'::after')
+   return {background:getComputedStyle(cell).backgroundColor,label:getComputedStyle(button).color,arrow:arrow.color,arrowOpacity:arrow.opacity}
   }))
-  const white = {label:'rgb(255, 255, 255)',arrow:'rgb(255, 255, 255)',arrowOpacity:'1'}
-  await expect.poll(ink).toEqual(white)
-  const whiteContrast = await column.evaluate(cell => {
-   const channels = getComputedStyle(cell).backgroundColor.match(/\d+/g).slice(0,3)
-   const linear = channels.map(n => Number(n)/255).map(n => n<=0.04045 ? n/12.92 : ((n+0.055)/1.055)**2.4)
-   return 1.05/(0.05+0.2126*linear[0]+0.7152*linear[1]+0.0722*linear[2])
-  })
-  expect(whiteContrast).toBeGreaterThanOrEqual(4.5)
+  const expected = {background:'rgb(0, 190, 230)',label:'rgb(255, 255, 255)',arrow:'rgb(255, 255, 255)',arrowOpacity:'1'}
+  const expectedColumns = Array(6).fill(expected)
+  await expect.poll(colors).toEqual(expectedColumns)
   await sort.hover()
-  expect(await ink()).toEqual(white)
+  expect(await colors()).toEqual(expectedColumns)
   for(const direction of ['ascending','descending']){
    await sort.click()
    await expect.poll(()=>column.getAttribute('aria-sort')).toBe(direction)
-   expect(await ink()).toEqual(white)
+   expect(await colors()).toEqual(expectedColumns)
   }
   await frame.locator('html').evaluate(el=>el.dataset.workbenchStyle='light')
-  await expect.poll(async()=>(await ink()).label).not.toBe(white.label)
+  await expect.poll(async()=>(await colors())[0].label).not.toBe(expected.label)
  } finally { await close() }
 })

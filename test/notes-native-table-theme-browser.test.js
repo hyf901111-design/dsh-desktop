@@ -41,7 +41,7 @@ async function fixture(variant){
  return{page,payload,footer:parsed.footer.flat().map(part=>part.text).join('')}
 }
 const colors={
- enterprise:{surface:'rgb(255, 255, 255)',text:'rgb(60, 60, 60)',muted:'rgb(102, 102, 102)',row:'rgb(243, 245, 247)',heading:'rgb(30, 185, 225)',headingText:'rgb(255, 255, 255)',control:'rgb(244, 244, 246)',controlText:'rgb(37, 37, 43)'},
+ enterprise:{surface:'rgb(255, 255, 255)',text:'rgb(60, 60, 60)',muted:'rgb(102, 102, 102)',row:'rgb(243, 245, 247)',heading:'rgb(0, 190, 230)',headingText:'rgb(255, 255, 255)',control:'rgb(244, 244, 246)',controlText:'rgb(37, 37, 43)'},
  light:{surface:'rgb(255, 255, 255)',text:'rgb(37, 37, 43)',muted:'rgb(119, 119, 129)',row:'rgb(244, 244, 246)',heading:'rgb(244, 244, 246)',headingText:'rgb(119, 119, 129)',control:'rgb(244, 244, 246)',controlText:'rgb(37, 37, 43)'},
  dark:{surface:'rgb(21, 21, 24)',text:'rgb(232, 232, 237)',muted:'rgb(160, 160, 171)',row:'rgb(36, 36, 43)',heading:'rgb(36, 36, 43)',headingText:'rgb(160, 160, 171)',control:'rgb(29, 29, 35)',controlText:'rgb(232, 232, 237)'},
  openterminal:{surface:'rgb(10, 10, 10)',text:'rgb(217, 217, 217)',muted:'rgb(128, 128, 128)',row:'rgb(10, 10, 10)',heading:'rgb(17, 17, 17)',headingText:'rgb(128, 128, 128)',control:'rgb(17, 17, 17)',controlText:'rgb(217, 217, 217)'}
