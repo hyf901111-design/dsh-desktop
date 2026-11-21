@@ -9,6 +9,9 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   function normalizeComponentClause(text){
     return text.replace(/📎\s*文件：`(?:\\`|[^`])+`/gu,'').trim().replace(/^(?:(?:另外|另行|同时|然后|但是|但|并且|并)\s*)+/u,'')
       .replace(/^(?:(?:请|麻烦|帮我|现在|先|本轮|这次)\s*)*(?:在|于)(?:(?:当前|本次|这段)(?:的)?)?(?:对话|会话|聊天)(?:中|里|内)?\s*/u,'')
+      // A source qualifier may precede bare 建. Normalize only direct requests
+      // naming the board as the result, keeping leading negation and the raw input.
+      .replace(/^((?:(?:请|麻烦|帮我|给我|为我|替我|先|再|不要|不用|无需|别|暂不|禁止)\s*)*)(?:仅|只)?(?:使用|利用|根据|基于|依据|参照|按照|按|用)[^，,。；;！？!?：:\t\r\n“”「」]{0,48}?(?:资料|材料|数据|原型|记录|台账|清单|报告|附件|文件|底稿|明细|表格|表)[ ]*(?:来)?建(?=(?:一[张个套])?[\p{L}\p{N} -]{0,24}?(?:工作台|看板|仪表盘)(?:[，,。；;！？!?：:]|$))/u,'$1创建')
       // A spoken “弄个看板” requests the same delivery as “做个看板”.
       // Match the action at the start of the clause and retain its negation.
       .replace(/^((?:(?:请|麻烦|帮我|给我|为我|替我|先|再|顺便|现在|不要|不用|无需|别|暂不)\s*)*)(?:弄|搞|来)(?=一?[个张套份])(?!.{0,100}(?:看板|工作台|组件|图表|表格|卡片)(?:的)?(?:截图|链接|地址|生成方法|创建步骤|使用说明))/u,'$1做')
