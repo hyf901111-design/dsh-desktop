@@ -166,3 +166,19 @@ it('recovers once from a real reasoning-only opening limit without double counti
  expect(chunks.filter(c=>c.type==='text-delta').map(c=>c.text)).toEqual(['我先核对两个交易日的曲线。'])
  expect(JSON.stringify(chunks)).not.toContain('private')
 })
+
+it('keeps component markup out of the dedicated spoken opening without rewriting requested HTML or spending a second opening budget',async()=>{
+ const prose='两只持仓适合共用一条百分比刻度。\n'
+ const document='<html lang="zh-CN"><body><table><tr><td>3.81%</td></tr></table></body></html>'
+ const fenced='```html\n<!DOCTYPE html>\n'+document
+ for(const source of [fenced,document]){
+  const literal=prose+source
+  const text=async explicit=>{const out=[];for await(const e of publicTaskOpeningStream(textStream([...literal]),explicit))out.push(e);return [out.filter(e=>e.type==='text-delta').map(e=>e.text).join(''),out.find(e=>e.type==='block-end').block.text]}
+  expect(await text(true)).toEqual([prose,prose])
+  expect(await text(false)).toEqual([literal,literal])
+ }
+ const request={provider:'ework-ark',model:'deepseek-v4.1-flash',maxTokens:4096,[Symbol.for('ework.native-component-opening')]:true}
+ const calls=[],chunks=[];const llm={stream:r=>{calls.push(r);return [...textStream([fenced]).slice(0,-1),{type:'finish',reason:{kind:'max-tokens'}}]}}
+ for await(const e of boundedTaskOpeningStream(llm,undefined,request,new AbortController().signal,x=>x,x=>x))chunks.push(e)
+ expect(calls).toHaveLength(1);expect(JSON.stringify(chunks)).not.toContain('DOCTYPE')
+})

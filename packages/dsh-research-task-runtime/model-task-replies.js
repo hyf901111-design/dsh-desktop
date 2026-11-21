@@ -176,8 +176,13 @@ export function registerModelTaskReplies(ctx) {
       if (!message) return request
       opened.add(turn)
       const opening=openingContext(message,turn,request.provider==='ework-ark' && request.model==='deepseek-v4.1-flash')
-      return {...request, tools:[], [publicOpening]:true, messages:[opening.message],
-        system:'用用户指定的语言或用户的语言，只写一句能推进当前任务的话。已给事实足够时可直接点出结论；也可说明一个与目标有关的取舍，或接下来的具体动作怎样帮助交付。只使用已给出的事实，执行结果等实际回执，省略套话和内部指令。'+openingCapabilities(turn,request.tools)+(opening.hasPastedTable?'原表的已识别行在执行时可读取，无需用户重发。':'')}
+      const sourceRequest = turn.text.replace(/(?:不用|无需|不必|不要|不需要)(?:展示|显示|附上|给出|提供|输出|写)?(?:源码|源代码|代码示例|示例代码|代码片段|代码块)/gu, '')
+      const component = turn.mode === 'conversation' && turn.create?.kind === 'component' &&
+        request.tools.some(tool=>tool.name==='client_action' && tool.parameters?.properties?.capability?.enum?.includes('conversation.components.create')) &&
+        !/(?:源码|源代码|代码示例|示例代码|代码片段|代码块|\b(?:source code|example code|code sample)\b)/iu.test(sourceRequest)
+      const format = component ? '本步只用自然语言说出与用户目标有关的发现或呈现方式。实际组件由下一步工具负责保存，开场不写示例、标记语言或源码。' : ''
+      return {...request, tools:[], [publicOpening]:true, ...(component && {[Symbol.for('ework.native-component-opening')]:true}), messages:[opening.message],
+        system:'用用户指定的语言或用户的语言，只写一句能推进当前任务的话。已给事实足够时可直接点出结论；也可说明一个与目标有关的取舍，或接下来的具体动作怎样帮助交付。只使用已给出的事实，执行结果等实际回执，省略套话和内部指令。'+openingCapabilities(turn,request.tools)+format+(opening.hasPastedTable?'原表的已识别行在执行时可读取，无需用户重发。':'')}
     }
     if (step === 2 && opened.has(turn) && request.messages?.at(-1)?.role === 'assistant') {
       // Wire-only instruction. The actual user's message and its permissions

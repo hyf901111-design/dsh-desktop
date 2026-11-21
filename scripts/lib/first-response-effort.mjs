@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto'
 import {boundedTaskOpeningStream,publicTaskOpeningStream,taskOpeningText} from './task-opening-stream.mjs'
 
-const openingFilter = '\n/* ework:public-task-opening:v6 */\n'+taskOpeningText.toString()+'\n'+publicTaskOpeningStream.toString()+'\n'+boundedTaskOpeningStream.toString()+'\n'
+const openingFilter = '\n/* ework:public-task-opening:v7 */\n'+taskOpeningText.toString()+'\n'+publicTaskOpeningStream.toString()+'\n'+boundedTaskOpeningStream.toString()+'\n'
 const openAttempt = 'const system = renderPrompt(assembly);\n\t\twhile (true) {'
 const openingScope = [
   [openAttempt,openAttempt+'\n\t\t\tlet opening = false;'],
@@ -25,6 +25,7 @@ export function patchFirstResponseEffort(source) {
     [3,3895,'ecdf392e35e052b5b630d0a5e2cf4f5e1518306c1e4fa1b18ae4b527fcf39c29'],
     [4,4239,'ec2227cc59a8a2a3fd2240f31104e6245720ee479790c620e232f421401fa88b'],
     [5,5471,'192ef97f4a5894e29882e97c7996d19ffc26d3782b1fd7307047ccbee0454bf5'],
+    [6,6707,'ef8ab2d2cb95ae2b974df633b7b8806bf0beb2eeb30940776349f38b02355b98'],
   ]) {
     const marker = '\n/* ework:public-task-opening:v'+version+' */\n'
     const start = source.indexOf(marker)
@@ -35,7 +36,7 @@ export function patchFirstResponseEffort(source) {
     }
     source=transformOpeningScope(source.replace(legacy,''),true)
   }
-  if (source.includes('/* ework:public-task-opening:v6 */')) {
+  if (source.includes('/* ework:public-task-opening:v7 */')) {
     if (source.split(openingFilter).length!==2) throw Error('Task opening public stream definition drifted')
     source=transformOpeningScope(source.replace(openingFilter,''),true)
   }

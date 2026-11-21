@@ -114,3 +114,14 @@ it('describes only tools authorized on the execution request while the opening r
  expect(read.system).toContain('读取工作簿')
  expect(read.system).not.toContain('写入数据和公式')
 })
+
+it('uses a prose-only first step only when the current request asks for an actionable saved conversation component',async()=>{
+ const user='基金晨会执行E1：请直接在这段对话里创建一个可保存的对比组件，比较易方达沪深300ETF 2025年四季报披露的宁德时代3.81%与贵州茅台3.38%，注明单位是占净值比例，给出0.43个百分点的差额。使用已给这两个数。'
+ for(const [text,grant,expected] of [[user,true,true],[user,false,false],[user+'不需要源码。',true,true],[user+'另外给我源码和代码示例。',true,false],['只讨论这种组件如何设计，请举一个代码示例。',true,false]]){
+  const {run,current}=requests(text,{mode:'conversation'})
+  current.tools=[{name:'client_action',parameters:{properties:{capability:{enum:grant?['conversation.components.create']:[]}}}}]
+  const first=await run(1)
+  expect(first[Symbol.for('ework.native-component-opening')]===true).toBe(expected)
+  if(expected){expect(first.system).toContain('只用自然语言');expect(first.tools).toEqual([]);expect((await run(2)).tools).toEqual(current.tools)}
+ }
+})
