@@ -2,6 +2,7 @@ import {readDelimitedRow} from './delimited-row.js';
 import {addDecimal,decimalParts,decimalPercentage,subtractDecimal} from './workbench-decimal.js';
 import {publicTableSourceHref} from './component-provenance.js';
 import {mapWorkbenchPanelFields} from './dataset-view-contract.js';
+import {matchesDatasetViewScope} from './dataset-view-runtime.js';
 
 const fieldKey=/^\p{L}[\p{L}\p{N}\p{M}_-]{0,63}$/u;
 const forbidden=new Set(['constructor','prototype','__proto__']);
@@ -229,6 +230,30 @@ function omittedSourceOrdinal(raw,declared,identity,derivedKeys){
   raw.slice(1).every((row,i)=>row.length===labels.length&&row[0]===String(i+1));
 }
 
+// Only complete a missing second scope when both groups were requested,
+// all threshold values are known, and the first panel is a simple records view.
+function remainingComparison(plan,panels,datasets,context) {
+ if(panels.length!==1||plan.tabs||plan.links||
+    !/(?:再|并|同时)[^。；;\n]{0,12}(?:对照|比较|对比|查看)[^。；;\n]{0,6}(?:其余|剩余|其他|其它)(?:类别|分类)/u.test(context)||
+    /(?:不要|不用|无需|不必|禁止)[^。；;，,\n]{0,12}(?:其余|剩余|其他|其它)|(?:只|仅|同一)[^。；;，,\n]{0,9}(?:卡|组件|面板)|(?:一张|一个|单一)(?:卡片?|组件|面板)|单卡/u.test(context))return panels;
+ const [panel]=panels,view=panel?.view,rule=view?.where?.[0],section=view?.sections?.[0];
+ if(panel?.type!=='view'||view?.where?.length!==1||view.sections?.length!==1||section?.kind!=='records'||!Number.isFinite(rule?.value))return panels;
+ const complement={lt:'gte',lte:'gt',gt:'lte',gte:'lt'}[rule.op];
+ const dataset=datasets.find(d=>d.id===view.dataset);
+ const column=dataset?.fields?.find(f=>f.key===rule.field||f.label===rule.field);
+ if(typeof complement!=='string'||!column||!dataset.records?.length)return panels;
+ if(dataset.records.some(r=>!Number.isFinite(r[column.key])))return panels;
+ const scope=[{...rule,field:column.key}];
+ const hits=dataset.records.filter(record=>matchesDatasetViewScope(record,scope)).length;
+ if(!hits||hits===dataset.records.length)return panels;
+ const title='其余类别同期对照';
+ const suffix=(section.title??'').match(/[（(][^（）()]{1,28}[）)]$/u)?.[0]??'';
+ return [panel,{type:'view',title,...(panel.size?{size:panel.size}:{}),view:{
+  dataset:view.dataset,where:[{...rule,op:complement}],...(view.note?{note:view.note}:{}),
+  sections:[{kind:'records',title:title+suffix,fields:section.fields}]
+ }}];
+}
+
 export function resolvePastedWorkbenchPlan(plan){
  const request=plan.originalRequest;
  const direct=Array.isArray(plan.sharedDatasets)&&plan.sharedDatasets.some(dataset=>dataset?.pastedTable!==undefined);
@@ -269,6 +294,16 @@ export function resolvePastedWorkbenchPlan(plan){
    const note=draft.note??origin;
    pastedSources.set(draft.id,note);
    return {...draft,note,asOf:draft.asOf??asOf};
+  }
+  const nested=draft.pastedTable;
+  const rawOrdinal=Number.isInteger(nested?.block)&&blocks[nested.block-1],ordinal=nested?.identity;
+  if(Object.hasOwn(draft,'identity')&&draft.identity===ordinal&&validKey(ordinal)&&nested?.header===true&&
+     rawOrdinal?.[0]?.[0]==='序号'&&draft.fields?.[0]?.label==='序号'&&draft.fields[0].key===ordinal&&
+     rawOrdinal.length>1&&rawOrdinal.slice(1).every((row,index)=>row[0]===String(index+1))&&
+     Array.isArray(nested.numericFields)&&nested.numericFields.filter(key=>key===ordinal).length===1&&
+     (nested.derive===undefined||Array.isArray(nested.derive)&&!nested.derive.some(field=>field?.left===ordinal||field?.right===ordinal))){
+   const {identity,...rest}=draft;
+   draft={...rest,pastedTable:{...nested,numericFields:nested.numericFields.filter(key=>key!==ordinal)}};
   }
   if(!exact(draft,['id','label','pastedTable'],['fields','recordScope','note','asOf'])||
      draft.asOf!==undefined&&(typeof draft.asOf!=='string'||draft.asOf.length>500)||
@@ -359,7 +394,7 @@ export function resolvePastedWorkbenchPlan(plan){
   const origin=pastedSources.get(draft?.aggregate?.dataset);
   return origin&&typeof draft.note==='string'&&!draft.note.includes(origin)?{...draft,note:origin+'\n'+draft.note}:draft;
  });
- return {...plan,sharedDatasets,panels:plan.panels.map(panel=>{
+ const panels=plan.panels.map(panel=>{
   const totals=panel?.type==='kpi'?aggregateIds.get(panel.view?.dataset):undefined;
   if(totals)return {...panel,view:{...panel.view,dataset:totals}};
   const remaining=ordinalDetails.get(panel?.view?.dataset);
@@ -370,5 +405,6 @@ export function resolvePastedWorkbenchPlan(plan){
    panel={...panel,view:{...panel.view,sections}};
   }
   return mapWorkbenchPanelFields(panel,(dataset,key)=>identities.get(dataset)?.has(key)?'id':key);
- })};
+ });
+ return {...plan,sharedDatasets,panels:remainingComparison(plan,panels,sharedDatasets,context)};
 }
