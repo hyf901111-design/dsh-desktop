@@ -1,0 +1,50 @@
+{
+  "title": "510310 季末持仓底稿核对",
+  "dataMode": "source",
+  "sharedDatasets": [
+    {
+      "id": "holdings_510310_q4_2025",
+      "label": "易方达沪深300ETF（510310）2025年四季报 5.3.1 股票投资明细（前五大）",
+      "pastedTable": {
+        "block": 1,
+        "header": true,
+        "identity": "序号",
+        "numericFields": [
+          "数量（股）",
+          "公允价值（元）",
+          "占基金资产净值比例（%）"
+        ]
+      }
+    }
+  ],
+  "panels": [
+    {
+      "title": "510310 前五大股票持仓逐笔核对（2025-12-31）",
+      "type": "view",
+      "size": "large",
+      "layout": "wide",
+      "note": "来源：上海证券交易所披露的易方达沪深300 ETF（510310）2025 年四季报第 10 页第 5.3.1 节。截止日 2025-12-31，公允价值单位人民币元、保留至分，比例为占基金资产净值百分比，按报告原序排列。",
+      "view": {
+        "dataset": "holdings_510310_q4_2025",
+        "type": "table",
+        "label": "序号",
+        "layout": "stack",
+        "navigation": "flow",
+        "sections": [
+          {
+            "kind": "records",
+            "title": "股票投资明细（按原序）",
+            "fields": [
+              "序号",
+              "股票代码",
+              "股票名称",
+              "数量（股）",
+              "公允价值（元）",
+              "占基金资产净值比例（%）"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
