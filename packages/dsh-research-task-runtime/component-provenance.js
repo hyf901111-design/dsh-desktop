@@ -25,12 +25,20 @@ export function tableSourceLink(label, value) {
 export function nativeProvenance(spec){
  if(!native.has(spec?.type)||spec.source===undefined&&spec.sources===undefined||typeof spec.source==='string')return {data:spec}
  const rows=[...(spec.source===undefined?[]:[spec.source]),...(Array.isArray(spec.sources)?spec.sources:[])]
- if(spec.sources!==undefined&&!Array.isArray(spec.sources)||!rows.length||rows.length>100||Buffer.byteLength(JSON.stringify(rows))>32000)return {invalid:true}
+ if(spec.sources!==undefined&&!Array.isArray(spec.sources)||rows.length>100||Buffer.byteLength(JSON.stringify(rows))>32000)return {invalid:true}
+ const {source,sources,...data}=spec
+ if(!rows.length)return {data,metadata:{sources}}
  for(const row of rows){
-  if(!row||typeof row!=='object'||Array.isArray(row)||!Object.keys(row).length||Object.keys(row).some(key=>!fields.has(key))||Object.values(row).some(value=>typeof value!=='string'||!value.trim()||value.length>8000))return {invalid:true}
+  if(!row||typeof row!=='object'||Array.isArray(row)||!Object.keys(row).length)return {invalid:true}
+  // A named internal source may have no public link. It still identifies
+  // the data provider in the client source panel.
+  const named=[row.label,row.name,row.title].some(value=>typeof value==='string'&&value.trim())
+  for(const [key,value] of Object.entries(row)){
+   if(key==='url'&&value===''&&named)continue
+   if(!fields.has(key)||typeof value!=='string'||!value.trim()||value.length>8000)return {invalid:true}
+  }
   if(row.url){try{const url=new URL(row.url);if(!['http:','https:'].includes(url.protocol)||url.username||url.password||/[\u0000-\u0020\u007f]/u.test(row.url))return {invalid:true}}catch{return {invalid:true}}}
  }
- const {source,sources,...data}=spec
  const html='<aside hidden data-component-source-info>'+rows.map(row=>{
   const labels=[...new Set([row.label,row.name,row.title].filter(Boolean))]
   return '<p>'+labels.map(esc).join(' · ')+(row.url?' <a href="'+esc(row.url)+'">'+esc(row.url)+'</a>':'')+'</p>'+(row.text?'<p>'+esc(row.text)+'</p>':'')+(row.fetchedAt?'<p>取得时间：'+esc(row.fetchedAt)+'</p>':'')

@@ -1,3 +1,4 @@
+import {normalizeCanvasMessageText} from '../../packages/dsh-research-task-runtime/canvas-task-routing.js'
 import {notesUiLocaleSource} from './notes-ui-locale.mjs'
 import { patchNotesSidebar } from './notes-sidebar.mjs'
 /** Adapt the existing native InputBar and input machine, without duplicating UI. */
@@ -231,7 +232,22 @@ function patchNotesSlots(source){
  return source;
 }
 
-function patchNotesAdmission(source){
+export function patchNotesAdmission(source) {
+ source=installNotesAdmission(source)
+ const marker='/* ework:notes-composer-admission:v2 */'
+ const helper=normalizeCanvasMessageText.toString()
+ const upgraded=marker+'\n'+helper
+ const alreadyPatched=source.includes(upgraded)
+ for(const value of ['draft','out']){
+  const before='this.deps.defaultSink('+value+'.trim(), imageIds, mode, noteAdmission);'
+  const after='this.deps.defaultSink(normalizeCanvasMessageText('+value+'), imageIds, mode, noteAdmission);'
+  if(source.split(alreadyPatched?after:before).length!==2)throw Error('无法定位原生输入框的表格文本提交。')
+  if(!alreadyPatched)source=source.replace(before,after)
+ }
+ return alreadyPatched?source:source.replace(marker,upgraded)
+}
+
+function installNotesAdmission(source){
  const admission='const noteAdmission={draft:this.snapshot.draft,draftRev:this.snapshot.draftRev,imageIds:[...this.imageIds],occurrences:this.snapshot.occurrences.map(occurrence=>({...occurrence}))};';
  if(source.includes('ework:notes-composer-admission:v2'))return source;
  if(source.includes('ework:notes-composer-admission:v1')){

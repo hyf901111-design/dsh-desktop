@@ -1,4 +1,5 @@
 import {hydrateCompactChartNavigationDisplay} from './chart-navigation-display'
+import cartesian169 from './cartesian-navigation-1.6.9.js?raw'
 import fixedSource from '../../../packages/dsh-research-task-runtime/fixed-chart-runtime.js?raw'
 import cartesianSource from '../../../packages/dsh-research-task-runtime/cartesian-chart-artifact.js?raw'
 import {chartDataIssue} from '../../../packages/dsh-research-task-runtime/chart-template-contract.js'
@@ -12,7 +13,22 @@ const functionSource=(source:string,name:string,next?:string)=>{
  if(start<0||source.indexOf(prefix,start+prefix.length)>=0||end<start||boundary&&source.indexOf(boundary,end+boundary.length)>=0)return undefined
  return source.slice(start+'export '.length,end).trim()
 }
-const fixed=functionSource(fixedSource,'fixedChartRuntime'),cartesian=functionSource(cartesianSource,'cartesianChartRuntime','renderCartesianChart'),geometry=functionSource(cartesianSource,'cartesianChartSvg','cartesianChartRuntime'),precision=functionSource(cartesianSource,'cartesianChartAxisPrecision')
+const fixed=functionSource(fixedSource,'fixedChartRuntime')
+const cartesianPrograms=(source:string,legacy=false)=>{
+ const runtime=functionSource(source,'cartesianChartRuntime',legacy?'cartesianChartAxisPrecision':'renderCartesianChart')
+ const geometry=functionSource(source,'cartesianChartSvg','cartesianChartRuntime')
+ const precision=functionSource(source,'cartesianChartAxisPrecision')
+ if(!runtime||!geometry||!precision)return []
+ return [
+  {runtime,suffix:','+geometry+');',fixed:false,precise:false,legacy},
+  {runtime,suffix:',('+precision+')('+geometry+'));',fixed:false,precise:true,legacy}
+ ]
+}
+const programs=[
+ {runtime:fixed,suffix:');',fixed:true,precise:false,legacy:false},
+ ...cartesianPrograms(cartesianSource),
+ ...cartesianPrograms(cartesian169,true)
+]
 
 const interactive='a,button,label,input,select,textarea,[contenteditable],[role="button"],[role="menuitem"],[data-chart-series]'
 const passiveSvg=new Set(['SVG','G','PATH','RECT','CIRCLE','ELLIPSE','LINE','POLYGON','POLYLINE','TEXT','TSPAN','TITLE','DESC','DEFS','CLIPPATH','MASK','LINEARGRADIENT','RADIALGRADIENT','STOP'])
@@ -21,7 +37,7 @@ const passiveSvg=new Set(['SVG','G','PATH','RECT','CIRCLE','ELLIPSE','LINE','POL
 // Its exact table structure has no editable controls or delegated commands.
 const readOnlyDataDisclosure=(body:HTMLElement,target:Element|undefined,model:any,fixed:boolean)=>{
  const shape=(node:Element|undefined,tag:string,attrs:Record<string,string>={})=>!!node&&node.namespaceURI==='http://www.w3.org/1999/xhtml'&&node.tagName===tag&&node.attributes.length===Object.keys(attrs).length&&Object.entries(attrs).every(([key,value])=>node.getAttribute(key)===value)
- const leaf=(node:Element|undefined,tag:string,value:unknown)=>shape(node,tag)&&!node!.children.length&&node!.textContent===String(value).replace(/\r\n?/g,'\n').replace(/\0/g,'\ufffd')
+ const leaf=(node:Element|undefined,tag:string,value:unknown)=>shape(node,tag)&&!node!.children.length&&node!.textContent===String(value??'—').replace(/\r\n?/g,'\n').replace(/\0/g,'\ufffd')
  const disclosures=body.querySelectorAll('details'),details=disclosures[0]
  if(disclosures.length!==1||!shape(details,'DETAILS')||details!.parentElement!==body||details!.children.length!==2||details!.closest(interactive+',summary'))return false
  const [summary,content]=[...details!.children]
@@ -47,12 +63,13 @@ export function noteChartNavigationAllowed(html:string,event:any):boolean{
   if(elements.some(node=>['iframe','frame','object','embed'].includes(node.localName)||[...node.attributes].some(item=>/^on/i.test(item.name))))return false
   const scripts=elements.filter(node=>node.localName==='script'&&attr(node,'type')!=='application/json')
   if(scripts.length!==1||attr(scripts[0]!,'src')!==undefined)return false
-  const script=scripts[0]!.textContent??'',programs=[{runtime:fixed,suffix:');',fixed:true},{runtime:geometry?cartesian:undefined,suffix:','+geometry+');',fixed:false},{runtime:geometry&&precision?cartesian:undefined,suffix:',('+precision+')('+geometry+'));',fixed:false,precise:true}]
+  const script=scripts[0]!.textContent??''
   const program=programs.find(({runtime,suffix})=>runtime&&script.startsWith('('+runtime+')(')&&script.endsWith(suffix))
   if(!program)return false
   if(!pointer&&program.fixed&&!['ArrowLeft','ArrowRight'].includes(event.key))return false
   const model=JSON.parse(script.slice(('('+program.runtime+')(').length,-program.suffix.length))
   if(!!program.precise!==(model.axisDecimals!==undefined)||chartDataIssue(model)||program.fixed&&!['line','bar'].includes(model.variant))return false
+  if(program.legacy&&model.series.some((series:{values:unknown[]})=>series.values.includes(null)))return false
   // Resolve against the exact display projection embedded by the sandbox.
   const display=parse(researchHtmlDisplayHtml(html,true))
   if(!hydrateCompactChartNavigationDisplay(display,model,!!program.precise,attr(document.body,'data-note-chart-compact')))return false

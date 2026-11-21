@@ -1,17 +1,30 @@
-export function trendRuntime(labels, series, low, high, viewport, observe) {
+// Both the first paint and the sandbox use the visible domain's resolution.
+// A daily NAV can move by only a few ten-thousandths of a yuan.
+export function trendAxisLabels(low, high) {
+ const step = (high-low)/4
+ const decimals = Math.max(0, 1-Math.floor(Math.log10(step)))
+ return Array.from({length:5}, (_,i)=>{
+  const value=high-step*i
+  if(decimals>12)return String(value)
+  const label=value.toFixed(decimals)
+  return Number(label)===0?(0).toFixed(decimals):label
+ })
+}
+
+export function trendRuntime(labels, series, low, high, viewport, observe, axisLabels) {
  const svg=document.querySelector('.market-trend svg'),readout=document.querySelector('.trend-readout'),crosshair=svg?.querySelector('.trend-crosshair'),dots=[...svg.querySelectorAll('.trend-selected-dot')],lines=[...svg.querySelectorAll('.trend-line')],buttons=[...document.querySelectorAll('[data-trend-series]')]
  if(!svg||!readout||!crosshair)return
  const selectedDate=readout.querySelector('[data-trend-selected-date]'),pointRows=[...readout.querySelectorAll('[data-trend-readout-row]')]
  const visible=series.map(()=>true)
  const original={low,high,start:0,end:labels.length-1};let start=0,end=labels.length-1
- let layout=viewport(svg,[low.toFixed(2),high.toFixed(2)])
+ let layout
  const x=i=>layout.x(i-start,end-start+1),y=value=>layout.bottom-(value-low)/(high-low)*(layout.bottom-layout.top)
  const syncView=()=>{
-  const interval=(high-low)/4,decimals=interval<1?2:interval<10?1:0
-  layout=viewport(svg,Array.from({length:5},(_,i)=>(high-interval*i).toFixed(decimals)))
+  const interval=(high-low)/4,ticks=axisLabels(low,high)
+  layout=viewport(svg,ticks)
   svg.setAttribute('data-workbench-chart-view',JSON.stringify({min:low,max:high,start:labels[start],end:labels[end]}))
   lines.forEach((line,n)=>{line.setAttribute('points',series[n].values.slice(start,end+1).map((v,i)=>x(start+i)+','+y(v)).join(' '));line.setAttribute('data-refresh-key','trend:'+series[n].name);line.setAttribute('data-refresh-value',String(series[n].values[end]))})
-  svg.querySelectorAll('.trend-grid:not(.trend-vertical)').forEach((line,i)=>{const text=line.nextElementSibling;const yy=y(high-interval*i);for(const [k,v] of Object.entries({x1:layout.left,x2:layout.right,y1:yy,y2:yy}))line.setAttribute(k,String(v));if(text?.tagName.toLowerCase()==='text'){text.setAttribute('x',String(layout.left-7));text.setAttribute('y',String(yy+3));text.textContent=(high-interval*i).toFixed(decimals)}})
+  svg.querySelectorAll('.trend-grid:not(.trend-vertical)').forEach((line,i)=>{const text=line.nextElementSibling;const yy=y(high-interval*i);for(const [k,v] of Object.entries({x1:layout.left,x2:layout.right,y1:yy,y2:yy}))line.setAttribute(k,String(v));if(text?.tagName.toLowerCase()==='text'){text.setAttribute('x',String(layout.left-7));text.setAttribute('y',String(yy+3));text.textContent=ticks[i]}})
   svg.querySelectorAll('.trend-date-axis,.trend-vertical').forEach(el=>el.remove())
   layout.dates(labels,start,end-start+1)
   svg.querySelectorAll('[data-series-date]').forEach(text=>{text.classList.add('trend-date-axis');const line=document.createElementNS('http://www.w3.org/2000/svg','line');for(const [k,v] of Object.entries({class:'trend-grid trend-vertical',x1:text.getAttribute('x'),x2:text.getAttribute('x'),y1:layout.top,y2:layout.bottom}))line.setAttribute(k,String(v));svg.insertBefore(line,svg.firstChild)})

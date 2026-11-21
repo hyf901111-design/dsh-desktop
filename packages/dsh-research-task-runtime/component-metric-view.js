@@ -6,7 +6,7 @@ const comparison = /比较|对比|横向对照|排行|排名|横向条形|\b(?:c
 const tableOnly = /(?<!不)(?:只|仅)(?:要|需|用|看|做|保留|展示|显示|提供|输出|呈现|使用|以)*\s*(?:(?:一[个张份]|原始|完整|原生|明细|数据|可排序的)\s*)*表(?:格|单|(?=$|[，,。；;、！!？?\s]|即可|就好|形式))|(?:不要|不需(?:要)?|不画|不做|无需|不用|禁止)(?:再|用|画|做|生成|绘制|使用|展示|显示|任何)*\s*(?:图表|图形|可视化|图)|\b(?:tables? only|only (?:a |the )?tables?|no charts?|without (?:a |any )?charts?)\b/iu
 const identifier = /编号|序号|代码|名次|排名|\b(?:id|code|symbol|ticker|rank|index|order|position|no)$/iu
 const periodField = /日期|交易日|时[间点]|季度|月份|年度|年份|报告期|会计期|周期|^期间$|\b(?:date|time|timestamp|day|month|quarter|year|period)\b/iu
-const categoryField = /(?:名称|简称|品种|标的|类别|分类|地区|机构|板块|行业|部门|产品|公司|项目|城市|国家|基金|商品|品牌|交易所)$|\b(?:name|label|category|sector|region|product|company|market|asset|contract|group|country|city|industry|brand|exchange)$/iu
+const categoryField = /(?:名称|简称|品种|标的|类别|分类|地区|机构|板块|行业|部门|产品|渠道|团队|组合|公司|项目|城市|国家|基金|商品|品牌|交易所)$|\b(?:name|label|category|channel|team|portfolio|sector|region|product|company|market|asset|contract|group|country|city|industry|brand|exchange)$/iu
 const supplementaryField = /备注|说明|描述|来源|链接|网址|状态|\b(?:note|notes|description|source|url|link|status|comment|details)\b/iu
 const unitField = /^(?:(?:报价|计价|货币|度量|统计|指标|数值)?单位|币种|(?:quote |price )?(?:unit|currency)|ccy)$/iu
 const fieldNames = field => [field.key, field.label].map(name => name.replace(/([a-z])([A-Z])/gu,'$1 $2').replace(/[_-]+/gu,' '))
@@ -70,6 +70,11 @@ function panelIntent(content, {panelTitle='',panelRequest='',originalRequest='',
 function categoryAxis(columns, rows, intent) {
  const unique = columns.filter(field => !matches(field,periodField) && !matches(field,unitField) &&
   rows.every(row => typeof row[field.key] === 'string' && row[field.key].trim()) && distinct(rows.map(row => row[field.key])))
+ // Duplicate values on the named business axis require grouping, not a
+ // silent substitution of a unique owner, note, or document identifier.
+ const requestedAxes = columns.filter(field => matches(field,categoryField) && !matches(field,identifier) &&
+  rows.every(row => typeof row[field.key] === 'string') && namesMeasure(field,intent))
+ if (requestedAxes.length === 1) return unique.includes(requestedAxes[0]) ? requestedAxes[0] : undefined
  const names = unique.filter(field => matches(field,categoryField) && !matches(field,identifier))
  const named = names.filter(field => namesMeasure(field,intent))
  if (named.length === 1) return named[0]
@@ -81,6 +86,17 @@ function categoryAxis(columns, rows, intent) {
  if (descriptive.length === 1) return descriptive[0]
  const codes = unique.filter(field => matches(field,/代码|\b(?:code|symbol|ticker)$/iu))
  return !descriptive.length && codes.length === 1 ? codes[0] : undefined
+}
+
+// Pair two source columns without guessing which business measure is meant.
+function isBusinessMeasurePair(fields) {
+ const labels = fields.map(field => field.label.split(/[（(]/u,1)[0].trim())
+ const pairs = [
+  [/实际|实绩|\bactual\b/iu, /目标|预算|\b(?:target|budget)\b/iu],
+  [/组合|持仓|\bportfolio\b/iu, /基准|\bbenchmark\b/iu]
+ ]
+ return pairs.some(([left,right]) => [labels, [...labels].reverse()].some(([a,b]) =>
+  left.test(a) && right.test(b) && a.replace(left,'').trim().toLowerCase() === b.replace(right,'').trim().toLowerCase()))
 }
 
 // A chart is a projection of one full record set. Mixed dimensions, unknown
@@ -123,9 +139,22 @@ export function contentChartSelection(content, columns, scope = {}) {
   const ordered = rows.map((row,i) => ({row,order:times[i].order})).sort((a,b) => a.order-b.order)
   return {view:{kind:'line',label:axis.key,...config},rows:ordered.map(item => item.row)}
  }
- if (selected.length !== 1 || !comparison.test(intent)) return
+ // Keep both ends of a named comparison attached to the same category.
+ // Infer a pair only for named measures or semantic counterparts whose
+ // units agree. Never pair the two numeric columns of an arbitrary table.
+ const gap = /偏离|差距|缺口|哑铃|\b(?:gap|deviation|dumbbell)\b/iu.test(intent)
+ const paired = selected.length === 2 && Boolean(unit.unit) &&
+  (requested.length === 2 || isBusinessMeasurePair(selected))
+ const pairReview = gap || /达标|达成|超限|越限|对照|\b(?:vs|versus|shortfall|attainment)\b/iu.test(intent) ||
+  (requested.length === 2 && /与|和|及|\band\b/iu.test(intent))
+ if (!comparison.test(intent) && !(paired && pairReview)) return
+ if (selected.length !== 1 && !paired) return
  const axis = categoryAxis(columns,rows,intent)
  if (!axis) return
+ if (paired) {
+  const grouped = /分组(?:柱|条)|并列(?:柱|条)|\bgrouped bars?\b/iu.test(intent)
+  return {view:{kind:gap && !grouped ? 'dumbbell' : 'groupedBar',label:axis.key,...config},rows}
+ }
  const direction = /升序|从低到高|由(?:低到高|小到大)|\b(?:ascending|lowest first|smallest first)\b/iu.test(intent) ? 1 : -1
  const [measure] = selected
  return {view:{kind:'horizontal',label:axis.key,...config},rows:rows.toSorted((a,b) => direction*(a[measure.key]-b[measure.key]))}

@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 import { glmReasoningEntry, patchGlmReasoningCapabilities } from '../scripts/lib/glm-reasoning-capabilities.mjs'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import { patchNotesAdmission } from '../scripts/lib/notes-composer.mjs'
 import { runHumanSteerableGeneration } from '../scripts/lib/human-steering-yield.mjs'
 
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
@@ -174,6 +175,51 @@ describe('workbench planning continuation', () => {
       expect(run.wire.system).toContain('浅色、深色和彭博模式共用布局')
       expect(run.wire.system).toContain('costComparison')
     } finally { run.dispose() }
+  })
+
+  it('preserves edge cells through a clean or upgraded native composer and an optional serialized reference', async () => {
+    const bundle=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+    const start=bundle.indexOf('sinkSerialized(draft, mode) {')
+    const end=bundle.indexOf('\n\t\t\t}',start)+5
+    expect(start).toBeGreaterThan(0)
+    const installed=bundle.slice(start,end)
+    const clean=installed.replace(/\/\* ework:notes-composer-admission:v2 \*\/[\s\S]*?const noteAdmission=[^;]+;/u,'')
+      .replace(/normalizeCanvasMessageText\((draft|out)\)/gu,'$1.trim()')
+      .replaceAll(', mode, noteAdmission);',', mode);')
+    for (const source of [clean,installed]) {
+      const patched=patchNotesAdmission(source)
+      expect(patchNotesAdmission(patched)).toBe(patched)
+      const sink=new Function('window','return ({'+patched+'}).sinkSerialized')({})
+      for (const withReference of [false,true]) {
+        const text='做个渠道经营看板\n渠道\t目标\t实际\n直销\t5\t'
+        const draft=withReference?'\ufffc'+text:text
+        const occurrences=withReference?[{source:'test',offset:0,ref:'补充材料'}]:[]
+        const shell={imageIds:[],snapshot:{draft,draftRev:1,occurrences},core:{state:{occurrences}},deps:{
+          inputTriggers:()=>({serializeReference:async(_source,ref)=>ref})
+        }}
+        const sent=await new Promise(resolve=>{shell.deps.defaultSink=resolve;sink.call(shell,draft,'queue')})
+        expect(sent).toBe((withReference?'补充材料':'')+text)
+        expect(workbenchCreationRequest(session(sent)).text).toBe(sent)
+      }
+    }
+  })
+
+  it('offers pasted Excel rows to the planner and keeps additional source requests available', async () => {
+    for (const [scope, additionalTools] of [
+      ['只用下表。',false],['并补充公开市场数据。',true],
+      ['仅使用下表中的基金代码作为观察名单，再联网获取最新净值。',true],
+      ['仅用下表中的基金代码作为观察名单。',true],
+      ['禁止联网，仅使用下表的基金代码核对最新净值。',false],
+      ['只用下表，不需要补充公开市场数据。',false]
+    ]) {
+      const text='做个风险复核工作台，'+scope+'\n组合\t限额\t敞口\n债券一号\t10\t'
+      const run=await planningRun(text)
+      try {
+        expect(workbenchCreationRequest(run.s).text).toBe(text)
+        expect(run.wire.system).toContain('pastedTable')
+        expect(run.wire.tools.some(tool=>tool.name==='research_canvas_use')).toBe(additionalTools)
+      } finally { run.dispose() }
+    }
   })
 
   it('plans a simple morning brief in one native feed call',async()=>{

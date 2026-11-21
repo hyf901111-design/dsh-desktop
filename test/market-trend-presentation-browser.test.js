@@ -102,3 +102,30 @@ it('keeps business qualifiers and custom analytical notes visible instead of tre
   expect(dom.window.document.querySelector('[data-trend-provenance]')).toBeNull()
  }finally{dom.window.close()}
 })
+
+it('keeps small daily NAV moves distinguishable on the axis and exact in the point readout',async()=>{
+ const nav={version:1,type:'market',variant:'trend',title:'短债组合日净值',asOf:'模拟估值',labels:['周一','周二','周三','周四','周五'],series:[{name:'单位净值（元）',values:[1.0234,1.0236,1.0235,1.0237,1.0239]}]}
+ const source=JSON.parse(acceptArtifactOutput(JSON.stringify(nav)))
+ const staticDom=new JSDOM(source.html)
+ try{
+  const labels=[...staticDom.window.document.querySelectorAll('.trend-grid:not(.trend-vertical)')].map(line=>line.nextElementSibling.textContent)
+  expect(new Set(labels).size).toBe(5)
+ }finally{staticDom.window.close()}
+ documentHtml=buildResearchHtmlPreview(source.html,nav.title,'light',{notoFont:'runtime',workbench:true})
+ const page=await browser.newPage({viewport:{width:320,height:360},reducedMotion:'reduce'})
+ try{
+  await page.goto(url)
+  const content=page.frameLocator('#preview'),svg=content.locator('.market-trend svg')
+  await svg.waitFor()
+  await page.evaluate(()=>document.querySelector('#preview').contentWindow.postMessage({type:'sherlock-interaction-state',state:{events:{}},readOnly:false},'*'))
+  for(const width of [320,656]){
+   await page.setViewportSize({width,height:360})
+   await expect.poll(()=>svg.evaluate(node=>Math.abs(node.viewBox.baseVal.width-node.getBoundingClientRect().width))).toBeLessThan(1)
+   const ticks=await svg.locator('.trend-grid:not(.trend-vertical)').evaluateAll(lines=>lines.map(line=>({label:line.nextElementSibling.textContent,left:line.nextElementSibling.getBoundingClientRect().left})))
+   expect(new Set(ticks.map(t=>t.label)).size).toBe(5)
+   expect(ticks.every(t=>t.left>=0)).toBe(true)
+  }
+  await svg.focus();await page.keyboard.press('Home');await page.keyboard.press('ArrowRight')
+  expect(await content.locator('[data-trend-point-value]').textContent()).toBe('1.0236')
+ }finally{await page.close()}
+},20000)

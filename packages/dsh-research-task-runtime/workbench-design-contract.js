@@ -99,23 +99,31 @@ const rank = { small: 0, medium: 1, large: 2 };
 export function marketVariant(panel = {}) {
   panel = {...panel,title:positiveChartIntent(panel.title??''),prompt:positiveChartIntent(panel.prompt??'')};
   if (panel.artifact?.variant && Object.hasOwn(market, panel.artifact.variant)) return panel.artifact.variant;
-  if(/技术图表|技术指标|技术分析|可绘图.?K线|market\.charting/iu.test(panel.title??'')&&(!requestedMarketVariant(panel.prompt)||requestedMarketVariant(panel.prompt)==='charting'))return 'charting';
-  const recordsTitle=inferFinancialRecordsVariant(panel.title),declaredRecords=requestedMarketVariant(panel.prompt);
-  if(recordsTitle&&(!declaredRecords||declaredRecords===recordsTitle))return recordsTitle;
-  const ownershipTitle=inferFinancialOwnershipVariant(panel.title),declaredOwnership=requestedMarketVariant(panel.prompt);
-  if(ownershipTitle&&(!declaredOwnership||declaredOwnership===ownershipTitle))return ownershipTitle;
-  const actionTitle=inferFinancialActionVariant(panel.title),declaredAction=requestedMarketVariant(panel.prompt);
-  if(actionTitle&&(!declaredAction||declaredAction===actionTitle))return actionTitle;
-  const revenueTitle=inferFinancialRevenueVariant(panel.title),declaredRevenue=requestedMarketVariant(panel.prompt);
-  if(revenueTitle&&(!declaredRevenue||declaredRevenue===revenueTitle))return revenueTitle;
-  const fundamentalTitle=inferFinancialFundamentalVariant(panel.title),declaredFundamental=requestedMarketVariant(panel.prompt);
-  if(fundamentalTitle&&(!declaredFundamental||declaredFundamental===fundamentalTitle))return fundamentalTitle;
-  const seriesTitle=inferFinancialSeriesVariant(panel.title),declaredSeries=requestedMarketVariant(panel.prompt);
-  if(seriesTitle&&(!declaredSeries||declaredSeries===seriesTitle))return seriesTitle;
-  const snapshotTitle=inferFinancialSnapshotVariant(panel.title),declaredSnapshot=requestedMarketVariant(panel.prompt);
-  if(snapshotTitle&&(!declaredSnapshot||declaredSnapshot===snapshotTitle))return snapshotTitle;
+  const promptVariant = requestedMarketVariant(panel.prompt);
+  if(/技术图表|技术指标|技术分析|可绘图.?K线|market\.charting/iu.test(panel.title??'')&&(!promptVariant||promptVariant==='charting'))return 'charting';
+  const recordsTitle=inferFinancialRecordsVariant(panel.title);
+  if(recordsTitle&&(!promptVariant||promptVariant===recordsTitle))return recordsTitle;
+  const ownershipTitle=inferFinancialOwnershipVariant(panel.title);
+  if(ownershipTitle&&(!promptVariant||promptVariant===ownershipTitle))return ownershipTitle;
+  const actionTitle=inferFinancialActionVariant(panel.title);
+  if(actionTitle&&(!promptVariant||promptVariant===actionTitle))return actionTitle;
+  const revenueTitle=inferFinancialRevenueVariant(panel.title);
+  if(revenueTitle&&(!promptVariant||promptVariant===revenueTitle))return revenueTitle;
+  const fundamentalTitle=inferFinancialFundamentalVariant(panel.title);
+  if(fundamentalTitle&&(!promptVariant||promptVariant===fundamentalTitle))return fundamentalTitle;
+  const seriesTitle=inferFinancialSeriesVariant(panel.title);
+  if(seriesTitle&&(!promptVariant||promptVariant===seriesTitle))return seriesTitle;
+  const snapshotTitle=inferFinancialSnapshotVariant(panel.title);
+  if(snapshotTitle&&(!promptVariant||promptVariant===snapshotTitle))return snapshotTitle;
   if(/管理团队|管理层团队|高管.{0,8}(?:薪酬|报酬)|management.team/iu.test(panel.title??''))return 'management-team';
-  if(/核心指标|关键指标|key.metrics/iu.test(panel.title??''))return 'key-metrics';
+  if (/核心指标|关键指标|key.metrics/iu.test(panel.title)) {
+    if (promptVariant) return promptVariant;
+    const value = panel.title + '\n' + panel.prompt;
+    const overviewMetrics = /经营|运营|事业部|渠道|全市场|各部门|各产品|各行业/u.test(value) ||
+      /^(?:核心|关键)指标(?:[（(]模拟[）)])?$/u.test(panel.title.trim()) && /(?:展示|汇总)[一二两三四五六七八九十\d]+项指标/u.test(panel.prompt);
+    const securityMetrics = /个股|证券代码|股票代码|单一标的|每股|市盈率|\b(?:ticker|symbol|EPS)\b/iu.test(value);
+    return overviewMetrics && !securityMetrics ? 'metrics' : 'key-metrics';
+  }
   if(/个股信息|证券信息|ticker.information/iu.test(panel.title??''))return 'ticker-information';
   // A chart named explicitly by the user must not degrade to generic metrics.
   if (/散点|scatter/iu.test(panel.title ?? '')) return 'scatter';
@@ -136,6 +144,8 @@ export function marketVariant(panel = {}) {
   const value = `${panel.title ?? ''}\n${panel.prompt ?? ''}`;
   const declared = value.match(new RegExp(`\\b(?:variant|变体)\\s*[:：=]\\s*(${MARKET_VARIANT_PATTERN})\\b`, 'iu'))?.[1]?.toLowerCase();
   if (declared) return declared;
+  // A named heatmap can discuss trends in its explanatory text.
+  if (!promptVariant && /热力图|\bheatmap\b/iu.test(panel.title)) return 'heatmap';
   // A multi-symbol quote watchlist needs sortable rows rather than one
   // stock's metrics or candles, even when the prompt calls them indicators.
   const primaryCandle = /K\s*线|蜡烛图|candlestick/iu.test(panel.title ?? '') ||

@@ -233,7 +233,16 @@ const str = (v, max) => typeof v === 'string' && v.trim().length > 0 && v.length
 const placeholderPanelText = /^(?:临时)?(?:占位(?:符)?|待填(?:写)?|待生成|待补充|placeholder|todo)[。.!！\s]*$/iu;
 const preparedTypes = new Set(['view','html','files','gallery','audio', 'markdown', 'chart', 'table', 'kpi', 'dashboard', 'news', 'reports', 'calendar', 'market', 'gantt', 'progress', 'tasks', 'approval', 'alerts', 'form', 'code', 'clock', 'note', 'rss', 'timeline', 'iframe', 'youtube', 'summary', 'mind-map']);
 const simulated = value => /模拟|演示/u.test(value ?? '');
-const explicitMetricValue = value => /(?:^|[（(、，,;；\s])\p{Script=Han}{2,12}\s*[:：]?\s*[+-]?\d+(?:\.\d+)?\s*(?:次|项|条|人|元|%|个|篇|家|亿元|万)?(?=$|[、，,;；）)\s])/u.test(value ?? '');
+// A bare numbered card name ("面板0") identifies a view; it is not a
+// supplied KPI. A label/value separator or a business unit still makes a
+// count explicit, including zero.
+function explicitMetricValue(value) {
+    const declarations = /(?:^|[（(、，,;；\s])(\p{Script=Han}{2,12})\s*([:：=]?)\s*[+-]?\d+(?:\.\d+)?\s*(次|项|条|人|%|％|个|篇|家|(?:亿|万)?元|万)?(?=$|[、，,;；。）)\s])/gu;
+    for (const [,label,separator,unit] of value.matchAll(declarations)) {
+        if (separator || unit || !/(?:面板|组件|卡片|页签|编号)$/u.test(label)) return true;
+    }
+    return false;
+}
 const schemaHints = {
     files: ATTACHMENT_GUIDANCE,
     gallery: ATTACHMENT_GUIDANCE,
@@ -607,6 +616,9 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     const issues = [];
     const ledger = !deferred && !parallel ? authoredFinanceLedger(value.originalRequest) : undefined;
     const compilePanel = candidate => {
+        // A shared-data view already describes its presentation and has no child prompt to execute.
+        if (candidate?.view && candidate.prompt === undefined && typeof candidate.title === 'string')
+            candidate = {...candidate, prompt:candidate.title};
         if(candidate?.content!==undefined&&candidate.library!==undefined)throw Error('已取得的content不能与组件库取数配置混用。');
         let p=expandMappedWorkbenchChart(applyAuthoredFinanceLedger(resolveWorkbenchLibraryPanel(candidate,value.originalRequest,!isSimulated),ledger,value.originalRequest));
         if(!deferred&&!parallel){

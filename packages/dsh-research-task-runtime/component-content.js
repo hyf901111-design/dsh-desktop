@@ -8,13 +8,13 @@ import {contentChartSelection} from './component-metric-view.js'
 
 // One content model, independent of the renderer. Choosing a chart is a hint;
 // it must never remove rows or force the model to reacquire the same material.
-export const COMPONENT_CONTENT_GUIDANCE = '常规交付直接用 content:{title,body?,rows?,columns?,visualization?,sources?,asOf?,note?}。body 是完整正文；rows 是完整对象记录数组，columns 可省略（自动保留全部字段），或 [{key,label}]；技术字段名须用 label 保留用户可读的指标名称。基础图表用 visualization:{kind:"bar|horizontal|line|area|groupedBar",label:"名称或日期字段",values:["真实数值字段"],unit?}。观察走势时选日期和同单位的目标指标生成折线，横向比较时选类别和排名依据生成排序条形。同批的其他字段和计算依据保留在明细。分类名录、口径不一致和用户指定的表格使用原表。结构关系用 visualization:{kind:"hierarchy",outline:"一个 # 根标题和嵌套项目列表"}，body 保留完整依据。K线、散点、瀑布、环图、风险矩阵等用对应原生 artifact。sources:[{label,url?}] 保存真实出处。content 不填 version/type、HTML、样式或交互代码。已取结构化响应优先用来源引用，避免复制大量数据。'
+export const COMPONENT_CONTENT_GUIDANCE = '常规交付直接用 content:{title,body?,rows?,columns?,visualization?,sources?,asOf?,note?}。body 是完整正文；rows 是完整对象记录数组，columns 可省略（自动保留全部字段），或 [{key,label}]；技术字段名须用 label 保留用户可读的指标名称。基础图表用 visualization:{kind:"bar|horizontal|line|area|groupedBar|dumbbell",label:"名称或日期字段",values:["真实数值字段"],unit?}。观察走势时选日期和同单位的目标指标生成折线，横向比较时选类别和排名依据生成排序条形。两个明确可比的同单位指标可用分组柱图并列，需要突出两个端点的差距时用哑铃图。其他字段和计算依据保留在明细。分类名录、口径不一致和用户指定的表格使用原表。结构关系用 visualization:{kind:"hierarchy",outline:"一个 # 根标题和嵌套项目列表"}，body 保留完整依据。K线、散点、瀑布、环图、风险矩阵等用对应原生 artifact。sources:[{label,url?}] 保存真实出处。content 不填 version/type、HTML、样式或交互代码。已取结构化响应优先用来源引用，避免复制大量数据。'
 
 const plain = value => value && typeof value === 'object' && !Array.isArray(value)
 const cell = value => value == null || value === '' ? '—' : typeof value === 'object' ? JSON.stringify(value) : typeof value === 'boolean' ? String(value) : value
 const detailCell = value => value == null ? null : typeof value === 'object' ? JSON.stringify(value) : value
 const chartKind = view => typeof view?.kind==='string' ? view.kind.replace(/^chart\./u,'') : undefined
-const contentChartKinds = ['bar','horizontal','line','area','groupedBar']
+const contentChartKinds = ['bar','horizontal','line','area','groupedBar','dumbbell']
 
 function hierarchyOutline(outline) {
  if(typeof outline!=='string')return outline

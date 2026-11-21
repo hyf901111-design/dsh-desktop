@@ -1,3 +1,4 @@
+import {readDelimitedRow} from './delimited-row.js';
 import {addDecimal,decimalParts,decimalPercentage,subtractDecimal} from './workbench-decimal.js';
 import {mapWorkbenchPanelFields} from './dataset-view-contract.js';
 
@@ -9,19 +10,56 @@ const exact=(value,required,optional=[])=>value&&typeof value==='object'&&!Array
 const fail=message=>{throw Error('消息中的原始表格：'+message);};
 const rawDecimal=/^[+-]?(?:0|[1-9]\d{0,14})(?:\.\d{1,12})?$/u;
 
-export function pastedWorkbenchBlocks(request=''){
- const blocks=[];
- let block=[];
- for(const line of request.split(/\r?\n/u)){
-  const text=line.trim();
-  const inner=/^[|｜].*[|｜]$/u.test(text)?text.slice(1,-1):text;
-  const cells=inner.split(/[|｜]/u).map(value=>value.trim());
-  if(cells.length<2){if(block.length>=2)blocks.push(block);block=[];continue;}
-  if(cells.every(value=>/^:?-{3,}:?$/u.test(value)))continue;
-  block.push(cells);
+function scanPastedTables(request, strict = false) {
+ const blocks = [], context = [], lineBreak = /[\r\n]/gu;
+ let block = [], format;
+ function finishBlock() {
+  if (block.length >= 2) blocks.push(block);
+  block = [];
  }
- if(block.length>=2)blocks.push(block);
- return blocks;
+ for (let start = 0; start < request.length;) {
+  lineBreak.lastIndex = start;
+  const end = lineBreak.exec(request)?.index ?? request.length;
+  const line = request.slice(start, end);
+  let next = end === request.length ? end : end + (request.startsWith('\r\n',end) ? 2 : 1);
+  let cells, kind;
+  const visibleTab = line.includes('\t');
+  // A quoted header can span lines before the first actual column boundary.
+  if (visibleTab || line.startsWith('"')) {
+   try {
+    const row = readDelimitedRow(request, start, '\t');
+    if (row.cells.length >= 2) {
+     kind = 'tsv';
+     cells = row.cells;
+     next = row.next;
+    }
+   } catch (error) {
+    // Never offer a partial table or renumber later blocks after a broken quote.
+    // A leading quote in standalone prose is not a spreadsheet declaration.
+    if (visibleTab || format === 'tsv') {
+     if (strict) fail(error.message);
+     return {blocks:[], context:request};
+    }
+   }
+  }
+  if (!kind && !visibleTab && /[|｜]/u.test(line)) {
+   const text = line.trim();
+   const inner = /^[|｜].*[|｜]$/u.test(text) ? text.slice(1,-1) : text;
+   cells = inner.split(/[|｜]/u).map(value => value.trim());
+   if (cells.length >= 2) kind = 'pipe';
+  }
+  if (kind !== format || !kind) finishBlock();
+  format = kind;
+  if (!kind) context.push(line);
+  else if (kind !== 'pipe' || !cells.every(value => /^:?-{3,}:?$/u.test(value))) block.push(cells);
+  start = next;
+ }
+ finishBlock();
+ return {blocks, context:context.join('\n')};
+}
+
+export function pastedWorkbenchBlocks(request = '') {
+ return scanPastedTables(request).blocks;
 }
 
 function pastedNumber(value){
@@ -117,13 +155,13 @@ export function resolvePastedWorkbenchPlan(plan){
  const recoverCopied=typeof request==='string'&&/(?:禁止|不要|不用|不)\s*联网/u.test(request);
  if(!direct&&!recoverCopied)return plan;
  if(typeof request!=='string'||!request)fail('只引用本轮用户消息中的表格。');
- const blocks=pastedWorkbenchBlocks(request);
- const source=/(?:^|[。；;，,\n])\s*(?:来源|出处)\s*(?:标(?:为|注(?:为)?)?|写(?:为)?|[:：])?\s*[「“]?([^。；;，、」”\n]{1,100})/u.exec(request)?.[1]?.trim()??
-  /(?:^|[。；;，,\n])\s*(模拟[\p{L}]{2,16})\s+\d{4}-\d{2}-\d{2}/u.exec(request)?.[1];
+ const {blocks,context}=scanPastedTables(request,direct);
+ const source=/(?:^|[。；;，,\n])\s*(?:来源|出处)\s*(?:标(?:为|注(?:为)?)?|写(?:为)?|[:：])?\s*[「“]?([^。；;，、」”\n]{1,100})/u.exec(context)?.[1]?.trim()??
+  /(?:^|[。；;，,\n])\s*(模拟[\p{L}]{2,16})\s+\d{4}-\d{2}-\d{2}/u.exec(context)?.[1];
  if(recoverCopied)plan=completeNamedCalculationPlan(plan,blocks,source);
  const datasets=plan.sharedDatasets;
  if(!Array.isArray(datasets))return plan;
- const dateMatches=[...new Set([...request.split(/\r?\n/u).filter(line=>!/\||｜/u.test(line)).join('\n').matchAll(/\b\d{4}-\d{2}-\d{2}\b/gu)].map(match=>match[0]))];
+ const dateMatches=[...new Set([...context.matchAll(/\b\d{4}-\d{2}-\d{2}\b/gu)].map(match=>match[0]))];
  const asOf=dateMatches.length===1?dateMatches[0]:'用户消息所附原表，时点以记录为准';
  const identities=new Map();
  const pastedSources=new Map();
@@ -148,7 +186,7 @@ export function resolvePastedWorkbenchPlan(plan){
    pastedSources.set(draft.id,note);
    return {...draft,note,asOf:draft.asOf??asOf};
   }
-  if(!exact(draft,['id','label','fields','pastedTable'],['recordScope','note','asOf'])||
+  if(!exact(draft,['id','label','pastedTable'],['fields','recordScope','note','asOf'])||
      draft.asOf!==undefined&&(typeof draft.asOf!=='string'||draft.asOf.length>500)||
      draft.note!==undefined&&(typeof draft.note!=='string'||!draft.note.trim()||draft.note.length>2000)||
      !exact(draft.pastedTable,['block'],['header','identity','numericFields','derive']))fail('只声明表段、列和计算，不附重抄的原表记录。');
@@ -156,7 +194,10 @@ export function resolvePastedWorkbenchPlan(plan){
   const {block,header=false,identity,numericFields=[],derive=[]}=pastedTable;
   const raw=Number.isInteger(block)&&blocks[block-1];
   const derivedKeys=new Set(Array.isArray(derive)?derive.map(field=>field?.key):[]);
-  const inputColumns=Array.isArray(declared)?declared.filter(field=>!derivedKeys.has(field?.key)):declared;
+  const sourceFields=declared===undefined&&header&&raw ? raw[0].map(label=>({key:label,label})) : declared;
+  if(declared===undefined&&(!sourceFields||!raw[0].every(validKey)))
+   fail('请按原表头的列顺序声明 fields，每列提供有效的 key 与原文 label。');
+  const inputColumns=Array.isArray(sourceFields)?sourceFields.filter(field=>!derivedKeys.has(field?.key)):sourceFields;
   const fields=identity==='id'&&Array.isArray(inputColumns)&&!inputColumns.some(field=>field?.key==='id')&&raw?.[0].length===inputColumns.length+1
    ?[{key:'id',label:header?raw[0][0]:'记录编号'},...inputColumns]:inputColumns;
   if(typeof header!=='boolean'||!raw||raw.length>500||!Array.isArray(fields)||fields.length<2||fields.length>24||

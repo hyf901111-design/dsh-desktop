@@ -1,3 +1,4 @@
+import {readDelimitedRow} from './delimited-row.js'
 import {delimitedStatistics} from './delimited-statistics.js'
 import {extractArtifactObjects,retainedTableData} from './artifact-output.js'
 import {readTemplateModel} from './component-template-registry.js'
@@ -6,21 +7,12 @@ import {readTemplateModel} from './component-template-registry.js'
 // Bound the complete representation; a cut record must not look like EOF.
 export function extractDelimitedEvidence(input,name,budget=140_000) {
  const text=String(input).replace(/^\uFEFF/u,''),delimiter=/\.tsv$/iu.test(name)?'\t':','
- const rows=[];let row=[],cell='',quoted=false,closed=false
- const pushCell=()=>{row.push(cell);cell='';closed=false}
- const pushRow=()=>{pushCell();rows.push(row);row=[]}
- for(let i=0;i<text.length;i++){
-  const c=text[i]
-  if(quoted){
-   if(c==='"'){if(text[i+1]==='"'){cell+='"';i++}else{quoted=false;closed=true}}
-   else cell+=c
-  }else if(c===delimiter)pushCell()
-  else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;pushRow()}
-  else if(c==='"'&&!cell&&!closed)quoted=true
-  else{if(closed||c==='"')throw Error('CSV 引号格式不完整');cell+=c}
+ const rows=[]
+ for(let i=0;i<text.length;){
+  const row=readDelimitedRow(text,i,delimiter)
+  rows.push(row.cells)
+  i=row.next
  }
- if(quoted)throw Error('CSV 引号未闭合，不能把截断记录当作完整文件')
- if(cell||row.length||closed)pushRow()
  while(rows.length&&rows.at(-1).every(value=>value===''))rows.pop()
  const header=rows[0]
  if(!header?.length||header.some(value=>!value.trim())||new Set(header).size!==header.length||rows.some(row=>row.length!==header.length))throw Error('CSV 表头重复、为空或记录列数不一致')

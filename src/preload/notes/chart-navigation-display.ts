@@ -14,7 +14,7 @@ export function hydrateCompactChartNavigationDisplay(document:Document,model:any
  for(let index=0;index<model.labels.length;index++){
   const row=document.createElement('tr')
   for(const value of [model.labels[index],...model.series.map((series:any)=>series.values[index])]){
-   const cell=document.createElement('td');cell.textContent=String(value).replace(/\r\n?/g,'\n').replace(/\0/g,'\ufffd');row.append(cell)
+   const cell=document.createElement('td');cell.textContent=String(value??'—').replace(/\r\n?/g,'\n').replace(/\0/g,'\ufffd');row.append(cell)
   }
   rows.append(row)
  }

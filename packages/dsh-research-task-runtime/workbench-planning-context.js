@@ -51,6 +51,32 @@ export function initialWorkbenchInformationPlan(request, english = false) {
   return ideas.join(english ? ' ' : '')
 }
 
+// Match decisions and available evidence, not a person's job title. These
+// suggestions accompany the planning model only; they never authorize sources
+// or add a panel to a user's submitted plan.
+function fundDecisionGuidance(request) {
+  if (typeof request !== 'string' || !request.trim()) return ''
+  const text = request.replace(/```[\s\S]*?```/gu, '').split(/\r?\n/u)
+    .filter(line => !/\|.*\|/u.test(line)).join(' ')
+  const views = []
+  if (/目标|预算|\b(?:target|budget)\b/iu.test(text) && /净申购|保有量|管理规模|管理费|销售额|募集额|\b(?:net sales|net flows?|AUM|management fees?)\b/iu.test(text)) {
+    views.push('经营复盘按产品或渠道并列同一期间、同一单位的实际与目标，可用 content 的 groupedBar 保留完整明细。涉及期初期末规模时，只有净申赎、估值等变动能与期末勾稽才用 waterfall。')
+  }
+  if (/基准|\bbenchmark\b/iu.test(text) && /配置|权重|超配|低配|行业偏离|\b(?:weights?|allocation|overweight|underweight)\b/iu.test(text)) {
+    views.push('组合与基准按同一披露日、同一行业分类对齐。权重配对比较可用 groupedBar，突出两端偏离可用 dumbbell；只有组合权重时呈现已有分布。')
+  }
+  if (/限额|越限|超限|\b(?:limits?|breaches)\b/iu.test(text) && /敞口|风险|集中度|久期|流动性|\b(?:risk|exposure|duration|liquidity)\b/iu.test(text)) {
+    views.push('实际敞口与对应限额按产品、日期和计量单位配对。异常清单保留规则、观测值与限额；只有来源提供概率与影响评级时才绘制风险矩阵。')
+  }
+  if (/财报|业绩会|业绩说明会|\bearnings\b/iu.test(text) && /披露日|日程|日历|催化|排期|\b(?:calendar|schedule|catalysts?)\b/iu.test(text)) {
+    views.push('有明确披露日期的财报或业绩会按时序呈现，用 calendar 或 timeline 保留公司、事件、预计或已确认状态和公告出处。日期未定的事项单列。')
+  }
+  if (/客户|渠道|销售|\b(?:clients?|sales|distribution)\b/iu.test(text) && /转化|漏斗|\b(?:conversion|funnel)\b/iu.test(text)) {
+    views.push('同一批客户、相同观察窗口、前后包含的阶段人数可用原生 funnel。分母或人群不一致时并列原始计数，保留各自口径。')
+  }
+  return views.length ? '\n【业务视图】以用户指定的范围和图形为先，依据本次可读的资料选择适用项。内部持仓、限额和销售台账使用用户提供或已授权的数据。'+views.join('') : ''
+}
+
 export function workbenchPlanningContext(now = new Date(), request = '') {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const date = new Intl.DateTimeFormat('sv-SE', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -58,5 +84,5 @@ export function workbenchPlanningContext(now = new Date(), request = '') {
   return `【宿主规划口径】当前日期 ${date}（${zone}）。相对日期以此为锚点；用户明确指定的具体/虚构日期或历史范围原样保留。仅描述实际支持的交互；未实现的跨卡自动执行、冲突校验或撤销不能声称可用。${initialPlan ? '\n首条回执已展示初步的信息结构：' + initialPlan + ' 依据实际覆盖调整，正文直接补充新判断。原生面板已有的品种切换、曲线和明细不另做静态重复卡，用户明确要求独立展示时除外。' : ''}
 【先设计信息入口】先用一两句向用户说明准备让他看什么、比较什么、如何追踪变化。由用户要做的判断反推出各卡的研究问题、对象、取数来源、更新节奏和首屏交互，再开始查资料。持续监测用覆盖该对象的原生可刷新面板或成功请求的可重放绑定；指定历史区间保留快照，知识框架作为参考。行情、资讯、公告按各自发布节奏，刷新时点和数据时点分开。
 【取数与交付】确认指定来源、范围和联网限制后，直接挂载已有原生入口；同批历史记录用已有授权工具取得。只使用已暴露的真实工具名和已发现的参数 schema；统计在可用工具或脚本中计算，模型接收完整汇总字段和来源定位，原始明细保留可读取的文件引用，不逐卡重复注入。再按实际内容决定呈现。多卡复用同一份数据，保留来源、日期、单位和真实缺失，不为迁就模板改动问题或补造数据。正文、明细或可视化可提交 panel.content；多卡共享 sharedDatasets/view，完整组件可用 artifact；原生能力不足时保留自定义 HTML。实际取得内容前不把占位、规划受理或来源目录当作完成。
-【按问题选择视图】每卡回答一个问题。同一对象、指标和期间的重复小卡或列默认合并，保留用户明确要求的独立卡及对照。已核验的核心走势和总览放在通用背景之前。保留完整实有记录和层级；数量、日期和单位必须可比较，缺失不冒充零。观察趋势时把同一指标的可比期间绘成折线。横向比较时按所问指标排列条形，完整明细在同卡展开。分类名录、单位不兼容或用户明确要求表格时使用原表。有依据的组成关系用原生关系图，同一主题的多个栏目在卡内切换，完整材料在详情阅读。核心数据缺失时只给简短缺口，其他已可用信息照常交付。类型和尺寸依据内容与所需交互确定。自定义组件使用可点击和键盘操作的筛选器与页签，正文和标题对齐。搜索、计数与来源之间留出间距，窄卡换行。为图例、坐标标签、可换行的选中值与来源栏分别留出阅读空间，自动整理时按实际内容定高，长明细单独滚动。跟随用户语言，仅回报新增结果、重要缺失或必要操作。`;
+【按问题选择视图】每卡回答一个问题。同一对象、指标和期间的重复小卡或列默认合并，保留用户明确要求的独立卡及对照。已核验的核心走势和总览放在通用背景之前。保留完整实有记录和层级；数量、日期和单位必须可比较，缺失不冒充零。观察趋势时把同一指标的可比期间绘成折线。横向比较时按所问指标排列条形，完整明细在同卡展开。分类名录、单位不兼容或用户明确要求表格时使用原表。有依据的组成关系用原生关系图，同一主题的多个栏目在卡内切换，完整材料在详情阅读。核心数据缺失时只给简短缺口，其他已可用信息照常交付。类型和尺寸依据内容与所需交互确定。自定义组件使用可点击和键盘操作的筛选器与页签，正文和标题对齐。搜索、计数与来源之间留出间距，窄卡换行。为图例、坐标标签、可换行的选中值与来源栏分别留出阅读空间，自动整理时按实际内容定高，长明细单独滚动。跟随用户语言，仅回报新增结果、重要缺失或必要操作。${fundDecisionGuidance(request)}`;
 }

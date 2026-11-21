@@ -217,3 +217,16 @@ describe('Figma cartesian templates',()=>{
    expect(workbenchMarketVariantIssue(JSON.stringify({type:'html',html:'<body data-sherlock-market="trend">'}),'必须输出 market.trend 的结构化数据')).toBeNull();
  });
 });
+
+it('accepts missing observations only for grouped bars with at least one measured value',()=>{
+ const grouped=data('groupedBar',{series:[{name:'目标',values:[1,2,3]},{name:'实际',values:[0,null,-1]}]})
+ expect(chartDataIssue(grouped)).toBeNull()
+ for(const {variant} of CARTESIAN_CHART_TEMPLATES.filter(template=>template.variant!=='groupedBar'))expect(chartDataIssue({...grouped,variant})).toBeTruthy()
+ expect(chartDataIssue({...grouped,series:[{name:'实际',values:[null,null,null]}]})).toBeTruthy()
+ for(const bad of [false,'',Infinity,1e13])expect(chartDataIssue({...grouped,series:[{name:'实际',values:[1,null,bad]}]})).toBeTruthy()
+ const result=JSON.parse(acceptArtifactOutput(JSON.stringify(grouped)))
+ expect(readTemplateModel(result).data.series).toEqual(grouped.series)
+ const marks=cartesianChartSvg(grouped).elements.find(el=>el.attributes['data-series']===1).children
+ expect(marks.map(el=>el.attributes['data-point'])).toEqual([0,2])
+ expect(marks[0].attributes.height).toBe(0)
+})

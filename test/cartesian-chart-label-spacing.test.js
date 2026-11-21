@@ -17,3 +17,25 @@ it.each([1,2,3,5,60,63,100,366])('keeps endpoint labels inside the plot with sep
  // Resizing only changes visibility/position; passive routes remain stable.
  expect(ticks(cartesianChartSvg(spec,320)).map(el=>el.children)).toEqual(ticks(cartesianChartSvg(spec,880)).map(el=>el.children));
 });
+
+it.each(['horizontal','lollipop','dumbbell'])('fits long Chinese organization names in the %s chart gutter while retaining their distinguishing suffixes',variant=>{
+ const labels=['华东分公司机构直销客户一部','华东分公司机构直销客户二部','华南分公司银行渠道客户部']
+ const spec={version:1,type:'chart',variant,title:'渠道净申购排名',labels,series:[{name:'本期',values:[2.6,1.2,-.7]},{name:'上期',values:[1.8,.7,-.5]}]}
+ for(const width of [280,320,656]){
+  const parts=ticks(cartesianChartSvg(spec,width))
+  expect(parts.map(el=>el.children[0].children[0])).toEqual(labels)
+  expect(new Set(parts.map(el=>el.children.at(-1))).size).toBe(labels.length)
+  for(const el of parts)expect(el.attributes.x-Array.from(el.children.at(-1)).length*11).toBeGreaterThanOrEqual(0)
+ }
+})
+
+it('centers each short channel label beneath its own group of actual and target bars',()=>{
+ const spec={version:1,type:'chart',variant:'groupedBar',title:'渠道对比',labels:['直销','银行','互联网'],series:[{name:'实际',values:[null,0,-.4]},{name:'目标',values:[2.2,1.3,.5]}]}
+ for(const width of [280,320,656]){
+  const result=cartesianChartSvg(spec,width),labels=ticks(result),groups=result.elements.filter(el=>el.attributes.class==='hit')
+  for(const [i,label] of labels.entries()){
+   expect(label.attributes['text-anchor']).toBe('middle')
+   expect(label.attributes.x).toBeCloseTo(groups[i].attributes.x+groups[i].attributes.width/2)
+  }
+ }
+})

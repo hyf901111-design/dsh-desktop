@@ -30,6 +30,7 @@ export function mapWorkbenchPanelFields(panel,resolveField){
   return mapKeys(mapKeys(section,names,resolve),['fields'],fields=>mapFields(fields,resolve))
  })
  return {...panel,view:{...mapKeys(view,['filters','details'],value=>mapFields(value,resolve)),
+  ...(Object.hasOwn(view,'label')?{label:resolve(view.label)}:{}),
   ...(Object.hasOwn(view,'where')?{where:rules(view.where)}:{}),
   ...(Object.hasOwn(view,'sections')?{sections:sections(view.sections)}:{})}}
 }
@@ -138,7 +139,12 @@ export function validateWorkbenchDatasets(value){
   return validateWorkbenchDatasets(value.map(d=>complete.get(d.id)))
  }
  const ids=new Set(),result=[]
- for(const d of value){
+ for(let d of value){
+  if(d?.identity==='id'){
+   // Direct records already use id as their canonical identity. All row validation still applies.
+   const {identity,...dataset}=d
+   d=dataset
+  }
   check(exact(d,['id','label','asOf','note','fields','records'],['recordScope','groupBy']),`共同数据集 ${d?.id??'未命名'} 字段无效，必须提供id、label、asOf、note、fields和records；缺少：${['id','label','asOf','note','fields','records'].filter(k=>!object(d)||!Object.hasOwn(d,k)).join('、')||'无'}；多余：${object(d)?Object.keys(d).filter(k=>!['id','label','asOf','note','fields','records','recordScope','groupBy'].includes(k)).join('、')||'无':'无'}。`)
   check(id(d.id)&&!ids.has(d.id),'共同数据集编号无效或重复。');ids.add(d.id)
   check(d.recordScope===undefined||id(d.recordScope),'共同记录对象范围recordScope无效。')
@@ -255,6 +261,11 @@ export function compileDatasetHierarchy(declaration,datasets,title){
 }
 
 export function compileDatasetChart(config,datasets,title,variant,intent=''){
+ if(object(config)&&Object.hasOwn(config,'label')&&config.sections?.length===1){
+  const {label,...view}=config, [section]=view.sections;
+  check(typeof label==='string'&&object(section)&&(section.label===undefined||section.label===label),'图表分类字段与记录区的分类字段不一致。');
+  config={...view,sections:[{...section,label}]};
+ }
  check(exact(config,['dataset','sections'],['variant','unit','note','subject'])&&id(config.dataset)&&Array.isArray(config.sections)&&config.sections.length===1,
   '共同数据图表只使用一个完整的记录区；需要交互筛选时请保留独立 view。')
  const [section]=config.sections
@@ -269,7 +280,10 @@ export function compileDatasetChart(config,datasets,title,variant,intent=''){
  const groupLabel=typeof section.label==='string'?section.label.replace(/(?:分类|分组)$/u,''):section.label
  const tokens=new Set(intent.match(/[A-Za-z][A-Za-z\d_.-]*/gu)??[]);
  const mentioned=field=>tokens.has(field.key)||field.label.length>=2&&intent.includes(field.label);
- const numeric=section.fields===undefined?dataset.fields.filter(field=>field.key!=='id'&&dataset.records.every(row=>Number.isFinite(row[field.key]))):[];
+ // Grouped bars can leave an individual source cell empty without drawing a zero.
+ const numericSeries=field=>dataset.records.every(row=>Number.isFinite(row[field.key])||variant==='groupedBar'&&row[field.key]===null)&&
+  (section.fields?.includes(field.key)||dataset.records.some(row=>Number.isFinite(row[field.key])));
+ const numeric=section.fields===undefined?dataset.fields.filter(field=>field.key!=='id'&&numericSeries(field)):[];
  const marked=numeric.filter(mentioned);
  const onlyMeasure=marked.length===1?marked:numeric.length===1?numeric:[];
  const selected=section.fields??onlyMeasure.map(field=>field.key);
@@ -296,7 +310,7 @@ export function compileDatasetChart(config,datasets,title,variant,intent=''){
  const longLabels=categories.some(label=>label.length>128)
  const labels=longLabels?categories.map(compactDatasetGroupLabel):categories
  const separateLabel=longLabels||axes.length>1
- const measures=fields.filter(field=>records.every(row=>Number.isFinite(row[field.key])))
+ const measures=fields.filter(numericSeries)
  check(measures.length,'共同数据图表没有完整的数值系列。')
  const preferred=config.unit===undefined?undefined:measures.find(field=>chartFieldUnit(field)===config.unit);
  const primaryUnit=chartFieldUnit(preferred??measures[0]);
@@ -307,6 +321,13 @@ export function compileDatasetChart(config,datasets,title,variant,intent=''){
  check(config.subject===undefined||text(config.subject,256),'共同数据图表的副标题无效。')
  const note=[...new Set([dataset.note,config.note].filter(Boolean))].join('\n');
  const base={version:1,type:'chart',title,variant,...(unit?{unit}:{}),...(config.subject?{subtitle:config.subject}:{}),asOf:dataset.asOf,note,sources:[{label:dataset.note.split('\n',1)[0]}]}
+ if(variant==='funnel'){
+  check(axes.length===1&&fields.length===1&&measures.length===1,'漏斗图引用一列有序阶段及一列同批次的数值。')
+  const artifact={...base,stages:records.map(row=>({label:row[axes[0].key],value:row[measures[0].key]}))}
+  const issue=chartDataIssue(artifact)
+  check(!issue,`共同数据漏斗图无法完整显示：${issue}`)
+  return artifact
+ }
  if(variant==='groupedBar'&&axes.length===2&&fields.length===1){
   const labels=[...new Set(keys.map(([label])=>label))]
   const groups=[...new Set(keys.map(([,group])=>group))]
@@ -318,7 +339,7 @@ export function compileDatasetChart(config,datasets,title,variant,intent=''){
   return artifact
  }
  check(variant!=='groupedBar'||sameUnit.length>1,'分组柱图至少需要两个同单位的数值系列；其他原单位可保留为完整数据。')
- const singleSeriesIntent=variant!=='groupedBar'&&sameUnit.length>1&&!/两条|双序列|双线|多序列|多条|分别(?:绘制|展示|显示)/u.test(intent);
+ const singleSeriesIntent=!['groupedBar','dumbbell'].includes(variant)&&sameUnit.length>1&&!/两条|双序列|双线|多序列|多条|分别(?:绘制|展示|显示)/u.test(intent);
  const singleTargets=!singleSeriesIntent?[]:
   [...intent.matchAll(/(?:纵轴(?:为|是)?|绘制|展示|显示|画)\s*([^，。；;\n]{1,70})/gu)].flatMap(([,phrase])=>{
   const measure=phrase.replace(/^\d{4}[-/]\d{2}[-/]\d{2}\s*(?:至|到|—|–|~|～)\s*\d{4}[-/]\d{2}[-/]\d{2}\s*(?:(?:共)?[\d一二两三四五六七八九十]+(?:天|日))?的?\s*/u,'');
@@ -365,21 +386,24 @@ export function compileSharedDatasetCard(type,config,datasets,title){
      datasets?.some(dataset=>dataset.id===view.dataset&&dataset.groupBy?.length===0)))
    config=details!==undefined&&section.fields===undefined?{...view,sections:[{...section,fields:details}]}:view;
  }
- check(exact(config,['dataset','sections'],type==='kpi'?['subject','note']:['subject'])&&config.sections?.length===1,'指标和时间线从共同记录引用一个内容区，交互筛选请使用独立记录视图。')
+ check(exact(config,['dataset','sections'],type==='timeline'?['subject','note','details']:['subject','note'])&&config.sections?.length===1,'指标和时间线从共同记录引用一个内容区，交互筛选请使用独立记录视图。')
  const source=datasets?.find(dataset=>dataset.id===config.dataset),[declared]=config.sections;
  if(type==='kpi'&&declared?.kind==='records'&&declared.fields===undefined&&source?.records.length===1)
   config={...config,sections:[{...declared,fields:source.fields.filter(field=>field.key!=='id').map(field=>field.key)}]};
  let timelineDetails=[];
  if(type==='timeline'&&declared?.kind==='schedule'){
   const {fields,...schedule}=declared;
+  const {details,...timeline}=config;
   const available=new Set(source?.fields.map(field=>field.key));
-  check(fields===undefined||Array.isArray(fields)&&fields.length<=24&&new Set(fields).size===fields.length&&fields.every(field=>available.has(field)),
-   '时间线明细字段必须来自同一记录集。');
+  for(const list of [fields,details]){
+   check(list===undefined||Array.isArray(list)&&list.length<=24&&new Set(list).size===list.length&&list.every(field=>available.has(field)),
+    '时间线明细字段必须来自同一记录集。');
+  }
   const label=schedule.label??(fields?.includes('id')||schedule.resource==='id'?'id':undefined);
   const end=schedule.end??schedule.start;
   const used=new Set([label,schedule.start,end,schedule.owner,schedule.resource,'id']);
-  timelineDetails=(fields??[]).filter(field=>!used.has(field));
-  config={...config,sections:[{...schedule,label,end}]};
+  timelineDetails=[...new Set([...(fields??[]),...(details??[])])].filter(field=>!used.has(field));
+  config={...timeline,sections:[{...schedule,label,end}]};
  }
  const {dataset,view}=validateDatasetView(config,datasets),[section]=view.sections;
  const note=[...new Set([dataset.note,view.note].filter(Boolean))].join('\n');
@@ -468,7 +492,7 @@ export const DATASET_HIERARCHY_SCHEMA={type:'object',additionalProperties:false,
  dataset:{type:'string',required:true},levels:{...fieldKeysSchema,required:true},details:{...fieldKeysSchema,description:'可选。来源快照内额外保留的原表字段。'}
 }};
 export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{
- dataset:{type:'string',required:true},type:{type:'string',enum:['view','table','chart','kpi','timeline'],description:'通常省略，面板类型由 panel.type 声明。'},variant:{type:'string',enum:['bar','horizontal','line','area','groupedBar','candlestick','scatter'],description:'原生图表变体。用户贴出的完整金融台账可用 candlestick 或 scatter。'},unit:{type:'string',description:'仅 type:chart 的来源原单位。'},note:{type:'string',description:'组件的额外业务说明，不替代共同数据来源。'},subject:{type:'string'},filters:{...fieldKeysSchema,description:'最多4个用户可切换筛选字段；范围子集另用where声明。'},details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs']},layout:{type:'string',enum:['stack','split']},
+ dataset:{type:'string',required:true},label:{type:'string',description:'图表分类字段；优先放在唯一的 sections[0].label。'},type:{type:'string',enum:['view','table','chart','kpi','timeline'],description:'通常省略，面板类型由 panel.type 声明。'},variant:{type:'string',enum:['bar','horizontal','line','area','groupedBar','dumbbell','funnel','candlestick','scatter'],description:'原生图表变体。用户贴出的完整金融台账可用 candlestick 或 scatter。'},unit:{type:'string',description:'仅 type:chart 的来源原单位。'},note:{type:'string',description:'组件的额外业务说明，不替代共同数据来源。'},subject:{type:'string'},filters:{...fieldKeysSchema,description:'最多4个用户可切换筛选字段；范围子集另用where声明。'},details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs']},layout:{type:'string',enum:['stack','split']},
  where:{type:'array',description:'最多8个默认范围条件，多个条件为且。in用values；gt（大于）、ne（不等于）对数值列用value；notNull不提供值。',items:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},op:{type:'string',required:true,enum:['in','notNull','gt','ne']},value:{type:'number'},values:{type:'array',items:{type:'json',description:'来源字段的原始字符串、数字、布尔或null，不接受对象或表达式。'}}}}},
  groupBy:{...fieldKeysSchema,description:'可省略。仅用于引用全表汇总的指标卡时可写 []，计算项仍须在 sharedDatasets.aggregate 声明。'},
  sections:{type:'array',description:'显式声明记录、图表和排程字段。只引用一条全表汇总的指标卡，或直接显示已声明筛选范围内所有字段的记录表，可省略。',items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
@@ -491,7 +515,7 @@ export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'已取得的�
   identity:{type:'string',description:'原数组中非空且唯一的字符串编号字段，保留前导零。没有业务编号时可省略，宿主使用原型行号。'},
   mode:{type:'string',enum:['rows','entries'],description:'rows 为静态数组。entries 为静态对象的原始键值对，fields 使用 key 和 value。'}
  }},
- pastedTable:{type:'object',additionalProperties:false,description:'直接使用本轮用户消息里按 | 或 ｜ 分隔的完整原表。与按原列顺序排列的 fields 同用，省略 records、asOf、note。',properties:{
+ pastedTable:{type:'object',additionalProperties:false,description:'直接使用本轮用户消息里从 Excel 粘贴的制表符原表或按 |、｜ 分隔的完整原表。首行表头可直接作为字段键时用 header:true 并省略 fields，其他情况按原列顺序声明 fields。省略 records、asOf、note。',properties:{
   block:{type:'integer',required:true,description:'消息中连续表段的 1-based 编号。'},header:{type:'boolean',description:'首行确为表头时填true，fields 的 key 或 label 与原表头对应。'},
   identity:{type:'string',description:'原表真实唯一编号的字段键，视图可用 id 引用。'},numericFields:{type:'array',items:{type:'string'}},
   derive:{type:'array',items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},

@@ -1,6 +1,6 @@
 import {tableSourceLink} from './component-provenance.js'
 import {validOpenTerminalLayout,openTerminalMarketBody,openTerminalColumnLabel} from './openterminal-layout.js'
-import { trendRuntime } from './market-trend-runtime.js'
+import { trendRuntime, trendAxisLabels } from './market-trend-runtime.js'
 import { refineTrendPresentation } from './market-trend-presentation.js'
 import { marketSeriesViewport, observeMarketSeries } from './market-series-viewport.js'
 import { TEMPLATE_LIMITS, TEMPLATE_RULES, tableShapeIssue } from './template-data-contract.js'
@@ -117,10 +117,11 @@ function trendScale(series) {
 function renderTrend(spec) {
  const labels=spec.labels,series=spec.series
  const {low,high}=trendScale(series)
- const left=30,right=502,top=10,bottom=137
+ const ticks=trendAxisLabels(low,high)
+ const left=Math.max(30,...ticks.map(label=>label.length*6.5+12)),right=502,top=10,bottom=137
  const x=i=>left+(right-left)*i/(labels.length-1),y=value=>bottom-(value-low)/(high-low)*(bottom-top)
- const interval=(high-low)/4,decimals=interval<1?2:interval<10?1:0
- const horizontal=Array.from({length:5},(_,i)=>{const value=high-interval*i,yy=y(value);return `<line x1="${left}" y1="${yy.toFixed(2)}" x2="${right}" y2="${yy.toFixed(2)}" class="trend-grid"/><text x="${left-5}" y="${(yy+3).toFixed(2)}" text-anchor="end">${value.toFixed(decimals)}</text>`}).join('')
+ const interval=(high-low)/4
+ const horizontal=Array.from({length:5},(_,i)=>{const value=high-interval*i,yy=y(value);return `<line x1="${left}" y1="${yy.toFixed(2)}" x2="${right}" y2="${yy.toFixed(2)}" class="trend-grid"/><text x="${left-5}" y="${(yy+3).toFixed(2)}" text-anchor="end">${ticks[i]}</text>`}).join('')
  const lines=series.map((item,index)=>`<polyline class="trend-line trend-${index+1}" points="${item.values.map((value,i)=>`${x(i).toFixed(2)},${y(value).toFixed(2)}`).join(' ')}"/>`).join('')
  const marks=[...new Set([0,Math.floor((labels.length-1)/3),Math.floor((labels.length-1)*2/3),labels.length-1])]
  const vertical=marks.map(i=>`<line x1="${x(i).toFixed(2)}" y1="${top}" x2="${x(i).toFixed(2)}" y2="${bottom}" class="trend-grid trend-vertical"/>`).join('')
@@ -150,7 +151,7 @@ export function renderMarketArtifact(s) {
   if(!list(s.labels,TEMPLATE_LIMITS.trendPoints)||s.labels.length<2||!s.labels.every(str)||!list(s.series,TEMPLATE_LIMITS.trendSeries)||s.series.some(item=>!str(item?.name)||!Array.isArray(item.values)||item.values.length!==s.labels.length||item.values.some(value=>!finite(value))))return null
   body=renderTrend(s)
   const {low,high}=trendScale(s.series)
-  script=`(${trendRuntime.toString()})(${json(s.labels)},${json(s.series)},${low},${high},${marketSeriesViewport.toString()},${observeMarketSeries.toString()});`
+  script=`(${trendRuntime.toString()})(${json(s.labels)},${json(s.series)},${low},${high},${marketSeriesViewport.toString()},${observeMarketSeries.toString()},${trendAxisLabels.toString()});`
  }
  else if(s.variant==='price-volume') {
   const artifact=renderPriceVolume(s)

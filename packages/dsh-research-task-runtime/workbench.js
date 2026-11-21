@@ -47,6 +47,37 @@ const refreshReceipt = () => ({refreshStatus:'unverified',refreshGuidance:'刷�
 const preparedWorkbench = input => input.dataMode === 'simulated' && input.generationMode !== 'deferred' || input.panels.every(p => p.artifact);
 const incompleteWorkbench=plan=>plan.sharedComparisonError||plan.scopeDeficits?.length||plan.panels.some(panel=>panel.deliveryStatus==='partial'||panel.error);
 const partialDelivery=task=>task.deliveryStatus==='partial'?{deliveryStatus:'partial',recoveryMode:task.recoveryMode,unmetRequirements:task.unmetRequirements}:undefined;
+const startupFailure = '面板任务未能启动，请重试。';
+const interruptedStartup = '任务启动时中断，请重试。';
+
+function panelForCanvas(plan, {artifact, ...panel}, runtime) {
+    if (!panel.taskId) return !plan.ready && !panel.error ? {...panel, pending:true} : panel;
+    if (plan.dataMode === 'simulated' || panel.prepared) {
+        try {
+            const task = runtime.inspect({parentSessionId:plan.parentSessionId, taskId:panel.taskId, afterSeq:0});
+            const delivery = partialDelivery(task);
+            return {...panel, preparedOutput:task.finalOutput, ...(delivery ? {preparedDelivery:delivery} : {})};
+        } catch (error) {
+            if (error.code !== 'TASK_NOT_FOUND') throw error;
+        }
+        // Prepared plans outlive the bounded task history. Rebuild the saved
+        // snapshot through the same validator as initial delivery, without a job.
+        if (artifact) {
+            try {
+                const output = runtime.prepareArtifact(artifact);
+                if (output) {
+                    const delivery = partialDelivery(panel);
+                    return {...panel, preparedOutput:output, ...(delivery ? {preparedDelivery:delivery} : {})};
+                }
+            } catch { /* An obsolete snapshot can fail current validation. */ }
+        }
+    } else if (!runtime.tasks || runtime.tasks.has(panel.taskId)) {
+        return panel;
+    }
+    const {taskId, ...expired} = panel;
+    return {...expired, error:'组件任务记录已过期，请重试。'};
+}
+
 function workbenchReceiptDetail(plan) {
     const scopeDetail = plan.sharedComparisonError || plan.scopeDeficits?.map(scopeDeficitText).join('\n');
     const failed = plan.panels.filter(panel=>panel.error).map(panel=>`「${panel.title}」${panel.error}`).join('\n');
@@ -96,8 +127,9 @@ function normalizePanelNotes(args) {
         if (panel?.note === undefined) return panel;
         const {note,...rest} = panel;
         if (typeof note !== 'string' || note.length > 2000) throw Error('面板附注必须为 2000 字以内的文字。');
-        return typeof rest.prompt === 'string' && note.trim()
-            ? {...rest,prompt:`${rest.prompt}\n> 补充说明（规划文字，以实际来源和正文为准）：${note.trim().replace(/\n/g, '\n> ')}`}
+        const prompt = rest.prompt ?? (rest.view ? rest.title : undefined);
+        return typeof prompt === 'string' && note.trim()
+            ? {...rest,prompt:`${prompt}\n> 补充说明（规划文字，以实际来源和正文为准）：${note.trim().replace(/\n/g, '\n> ')}`}
             : rest;
     })};
 }
@@ -161,7 +193,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     if (task)
                         panel.taskId = task.taskId;
                     else
-                        panel.error = '任务启动时中断，请重试。';
+                        panel.error = interruptedStartup;
                 }
         }
     // Planned cards exist before acquisition finishes and child tasks start.
@@ -450,8 +482,39 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         generated.forEach((p, i) => { p.taskId = receipts[i].taskId; delete p.error; });
                     }
                 } catch (error) {
-                    for (const p of pending) if(!p.taskId)p.error = '面板任务未能启动，请重试。';
+                    for (const p of pending) if(!p.taskId)p.error = startupFailure;
                     plan.ready = true; await persist(); throw error;
+                }
+            };
+            // A direct feed, a prepared snapshot and a generated analysis use
+            // independent dispatch paths. A failure in one cannot discard the others.
+            const startSourcePanels = async panels => {
+                const startGroup = async (group, launch, record) => {
+                    if (!group.length) return;
+                    try {
+                        const receipts = await launch(group);
+                        group.forEach((panel,index) => {
+                            record(panel,receipts[index]);
+                            delete panel.error;
+                        });
+                    } catch {
+                        for (const panel of group) if (!panel.taskId) panel.error = startupFailure;
+                    }
+                };
+                const direct = panels.filter(panel=>panel.publicData);
+                const prepared = panels.filter(panel=>panel.artifact && !panel.publicData);
+                const pending = panels.filter(panel=>!panel.artifact && !panel.publicData);
+                const recordTask = (panel, receipt) => { panel.taskId = receipt.taskId; };
+                const taskRequest = panel => ({canvasNodeId:panel.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,panel,comparisonReferenceTime)});
+                await startGroup(direct, group => runtime.startPublicDataBatch({parentSessionId,panels:group.map(panel=>({
+                    canvasNodeId:panel.nodeId, title:panel.title, type:panel.type, prompt:workbenchPanelPrompt(input,panel,comparisonReferenceTime),
+                    publicDataPrompt:panel.prompt, publicData:panel.publicData
+                }))}), recordTask);
+                await startGroup(prepared, group => runtime.startPreparedBatch({parentSessionId,panels:group.map(preparedPanel)}), preparedReceipt);
+                if (typeof runtime.startBatch === 'function') {
+                    await startGroup(pending, group => runtime.startBatch({parentSessionId,panels:group.map(taskRequest)}, {panels:group.map(panelContext)}), recordTask);
+                } else for (const panel of pending) {
+                    await startGroup([panel], async () => [await runtime.start({parentSessionId,...taskRequest(panel)},panelContext(panel))], recordTask);
                 }
             };
             if (old) {
@@ -463,7 +526,20 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                         throw Error('该 requestId 已用于另一份规划，新需求请使用新的标识。');
                 }
                 await saveWorkbenchWebpages(ctx,exec,webpages.pages);
-                if (old.ready && old.panels.some(p=>!p.taskId) && (recoveredDraftHash||old.generationMode==='deferred'||old.panels.every(p=>p.artifact))) { await startDeferred(old); await persist(); }
+                if (old.ready && old.panels.some(panel=>!panel.taskId)) {
+                    if (old.generationMode === 'deferred' || recoveredDraftHash || old.panels.every(panel=>panel.artifact)) {
+                        await startDeferred(old);
+                        await persist();
+                    } else if (!old.applied) {
+                        // Mounted plans already expose per-card retry. Replaying an
+                        // acknowledged plan could resurrect a card the user removed.
+                        const retry = old.panels.filter(panel=>!panel.taskId && [startupFailure,interruptedStartup].includes(panel.error));
+                        if (retry.length) {
+                            await startSourcePanels(retry);
+                            await persist();
+                        }
+                    }
+                }
                 return { ...refreshReceipt(), planId: old.id, tabs: old.tabs?.map(t=>t.name)??[], panels: old.panels.map(p => p.title), templateIds: templateIds(old.panels), status: old.ready ? incompleteWorkbench(old) ? 'incomplete' : (old.sharedComparisonPrepared || preparedWorkbench(old)) && old.panels.every(p=>p.taskId&&!p.error) ? 'prepared' : 'accepted' : 'preparing', ...workbenchReceiptDetail(old) };
             }
             const id = randomUUID();
@@ -517,27 +593,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             } else if (input.dataMode === 'simulated') {
                 await startDeferred(plan);
             } else {
-                const prepared = plan.panels.filter(p => p.artifact);
-                const pending = plan.panels.filter(p => !p.artifact && !p.publicData);
-                const direct = plan.panels.filter(p => p.publicData);
-                try {
-                    if (direct.length) {
-                        const receipts = await runtime.startPublicDataBatch({ parentSessionId, panels: direct.map(p => ({ canvasNodeId: p.nodeId, title: p.title, type: p.type, prompt: workbenchPanelPrompt(input, p,comparisonReferenceTime), publicDataPrompt: p.prompt, publicData: p.publicData })) });
-                        direct.forEach((p, i) => { p.taskId = receipts[i].taskId; });
-                    }
-                    if (prepared.length) {
-                        const receipts = await runtime.startPreparedBatch({parentSessionId, panels:prepared.map(preparedPanel)});
-                        prepared.forEach((p,i) => preparedReceipt(p,receipts[i]));
-                    }
-                    if (pending.length && typeof runtime.startBatch === 'function') {
-                        const receipts = await runtime.startBatch({parentSessionId, panels:pending.map(p => ({canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p,comparisonReferenceTime)}))}, {panels:pending.map(panelContext)});
-                        pending.forEach((p,i) => {p.taskId=receipts[i].taskId;});
-                    } else for (const p of pending) {
-                        try { p.taskId=(await runtime.start({parentSessionId,canvasNodeId:p.nodeId,kind:'container',prompt:workbenchPanelPrompt(input,p,comparisonReferenceTime)}, panelContext(p))).taskId; } catch { p.error='面板任务未能启动，请重试。'; }
-                    }
-                } catch(error) {
-                    for(const p of plan.panels) if(!p.taskId)p.error='面板任务未能启动，请重试。';
-                }
+                await startSourcePanels(plan.panels);
             }
             plan.ready = true;
             mountedPlans.delete(id);
@@ -575,7 +631,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
             links:{type:'array',description:'组件节点联动。panels零基序号；自选→行情/新闻/公告，行情→新闻/公告，每目标至多一个来源。',items:{type:'object',additionalProperties:false,properties:{sourcePanel:{type:'integer',required:true},targetPanel:{type:'integer',required:true}}}},
             tabs: {type:'array',description:'原生看板页签。要求分页面/按页签切换时必填；每卡恰好归属一页，不在 prompt 中假装有页签。',items:{type:'object',additionalProperties:false,properties:{name:{type:'string',required:true},panelIndexes:{type:'array',required:true,description:'本页 panels 的零起始下标，如 [0,1,2]。',items:{type:'integer'}}}}},
             panels: { type: 'array', required: true, description: '必填。自定义工作台提交1–30个含title/prompt/type的完整面板，size可省略由宿主按内容排版；已取得内容直接提交content，已有规范组件可提交artifact；完整共同记录用sharedDatasets+view。仅内置preset使用空数组[]。', items: { type: 'object', additionalProperties: false, properties: {
-                        title: { type: 'string', description: '卡片标题；已有 content.title 或 artifact.title 时可复用，其他面板必填。' }, prompt: { type: 'string', description: '待取数或生成的卡必须描述研究问题、范围、来源和所需操作。提供完整 content 的面板可省略，沿用其标题；子任务可用 workbench_source_read 复用已授权的资料。' },
+                        title: { type: 'string', description: '卡片标题；已有 content.title 或 artifact.title 时可复用，其他面板必填。' }, prompt: { type: 'string', description: '待取数或生成的卡必须描述研究问题、范围、来源和所需操作。提供完整 content 或共同数据 view 的面板可省略，沿用其标题；子任务可用 workbench_source_read 复用已授权的资料。' },
                         note: {type:'string',description:'可选，2000 字以内的规划补充说明。经核对的成品附注写入 content.note 或受支持的 artifact.note。'},
                         type: { type: 'string', enum: types, required: true, description: 'view必须同时提供完整sharedDatasets与每卡view，不能作为deferred占位。table仅支持平面行、排序和搜索，不能逐条展开详情。时序记录可用timeline/calendar等合适模板；明确需要可展开表格或独特业务交互时用html；模拟场景保留deferred与sharedContext，由受限子卡离线生成自包含HTML；真实记录保持原数据性质和来源约束，不改称模拟。散点图用 market 且 prompt 声明 variant: scatter；普通柱状图用 chart 并声明 chart.bar；指标卡 metrics 只显示数值，不会渲染散点或柱状图。' }, size: { type: 'string', enum: ['small', 'medium', 'large', 'wide'], description: '可省略，由宿主按内容选择尺寸。通用组件初始规格：small 320×220、medium 656×220、large 656×456；金融 market 组件由宿主以 Figma 源节点为基线按内容密度确定几何，此字段只作画布预设。按内容密度选规格，内容放不下则拆分组件或提供完整阅读入口。字体不缩小。' },
                         layout: {type:'string',enum:['standard','wide'],description:'可选的语义阅读布局；排程、宽对照、图表与独立详情并排时用wide跨整行，其余standard。不要所有面板选同一宽度；手动尺寸优先。'},
@@ -696,13 +752,7 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
                     try { deliveryStatus = await reconcileDelivery(parentSessionId, delivery); }
                     catch (error) { return send(200, {plans:[], deliveryStatus:'error', detail:error.message}); }
                 }
-                send(200, { ...(deliveryStatus ? {deliveryStatus} : {}), plans: plans.filter(p => p.parentSessionId === parentSessionId && !p.applied).map(p => ({ id: p.id, title: p.title, createdAt: p.createdAt, ready: p.ready, ...(workbenchRequestedStyle(p.originalRequest)?{requestedStyle:workbenchRequestedStyle(p.originalRequest)}:{}), ...(p.tabs?{tabs:p.tabs}:{}), panels: p.panels.map(({ artifact, ...panel }) => ({
-                    ...panel,
-                    ...(!p.ready && !panel.taskId && !panel.error ? { pending: true } : {}),
-                    // A completed prepared plan can also be mounted after the
-                    // preparation finishes, such as when the renderer reloads.
-                    ...((p.dataMode === 'simulated' || panel.prepared) && panel.taskId ? (()=>{const task=runtime.inspect({parentSessionId,taskId:panel.taskId,afterSeq:0}),delivery=partialDelivery(task);return {preparedOutput:task.finalOutput,...(delivery?{preparedDelivery:delivery}:{})};})() : {})
-                })) })) });
+                send(200, { ...(deliveryStatus ? {deliveryStatus} : {}), plans: plans.filter(p => p.parentSessionId === parentSessionId && !p.applied).map(p => ({ id: p.id, title: p.title, createdAt: p.createdAt, ready: p.ready, ...(workbenchRequestedStyle(p.originalRequest)?{requestedStyle:workbenchRequestedStyle(p.originalRequest)}:{}), ...(p.tabs?{tabs:p.tabs}:{}), panels: p.panels.map(panel => panelForCanvas(p,panel,runtime)) })) });
             }
             catch {
                 send(400, { error: '工作台读取失败' });

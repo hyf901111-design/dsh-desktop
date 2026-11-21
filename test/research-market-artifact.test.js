@@ -1,6 +1,7 @@
 import {execFileSync} from 'node:child_process'
 import {it,expect} from 'vitest'
 import {Window} from 'happy-dom'
+import {getComponentSourceInfo} from '../scripts/lib/component-source-info.mjs'
 import {acceptArtifactOutput, workbenchMarketVariantIssue, workbenchMarketRecencyIssue} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {compactHostDashboardHtml,RESEARCH_COMPONENT_CONTROLS_CSS} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {marketVariant,workbenchDesignTemplate} from '../packages/dsh-research-task-runtime/workbench-design-contract.js'
@@ -92,8 +93,8 @@ it('keeps a sourced full-year daily trend instead of rejecting 252 genuine obser
  const d=render({variant:'trend',labels,series:[{name:'农林牧渔指数',values}],sources:[{label:'通联 DataYes',url:''}]})
  expect(d.querySelectorAll('tbody tr')).toHaveLength(252)
  expect(d.querySelector('.trend-line').getAttribute('points').split(' ')).toHaveLength(252)
- expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')
- expect(d.querySelector('.market-footer a')).toBeNull()
+ const sourceInfo=getComponentSourceInfo({containerSpec:{html:d.documentElement.outerHTML}})
+ expect(sourceInfo.records).toContainEqual(expect.objectContaining({label:'通联 DataYes',url:''}))
 })
 it('lets a reader inspect every genuine trend point with keyboard controls',()=>{
  const d=render({variant:'trend',labels:['2026-01','2026-02','2026-03'],series:[{name:'CPI 同比',values:[0.2,0.5,0.8]}]})
@@ -338,8 +339,8 @@ it('keeps all nine new template types distinct when each panel repeats a shared 
 })
 it('preserves source names without URLs while rejecting unsafe source links',()=>{
  const d=render({variant:'heatmap',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'通联 DataYes',url:''}]})
- expect(d.querySelector('.market-footer').textContent).toContain('通联 DataYes')
- expect(d.querySelector('.market-footer a')).toBeNull()
+ const sourceInfo=getComponentSourceInfo({containerSpec:{html:d.documentElement.outerHTML}})
+ expect(sourceInfo.records).toContainEqual(expect.objectContaining({label:'通联 DataYes',url:''}))
  expect(acceptArtifactOutput(JSON.stringify({version:1,type:'market',variant:'heatmap',title:'热力图',asOf:'2026-09-25',items:[{label:'农林牧渔',weight:16.35,change:-1.25}],sources:[{label:'危险链接',url:'javascript:alert(1)'}]}))).toBeUndefined()
 })
 it('validates real OHLC bounds instead of fabricating or accepting impossible candles',()=>{

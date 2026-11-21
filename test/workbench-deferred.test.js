@@ -223,9 +223,9 @@ describe('领域自适应模拟工作台延后生成', () => {
       expect(built).toContain(common)
       expect(built).toContain('component_presentation_schema')
       expect(built).toMatch(/理解需求[\s\S]*收集与处理内容[\s\S]*可视化交付/u)
-      expect(built).toMatch(/完整内容模型[\s\S]*搜索[\s\S]*排序[\s\S]*分页[\s\S]*计数/u)
+      expect(built).toMatch(/(?:完整内容模型[^。]*搜索[^。]*排序[^。]*分页[^。]*计数|搜索[^。]*排序[^。]*分页[^。]*计数[^。]*完整内容模型)/u)
       expect(built).toMatch(/submit_component_data[^\n]*content/u)
-      expect(built).toMatch(/不得[^\n]*样例[^\n]*缺失值[^\n]*真实业务数据/u)
+      expect(built).toMatch(/(?:不得[^。]*样例[^。]*缺失值[^。]*真实(?:业务)?数据|样例[^。]*缺失值[^。]*不能充当真实(?:业务)?数据)/u)
       if(p.type==='timeline')expect(built).not.toContain('同次提供artifact:')
       expect(built).not.toContain('唯一交付格式：undefined')
     }
