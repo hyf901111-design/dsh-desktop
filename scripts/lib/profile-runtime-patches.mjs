@@ -4,6 +4,7 @@ import {patchPlanPendingReplay} from './plan-mode-pending-replay.mjs'
 import {patchGoalToolGuidance,patchGoalRoundGuidance} from './goal-stage-guidance.mjs'
 import {patchBashBackgroundLifecycle} from './bash-background-lifecycle.mjs'
 import {patchMemoryRequestContext} from './memory-request-context.mjs'
+import {patchFirstResponseEffort} from './first-response-effort.mjs'
 import {patchHumanSteeringYield} from './human-steering-yield.mjs'
 import {patchNoteFeedbackHost} from './notes-reply-actions.mjs'
 import {patchGlmReasoningCapabilities} from './glm-reasoning-capabilities.mjs'
@@ -73,7 +74,7 @@ async function sources(projectRoot, modulesRoot) {
       readFile(path.join(sourceRoot, 'package.json'), 'utf8'),
       readFile(path.join(sourceRoot, entry), 'utf8')
     ])
-    const source = name === '@earendil-works/pi-ai' ? patchOpenAIResponsesToolOptionals(originalSource) : name === '@deepseek-ai/dsh-llm-pi-ai' ? patchGlmReasoningCapabilities(originalSource) : name === '@deepseek-ai/dsh-agent-loop' ? patchHumanSteeringYield(patchMemoryRequestContext(originalSource)) : name === '@deepseek-ai/dsh-goal-round-driver' ? patchGoalRoundGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-goal' ? patchGoalToolGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-plan-mode' ? patchPlanPendingReplay(originalSource) : name === '@deepseek-ai/dsh-tool-bash' ? patchBashBackgroundLifecycle(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
+    const source = name === '@earendil-works/pi-ai' ? patchOpenAIResponsesToolOptionals(originalSource) : name === '@deepseek-ai/dsh-llm-pi-ai' ? patchGlmReasoningCapabilities(originalSource) : name === '@deepseek-ai/dsh-agent-loop' ? patchFirstResponseEffort(patchHumanSteeringYield(patchMemoryRequestContext(originalSource))) : name === '@deepseek-ai/dsh-goal-round-driver' ? patchGoalRoundGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-goal' ? patchGoalToolGuidance(originalSource) : name === '@deepseek-ai/dsh-tool-todo' ? patchTaskProgressRuntime(originalSource) : name === '@deepseek-ai/dsh-plan-mode' ? patchPlanPendingReplay(originalSource) : name === '@deepseek-ai/dsh-tool-bash' ? patchBashBackgroundLifecycle(originalSource) : name === '@deepseek-ai/dsh-subagent' ? patchCanvasTaskNotices(originalSource) : name === '@deepseek-ai/dsh-message-feedback' ? patchNoteFeedbackHost(originalSource) : originalSource
     if (JSON.parse(sourceManifest).version !== JSON.parse(targetManifest).version) throw Error(`Plugin runtime version mismatch: ${name}`)
     if (!source.includes(marker)) throw Error(`Required runtime patch missing: ${name}`)
     const targets=nestedTargets??(['@earendil-works/pi-ai','@deepseek-ai/dsh-skill','@deepseek-ai/dsh-agent-loop','@deepseek-ai/dsh-tool-bash','@deepseek-ai/dsh-plan-mode','@deepseek-ai/dsh-tool-goal','@deepseek-ai/dsh-goal-round-driver'].includes(name)?await skillCopies(modulesRoot,name):[targetRoot])

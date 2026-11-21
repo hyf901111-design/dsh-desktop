@@ -48,6 +48,7 @@ import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPromp
 import { extractDocxEvidence } from './docx-evidence.js'
 import { completeWordReadingPanel } from './workbench-word-grid.js'
 import { loadPdfLibrary } from './pdf-library.js'
+import {registerFirstResponseEffort} from './first-response-effort.js'
 import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
 import { componentDiscoveryToolNames, componentSourceCollector, componentSnapshotEvidence, componentFeedEvidenceIssue, articleTimelineSourceProven, restoreSnapshotMarketHistory, restoreSnapshotStatementGrowth, restoreSnapshotFeedHeadlines, retainVerifiedFeedItems, componentBindingEvidence, componentMappableSource, componentAcquiredBusinessData, componentBindingRequested, componentSnapshotData, resolveComponentSnapshot, COMPONENT_BOUND_DATA_PROMPT, COMPONENT_STATIC_DATA_PROMPT, COMPONENT_STATIC_CHART_PROMPT, resolveBoundComponent } from './component-source-binding.js'
@@ -3733,6 +3734,7 @@ export async function apply(ctx) {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence })
+    const disposeFirstResponseEffort = registerFirstResponseEffort(ctx)
     const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readWorkspaceReference})
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
@@ -3766,6 +3768,7 @@ export async function apply(ctx) {
     } catch (error) {
       disposePublicData(); disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
+      disposeFirstResponseEffort()
       disposeConversationComponentsPolicy()
       disposeModelQueue()
       disposeCompletionNotifications()
@@ -3793,6 +3796,7 @@ export async function apply(ctx) {
     return async () => {
       disposePublicData(); disposeSourceGuidance?.()
       disposeWorkbenchPolicy()
+      disposeFirstResponseEffort()
       disposeConversationComponentsPolicy()
       disposeModelQueue()
       disposeCompletionNotifications()
