@@ -609,7 +609,7 @@ it('adds workspace context to the real native prompt while leaving ordinary chat
   const f = fixture()
   try {
     f.respond()
-    const content = [{ type: 'text', text: '你好，我想生成一张用于活动的海报' }]
+    const content = [{ type: 'text', text: '按刚讨论的美国国债晨会封面方案，现在请生成一张 16:9 的编辑部风格插画。左侧预留标题空间。' }]
     f.doc.body.dataset.workspaceSurface = 'browser'
     await f.binding.prompt(f.session, content, 'queue')
     expect(f.session.prompt).toHaveBeenLastCalledWith(content, 'queue')
@@ -630,7 +630,7 @@ it('sends greetings, image analysis and advice as ordinary messages in Images', 
     f.doc.body.dataset.workspaceSurface = 'image-factory'
     const image = { type: 'image', data: 'QkJC', mediaType: 'image/png', name: '参考.png' }
     for (const text of ['你好', '看看这张图片有什么问题', '帮我分析这张海报，怎么改更好？',
-      '生成图片的提示词怎么写？', 'Please write a prompt to generate an image', '不要生成图片，先给建议']) {
+      '生成图片的提示词怎么写？', '现在生成图片需要多久？', '先讨论财政部收益率晨会的封面配色和构图，只给建议，暂时不要出图。', 'Please write a prompt to generate an image', '不要生成图片，先给建议']) {
       const content = [{ type: 'text', text }, image]
       expect(await f.binding.prompt(f.session, content, 'queue')).toEqual({ ok: true })
       expect(f.session.prompt).toHaveBeenLastCalledWith(content, 'queue')
