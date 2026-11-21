@@ -1326,6 +1326,107 @@
         ],
         "recordedAt": "2026-11-21T08:31:06.705Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "恢复复杂任务首段之后的执行并隔离模型内部调用格式",
+        "branch": "codex/feat/task-opening-recovery-20261121",
+        "baseCommit": "824680096f8d37dfa43e4cc624e016a4b062c863",
+        "tipCommit": "dedcfd285438a1c98e766c6081eb21f1ab5ad3d5",
+        "commits": [
+          {
+            "commit": "626a504c291fd98d9b5924cda50d6a1e55a3e70b",
+            "parents": [
+              "824680096f8d37dfa43e4cc624e016a4b062c863"
+            ],
+            "subject": "修复模型首段结束中断并在流入对话前截住伪工具协议"
+          },
+          {
+            "commit": "dedcfd285438a1c98e766c6081eb21f1ab5ad3d5",
+            "parents": [
+              "626a504c291fd98d9b5924cda50d6a1e55a3e70b"
+            ],
+            "subject": "缩减任务开场到当前用户目标与必要引用范围"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/model-task-replies.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/first-response-effort.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/task-opening-stream.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-first-response-effort.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/task-opening-deepseek-public.json"
+          },
+          {
+            "status": "A",
+            "path": "test/model-task-opening-context.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/task-opening-sdk-recovery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/task-opening-sdk-recovery.test.js",
+              "test/conversation-first-response-effort.test.js",
+              "test/model-task-opening-context.test.js",
+              "test/human-steering-yield-sdk.test.js",
+              "test/client-mode-profile.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=20000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "52 项模式和真实 SDK 回归通过，覆盖已安装 human-steering、选定模型分片、公开伪工具标记、示例代码、断流、下步读工具及结束。",
+            "verifiedCommit": "dedcfd285438a1c98e766c6081eb21f1ab5ad3d5",
+            "completedAt": "2026-11-21T08:55:09.027646+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "/private/tmp/ework-research-role-qa-20261121/real/verify-sdk-opening-upgrade.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "真实 824680096 旧包与共享依赖分别升级，产物一致、可重复安装、拒绝未知字节漂移。",
+            "verifiedCommit": "dedcfd285438a1c98e766c6081eb21f1ab5ad3d5",
+            "completedAt": "2026-11-21T08:55:09.027646+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "功能分支只改后端开场准备与 SDK 流；真实服务会话、已签名包、模型公开分片和原生工作簿已在隔离环境核验，新包完整端到端由集成后实机复核。"
+        },
+        "acceptanceCriteria": [
+          "开场使用用户当轮目标、必要约束与少量相关上下文，保留语言和所选模型；下一步恢复完整上下文与额度。",
+          "固收失效会话首次公开分片移除未执行伪调用，真实正文即时出现；正常按用户要求展示的代码样例仍可阅读。",
+          "同一 SDK turn 在开场后发起后续模型请求、记录受理工具与真实结果，最后正常结束；普通单步回答和真实错误仍按原状态结束。"
+        ],
+        "risks": [
+          "基线证据是真实会话/原始公开分片/真实原生工作簿，离线 SDK 回放未重新请求托管模型。正式本地签名客户端仍需同一自然语言实测，首段耗时取决于上游。"
+        ],
+        "generatedAt": "2026-11-21T08:55:09.027646+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -1463,6 +1564,29 @@
         "/private/tmp/ework-research-role-qa-20261121/real/replay-document-readonly.mjs"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/task-opening-sdk-recovery.test.js",
+        "test/conversation-first-response-effort.test.js",
+        "test/model-task-opening-context.test.js",
+        "test/human-steering-yield-sdk.test.js",
+        "test/client-mode-profile.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=20000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "/private/tmp/ework-research-role-qa-20261121/real/verify-sdk-opening-upgrade.mjs"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
