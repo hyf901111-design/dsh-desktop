@@ -114,10 +114,17 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   const manualDestination = /(?:用|通过|借助|采用|在|创建|新建|生成|建立|建|加|打开|放(?:进|入|到|在)?|拖(?:进|入|到)?)(?:(?:一[个张]|[个张]|新|空白|留白|手动|手工|刚才|刚建|指定|这[个张]|选中|当前|已有|现有|的)\s*)*(?:智能容器|手动容器|手工容器|容器草稿)|(?:智能容器|手动容器|手工容器|容器草稿)(?:里|内|中)/u
   const rejectsContainer = /(?:不要|不用|不使用|无需|无须|不必|别|禁止|跳过|不通过|不需要)(?:再|额外|手动|手工|任何|先|去|新建|创建|生成|打开|使用|用|通过|借助|一个|新的?|空白的?|智能的?)*\s*(?:智能容器|手动容器|手工容器|容器草稿)/u
   const manualClause = clause => clause.includes('\t') ? '' : clause.replace(/“[^”]+”|「[^」]+」|『[^』]+』|"[^"]+"/gu, quoted => /^(?:智能容器|手动容器|手工容器|容器草稿)$/u.test(quoted.slice(1,-1)) ? quoted.slice(1,-1) : '')
+  const asksForManualDraft = clause => {
+    if (creationDenied(clause) || rejectsContainer.test(clause) || /(?:吗|方法|步骤|教程|用法|需要多久)$/u.test(clause)) return false
+    const action = clause.replace(/^(?:(?:请|帮我|给我|麻烦|我想|我要|我需要|在(?:研究)?看板上|先|再)\s*)+/u, '')
+    return /^(?:创建|新建|新增|添加|打开|拖出|放入|使用|用|通过|借助|采用)(?:(?:一[张个]|[张个]|新的?|空白的?|手动的?|的)\s*)*(?:智能容器|手动容器|手工容器|容器草稿|空白组件草稿)/u.test(action) ||
+      /^(?:please )?(?:create|add|insert|open|use) (?:an? |the )?(?:new |blank )*(?:(?:smart|manual) container|component draft)\b/iu.test(action)
+  }
+  if (scope === 'manual-container') return authoredClauses.map(manualClause).some(asksForManualDraft)
   const existingEdit = /^(?:(?:请|麻烦|帮我|先|只|继续)\s*)*(?:(?:编辑|修改|修复|更新|调整|优化)(?:当前|刚才|之前|已有|现有|指定|选中|这[个张]|那[个张])[^，。；;\n]{0,32}(?:组件|卡片|图表|智能容器)|(?:把|将)(?:刚才|之前|选中|当前|已有|现有|这[个张]|那[个张])[^，。；;\n]{0,32}(?:组件|卡片|图表|智能容器)[^，。；;\n]{0,20}(?:改成|改为|更新|修改|调整|编辑|重命名))/u
   const independentAddition = /(?:^|[，,。；;\n])\s*(?:另外|另行|同时|并且|并)(?:再)?(?:帮我)?(?:新建|新增|创建|做一|加一|生成)/u.test(request)
   if (!independentAddition && authoredClauses.map(manualClause).some(clause => clause && !creationDenied(clause) &&
-      (existingDestination.test(clause) || existingEdit.test(clause) || manualDestination.test(clause) && !rejectsContainer.test(clause)))) return null
+      (existingDestination.test(clause) || existingEdit.test(clause) || asksForManualDraft(clause) || manualDestination.test(clause) && !rejectsContainer.test(clause)))) return null
   // A short imperative can name a new chart without saying “组件”. Strip only
   // the destination board, so “在这张卡片中” continues to address an existing card.
   const boardPrefix = /^(?:(?:请|麻烦|帮我|给我|我想|想|先|再|另外)\s*)*(?:(?:在|往|给)(?:当前|这个|现有|已有)?(?:的)?(?:研究)?(?:看板|工作台|画布)(?:上|里|内|中)?\s*)?(?:再|另外)?/u
@@ -132,6 +139,10 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
       const head = clause.split(/[：:]/u, 1)[0].trim()
       if (/(?:如何|怎么|怎样|假如|假设|如果|讨论|解释|建议|意味着|是否|引用|个人笔记|我的笔记)/u.test(head)) return false
       const command = head.replace(/^(?:(?:请|麻烦|帮我|先|再)\s*)*给[\p{L}\d ·-]{1,20}?(?=在(?:当前|这个)?(?:研究)?(?:看板|工作台|画布))/u, '').replace(boardPrefix, '')
+      // The board is the destination of the supplied material. Moving an
+      // existing card between boards still belongs to the canvas controls.
+      const material = /^(?:把|将)(.{1,64}?)(?:整理|汇总|编排|收录|归集|放|添加|呈现|展示)(?:到|至|进|入|在)(?:当前|这个|我的)?(?:的)?(?:研究)?(?:看板|工作台|画布)(?:上|里|内|中)?$/u.exec(command)?.[1]
+      if (material && !/(?:组件|卡片|容器|看板|工作台|画布|这张卡|那张卡)/u.test(material)) return true
       const placed = /^(?:留(?:下)?|放(?:上)?)(?:一[张个份]|[张个份])([\p{L}\d ·%-]{1,36}?)(?:吧|即可)?$/u.exec(command)
       if (placed && !/(?:[这那][张个]|同一|原来|现成|已有|现有|既有|原有|当前|选中|刚才|之前)/u.test(placed[1]) &&
           /(?:明细|交接便签|便签|卡片|卡|组件|图表|表格|明细表|折线图|柱[状形]图|条形图|散点图|趋势图|日历)$/u.test(placed[1])) return true
