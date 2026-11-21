@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 import { glmReasoningEntry, patchGlmReasoningCapabilities } from '../scripts/lib/glm-reasoning-capabilities.mjs'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
-import { patchNotesAdmission } from '../scripts/lib/notes-composer.mjs'
+import { createRequire } from 'node:module'
 import { runHumanSteerableGeneration } from '../scripts/lib/human-steering-yield.mjs'
 
 const session = text => ({ header: {}, events: [{ type: 'user/message', data: { id: 'human', source: { kind: 'user' }, content: [{ type: 'text', text }] } }] })
@@ -183,9 +183,11 @@ describe('workbench planning continuation', () => {
     const end=bundle.indexOf('\n\t\t\t}',start)+5
     expect(start).toBeGreaterThan(0)
     const installed=bundle.slice(start,end)
-    const clean=installed.replace(/\/\* ework:notes-composer-admission:v2 \*\/[\s\S]*?const noteAdmission=[^;]+;/u,'')
-      .replace(/normalizeCanvasMessageText\((draft|out)\)/gu,'$1.trim()')
-      .replaceAll(', mode, noteAdmission);',', mode);')
+    // The fixture is the original method in the lockfile's rc.7 tarball.
+    const clean=readFileSync(new URL('./fixtures/native-composer-sink-rc7.txt',import.meta.url),'utf8')
+    // The production patch embeds Function#toString verbatim. Run it with Node
+    // so an already installed helper is compared with the bytes used by the build.
+    const {patchNotesAdmission}=createRequire(import.meta.url)('../scripts/lib/notes-composer.mjs')
     for (const source of [clean,installed]) {
       const patched=patchNotesAdmission(source)
       expect(patchNotesAdmission(patched)).toBe(patched)

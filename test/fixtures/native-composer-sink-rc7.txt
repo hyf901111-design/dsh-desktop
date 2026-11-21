@@ -1,0 +1,32 @@
+sinkSerialized(draft, mode) {
+				const imageIds = [...this.imageIds];
+				const occurrences = this.core.state.occurrences;
+				if (occurrences.length === 0) {
+					this.deps.defaultSink(draft.trim(), imageIds, mode);
+					return;
+				}
+				const inputTriggers = this.deps.inputTriggers?.();
+				const controller = new AbortController();
+				Promise.all(occurrences.map(async (o) => {
+					if (inputTriggers === void 0) throw new Error(`no serializer for reference source "${o.source}"`);
+					return {
+						offset: o.offset,
+						text: await inputTriggers.serializeReference(o.source, o.ref, controller.signal)
+					};
+				})).then((parts) => {
+					if (this.disposed) return;
+					let out = "";
+					let cursor = 0;
+					for (const part of parts) {
+						out += draft.slice(cursor, part.offset) + part.text;
+						cursor = part.offset + 1;
+					}
+					out += draft.slice(cursor);
+					this.deps.defaultSink(out.trim(), imageIds, mode);
+				}, (error) => {
+					controller.abort();
+					if (this.disposed) return;
+					const message = error instanceof Error ? error.message : String(error);
+					this.notify("error", message);
+				});
+			}

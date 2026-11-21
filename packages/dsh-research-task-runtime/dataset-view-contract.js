@@ -110,7 +110,38 @@ function cell(value){
 export function simulatedDatasetMetadata(value){
  return Array.isArray(value)?value.map(d=>object(d)&&d.aggregate===undefined?{...d,...(!Object.hasOwn(d,'note')?{note:'用户请求的模拟数据'}:{}),...(!Object.hasOwn(d,'asOf')?{asOf:'模拟数据，时点未指定'}:{}),...(Array.isArray(d.fields)&&Array.isArray(d.records)?{records:d.records.map(r=>object(r)?{...Object.fromEntries(d.fields.filter(f=>object(f)&&fieldKey(f.key)&&f.key!=='id').map(f=>[f.key,null])),...r}:r)}:{})}:d):value
 }
-export function validateWorkbenchDatasets(value){
+// A chart axis is field metadata only for explicitly selected measures. Carry it
+// onto the canonical descriptors so all views of this dataset render the same units.
+function applySharedChartUnits(dataset,panels){
+ const claims=new Map()
+ for(const panel of panels){
+  const view=panel?.view
+  if(view?.dataset!==dataset.id||panel.artifact!==undefined||!text(view.unit,64)||
+     !(panel.type==='chart'||panel.type==='view'&&view.type==='chart')||!Array.isArray(view.sections)||view.sections.length!==1)continue
+  const resolved=resolveWorkbenchPanelLabels(panel,[dataset]).view
+  const [section]=resolved.sections
+  if(!['records','compare'].includes(section?.kind)||!Array.isArray(section.fields))continue
+  const measures=section.fields.filter(key=>key!=='id'&&key!==section.label&&key!==resolved.label&&!dataset.groupBy?.includes(key))
+   .map(key=>dataset.fields.find(field=>field.key===key))
+   .filter(field=>field&&dataset.records.some(row=>Number.isFinite(row[field.key]))&&
+    dataset.records.every(row=>row[field.key]===null||Number.isFinite(row[field.key])))
+  // A single-series chart can also declare extra fields solely for its detail table.
+  if(measures.length>1&&!['groupedBar','dumbbell'].includes(resolved.variant))continue
+  for(const field of measures){
+   if(chartFieldUnit(field)||/[（(][^）()]+[）)]$/u.test(field.label))continue
+   // An unlabelled rate could be a fraction, percent or basis points.
+   if([field.key,field.label].some(name=>/率|占比|比例|百分|[%％]|(?:rate|ratio|pct|percent(?:age)?)$/iu.test(name))&&
+      !/^(?:%|％|比例|百分点|基点|bp|bps)$/iu.test(view.unit))continue
+   if(!claims.has(field.key))claims.set(field.key,new Set())
+   claims.get(field.key).add(view.unit)
+  }
+ }
+ for(const field of dataset.fields){
+  const units=claims.get(field.key)
+  if(units?.size===1)field.unit=units.values().next().value
+ }
+}
+export function validateWorkbenchDatasets(value,panels=[]){
  check(Array.isArray(value)&&value.length>=1&&value.length<=WORKBENCH_DATASET_LIMITS.datasets,`共同数据需要1–${WORKBENCH_DATASET_LIMITS.datasets}份完整记录集；不能删除来源来满足容量。`)
  if(value.some(d=>object(d)&&d.aggregate!==undefined)){
   const complete=new Map(),pending=[...value]
@@ -136,7 +167,7 @@ export function validateWorkbenchDatasets(value){
    }
    check(progress,'共同数据汇总引用了不存在的来源或形成循环；不能改用独立估算。')
   }
-  return validateWorkbenchDatasets(value.map(d=>complete.get(d.id)))
+  return validateWorkbenchDatasets(value.map(d=>complete.get(d.id)),panels)
  }
  const ids=new Set(),result=[]
  for(let d of value){
@@ -171,6 +202,7 @@ export function validateWorkbenchDatasets(value){
   })
   check(d.groupBy===undefined||Array.isArray(d.groupBy)&&d.groupBy.length<=4&&(d.groupBy.length>0||records.length===1)&&new Set(d.groupBy).size===d.groupBy.length&&d.groupBy.every(key=>key!=='id'&&keys.has(key)),'汇总分组标识必须引用实际字段，全表汇总只有一条记录。')
   const copy={id:d.id,...(d.groupBy===undefined?{}:{groupBy:[...d.groupBy]}),...(d.recordScope===undefined?{}:{recordScope:d.recordScope}),label:d.label,asOf:d.asOf,note:d.note,fields,records}
+  applySharedChartUnits(copy,panels)
   check(bytes(copy)<=WORKBENCH_DATASET_LIMITS.datasetBytes,`单份共同数据超过${WORKBENCH_DATASET_LIMITS.datasetBytes}字节的宿主存储配额；不能丢弃记录或字段。`);result.push(copy)
  }
  check(bytes(result)<=WORKBENCH_DATASET_LIMITS.totalBytes,`共同数据总量超过${WORKBENCH_DATASET_LIMITS.totalBytes}字节的宿主存储配额；不能截取用户范围。`)

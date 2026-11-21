@@ -602,7 +602,7 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     const deferred = value.generationMode === 'deferred';
     if ((value.sharedDatasets !== undefined || value.panels.some(p=>p?.type==='view')) && parallel)
         throw Error('共同数据组合视图不能用于parallel模式，请直接提供完整共同记录。');
-    const datasets = value.sharedDatasets === undefined ? undefined : validateWorkbenchDatasets(isSimulated ? simulatedDatasetMetadata(value.sharedDatasets) : value.sharedDatasets);
+    const datasets = value.sharedDatasets === undefined ? undefined : validateWorkbenchDatasets(isSimulated ? simulatedDatasetMetadata(value.sharedDatasets) : value.sharedDatasets, value.panels);
     if (isSimulated && value.panels.some(p=>p?.type==='audio')) throw Error('音频需要本人实际音频网址或 url:null；请使用 source 模式，不生成模拟音频。');
     if (isSimulated && value.panels.some(p=>p?.type==='youtube')) throw Error('YouTube需要用户实际提供的视频网址或 url:null；请使用 source 模式提交，不猜测视频。');
     if (isSimulated && value.panels.some(p=>p?.type==='iframe')) throw Error('嵌入网页需要用户实际提供的网址或 url:null；请使用 source 模式提交，不生成模拟网址。');
