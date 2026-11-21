@@ -2371,6 +2371,210 @@
         ],
         "recordedAt": "2026-11-21T09:26:28.575Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "按披露原表完成核对、带符号例外跟踪与交接便签，修正资讯初态、文章质量与资料下载窗口退出竞争",
+        "branch": "codex/feat/workbench-disclosed-row-numbers-20261121",
+        "baseCommit": "356220d4c469c24c27d0c24b59d579f6e836e2a5",
+        "tipCommit": "6ae0ab9ecde91f34fb32a85561d8550f0ae749ac",
+        "commits": [
+          {
+            "commit": "3f4bc92652669f6da82ff8e5b0e075fa20f742fe",
+            "parents": [
+              "356220d4c469c24c27d0c24b59d579f6e836e2a5"
+            ],
+            "subject": "按原表唯一列序恢复披露序号与完整明细"
+          },
+          {
+            "commit": "9091319e502fa23ed54cdb8b0eaee01b078f837b",
+            "parents": [
+              "3f4bc92652669f6da82ff8e5b0e075fa20f742fe"
+            ],
+            "subject": "按披露原序核对台账、展示带符号的例外对照并前置交接结论"
+          },
+          {
+            "commit": "dad4614246a4ad5622fea9c7852fcf7242dba74a",
+            "parents": [
+              "9091319e502fa23ed54cdb8b0eaee01b078f837b"
+            ],
+            "subject": "过滤冒充行业报道的博彩推广与栏目并修正资讯首帧来源"
+          },
+          {
+            "commit": "6ae0ab9ecde91f34fb32a85561d8550f0ae749ac",
+            "parents": [
+              "dad4614246a4ad5622fea9c7852fcf7242dba74a"
+            ],
+            "subject": "修复后台网页窗口销毁后的附件下载和超时清理"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-reading-footer.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/financial/account-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/search/browser-page-reader.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/financial-ui-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-page-reader.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/component-reading-footer.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-localization.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-public.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-refresh.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/research-semiconductor-published-results.json"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-etf-omitted-ordinal-first-call.json"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-role-source-first-calls.json"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/financial-widget-client-fixture.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-pasted-source-link.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-role-source-first-calls.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "/private/tmp/ework-research-role-qa-20261121/real/verify-source-readership-last.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "八次真实成品组件回放。440、720 像素均可读完整交接句，再看曲线和三个数据点；核对两例外和另三类的逐年流量和 ETF 五行六列。",
+            "verifiedCommit": "6ae0ab9ecde91f34fb32a85561d8550f0ae749ac",
+            "completedAt": "2026-11-21T09:40:46.559425+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-public.test.ts",
+              "test/financial-widget-refresh.test.js",
+              "test/financial-widget-localization.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=15000",
+              "--reporter=dot",
+              "-t",
+              "^(?!.*localizes actual built-in widgets and new menus live)"
+            ],
+            "outcome": "passed",
+            "summary": "资讯文章过滤、正常跨行业文章和公告、首帧文字、刷新与中英界面30项通过。股票连接线的既有综合用例单列。",
+            "verifiedCommit": "6ae0ab9ecde91f34fb32a85561d8550f0ae749ac",
+            "completedAt": "2026-11-21T09:40:48.513615+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-role-source-first-calls.test.js",
+              "test/component-reading-footer.test.js",
+              "test/workbench-pasted-source-link.test.js",
+              "test/workbench-pasted-spreadsheet.test.js",
+              "test/dataset-view-artifact.test.js",
+              "test/component-reading-footer-browser.test.js",
+              "test/dataset-view-browser.test.js",
+              "test/browser-page-reader.test.ts",
+              "--maxWorkers=2",
+              "--testTimeout=30000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "真实工作台实参、字段边界、带符号净流量、便签顺序、详情及下载窗口关闭回归。",
+            "verifiedCommit": "6ae0ab9ecde91f34fb32a85561d8550f0ae749ac",
+            "completedAt": "2026-11-21T09:41:00.183931+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "-p",
+              "tsconfig.node.json"
+            ],
+            "outcome": "passed",
+            "summary": "主进程 TypeScript 无输出编译检查通过。",
+            "verifiedCommit": "6ae0ab9ecde91f34fb32a85561d8550f0ae749ac",
+            "completedAt": "2026-11-21T09:41:00.954079+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "浏览器实际运行工作台双层预览和原生图表交互。两种宽度结论高 8–44 像素、曲线自 56 像素起，点击展开三行明细。例外与其余类别在搜索、清除后恢复所有原值，稽核读取五行六栏。"
+        },
+        "acceptanceCriteria": [
+          "原文序号确实匹配完整、唯一列序时按源表恢复，业务编号仍为文本，金额保留人民币分。冲突身份和类型仍由验证拒绝。",
+          "管理者先见负基期两类与今年转正值的显式符号，再对照同口径的其他三类，单位与余额行分开。",
+          "结论和日期、基点方向先于曲线，历史卡重开仍能展开原始细节。",
+          "等待首个资讯提供方时显示有效文案，文章不包含已知博彩/下载垃圾及无内容的栏目索引。",
+          "网页资料读取与关闭窗口竞争时，主进程清理已销毁的会话/窗口，稳定保留其他活动查阅。"
+        ],
+        "risks": [
+          "仅在明确需要其余类别、所有阈值记录都是完整数值且未限定单卡时补齐互补表；没有将模糊条件推断为授权展示其余数据。",
+          "资讯旁边原有股票连接线综合测试在 happy-dom 找不到 SVG title，单独运行亦如此；已列明30条直接相关用例和1条排除。",
+          "本交接通过真实旧包实参和保存组件回放。新签名客户端的八个岗位请求、资讯获取及刷新另列实机记录。"
+        ],
+        "generatedAt": "2026-11-21T09:40:35.140063+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2580,6 +2784,58 @@
       "argv": [
         "node",
         "/private/tmp/ework-research-role-qa-20261121/real/verify-render-last.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "/private/tmp/ework-research-role-qa-20261121/real/verify-source-readership-last.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/financial-widget-public.test.ts",
+        "test/financial-widget-refresh.test.js",
+        "test/financial-widget-localization.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=15000",
+        "--reporter=dot",
+        "-t",
+        "^(?!.*localizes actual built-in widgets and new menus live)"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-role-source-first-calls.test.js",
+        "test/component-reading-footer.test.js",
+        "test/workbench-pasted-source-link.test.js",
+        "test/workbench-pasted-spreadsheet.test.js",
+        "test/dataset-view-artifact.test.js",
+        "test/component-reading-footer-browser.test.js",
+        "test/dataset-view-browser.test.js",
+        "test/browser-page-reader.test.ts",
+        "--maxWorkers=2",
+        "--testTimeout=30000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.node.json"
       ],
       "timeoutMs": 180000
     }
