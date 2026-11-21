@@ -563,6 +563,7 @@ export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,prope
  groupBy:{...fieldKeysSchema,description:'可省略。仅用于引用全表汇总的指标卡时可写 []，计算项仍须在 sharedDatasets.aggregate 声明。'},
  sections:{type:'array',description:'显式声明记录、图表和排程字段。只引用一条全表汇总的指标卡，或直接显示已声明筛选范围内所有字段的记录表，可省略。',items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
 }};
+const datasetFieldsSchema={type:'array',items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},unit:{type:'string'}}}};
 export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'已取得的真实资料或用户允许的模拟场景，同一批对象只写一个主记录集，排程/对比/列表均引用它；每份数据必须有组件引用，同批对象跨表时显式声明相同recordScope，该范围内同id同名事实及单位不得矛盾。不同实体的编号独立；每条记录有稳定id并完整填写所有声明字段，缺失null。记录必须含id，id显示字段省略时由宿主补标签。完整数据按宿主存储配额校验，最多16组，每组10000条/24字段/2000000字节，总8000000字节；与显示或模型读取页大小无关。超限须保留完整范围并明确说明，不能截取记录、删除字段或猜共同值。',items:{type:'object',additionalProperties:false,properties:{
  id:{type:'string',required:true},recordScope:{type:'string',description:'可选。跨数据集确为同一批对象时提供相同范围如book；该范围内同id的同名事实/单位必须一致。省略时编号仅限本数据集，员工001与设备001不视为同一对象。'},label:{type:'string',required:true},asOf:{type:'string',description:'真实资料必填实际数据时点或明确的时点未提供说明。仅模拟模式可省略，由宿主标注模拟时点未指定，不猜日期。'},note:{type:'string',description:'真实资料必填实际出处及必要口径，不伪造来源。仅模拟模式可省略，由宿主标注用户请求的模拟数据。'},
  sourceRef:{type:'string',description:'本轮 research_workbench_source_catalog 返回的完整业务来源编号。与 id、label、fields 和 identity 一起使用，宿主沿用真实来源、时间和原始记录。'},
@@ -583,11 +584,12 @@ export const WORKBENCH_DATASETS_SCHEMA={type:'array',description:'已取得的�
  }},
  pastedTable:{type:'object',additionalProperties:false,description:'直接使用本轮用户消息里从 Excel 粘贴的制表符原表或按 |、｜ 分隔的完整原表。首行表头可直接作为字段键时用 header:true 并省略 fields，其他情况按原列顺序声明 fields。省略 records、asOf、note。',properties:{
   block:{type:'integer',required:true,description:'消息中连续表段的 1-based 编号。'},header:{type:'boolean',description:'首行确为表头时填true，fields 的 key 或 label 与原表头对应。'},
+  fields:datasetFieldsSchema,
   identity:{type:'string',description:'原表真实唯一编号的字段键，视图可用 id 引用。'},numericFields:{type:'array',items:{type:'string'}},
   derive:{type:'array',items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},
    op:{type:'string',required:true,enum:['subtract','percent']},left:{type:'string',required:true},right:{type:'string',required:true},unit:{type:'string'},digits:{type:'integer'}}}}
  }},
  aggregate:{type:'object',additionalProperties:false,description:DATASET_AGGREGATE_GUIDANCE,properties:{dataset:{type:'string',required:true},groupBy:{type:'array',required:true,items:{type:'string'}},measures:{type:'array',required:true,items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},op:{type:'string',required:true,enum:['count','sum','percent']},field:{type:'string'},numerator:{type:'string'},denominator:{type:'string'},digits:{type:'integer'},unit:{type:'string'},where:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},equals:{type:'json',description:'与来源标量严格相等的原值',required:true}}}}}}}},
- fields:{type:'array',items:{type:'object',additionalProperties:false,properties:{key:{type:'string',required:true},label:{type:'string',required:true},unit:{type:'string'}}}},
+ fields:datasetFieldsSchema,
  records:{type:'array',items:{type:'object',additionalProperties:true,properties:{id:{type:'string',required:true,description:'直接使用稳定业务编号，如B01；每条必填且唯一。其他字段必须与fields声明一致。'}}}}
 }}};

@@ -333,10 +333,18 @@ export function resolvePastedWorkbenchPlan(plan){
   if(!exact(draft,['id','label','pastedTable'],['fields','recordScope','note','asOf'])||
      draft.asOf!==undefined&&(typeof draft.asOf!=='string'||draft.asOf.length>500)||
      draft.note!==undefined&&(typeof draft.note!=='string'||!draft.note.trim()||draft.note.length>2000)||
-     !exact(draft.pastedTable,['block'],['header','identity','numericFields','derive']))fail('只声明表段、列和计算，不附重抄的原表记录。');
-  const {id,label,fields:declared,recordScope,pastedTable}=draft;
-  const {block,header=false}=pastedTable;
+     !exact(draft.pastedTable,['block'],['header','identity','numericFields','derive','fields']))fail('只声明表段、列和计算，不附重抄的原表记录。');
+  const {id,label,recordScope,pastedTable}=draft;
+  if(draft.fields!==undefined&&pastedTable.fields!==undefined)fail('fields 只需在数据集或表段中声明一次。');
+  const declared=draft.fields??pastedTable.fields;
+  const {block}=pastedTable;
   const raw=Number.isInteger(block)&&blocks[block-1];
+  // Infer only an exact, unique row of declared labels. An explicit false
+  // always keeps the first row, including when its values resemble headings.
+  const header=pastedTable.header===undefined
+   ? Array.isArray(raw)&&raw.length>1&&Array.isArray(declared)&&raw[0].length===declared.length&&
+     new Set(raw[0]).size===declared.length&&declared.every((field,index)=>field?.label===raw[0][index])
+   : pastedTable.header;
   const aliases=new Map();
   const derivedKeys=new Set(Array.isArray(pastedTable.derive)?pastedTable.derive.map(field=>field?.key):[]);
   const omitted=header===true&&omittedSourceOrdinal(raw,declared,pastedTable.identity,derivedKeys);
