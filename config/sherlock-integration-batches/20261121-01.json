@@ -1515,17 +1515,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "单次只读取匹配数量与题名时直接检索",
+        "featureName": "首段依据当轮真实原表与可用能力回答用户",
         "branch": "codex/feat/ark-opening-thinking-20261121",
-        "baseCommit": "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3",
-        "tipCommit": "13bcac01a9442f1dee257443736999f861aa74bb",
+        "baseCommit": "13bcac01a9442f1dee257443736999f861aa74bb",
+        "tipCommit": "f760fe207914d87a68776279aeed0c7eac4007e1",
         "commits": [
           {
-            "commit": "13bcac01a9442f1dee257443736999f861aa74bb",
+            "commit": "30152ab187002d26424215475336ac81fac3703b",
             "parents": [
-              "f379cbfa85d5d4d616c6951100f2fd14c2ea44f3"
+              "13bcac01a9442f1dee257443736999f861aa74bb"
             ],
-            "subject": "对只要匹配条数的知识检索直接执行读取"
+            "subject": "让模型首段看见已给原表行列和带单位的首行事实"
+          },
+          {
+            "commit": "f760fe207914d87a68776279aeed0c7eac4007e1",
+            "parents": [
+              "30152ab187002d26424215475336ac81fac3703b"
+            ],
+            "subject": "向独立开场传递当轮可执行的图像与办公能力"
           }
         ],
         "files": [
@@ -1535,7 +1542,7 @@
           },
           {
             "status": "M",
-            "path": "test/conversation-first-response-effort.test.js"
+            "path": "test/model-task-opening-context.test.js"
           }
         ],
         "checks": [
@@ -1551,9 +1558,9 @@
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "明确仅要数量和首条标题的本机查找直接读一次，长篇文档比较和分析仍给出自然开场。",
-            "verifiedCommit": "13bcac01a9442f1dee257443736999f861aa74bb",
-            "completedAt": "2026-11-21T12:23:05.171278+00:00",
+            "summary": "已提供原表和确有执行能力时，自然首段不重复索要上传、不否认当前能力。",
+            "verifiedCommit": "f760fe207914d87a68776279aeed0c7eac4007e1",
+            "completedAt": "2026-11-21T12:45:19.735636+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -1568,7 +1575,7 @@
         "risks": [
           "模型自由措辞与托管服务响应时间随运行而变。"
         ],
-        "generatedAt": "2026-11-21T12:23:05.171278+00:00"
+        "generatedAt": "2026-11-21T12:45:19.735636+00:00"
       }
     },
     {
