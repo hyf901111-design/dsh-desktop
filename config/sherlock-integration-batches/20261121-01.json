@@ -3381,6 +3381,71 @@
         ],
         "generatedAt": "2026-11-21T13:58:28.421383+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图像首条真实讨论与历史默认标题恢复",
+        "branch": "codex/feat/image-first-topic-20261121",
+        "baseCommit": "48c29f9a883512b2235ece2874fa0c91fc3fc256",
+        "tipCommit": "ce63ce9d45a0398a12c8695cb014c9885dcdbe2e",
+        "commits": [
+          {
+            "commit": "80a5c1dbf6d893f0ae4690c80d423aba9489a983",
+            "parents": [
+              "48c29f9a883512b2235ece2874fa0c91fc3fc256"
+            ],
+            "subject": "在图像真人消息发布后命名并恢复已有图像讨论主题"
+          },
+          {
+            "commit": "ce63ce9d45a0398a12c8695cb014c9885dcdbe2e",
+            "parents": [
+              "80a5c1dbf6d893f0ae4690c80d423aba9489a983"
+            ],
+            "subject": "统一干净依赖与已安装图像标题补丁的升级结果"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/session-title-subject.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/session-title-subject.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/session-title-subject.test.js",
+              "test/image-session-title.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "12项通过，含真实SessionStore同步发布拒绝与延后写入、旧暂名恢复、显式重命名优先。",
+            "verifiedCommit": "ce63ce9d45a0398a12c8695cb014c9885dcdbe2e",
+            "completedAt": "2026-11-21T14:00:30.066211+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "G签名包已确认讨论完成与画布生成后正式历史仍只有默认名；最终安装后由原生入口复验。"
+        },
+        "acceptanceCriteria": [
+          "首条真实图像对话自动成为原生会话主题",
+          "恢复旧默认名并保留手改名与其他模式的后续使用"
+        ],
+        "risks": [
+          "补回旧默认名在会话进入活动服务时触发。"
+        ],
+        "generatedAt": "2026-11-21T14:00:30.066211+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3866,6 +3931,18 @@
         "test/client-mode-workspace-reference.test.js",
         "test/pending-conversation.test.js",
         "test/browser-app-native.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/session-title-subject.test.js",
+        "test/image-session-title.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
