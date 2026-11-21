@@ -510,6 +510,228 @@
         ],
         "recordedAt": "2026-11-21T05:38:57.353Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "各应用原生对话模式、快速响应及能力直达",
+        "branch": "codex/feat/mode-harness-20261121",
+        "baseCommit": "9844dc5fd8c90259a30d9762899cdc065e3265b5",
+        "tipCommit": "5ac05f3e3118f7e2619f73f16914756dd2d93333",
+        "commits": [
+          {
+            "commit": "a6abfb9b717e847bc3f1211cdb98e444654abbec",
+            "parents": [
+              "9844dc5fd8c90259a30d9762899cdc065e3265b5"
+            ],
+            "subject": "让各应用对话在等待模型首字时立即显示消息回执"
+          },
+          {
+            "commit": "6445ef6f89445ce8d7cf401a1c6dcf5d2a009167",
+            "parents": [
+              "a6abfb9b717e847bc3f1211cdb98e444654abbec"
+            ],
+            "subject": "让每轮对话携带发送时的工作区模式并保留历史归属"
+          },
+          {
+            "commit": "d0c9b96f3daa2c6fbebe5c8bdc48f1fa747da191",
+            "parents": [
+              "6445ef6f89445ce8d7cf401a1c6dcf5d2a009167"
+            ],
+            "subject": "按现行安装顺序构造笔记活动回归的客户端样本"
+          },
+          {
+            "commit": "bcfae8a3c03db0bfa27d56690d1c1d78a76bec9c",
+            "parents": [
+              "d0c9b96f3daa2c6fbebe5c8bdc48f1fa747da191"
+            ],
+            "subject": "按本轮应用和用户意图直达原生工具并核验可见权限"
+          },
+          {
+            "commit": "a51d55aa1c730392a2d747073ed4144b2214e6f4",
+            "parents": [
+              "bcfae8a3c03db0bfa27d56690d1c1d78a76bec9c"
+            ],
+            "subject": "读取笔记引用前先向对话区回传已接收状态"
+          },
+          {
+            "commit": "5ac05f3e3118f7e2619f73f16914756dd2d93333",
+            "parents": [
+              "a51d55aa1c730392a2d747073ed4144b2214e6f4"
+            ],
+            "subject": "让简答与直接编辑使用单轮低延迟推理默认值"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-mode-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-source-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-component-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/first-response-effort.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-ai.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/shared-main-agent.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/first-response-effort.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/turn-client-mode.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capability-header.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capability-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-mode-profile.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/client-tools.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/conversation-first-response-effort.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/strip-conversation-live-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-activity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-session.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/shared-main-agent.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/turn-client-mode.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/client-capability-service.test.ts",
+              "test/client-tools.test.js",
+              "test/image-generation-tool.test.js",
+              "test/notes-activity.test.js",
+              "test/notes-session.test.js",
+              "test/shared-main-agent.test.js",
+              "test/profile-runtime-patches.test.js",
+              "test/conversation-first-response-effort.test.js",
+              "test/turn-client-mode.test.js",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
+              "test/conversation-response-progress-browser.test.js",
+              "test/client-mode-profile.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=20000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "Test Files  13 passed (13)，Tests  172 passed (172)",
+            "verifiedCommit": "5ac05f3e3118f7e2619f73f16914756dd2d93333",
+            "completedAt": "2026-11-21T06:16:57.628813+00:00",
+            "timeoutMs": 360000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "使用已安装版本的会话协议和浏览器渲染器复测消息回执、模式发送、正常讨论、原生操作。集成后另行验证实机。"
+        },
+        "acceptanceCriteria": [
+          "当前原生用户消息拥有发送时的工作区模式，切换不串线",
+          "明确操作直达相应能力、自由对话及图像方案讨论不触发操作",
+          "模型未输出时能看到真实接收状态，正文与工具出现后替换"
+        ],
+        "risks": [
+          "首字时间受所选模型和网络波动影响"
+        ],
+        "generatedAt": "2026-11-21T06:16:57.628350+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -589,6 +811,30 @@
         "typecheck"
       ],
       "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/client-capability-service.test.ts",
+        "test/client-tools.test.js",
+        "test/image-generation-tool.test.js",
+        "test/notes-activity.test.js",
+        "test/notes-session.test.js",
+        "test/shared-main-agent.test.js",
+        "test/profile-runtime-patches.test.js",
+        "test/conversation-first-response-effort.test.js",
+        "test/turn-client-mode.test.js",
+        "test/conversation-live-activity.test.js",
+        "test/conversation-live-activity-browser.test.js",
+        "test/conversation-response-progress-browser.test.js",
+        "test/client-mode-profile.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=20000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 360000
     }
   ],
   "mainSynchronizations": []
