@@ -3532,6 +3532,75 @@
         ],
         "generatedAt": "2026-11-21T14:01:00.048379+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "研究卡来源去重与静态披露出处",
+        "branch": "codex/feat/research-source-details-dedup-20261121",
+        "baseCommit": "5e5becedc5956c8598b1c4030e3746aaae008deb",
+        "tipCommit": "aba811bf52e246a0b038a705d8ae179f55c69520",
+        "commits": [
+          {
+            "commit": "aba811bf52e246a0b038a705d8ae179f55c69520",
+            "parents": [
+              "5e5becedc5956c8598b1c4030e3746aaae008deb"
+            ],
+            "subject": "合并研究卡重复原文链接并显示已绑定的披露出处"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/component-data-status.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/component-source-info-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-record-source-display.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-source-info-browser.test.js",
+              "test/research-record-source-display.test.js",
+              "test/component-observed-provenance.test.js",
+              "test/component-data-status.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "37项聚焦测试通过，包含实际客户端来源页的浏览器入口、不同页和原文保留、具名原文优先、存量静态明细标注出处。",
+            "verifiedCommit": "aba811bf52e246a0b038a705d8ae179f55c69520",
+            "completedAt": "2026-11-21T14:30:59.830656+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "H实机确认重复及缺名；在隔离Chrome中按两组宿主代码读取同一批H五张原存卡，原链接条数2/2/1/1/2，现均为1，全部五张的底栏有上交所季报及2025-12-31，原数据不改写。后续签名版可打开同一存量卡复核。"
+        },
+        "acceptanceCriteria": [
+          "同一来源的裸URL和具名引用合并，优先显示正式标题",
+          "不同页或不同引文完整保留",
+          "静态明细的底栏读取其绑定数据集的正式来源与披露日"
+        ],
+        "risks": [
+          "旧卡完全未保存可信来源时仍显示来源未标注。"
+        ],
+        "generatedAt": "2026-11-21T14:30:59.830656+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4043,6 +4112,20 @@
         "test/conversation-first-response-effort.test.js",
         "test/client-mode-workspace-reference.test.js",
         "test/client-mode-profile.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/component-source-info-browser.test.js",
+        "test/research-record-source-display.test.js",
+        "test/component-observed-provenance.test.js",
+        "test/component-data-status.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
