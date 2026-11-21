@@ -69,7 +69,21 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
     const control = editor.locator('.narration-button')
     const state = () => control.getAttribute('data-state')
     const time = () => control.evaluate((el: Element) => (el.ownerDocument.defaultView as any).testAudio.currentTime)
+    const expectVoicedAudio = async () => {
+      const rms = await control.evaluate(async (el: Element) => {
+        const audio: HTMLAudioElement = (el.ownerDocument.defaultView as any).testAudio
+        if (audio.muted || audio.paused || !audio.volume) return 0
+        const response = await fetch(audio.currentSrc)
+        const decoder = new OfflineAudioContext(1, 1, 24000)
+        const track = await decoder.decodeAudioData(await response.arrayBuffer())
+        const opening = track.getChannelData(0).subarray(0, 2 * track.sampleRate)
+        const power = opening.reduce((sum, sample) => sum + sample * sample, 0)
+        return audio.volume * Math.sqrt(power / opening.length)
+      })
+      expect(rms).toBeGreaterThan(0.01)
+    }
     await expect.poll(state).toBe('playing')
+    await expectVoicedAudio()
     // Tab focus remains visible on the dark controls without a blue focus ring.
     await page.keyboard.press('Tab')
     await page.keyboard.press('Shift+Tab')
@@ -86,6 +100,7 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
     const nav = editor.locator('.theater nav')
     await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('2 / 5')
     await expect.poll(state).toBe('playing')
+    await expectVoicedAudio()
     await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('3 / 5')
     await expect.poll(state).toBe('playing')
     await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('4 / 5')
