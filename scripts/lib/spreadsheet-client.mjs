@@ -1,3 +1,4 @@
+import {addPresentationReplyDestination} from './presentation-reply-action.mjs'
 import {presentationCodec,installPresentationReferences,presentationMessageParts} from './presentation-references.mjs'
 import {spreadsheetRangeCodec,collectSpreadsheetReferences,installSpreadsheetReferences,spreadsheetMessageParts} from './spreadsheet-inline-references.mjs'
 import {SPREADSHEET_QUICK_PROMPTS} from '../../packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js'
@@ -188,6 +189,15 @@ ${welcomeAnchor}`,'right pane welcome component')
  change(notePortal,"EWorkNotesConversation,{sessionId,t,empty:conversationVacant,welcomeView:react.createElement(EWorkModeWelcome,{sessionId,mode:'notes'}),children:sessionPresentation.conversationView}",'notes welcome without replacing native history')
  const researchWelcome=': researchEmpty ? (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: "sRp_emptyState",'
  change(researchWelcome,": researchEmpty && research && !browserAppActive && !subagentPanel ? react.createElement(EWorkModeWelcome,{sessionId,mode:'research'}) "+researchWelcome,'research welcome without replacing personal history')
+ const replyStart=source.indexOf('function ResearchAssistantCanvasAction(')
+ const replyEnd=source.indexOf('function registerResearchAssistantActions(',replyStart)
+ if(replyStart<0||replyEnd<0)throw Error('Presentation reply action missing')
+ const replyAction=source.slice(replyStart,replyEnd)
+ change(replyAction,`function subscribePresentationReplyTarget(listener){
+   document.addEventListener('sherlock:presentation-reply-target',listener);
+   return ()=>document.removeEventListener('sherlock:presentation-reply-target',listener);
+ }
+ `+addPresentationReplyDestination(replyAction),'insert the assistant reply on the current presentation slide')
  const inputBar='function InputBar({ subagentPanel=false,'
  change(inputBar,inputBar.replace('subagentPanel=false','eworkSpreadsheet=false, eworkPresentation=false, eworkNoteContext, subagentPanel=false'),'spreadsheet context composer input')
  const barProps='eworkNotes:activeView === "notes",'

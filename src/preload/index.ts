@@ -662,6 +662,7 @@ contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
     presentationAdmission:(id:string,prompt:string,refs:unknown,useSlide:boolean)=>{if(!presentationView)throw Error('演示尚未就绪。');return presentationView.admit(id,prompt,refs,useSlide)},
+    presentationInsertReply:(id:string,text:string)=>{if(!presentationView)throw Error('演示尚未就绪。');return presentationView.insertReply(id,text)},
     presentationFlush:(id:string)=>presentationView?.flush(id),
     spreadsheetAdmission:(sessionId:string,prompt:string,references:unknown,useWorkbook?:boolean)=>{if(!spreadsheetView)throw Error('表格尚未就绪。');return spreadsheetView.admit(sessionId,prompt,references,useWorkbook)},
     spreadsheetFlush:(sessionId:string)=>spreadsheetView?.flush(sessionId),
