@@ -104,7 +104,7 @@ function odysseyForgetBoardDelivery(sessionId) {
   try { localStorage.removeItem('odyssey:board-delivery:' + sessionId); } catch {}
 }
 function odysseyAdmitBoardDelivery(sessionId, draft, startedAt) {
-  const intent = (${classifyResearchCreationRequest.toString()})(draft);
+  const intent = (${classifyResearchCreationRequest.toString()})(draft, 'research');
   if (!intent || !sessionId || !startedAt || sherlockShared(sessionId)) return;
   const delivery = {request:intent.request, startedAt};
   odysseyBoardDeliveries.set(sessionId, delivery);
@@ -117,7 +117,7 @@ function odysseyCreationEmit(sessionId) {
 }
 function odysseyCreationAnnounce(sessionId, draft, subagentPanel, busy, research = false, sawRunning = false) {
   if (!sessionId || subagentPanel || busy || sherlockShared(sessionId)) return;
-  const request = (${classifyResearchCreationRequest.toString()})(draft);
+  const request = (${classifyResearchCreationRequest.toString()})(draft, research ? 'research' : 'creation');
   // Chat components are saved by the main agent; only the canvas owns a
   // provisional component plan. An explicit workbench may still enter it.
   if (!request || request.kind === 'component' && !research) return;

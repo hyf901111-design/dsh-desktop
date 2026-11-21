@@ -22,7 +22,7 @@ export function admittedResearchTurn(session, delivery) {
       if (message?.source?.kind !== 'user') continue
       const candidate = canvasHumanRequest({events:[{type:'user/message',data:message}]})
       // A later send with identical wording cannot claim a different first message.
-      if (!candidate?.messageId || classifyResearchCreationRequest(candidate.text)?.request !== delivery.request) return
+      if (!candidate?.messageId || classifyResearchCreationRequest(candidate.text,'research')?.request !== delivery.request) return
       human = candidate
       break
     }

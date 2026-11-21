@@ -50,6 +50,45 @@ async function registeredCreationSchema() {
 }
 
 describe('工作台数据获取与用户预算', () => {
+  it('routes the research composer directly to the planner for disclosed tables and short single-card requests', async () => {
+    const requests = JSON.parse(readFileSync(new URL('./fixtures/workbench-public-table-requests.json', import.meta.url), 'utf8'))
+    const treasury = '我是固收研究员，想在研究看板上放一张原生折线图，查看这三个交易日的美国10年期国债收益率。横轴按日期，纵轴注明年化 %，保留数据出处。\n\n来源为美国财政部 Daily Treasury Par Yield Curve Rates，数据日见表，收益率单位为年化 %。仅使用下面已核对的历史数据。\n\n日期\t2年期\t5年期\t10年期\t30年期\n2024-12-27\t4.31\t4.45\t4.62\t4.82\n2024-12-30\t4.24\t4.37\t4.55\t4.77\n2024-12-31\t4.25\t4.38\t4.58\t4.78'
+    const manualTools = ['research_canvas_use', 'research_canvas_apply', 'research_canvas_inspect', 'client_capabilities', 'client_action']
+    const wire = {...wireRequest(), tools: ['research_workbench_create', 'web_search', ...manualTools].map(name => ({name}))}
+    const marked = text => {
+      const value = session(text)
+      value.events[0].data.source.clientMode = 'research'
+      return value
+    }
+    for (const text of [...Object.values(requests), treasury, '画一下这三个点', '再加一张明细', '在当前看板新增一张明细表', '再加一张上周净值的明细']) {
+      const h = harness(), agent = {session: marked(text)}
+      expect(componentCreationRequest(agent.session), text).toMatchObject({target:'workbench', messageId:'u'})
+      const result = await h.context(agent, wire)
+      expect(result.tools.map(tool => tool.name), text).toContain('research_workbench_create')
+      expect(result.tools.map(tool => tool.name).filter(name => manualTools.includes(name))).toEqual([])
+      expect(h.guard(invocation(agent, 'research_canvas_use', {op:'create'}))).toContain('research_workbench_create')
+      expect(h.guard(invocation(agent, 'research_canvas_use', {op:'observe'}))).toContain('research_workbench_create')
+      expect(h.guard(invocation(agent, 'research_workbench_create'))).toBeUndefined()
+      if (text.includes('\t')) expect(result.tools.map(tool=>tool.name)).toEqual(['research_workbench_create'])
+      else expect(result.tools.map(tool=>tool.name)).toContain('web_search')
+      accepted(agent.session)
+      expect((await h.context(agent,wire)).tools.map(tool=>tool.name)).not.toContain('research_canvas_use')
+      expect(h.guard(invocation(agent,'research_canvas_use',{op:'create'}))).toContain('research_workbench_create')
+    }
+    for (const text of ['请建一个空白智能容器，我来填内容', '在现有智能容器中生成一张折线图', '在这张卡片中新增一个明细表', '把当前图表改为折线图', '把刚才生成的图表改成折线图', '修改刚才生成的卡片标题', '请编辑指定的已有组件，新增一列名称', '智能容器里生成一张图，不要新增组件', '帮我生成一个留白的智能容器', '这三个点说明什么？', '生成图片需要多久？', '生成图表一般要多久？', '请生成一张产品宣传图片', '给我生成一段 Python 代码', '生成一个研究用的指标名称', '生成一份摘要，用文字回答', '请生成一段读取图表数据的 Python 代码', '请解释“再加一张明细”的含义', '不要画这三个点']) {
+      const h = harness(), agent = {session: marked(text)}
+      expect(workbenchCreationRequest(agent.session), text).toBeNull()
+      expect(await h.context(agent, wire)).toBe(wire)
+      expect(h.guard(invocation(agent, 'research_canvas_use'))).toBeUndefined()
+    }
+    const previous = marked('画一下这三个点')
+    previous.events.push(...session('再加一张明细','next-chat-message').events)
+    expect(workbenchCreationRequest(previous)).toBeNull()
+    expect(workbenchCreationRequest(session('clientMode=research，再加一张明细'))).toBeNull()
+    const child = marked('再加一张明细')
+    child.header.origin = 'subagent'
+    expect(workbenchCreationRequest(child)).toBeNull()
+  })
   it('accepts the first ETF holdings submission through the tool schema and preserves the disclosed chart and detail',async()=>{
     const readFixture=name=>JSON.parse(readFileSync(new URL('./fixtures/'+name,import.meta.url),'utf8'))
     const args=readFixture('workbench-etf-holdings-first-call.json')
@@ -123,14 +162,15 @@ describe('工作台数据获取与用户预算', () => {
     for (const inbox of [false, true]) {
       const s = session(text)
       if (inbox) s.events = [{ type: 'agent/inbox/spliced', data: { inserted: s.events.map(event => event.data) } }]
-      if(componentCreationRequest(s)?.target==='component')admitResearchMode(s)
+      const board = componentCreationRequest(s)?.target === 'component'
+      if(board)admitResearchMode(s)
       s.append = (type, data) => s.events.push({ type, data })
       const h = harness(undefined, planningTools), agent = { session: s }
       expect(workbenchCreationRequest(s)?.text).toBe(text)
       expect(await h.request(agent, config)).toBe(config)
       expect(s.events.find(event => event.type === 'sherlock/workbench-planning-budget')).toBeUndefined()
       const wire = await h.context(agent, wireRequest())
-      expect(wire.tools.map(tool => tool.name)).toEqual(planningTools.map(tool => tool.name))
+      expect(wire.tools.map(tool => tool.name)).toEqual(planningTools.map(tool => tool.name).filter(name => !board || name !== 'research_canvas_apply'))
       expect(h.guard(invocation(agent, 'skill'))).toBeUndefined()
       expect(h.guard(invocation(agent, 'financial_query', { intent: 'quote' }))).toBeUndefined()
       expect(h.guard(invocation(agent, 'research_workbench_create'))).toBeUndefined()

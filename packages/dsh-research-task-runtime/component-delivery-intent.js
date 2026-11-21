@@ -105,10 +105,29 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   const {request,documentOnly}=deliveryScope(raw)
   if (scope === 'document') return documentOnly
   if (!request) return null
+  const authoredClauses = deliveryClauses(request).map(normalizeComponentClause)
+  // A manual draft or an edit inside a named destination already has an owner.
+  const existingDestination = /(?:在|往|向)(?:当前|现有|已有|指定|选中|这[个张]|那[个张]|原来)(?:的)?(?:智能容器|容器草稿|组件|卡片|图表)(?:里|内|中|上)|(?:智能容器|手动容器)(?:里|内|中)(?:来)?(?:生成|制作|添加|创建)|(?:用|通过)(?:手动|空白|这个|当前|已有|现有)?(?:智能容器|手动容器)(?:来)?(?:生成|制作|添加|创建|放)|(?:创建|新建|生成|建立|建|加|打开|放)(?:一[个张]|[个张])?(?:(?:新的?|空白的?|留白的?|手动的?)\s*)*(?:智能容器|手动容器|容器草稿)/u
+  const existingEdit = /^(?:(?:请|麻烦|帮我|先|只|继续)\s*)*(?:(?:编辑|修改|修复|更新|调整|优化)(?:当前|刚才|之前|已有|现有|指定|选中|这[个张]|那[个张])[^，。；;\n]{0,32}(?:组件|卡片|图表|智能容器)|(?:把|将)(?:刚才|之前|选中|当前|已有|现有|这[个张]|那[个张])[^，。；;\n]{0,32}(?:组件|卡片|图表|智能容器)[^，。；;\n]{0,20}(?:改成|改为|更新|修改|调整|编辑|重命名))/u
+  const independentAddition = /(?:另外|另行|同时|并且|并)(?:再)?(?:帮我)?(?:新建|新增|创建|做一|加一|生成)/u.test(request)
+  if (!independentAddition && authoredClauses.some(clause => (existingDestination.test(clause) || existingEdit.test(clause)) && !creationDenied(clause))) return null
+  // A short imperative can name a new chart without saying “组件”. Strip only
+  // the destination board, so “在这张卡片中” continues to address an existing card.
+  const boardPrefix = /^(?:(?:请|麻烦|帮我|给我|我想|想|先|再|另外)\s*)*(?:(?:在|往|给)(?:当前|这个|现有|已有)?(?:的)?(?:研究)?(?:看板|工作台|画布)(?:上|里|内|中)?\s*)?(?:再|另外)?/u
+  const shortBoardCard = scope === 'research' && authoredClauses.some(clause => {
+    if (clause.includes('\t') || /[“”「」『』"‘’]/u.test(clause)) return false
+    const action = clause.replace(boardPrefix, '').replace(/(?:吧|即可)$/u, '')
+    if (/^画(?:一下|出)?(?:这|那)(?:组|些|几|[一二两三四五六七八九十\d]+个)?(?:数据点|点|读数|数值)(?:的图)?$/u.test(action)) return true
+    const object = /^(?:(?:画|放|加|补|新增|添加|创建|做|生成)(?:一[个张份]|张|个)|绘制|画出)(.+)$/u.exec(action)?.[1]
+    return object && object.length <= 64 && /(?:明细(?:表|卡)?|折线(?:图|卡)|柱(?:状|形)?图|条形图|散点图|趋势图|图表|表格|指标卡|组件|卡片)$/u.test(object)
+  })
   // Inspect only affirmative action clauses. Generation status is a noun,
   // and temporary negation must not suppress a separate requested addition.
   // The same classifier is serialized into the renderer.
-  const targets=[]
+  const boardVisual = /折线卡|柱状卡|行情卡|净值卡|指标卡|数据卡|条形图|柱图|曲线图|饼图|环形图|瀑布图|漏斗图|雷达图|箱线图|桑基图|时间线|热图|独立明细|交互网页|复盘网页|自包含网页/u
+  const otherDeliverable = /(?:代码(?:片段|示例)?|脚本|图片|图像|插画|照片|海报|摘要|名称)(?:给我)?(?:吧|即可)?$/u
+  const creationQuestion = /(?:生成|创建|绘制|制作)[^，。；;\n]{0,50}(?:需要多久|要多久|多长时间|要几分钟|要多少时间|为什么.{0,6}慢|的成功率(?:是|有)?多少)/u
+  const targets=shortBoardCard ? ['component'] : []
   const text = deliveryClauses(request).filter(clause => {
     // Past creation describes an existing object; it is not a new action.
     const action = normalizeComponentClause(clause).replace(/已(?:经)?(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版]))/gu, '')
@@ -126,14 +145,19 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
     const create = delivery || createBuild || !!explicit || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|重新规划|\b(?:create|build|generate)\b/iu.test(action)
     const denied = creationDenied(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
-    const accepted=create&&!denied&&!inspection&&!readOnlyComponentDelivery(action)
+    // “生成” also introduces ordinary text, images and code. A confirmed board
+    // identifies the destination, while the human still authorizes the object.
+    const namesBoardOutput = explicit || componentObject.test(action) || boardVisual.test(action)
+    const acceptsObject = scope !== 'research' || (namesBoardOutput && !clause.includes('\t') &&
+      !otherDeliverable.test(action) && !creationQuestion.test(action))
+    const accepted=create&&acceptsObject&&!denied&&!inspection&&!readOnlyComponentDelivery(action)
     if(accepted){const object=action.match(componentObject);targets.push(explicit?.target??(object&&boardObject.test(object[0])?'workbench':'component'))}
     return accepted
   }).join('；')
-  if (!text || /(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|规划|实现出来|还原出来|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
+  if ((!text && !shortBoardCard) || /(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|规划|实现出来|还原出来|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
   if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(request) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
-  if (/(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘))/u.test(text)) return null
+  if (!shortBoardCard && /(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘))/u.test(text)) return null
   const board = targets.includes('workbench')
   const component = targets.includes('component') || /组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|思维导图|组织架构图|关系图|流程图|\b(?:component|card|table|chart)\b/iu.test(text)
   // New canvas cards use the same host planning tool. Coding requests and
