@@ -4,6 +4,8 @@ export {displayKpiValue};
 import {KPI_VALUE_FIT_CSS as KPI_VALUE_FIT_STYLE} from './kpi-presentation.js';
 const KPI_VALUE_FIT_CSS=KPI_VALUE_FIT_STYLE;
 export {KPI_VALUE_FIT_CSS};
+import {refineStoredViewFlowSigns as upgradeSavedFlowSigns} from './stored-view-flow-signs.js';
+const refineStoredViewFlowSigns=upgradeSavedFlowSigns;
 import {specialChartRuntime} from './special-chart-artifact.js';
 import {advancedChartView} from './advanced-chart-view.js';
 import {CODE_VIEWPORT_CSS,INPUT_VIEW_RUNTIME} from './input-artifact.js';
@@ -45,6 +47,7 @@ export function refineStoredTemplateHtml(html){
  if(!encoded||encoded.length>512000)return html;
  let model;try{model=JSON.parse(encoded);}catch{return html;}
  if(!model.data||typeof model.data!=='object')return html;
+ if(model.templateId==='view')return refineStoredViewFlowSigns(html,model);
  if(['news','reports'].includes(model.templateId)&&model.data.type===model.templateId&&model.version==='21m-20260923-v1'&&model.data.version===1&&html.includes('data-research-kind="'+model.data.type+'"')&&(html.includes('class="feed-copy"')||html.includes('class="ot-news-copy"'))){
   // Saved host feeds already contain a vetted source anchor inside details.
   // Reuse that exact destination for the title; never invent a missing URL.

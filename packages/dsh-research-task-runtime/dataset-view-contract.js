@@ -1,3 +1,4 @@
+import {netFlowDisplayFields} from './dataset-net-flow-display.js'
 import {matchesDatasetViewScope} from './dataset-view-runtime.js';
 // A canonical snapshot plus declarative field references. No model-authored
 // executable code or independently restated record values are part of a view.
@@ -31,7 +32,7 @@ export function mapWorkbenchPanelFields(panel,resolveField){
   const names=section.kind==='schedule'?['label','start','end','owner','resource']:panel.type==='chart'||view.variant!==undefined?['label']:[]
   return mapKeys(mapKeys(section,names,resolve),['fields'],fields=>mapFields(fields,resolve))
  })
- return {...panel,view:{...mapKeys(view,['filters','details'],value=>mapFields(value,resolve)),
+ return {...panel,view:{...mapKeys(view,['filters','details','signedFields'],value=>mapFields(value,resolve)),
   ...(Object.hasOwn(view,'label')?{label:resolve(view.label)}:{}),
   ...(Object.hasOwn(view,'where')?{where:rules(view.where)}:{}),
   ...(Object.hasOwn(view,'sections')?{sections:sections(view.sections)}:{})}}
@@ -497,8 +498,8 @@ function validateViewScope(where,dataset){
  };
  check(where===undefined||Array.isArray(where)&&where.length<=8&&where.every(scopeRule),'视图范围条件无效；使用in、notNull或数值列的gt、gte、lt、lte、ne，不删改共同记录。')
 }
-export function validateDatasetView(config,datasets){
- check(exact(config,['dataset','sections'],['subject','note','filters','where','details','reorder','navigation','layout']),'组合视图配置包含无效字段。')
+export function validateDatasetView(config,datasets,{signedNetFlows=false}={}){
+ check(exact(config,['dataset','sections'],['subject','note','filters','where','details','reorder','navigation','layout','signedFields']),'组合视图配置包含无效字段。')
  check(id(config.dataset),'组合视图必须引用有效的共同数据集。')
  const dataset=validateWorkbenchDatasets(datasets).find(d=>d.id===config.dataset)
  check(dataset,'组合视图引用的共同数据集不存在。')
@@ -533,6 +534,12 @@ export function validateDatasetView(config,datasets){
  })
  check(!config.reorder||sections.some(s=>s.kind==='records'),'优先级排序需要可操作的记录内容区。')
  const view={dataset:config.dataset,...(config.where===undefined?{}:{where:config.where.map(rule=>({...rule,...(rule.values?{values:[...rule.values]}:{})}))}),...(config.subject===undefined?{}:{subject:config.subject}),...(config.note===undefined?{}:{note:config.note}),filters:[...(config.filters??[])],details:[...(config.details??[])],reorder:config.reorder??false,navigation:config.navigation??'flow',layout:config.layout??'stack',sections}
+ if(signedNetFlows||config.signedFields!==undefined){
+  const eligible=netFlowDisplayFields(view,dataset)
+  if(config.signedFields!==undefined)check(refs(config.signedFields)&&config.signedFields.every(key=>eligible.includes(key)),'正负号格式须引用本视图展示的净流入、净流出或其变化数值列。')
+  const signed=signedNetFlows?eligible:config.signedFields
+  if(signed.length)view.signedFields=[...signed]
+ }
  check(bytes(view)<=DATASET_VIEW_LIMITS.viewBytes,'组合视图配置超过8000字节。')
  return freeze({dataset,view})
 }
