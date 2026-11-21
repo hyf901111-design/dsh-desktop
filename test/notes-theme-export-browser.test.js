@@ -29,8 +29,8 @@ it.each(['no-preference','reduce'])('freezes the final shared palette when expor
    const parsed=new DOMParser().parseFromString(frozen.html,'text/html')
    return{before,color:parsed.querySelector('th').style.backgroundColor,elapsed:performance.now()-start}
   })
-  if(motion==='no-preference')expect(result.before).not.toBe('rgb(30, 185, 225)')
-  expect(result.color).toBe('rgb(30, 185, 225)');expect(result.elapsed).toBeLessThan(1200)
+  if(motion==='no-preference')expect(result.before).not.toBe('rgb(0, 190, 230)')
+  expect(result.color).toBe('rgb(0, 190, 230)');expect(result.elapsed).toBeLessThan(1200)
  }finally{await context.close()}
 })
 it('interrupts a pending theme barrier without freezing the already-applied style',async()=>{
@@ -45,7 +45,7 @@ it('bounds a stalled shared transition marker instead of waiting for unlimited a
 
 it('can freeze final theme colors for an off-screen mounted iframe',async()=>{
  const {context,frame}=await fixture('no-preference',true)
- try{const frozen=await frame.evaluate(()=>window.freezeNoteSnapshotElement(document.body,'offscreen-theme',{width:500,height:220}));expect(frozen.html).toContain('rgb(30, 185, 225)')}finally{await context.close()}
+ try{const frozen=await frame.evaluate(()=>window.freezeNoteSnapshotElement(document.body,'offscreen-theme',{width:500,height:220}));expect(frozen.html).toContain('rgb(0, 190, 230)')}finally{await context.close()}
 })
 
 it.each([undefined,true,false])('freezes frame=%s from the real component CSS without removing table rules',async frame=>{

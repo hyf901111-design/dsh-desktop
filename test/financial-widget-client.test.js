@@ -331,7 +331,7 @@ it('易方达模式保留表头、数据和搜索状态，组件库沿用全局�
  const f=await fixture();await f.act(async()=>{const n=f.workspace.createFinancialWidget('watchlist');f.workspace.setArtifacts([{...n,containerSpec:{...n.containerSpec,symbols:[s]}}])});await vi.waitFor(()=>expect(f.host.querySelector('.ew-watch-price').textContent).toBe('100.00'));
  const grid=f.host.querySelector('[data-ework-grid]');
  await f.act(async()=>{f.workspace.setWorkbenchStyle('enterprise')});
- expect(f.win.getComputedStyle(grid).getPropertyValue('--fw-heading')).toBe('#1eb9e1');expect(f.win.getComputedStyle(grid).getPropertyValue('--fw-heading-text')).toBe('#fff');
+ expect(f.win.getComputedStyle(grid).getPropertyValue('--fw-heading')).toBe('#00bee6');expect(f.win.getComputedStyle(grid).getPropertyValue('--fw-heading-text')).toBe('#fff');
  await f.event('click',f.host.querySelector('[aria-label="添加自选股"]'));const input=f.host.querySelector('input[role=combobox]');await f.input(input,'茅台');await f.act(async()=>{await new Promise(r=>setTimeout(r,250))});expect(f.document.querySelector('.ew-financial-suggestions [role=option]')).not.toBeNull();
  expect(f.document.querySelector('.ew-financial-suggestions').dataset.financialTheme).toBe('enterprise');
  await f.act(async()=>{f.workspace.setWorkbenchStyle('dark');await new Promise(r=>setTimeout(r,20))});expect(f.document.querySelector('.ew-financial-suggestions').dataset.financialTheme).toBe('dark');expect(input.value).toBe('茅台');expect(f.host.querySelector('.ew-watch-price').textContent).toBe('100.00');
