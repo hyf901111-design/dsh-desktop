@@ -16,7 +16,7 @@ export function initialWorkbenchInformationPlan(request, english = false) {
       : say('会把共用的输入、计算和比较结果放在同一张可交互网页中，在看板内操作，也可以下载整页。', 'I’ll put the shared inputs, calculations and comparisons on one interactive page that you can use on the board and download.')
   }
   if (/附件|上传|原型|仅用|只用|只根据|仅根据|离线|不联网|禁止联网|\.xlsx?\b|\.csv\b|\.docx?\b|\.pdf\b|\b(?:offline|attached|uploaded|prototype)\b/iu.test(text)) {
-    return say('先从指定材料提取对象、指标和来源。可比较的记录进入图表，原文和依据放在同卡的详情中。', 'I’ll extract the subjects, measures and sources from the specified material, chart comparable records, and keep the original evidence in the card details.')
+    return say('先从指定材料提取对象、指标和来源。按这次要求组织图表和明细，并保留原始依据。', 'I’ll extract the subjects, measures and sources from the specified material, arrange the charts and details as requested, and retain the original evidence.')
   }
   if (/禁止|不要|不需要|仅限|只需|只看|只做|只要|仅做|\b(?:only|exclude|without|do not)\b/iu.test(text)) return ''
   if (/(?:调调|调整|改改|改动|改一下|修改|adjust|change)/iu.test(text) &&

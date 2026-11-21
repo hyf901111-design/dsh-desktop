@@ -2,10 +2,13 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
 import {getComponentSourceInfo} from '../scripts/lib/component-source-info.mjs'
+import {workbenchOfflineRequest} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
+import {initialWorkbenchInformationPlan} from '../packages/dsh-research-task-runtime/workbench-planning-context.js'
 import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 
-const fixture=name=>JSON.parse(readFileSync(new URL('./fixtures/'+name,import.meta.url),'utf8'))
+const rawFixture=name=>readFileSync(new URL('./fixtures/'+name,import.meta.url),'utf8')
+const fixture=name=>JSON.parse(rawFixture(name))
 const requests=fixture('workbench-public-table-requests.json')
 const etf=fixture('workbench-etf-holdings-first-call.json')
 const management={
@@ -47,4 +50,44 @@ it('does not attribute unrelated, competing, local or credential-bearing URLs to
     expect(result.panels[0].artifact.sources[0].url).toBeUndefined()
     expect(result.panels[1].artifact.dataset.sourceUrl).toBeUndefined()
   }
+})
+
+it('accepts first dashboard submissions with a single flow section and original year-prefixed field names',()=>{
+  const first=fixture('workbench-public-table-plans.json')
+  const compile=(role,changes={})=>validateWorkbench({requestId:'chart-first',...structuredClone(first[role]),originalRequest:requests[role],...changes})
+  const etf=compile('ETF持仓')
+  expect(etf.panels[0].artifact).toMatchObject({variant:'horizontal',labels:['宁德时代','贵州茅台','中国平安','中际旭创','紫金矿业'],series:[{values:[3.81,3.38,2.86,2.66,2.23]}]})
+  expect(compile('ETF持仓',{originalRequest:requests.ETF持仓.replace('持仓条形图','持仓柱状图')}).panels[0].artifact.variant).toBe('bar')
+  expect(()=>compile('ETF持仓',{panels:first.ETF持仓.panels.map((p,i)=>i?p:{...p,view:{...p.view,navigation:'tabs'}})})).toThrow()
+  const blk=compile('资管经营')
+  expect(blk.panels[0].artifact).toMatchObject({variant:'groupedBar',series:[{values:[24367,390433,64447,9374,152730]},{values:[-8473,185942,87106,-55125,79245]}]})
+  const table=blk.panels[1].artifact.dataset
+  for(const label of ['2024年末AUM','2023年末AUM','2024全年净流入','2023全年净流入'])expect(table.fields.filter(f=>f.label===label)).toHaveLength(1)
+  expect(validateWorkbench(blk).panels).toEqual(blk.panels)
+  const raw=structuredClone(first.资管经营.sharedDatasets[0])
+  raw.pastedTable.numericFields[0]='不存在的列'
+  expect(()=>compile('资管经营',{sharedDatasets:[raw]})).toThrow(/数值列/)
+  expect(()=>compile('资管经营',{originalRequest:requests.资管经营.replace('2023年末AUM\t','2024年末AUM\t')})).toThrow(/表头|列键/)
+  const source=first.资管经营.sharedDatasets[0].id
+  const total={id:'totals',label:'总流入',aggregate:{dataset:source,groupBy:[],measures:[{key:'amount',label:'全年净流入',op:'sum',field:'2024全年净流入'}]}}
+  const aggregated=compile('资管经营',{sharedDatasets:[...first.资管经营.sharedDatasets,total],panels:[{title:'合计',type:'kpi',view:{dataset:'totals',sections:[{kind:'records',fields:['amount']}]}}]})
+  expect(aggregated.panels[0].artifact.items[0].value).toBe(641351)
+
+})
+
+it('retains the one official locator for a finalized historical table and avoids re-fetching its full period',()=>{
+  const originalRequest=rawFixture('workbench-treasury-dated-snapshot.txt').trim()
+  const url=originalRequest.match(/^https:\/\/[^\n]+/mu)[0]
+  const input={requestId:'historical',title:'三日复核',sharedDatasets:[{id:'history',label:'日期与收益率',pastedTable:{block:1,header:true,identity:'日期',numericFields:['10年期收益率']}}],
+    panels:[{title:'历史读数',type:'chart',view:{dataset:'history',variant:'line',unit:'%',sections:[{kind:'records',label:'日期',fields:['10年期收益率']}]}}]}
+  const output=validateWorkbench({...input,originalRequest})
+  expect(output.panels[0].artifact).toMatchObject({variant:'line',unit:'%',sources:[{url}],series:[{values:[4.62,4.55,4.58]}]})
+  expect(workbenchOfflineRequest(originalRequest)).toBe(true)
+  expect(workbenchOfflineRequest(originalRequest+'\n请去官网核实原始数据。')).toBe(false)
+  for(const altered of [originalRequest.replace(url,'https://example.org/unrelated'),originalRequest.replace(url,url+'&token=abc'),originalRequest.replace(url,url+'?token=abc'),originalRequest.replace('数据已定稿','这里给出帮助网址。数据已定稿')]){
+    expect(validateWorkbench({...input,originalRequest:altered}).sharedDatasets[0].sourceUrl).toBeUndefined()
+  }
+  const parts=requests.ETF持仓
+  expect(initialWorkbenchInformationPlan(parts)).toContain('按这次要求组织图表和明细')
+  expect(initialWorkbenchInformationPlan(parts,true)).toContain('arrange the charts and details as requested')
 })

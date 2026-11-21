@@ -1,0 +1,173 @@
+{
+  "ETF持仓": {
+    "requestId": "510310-2025q4-top5-review",
+    "title": "510310 易方达沪深300ETF · 2025年四季报前五大持仓复核",
+    "dataMode": "source",
+    "sharedDatasets": [
+      {
+        "id": "holdings510310",
+        "label": "510310 前五名持仓（2025-12-31）",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "identity": "code",
+          "numericFields": [
+            "seq",
+            "shares",
+            "value",
+            "weight"
+          ]
+        },
+        "fields": [
+          {
+            "key": "seq",
+            "label": "序号"
+          },
+          {
+            "key": "code",
+            "label": "股票代码"
+          },
+          {
+            "key": "name",
+            "label": "股票名称"
+          },
+          {
+            "key": "shares",
+            "label": "数量（股）",
+            "unit": "股"
+          },
+          {
+            "key": "value",
+            "label": "公允价值（元）",
+            "unit": "元"
+          },
+          {
+            "key": "weight",
+            "label": "占基金资产净值比例（%）",
+            "unit": "%"
+          }
+        ]
+      }
+    ],
+    "panels": [
+      {
+        "type": "chart",
+        "title": "前五大持仓 · 占基金资产净值比例（降序）",
+        "size": "large",
+        "layout": "wide",
+        "note": "截止日 2025-12-31，单位 %。仅含季报第 5.3.1 节前五名共 5 只股票，合计占比 14.94%，未归一化为 100%。来源：上海证券交易所披露的易方达沪深300ETF 2025 年第 4 季度报告。",
+        "view": {
+          "dataset": "holdings510310",
+          "variant": "bar",
+          "unit": "%",
+          "navigation": "flow",
+          "sections": [
+            {
+              "kind": "records",
+              "label": "name",
+              "fields": [
+                "weight"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "type": "view",
+        "title": "前五名持仓复核明细（含全部原字段）",
+        "size": "large",
+        "layout": "wide",
+        "note": "公允价值单位：人民币元，保留至分；数量单位：股；占比单位：%。原表按序号排列，本卡保留原字段值，未做任何换算。",
+        "view": {
+          "dataset": "holdings510310",
+          "navigation": "flow",
+          "sections": [
+            {
+              "kind": "records",
+              "title": "2025-12-31 前五名股票明细",
+              "fields": [
+                "seq",
+                "code",
+                "name",
+                "shares",
+                "value",
+                "weight"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "资管经营": {
+    "title": "贝莱德 2024 年报：各类别 AUM 与净流入复盘",
+    "dataMode": "source",
+    "sharedDatasets": [
+      {
+        "id": "blk2024_flows",
+        "label": "BlackRock 2024 年报 客户及产品类别 AUM 与净流入",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "identity": "客户及产品类别",
+          "numericFields": [
+            "2024年末AUM",
+            "2023年末AUM",
+            "2024全年净流入",
+            "2023全年净流入"
+          ]
+        }
+      }
+    ],
+    "panels": [
+      {
+        "title": "各类别净流入：2024 与 2023 分组对比（百万美元）",
+        "type": "chart",
+        "size": "wide",
+        "layout": "wide",
+        "note": "负值为净流出。零售 2023 年 -8,473、机构指数 2023 年 -55,125 为两大流出项，2024 年均转正；ETF 与现金管理为两年主要流入来源。AUM 为年末余额，不在此图展示。",
+        "view": {
+          "dataset": "blk2024_flows",
+          "variant": "groupedBar",
+          "unit": "百万美元",
+          "label": "客户及产品类别",
+          "note": "来源：BlackRock 2024 Form 10-K，印刷第 47 页（PDF 第 42 页）。金额单位百万美元；净流入为全年口径，负数代表净流出。",
+          "sections": [
+            {
+              "kind": "records",
+              "label": "客户及产品类别",
+              "fields": [
+                "2024全年净流入",
+                "2023全年净流入"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "客户及产品类别明细：年末 AUM 与全年净流入（五行）",
+        "type": "view",
+        "size": "large",
+        "layout": "wide",
+        "note": "AUM 为 2024、2023 年末余额，仅在本明细展示；净流入为当年全年口径，负数为净流出。",
+        "view": {
+          "dataset": "blk2024_flows",
+          "note": "来源：BlackRock 2024 Form 10-K，印刷第 47 页（PDF 第 42 页），原表照录。金额单位：百万美元。",
+          "sections": [
+            {
+              "kind": "records",
+              "title": "按客户及产品类别",
+              "fields": [
+                "客户及产品类别",
+                "2024年末AUM",
+                "2023年末AUM",
+                "2024全年净流入",
+                "2023全年净流入"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

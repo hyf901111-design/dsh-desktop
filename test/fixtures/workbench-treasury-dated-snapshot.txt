@@ -1,0 +1,6 @@
+我需要快速复核 2024 年最后三个交易日美国 10 年期国债的官方历史收益率。只做一张原生折线卡，能看到这三个日期的具体读数即可，单位 %。数据已定稿，无须定时更新。
+https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202412
+日期	10年期收益率
+2024-12-27	4.62
+2024-12-30	4.55
+2024-12-31	4.58

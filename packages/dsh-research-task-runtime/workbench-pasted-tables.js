@@ -156,6 +156,20 @@ function completeNamedCalculationPlan(plan,blocks,source){
  return {...prepared,sharedDatasets,panels};
 }
 
+function fixedSnapshotLanguage(prose){
+ return /(?:数据|原始记录|历史读数)(?:已经?|均已|均)?(?:定稿|定版|核定|最终确认)/u.test(prose) ||
+  /(?:只用|仅用|仅使用|只使用)(?:摘自|摘录自|引自|来自)[^。；;，,\n]{1,120}的(?:真实|历史|已披露)/u.test(prose);
+}
+
+export function hasCompletePastedSnapshot(request){
+ if(!fixedSnapshotLanguage(request))return false;
+ const {blocks,context}=scanPastedTables(request);
+ if(blocks.length!==1||!fixedSnapshotLanguage(context))return false;
+ const [headers,...rows]=blocks[0];
+ if(new Set(headers).size!==headers.length||!headers.every(Boolean)||!rows.every(row=>row.length===headers.length))return false;
+ return headers.some((header,index)=>!/(?:代码|编号|序号|日期|标识|^ID$|code$|date$)/iu.test(header)&&
+  rows.every(row=>row[index]===''||rawDecimal.test(row[index]))&&rows.some(row=>row[index]!==''));
+}
 function pastedDisclosure(request,firstTableStart){
  // The cited locator is on its own line between the source attribution and
  // the one pasted table. Never mine data cells or other links for provenance.
@@ -166,14 +180,34 @@ function pastedDisclosure(request,firstTableStart){
  const labeledLine=/^(?:数据|资料)?(?:来源|出处)/u.test(link[0].trim());
  const declarations=preceding.match(/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)(?=[:：为是\s]|标注|写为|保留)/gu)??[];
  if(declarations.length+(labeledLine?1:0)>1)return;
- const label=/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)\s*(?:标注为|标为|写为|保留|为|[:：])?\s*([^。；;，,、\n:/]{1,100}?)[。.]?$/u.exec(preceding)?.[1]?.trim();
+ let label=/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)\s*(?:标注为|标为|写为|保留|为|[:：])?\s*([^。；;，,、\n:/]{1,100}?)[。.]?$/u.exec(preceding)?.[1]?.trim();
  const end=link.index+link[0].length;
  if(end>=firstTableStart||request.slice(end,firstTableStart).trim())return;
- if(!labeledLine&&(!label||!/[\p{L}]/u.test(label)||/以及|与|和|\band\b|\\/iu.test(label)))return;
  const url=publicTableSourceHref(link[1]);
- if(url)return {source:labeledLine?new URL(url).hostname:label,url};
+ if(!url)return;
+ if(!declarations.length&&!label&&!labeledLine&&fixedSnapshotLanguage(preceding)&&!/(?:其他|另一|别的|示例|样例|帮助|教程|参考链接|附录网址|举例)/u.test(preceding)){
+  const attribution=/(?:只用|仅用|仅使用|只使用)(?:摘自|摘录自|引自|来自)\s*([^。；;，,\n]{1,120}?)的(?:真实|历史|已披露)/u.exec(preceding)?.[1]?.trim();
+  const official=/(?:官方|政府披露)(?:的)?(?:历史)?(?:数据|收益率|读数|统计|记录)/u.test(preceding)&&/\.gov(?:\.[a-z]{2})?$/iu.test(new URL(url).hostname);
+  label=attribution||(official?new URL(url).hostname:undefined);
+ }
+ if(!labeledLine&&(!label||!/[\p{L}]/u.test(label)||/以及|与|和|\band\b|\\/iu.test(label)))return;
+ return {source:labeledLine?new URL(url).hostname:label,url};
 }
 
+// Display labels may begin with a year or a tenor while persisted keys keep
+// their existing identifier contract. Only exact, unique original headers map.
+function inferredHeaderFields(labels,derivedKeys,aliases){
+ if(!Array.isArray(labels)||new Set(labels).size!==labels.length)return;
+ const reserved=new Set([...labels,...derivedKeys]);
+ return labels.map((label,i)=>{
+  if(validKey(label))return {key:label,label};
+  if(label!==label.trim()||!/^\p{N}[\p{L}\p{N}\p{M} _()（）%％./-]{0,99}$/u.test(label))return;
+  let key='column'+(i+1);
+  while(reserved.has(key))key+='_';
+  reserved.add(key);aliases.set(label,key);
+  return {key,label};
+ });
+}
 export function resolvePastedWorkbenchPlan(plan){
  const request=plan.originalRequest;
  const direct=Array.isArray(plan.sharedDatasets)&&plan.sharedDatasets.some(dataset=>dataset?.pastedTable!==undefined);
@@ -192,7 +226,7 @@ export function resolvePastedWorkbenchPlan(plan){
  const narrative=context.replace(/(?:https?|file):\/\/[^\s<>，。；！？]+/giu,'');
  const dateMatches=[...new Set([...narrative.matchAll(/\b\d{4}-\d{2}-\d{2}\b/gu)].map(match=>match[0]))];
  const asOf=dateMatches.length===1?dateMatches[0]:'用户消息所附原表，时点以记录为准';
- const identities=new Map();
+ const identities=new Map(), fieldAliases=new Map();
  const pastedSources=new Map();
  const aggregateIds=new Map(),datasetIds=new Set(datasets.map(dataset=>dataset?.id));
  const split=datasets.flatMap(draft=>{
@@ -220,12 +254,22 @@ export function resolvePastedWorkbenchPlan(plan){
      draft.note!==undefined&&(typeof draft.note!=='string'||!draft.note.trim()||draft.note.length>2000)||
      !exact(draft.pastedTable,['block'],['header','identity','numericFields','derive']))fail('只声明表段、列和计算，不附重抄的原表记录。');
   const {id,label,fields:declared,recordScope,pastedTable}=draft;
-  const {block,header=false,identity,numericFields=[],derive=[]}=pastedTable;
+  const {block,header=false}=pastedTable;
   const raw=Number.isInteger(block)&&blocks[block-1];
-  const derivedKeys=new Set(Array.isArray(derive)?derive.map(field=>field?.key):[]);
-  const sourceFields=declared===undefined&&header&&raw ? raw[0].map(label=>({key:label,label})) : declared;
-  if(declared===undefined&&(!sourceFields||!raw[0].every(validKey)))
+  const aliases=new Map();
+  const derivedKeys=new Set(Array.isArray(pastedTable.derive)?pastedTable.derive.map(field=>field?.key):[]);
+  const sourceFields=declared===undefined&&header&&raw ? inferredHeaderFields(raw[0],derivedKeys,aliases) : declared;
+  if(declared===undefined&&(!sourceFields||sourceFields.some(field=>!field)))
    fail('请按原表头的列顺序声明 fields，每列提供有效的 key 与原文 label。');
+  let {identity,numericFields=[],derive=[]}=pastedTable;
+  if(aliases.size){
+   const resolve=key=>aliases.get(key)??key;
+   fieldAliases.set(id,aliases);
+   identity=resolve(identity);
+   if(Array.isArray(numericFields))numericFields=numericFields.map(resolve);
+   if(Array.isArray(derive))derive=derive.map(field=>field&&typeof field==='object'?
+    {...field,left:resolve(field.left),right:resolve(field.right)}:field);
+  }
   const inputColumns=Array.isArray(sourceFields)?sourceFields.filter(field=>!derivedKeys.has(field?.key)):sourceFields;
   const fields=identity==='id'&&Array.isArray(inputColumns)&&!inputColumns.some(field=>field?.key==='id')&&raw?.[0].length===inputColumns.length+1
    ?[{key:'id',label:header?raw[0][0]:'记录编号'},...inputColumns]:inputColumns;
@@ -279,6 +323,13 @@ export function resolvePastedWorkbenchPlan(plan){
   return {id,label,asOf,note,...(citation?{sourceUrl:citation.url}:{}),fields:columns,records,...(recordScope===undefined?{}:{recordScope})};
  });
  const sharedDatasets=resolved.map(draft=>{
+  const aggregate=draft?.aggregate,aliases=fieldAliases.get(aggregate?.dataset);
+  if(aliases&&Array.isArray(aggregate.groupBy)&&Array.isArray(aggregate.measures)){
+   const resolve=key=>aliases.get(key)??key;
+   const measures=aggregate.measures.map(m=>!m||typeof m!=='object'?m:{...m,
+    ...(Object.hasOwn(m,'field')?{field:resolve(m.field)}:{}),...(m.where&&Object.hasOwn(m.where,'field')?{where:{...m.where,field:resolve(m.where.field)}}:{})});
+   draft={...draft,aggregate:{...aggregate,groupBy:aggregate.groupBy.map(resolve),measures}};
+  }
   const origin=pastedSources.get(draft?.aggregate?.dataset);
   return origin&&typeof draft.note==='string'&&!draft.note.includes(origin)?{...draft,note:origin+'\n'+draft.note}:draft;
  });
