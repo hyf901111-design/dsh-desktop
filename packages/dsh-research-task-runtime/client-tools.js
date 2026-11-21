@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto'
 import {defineTool} from '@deepseek-ai/dsh-tools'
+import {clientModeTurn} from './client-mode-profile.js'
 import {canvasHumanRequest} from './canvas-task-routing.js'
 import {parseConversationComponentManifest} from './conversation-component-contract.js'
 
@@ -118,6 +119,9 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
         if(!object(args)||method==='catalog'&&Object.keys(args).length)throw Error('客户端操作参数无效。')
         const call=method==='execute'?actionCall(args):undefined
         const identity=executionIdentity(exec)
+        const turn=clientModeTurn(exec.agent.session)
+        if(turn&&identity.authorityId!==turn.messageId)throw Error('用户输入已更新，请按当前消息继续。')
+        const expectedMode=method==='execute'&&identity.authorityId&&turn?.mode
         let endpoint
         try{endpoint=capabilityEndpoint(env)}catch{throw Error('客户端能力服务不可用。')}
         exec.signal?.throwIfAborted()
@@ -131,7 +135,7 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
           const response=await request(endpoint,{
             method:'POST',redirect:'error',signal:transportSignal,
             headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},
-            body:JSON.stringify({...identity,method:operation,...(call?{call}:{})})
+            body:JSON.stringify({...identity,method:operation,...(operation==='execute'&&expectedMode?{expectedMode}:{}),...(call?{call}:{})})
           })
           const result=await response.json()
           if(!response.ok)throw Error(typeof result?.error==='string'?result.error:'客户端操作失败。')

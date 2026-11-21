@@ -46,7 +46,7 @@ it('upgrades the exact installed v2 status layer while rejecting a changed histo
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchConversationLiveActivity(source)
  const frozen=JSON.parse(await readFile('test/fixtures/conversation-live-activity-v2.json','utf8')).definition
  const compatible=transformWorkbenchConversationPresentation(next,true)
- const start=compatible.indexOf('/* ework:conversation-live-activity:v9 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
+ const start=compatible.indexOf('/* ework:conversation-live-activity:v10 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
  const previous=compatible.slice(0,start)+frozen+compatible.slice(end)
  expect(patchConversationLiveActivity(previous)).toBe(next)
  expect(()=>patchConversationLiveActivity(previous.replace('2.4s linear infinite','1s linear infinite'))).toThrow('definition drifted')
@@ -125,4 +125,23 @@ it('groups adjacent webpage read failures and preserves each original activity r
  expect(conversationToolFailureLabel(b.data.root)).toBe('网页读取失败')
  expect(conversationToolFailureLabel(s.data.root)).toBeNull()
  expect(conversationActivityRecords([a,b,s,c]).map(group=>group.map(node=>node.key))).toEqual([['a','b'],['s'],['c']])
+})
+
+
+it('shows a transient native receipt on every active human conversation before public model output',()=>{
+ const message=user('讨论一下展示方式')
+ message.data.source.clientMode='spreadsheet'
+ const options={includeReceipt:true}
+ expect(update([message],options)).toMatchObject({kind:'acknowledged',text:expect.stringContaining('表格')})
+ expect(update([],{...options,running:false,runningTurn:null,flow:[pending({content:message.data.content})]})).toMatchObject({kind:'acknowledged'})
+ for(const props of [{initialImmediate:false},{accepted:false},{mode:'steer'}]){
+  expect(update([],{...options,running:false,runningTurn:null,flow:[pending({content:message.data.content,...props})]})).toBeNull()
+ }
+ const step={key:'answer',kind:'assistant-step',location:{turn:{turn:4}},data:{blocks:[{kind:'reasoning',text:'private'}]}}
+ expect(update([message,step],options).kind).toBe('acknowledged')
+ step.data.blocks.push({kind:'text',text:'先看两个口径。'})
+ expect(update([message,step],options)).toBeNull()
+ expect(update([message,result('action','spreadsheet_apply',{})],options)).toBeNull()
+ expect(update([message],{...options,running:false,settledTurn:4})).toBeNull()
+ expect(update([message],{...options,openState:'error'})).toBeNull()
 })

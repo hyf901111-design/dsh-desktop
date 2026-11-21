@@ -1,6 +1,6 @@
 import type { KnowledgeFilter, KnowledgeFormat } from '../../src/shared/knowledge-library'
 import type {ConversationComponentCreateArguments,ConversationComponentCreateReceipt} from './conversation-component-contract.js'
-export type ClientCapabilityContext={owner:string;sessionId:string;documentId:string;mode:'notes'|'research'|'conversation'|'spreadsheet'|'presentation'|'knowledge';editable:boolean;selectedBlockIds:string[];componentBlockIds?:string[];selectedParagraphIds?:string[];selectedNativeBlockIds?:string[];canvasAvailable?:boolean}
+export type ClientCapabilityContext={owner:string;sessionId:string;documentId:string;mode:'notes'|'research'|'conversation'|'spreadsheet'|'presentation'|'knowledge'|'image'|'browser'|'trajectory';editable:boolean;selectedBlockIds:string[];componentBlockIds?:string[];selectedParagraphIds?:string[];selectedNativeBlockIds?:string[];canvasAvailable?:boolean}
 /** Native payloads receive full type/content validation in the visible Notes editor. */
 export type CapabilityNativeBlock={id?:string;type?:string;props?:Record<string,unknown>;content?:string|unknown[]|Record<string,unknown>;children?:CapabilityNativeBlock[]}
 export type CapabilityNativeBlockAnchor={blockId:string;placement:'before'|'after'}

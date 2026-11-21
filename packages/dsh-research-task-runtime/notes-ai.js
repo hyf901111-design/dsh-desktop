@@ -151,10 +151,10 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
   const supplied=input.documentSnapshot
   const documentSnapshot=references.scope!=='none'&&supplied&&supplied.documentId===input.clientContext?.documentId&&supplied.scope===(references.scope==='selection'?'selected':references.scope)&&typeof supplied.revision==='string'&&supplied.revision.length<=256&&Array.isArray(supplied.blocks)&&supplied.blocks.length&&JSON.stringify(supplied).length<=500000?supplied:undefined
   const document=references.scope==='note'&&!documentSnapshot?input.markdown:'',selection=references.scope==='none'?'':input.selection,title=references.scope==='note'?input.title:''
-  const selectedReferences=await loadNoteReferenceContent(input.sessionId,references,input.prompt,signal,sourceOptions)
   const conversation=cardLocal?[]:sharedNoteConversationContext(session)
   if(session&&!cardLocal){engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title||''});setNoteConversationRunning(session,input.requestId,true);const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,references:noteMessageReferences(references,selection)});latest={...latest,...metadata};started=true}
   emit({stage:'model',reasoning:'',outputChars:0})
+  const selectedReferences=await loadNoteReferenceContent(input.sessionId,references,input.prompt,signal,sourceOptions)
   const response = retainedRoute?undefined:await ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } })
   if (!retainedRoute&&(!response.result.ok || !response.result.value.current || !response.result.value.routable)) throw Error('当前会话模型不可用，请选择模型后重试。')
   const route = retainedRoute||response.result.value.current

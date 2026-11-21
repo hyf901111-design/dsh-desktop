@@ -24,6 +24,13 @@ it('uses the real injected header hook to bind and navigate only its current ses
   document.body.dataset.workspaceSurface='knowledge'
   document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
   expect((await service.request({sessionId:'s',turnId:'1',method:'catalog'}) as any).mode).toBe('knowledge')
+  for(const [surface,mode] of [['image-factory','image'],['browser','browser'],['notes','notes']]){
+   document.body.dataset.workspaceSurface=surface
+   document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
+   const catalog=await service.request({sessionId:'s',turnId:'1',method:'catalog'})
+   expect(catalog.mode).toBe(mode)
+   expect(catalog.capabilities.find((item:any)=>item.id==='conversation.components.create')?.available).toBe(false)
+  }
   delete document.body.dataset.workspaceSurface
   document.dispatchEvent(new CustomEvent('sherlock:workspace-surface-change'))
   expect((await service.request({sessionId:'s',turnId:'1',method:'catalog'}) as any).mode).toBe('notes')

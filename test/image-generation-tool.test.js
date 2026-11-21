@@ -311,3 +311,13 @@ it('routes mixed layer edits to their explicit numbers and keeps the turn open f
  expect(f.prompts[0].text({agent:f.agent})).toContain('根据每个标签在句子中的位置和上下文')
  expect(f.concludeTurn).not.toHaveBeenCalled()
 })
+
+it('blocks model-initiated image generation on an image-workspace discussion before accessing the paid provider',async()=>{
+ const f=fixture({uploaded:true})
+ const user=f.agent.session.events.findLast(event=>event.type==='user/message').data
+ user.source={kind:'user',clientMode:'image'}
+ user.content=[{type:'text',text:imageFactoryPrompt('给我三条构图建议，不用改图。',{id:'12345678-aaaa-4aaa-8aaa-123456789012',operation:'edit',size:'1024x1024',width:1024,height:1024,title:'海报',internalReference:true})}]
+ await expect(f.call()).rejects.toThrow('没有要求生成或修改')
+ expect(f.request).not.toHaveBeenCalled()
+ expect(f.prompts[0].text({agent:f.agent})).toBe('')
+})

@@ -6,7 +6,7 @@ it('delivers to the existing main agent and keeps native delegation and tools in
  const ctx={agents:{get:()=>parent},on:(name,fn)=>{events.set(name,fn);return()=>events.delete(name)}}
  const adapter=createSharedMainAgentAdapter(ctx)
  const handle=await adapter.start({parentSessionId:'mine',prompt:'request',executionId:'t:resume:1',signal:new AbortController().signal,onSessionEvent:()=>{}})
- expect(sent).toMatchObject({target:'next-turn',wake:true,m:{id:'shared-board-task:t:resume:1',role:'user',content:[{type:'text',text:'request'}]}})
+ expect(sent).toMatchObject({target:'next-turn',wake:true,m:{id:'shared-board-task:t:resume:1',role:'user',source:{kind:'user',clientMode:'research'},content:[{type:'text',text:'request'}]}})
  events.get('session/event')({id:'other'},{type:'assistant/message',data:{message:{content:[{type:'text',text:'wrong'}]}}})
  events.get('session/event')(parent,{type:'assistant/message',data:{message:{content:[{type:'text',text:'done'}]}}})
  parent.status='idle';resolve();expect(await handle.result).toMatchObject({output:[{type:'text',text:'done'}]});await handle.dispose();expect(events.size).toBe(0)

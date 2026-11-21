@@ -4,7 +4,7 @@ import {generalFuturesWorkbench,initialWorkbenchInformationPlan} from '../../pac
 import {stripConversationResponseHistory} from './conversation-response-history.mjs'
 import {planningResponseMetadata} from './research-planning-feedback.mjs'
 import {conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,statusPresentationCss,transformStatusPresentation,transformWorkbenchConversationPresentation} from './conversation-status-presentation.mjs'
-const START='/* ework:conversation-live-activity:v9 */',V8='/* ework:conversation-live-activity:v8 */',V7='/* ework:conversation-live-activity:v7 */',V6='/* ework:conversation-live-activity:v6 */',V5='/* ework:conversation-live-activity:v5 */',V4='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
+const START='/* ework:conversation-live-activity:v10 */',V9='/* ework:conversation-live-activity:v9 */',V8='/* ework:conversation-live-activity:v8 */',V7='/* ework:conversation-live-activity:v7 */',V6='/* ework:conversation-live-activity:v6 */',V5='/* ework:conversation-live-activity:v5 */',V4='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
 
 const workbenchSourceObservationCache = new WeakMap()
 
@@ -39,7 +39,7 @@ function workbenchSourceObservation(root, name) {
  return status
 }
 
-export function workbenchConversationUpdate({ running, runningTurn, settledTurn, openState, order, nodeStore, flow, readText, english = false, classify = classifyResearchCreationRequest, readPlans = planningResponseMetadata }) {
+export function workbenchConversationUpdate({ running, runningTurn, settledTurn, openState, order, nodeStore, flow, readText, english = false, includeReceipt = false, classify = classifyResearchCreationRequest, readPlans = planningResponseMetadata }) {
  if (openState !== 'open') return null
  const say = (zh, en) => english ? en : zh
  const turnOf = node => node?.location?.turn?.turn ?? node?.data?.turn
@@ -53,8 +53,21 @@ export function workbenchConversationUpdate({ running, runningTurn, settledTurn,
  const prompt = current[promptIndex], ownerKey = prompt?.key ?? pending?.key
  if (!ownerKey || prompt && (prompt.kind !== 'user' || prompt.data?.source?.kind !== 'user')) return null
  const request=readText(prompt?.data?.content ?? pending?.submission?.content ?? [])
- if (classify(request)?.kind !== 'workbench') return null
+ const mode = prompt?.data?.source?.clientMode ?? pending?.submission?.clientMode
  const milestone = (kind, zh, en) => ({ ownerKey, kind, text: say(zh, en) })
+ if (classify(request)?.kind !== 'workbench' || (mode && !['research', 'conversation'].includes(mode))) {
+  if (!includeReceipt || (!pending && !running)) return null
+  // The native delivery acknowledgement covers the provider's first-token wait.
+  // Retire it as soon as the turn has a public answer or a concrete tool action.
+  const answered = current.slice(promptIndex + 1).some(node =>
+   node.kind === 'tool-call' || node.kind === 'turn-tail' ||
+   node.kind === 'assistant-step' && node.data?.blocks?.some(block => block.kind === 'image' || block.kind === 'text' && block.text?.trim()))
+  if (answered) return null
+  const names = { spreadsheet: ['表格', 'Spreadsheet'], presentation: ['演示', 'Presentation'], notes: ['笔记', 'Notes'], image: ['图像', 'Image'], research: ['研究看板', 'Research'], browser: ['浏览器', 'Browser'], knowledge: ['知识库', 'Knowledge'], trajectory: ['轨迹', 'Trajectory'] }
+  const name = Object.hasOwn(names, mode) ? names[mode] : null
+  return name ? milestone('acknowledged', name[0] + '对话已收到消息，正在准备回复。', name[1] + ' chat received your message. Preparing a reply.')
+   : milestone('acknowledged', '已收到消息，正在准备回复。', 'Message received. Preparing a reply.')
+ }
  const calls = current.slice(promptIndex + 1).filter(node => node.kind === 'tool-call' && node.data?.root)
  const plans = readPlans(calls).plans
  if (!running && !pending) {
@@ -101,7 +114,7 @@ function workbenchConversationFlow(flow, options) {
   if (Number.isSafeInteger(turn.turn) && (latest === null || turn.turn > latest.turn)) latest = turn
  }
  const settledTurn = latest?.status === 'closed' ? latest.turn : null
- const update = workbenchConversationUpdate({ ...options, settledTurn, flow, english, readText: parts => parseResearchPrompt(contentParts(parts).text).text })
+ const update = workbenchConversationUpdate({ ...options, settledTurn, flow, english, includeReceipt:true, readText: parts => parseResearchPrompt(contentParts(parts).text).text })
  if (!update) return flow
  const owner = flow.findIndex(entry => entry.key === update.ownerKey)
  if (owner < 0) return flow
@@ -173,7 +186,7 @@ const SHARED_NEXT=SHARED_LEGACY.replace('nodeStore,canvasTasks','nodeStore,flow:
 function scope(source,anchor,from,to){const a=source.indexOf(anchor),b=source.indexOf('\n\t\t//#endregion',a);if(a<0||b<a)throw Error('Live activity scope missing: '+anchor);const part=source.slice(a,b);if(part.split(from).length!==2)throw Error('Live activity anchor drifted: '+anchor);return source.slice(0,a)+part.replace(from,to)+source.slice(b)}
 export function stripConversationLiveActivity(source){
  source=stripConversationResponseHistory(source)
- const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),v4=source.includes(V4),v5=source.includes(V5),v6=source.includes(V6),v7=source.includes(V7),v8=source.includes(V8),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:v4?V4:v5?V5:v6?V6:v7?V7:v8?V8:START,a=source.indexOf(marker)
+ const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),v4=source.includes(V4),v5=source.includes(V5),v6=source.includes(V6),v7=source.includes(V7),v8=source.includes(V8),v9=source.includes(V9),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:v4?V4:v5?V5:v6?V6:v7?V7:v8?V8:v9?V9:START,a=source.indexOf(marker)
  if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
  const end=source.indexOf(END,a),block=source.slice(a,end+END.length+1)
  const historicalHash=legacy?'6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':previous?'e7f1ff04a7719a5abde00da1bd1fe91f49b155f61e1b013f5f3a0d319084b7a3':v3?'d169fef72132cd6ce5cd77d8aa6145cdba0dc3dd7bbfdc86c63032189f6963ef':v4?'578940255480b5473821c0a226b95a1d7624ce5cd75b8f1197b9f8a7327f1f2c':null
@@ -181,7 +194,9 @@ export function stripConversationLiveActivity(source){
  const previousV5=['51cc8be2cdf432f3a44bfbcac133c6c91a061030b0465832287b1f0c83faf605','555288281e837cee8d0067a9389a7993b4e4a37e08138bad65fe9dd39f8cf813']
  const priorDefinition = v8 ? '12d9afa15d1f08695143aadb6495f4ea412bf6a196f0e621bbd9ec19f28826e3' : v7 ? 'af63ec1fd79c2cb7c12b9ca5eb74e57d15ea632dce92c7f7b29afda3565e5d9f' :
   v6 ? 'b6d3b84c7dac71733130add9aacac7cca15dd104037f40afc8b4d76747e50e8f' : historicalHash
- const exactDefinition=v5 ? previousV5.includes(digest) : priorDefinition ? digest===priorDefinition : block===definition()
+ // v9 was installed with both shipped revisions of the shared workbench classifier.
+ const previousV9=['c87623c1985c9006059264fcb21393529ff8b2082b412f4935f228a827153b3e','050873044e0ba02164c7d72b1342f8c3582a577b639271e23c6a215c8a3af89c']
+ const exactDefinition=v9 ? previousV9.includes(digest) : v5 ? previousV5.includes(digest) : priorDefinition ? digest===priorDefinition : block===definition()
  if(source.split(marker).length!==2||source.split(END).length!==2||end<a||!exactDefinition)throw Error('Live activity definition drifted')
  if(v4||!historicalHash)source=transformWorkbenchConversationPresentation(source,true)
  if(!legacy)source=transformStatusPresentation(source,true)

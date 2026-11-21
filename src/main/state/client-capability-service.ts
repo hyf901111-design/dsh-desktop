@@ -7,7 +7,7 @@ import type {NoteDocumentAdapter,NoteDocumentLease} from '../notes/document-capa
 import {registerTrustedMainWindowHandler,type TrustedWindow} from '../ipc-trust'
 const validId=(v:any)=>typeof v==='string'&&v.length>0&&v.length<=256
 import type {SpreadsheetService} from '../spreadsheet/service'
-const modes=['conversation','research','notes','spreadsheet','presentation','knowledge']
+const modes=['conversation','research','notes','spreadsheet','presentation','knowledge','image','browser','trajectory']
 type Binding={sessionId:string;mode:ClientCapabilityContext['mode'];owner:string;generation:string;expires:number;controller:AbortController;windowIdentity:unknown}
 type CapabilityHandlers=NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>
 type Options={presentation?:ReturnType<typeof import('../presentation/service').installPresentation>;spreadsheet?:SpreadsheetService;sharedKnowledge?(current:()=>boolean,sessionId:string):CapabilityHandlers;knowledge?(current:()=>boolean,sessionId:string):NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>;conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
@@ -15,6 +15,7 @@ type Options={presentation?:ReturnType<typeof import('../presentation/service').
  * binding. A background task or child can never borrow a visible parent lease. */
 export class ClientCapabilityService{
  private binding?:Binding
+ private firstActions=new Map<string,Promise<unknown>>()
  private turns=new Map<string,{generation:string;authorityId?:string;authoritySeq?:number;catalogRequired?:boolean;canvasAvailable:boolean;editable:boolean;context:ClientCapabilityContext;conversationIdentity?:ConversationComponentExecutionIdentity;sheet?:Awaited<ReturnType<SpreadsheetService['acquire']>>;notesIdentity?:string;notes?:NoteDocumentLease;host:ReturnType<typeof createClientCapabilityHost>;receipts:Map<string,{fingerprint:string;promise:Promise<any>;identity?:ConversationComponentExecutionIdentity;authority:string}>}>()
  private authorities=new Map<string,{id?:string;sequence:number;instruction:string}>()
  private callers=new WeakMap<AbortSignal,AbortSignal|undefined>()
@@ -35,10 +36,11 @@ export class ClientCapabilityService{
   const binding=this.binding&&this.current(this.binding.sessionId)
   return binding?{ownerAccountId:binding.owner,sessionId:binding.sessionId,mode:binding.mode,generation:binding.generation}:undefined
  }
- async request(input:any,signal?:AbortSignal){
-  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference','workspace-reference'].includes(input.method)||['catalog','spreadsheet-reference','workspace-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
+ async request(input:any,signal?:AbortSignal):Promise<any>{
+  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','expectedMode','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference','workspace-reference'].includes(input.method)||['catalog','spreadsheet-reference','workspace-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
   if(input.sourceInstruction!==undefined&&(typeof input.sourceInstruction!=='string'||input.sourceInstruction.length>8000)||input.authorityId!==undefined&&!validId(input.authorityId)||(input.authorityId===undefined)!==(input.sourceInstruction===undefined)||(input.authorityId===undefined)!==(input.authoritySeq===undefined)||input.authoritySeq!==undefined&&(!Number.isSafeInteger(input.authoritySeq)||input.authoritySeq<0))throw Error('客户端请求来源无效。')
   if(input.sourceInstructionDigest!==undefined&&(input.sourceInstruction!==''||typeof input.sourceInstructionDigest!=='string'||!/^[a-f0-9]{64}$/.test(input.sourceInstructionDigest)))throw Error('客户端请求来源无效。')
+  if(input.expectedMode!==undefined&&(input.method!=='execute'||!input.authorityId||!modes.includes(input.expectedMode)))throw Error('客户端模式无效。')
   signal?.throwIfAborted()
   if(input.method==='spreadsheet-reference'||input.method==='workspace-reference'){
    const binding=this.current(input.sessionId)
@@ -51,6 +53,7 @@ export class ClientCapabilityService{
   }
   if(input.method==='receipt')return this.recoverReceipt(input,signal)
   const binding=this.current(input.sessionId);if(!binding)throw Error('当前会话未绑定可见客户端，请回到该会话后重试。')
+  if(input.expectedMode!==undefined&&binding.mode!==input.expectedMode)throw Error('当前客户端视图已切换，请在目标应用重新发送请求。')
   const key=JSON.stringify([binding.owner,binding.sessionId,input.turnId])
   let turn=this.turns.get(key)
   const authorityId=input.authorityId,sequence=input.authoritySeq??-1,instruction=input.sourceInstruction??''
@@ -65,6 +68,21 @@ export class ClientCapabilityService{
    // A newly admitted human can withdraw the old request in this same turn.
    // Revoke its lease immediately; completed receipts remain replayable.
    turn.notes?.dispose();turn.notes=undefined;turn.authorityId=authorityId;turn.authoritySeq=sequence;turn.catalogRequired=true
+  }
+  if(input.expectedMode!==undefined&&(!turn||turn.catalogRequired)&&(!turn||turn.generation===binding.generation)){
+   // The host alone acquires its normal lease. Parallel first actions share
+   // the acquisition and its receipt store; switching away invalidates both.
+   const acquisitionKey=JSON.stringify([key,binding.generation,sequence])
+   let pending=this.firstActions.get(acquisitionKey)
+   if(!pending){
+    const {call,expectedMode,...origin}=input
+    pending=this.request({...origin,method:'catalog'},signal)
+    this.firstActions.set(acquisitionKey,pending)
+   }
+   try{await pending}finally{if(this.firstActions.get(acquisitionKey)===pending)this.firstActions.delete(acquisitionKey)}
+   signal?.throwIfAborted()
+   if(this.current(input.sessionId)?.generation!==binding.generation||!authorityCurrent())throw Error('当前客户端上下文已变化，请重新发送请求。')
+   turn=this.turns.get(key)
   }
   if(input.method==='catalog'){
    const sheetService=binding.mode==='spreadsheet'?this.options.spreadsheet:undefined
