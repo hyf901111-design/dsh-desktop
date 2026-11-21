@@ -13,7 +13,8 @@ export function wantsTaskOpening(turn) {
   const work = turn.appEdit || turn.image || turn.create || turn.shared || turn.hasFile ||
     /(?:整理|梳理|分析|对比|核对|调查|准备|制作|建立|生成|做一|搭建|查找|检索|研究|\b(?:investigate|analy[sz]e|audit|prepare|build|research)\b)/iu.test(prose)
   if (!work) return false
-  return turn.image || turn.create?.kind === 'workbench' || turn.hasFile ||
+  const multiStep = /(?:先.{2,60}(?:再|然后)|(?:然后|接着|最后|随后).{1,30}(?:查|写|算|建|画|比较|核|验证|输出|导出)|\b(?:then|followed by|afterwards)\b)/iu.test(prose)
+  return turn.image || turn.create?.kind === 'workbench' || turn.hasFile || multiStep ||
     /数据分析|汇总|核对|逐笔|稽核|归因|报告|分析表|工资表|工作台|看板|审计|调研|利差|报告期|逐页|比较|对比|复盘|明细|复杂|分析.{0,8}(?:数据|情况|差异)|\b(?:analys[ei]s|audit|compar(?:e|ison)|forecast|reports?|dashboard|dataset|workbook)\b/iu.test(prose)
 }
 
@@ -21,15 +22,15 @@ export function allowTaskOpening(turn) {
   if (turn) supported.add(turn)
 }
 
-function milestone(session, turnNumber) {
+function milestone(session, turnNumber, firstFinding) {
   const events = session.events ?? []
   let result = false
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i]
-    if (event.type === 'turn/start') return result && event.data?.turn === turnNumber && Date.now() - event.time >= 15000
+    if (event.type === 'turn/start') return result && event.data?.turn === turnNumber && (firstFinding || Date.now() - event.time >= 15000)
     if (event.type === 'tool/result') result = true
     if (event.type === 'assistant/message' && event.data?.message?.content?.some(part => part.type === 'text' && part.text?.trim())) {
-      return result && Date.now() - event.time >= 15000
+      return result && (firstFinding || Date.now() - event.time >= 15000)
     }
   }
   return false
@@ -53,7 +54,7 @@ export function registerModelTaskReplies(ctx) {
         source:{kind:'plugin',plugin:'dsh-research-task-runtime',form:'instructions'},
         content:[{type:'text',text:'继续完成本轮用户的原始任务。根据这轮的实际资料和工具执行，保留已有授权范围，开场不用重复。'}]}]}
     }
-    if (step > 1 && request.tools?.length && milestone(agent.session,turnNumber)) {
+    if (step > 1 && request.tools?.length && milestone(agent.session, turnNumber, opened.has(turn) && step === 3)) {
       return {...request,system:(request.system ?? '')+'\n用户正在等这项工作的结果。如果还需继续操作，先用简短正文告诉用户刚刚得到的实质发现、遇到的具体困难或完成的阶段，然后继续。根据真实回执写，已有结果足以回答时直接交付。'}
     }
     return request
