@@ -481,11 +481,13 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     if (!simulation && !prototypeSource && !documentPaths && hasPastedTable && observationComparison(human.text)) {
       const create=tools.find(tool=>tool.name===CREATE_TOOL)
       if (create) {
+        state.restrictEvidence=true
+        state.allowedTools.clear()
         const parameters={type:'object',additionalProperties:false,required:['title','panels'],properties:{
           title:{type:'string'},panels:{type:'array',minItems:1,maxItems:1,items:{type:'object',additionalProperties:false,
             required:['type','title','htmlFile'],properties:{type:{type:'string',enum:['files']},title:{type:'string'},
-              htmlFile:{type:'object',additionalProperties:false,required:['name'],
-                properties:{name:{type:'string'},observationComparison:{type:'boolean',enum:[true]},html:{type:'string',description:'仅当另有宿主比较视图无法表达的操作或算式时，直接提交完整自包含 HTML。与 observationComparison 互斥。'}}}}}}}}
+              htmlFile:{type:'object',additionalProperties:false,required:['name','observationComparison'],
+                properties:{name:{type:'string'},observationComparison:{type:'boolean',enum:[true]}}}}}}}}
         return {...request,tools:[{...create,parameters,description:'用本轮已核实的原表和指标组合创建一张可离线操作的比较网页。'}],
           system:[request.system,'宿主已从本轮消息绑定日期、原表、来源、利差组合与单位，负责生成完整可带走网页。直接调用 research_workbench_create，传 title 和一个 panel，如 {"title":"收益率曲线复盘","panels":[{"type":"files","title":"收益率曲线复盘","htmlFile":{"name":"收益率曲线复盘.html","observationComparison":true}}]}，标题可按用户主题命名。无需编写前端、重抄数据或计算结果。根据实际回执回复。'].join('\n')}
       }

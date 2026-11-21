@@ -1,16 +1,34 @@
+import {publicTableSourceHref} from './component-provenance.js'
 import {pastedWorkbenchBlocks} from './workbench-pasted-tables.js'
+
+// Resolve dates against the supplied observations. Month/day alone may
+// identify only one row; a trailing bare day inherits the first date's month.
+function observedDate(label, dates, first) {
+  if (dates.includes(label)) return label
+  const parts = /^(?:(?:(\d{4})年)?(\d{1,2})月)?(\d{1,2})日$/u.exec(label)
+  if (!parts || !parts[2] && !first) return
+  const [, year, month, day] = parts
+  const mm = month?.padStart(2,'0') ?? first.slice(5,7)
+  const yyyy = year ?? (!month && first ? first.slice(0,4) : undefined)
+  const matches = dates.filter(date => (!yyyy || date.startsWith(yyyy+'-')) && date.endsWith('-'+mm+'-'+day.padStart(2,'0')))
+  if (matches.length === 1) return matches[0]
+}
+const dateLabel = String.raw`(?:\d{4}-\d{2}-\d{2}|(?:(?:\d{4}年)?\d{1,2}月)?\d{1,2}日)`
+const defaultDates = new RegExp('(默认|初始)\\s*(?:比较|对比)\\s*('+dateLabel+')\\s*(?:至|到|与|和|→|～|~)\\s*('+dateLabel+')(?=[\\s，,。；;]|$)','u')
 
 // A historical rate table and explicitly named spreads already specify this
 // comparison. Keep ambiguous pairs, extra formulas and data retrieval in the planner.
 export function observationComparison(request) {
   if (typeof request !== 'string' || request.length > 40000) return null
   const prose = request.split(/\r?\n/u).filter(line => !/[\t|｜]/u.test(line)).join('\n')
+  const requestedDates = defaultDates.exec(prose)
+  const otherInstructions = requestedDates ? prose.replace(defaultDates,'') : prose
   if (!/网页|HTML/iu.test(prose) || !/离线|断网|带走/u.test(prose) ||
       !/基准日/u.test(prose) || !/观察日/u.test(prose) || !/切换|选择|筛选/u.test(prose) ||
       !/曲线/u.test(prose) || !/明细/u.test(prose) || !/利差|点差/u.test(prose) ||
       !/(?:利率|收益率|费率|各(?:列|项)?(?:数据|数值)?|单位)[^。；，\n]{0,14}(?:[%％]|百分比)/u.test(prose) ||
       !/%|％|百分比/u.test(prose) || !/\bbps?\b|基点/iu.test(prose) ||
-      /不要.{0,4}网页|只(?:要|用)原生|多张|另(?:外|做|加)|实时刷新|持续更新|联动.{0,3}(?:另一|其他)卡|预测|预警|移动均线|跨币种|保存修改|筛选行业|异常筛选|额外|新增|违约|久期|凸性|敏感度|情景|阈值|权重|插值|平均|分位|置信|回归|归因|持久化|保存选择|导出.{0,4}(?:CSV|Excel)|默认|初始|自定义|手动输入/iu.test(prose)) return null
+      /不要.{0,4}网页|只(?:要|用)原生|多张|另(?:外|做|加)|实时刷新|持续更新|还(?:要|需)|滑块|回放|刷选|拖动|排序|动画|手动编辑|核(?:查|实|验).{0,10}(?:来源|官网|原文)|联网核对|联动.{0,3}(?:另一|其他)卡|预测|预警|移动均线|跨币种|保存修改|筛选行业|异常筛选|额外|新增|违约|久期|凸性|敏感度|情景|阈值|权重|插值|平均|分位|置信|回归|归因|持久化|保存选择|导出.{0,4}(?:CSV|Excel)|默认|初始|自定义|手动输入/iu.test(otherInstructions)) return null
   const blocks = pastedWorkbenchBlocks(request)
   if (blocks.length !== 1) return null
   const [header,...rows] = blocks[0]
@@ -35,9 +53,26 @@ export function observationComparison(request) {
     pairs.push([left,right])
   }
   if (pairs.length < 2 || new Set(pairs.map(pair=>pair.join(','))).size !== pairs.length) return null
-  const source = /(?:^|\n)\s*(?:数据来源|来源|出处)\s*[:：]\s*([^\n]+)/u.exec(prose)?.[1]?.trim()
+  let source = /(?:^|\n)\s*(?:数据来源|来源|出处)\s*[:：]\s*([^\n]+)/u.exec(prose)?.[1]?.trim()
   const publisher = /(?:摘自|摘录自)\s*([^。；，\n]{1,140}?)\s*(?:的真实|的历史|的公开|[，。；])/u.exec(prose)?.[1]?.trim()
-  return {fields, rows:[...rows].sort((a,b)=>a[0].localeCompare(b[0])), pairs, source, publisher}
+  // A single bare citation can follow an explicit attribution, directly
+  // before the supplied table. Other navigational URLs belong to the planner.
+  const urlCount = (request.match(/https?:\/\//giu) ?? []).length
+  if (urlCount > 1) return null
+  if (!source && publisher && urlCount === 1) {
+    const bareURL = /(?:^|\n)[ ]*(https?:\/\/[^\s]+)[ ]*\r?\n(?=[^\n]*(?:\t|[|｜]))/iu.exec(request)?.[1]
+    if (bareURL) source = publicTableSourceHref(bareURL)
+  }
+  if (urlCount && !publicTableSourceHref(source)) return null
+  let initial
+  if (requestedDates) {
+    const dates = rows.map(row=>row[0])
+    const baseline = observedDate(requestedDates[2],dates)
+    const observation = observedDate(requestedDates[3],dates,baseline)
+    if (!baseline || !observation) return null
+    initial = {baseline,observation}
+  }
+  return {fields, rows:[...rows].sort((a,b)=>a[0].localeCompare(b[0])), pairs, source, publisher, ...(initial && {initial})}
 }
 
 const escapeHtml = s => String(s).replace(/[&<>"']/gu,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch])
@@ -56,7 +91,8 @@ function interactivePage(data) {
     addOption(observed,row[0],row[0])
   }
   data.pairs.forEach(([left,right],i)=>addOption(pair,fields[left]+' − '+fields[right],String(i)))
-  observed.selectedIndex = data.rows.length-1
+  base.value = data.initial?.baseline ?? data.rows[0][0]
+  observed.value = data.initial?.observation ?? data.rows.at(-1)[0]
   // Source strings preserve precision in the detail rows. Convert to fixed
   // integers for exact basis-point subtraction, including sub-bp and zero.
   const digits = Math.max(2,...data.rows.flatMap(row=>row.slice(1).map(v=>(v.split('.')[1]||'').length)))
