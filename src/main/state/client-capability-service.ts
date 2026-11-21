@@ -37,19 +37,20 @@ export class ClientCapabilityService{
   return binding?{ownerAccountId:binding.owner,sessionId:binding.sessionId,mode:binding.mode,generation:binding.generation}:undefined
  }
  async request(input:any,signal?:AbortSignal):Promise<any>{
-  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','expectedMode','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference','workspace-reference'].includes(input.method)||['catalog','spreadsheet-reference','workspace-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
+  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','expectedMode','includeContent','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference','workspace-reference'].includes(input.method)||['catalog','spreadsheet-reference','workspace-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
   if(input.sourceInstruction!==undefined&&(typeof input.sourceInstruction!=='string'||input.sourceInstruction.length>8000)||input.authorityId!==undefined&&!validId(input.authorityId)||(input.authorityId===undefined)!==(input.sourceInstruction===undefined)||(input.authorityId===undefined)!==(input.authoritySeq===undefined)||input.authoritySeq!==undefined&&(!Number.isSafeInteger(input.authoritySeq)||input.authoritySeq<0))throw Error('客户端请求来源无效。')
   if(input.sourceInstructionDigest!==undefined&&(input.sourceInstruction!==''||typeof input.sourceInstructionDigest!=='string'||!/^[a-f0-9]{64}$/.test(input.sourceInstructionDigest)))throw Error('客户端请求来源无效。')
+  if(input.includeContent!==undefined&&(input.includeContent!==true||input.method!=='workspace-reference'||!['spreadsheet','presentation'].includes(input.expectedMode)))throw Error('当前文档读取范围无效。')
   if(input.expectedMode!==undefined&&(!input.authorityId||!modes.includes(input.expectedMode)||!(input.method==='execute'||input.method==='workspace-reference'&&['spreadsheet','presentation'].includes(input.expectedMode))))throw Error('客户端模式无效。')
   signal?.throwIfAborted()
   if(input.method==='spreadsheet-reference'||input.method==='workspace-reference'){
    const binding=this.current(input.sessionId)
    if(!binding||input.authorityId===undefined||input.expectedMode!==undefined&&binding.mode!==input.expectedMode)return {}
    if(input.method==='workspace-reference'&&binding.mode==='presentation'){
-    return this.options.presentation?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest)??{}
+    return this.options.presentation?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest,input.includeContent===true)??{}
    }
    if(binding.mode!=='spreadsheet')return {}
-   return this.options.spreadsheet?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest)??{}
+   return this.options.spreadsheet?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest,input.includeContent===true)??{}
   }
   if(input.method==='receipt')return this.recoverReceipt(input,signal)
   const binding=this.current(input.sessionId);if(!binding)throw Error('当前会话未绑定可见客户端，请回到该会话后重试。')

@@ -41,19 +41,19 @@ function capabilityEndpoint(env){
   return endpoint.origin+'/client-capabilities'
 }
 
-// Only admission metadata is read here. The scoped native inspection supplies the content.
-export async function readWorkspaceReference(agent,signal,{env=process.env,fetch:request=globalThis.fetch,expectedMode}={}){
+// Only an implicit document read may request bounded content together with the host admission.
+export async function readWorkspaceReference(agent,signal,{env=process.env,fetch:request=globalThis.fetch,expectedMode,includeContent=false}={}){
   if(!env.SHERLOCK_RESEARCH_CONTEXT_URL)return undefined
   try{
     const claimed=expectedMode&&claimedWorkspaceMessage(agent.session,expectedMode)
     if(expectedMode&&!claimed)return undefined
     const identity=executionIdentity({agent},claimed)
     if(!identity.authorityId)return undefined
-    const timeout=AbortSignal.timeout(500)
+    const timeout=AbortSignal.timeout(includeContent?2000:500)
     const response=await request(capabilityEndpoint(env),{
       method:'POST',redirect:'error',signal:signal?AbortSignal.any([signal,timeout]):timeout,
       headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},
-      body:JSON.stringify({...identity,method:'workspace-reference',...expectedMode&&{expectedMode}})
+      body:JSON.stringify({...identity,method:'workspace-reference',...expectedMode&&{expectedMode},...includeContent&&{includeContent:true}})
     })
     if(!response.ok)return undefined
     const value=await response.json()
@@ -61,7 +61,8 @@ export async function readWorkspaceReference(agent,signal,{env=process.env,fetch
       if(value?.mode!==undefined&&value.mode!==expectedMode||expectedMode==='presentation'&&!value?.mode)return undefined
       const scopes=expectedMode==='presentation'?['slide','selection','none']:['workbook','ranges','none']
       if(!scopes.includes(value?.referenceScope))return undefined
-      return {mode:expectedMode,scope:value.referenceScope,...Number.isInteger(value.referenceCount)&&value.referenceCount>0&&{count:value.referenceCount}}
+      const snapshot=includeContent&&['workbook','slide'].includes(value.referenceScope)&&object(value.snapshot)&&JSON.stringify(value.snapshot).length<=24000?value.snapshot:undefined
+      return {mode:expectedMode,scope:value.referenceScope,...snapshot&&{snapshot},...Number.isInteger(value.referenceCount)&&value.referenceCount>0&&{count:value.referenceCount}}
     }
     if(value?.mode==='presentation'&&['none','slide','selection'].includes(value.referenceScope))return {mode:'presentation',scope:value.referenceScope}
     if(['workbook','ranges','none'].includes(value?.referenceScope)&&typeof value.guidance==='string')return {mode:'spreadsheet',guidance:value.guidance}

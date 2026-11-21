@@ -244,10 +244,29 @@ export function installPresentation(options: {
   const admissionFor = (key: Key, instruction: string, digest?: string) =>
     admissions.get(who(key))?.get(digest ?? hash(canvasHumanText(instruction) ?? instruction))
   return {
-    referenceSettings(key: Key, instruction: string, digest?: string) {
+    referenceSettings(key: Key, instruction: string, digest?: string, includeContent = false) {
       const ref = admissionFor(key, instruction, digest)
       if (!ref) return {}
-      return { mode: 'presentation', referenceScope: ref.references.length ? 'selection' : ref.useSlide ? 'slide' : 'none' }
+      const settings = { mode: 'presentation', referenceScope: ref.references.length ? 'selection' : ref.useSlide ? 'slide' : 'none' }
+      if (!includeContent || settings.referenceScope !== 'slide') return settings
+      const { revision, deck } = store.read(key)
+      if ((deck?.id ?? null) !== (ref.documentId ?? null)) return {}
+      if (!deck || !ref.slideId) return { ...settings, snapshot: { revision, currentSlide: null } }
+      const slide = store.inspect(key, ref.slideId, ref.slideId).currentSlide
+      if (!slide) return {}
+      const notes = slide.notes.slice(0, 4800), elements = []
+      let remaining = 7000, truncated = notes.length < slide.notes.length
+      for (const element of slide.elements) {
+        const content = element.text || (element.cells ? element.cells.map((row: string[]) => row.join(' ｜ ')).join('\n') :
+          element.data ? JSON.stringify({ labels: element.data.labels, legends: element.data.legends, series: element.data.series }) : '')
+        if (!content) continue
+        if (remaining <= 0 || elements.length >= 64) { truncated = true; break }
+        const text = content.slice(0, remaining)
+        if (text.length < content.length) truncated = true
+        elements.push({ type: element.type, text })
+        remaining -= text.length
+      }
+      return { ...settings, snapshot: { revision, slideId: slide.id, notes, elements, truncated } }
     },
     handlers(key: Key, current: () => boolean, instruction: string, digest?: string) {
       const admitted = admissionFor(key, instruction, digest)

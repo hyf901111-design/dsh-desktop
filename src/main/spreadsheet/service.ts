@@ -1,5 +1,5 @@
 import {createHash,randomUUID} from 'node:crypto'
-import {blankWorkbook,inspectWorkbook,safeId,sheetRange} from '../../shared/spreadsheet/workbook'
+import {address,blankWorkbook,inspectWorkbook,safeId,sheetRange} from '../../shared/spreadsheet/workbook'
 import {SpreadsheetStore,type WorkbookKey,type WorkbookRecord,type WorkbookPosition} from './store'
 import type {CapabilityHandler} from '../../../packages/dsh-research-task-runtime/client-capabilities'
 import {canvasHumanText} from '../../../packages/dsh-research-task-runtime/canvas-task-routing.js'
@@ -56,9 +56,37 @@ export class SpreadsheetService{
   const item=this.admitted.get(index(key))?.get(instructionKey(instruction,digest))
   return item&&Date.now()-item.time<30*60_000?item:undefined
  }
- referenceSettings(key:WorkbookKey,instruction:string,digest?:string){
+ referenceSettings(key:WorkbookKey,instruction:string,digest?:string,includeContent=false){
   const admitted=this.admission(key,instruction,digest)
-  return admitted&&referenceSettings(admitted)
+  if(!admitted)return
+  const settings=referenceSettings(admitted)
+  if(!includeContent||settings.referenceScope!=='workbook')return settings
+  const {revision,workbook}=this.store.load(key)
+  if((workbook?.id??null)!==admitted.bookId)return
+  if(!workbook)return {...settings,snapshot:{revision,workbook:null}}
+  const samples=[]
+  let characters=0,truncated=workbook.sheetOrder.length>6
+  for(const sheetId of workbook.sheetOrder.slice(0,6)){
+   const sheet=workbook.sheets[sheetId]!,cells=[]
+   let examined=0
+   sample:for(const [row,columns] of Object.entries(sheet.cellData)){
+    for(const [column,raw] of Object.entries(columns)){
+     if(++examined>1000||cells.length>=48||characters>=10000){truncated=true;break sample}
+     if(raw.v==null&&!raw.f)continue
+     const at=address(Number(row),Number(column)),cell=inspectWorkbook(workbook,sheetId,at).cells[0]![0]!
+     const value=typeof cell.value==='string'?cell.value.slice(0,500):cell.value
+     const formula=cell.formula?.slice(0,500)
+     if(value!==cell.value||formula!==cell.formula)truncated=true
+     const numberFormat=cell.format.numberFormat
+     const percent=typeof value==='number'&&numberFormat?.match(/^0(?:\.(0{1,12}))?%$/u)
+     const display=percent&&typeof value==='number'?(value*100).toFixed(percent[1]?.length??0)+'%':undefined
+     const item={at,value,...formula&&{formula},...numberFormat&&{numberFormat},...display&&{display}}
+     cells.push(item);characters+=JSON.stringify(item).length
+    }
+   }
+   samples.push({sheet:sheet.name,cells})
+  }
+  return {...settings,snapshot:{revision,workbook:workbook.name,sheets:samples,truncated}}
  }
  async acquire(input:{key:WorkbookKey;turnId:string;authorityId?:string;instruction?:string;instructionDigest?:string;current():boolean;canWrite():boolean;signal?:AbortSignal}){
   const {key}=input

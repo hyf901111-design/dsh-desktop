@@ -28,7 +28,7 @@ export function scopedModeTurn(turn, intent, reference) {
   const defaultRead = intent.implicit || intent.tagged || intent.selectionRead
   const noTarget = !turn.appEdit && (intent.selectionRead || intent.tagged ? !selected : intent.implicit && !current && !selected)
   if (noTarget) return {...turn, appRead:false, create:null, simple:true,
-    scopeGuidance:scope==='none' ? '用户已关闭当前内容参考。本轮没有可默认读取的内容，请直接说明需要提供内容或选择引用。' :
+    scopeGuidance:scope==='none' ? '用户已关闭当前内容参考。本轮可按用户消息和已有对话作答；如需尚未提供的文档事实，请用户选择引用。' :
       '本轮没有已受理的相应选区或默认内容。请用户提供需要读取的内容或选区。'}
   const scoped = {...turn, appRead:turn.appRead || defaultRead && (current || selected),
     simple:defaultRead && (current || selected) ? false : turn.simple}
