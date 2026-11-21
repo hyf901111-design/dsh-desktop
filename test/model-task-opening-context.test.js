@@ -56,7 +56,18 @@ it('uses a short task outline on the hosted reasoning route and retains a reques
  const route={...current,provider:'ework-ark',model:'deepseek-v4.1-flash'}
  const first=await run(1,route),text=first.messages[0].content[0].text
  expect(text).toContain('断网');expect(text).toContain('Reply in English')
- expect(text).toContain('日期、2年、5年、10年、30年');expect(text).toContain('完整表格留待执行时读取');expect(text.length).toBeLessThan(220)
+ expect(text).toContain('日期、2年、5年、10年、30年');expect(first.system).toContain('已给事实足够时可直接点出结论');expect(text+' '+first.system).not.toMatch(/任务摘录|先核对什么/);expect(text.length).toBeLessThan(220)
  const second=await run(2,route)
  expect(second.messages.at(-1).content[0].text).toBe(prompt)
+})
+
+it('keeps the supplied decision or facts available without prescribing a verification receipt',async()=>{
+ const actual='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，整图不要出现任何文字、数字或水印。作为新素材加入这份验收画布。'
+ const {current,run}=requests(actual,{mode:'image'})
+ const first=await run(1,{...current,provider:'ework-ark',model:'deepseek-v4.1-flash'})
+ expect(first.messages[0].content[0].text).toContain('左侧三分之一')
+ expect(first.system).toContain('与目标有关的取舍')
+ expect(first.system).toContain('执行结果等实际回执')
+ expect(first.messages).toHaveLength(1)
+ expect(first.tools).toEqual([])
 })

@@ -95,8 +95,7 @@ function openingMessage(message, turn, brief) {
   const outline = [goal,scope].filter(Boolean).join('\n')
   // Treat the original imperative as quoted material. The communication call
   // has a different job from the execution call that follows.
-  const text = brief ? '稍后要处理的任务摘录：'+JSON.stringify(outline)+'\n'+(blocks.length?'完整表格留待执行时读取，不评价资料齐全性。':'')+'现在只用一句话告诉我准备先核对什么。' : outline
-  return {id:message.id,role:'user',source:message.source,content:[{type:'text',text}]}
+  return {id:message.id,role:'user',source:message.source,content:[{type:'text',text:outline}]}
 }
 
 function milestone(session, turnNumber, firstFinding) {
@@ -124,7 +123,7 @@ export function registerModelTaskReplies(ctx) {
       if (!message) return request
       opened.add(turn)
       return {...request, tools:[], [publicOpening]:true, messages:[openingMessage(message,turn,request.provider==='ework-ark' && request.model==='deepseek-v4.1-flash')],
-        system:'用用户的语言或指定的语言，直接写一句简短具体的开场。只陈述准备先核对什么，不追问、不解题、不声称已经执行，不输出工具格式或内部思考。'}
+        system:'用用户指定的语言或用户的语言，只写一句能推进当前任务的话。已给事实足够时可直接点出结论；也可说明一个与目标有关的取舍，或接下来的具体动作怎样帮助交付。只使用已给出的事实，执行结果等实际回执，省略套话和内部指令。'}
     }
     if (step === 2 && opened.has(turn) && request.messages?.at(-1)?.role === 'assistant') {
       // Wire-only instruction. The actual user's message and its permissions
