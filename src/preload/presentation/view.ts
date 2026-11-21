@@ -23,6 +23,7 @@ type Editor = {
   editable: boolean
   queue: Promise<void>
   disposeDrop?: () => void
+  narrationIds: Set<string>
   beforeFocus?: WorkspaceSidebars
   failure?: string
 }
@@ -193,6 +194,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       closeArchive?.()
       closeArchive = undefined
       restoreSidebars(doc, current)
+      for (const id of current.narrationIds) void request(current, 'cancel-narration', { id }).catch(() => {})
       current.disposeDrop?.()
       delete current.host.dataset.presentationDisplayedDocument
       delete current.host.dataset.presentationFramePending
@@ -218,13 +220,14 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     host.dataset.presentationFramePending = 'true'
     frame.title = '演示文稿编辑器'
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-downloads')
-    frame.allow = 'fullscreen'
+    frame.allow = 'fullscreen; autoplay'
     frame.src = origin + '/index.html?host=' + encodeURIComponent(win.location.origin)
     current = {
       frame,
       host,
       sessionId: host.dataset.eworkPresentationView,
       ready: false,
+      narrationIds: new Set(),
       locked: false,
       editable: false,
       documentId: null,
@@ -294,6 +297,20 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       return
     }
     if (!e.ready) return
+    if (d.type === 'narrate' && d.documentId === e.documentId && typeof d.id === 'string') {
+      e.narrationIds.add(d.id)
+      void request(e, 'narrate', { id: d.id, text: d.text, documentId: d.documentId })
+        .then(bytes => { if (e === current && e.narrationIds.has(d.id)) post(e, 'narration-result', { id: d.id, bytes }) })
+        .catch(err => { if (e === current && e.narrationIds.has(d.id)) post(e, 'narration-result', { id: d.id,
+          error: String(err.message || err).replace(/^.*?Error: /g, '') }) })
+        .finally(() => e.narrationIds.delete(d.id))
+      return
+    }
+    if (d.type === 'cancel-narration' && e.narrationIds.has(d.id)) {
+      e.narrationIds.delete(d.id)
+      void request(e, 'cancel-narration', { id: d.id }).catch(() => {})
+      return
+    }
     if (d.type === 'open-archive') { openArchive(); return }
     if (d.type === 'workspace-focus') {
       if (typeof d.active !== 'boolean') return

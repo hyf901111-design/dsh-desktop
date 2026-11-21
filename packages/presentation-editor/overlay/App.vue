@@ -251,6 +251,7 @@
         <button title="缩小" @click="zoom.scaleCanvas('-')"><Glyph name="minus" /></button>
         <button title="适合窗口" @click="zoom.resetCanvas">适合</button>
         <button title="放大" @click="zoom.scaleCanvas('+')"><Glyph name="plus" /></button>
+        <button title="从当前页放映" aria-label="播放演示文稿" @click="play"><Glyph name="footer-play" /></button>
         <button
           :title="focusLabel"
           :aria-label="focusLabel"
@@ -271,7 +272,17 @@
     >
       <div @click="advance(1)"><ThumbnailSlide :slide="slide" :size="screenWidth" /></div>
       <button @click.stop="stopPlaying">×　退出放映</button>
-      <nav>
+      <span v-if="narrationError" class="narration-error" role="alert">{{ narrationError }}</span>
+      <nav aria-label="放映控制">
+        <button class="narration-button" :data-state="narrationState" :title="narrationTitle"
+          :aria-label="narrationLabel" :aria-pressed="narrationActive" :disabled="!noteText.trim()"
+          @click.stop="narrator.toggle(noteText, demoNarration)">
+          <svg viewBox="0 0 20 20" width="16" height="16" fill="currentColor" aria-hidden="true">
+            <path v-if="narrationActive" d="M5 3.5h3.5v13H5zm6.5 0H15v13h-3.5z"/>
+            <path v-else d="M3 7h3l5-4v14l-5-4H3zm10.2-.8a5 5 0 0 1 0 7.6l-.9-1.2a3.5 3.5 0 0 0 0-5.2zm2.1-2.4a8 8 0 0 1 0 12.4l-1-1.2a6.5 6.5 0 0 0 0-10z"/>
+          </svg>
+          <span>{{ narrationLabel }}</span>
+        </button>
         <button @click="advance(-1)">上一页</button>
         <span>{{ index + 1 }} / {{ store.slides.length }}</span>
         <button @click="advance(1)">下一页</button>
@@ -318,6 +329,7 @@ import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
 import { replyTextBox } from './reply-text'
 import { useRibbonOverflow } from './ribbon-overflow'
+import { createNarrator } from './narration'
 import { runEditGuideAction } from './edit-guide'
 
 const Glyph = defineComponent({
@@ -414,6 +426,52 @@ function undoEdit() {
 }
 let committedMarkIds = new Set()
 const noteText = computed(() => plain(slide.value?.remark))
+const narrationState = ref('idle'), narrationError = ref('')
+const narrationActive = computed(() => ['playing', 'loading'].includes(narrationState.value))
+const narrationLabel = computed(() => ({ playing: '暂停朗读', loading: '准备朗读…', paused: '继续朗读' })[narrationState.value] || '演讲者朗读')
+const narrationTitle = computed(() => !noteText.value.trim() ? '本页没有演讲者备注' : narrationActive.value ? '暂停朗读' : narrationLabel.value)
+const pendingSpeech = new Map()
+let demoNarration = false, autoTurning = false
+function loadSpeech(text, demo, signal) {
+  if (demo) return (async () => {
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+    const digest = Array.from(new Uint8Array(bytes), b => b.toString(16).padStart(2, '0')).join('')
+    const response = await fetch('./guide-narration/' + digest + '.mp3', { signal })
+    if (!response.ok) throw Error('本页备注与用例录音不匹配。')
+    return response.blob()
+  })()
+  return new Promise((resolve, reject) => {
+    const id = crypto.randomUUID()
+    const cancel = () => {
+      send('cancel-narration', { id })
+      pendingSpeech.delete(id)
+      reject(new DOMException('朗读已停止', 'AbortError'))
+    }
+    signal.addEventListener('abort', cancel, { once: true })
+    pendingSpeech.set(id, d => {
+      signal.removeEventListener('abort', cancel)
+      pendingSpeech.delete(id)
+      if (d.error) reject(Error(d.error))
+      else resolve(new Blob([d.bytes], { type: 'audio/mpeg' }))
+    })
+    send('narrate', { id, documentId: docId.value, text })
+  })
+}
+const narrator = createNarrator({
+  load: loadSpeech,
+  nextNotes: () => plain(store.slides[index.value + 1]?.remark),
+  changed(state, error) { narrationState.value = state; narrationError.value = error },
+  finished() {
+    if (!playing.value || index.value + 1 >= store.slides.length) return
+    autoTurning = true
+    try { selectSlide(index.value + 1) } finally { autoTurning = false }
+    narrator.toggle(noteText.value, demoNarration)
+  }
+})
+watch([playing, () => slide.value?.id, docId, noteText], () => {
+  if (!autoTurning) narrator.stop()
+  if (!playing.value) demoNarration = false
+}, { flush: 'sync' })
 const selectedFont = computed(() => (main.richTextAttrs.fontname || '华文黑体').replace(/^["']|["']$/g, ''))
 const selectedSize = computed(() => parseFloat(main.richTextAttrs.fontsize) || 24)
 const fontOptions = computed(() => [...new Set([selectedFont.value, '华文黑体', '微软雅黑', '宋体', 'Arial'])])
@@ -453,6 +511,7 @@ function remember() {
   recent.value = [{ id: docId.value, title: store.title }, ...recent.value.filter((d) => d.id !== docId.value)]
 }
 async function hydrate(d) {
+  narrator.stop()
   const seq = ++hydration
   loading = true
   freeze = false
@@ -521,9 +580,13 @@ function receive(event) {
   )
     return
   const d = event.data
+  if (d.type === 'narration-result') {
+    pendingSpeech.get(d.id)?.(d)
+    return
+  }
   if (d.type === 'edit-guide') {
     try {
-      const result = runEditGuideAction(d, {store, documentId:docId.value, editable:editable.value && !loading && !freeze, activeIds:main.activeElementIdList, plain, resizeNotes:h=>{noteHeight.value=h}})
+      const result = runEditGuideAction(d, {store, documentId:docId.value, editable:editable.value && !loading && !freeze, activeIds:main.activeElementIdList, plain, enableDemoNarration:()=>{demoNarration=true}, resizeNotes:h=>{noteHeight.value=h}})
       if (d.id) send('edit-guide-result', {id:d.id,result})
     } catch (error) { if (d.id) send('edit-guide-result', {id:d.id,error:String(error.message || error)}) }
     return
@@ -1117,6 +1180,7 @@ function advance(by) {
   if (n >= 0) selectSlide(n)
 }
 function playKey(e) {
+  if (e.key === ' ' && e.target.closest('button')) return
   if (['Escape', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', ' '].includes(e.key)) {
     e.stopPropagation()
     e.preventDefault()
@@ -1152,6 +1216,7 @@ onMounted(() => {
   send('ready')
 })
 onUnmounted(() => {
+  narrator.stop()
   thumbnailObserver.disconnect()
   markViewer?.destroy()
   window.removeEventListener('message', receive)

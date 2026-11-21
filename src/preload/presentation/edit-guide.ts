@@ -19,6 +19,7 @@ type EditorState = {
   rectReady: boolean
   rectSelected: boolean
   commentOpen: boolean
+  narrating?: boolean
   playing?: boolean
 }
 
@@ -121,7 +122,7 @@ export async function mountPresentationEditGuide(
     return { x: rect.left + rect.width * p.x, y: rect.top + rect.height * p.y }
   }
   async function hit(target: string, details: Record<string, unknown> = {}) {
-    if ((target === 'mark' || target === 'play') && await command<boolean>('in-overflow', {target})) await hit('overflow')
+    if (target === 'mark' && await command<boolean>('in-overflow', {target})) await hit('overflow')
     const args = { target, ...details },
       bounds = await command<Bounds>('bounds', args)
     const p = {
@@ -135,6 +136,23 @@ export async function mountPresentationEditGuide(
     await hit('page', { page: number })
     await until((s) => s.page === number, '所选幻灯片未打开。')
     await wait(200)
+  }
+  async function returnToCover() {
+    const list = await command<Bounds & { scrollTop: number }>('directory-position')
+    await point?.({
+      target: frame()!, action: 'move', hover: 'none',
+      targetPoint: () => screenPoint({ x: list.left + list.width / 2, y: list.top + list.height / 2 })
+    })
+    if (list.scrollTop > 0) {
+      const reduced = win.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const duration = Math.min(900, Math.sqrt(list.scrollTop) * 26)
+      const steps = reduced ? 1 : Math.max(1, Math.ceil(duration / 24))
+      for (let i = 1; i <= steps; i++) {
+        if (!reduced) await wait(duration / steps)
+        await command('scroll-directory', { top: list.scrollTop * (1 - i / steps) ** 2 })
+      }
+    }
+    await page(1)
   }
   async function markObject(target: 'chart' | 'table') {
     const spec = content[target]
@@ -185,7 +203,7 @@ export async function mountPresentationEditGuide(
     }
     await command('comment', { target: 'comment', text })
     await until((s) => s.comment === text, '图表批注尚未保存。')
-    await wait(1500)
+    if (target === 'chart') await wait(1500)
     return markId
   }
   async function openChat() {
@@ -198,10 +216,10 @@ export async function mountPresentationEditGuide(
     chat ??= await mountPresentationEditGuideChat(doc, options)
     return chat
   }
-  const request = async (prompt: string, existing = false) => {
+  const request = async (prompt: string, { existing = false, draftHoldMs = 1200, referenceText = '' } = {}) => {
     const c = chat ?? (await openChat())
-    await c.draft(prompt, { existing })
-    await wait(1200)
+    await c.draft(prompt, { existing, referenceText })
+    if (draftHoldMs > 0) await wait(draftHoldMs)
     await c.send()
     await wait(content.executionMs)
   }
@@ -278,7 +296,7 @@ export async function mountPresentationEditGuide(
           tableMarkId = await markObject('table')
           break
         case 'revise-chart':
-          await request(content.chart.comment + '\n' + content.table.comment, true)
+          await request(content.chart.comment + '\n' + content.table.comment, { existing: true, draftHoldMs: 0 })
           await until(s => !s.commentOpen, '已发送的标记评论框尚未收起。')
           await native('chart', chartMarkId)
           await until((s) => s.page === content.table.page && !s.marking, '表格调整尚未显示。')
@@ -298,7 +316,7 @@ export async function mountPresentationEditGuide(
           break
         }
         case 'revise-title':
-          await request(content.title.prompt)
+          await request(content.title.prompt, { referenceText: content.title.original })
           await native('title', titleId)
           await chat!.reply(content.replies.title)
           break
@@ -323,28 +341,30 @@ export async function mountPresentationEditGuide(
             }
           })
           await command('select-notes', { target: 'notes', ...selection, commit: true })
-          await wait(1700)
           break
         }
         case 'revise-notes':
-          await request(content.notesSelection.prompt)
+          await request(content.notesSelection.prompt, { draftHoldMs: 0, referenceText: content.notesSelection.quote })
           await native('notes-selection')
           await until(s => s.notes.includes(content.notesSelection.replacement), '所选逐字稿尚未优化。')
           await chat!.reply(content.replies['notes-selection'])
           await wait(2400)
           break
         case 'return-first':
-          await page(1)
-          await wait(1500)
+          await returnToCover()
           break
         case 'play':
           await hit('play')
           await until(s => s.page === 1 && s.playing === true, '首页放映尚未开始。')
-          await wait(2200)
+          break
+        case 'narrate':
+          await hit('narrate')
+          await until(s => s.narrating === true, '用例录音尚未开始播放。')
+          await wait(2500)
           break
         case 'finish':
           await until(
-            (s) => s.page === 1 && s.playing === true,
+            (s) => s.playing === true && s.narrating === true,
             '演示结果尚未保存。'
           )
           break
