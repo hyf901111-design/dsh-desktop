@@ -30,5 +30,5 @@ export function decodeSpeech(body, reserved) {
   }
   const audio = Buffer.concat(chunks)
   if (!complete || !audio.length) throw Error('incomplete speech')
-  return { audio, units: billed ?? reserved }
+  return { audio, units: billed !== undefined && billed <= reserved ? billed : undefined }
 }

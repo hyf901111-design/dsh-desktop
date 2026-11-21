@@ -346,7 +346,8 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         stage = 'speech-delivery'
         const body = await readBounded(response, 8_000_000, AbortSignal.any([request.signal, AbortSignal.timeout(90000)]))
         const { audio, units } = decodeSpeech(body, input.amountUnits)
-        await settle(units)
+        if (units !== undefined) await settle(units)
+        else diagnostic('HOSTED_AI_SPEECH_USAGE_MISSING')
         return new Response(audio, { headers: { ...requestHeaders, 'content-type': 'audio/mpeg' } })
       }
       if (!image) {
