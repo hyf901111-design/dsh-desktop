@@ -1,4 +1,5 @@
-import {chartFieldUnit} from './chart-template-contract.js'
+import {workbenchReadingPurpose} from './workbench-reading-purpose.js'
+import {chartFieldUnit,requestedChartVariant} from './chart-template-contract.js'
 import {datasetScheduleTime} from './dataset-view-contract.js'
 
 const trend = /趋势|走势|折线|时序|时间序列|逐(?:日|月|季|年)|历年|\b(?:trends?|time series|over time|historical)\b/iu
@@ -121,6 +122,9 @@ export function contentChartSelection(content, columns, scope = {}) {
   if (!chartUnit(fields,columns,rows,view.unit??content.unit,false)) return
   return {view:{...view,label:axis.key,values:fields.map(field => field.key)},rows}
  }
+ // Preserving the source order and exact values is the point of reconciliation.
+ // An explicit chart specification or requested graph still wins.
+ if (workbenchReadingPurpose(request)==='reconcile' && !requestedChartVariant(request)) return
  if (rows.length < 2 || rows.length > 366 || columns.length > 20 || rows.length*columns.length > 4000 ||
      /名录|速查|字典|\b(?:catalog(?:ue)?|directory|glossary)\b/iu.test(titles)) return
  const hasNumber = field => rows.some(row => Number.isFinite(row[field.key]))
