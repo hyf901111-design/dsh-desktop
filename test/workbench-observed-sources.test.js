@@ -231,3 +231,17 @@ it('retains validated partial artifacts, passes deficits and metadata, and retri
  expect(f.runtime.startPreparedBatch).toHaveBeenCalledOnce();expect(f.runtime.startBatch).toHaveBeenCalledOnce();
  expect((await f.plans()).find(plan=>plan.id===recovered.planId).panels[0].artifact).toBeUndefined()
 })
+
+it('accepts the actual Treasury request with one plotted series covering three supplied trading dates',async()=>{
+ const {originalRequest,toolArgs}=JSON.parse(await readFile(new URL('./fixtures/workbench-treasury-three-dates.json',import.meta.url),'utf8'))
+ const f=await fixture(originalRequest)
+ f.exec.agent.session.events[0].data.source.clientMode='research'
+ const result=await f.run(toolArgs)
+ expect(result.status).not.toBe('incomplete')
+ expect(result.templateIds).toEqual(['chart.line'])
+ const [saved]=await f.plans()
+ expect(saved.scopeDeficits??[]).toEqual([])
+ const chart=saved.panels[0].artifact
+ expect(chart.labels).toEqual(['2024-12-27','2024-12-30','2024-12-31'])
+ expect(chart.series.map(series=>series.values)).toEqual([[4.62,4.55,4.58]])
+})
