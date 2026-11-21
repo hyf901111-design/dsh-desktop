@@ -1418,6 +1418,7 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:canvas-adopt', () => mainWindow, (_event, sessionId: string, epoch: number) =>
     factoryCanvases.adopt(sessionId, epoch))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:tabs-read', () => mainWindow, () => factoryCanvases.readTabs())
+  registerTrustedMainWindowHandler(ipcMain, 'image-factory:task-has-canvas', () => mainWindow, (_event, id: string, epoch: number) => factoryCanvases.hasCanvas(id, epoch))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:tabs-write', () => mainWindow, (_event, value: unknown) => factoryCanvases.writeTabs(value))
   registerTrustedMainWindowHandler(ipcMain, 'image-factory:save-to-library', () => mainWindow, async (_event, value: unknown) => {
     const input = value as { sceneId?: string; scope?: CanvasScope; epoch?: number; data?: Uint8Array } | undefined

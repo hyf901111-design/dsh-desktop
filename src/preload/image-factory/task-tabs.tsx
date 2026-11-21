@@ -27,7 +27,7 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
   const press = useRef<Drag>(), suppressClick = useRef(0)
   const frozen = useRef<HTMLElement[]>([]), closing = useRef<Animation>()
   const focusOnChange = useRef(false)
-  const labels = tabs.map(tab => (tab.scope === current ? title : undefined) ?? tab.title ?? t('新图片任务', 'New image task'))
+  const labels = tabs.map(tab => tab.title ?? (tab.scope === current ? title : undefined) ?? t('新图像', 'New image'))
   const listLabel = t('已打开的页签', 'Open tabs')
   const addLabel = t('新建图片任务', 'New image task')
   const win = doc.defaultView!

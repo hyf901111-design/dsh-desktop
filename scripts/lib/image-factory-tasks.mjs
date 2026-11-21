@@ -1,7 +1,82 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
-export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, getDefaultWorkspace = getWorkspace, standaloneDirectory, setView, storage, isBoardOnly = () => false }) {
+export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, getDefaultWorkspace = getWorkspace, standaloneDirectory, setView, storage, archiveTask, requestTitle, blankTitle = () => '新图像', isBoardOnly = () => false }) {
   let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
-  let entryProject
+  let entryProject, navigation = 0, pendingFresh = false, account = {}, freshQueue = Promise.resolve()
+  const checking = new Set(), replacements = new Set(), sending = new Map()
+  const owned = id => [...tabs, ...closed].find(tab => tab.scope === id && tab.temporary)
+  function keep(id) {
+    if (!owned(id)) return
+    const commit = values => values.map(tab => {
+      if (tab.scope !== id) return tab
+      const { temporary, ...retained } = tab
+      return retained
+    })
+    tabs = commit(tabs)
+    closed = commit(closed)
+    save()
+    publish()
+  }
+  function admission(id) {
+    if (!owned(id)) return () => {}
+    const start = account
+    sending.set(id, (sending.get(id) ?? 0) + 1)
+    return ok => {
+      if (account !== start) return
+      if (ok) keep(id)
+      const count = sending.get(id) - 1
+      if (count) sending.set(id, count)
+      else sending.delete(id)
+      observe()
+    }
+  }
+  const blank = id => {
+    const row = sessions.list.getSnapshot().byId?.[id]
+    const session = sessions.binding(id)?.session?.getSnapshot?.()
+    if (!row || !session) return undefined
+    if (isBoardOnly(id) || row.blank === false || row.running || row.pendingInteraction || session.blank === false ||
+        session.running || session.pending?.length || session.queue?.length || session.chat?.order?.length ||
+        row.title && row.title !== '新图像' && row.title !== 'New image') return false
+    return row.blank === true ? true : undefined
+  }
+  function observe() {
+    const eligible = id => owned(id) && !sending.has(id) && !replacements.has(id) && openToken?.tab.scope !== id &&
+      (!isActive() || sessions.list.getSnapshot().current !== id)
+    for (const tab of [...tabs, ...closed]) {
+      const id = tab.scope
+      const title = sessions.list.getSnapshot().byId?.[id]?.title
+      if (title && !tab.temporary && title !== tab.title &&
+          (!tab.title || title !== '新图像' && title !== 'New image')) setTitle({ scope: id, title }, true)
+      if (!tab.temporary || checking.has(id) || !archiveTask || !storage?.hasCanvas || epoch === undefined) continue
+      const vacant = blank(id)
+      if (vacant === false) { keep(id); continue }
+      if (vacant !== true || !eligible(id)) continue
+      const start = account
+      checking.add(id)
+      void storage.hasCanvas(id, epoch).then(async canvas => {
+        if (account !== start || !owned(id)) return
+        if (canvas || blank(id) === false) { keep(id); return }
+        if (!eligible(id) || blank(id) !== true) return
+        await archiveTask(id)
+        if (account !== start) return
+        tabs = tabs.filter(item => item.scope !== id)
+        closed = closed.filter(item => item.scope !== id)
+        if (active === id && sessions.list.getSnapshot().current !== id) active = undefined
+        save()
+        publish()
+      }).catch(() => {}).finally(() => { if (start === account) checking.delete(id) })
+    }
+  }
+  function enterFresh(workspace = getDefaultWorkspace?.(), loaded = false, revision = ++navigation) {
+    if (!isActive()) return
+    if (!loaded) load()
+    if (loading) { pendingFresh = { workspace, revision }; publish(); return }
+    const start = account
+    freshQueue = freshQueue.then(async () => {
+      if (start !== account || !isActive()) return
+      await action({ kind: 'new', fresh: true, workspace, revision })
+    })
+    return freshQueue
+  }
   const validScope = value => value === null ||
     typeof value === 'string' && /^[A-Za-z0-9_-]{1,256}$/u.test(value) && !isBoardOnly(value)
   const canOpen = tab => {
@@ -23,13 +98,20 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       ? [...tabs.filter(tab => tab.scope !== openToken.replacing && tab.scope !== creating), openToken.tab]
       : tabs
     emitted = { tabs: displayed, active: selected, busy, creating, fresh: lastCreated,
-      canRestore: closed.some(tab => !tabs.some(open => open.scope === tab.scope) && canOpen(tab)) }
+      canRestore: closed.some(tab => !replacements.has(tab.scope) && !tabs.some(open => open.scope === tab.scope) && canOpen(tab)) }
     signal('task-state', emitted)
   }
   const save = () => {
     if (epoch === undefined) return
     const persisted = values => values.map(({ key, ...tab }) => tab)
-    void storage.write({ epoch, tabs: persisted(tabs), ...(closed.length > 0 && { closed: persisted(closed) }) }).catch(() => {})
+    return storage.write({ epoch, tabs: persisted(tabs), ...(closed.length > 0 && { closed: persisted(closed) }) }).catch(() => {})
+  }
+  function saveTitle(id, kind, title) {
+    const start = account
+    const stored = save()
+    if (stored) void stored.then(() => {
+      if (start === account && tabs.some(tab => tab.scope === id)) return requestTitle?.(id, kind, title)
+    }).catch(() => {})
   }
   const load = () => {
     if (!storage || epoch !== undefined || loading) return
@@ -49,17 +131,22 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       loading = undefined
       const requested = pendingSync
       pendingSync = undefined
-      if (isActive()) {
+      const fresh = pendingFresh
+      pendingFresh = false
+      if (isActive() && fresh) void enterFresh(fresh.workspace, true, fresh.revision)
+      else if (isActive()) {
         if (epoch !== undefined) syncSession(true, requested?.reopen ? requested.scope : undefined, requested?.entry)
         else if (requested) reconcile(requested.scope, requested.reopen, requested.entry)
       }
       save()
       publish()
+      observe()
     })
   }
   function sync(scope, reopen = false, entry = false) {
     if (!isActive()) return scope
     load()
+    if (openToken && scope !== openToken.tab.scope && !reopen) return active
     if (!loading) return reconcile(scope, reopen, entry)
     pendingSync = { scope, reopen: reopen || (pendingSync?.scope === scope && pendingSync.reopen),
       entry: entry || pendingSync?.entry }
@@ -110,7 +197,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     // Native workspace sessions can arrive after the app has selected its tab.
     // Only an explicit canvas request can introduce another session at that point.
     if (!reopen && (entry || (scope !== null && !known && !closedTab))) {
-      const previous = tabs.find(tab => tab.scope === active && canResume(tab)) ??
+      const previous = tabs.find(tab => tab.scope === active && canResume(tab) && (entry || !tab.temporary)) ??
         (entry ? (known && canResume(known) ? known : tabs.findLast(canResume)) : undefined)
       if (previous && (previous.scope !== scope ||
           (scope === null && sessions.list.getSnapshot().current !== draftSession))) {
@@ -172,10 +259,23 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     save()
     publish()
   }
+  function registerReplacement(scope) {
+    if (!validScope(scope) || !scope?.startsWith('image-task-') || owned(scope)) return
+    replacements.add(scope)
+    closed = [{ scope, temporary: true }, ...closed].slice(0, 32)
+    return save()
+  }
+  function releaseReplacement(id) { replacements.delete(id); observe() }
   function replaceActive(previous, scope) {
     if (!isActive() || openToken || loading || active !== previous || !validScope(scope) || !canOpen({ scope }) ||
         !tabs.some(tab => tab.scope === previous) || tabs.some(tab => tab.scope === scope)) return false
-    tabs = tabs.map(tab => tab.scope === previous ? { ...tab, scope, key: tabKey(tab) } : tab)
+    const original = tabs.find(tab => tab.scope === previous)
+    closed = closed.filter(tab => tab.scope !== scope)
+    if (original.temporary) rememberClosed([original])
+    const theme = !original.temporary && original.title && original.title !== '新图像' && original.title !== 'New image' ? original.title : undefined
+    tabs = tabs.map(tab => tab === original ? { scope, key: tabKey(tab), ...(theme ? { title: theme } : { temporary: true }),
+      ...(tab.pinned && { pinned: true }) } : tab)
+    saveTitle(scope, theme ? 'template' : 'blank', theme ?? blankTitle())
     active = scope
     if (previous === null) draftSession = undefined
     if (lastCreated === previous) lastCreated = undefined
@@ -183,13 +283,17 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     publish()
     return true
   }
-  function setTitle({ scope, title } = {}) {
+  function setTitle({ scope, title } = {}, fromSession = false) {
     if (typeof title !== 'string' || !title.trim()) return
     const tab = tabs.find(item => item.scope === scope)
-    const label = title.trim().slice(0, 255)
-    if (!tab || tab.title === label) return
-    tabs = tabs.map(item => item === tab ? { ...tab, title: label } : item)
-    save()
+    if (!tab) return
+    if (!fromSession) keep(scope)
+    const saved = sessions.list.getSnapshot().byId?.[scope]?.title
+    const label = (saved && saved !== '新图像' && saved !== 'New image' ? saved : title).trim().slice(0, 255)
+    if (tab.title === label) return
+    tabs = tabs.map(item => item.scope === scope ? { ...item, title: label } : item)
+    if (!fromSession && scope?.startsWith('image-task-')) saveTitle(scope, 'template', title.trim().slice(0, 255))
+    else save()
     publish()
   }
   function select(scope, sync = true) {
@@ -207,34 +311,41 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       syncSession(true)
     }
   }
-  async function create(replacedTab) {
+  async function create(replacedTab, template, workspaceId = getDefaultWorkspace?.(), revision = navigation) {
     const replacing = replacedTab?.scope
     if (replacing === undefined && tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
     const before = sessions.list.getSnapshot().current
     const id = 'image-task-' + win.crypto.randomUUID()
-    const token = { tab: { scope: id }, replacing }
+    const token = { tab: { scope: id, temporary: true }, replacing }
     openToken = token
     publish()
     try {
-      const workspaceId = getDefaultWorkspace?.()
       const directory = workspaceId === null ? { cwd: await standaloneDirectory() } : workspaceId ? { workspaceId } : {}
       if (openToken !== token) return
+      if (archiveTask && storage?.hasCanvas) {
+        await registerReplacement(id)
+        if (openToken !== token) return
+      }
       const sessionId = await sessions.create({ sessionId: id, ...directory })
       if (openToken !== token) return
       if (sessionId !== id || !sessions.binding(id)) throw Error('新图片任务未能打开。')
+      closed = closed.filter(tab => tab.scope !== id)
       if (replacedTab) {
         tabs = tabs.filter(tab => tab.scope !== replacing)
         rememberClosed([replacedTab])
       }
       lastCreated = id
       tabs = [...tabs, token.tab]
-      save()
-      if (isActive() && sessions.list.getSnapshot().current === before) select(id)
+      if (template) { keep(id); setTitle({ scope: id, title: template }) }
+      else saveTitle(id, 'blank', blankTitle())
+      if (revision === navigation && isActive() && sessions.list.getSnapshot().current === before) select(id)
       return id
     } finally {
       if (openToken === token) {
         openToken = undefined
+        replacements.delete(id)
         publish()
+        observe()
       }
     }
   }
@@ -243,12 +354,20 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     closed = [...removed, ...closed.filter(tab => !scopes.has(tab.scope))].slice(0, 32)
   }
   const pinnedFirst = (left, right) => Number(!!right.pinned) - Number(!!left.pinned)
-  async function action({ kind, scope, before } = {}) {
+  async function action({ kind, scope, before, template, fresh, workspace, revision } = {}) {
     if ((!isActive() && kind !== 'close') || openToken || loading) return
     try {
-      if (kind === 'new') return await create()
+      if (kind === 'new') {
+        const current = sessions.list.getSnapshot().current
+        if (typeof template === 'string' && template.trim() && owned(current) && blank(current) === true) {
+          setTitle({ scope: current, title: template })
+          return current
+        }
+        const displaced = fresh && tabs.length >= 32 && (tabs.find(tab => tab.temporary) ?? tabs.find(tab => !tab.pinned) ?? tabs[0])
+        return await create(displaced || undefined, template, workspace, revision)
+      }
       if (kind === 'restore') {
-        const tab = closed.find(item => !tabs.some(open => open.scope === item.scope) && canOpen(item))
+        const tab = closed.find(item => !replacements.has(item.scope) && !tabs.some(open => open.scope === item.scope) && canOpen(item))
         if (!tab) return
         if (tabs.length >= 32) throw Error('最多打开 32 个图片任务，请先关闭不用的页签。')
         closed = closed.filter(item => item !== tab)
@@ -299,10 +418,12 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     }
   }
   function reset() {
+    account = {}; navigation++; checking.clear(); replacements.clear(); sending.clear(); pendingFresh = false
     tabs = []
     closed = []
     active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = entryProject = undefined
     publish()
   }
-  return { sync, action, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
+  function leave() { navigation++; observe() }
+  return { load, sync, action, enterFresh, leave, admission, observe, registerReplacement, releaseReplacement, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
 }

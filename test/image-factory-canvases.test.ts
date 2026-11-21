@@ -160,3 +160,26 @@ it('persists and reopens every campaign with all editable layers and the origina
     }
   } finally { await rm(root, { force: true, recursive: true }) }
 })
+
+it('restores ownership only for known new tasks and recovers interrupted canvas saves under the correct account', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'odyssey-temporary-image-'))
+  try {
+    let owner = { owner: 'first', generation: 3 }
+    const store = new ImageFactoryCanvases(root, () => owner)
+    const kept = 'image-task-' + randomUUID(), empty = 'image-task-' + randomUUID()
+    const legacy = 'image-task-' + randomUUID()
+    await store.writeTabs({ epoch: 3, tabs: [{ scope: empty, temporary: true }, { scope: legacy }],
+      closed: [{ scope: kept, temporary: true, title: '旧画布' }] })
+    await store.write({ scope: kept, canvas: canvas(), epoch: 3, image: png })
+    const restored = new ImageFactoryCanvases(root, () => owner)
+    expect(await restored.readTabs()).toMatchObject({ tabs: [{ scope: empty, temporary: true }, { scope: legacy }],
+      closed: [{ scope: kept, title: '旧画布' }], canvasScopes: [kept] })
+    expect((await restored.readTabs()).closed?.[0]).not.toHaveProperty('temporary')
+    expect(await restored.hasCanvas(kept, 3)).toBe(true)
+    expect(await restored.hasCanvas(empty, 3)).toBe(false)
+    await expect(store.writeTabs({ epoch: 3, tabs: [{ scope: 'other-session', temporary: true }] })).rejects.toThrow()
+    owner = { owner: 'second', generation: 4 }
+    await expect(restored.hasCanvas(kept, 3)).rejects.toThrow('账号已切换')
+    expect(await restored.readTabs()).toEqual({ epoch: 4, tabs: [] })
+  } finally { await rm(root, { force: true, recursive: true }) }
+})

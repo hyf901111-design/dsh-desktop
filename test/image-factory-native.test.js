@@ -315,7 +315,7 @@ it.each(['new-workspace', null])('keeps untouched image tabs on return after sel
   }
 })
 
-it('keeps all empty galleries on load, when creating and switching tabs, and when leaving Images', async () => {
+it('preserves legacy unmarked galleries and tracks new ones when the cleanup bridge is unavailable', async () => {
   const empty = 'native-session'
   const edited = { scope: 'edited-tab', title: '已编辑的图像' }
   const stored = [{ scope: empty }, { scope: 'old-empty-tab', pinned: true }, edited]
@@ -339,7 +339,7 @@ it('keeps all empty galleries on load, when creating and switching tabs, and whe
       const previous = tasks.active
       f.events('task-action', { kind: 'new' })
       await vi.waitFor(() => expect(tasks).toMatchObject({ busy: false, active: expect.not.stringMatching(previous) }))
-      expected.push({ scope: tasks.active })
+      expected.push({ scope: tasks.active, temporary: true })
       expect(tasks.tabs).toEqual(expected)
       expect(tasks.canRestore).toBe(false)
     }
@@ -350,7 +350,7 @@ it('keeps all empty galleries on load, when creating and switching tabs, and whe
     f.events('task-action', { kind: 'new' })
     await vi.waitFor(() => expect(tasks).toMatchObject({ busy: false, active: expect.stringMatching(/^image-task-/) }))
     const active = tasks.active
-    expected.push({ scope: active })
+    expected.push({ scope: active, temporary: true })
     f.doc.body.dataset.workspaceSurface = 'browser'
     f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change'))
     expect(storage.write.mock.lastCall[0].tabs).toEqual(expected)
@@ -436,7 +436,7 @@ it('keeps a closed canvas tab closed when Home leaves an older native scope to b
     const closed = latest().active
     f.events('task-action', { kind: 'close', scope: closed })
     expect(latest().tabs.map(tab => tab.scope)).toEqual(['native-session'])
-    expect(saved.closed).toEqual([{ scope: closed }])
+    expect(saved.closed).toEqual([{ scope: closed, temporary: true }])
 
     f.sessionCatalog.clear()
     delete f.doc.body.dataset.workspaceSurface
@@ -1003,4 +1003,132 @@ it('delivers successful edits with a failure flag for a referenced image in the 
       imageError: true, url: undefined, edits: [{ key: 1, patch: { text: '海面晨光' } }],
     })
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
+
+function imageSessionLifecycle(options = {}) {
+  const storage = { read: vi.fn(async () => ({ epoch: 7, tabs: [] })), write: vi.fn(async () => {}),
+    hasCanvas: vi.fn(async () => false), ...options.storage }
+  const archiveTask = vi.fn(async () => {})
+  const f = fixture(storage, undefined, undefined, { archiveTask, ...options.deps })
+  const request = vi.spyOn(f.win, 'fetch').mockResolvedValue({ ok: true })
+  const open = () => {
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    f.events('request-session', { fresh: true, entry: true })
+  }
+  const leave = () => {
+    f.doc.body.dataset.workspaceSurface = 'browser'
+    f.doc.dispatchEvent(new f.win.CustomEvent('sherlock:workspace-surface-change'))
+  }
+  const created = async count => {
+    await vi.waitFor(() => expect(f.sessionCatalog.create).toHaveBeenCalledTimes(count))
+    const id = f.sessionCatalog.create.mock.calls[count - 1][0].sessionId
+    await vi.waitFor(() => expect(f.sessionsState.current).toBe(id))
+    return id
+  }
+  return { ...f, open, leave, created, archiveTask, storage, request,
+    dispose: async () => { f.binding.dispose(); await f.win.happyDOM.abort() } }
+}
+
+it('creates each image entry in its selected workspace and archives only the abandoned, owned blank sessions', async () => {
+  let project = '第一工作区'
+  const f = imageSessionLifecycle({ deps: { getDefaultWorkspace: () => project } })
+  try {
+    f.open()
+    const first = await f.created(1)
+    project = '第二工作区'
+    f.open()
+    const second = await f.created(2)
+    expect(first).not.toBe(second)
+    expect(f.sessionCatalog.create.mock.calls.map(([args]) => args.workspaceId)).toEqual(['第一工作区', '第二工作区'])
+    await vi.waitFor(() => expect(f.archiveTask).toHaveBeenCalledWith(first))
+    await vi.waitFor(() => expect(f.request.mock.calls.some(([, init]) =>
+      JSON.parse(init.body).sessionId === second && JSON.parse(init.body).title === '新图像')).toBe(true))
+    f.leave()
+    await vi.waitFor(() => expect(f.archiveTask.mock.calls.map(([id]) => id)).toEqual([first, second]))
+    expect(f.storage.write.mock.lastCall[0].tabs).toEqual([])
+    expect(f.archiveTask).not.toHaveBeenCalledWith('native-session')
+  } finally { await f.dispose() }
+})
+
+it('adopts the clicked template in the same empty task and follows its native conversation title thereafter', async () => {
+  const f = imageSessionLifecycle()
+  let state
+  f.doc.addEventListener('sherlock:image-factory-task-state', event => { state = event.detail })
+  try {
+    f.open()
+    const id = await f.created(1)
+    f.events('task-action', { kind: 'new', template: '奔流的线', requestId: f.win.crypto.randomUUID() })
+    expect(f.sessionCatalog.create).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(f.storage.write.mock.lastCall[0].tabs).toEqual([{ scope: id, title: '奔流的线' }]))
+    await vi.waitFor(() => expect(f.request.mock.calls.some(([, init]) =>
+      JSON.parse(init.body).kind === 'template' && JSON.parse(init.body).title === '奔流的线')).toBe(true))
+    f.sessionsState.byId[id].title = '我手动起的名字'
+    f.sessionCatalog.open(id)
+    f.events('task-title', { scope: id, title: '奔流的线' })
+    expect(state.tabs[0].title).toBe('我手动起的名字')
+    f.leave()
+    await Promise.resolve()
+    expect(f.archiveTask).not.toHaveBeenCalled()
+  } finally { await f.dispose() }
+})
+
+it('protects an accepted right-hand conversation and waits for pending admission before cleaning up a rejected one', async () => {
+  const f = imageSessionLifecycle()
+  try {
+    for (const [i, ok] of [true, false].entries()) {
+      f.open()
+      const id = await f.created(i + 1)
+      let accept
+      const session = { ...f.session, sessionId: id, prompt: vi.fn(() => new Promise(resolve => { accept = resolve })) }
+      const outgoing = f.binding.prompt(session, [{ type: 'text', text: '只讨论封面留白，不要出图。' }], 'queue')
+      await vi.waitFor(() => expect(accept).toBeTypeOf('function'))
+      f.leave()
+      expect(f.archiveTask).not.toHaveBeenCalledWith(id)
+      accept({ ok })
+      await outgoing
+      if (ok) expect(f.storage.write.mock.lastCall[0].tabs).toContainEqual({ scope: id })
+      else await vi.waitFor(() => expect(f.archiveTask).toHaveBeenCalledWith(id))
+    }
+    expect(f.archiveTask).toHaveBeenCalledTimes(1)
+  } finally { await f.dispose() }
+})
+
+it('collects a failed workspace replacement but preserves the original active session and stored historical artwork', async () => {
+  const f = imageSessionLifecycle()
+  try {
+    f.open()
+    const active = await f.created(1)
+    f.doc.addEventListener('sherlock:image-factory-rebind-canvas', ({ detail }) => f.events('canvas-rebound', { next: detail.next, error: '已切换' }))
+    await expect(f.binding.switchWorkspace('另一个项目', '原项目')).rejects.toThrow()
+    const replacement = f.sessionCatalog.create.mock.calls[1][0].sessionId
+    await vi.waitFor(() => expect(f.archiveTask).toHaveBeenCalledWith(replacement))
+    expect(f.archiveTask).not.toHaveBeenCalledWith(active)
+    f.storage.hasCanvas.mockResolvedValue(true)
+    f.leave()
+    await vi.waitFor(() => expect(f.storage.write.mock.lastCall[0].tabs).toContainEqual({ scope: active }))
+    expect(f.archiveTask).not.toHaveBeenCalledWith(active)
+  } finally { await f.dispose() }
+})
+
+it('abandons a late create after switching surfaces and keeps the next click tied to its own workspace', async () => {
+  let project = 'A'
+  const f = imageSessionLifecycle({ deps: { getDefaultWorkspace: () => project } })
+  try {
+    let finish, delayedId
+    f.sessionCatalog.create.mockImplementationOnce(({ sessionId }) => new Promise(resolve => {
+      delayedId = sessionId
+      finish = () => { f.sessionsState.byId[sessionId] = { blank: true }; resolve(sessionId) }
+    }))
+    f.open()
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    f.leave()
+    project = 'B'
+    f.open()
+    finish()
+    const current = await f.created(2)
+    expect(f.sessionCatalog.open).not.toHaveBeenCalledWith(delayedId)
+    await vi.waitFor(() => expect(f.archiveTask).toHaveBeenCalledWith(delayedId))
+    expect(f.sessionCatalog.create.mock.calls[1][0]).toMatchObject({ sessionId: current, workspaceId: 'B' })
+  } finally { await f.dispose() }
 })

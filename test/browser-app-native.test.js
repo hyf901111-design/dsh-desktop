@@ -245,3 +245,16 @@ it('opens the standalone app with or without a conversation without creating or 
  const raw=await browserSourceCodec().codec.serialize(JSON.stringify({title:'文章',url:'https://example.com/',at:1}));expect(browserUserTextSegments('问题'+raw)).toEqual([{text:'问题'},{title:'文章',url:'https://example.com/'}])
  off();vi.unstubAllGlobals();await w.happyDOM.abort()
 })
+
+it('lets an explicit Images app launch allocate its own blank session from a pinned board', () => {
+ const win=new Window(), doc=win.document, host=new WorkspaceSurfaceHost(doc)
+ const workspaceSession=vi.fn(), sessions={list:{getSnapshot:()=>({current:'pinned'})}}
+ const dispose=installWorkspaceAppSessions({sessions,isBoardOnly:()=>true,workspaceSession,doc})
+ try {
+  host.register('image-factory',doc.createElement('div'))
+  doc.body.dataset.imageFactoryNewSession='true'
+  host.open('image-factory')
+  expect(workspaceSession).not.toHaveBeenCalled()
+  expect(doc.body.dataset.boardWorkspacePending).toBeUndefined()
+ } finally {dispose();host.dispose()}
+})

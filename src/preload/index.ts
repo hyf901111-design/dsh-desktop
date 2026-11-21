@@ -551,7 +551,7 @@ function initializeUi(): void {
     delete document.body.dataset.sessionWorkspaceSwitch
     const surface = workspaceSurfaceHost.current()?.surface
     const targetSurface = app === 'plugin' ? 'integrations' : app
-    if (surface && surface === targetSurface) return
+    if (surface && surface === targetSurface && app !== 'image-factory') return
     const inheritSidebarWorkspace = () => {
       if (region === 'side') document.dispatchEvent(new CustomEvent('sherlock:sidebar-launch-workspace-app', { detail: app }))
     }
@@ -703,6 +703,7 @@ contextBridge.exposeInMainWorld(
     imageFactoryTasks: Object.freeze({
       read: () => ipcRenderer.invoke('image-factory:tabs-read'),
       write: (value: unknown) => ipcRenderer.invoke('image-factory:tabs-write', value),
+      hasCanvas: (id: string, epoch: number) => ipcRenderer.invoke('image-factory:task-has-canvas', id, epoch),
     }),
     restartHarness: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('harness:restart'),
     showItemInFolder: (path: string): Promise<{ ok: boolean }> =>

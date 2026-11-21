@@ -109,7 +109,7 @@ function titleFromPrompt(prompt: string, t: T) {
   return prompt.match(/[「“"《]([^」”"》\n]{1,36})[」”"》]/)?.[1] ||
     prompt.split(/[\n。！？；]/u)[0]?.trim().slice(0, 30) || t('生成图片', 'Generated image')
 }
-function requestGalleryTask(doc: Document): Promise<string | undefined> {
+function requestGalleryTask(doc: Document, title: string): Promise<string | undefined> {
   return new Promise(resolve => {
     const requestId = crypto.randomUUID()
     const done = (result?: string) => {
@@ -124,7 +124,7 @@ function requestGalleryTask(doc: Document): Promise<string | undefined> {
     }
     const timer = setTimeout(done, 15_000)
     doc.addEventListener('sherlock:image-factory-task-created', receive)
-    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-action', { detail: { kind: 'new', requestId } }))
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-task-action', { detail: { kind: 'new', requestId, template: title } }))
   })
 }
 
@@ -1282,10 +1282,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     setGalleryOpen(false)
     returnFocusToDrawer.current = true
   }
-  const useGalleryPrompt = useCallback((prompt: string) => {
+  const useGalleryPrompt = useCallback((prompt: string, title: string) => {
     doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     const instruction = t('生成图片：', 'Generate an image: ') + prompt
-    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt: instruction }, cancelable: true }))
+    doc.dispatchEvent(new CustomEvent('sherlock:image-factory-use-prompt', { detail: { prompt: instruction, title }, cancelable: true }))
   }, [doc, t])
   async function openGalleryTemplate(example: GalleryExample) {
     if (busy || creatingTemplate.current) return
@@ -1294,6 +1294,10 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     refreshBusy()
     let background: Awaited<ReturnType<typeof createImageLayer>> | undefined
     try {
+      const target = await requestGalleryTask(doc, t(...example.title))
+      if (!target) throw Error(t('未能打开新的图片任务。', 'Could not open a new image task.'))
+      await workspace.ready(target)
+      if (!inImages() || workspace.getSnapshot().scope !== target) return
       const source = galleryArtwork(example.id)
       if (!source) throw Error(t('模板底图不可用。', 'The template background is unavailable.'))
       const id = crypto.randomUUID()
@@ -1314,10 +1318,6 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
         } finally { URL.revokeObjectURL(raster.url) }
       }
       background = await createImageLayer(doc, image, id, crypto.randomUUID(), image === photo ? 'image/jpeg' : 'image/png')
-      if (!inImages() || workspace.getSnapshot().scope !== scope) return
-      const target = await requestGalleryTask(doc)
-      if (!target) throw Error(t('未能打开新的图片任务。', 'Could not open a new image task.'))
-      await workspace.ready(target)
       if (!inImages() || workspace.getSnapshot().scope !== target) return
       const { width, height } = background.raster
       const layers: CanvasLayer[] = [background,
@@ -1815,17 +1815,19 @@ export function mountImageFactory(doc: Document, host: WorkspaceSurfaceHost, bri
     if (now !== english) { english = now; render() }
   })
   language.observe(doc.documentElement, { attributes: true, attributeFilter: ['data-odyssey-locale'] })
-  const open = (reopen?: string) => {
-    host.open('image-factory')
+  const open = (reopen?: string, fresh = false) => {
+    if (fresh) doc.body.dataset.imageFactoryNewSession = 'true'
+    try { host.open('image-factory') }
+    finally { if (fresh) delete doc.body.dataset.imageFactoryNewSession }
     if (activeHere()) {
-      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen, entry: true } }))
-      if (session !== undefined) workspace.select(session)
+      doc.dispatchEvent(new CustomEvent('sherlock:image-factory-request-session', { detail: { reopen, entry: true, fresh } }))
+      if (!fresh && session !== undefined) workspace.select(session)
       doc.dispatchEvent(new CustomEvent('sherlock:image-factory-show-chat'))
     }
   }
   render()
   return {
-    open: () => open(),
+    open: () => open(undefined, true),
     openInSession: (id: string) => open(id),
     async openSessionCanvas(id: string, activateSession: () => Promise<boolean>, expectedCanvasId?: string) {
       if (!validCanvasScope(id)) throw Error('来源会话已不可用。')
