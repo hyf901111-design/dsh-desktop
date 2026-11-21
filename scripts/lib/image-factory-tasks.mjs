@@ -1,5 +1,5 @@
 /** Open image task tabs, linked to the same native sessions as the conversation pane. */
-export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, getDefaultWorkspace = getWorkspace, standaloneDirectory, setView, storage, archiveTask, requestTitle, blankTitle = () => '新图像', isBoardOnly = () => false }) {
+export function createImageFactoryTasks({ sessions, win, isActive, signal, syncSession, getWorkspace, getDefaultWorkspace = getWorkspace, standaloneDirectory, setView, storage, archiveTask, requestTitle, canSyncTitle, blankTitle = () => '新图像', isBoardOnly = () => false }) {
   let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
   let entryProject, navigation = 0, pendingFresh = false, account = {}, freshQueue = Promise.resolve()
   const checking = new Set(), replacements = new Set(), sending = new Map()
@@ -38,14 +38,29 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
         row.title && row.title !== '新图像' && row.title !== 'New image') return false
     return row.blank === true ? true : undefined
   }
+  const titleChecks = new Map()
+  function sessionTitleForTab(scope, row) {
+    const title = row?.title
+    if (!title || title === '新图像' || title === 'New image' || title === 'New Image') return
+    if (!canSyncTitle || !scope?.startsWith('image-task-')) return title
+    const prior = titleChecks.get(scope)
+    if (prior?.title === title && (prior.pending || prior.allowed || row.running || prior.updated === row.updatedAt)) return prior.allowed ? title : undefined
+    const check = {title, updated:row.updatedAt, pending:true, allowed:false}
+    titleChecks.set(scope,check)
+    void canSyncTitle(scope,title).then(allowed => {
+      if (titleChecks.get(scope) !== check) return
+      check.pending = false
+      check.allowed = allowed
+      if (allowed && sessions.list.getSnapshot().byId?.[scope]?.title === title) observe()
+    }).catch(() => { if (titleChecks.get(scope) === check) titleChecks.delete(scope) })
+  }
   function observe() {
     const eligible = id => owned(id) && !sending.has(id) && !replacements.has(id) && openToken?.tab.scope !== id &&
       (!isActive() || sessions.list.getSnapshot().current !== id)
     for (const tab of [...tabs, ...closed]) {
       const id = tab.scope
-      const title = sessions.list.getSnapshot().byId?.[id]?.title
-      if (title && !tab.temporary && title !== tab.title &&
-          (!tab.title || title !== '新图像' && title !== 'New image')) setTitle({ scope: id, title }, true)
+      const row = sessions.list.getSnapshot().byId?.[id]
+      if (!tab.temporary && row?.title && row.title !== tab.title && sessionTitleForTab(id,row)) setTitle({scope:id,title:row.title},true)
       if (!tab.temporary || checking.has(id) || !archiveTask || !storage?.hasCanvas || epoch === undefined) continue
       const vacant = blank(id)
       if (vacant === false) { keep(id); continue }
@@ -288,8 +303,9 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     const tab = tabs.find(item => item.scope === scope)
     if (!tab) return
     if (!fromSession) keep(scope)
-    const saved = sessions.list.getSnapshot().byId?.[scope]?.title
-    const label = (saved && saved !== '新图像' && saved !== 'New image' ? saved : title).trim().slice(0, 255)
+    const row = sessions.list.getSnapshot().byId?.[scope]
+    const saved = fromSession || row?.title === title ? title : sessionTitleForTab(scope,row)
+    const label = (saved || title).trim().slice(0, 255)
     if (tab.title === label) return
     tabs = tabs.map(item => item.scope === scope ? { ...item, title: label } : item)
     if (!fromSession && scope?.startsWith('image-task-')) saveTitle(scope, 'template', title.trim().slice(0, 255))
@@ -418,7 +434,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     }
   }
   function reset() {
-    account = {}; navigation++; checking.clear(); replacements.clear(); sending.clear(); pendingFresh = false
+    account = {}; navigation++; titleChecks.clear(); checking.clear(); replacements.clear(); sending.clear(); pendingFresh = false
     tabs = []
     closed = []
     active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = entryProject = undefined

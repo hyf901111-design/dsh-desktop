@@ -245,6 +245,38 @@ function patchImageSessionTitleSeed(source) {
   'if (accepted !== void 0 && (accepted.eventSeq !== current?.eventSeq || !this.isImageTitleSeed(session, accepted))) return accepted;')
 }
 
+// Both an image discussion and an ordinary conversation may be the first use
+// of an image tab. A document or a mixed history has its own title lifecycle.
+function imageSeedTopicMode(session, seed) {
+ if (!seed || !/^image-task-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iu.test(session.id) ||
+     session.header?.parentSession || session.header?.origin === 'subagent' ||
+     seed.source.kind !== 'fallback' || seed.messageSeqs.length !== 0) return
+ let mode
+ for (const event of session.events) {
+  if (/^workspace-(?:note|spreadsheet|presentation|research|knowledge)\//u.test(event.type)) return
+  if (event.type !== 'user/message' || event.data?.source?.kind !== 'user') continue
+  const next = event.data.source.clientMode
+  if (event.seq <= seed.eventSeq || (next !== 'image' && next !== 'conversation') || (mode && mode !== next)) return
+  mode = next
+ }
+ return mode
+}
+
+function patchImageSeedTopicMode(source) {
+ const marker='/* ework:image-title-scope:v1 */'
+ if (source.includes(marker)) return source
+ const check='imageSeedTopicMode(session, this.get(session))'
+ source=once(source,'function collectSessionTitleMessages(',marker+'\n'+imageSeedTopicMode.toString()+'\nfunction collectSessionTitleMessages(')
+ source=once(source,"const imageSeed = event.data.source.clientMode === 'image' && this.isImageTitleSeed(session);",
+  "const imageSeed = session.id.startsWith('image-task-') && Boolean("+check+');')
+ const begin=source.indexOf('   const recent = session.events.findLast(event =>',source.indexOf('async ensureFallback(session)'))
+ const end=source.indexOf(' return current;',begin)
+ if(begin<0 || end<0 || !source.slice(begin,end).includes('session.events.find(event => event.seq === first.seq)')) throw Error('Image seed mode guard drifted')
+ source=source.slice(0,begin)+'   if (!first || !imageSeedTopicMode(session, current))'+source.slice(end)
+ return once(source,'accepted.eventSeq !== current?.eventSeq || !this.isImageTitleSeed(session, accepted)',
+  'accepted.eventSeq !== current?.eventSeq || !imageSeedTopicMode(session, accepted)')
+}
+
 // Choose a complete topic only when the normal byte/word limit actually cuts
 // into a following instruction. The provider still sees the entire message.
 function imageMessageFallbackTitle(session,first,config) {
@@ -263,7 +295,7 @@ function imageMessageFallbackTitle(session,first,config) {
 }
 
 export function patchImageSessionTitle(source) {
- source=patchImageSessionTitleSeed(source)
+ source=patchImageSeedTopicMode(patchImageSessionTitleSeed(source))
  const marker='/* ework:image-fallback-clause:v1 */'
  if(source.includes(marker))return source
  const call='fallbackSessionTitle(first.text, this.config.fallbackMaxWords, this.config.fallbackMaxBytes)'

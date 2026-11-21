@@ -29,6 +29,12 @@ export function installImageFactoryContext({
   const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, getDefaultWorkspace, standaloneDirectory,
     setView: setTaskView, storage: taskStorage, archiveTask, isBoardOnly,
     blankTitle: () => doc.documentElement.dataset.odysseyLocale === 'en' ? 'New image' : '新图像',
+    canSyncTitle: async (sessionId, expectedTitle) => {
+      const reply = await win.fetch('/sherlock/image-factory/history-mode', {method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({sessionId, expectedTitle})})
+      if (!reply.ok) throw Error('暂时无法核对图片页签标题。')
+      return (await reply.json()).syncTitle === true
+    },
     requestTitle: (sessionId, kind, title) => win.fetch?.('/sherlock/image-factory/session-title', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, kind, title })
     }).catch(() => {}),

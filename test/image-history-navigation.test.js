@@ -80,3 +80,20 @@ it('patches the real SDK workspace row without changing programmatic opens or ad
  expect(installed).toContain('open: (sessionId) => {\n\t\t\t\t\tctx.sessions.open(sessionId);\ndocument.dispatchEvent(new CustomEvent("sherlock:history-session-selected"')
  expect(patchSidebarSessionExperience(installed)).toBe(installed)
 })
+
+it('shares only permission to sync the requested current title of a personal image tab',async()=>{
+ const events=[{seq:4,type:'session/title',data:{title:'主动有章法',messageSeqs:[],source:{kind:'fallback'}}},
+  {...human('conversation'),seq:10},{seq:22,type:'session/title',data:{title:'讨论实际主题',messageSeqs:[10],source:{kind:'fallback'}}}]
+ let handler,expectedTitle='讨论实际主题';const end=vi.fn()
+ registerImageHistoryMode({sessions:{get:()=>({events,header:{}})},webServer:{register:r=>{handler=r.handler}}},
+  {isTrustedRequest:()=>true,readJsonBody:async()=>({sessionId:id,expectedTitle}),checkPrivate:async()=>{}})
+ const read=async()=>{await handler({method:'POST'},{writeHead:vi.fn(),end});return JSON.parse(end.mock.lastCall[0])}
+ expect(await read()).toEqual({syncTitle:false})
+ events.at(-1).data.source.kind='provider';expect(await read()).toEqual({syncTitle:false})
+ events[1].data.source.clientMode='image';expect(await read()).toEqual({syncTitle:true})
+ events[1].data.source.clientMode='conversation';events.at(-1).data.source.kind='user';expect(await read()).toEqual({syncTitle:true})
+ events.push({seq:37,type:'workspace-research/title-context',data:{components:[]}},
+  {seq:38,type:'session/title',data:{title:'讨论实际主题',messageSeqs:[37],source:{kind:'fallback'}}})
+ expect(await read()).toEqual({syncTitle:false})
+ expectedTitle='过期的已显示标题';expect(await read()).toEqual({syncTitle:false})
+})

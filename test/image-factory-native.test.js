@@ -1028,7 +1028,7 @@ function imageSessionLifecycle(options = {}) {
     hasCanvas: vi.fn(async () => false), ...options.storage }
   const archiveTask = vi.fn(async () => {})
   const f = fixture(storage, undefined, undefined, { archiveTask, ...options.deps })
-  const request = vi.spyOn(f.win, 'fetch').mockResolvedValue({ ok: true })
+  const request = vi.spyOn(f.win, 'fetch').mockResolvedValue({ ok: true, json:async()=>({syncTitle:true}) })
   const open = () => {
     f.doc.body.dataset.workspaceSurface = 'image-factory'
     f.events('request-session', { fresh: true, entry: true })
@@ -1083,7 +1083,7 @@ it('adopts the clicked template in the same empty task and follows its native co
     f.sessionsState.byId[id].title = '我手动起的名字'
     f.sessionCatalog.open(id)
     f.events('task-title', { scope: id, title: '奔流的线' })
-    expect(state.tabs[0].title).toBe('我手动起的名字')
+    await vi.waitFor(()=>expect(state.tabs[0].title).toBe('我手动起的名字'))
     f.leave()
     await Promise.resolve()
     expect(f.archiveTask).not.toHaveBeenCalled()
@@ -1148,4 +1148,21 @@ it('abandons a late create after switching surfaces and keeps the next click tie
     await vi.waitFor(() => expect(f.archiveTask).toHaveBeenCalledWith(delayedId))
     expect(f.sessionCatalog.create.mock.calls[1][0]).toMatchObject({ sessionId: current, workspaceId: 'B' })
   } finally { await f.dispose() }
+})
+
+it('keeps a saved image tab and its canvas name when the same native session acquires an ordinary chat topic', async()=>{
+  const f=imageSessionLifecycle();let tabs
+  f.doc.addEventListener('sherlock:image-factory-task-state',event=>{tabs=event.detail.tabs})
+  try {
+    f.open();const id=await f.created(1)
+    f.events('task-action',{kind:'new',template:'主动有章法',requestId:f.win.crypto.randomUUID()})
+    await vi.waitFor(()=>expect(tabs[0].title).toBe('主动有章法'))
+    f.request.mockResolvedValue({ok:true,json:async()=>({syncTitle:false})})
+    f.sessionsState.byId[id].title='普通会话的新主题'
+    f.sessionCatalog.open(id)
+    f.events('task-title',{scope:id,title:'主动有章法'})
+    await vi.waitFor(()=>expect(f.request.mock.calls.some(([,init])=>JSON.parse(init.body).expectedTitle==='普通会话的新主题')).toBe(true))
+    expect(tabs[0]).toMatchObject({scope:id,title:'主动有章法'})
+    expect(f.storage.write.mock.lastCall[0].tabs[0].title).toBe('主动有章法')
+  } finally {await f.dispose()}
 })
