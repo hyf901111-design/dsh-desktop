@@ -1998,6 +1998,95 @@
         ],
         "recordedAt": "2026-11-21T09:22:26.129Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "披露明细原表列数与持久化数据集来源菜单",
+        "branch": "codex/feat/research-source-table-display-20261121",
+        "baseCommit": "356220d4c469c24c27d0c24b59d579f6e836e2a5",
+        "tipCommit": "bc083905d07eab1a13eef34c877337229bcc7c30",
+        "commits": [
+          {
+            "commit": "bc083905d07eab1a13eef34c877337229bcc7c30",
+            "parents": [
+              "356220d4c469c24c27d0c24b59d579f6e836e2a5"
+            ],
+            "subject": "保留披露原表六列并恢复共享明细来源菜单"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-runtime.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/component-source-info.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/research-etf-original-order-view.json"
+          },
+          {
+            "status": "A",
+            "path": "test/research-record-source-display.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-record-source-display.test.js",
+              "test/dataset-view-artifact.test.js",
+              "test/dataset-view-browser.test.js",
+              "test/component-source-info-browser.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=20000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "4个聚焦文件35项通过，覆盖真实5×6持仓原文、真实编号与主动选列、原生浏览器筛选/行选择、来源元信息。",
+            "verifiedCommit": "bc083905d07eab1a13eef34c877337229bcc7c30",
+            "completedAt": "2026-11-21T09:22:32.652681+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "/private/tmp/ework-research-role-qa-20261121/real/verify-render-last.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "4张既有落盘共享视图恢复官方来源链接；旧包会话资源更新两次字节一致。440/720 原生预览实跑搜索、复原及逐值检查。",
+            "verifiedCommit": "bc083905d07eab1a13eef34c877337229bcc7c30",
+            "completedAt": "2026-11-21T09:22:32.652681+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离 Chromium 通过真实生成预览和宿主引用模型，以440与720像素核对全部六列；记录交互筛选一行再恢复五行。实机前台由当前集成批次独立验收。"
+        },
+        "acceptanceCriteria": [
+          "公开ETF稽核表原始5×6，源序号、股票代码以及金额精度保留，内部row-N不额外占列。",
+          "业务编号继续可见，显式选定内部编号时如实显示，搜索以及键盘点击沿用内部ID。",
+          "四张此前来源为空的共享视图在宿主来源信息得到持久化的公开出处及日期。"
+        ],
+        "risks": [
+          "旧持久化卡无需重新生成即可通过宿主看到记录来源；独立预览的六列表格由新模板用原始数据生成。新签名客户端验收由集成批次负责。"
+        ],
+        "generatedAt": "2026-11-21T09:22:32.652681+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2185,6 +2274,28 @@
       "argv": [
         "node",
         "/private/tmp/ework-research-role-qa-20261121/real/托管开场AB/verify-evidence.mjs"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-record-source-display.test.js",
+        "test/dataset-view-artifact.test.js",
+        "test/dataset-view-browser.test.js",
+        "test/component-source-info-browser.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=20000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "/private/tmp/ework-research-role-qa-20261121/real/verify-render-last.mjs"
       ],
       "timeoutMs": 180000
     }
