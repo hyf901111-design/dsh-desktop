@@ -45,10 +45,58 @@ export function allowTaskOpening(turn) {
   if (turn) supported.add(turn)
 }
 
+// Describe what the user has already supplied. Only project a couple of scalar
+// values if their headers identify the measure and the row has a safe label.
+function openingTableScope(rows) {
+  const [header, ...records] = rows
+  const labels = header.slice(0,8).map(cell => cell.replace(/\s+/gu,' ').slice(0,24))
+  const dimension = '本轮原表已识别'+records.length+'行记录，表头'+header.length+'列：'+labels.join('、')
+  if (!records.length || records.some(row=>row.length!==header.length) || new Set(header).size!==header.length) return dimension
+  const row = records[0]
+  const key = header.findIndex(label => /名称|类别|项目|日期|证券名|产品名|^(?:name|category|date)$/iu.test(label))
+  if (key<0 || !/^[\p{L}\p{N} .·/−–-]{1,24}$/u.test(row[key])) return dimension
+  const scalars = []
+  for (let i=0;i<labels.length;i++) {
+    const label=labels[i],value=row[i]
+    if (i===key || label!==header[i] || /(?:序号|编号|代码|日期|code|(?:^|\s)id$)/iu.test(label)) continue
+    if (!/[（(][^()（）]{1,12}[）)]|[%％‰]|(?:bp|bps)$/iu.test(label) || !/^[-+−]?\d+(?:,\d{3})*(?:\.\d+)?(?:[%％‰]| ?bps?)?$/iu.test(value) || value.length>24) continue
+    scalars.push(label+'='+value)
+  }
+  const facts=scalars.slice(-2)
+  return facts.length ? dimension+'。原表首行 '+row[key]+'：'+facts.join('，') : dimension
+}
+
+// The opening itself is text-only. Describe an action only when the full
+// execution request actually offered it and the user asked for that action.
+function openingCapabilities(turn, tools) {
+  const named = name => tools.some(tool => tool.name === name)
+  const actions = []
+  if (turn.image) {
+    if (named('image_generate')) actions.push('生成并交付实际图片')
+    if (named('image_edit_layer')) actions.push('编辑用户指定的图层')
+  }
+  if (turn.mode === 'research' && named('research_workbench_create') && classifyResearchCreationRequest(turn.text,'research')) actions.push('在研究画布上创建组件')
+  if (turn.mode === 'browser' && named('browser_use') && (turn.appRead || turn.appEdit || /打开|访问|\bopen\b/iu.test(turn.text))) actions.push('打开或读取指定网页')
+  const grants = tools.find(tool=>tool.name==='client_action')?.parameters?.properties?.capability?.enum
+  if (Array.isArray(grants)) {
+    const descriptions = {
+      'spreadsheet.inspect':'读取工作簿','spreadsheet.apply':'在原生表格写入数据和公式',
+      'presentation.inspect':'读取演示正文与备注','presentation.apply':'在原生演示修改页面和备注',
+      'notes.blocks.read':'读取已授权的笔记正文','notes.blocks.apply':'在原生笔记准备修改',
+      'conversation.components.create':'在本次对话创建可保存的组件',
+      'knowledge.inspect':'查看本机知识库','knowledge.shared.search':'检索共享资料',
+    }
+    for (const [capability, description] of Object.entries(descriptions)) {
+      if (capability.startsWith(turn.mode+'.') && grants.includes(capability)) actions.push(description)
+    }
+  }
+  return actions.length ? '本轮后续步骤已具备以下能力：'+actions.join('、')+'。按用户意图说明有用的取舍，实际交付成功以执行回执为准。' : ''
+}
+
 // The opening is its own model call, with no ability to act. Keep the user's
 // goals on both sides of pasted tables, without making the model solve the
 // entire analysis or inspect documents before it can acknowledge the task.
-function openingMessage(message, turn, brief) {
+function openingContext(message, turn, brief) {
   const authored = turn.text.replace(/```[\s\S]*?(?:```|$)/gu, ' ')
   const {blocks,context} = pastedWorkbenchInput(authored)
   const lines = (blocks.length ? context : authored)
@@ -73,9 +121,6 @@ function openingMessage(message, turn, brief) {
     goal = boundary >= 42 ? head.slice(0,boundary+1) : head+'…'
     if (language && !goal.includes(language)) goal += ' '+language
   }
-  const labels = blocks.slice(0,2).map(rows=>rows[0].slice(0,8)
-    .filter(cell=>/[\p{L}]/u.test(cell))
-    .map(cell=>cell.replace(/\s+/gu,' ').slice(0,24)).join('、')).filter(Boolean)
   const references = []
   if (turn.workspaceTagged) {
     // Keep a short label/range, not the host ID or the contents of a selection.
@@ -91,12 +136,12 @@ function openingMessage(message, turn, brief) {
   const scope = [
     references.length && '用户选定的内容引用：'+references.join('、'),
     message.content?.some(part=>part.type==='image') && '本轮附有图片。',
-    ...labels.map(header=>'原表字段：'+header),
+    ...blocks.slice(0,2).map(openingTableScope),
   ].filter(Boolean).join('\n')
   const outline = [goal,scope].filter(Boolean).join('\n')
   // Treat the original imperative as quoted material. The communication call
   // has a different job from the execution call that follows.
-  return {id:message.id,role:'user',source:message.source,content:[{type:'text',text:outline}]}
+  return {message:{id:message.id,role:'user',source:message.source,content:[{type:'text',text:outline}]},hasPastedTable:blocks.length>0}
 }
 
 function milestone(session, turnNumber, firstFinding) {
@@ -123,8 +168,9 @@ export function registerModelTaskReplies(ctx) {
       const {message} = claimedWorkspaceMessage(agent.session,turn.mode) ?? {}
       if (!message) return request
       opened.add(turn)
-      return {...request, tools:[], [publicOpening]:true, messages:[openingMessage(message,turn,request.provider==='ework-ark' && request.model==='deepseek-v4.1-flash')],
-        system:'用用户指定的语言或用户的语言，只写一句能推进当前任务的话。已给事实足够时可直接点出结论；也可说明一个与目标有关的取舍，或接下来的具体动作怎样帮助交付。只使用已给出的事实，执行结果等实际回执，省略套话和内部指令。'}
+      const opening=openingContext(message,turn,request.provider==='ework-ark' && request.model==='deepseek-v4.1-flash')
+      return {...request, tools:[], [publicOpening]:true, messages:[opening.message],
+        system:'用用户指定的语言或用户的语言，只写一句能推进当前任务的话。已给事实足够时可直接点出结论；也可说明一个与目标有关的取舍，或接下来的具体动作怎样帮助交付。只使用已给出的事实，执行结果等实际回执，省略套话和内部指令。'+openingCapabilities(turn,request.tools)+(opening.hasPastedTable?'原表的已识别行在执行时可读取，无需用户重发。':'')}
     }
     if (step === 2 && opened.has(turn) && request.messages?.at(-1)?.role === 'assistant') {
       // Wire-only instruction. The actual user's message and its permissions

@@ -71,3 +71,46 @@ it('keeps the supplied decision or facts available without prescribing a verific
  expect(first.messages).toHaveLength(1)
  expect(first.tools).toEqual([])
 })
+
+it('carries the supplied row count, field units and two row-bound disclosed values in the short opening',async()=>{
+ const text=`我是估值核算岗，请把五笔持仓整理到研究看板，按原序逐笔核对。
+序号	股票代码	股票名称	数量（股）	公允价值（元）	占基金资产净值比例（%）
+1	300750	宁德时代	31173566	11448803849.16	3.81
+2	600519	贵州茅台	7377868	10160652252.24	3.38
+3	601318	中国平安	125580047	8589675214.80	2.86
+4	300308	中际旭创	13089026	7984305860.00	2.66
+5	601899	紫金矿业	194034163	6688357598.61	2.23`
+ const {current,run}=requests(text)
+ const first=await run(1,{...current,provider:'ework-ark',model:'deepseek-v4.1-flash'})
+ const body=first.messages[0].content[0].text
+ expect(body).toContain('已识别5行记录，表头6列')
+ expect(body).toContain('原表首行 宁德时代：公允价值（元）=11448803849.16，占基金资产净值比例（%）=3.81')
+ expect(body).not.toContain('601318')
+ expect(first.system).toContain('无需用户重发')
+ expect(first.tools).toEqual([])
+})
+
+it('reports the identified shape without assigning scalar examples to ambiguous columns',async()=>{
+ const text='请根据以下原表建立研究看板。\n名称\t金额（元）\t金额（元）\n余额\t100.00\t0.10\n扣除\t110.00\t0.21'
+ const {current,run}=requests(text)
+ const first=await run(1,{...current,provider:'ework-ark',model:'deepseek-v4.1-flash'})
+ expect(first.messages[0].content[0].text).toContain('已识别2行记录，表头3列')
+ expect(first.messages[0].content[0].text).not.toContain('100.00')
+})
+
+it('describes only tools authorized on the execution request while the opening remains text-only',async()=>{
+ const imageText='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，作为新素材加入这份验收画布。'
+ const image=requests(imageText,{mode:'image'})
+ const call=await image.run(1,{...image.current,tools:[{name:'image_generate'}]})
+ expect(call.tools).toEqual([])
+ expect(call.system).toContain('生成并交付实际图片')
+ expect((await image.run(1,{...image.current,tools:[{name:'existingTool'}]})).system).not.toContain('生成并交付实际图片')
+ const office=requests('请核对工作簿的现有日期、再按实际观察日写入两组利差公式。',{mode:'spreadsheet'})
+ const granted=ids=>[{name:'client_action',parameters:{properties:{capability:{enum:ids}}}}]
+ const native=await office.run(1,{...office.current,tools:granted(['spreadsheet.inspect','spreadsheet.apply'])})
+ expect(native.tools).toEqual([])
+ expect(native.system).toContain('读取工作簿、在原生表格写入数据和公式')
+ const read=await office.run(1,{...office.current,tools:granted(['spreadsheet.inspect'])})
+ expect(read.system).toContain('读取工作簿')
+ expect(read.system).not.toContain('写入数据和公式')
+})
