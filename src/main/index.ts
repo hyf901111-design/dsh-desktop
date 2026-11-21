@@ -1492,7 +1492,7 @@ async function bootstrap(): Promise<void> {
   const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
   protocol.handle('odyssey-presentation', request=>handleEditorAsset(app.getAppPath(),request))
   const presentationStore=new PresentationStore(join(app.getPath('userData'),'presentation-v1'))
-  const presentation:ReturnType<typeof installPresentation>=installPresentation({ipcMain,getWindow:()=>mainWindow,store:presentationStore,library:knowledge,workspaceRoot:id=>new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),runtimeUrl:()=>runtime?.snapshot().url,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet})
+  const presentation:ReturnType<typeof installPresentation>=installPresentation({ipcMain,narrate:(owner,text,signal)=>accountService!.narratePresentation(owner,text,signal),getWindow:()=>mainWindow,store:presentationStore,library:knowledge,workspaceRoot:id=>new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),runtimeUrl:()=>runtime?.snapshot().url,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet})
   app.once('before-quit',()=>presentationStore.close())
   const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',canPlayCashFlowGuide:({owner,sessionId})=>{
     const scope=owner==='local'?'local':'account:'+owner

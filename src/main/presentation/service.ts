@@ -32,9 +32,11 @@ export function installPresentation(options: {
   runtimeUrl?(): string | undefined
   visible(): ConversationComponentVisibleContext | undefined
   library?: Pick<KnowledgeStore, 'savePresentationArchive'>
+  narrate?(owner: string, text: string, signal: AbortSignal): Promise<Uint8Array>
   canWrite(id: string): boolean
 }) {
   const { store, getWindow } = options
+  let narration: { id: string; controller: AbortController } | undefined
   const archives = new Set<string>()
   const admissions = new Map<string, Map<string, Admission>>()
   type PendingImport = {
@@ -85,12 +87,31 @@ export function installPresentation(options: {
     'presentation:request',
     getWindow,
     async (_event, action: string, input: any) => {
+      if (action === 'cancel-narration') {
+        if (narration?.id === input.id) narration?.controller.abort()
+        return
+      }
       const { key, generation } = scope(
         input.sessionId,
         input.generation,
         ['save', 'open', 'undo', 'edit-guide'].includes(action)
       )
       const owner = who(key)
+      if (action === 'narrate') {
+        if (!options.narrate || typeof input.text !== 'string' || !input.text.trim() || input.text.length > 600 ||
+            typeof input.id !== 'string' || input.id.length > 64 || store.read(key).deck?.id !== input.documentId)
+          throw Error('当前文稿或备注已变化。')
+        narration?.controller.abort()
+        const task = { id: input.id, controller: new AbortController() }
+        narration = task
+        try {
+          const bytes = await options.narrate(key.owner, input.text, task.controller.signal)
+          if (scope(key.sessionId, generation).key.owner !== key.owner) throw Error('会话已切换。')
+          return bytes
+        } finally {
+          if (narration === task) narration = undefined
+        }
+      }
       if (action === 'archive') {
         const { name, format, documentId, revision, sessionTitle } = input
         if (!options.library || typeof name !== 'string' || !name.trim() || name.length > 250 ||

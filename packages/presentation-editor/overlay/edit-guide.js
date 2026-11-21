@@ -1,6 +1,6 @@
 // The home player lives outside the editor origin. Resolve its finite set of
 // targets against the current PPTist viewport so zoom and sidebar width apply.
-export function runEditGuideAction(d, { store, documentId, editable, activeIds, plain, resizeNotes }) {
+export function runEditGuideAction(d, { store, documentId, editable, activeIds, plain, enableDemoNarration, resizeNotes }) {
   if (!documentId || documentId !== d.documentId || !editable) throw Error('演示文稿已切换或锁定。')
   const slide = store.currentSlide
   const box = (rect) => ({
@@ -42,6 +42,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
       comment: '.pptxa-bubble:not([hidden]) textarea',
       close: '.pptxa-bubble:not([hidden]) .pptxa-bubble-close',
       notes: '.notes textarea',
+      narrate: '.theater .narration-button',
       play: '.ribbon button[aria-label="从当前页放映"]'
     }[d.target]
     let el = selector && document.querySelector(selector)
@@ -59,6 +60,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
       page: store.slideIndex + 1,
       notes: plain(slide.remark),
       playing: !!document.querySelector('.theater'),
+      narrating: document.querySelector('.theater .narration-button')?.dataset.state === 'playing',
       count: store.slides.length,
       title: (() => {
         const e = slide.elements.find((el) => el.id === activeIds.at(-1))
@@ -100,6 +102,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
           })
         )
     } else {
+      if (d.target === 'narrate') enableDemoNarration()
       const el = control()
       el.focus({ preventScroll: true })
       el.click()

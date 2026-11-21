@@ -298,6 +298,21 @@ export class AccountService {
     })
     return response
   }
+  async narratePresentation(owner: string, text: string, signal: AbortSignal): Promise<Uint8Array> {
+    if (!this.authenticated || !this.accountId || this.accountId !== owner) throw Error('请登录 EWork 后使用演讲者朗读。')
+    const generation = this.generation
+    const response = await this.hostedRequest('speech', signal, Buffer.from(JSON.stringify({ text })))
+    if (!response.ok) {
+      const result = await response.json().catch(() => null)
+      throw Error(response.status === 401 ? '登录已过期，请重新登录后朗读。' : result?.error?.message || '语音合成暂时不可用，请重试。')
+    }
+    if (response.headers.get('content-type') !== 'audio/mpeg') throw Error('朗读服务返回的音频格式无效。')
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    if (this.generation !== generation || !this.authenticated) throw Error('登录状态已变化。')
+    if (!bytes.length || bytes.length > 8_000_000) throw Error('未收到有效的朗读音频。')
+    this.collaborationOptions.onHostedQuotaChanged?.()
+    return bytes
+  }
   private async readHostedCatalog(): Promise<HostedCatalogResult | undefined> {
     if (!this.authenticated || !this.accountId) return emptyHostedCatalog
     const generation = this.generation

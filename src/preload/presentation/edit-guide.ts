@@ -19,6 +19,7 @@ type EditorState = {
   rectReady: boolean
   rectSelected: boolean
   commentOpen: boolean
+  narrating?: boolean
   playing?: boolean
 }
 
@@ -342,9 +343,14 @@ export async function mountPresentationEditGuide(
           await until(s => s.page === 1 && s.playing === true, '首页放映尚未开始。')
           await wait(2200)
           break
+        case 'narrate':
+          await hit('narrate')
+          await until(s => s.narrating === true, '用例录音尚未开始播放。')
+          await wait(2500)
+          break
         case 'finish':
           await until(
-            (s) => s.page === 1 && s.playing === true,
+            (s) => s.playing === true && s.narrating === true,
             '演示结果尚未保存。'
           )
           break
