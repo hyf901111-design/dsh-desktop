@@ -259,6 +259,7 @@
         <button title="缩小" @click="zoom.scaleCanvas('-')"><Glyph name="minus" /></button>
         <button title="适合窗口" @click="zoom.resetCanvas">适合</button>
         <button title="放大" @click="zoom.scaleCanvas('+')"><Glyph name="plus" /></button>
+        <button title="从当前页放映" aria-label="播放演示文稿" @click="play"><Glyph name="play" /></button>
         <button
           :title="focusLabel"
           :aria-label="focusLabel"
