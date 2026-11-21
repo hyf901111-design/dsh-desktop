@@ -622,6 +622,17 @@ it('adds workspace context to the real native prompt while leaving ordinary chat
   } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
 })
 
+it('binds a labeled cover brief to the native canvas and keeps the full creative instructions', async () => {
+  const f = fixture()
+  try {
+    f.respond()
+    f.doc.body.dataset.workspaceSurface = 'image-factory'
+    const text = '视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，整图不要出现任何文字、数字或水印。作为新素材加入这份验收画布。'
+    await f.binding.prompt(f.session, [{ type: 'text', text }], 'queue')
+    expect(readImageFactoryContext(f.session.prompt.mock.calls.at(-1)[0][0].text)).toMatchObject({ operation: 'generate', text })
+  } finally { f.binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('sends greetings, image analysis and advice as ordinary messages in Images', async () => {
   const f = fixture()
   const prepare = vi.fn()
@@ -629,7 +640,7 @@ it('sends greetings, image analysis and advice as ordinary messages in Images', 
   try {
     f.doc.body.dataset.workspaceSurface = 'image-factory'
     const image = { type: 'image', data: 'QkJC', mediaType: 'image/png', name: '参考.png' }
-    for (const text of ['你好', '看看这张图片有什么问题', '帮我分析这张海报，怎么改更好？',
+    for (const text of ['视觉讨论D1：给基金晨会做一幅16:9封面时，标题区放左侧，哪种构图能留出足够空间？这轮只讨论构图，不生成或修改图片。', '帮我分析这句话：“现在生成一张封面”。', '你好', '看看这张图片有什么问题', '帮我分析这张海报，怎么改更好？',
       '生成图片的提示词怎么写？', '现在生成图片需要多久？', '先讨论财政部收益率晨会的封面配色和构图，只给建议，暂时不要出图。', 'Please write a prompt to generate an image', '不要生成图片，先给建议']) {
       const content = [{ type: 'text', text }, image]
       expect(await f.binding.prompt(f.session, content, 'queue')).toEqual({ ok: true })
