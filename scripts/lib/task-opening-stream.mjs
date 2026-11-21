@@ -43,8 +43,9 @@ export async function* publicTaskOpeningStream(stream) {
   const blocks = new Map()
   let edited = false, protocolIndex
   for await (const chunk of stream) {
-    if (chunk.type === 'tool-call-delta' || chunk.type === 'block-start' && chunk.blockType === 'tool-call' ||
-        chunk.type === 'block-end' && chunk.block.type === 'tool-call') {
+    if (chunk.type === 'reasoning-delta' || chunk.type === 'tool-call-delta' ||
+        chunk.type === 'block-start' && ['reasoning','tool-call'].includes(chunk.blockType) ||
+        chunk.type === 'block-end' && ['reasoning','tool-call'].includes(chunk.block.type)) {
       edited = true
       continue
     }
@@ -90,7 +91,10 @@ export async function* publicTaskOpeningStream(stream) {
 // prepareCall binds both the adapter and the exact call configuration. The
 // opening gets its own capped call; execution keeps the selected model budget.
 export async function* boundedTaskOpeningStream(llm, prepared, request, signal, mark, freeze) {
-  const maxTokens = Math.min(request.maxTokens ?? 384, 384)
+  // The hosted Flash route counts mandatory reasoning against the same
+  // output limit as public text. Respect a smaller explicit session limit.
+  const budget = request.provider === 'ework-ark' && request.model === 'deepseek-v4.1-flash' ? 1024 : 384
+  const maxTokens = Math.min(request.maxTokens ?? budget, budget)
   if (request.maxTokens === maxTokens) {
     yield* publicTaskOpeningStream(prepared?.stream(request) ?? llm.stream(request))
     return

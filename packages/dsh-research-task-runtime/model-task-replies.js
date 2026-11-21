@@ -103,7 +103,7 @@ export function registerModelTaskReplies(ctx) {
       if (!message) return request
       opened.add(turn)
       return {...request, tools:[], [publicOpening]:true, messages:[openingMessage(message,turn)],
-        system:'用用户的语言或指定的语言写一句简短的开场白。点出其本轮具体目标、资料范围或优先核对的问题。稍后才会实际执行；这一句只回应任务，不解题、不写代码、调用格式或内部步骤，不声称已经读取、计算或保存。'}
+        system:'用用户的语言或指定的语言，直接写一句简短具体的开场。只陈述准备先核对什么，不追问、不解题、不声称已经执行，不输出工具格式或内部思考。'}
     }
     if (step === 2 && opened.has(turn) && request.messages?.at(-1)?.role === 'assistant') {
       // Wire-only instruction. The actual user's message and its permissions
