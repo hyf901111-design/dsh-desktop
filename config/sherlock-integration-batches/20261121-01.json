@@ -2244,6 +2244,84 @@
         ],
         "generatedAt": "2026-11-21T12:14:31.112868+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "实现实际受权的本机知识库标题检索",
+        "branch": "codex/feat/native-local-knowledge-search-20261121",
+        "baseCommit": "d7b60913199681f3dabe1b6aee0767a057ef1bdb",
+        "tipCommit": "a86bc111d7557731ebd133452f447060437a216a",
+        "commits": [
+          {
+            "commit": "a86bc111d7557731ebd133452f447060437a216a",
+            "parents": [
+              "d7b60913199681f3dabe1b6aee0767a057ef1bdb"
+            ],
+            "subject": "修复知识库本机标题检索的工具路由与只读回执"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-mode-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/capabilities.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/knowledge-local-search.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-local-search.test.js",
+              "test/client-mode-profile.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "复核原生claim、同账号本地检索、超40条历史、切账号以及缺少真实回执时的单次纠正。",
+            "verifiedCommit": "a86bc111d7557731ebd133452f447060437a216a",
+            "completedAt": "2026-11-21T12:22:43.074005+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "原签名客户端复现0工具。新签名客户端用有、无实际命中的两个原生问题继续复验。"
+        },
+        "acceptanceCriteria": [
+          "通过完整当前用户本机标题索引取得匹配总数和第一条标题",
+          "不改变当前界面筛选，离线查询不能误走外部共享或网络"
+        ],
+        "risks": [
+          "检索限本机标题与用户确实存放的文档。"
+        ],
+        "generatedAt": "2026-11-21T12:22:43.074005+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2532,6 +2610,18 @@
         "test/image-factory-layer-gesture.test.ts",
         "-t",
         "labeled cover brief|ordinary messages|prepares a canvas request",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/knowledge-local-search.test.js",
+        "test/client-mode-profile.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
