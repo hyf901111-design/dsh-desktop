@@ -187,7 +187,10 @@ function basisPointChange(text) {
   if (rates.length !== 2) return ''
   const [start, end] = rates
   const transition = normalized.slice(start.index + start[0].length, end.index).trim()
-  if (!/^(?:(?:下降|上升|下行|上行|降|升|跌|涨|变)?(?:至|到)|→|->|to)$/iu.test(transition)) return ''
+  if (!/^(?:(?:下降|上升|下行|上行|降|升|跌|涨|变)?(?:至|到)|→|->|to)$/iu.test(transition)) {
+    if (!/利差|\bspread\b/iu.test(normalized)) return ''
+    return '\n比较本条给出的两个利率时保留单位：两个带 % 的数相减，先写出差多少个百分点，再按 1 个百分点 = 100 bp 换算。直接用小数利率之差时才乘以 10000 bp。按题目指定的期限次序计算。'
+  }
   const points = Number((Number(end[1]) - Number(start[1])).toFixed(6))
   const bp = Number((points * 100).toFixed(4))
   return '\n本条消息所给区间的有符号变动已核算：末值 ' + end[1] + '% − 初值 ' + start[1] + '% = ' +
