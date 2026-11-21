@@ -74,7 +74,13 @@ function NativeHomeWorkbenchPortal({sessionId,subagentPanel=false,researchWorksp
    })
    return inputs.length===1?inputs[0]:undefined
   }
-  const readyInput=(t,active=true)=>waitFor(t,()=>inputFor(t),active,'右侧输入框尚未就绪，请重试。')
+  const readyInput=(t,active=true)=>waitFor(t,()=>{
+   const input=inputFor(t)
+   if(!input)return
+   // The right pane mounts before its opening transition gives the composer a painted area.
+   const box=input.getBoundingClientRect(),x=box.left+Math.min(22,box.width/3),y=box.top+Math.min(18,box.height/3)
+   if(box.width&&box.height&&document.elementFromPoint(x,y)===input)return input
+  },active,'右侧输入框尚未就绪，请重试。')
   const cue=async(t,target,label,action='click')=>{
    await playing(t);if(!target?.isConnected||target.disabled||target.closest('[inert]'))throw changed()
    const requestId=crypto.randomUUID(),runId=t.detail.runId,token=runId+':'+requestId+':target',targetToken=token,marker=document.documentElement.dataset.homeGuidePointerRun
