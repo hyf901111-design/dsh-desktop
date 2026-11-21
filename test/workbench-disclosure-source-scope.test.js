@@ -38,3 +38,16 @@ it('keeps original readers on a missing cell, an undated source or an unsafe / u
   expect(names(await planning(uncertain).wire())).toContain('web_fetch')
  }
 })
+
+it('starts a complete published concentration request with its source rows and keeps lookup for requested extra facts',async()=>{
+ const {originalRequest}=fixture('workbench-holding-weight-ranking.json')
+ const request=planning(originalRequest)
+ const first=await request.wire()
+ expect(names(first)).toEqual(['research_workbench_create','web_search'])
+ expect(first.system).toContain('百分点')
+ request.session.events.push({type:'tool/call',data:{name:'web_search',callId:'extra',arguments:'{}'}})
+ expect(names(await request.wire())).toContain('web_fetch')
+ for(const extra of ['请再打开季报核对原件。','请联网查最新净值。']){
+  expect(names(await planning(originalRequest+'\n'+extra).wire())).toContain('web_fetch')
+ }
+})

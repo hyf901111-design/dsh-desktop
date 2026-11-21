@@ -1,17 +1,21 @@
+import {requestsHoldingWeightRanking} from './holding-weight-ranking.js'
+
 // Use the narrative outside the source tables. A row label is evidence,
 // not an instruction to rank, filter or chart the rest of the disclosure.
 export function workbenchReadingPurpose(request = '') {
  const text = request.replace(/https?:\/\/\S+/gu, '')
- if (/逐(?:笔|行|项|条).{0,45}(?:核对|复核|核账|稽核)|(?:核对|对账|稽核).{0,30}(?:逐笔|逐行|原序)|reconcil\w*.{0,36}(?:row|ledger|line item)/iu.test(text)) return 'reconcile'
+ if (/逐(?:笔|行|项|条).{0,45}(?:核对|复核|核账|稽核|勾稽)|(?:核对|对账|稽核|勾稽).{0,30}(?:逐笔|逐行|原序)|reconcil\w*.{0,36}(?:row|ledger|line item)/iu.test(text)) return 'reconcile'
  if (/(?:例外|异常|净流出|为负|负数|低于).{0,70}(?:先|追问|扭转|恢复|优先)|(?:先|优先).{0,32}(?:例外|异常|净流出|为负|低于)|exceptions? first|outflows?.{0,30}revers/iu.test(text)) return 'exceptions'
  if (/交接便签|(?:一句话|一句交接|one sentence|one-line).{0,40}(?:交接|收盘|说明|读懂|handoff|close)|(?:交接|收盘|handoff|close).{0,80}(?:一句话|one sentence|one-line)/iu.test(text)) return 'handoff'
+ if (requestsHoldingWeightRanking(text)) return 'holding-rank'
  return ''
 }
 
 export function workbenchReadingGuidance(request, blocks = []) {
  const purpose = workbenchReadingPurpose(request)
  const choice = '优先以实际数据组织组件。保留用户明确要求的图、独立卡、原表和顺序。每张卡的主内容、占宽和先后由读者当前要完成的动作决定。'
- if (purpose === 'reconcile') return choice+'逐笔核对以可直接读的完整明细为入口，保留原始行序、业务编号、金额小数位与单位。显式声明 records.fields 的原列顺序，对账必读的多列可用 layout:"wide"。'
+ if (purpose === 'reconcile') return choice+'逐笔核对以可直接读的完整明细为入口，保留原始行序、业务编号、金额小数位与单位。显式声明 records.fields 的原列顺序；能用业务编号检索完整记录，对账必读的多列可用 layout:"wide"。'
+ if (purpose === 'holding-rank') return choice+'按披露的净值占比比较同一基金同日持仓，将所问合计、名次和差距与可复核的来源值放在看板上。百分比差用百分点，公允价值保留于核对明细。若用户另问金额比较，保留该比较。'
  if (purpose === 'handoff') return choice+'交接便签优先用一张紧凑的正文卡。将所问时点、实值、变化方向和按原单位换算的差额写入 panel.content.body；提供 content.title、asOf 和 sources 的公开出处。若只交付这一句，省略未被组件引用的 sharedDatasets；直接从指定原表计算。仅在用户另有要求时增加图或明细。'
  if (purpose === 'exceptions') {
   const signedHeaders = blocks.flatMap(block => block[0].filter((_,i) =>
