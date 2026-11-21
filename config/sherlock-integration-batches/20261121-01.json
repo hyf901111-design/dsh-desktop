@@ -4203,6 +4203,64 @@
         ],
         "generatedAt": "2026-11-21T15:39:21.956968+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "逐笔开场绑定一张明细与真实持仓",
+        "branch": "codex/feat/grounded-row-audit-opening-20261121",
+        "baseCommit": "3085de7c235db2ae59c50fb3f555ac43f6c8d82e",
+        "tipCommit": "96b0055a89ec1ffe5ca03628e2314c2adb7a5da9",
+        "commits": [
+          {
+            "commit": "96b0055a89ec1ffe5ca03628e2314c2adb7a5da9",
+            "parents": [
+              "3085de7c235db2ae59c50fb3f555ac43f6c8d82e"
+            ],
+            "subject": "按实际单表规划和原始持仓回复逐笔核算请求"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/model-task-replies.js"
+          },
+          {
+            "status": "M",
+            "path": "test/model-task-opening-context.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/model-task-opening-context.test.js",
+              "-t",
+              "keeps identifiers",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "真实上交所季报、可检索单表规划、明确的逐只拆卡、能力未授权均走相应协议。",
+            "verifiedCommit": "96b0055a89ec1ffe5ca03628e2314c2adb7a5da9",
+            "completedAt": "2026-11-21T15:39:46.306516+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "与主助手共享逐笔需求判定和本轮真实表段；实际端到端另验。"
+        },
+        "acceptanceCriteria": [
+          "开场使用原始股票代码及持股信息",
+          "按实际计划行数与组件数量分开，只在允许执行单表时引导"
+        ],
+        "risks": [
+          "响应时延和草拟措辞取决于当轮真实模型。"
+        ],
+        "generatedAt": "2026-11-21T15:39:46.306516+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4831,6 +4889,18 @@
         "test/workbench-holding-weight-ranking.test.js",
         "test/workbench-execution-policy.test.js",
         "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/model-task-opening-context.test.js",
+        "-t",
+        "keeps identifiers",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
