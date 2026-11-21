@@ -2978,6 +2978,68 @@
         ],
         "generatedAt": "2026-11-21T13:18:33.347845+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "浏览器加载时独立问答及首条会话移交",
+        "branch": "codex/feat/browser-discussion-admission-20261121",
+        "baseCommit": "e4fb48cce9e76c5895bd82653be042b22571fa06",
+        "tipCommit": "d3ec92e343fd903bfaeaed5bef6234739a00fd31",
+        "commits": [
+          {
+            "commit": "d3ec92e343fd903bfaeaed5bef6234739a00fd31",
+            "parents": [
+              "e4fb48cce9e76c5895bd82653be042b22571fa06"
+            ],
+            "subject": "浏览器加载期间允许独立问答并保留页面操作的稳定性校验"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/pending-conversation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/pending-conversation.test.js",
+              "test/browser-app-native.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "待创建和已创建会话均可跳过独立问答所不需的隐式页面读取，页面目标、选区和附件继续校验。34项通过。",
+            "verifiedCommit": "d3ec92e343fd903bfaeaed5bef6234739a00fd31",
+            "completedAt": "2026-11-21T13:24:26.904370+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "b085原生浏览器首次回车实际被“网页正在加载”拒绝。原样录入后继：无页面读取且可受理；同原文加真实来源芯片或图像附件仍保留读取，页面操作对照继续等待。新签名包由集成人复验。"
+        },
+        "acceptanceCriteria": [
+          "当前页正在加载时，能独立回答用户已给的数据或一般概念。",
+          "有明确页面来源、选区或附件时，保留稳定性和会话归属校验。"
+        ],
+        "risks": [
+          "相邻浏览器翻译的Happy DOM跨realm用例在干净基准及本分支同样失败，错误来自独立视图测试。"
+        ],
+        "generatedAt": "2026-11-21T13:24:26.904370+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3392,6 +3454,18 @@
         "test/pending-conversation-rendered.test.js",
         "-t",
         "hides the right project picker|keeps the active .*image-factory",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/pending-conversation.test.js",
+        "test/browser-app-native.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
