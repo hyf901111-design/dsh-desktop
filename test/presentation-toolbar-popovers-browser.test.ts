@@ -49,23 +49,42 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
         const rect = el.getBoundingClientRect()
         return { left: rect.left, top: rect.top, right: innerWidth - rect.right, bottom: innerHeight - rect.bottom,
           overflow: el.scrollWidth - el.clientWidth, rootOverflow: document.documentElement.scrollWidth - innerWidth,
-          background: getComputedStyle(el).backgroundColor }
+          background: getComputedStyle(el).backgroundColor,
+          track: getComputedStyle(el,'::-webkit-scrollbar-track').backgroundColor }
       })
       expect(Math.min(state.left, state.top, state.right, state.bottom)).toBeGreaterThanOrEqual(0)
+      expect(state.track).toBe(dark ? 'rgb(36, 36, 36)' : 'rgb(241, 241, 241)')
       expect(state.overflow).toBeLessThanOrEqual(1)
       expect(state.rootOverflow).toBe(0)
       expect(state.background).toBe(dark ? 'rgb(36, 36, 36)' : 'rgb(245, 245, 245)')
     }
-    const pool = async (label: string) => {
+    const pool = async (label: string, dark = true) => {
       await entry('插入')
       await frame.locator('[data-tool-menu=insert]').getByRole('button', { name: label, exact: true }).click()
-      await inside('.toolbar-popup')
+      await inside('.toolbar-popup',dark)
       if (label === '形状') {
         const scroller = frame.locator('.shape-pool')
-        expect(await scroller.evaluate((el: HTMLElement) => getComputedStyle(el).scrollbarWidth)).toBe('none')
-        await scroller.evaluate((el: HTMLElement) => el.scrollTop = el.scrollHeight)
-        expect(await scroller.evaluate((el: HTMLElement) => el.scrollHeight <= el.clientHeight || el.scrollTop > 0)).toBe(true)
+        await page.mouse.move(2,2)
+        const parts=await scroller.evaluate((el: HTMLElement) => ({
+          track:getComputedStyle(el,'::-webkit-scrollbar-track').backgroundColor,
+          thumb:getComputedStyle(el,'::-webkit-scrollbar-thumb').backgroundColor,
+          width:getComputedStyle(el,'::-webkit-scrollbar').width,
+          available:el.scrollHeight-el.clientHeight,
+        }))
+        expect(parts).toMatchObject(dark?{track:'rgb(36, 36, 36)',thumb:'rgb(75, 75, 75)',width:'6px'}:
+          {track:'rgb(241, 241, 241)',thumb:'rgb(184, 184, 184)',width:'6px'})
+        expect(parts.available).toBeGreaterThan(0)
+        await scroller.hover()
+        await page.mouse.wheel(0,160)
+        await expect.poll(() => scroller.evaluate((el: HTMLElement) => el.scrollTop)).toBeGreaterThan(0)
         await scroller.evaluate((el: HTMLElement) => el.scrollTop = 0)
+      } else {
+        const panel = frame.locator(label === '表格' ? '.table-generator' : '.chart-pool')
+        const emptyGutter = await panel.evaluate((el: HTMLElement) => ({
+          overflow: el.scrollHeight - el.clientHeight,
+          width: el.offsetWidth - el.clientWidth,
+        }))
+        expect(emptyGutter).toEqual({overflow:0,width:0})
       }
       expect(await frame.locator('.toolbar-popup').evaluate((el: HTMLElement) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1)
     }
@@ -147,6 +166,7 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
     await inside('.deck-choice-list', false)
     await page.keyboard.press('Tab')
     expect(await frame.getByRole('listbox').count()).toBe(0)
+    await pool('形状',false)
     expect(errors).toEqual([])
   } finally {
     await browser.close()
