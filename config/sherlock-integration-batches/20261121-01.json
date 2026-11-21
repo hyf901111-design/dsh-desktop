@@ -511,27 +511,121 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "按当前意图隐藏未授权的看板创建能力",
+        "featureName": "按本轮引用读取办公对象并将明确出图按指定比例保存到原生附件和画布",
         "branch": "codex/feat/mode-harness-20261121",
-        "baseCommit": "5ac05f3e3118f7e2619f73f16914756dd2d93333",
-        "tipCommit": "61ca412fde4f2aa4e381752e21872b9249045406",
+        "baseCommit": "61ca412fde4f2aa4e381752e21872b9249045406",
+        "tipCommit": "18cd888977d97e0644784730a96ae561ead035f8",
         "commits": [
           {
-            "commit": "61ca412fde4f2aa4e381752e21872b9249045406",
+            "commit": "7495a46add3da6610692db44a20f3e53f8374589",
             "parents": [
-              "5ac05f3e3118f7e2619f73f16914756dd2d93333"
+              "61ca412fde4f2aa4e381752e21872b9249045406"
             ],
-            "subject": "在本轮应用工具列表中同步执行研究建卡守卫"
+            "subject": "按当轮宿主引用约束表格和演示的首轮读取"
+          },
+          {
+            "commit": "4df75cdc935e8492096afa22d04fe708eeeab19f",
+            "parents": [
+              "7495a46add3da6610692db44a20f3e53f8374589"
+            ],
+            "subject": "将讨论方案后的明确出图指令绑定到当前图像画布"
+          },
+          {
+            "commit": "18cd888977d97e0644784730a96ae561ead035f8",
+            "parents": [
+              "4df75cdc935e8492096afa22d04fe708eeeab19f"
+            ],
+            "subject": "按用户指定比例编排生图并保存尺寸准确的原生附件"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-mode-profile.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-mode-reference.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-tools.js"
+          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
           },
           {
             "status": "M",
-            "path": "test/client-mode-profile.test.js"
+            "path": "packages/dsh-research-task-runtime/image-generation-provider.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-generation-tool.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-output-size.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-output-size.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/raster.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/shared/image-factory-canvas.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/client-capability-service.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-mode-workspace-reference.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-reference-inspect.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/spreadsheet-service.test.ts"
           }
         ],
         "checks": [
@@ -542,164 +636,33 @@
               "run",
               "test/client-mode-profile.test.js",
               "test/conversation-components-policy.test.js",
+              "test/image-generation-tool.test.js",
+              "test/image-factory.test.js",
+              "test/image-factory-native.test.js",
               "--maxWorkers=2",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "Test Files  2 passed (2)，Tests  220 passed (220)",
-            "verifiedCommit": "61ca412fde4f2aa4e381752e21872b9249045406",
-            "completedAt": "2026-11-21T06:21:00.938675+00:00",
+            "summary": "Test Files  5 passed (5)，Tests  299 passed (299)",
+            "verifiedCommit": "18cd888977d97e0644784730a96ae561ead035f8",
+            "completedAt": "2026-11-21T06:50:40.232342+00:00",
             "timeoutMs": 240000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "复用真实基金季报、年报和美国财政部收益率场景，检查主智能体首轮工具协议，明确手工编辑保留原入口。"
+          "summary": "真实研究→图像会话已验证讨论零工具、明确绘图唤起一次 Seedream，首次附件为 1248×832。使用该真实附件通过新保存路径离线重放得到 1600×900 PNG；新集成客户端重新发起绘图另行实测。表格真实工作簿已核对三天国债收益率 4.62%、4.55%、4.58% 及数值格式。"
         },
         "acceptanceCriteria": [
-          "按公开原表建工作台且保留数字精度与明确官方来源",
-          "讨论或总结看板时工具清单匹配执行守卫"
+          "表格和演示直接读取本轮已受理的对象，关闭引用仍可普通讨论",
+          "先讨论再明确出图时绑定图像画布，讨论不调用图像工具",
+          "明确的比例及像素尺寸传入构图条件，保存后的 PNG 尺寸按真实像素核验；保留完整画面和透明边缘"
         ],
         "risks": [
-          "弱关联或多义来源不自动绑定"
+          "现有在线托管网关采用 1K 预设；上游比例偏差由保存前原生像素适配处理",
+          "新集成客户端上的图片侧栏实际重新生成由实机验收记录确认"
         ],
-        "generatedAt": "2026-11-21T06:21:00.938675+00:00"
-      },
-      "merged": {
-        "mergeCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-        "verificationCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-pasted-spreadsheet.test.js",
-              "test/workbench-fund-decisions.test.js",
-              "test/workbench-delivery-recovery.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-delimited-evidence.test.js",
-              "test/dataset-view-contract.test.js",
-              "test/workbench-content-metric-view.test.js",
-              "test/workbench-content-delivery.test.js",
-              "test/workbench-dataset-view.test.js",
-              "test/workbench-public-data.test.js",
-              "test/workbench-deferred.test.js",
-              "--maxWorkers=2",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-pasted-spreadsheet.test.js test/workbench-fund-decisions.test.js test/workbench-delivery-recovery.test.js test/workbench-execution-policy.test.js test/workbench-delimited-evidence.test.js test/dataset-view-contract.test.js test/workbench-content-metric-view.test.js test/workbench-content-delivery.test.js test/workbench-dataset-view.test.js test/workbench-public-data.test.js test/workbench-deferred.test.js --maxWorkers=2 --reporter=dot",
-            "verifiedCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-            "completedAt": "2026-11-21T06:21:06.867Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/component-provenance-compatibility.test.js",
-              "test/market-trend-presentation-browser.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "-t",
-              "grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels",
-              "--maxWorkers=2",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/component-provenance-compatibility.test.js test/market-trend-presentation-browser.test.js test/component-reading-footer-browser.test.js -t grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels --maxWorkers=2 --reporter=dot",
-            "verifiedCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-            "completedAt": "2026-11-21T06:21:06.867Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "packages/presentation-editor/build.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node packages/presentation-editor/build.mjs",
-            "verifiedCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-            "completedAt": "2026-11-21T06:21:06.867Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workspace-empty-layout-browser.test.js",
-              "test/presentation-toolbar-popovers-browser.test.ts",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workspace-empty-layout-browser.test.js test/presentation-toolbar-popovers-browser.test.ts --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-            "completedAt": "2026-11-21T06:21:06.867Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-board-sidebar-overflow.test.ts -t 管理者工作台 --reporter=dot",
-            "verifiedCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-            "completedAt": "2026-11-21T06:21:06.867Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-            "completedAt": "2026-11-21T06:21:06.867Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/client-capability-service.test.ts",
-              "test/client-tools.test.js",
-              "test/image-generation-tool.test.js",
-              "test/notes-activity.test.js",
-              "test/notes-session.test.js",
-              "test/shared-main-agent.test.js",
-              "test/profile-runtime-patches.test.js",
-              "test/conversation-first-response-effort.test.js",
-              "test/turn-client-mode.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/conversation-response-progress-browser.test.js",
-              "test/client-mode-profile.test.js",
-              "--maxWorkers=1",
-              "--testTimeout=20000",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/client-capability-service.test.ts test/client-tools.test.js test/image-generation-tool.test.js test/notes-activity.test.js test/notes-session.test.js test/shared-main-agent.test.js test/profile-runtime-patches.test.js test/conversation-first-response-effort.test.js test/turn-client-mode.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-progress-browser.test.js test/client-mode-profile.test.js --maxWorkers=1 --testTimeout=20000 --reporter=dot",
-            "verifiedCommit": "968ca2582e1fa69c8246b641ee6f5c5e11f048db",
-            "completedAt": "2026-11-21T06:21:06.867Z",
-            "timeoutMs": 360000
-          }
-        ],
-        "recordedAt": "2026-11-21T06:21:06.867Z"
+        "generatedAt": "2026-11-21T06:50:40.232342+00:00"
       }
     }
   ],
