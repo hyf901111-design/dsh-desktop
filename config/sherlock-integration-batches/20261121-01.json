@@ -9,58 +9,20 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "研究看板真实观察日期、披露精度与口语建卡路由",
+        "featureName": "以已提供的披露原表直接规划，并按需要读取外部原件",
         "branch": "codex/feat/research-generation-20261121",
-        "baseCommit": "68991457665837516fe2dc5b9c6412573ef00dfb",
-        "tipCommit": "e65ec3c1b2d01b7d5e0865b62044d047153f5502",
+        "baseCommit": "e65ec3c1b2d01b7d5e0865b62044d047153f5502",
+        "tipCommit": "9503905cc670b454467c8d98e09c1397189323f6",
         "commits": [
           {
-            "commit": "2a772e5b849c0ea6fe90d46d2717e9ed29909bc8",
+            "commit": "9503905cc670b454467c8d98e09c1397189323f6",
             "parents": [
-              "68991457665837516fe2dc5b9c6412573ef00dfb"
+              "e65ec3c1b2d01b7d5e0865b62044d047153f5502"
             ],
-            "subject": "将公开原表的括号单位列映射为稳定字段并保留披露精度"
-          },
-          {
-            "commit": "8b75e8e6b1c0ae8c581868b0b815511a7731d6f8",
-            "parents": [
-              "68991457665837516fe2dc5b9c6412573ef00dfb"
-            ],
-            "subject": "按真实观测日期核验研究工作台的覆盖数量"
-          },
-          {
-            "commit": "9ae987ac618172335a18871921cd366f9263e40e",
-            "parents": [
-              "2a772e5b849c0ea6fe90d46d2717e9ed29909bc8",
-              "8b75e8e6b1c0ae8c581868b0b815511a7731d6f8"
-            ],
-            "subject": "合并历史观测日覆盖与缺项计数修正"
-          },
-          {
-            "commit": "dc092253cda8ec7c4eb2e17de99ed376eabc0c9e",
-            "parents": [
-              "68991457665837516fe2dc5b9c6412573ef00dfb"
-            ],
-            "subject": "修复看板留卡、交接便签与按要求呈现组件的主代理交付路由"
-          },
-          {
-            "commit": "e65ec3c1b2d01b7d5e0865b62044d047153f5502",
-            "parents": [
-              "9ae987ac618172335a18871921cd366f9263e40e",
-              "dc092253cda8ec7c4eb2e17de99ed376eabc0c9e"
-            ],
-            "subject": "合并观察日期、披露表头精度与口语研究建卡修复"
+            "subject": "优先用完整披露原表生成研究组件并保留补查通道"
           }
         ],
         "files": [
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/component-delivery-scope.js"
-          },
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
@@ -70,52 +32,8 @@
             "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
           },
           {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/conversation-live-activity.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-live-activity.test.js"
-          },
-          {
             "status": "A",
-            "path": "test/fixtures/conversation-live-activity-v9-before-calendar.txt.gz"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-etf-unit-header-first-calls.json"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-layout-delivery-requests.json"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/workbench-treasury-three-dates.json"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-observed-sources.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-pasted-source-link.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-planning-phase.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-quantity-coverage.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/workbench-resultative-request.test.js"
+            "path": "test/workbench-disclosure-source-scope.test.js"
           }
         ],
         "checks": [
@@ -124,176 +42,32 @@
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/workbench-observed-sources.test.js",
-              "test/workbench-quantity-coverage.test.js",
-              "test/workbench-pasted-source-link.test.js",
-              "test/workbench-dataset-view.test.js",
-              "test/workbench-sourced-table-delivery.test.js",
-              "test/workbench-planning-phase.test.js",
-              "test/workbench-resultative-request.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/conversation-live-activity.test.js",
-              "--maxWorkers=2",
+              "test/workbench-disclosure-source-scope.test.js",
+              "test/workbench-pasted-spreadsheet.test.js",
+              "test/workbench-delimited-evidence.test.js",
+              "--maxWorkers=1",
               "--testTimeout=20000",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "Test Files  9 passed (9)，Tests  426 passed (426)",
-            "verifiedCommit": "e65ec3c1b2d01b7d5e0865b62044d047153f5502",
-            "completedAt": "2026-11-21T07:59:48.647212+00:00",
+            "summary": "覆盖完整原表直达、独立查证与查询范围边界。",
+            "verifiedCommit": "9503905cc670b454467c8d98e09c1397189323f6",
+            "completedAt": "2026-11-21T10:26:26.705733+00:00",
             "timeoutMs": 240000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "三条真实布局请求在实际包 SDK 和批准的研究宿主消息中逐轮复放，确认证券披露列、历史日期、建卡主工具及否定句边界；最终候选客户端真实模型复提由集成验收执行。"
+          "outcome": "not-applicable",
+          "summary": "修改研究模式可用工具和规划上下文，年报稽核原文及实际表格沿用本批次资料。"
         },
         "acceptanceCriteria": [
-          "同日多个期限只按一个真实观察日期计数，区间描述和缺失日期不充作观测",
-          "ETF 披露表头括号内股数、金额、占比单位能映射，保留股票代码与人民币分精度",
-          "按真实 ETF、美国财政部和资管年报的三条原文识别留卡与结果式组件，讨论、个人笔记和既有卡保留原路径",
-          "实际已安装 v10 SDK 升级可幂等改写，历史匹配保持精确且拒绝未知字节"
+          "用户已提供带出处的完整原表且要求从这些记录分析时直接规划组件",
+          "需要新行情、回查原件、混合取数等任务仍可查相应来源"
         ],
         "risks": [
-          "ETF 与资管的原请求允许补充公开来源；固收明确只用下列定稿记录，首轮仅保留建卡工具。"
+          "模糊、缺项与最新数据任务保留原有真实取数能力。"
         ],
-        "generatedAt": "2026-11-21T07:59:48.647212+00:00"
-      },
-      "merged": {
-        "mergeCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-        "verificationCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-pasted-spreadsheet.test.js",
-              "test/workbench-fund-decisions.test.js",
-              "test/workbench-delivery-recovery.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-delimited-evidence.test.js",
-              "test/dataset-view-contract.test.js",
-              "test/workbench-content-metric-view.test.js",
-              "test/workbench-content-delivery.test.js",
-              "test/workbench-dataset-view.test.js",
-              "test/workbench-public-data.test.js",
-              "test/workbench-deferred.test.js",
-              "--maxWorkers=2",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-pasted-spreadsheet.test.js test/workbench-fund-decisions.test.js test/workbench-delivery-recovery.test.js test/workbench-execution-policy.test.js test/workbench-delimited-evidence.test.js test/dataset-view-contract.test.js test/workbench-content-metric-view.test.js test/workbench-content-delivery.test.js test/workbench-dataset-view.test.js test/workbench-public-data.test.js test/workbench-deferred.test.js --maxWorkers=2 --reporter=dot",
-            "verifiedCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-            "completedAt": "2026-11-21T08:00:49.155Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/component-provenance-compatibility.test.js",
-              "test/market-trend-presentation-browser.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "-t",
-              "grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels",
-              "--maxWorkers=2",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/component-provenance-compatibility.test.js test/market-trend-presentation-browser.test.js test/component-reading-footer-browser.test.js -t grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels --maxWorkers=2 --reporter=dot",
-            "verifiedCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-            "completedAt": "2026-11-21T08:00:49.155Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "packages/presentation-editor/build.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node packages/presentation-editor/build.mjs",
-            "verifiedCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-            "completedAt": "2026-11-21T08:00:49.155Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workspace-empty-layout-browser.test.js",
-              "test/presentation-toolbar-popovers-browser.test.ts",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workspace-empty-layout-browser.test.js test/presentation-toolbar-popovers-browser.test.ts --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-            "completedAt": "2026-11-21T08:00:49.155Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-board-sidebar-overflow.test.ts -t 管理者工作台 --reporter=dot",
-            "verifiedCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-            "completedAt": "2026-11-21T08:00:49.155Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-            "completedAt": "2026-11-21T08:00:49.155Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/client-capability-service.test.ts",
-              "test/client-tools.test.js",
-              "test/image-generation-tool.test.js",
-              "test/notes-activity.test.js",
-              "test/notes-session.test.js",
-              "test/shared-main-agent.test.js",
-              "test/profile-runtime-patches.test.js",
-              "test/conversation-first-response-effort.test.js",
-              "test/turn-client-mode.test.js",
-              "test/conversation-live-activity.test.js",
-              "test/conversation-live-activity-browser.test.js",
-              "test/conversation-response-progress-browser.test.js",
-              "test/client-mode-profile.test.js",
-              "--maxWorkers=1",
-              "--testTimeout=20000",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/client-capability-service.test.ts test/client-tools.test.js test/image-generation-tool.test.js test/notes-activity.test.js test/notes-session.test.js test/shared-main-agent.test.js test/profile-runtime-patches.test.js test/conversation-first-response-effort.test.js test/turn-client-mode.test.js test/conversation-live-activity.test.js test/conversation-live-activity-browser.test.js test/conversation-response-progress-browser.test.js test/client-mode-profile.test.js --maxWorkers=1 --testTimeout=20000 --reporter=dot",
-            "verifiedCommit": "bc910970a8a519d7c24756f0406d5a52a667c4fb",
-            "completedAt": "2026-11-21T08:00:49.155Z",
-            "timeoutMs": 360000
-          }
-        ],
-        "recordedAt": "2026-11-21T08:00:49.155Z"
+        "generatedAt": "2026-11-21T10:26:26.705733+00:00"
       }
     },
     {
