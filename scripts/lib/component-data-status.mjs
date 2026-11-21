@@ -1,5 +1,5 @@
 import * as sourceInfo from './component-source-info.mjs'
-const {componentSourceDefinitions:sourceDefinitions,componentSourceCss:sourceCss,componentRecordedProvenance}=sourceInfo
+const {componentSourceDefinitions:sourceDefinitions,componentSourceCss:sourceCss,componentRecordedProvenance,componentSavedSourceModel,componentLinkedDatasetProvenance}=sourceInfo
 import * as workbenchRefresh from '../../packages/dsh-research-task-runtime/workbench-refresh.js'
 const {createWorkbenchRefreshSurface,isWorkbenchViewState,workbenchContentRevision,workbenchTemplateIdentity,workbenchRefreshCss}=workbenchRefresh
 export function componentDataSourceNames(binding){
@@ -11,14 +11,11 @@ export function componentDataSourceNames(binding){
 // Provenance belongs to the saved component, independently of its refresh job.
 // Only read inert metadata; never execute generated HTML or infer a provider.
 export function componentSavedProvenance(node){
- const spec=node?.containerSpec||{},html=spec.html
- let data=spec
- if(typeof html==='string'){
-  const encoded=html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
-  if(encoded&&encoded.length<=512000){try{data=JSON.parse(encoded).data||spec}catch{}}
- }
+ const data=componentSavedSourceModel(node?.containerSpec||{},512000)
+ const dataset=componentLinkedDatasetProvenance(data)
  const label=value=>typeof value==='string'?value.trim():value&&typeof value==='object'?label(value.label||value.name||value.title||value.provider):''
  const names=[...(Array.isArray(data.sources)?data.sources:[]),data.source].map(label).filter(Boolean)
+ if(!names.length&&dataset.source)names.push(label(dataset.source))
  const recorded=typeof data.note==='string'?data.note.match(/(?:^|\n)\s*(?:数据)?来源(?:[：:]\s*|[ \t]+)([^，。；\n·]+)/)?.[1]?.trim():''
  if(!names.length&&recorded)names.push(recorded)
  if(!names.length&&['news','reports'].includes(data.type)&&Array.isArray(data.items)){
@@ -35,7 +32,7 @@ export function componentSavedProvenance(node){
   if(!name){try{const url=new URL(row?.url);if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password)name=url.hostname}catch{}}
   if(name)names.push(name)
  }
- return {names:[...new Set(names)],asOf:typeof data.asOf==='string'?data.asOf:'',range:typeof data.range==='string'?data.range:''}
+ return {names:[...new Set(names)],asOf:typeof data.asOf==='string'?data.asOf:typeof dataset.asOf==='string'?dataset.asOf:'',range:typeof data.range==='string'?data.range:''}
 }
 export function componentSourceLabel(name){
  const label=name.split(/\s+\/\s+/)[0].replace(/\s+MCP$/i,'').trim()

@@ -6,45 +6,76 @@ export function componentRecordedProvenance(node){
  if(!raw||raw.length>256000)return []
  try{const rows=JSON.parse(raw);return Array.isArray(rows)&&rows.length<=128?rows.filter(row=>row&&typeof row==='object'&&!Array.isArray(row)):[]}catch{return []}
 }
-export function getComponentSourceInfo(node){
- const spec=node?.containerSpec||{},records=[],notes=[],seen=new Set();let data=spec
+export function componentSavedSourceModel(spec,limit=Infinity){
  if(typeof spec.html==='string'){
   const raw=spec.html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
-  if(raw){try{data=JSON.parse(raw).data||spec}catch{}}
-  if(data===spec){
-   const legacy=spec.html.match(/<script id="dataset-view-source" type="application\/json">([^<]*)<\/script>/)?.[1]
-   if(legacy){try{const saved=JSON.parse(legacy);if(saved?.type==='view')data=saved}catch{}}
-  }
+  if(raw&&raw.length<=limit){try{const saved=JSON.parse(raw).data;if(saved)return saved}catch{}}
+  const legacy=spec.html.match(/<script id="dataset-view-source" type="application\/json">([^<]*)<\/script>/)?.[1]
+  if(legacy&&legacy.length<=limit){try{const saved=JSON.parse(legacy);if(saved?.type==='view')return saved}catch{}}
  }
- const dataset=data.type==='view'&&typeof data.dataset?.id==='string'&&data.view?.dataset===data.dataset.id?data.dataset:undefined
- let datasetHref=''
+ return spec
+}
+export function componentLinkedDatasetProvenance(data){
+ if(data.type!=='view'||typeof data.dataset?.id!=='string'||data.view?.dataset!==data.dataset.id)return {}
+ const dataset=data.dataset
+ let source
+ if(typeof dataset.sourceUrl==='string'){
+  try{
+   const url=new URL(dataset.sourceUrl)
+   if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&
+     ![...url.searchParams.keys()].some(key=>/token|secret|credential|auth|signature|api[_-]?key/iu.test(key))){
+    source={label:dataset.note?.split?.('\n')[0]||dataset.label||url.hostname,url:url.href}
+   }
+  }catch{}
+ }
+ return {source,asOf:dataset.asOf}
+}
+export function getComponentSourceInfo(node){
+ const spec=node?.containerSpec||{},records=[],notes=[],seen=new Set(),byUrl=new Map()
+ const data=componentSavedSourceModel(spec),dataset=componentLinkedDatasetProvenance(data)
+ // A source can reach the host through the saved model and its rendered footer.
+ // A bare link identifies the document. A passage, local file or named section
+ // can carry additional evidence even when its URL is identical.
+ const isLinkCaption=(label,url)=>{
+  if(!label||/^(?:原文|原始链接|查看原文|来源链接|source|original link)$/iu.test(label))return true
+  const address=new URL(url)
+  if(label.toLowerCase()===address.hostname.toLowerCase())return true
+  if(!/^https?:\/\//i.test(label))return false
+  try{return new URL(label).href===address.href}catch{return false}
+ }
  const add=value=>{
   if(!value)return
   const row=typeof value==='string'?{label:value}:value
   if(typeof row!=='object')return
   const label=[row.label,row.name,row.title,row.provider].find(v=>typeof v==='string'&&v.trim())?.trim()||''
   let url='';try{const u=new URL(row.url||row.sourceUrl||(/^https?:\/\//i.test(label)?label:''));if(['http:','https:'].includes(u.protocol)&&!u.username&&!u.password)url=u.href}catch{}
-  if(datasetHref&&url===datasetHref&&records.some(record=>record.url===url))return
   const explicit=typeof row.path==='string'?row.path:typeof row.filePath==='string'?row.filePath:''
   const fileLabel=label.replace(/^(?:(?:来源文件|参考文件|整理文档|来源文档|文档|文件|附件)\s*[:：]\s*)+/u,'')
   const filename=fileLabel.match(/(?:^|[：:\s])([^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?))(?=$|[\s·（(])/i)?.[1]?.trim()||fileLabel.match(/[（(]([^/\\\n（()）]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?))[）)]/i)?.[1]?.trim()||(/^[^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?)$/i.test(fileLabel)?fileLabel:'')
   const path=explicit&&!explicit.includes('\0')?explicit:''
   const text=typeof row.text==='string'?row.text:''
   const key=JSON.stringify([label,url,path,text]);if(seen.has(key)||!label&&!url&&!path&&!text)return;seen.add(key)
-  records.push({label:label||url||path.split(/[\\/]/).pop()||'来源',url,path,filename:path?path.split(/[\\/]/).pop():filename,text})
+  if(url&&!path){
+   const candidates=byUrl.get(url)||[]
+   const linkCaption=isLinkCaption(label,url)
+   const existing=candidates.find(record=>(!text||!record.text||record.text===text)&&
+    (record.label===label||linkCaption||isLinkCaption(record.label,url)))
+   if(existing){
+    if(!linkCaption&&isLinkCaption(existing.label,url))existing.label=label
+    if(text&&!existing.text)existing.text=text
+    return
+   }
+  }
+  const record={label:label||url||path.split(/[\\/]/).pop()||'来源',url,path,filename:path?path.split(/[\\/]/).pop():filename,text}
+  records.push(record)
+  if(url&&!path){
+   if(!byUrl.has(url))byUrl.set(url,[])
+   byUrl.get(url).push(record)
+  }
  }
  for(const row of Array.isArray(data.sources)?data.sources:[])add(row)
  add(data.source)
- if(typeof dataset?.sourceUrl==='string'){
-  try{
-   const url=new URL(dataset.sourceUrl)
-   if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&
-     ![...url.searchParams.keys()].some(key=>/token|secret|credential|auth|signature|api[_-]?key/iu.test(key))){
-    datasetHref=url.href
-    add({label:dataset.note?.split?.('\n')[0]||dataset.label,url:datasetHref})
-   }
-  }catch{}
- }
+ add(dataset.source)
  // Frozen prose sources keep their exact text, plus actionable original URLs.
  // Do not reinterpret business paragraphs or guess an endpoint from a domain.
  for(const source of [data.source,...(Array.isArray(data.sources)?data.sources:[])]){
@@ -69,12 +100,18 @@ export function getComponentSourceInfo(node){
    const annotation=el.getAttribute('data-component-source-info')?.trim()
    const business=el.querySelector('table,svg,canvas,button,input,select,textarea,[data-sherlock-structure],[data-node-id]')
    if(!annotation&&business&&el.matches('[data-component-source-info],.source-info,.chart-source'))continue
-   const text=annotation||el.textContent?.trim();if(el.matches('.src,footer')&&!annotation&&!/^(?:来源|资料来源|数据来源|参考来源|口径|Sources?\s*[:：])/iu.test(text||''))continue;const modeled=data!==spec&&el.matches('.market-footer,.indicator-method');if(text&&!modeled&&!notes.includes(text)&&!records.some(row=>row.label===text))notes.push(text)
+   const text=annotation||el.textContent?.trim();if(el.matches('.src,footer')&&!annotation&&!/^(?:来源|资料来源|数据来源|参考来源|口径|Sources?\s*[:：])/iu.test(text||''))continue;const modeled=data!==spec&&el.matches('.market-footer,.indicator-method,footer.indicator-footer');if(text&&!modeled&&!notes.includes(text)&&!records.some(row=>row.label===text))notes.push(text)
    if(annotation)continue
    for(const a of el.querySelectorAll('a[href]'))add({label:a.textContent,url:a.getAttribute('href')})
   }
  }
- return {records,notes,asOf:typeof data.asOf==='string'?data.asOf:typeof dataset?.asOf==='string'?dataset.asOf:'',range:typeof data.range==='string'?data.range:''}
+ const normalized=value=>value.replace(/\s+/gu,' ').trim()
+ const captions=new Set()
+ for(const record of records){
+  captions.add(normalized(record.label))
+  if(record.url)captions.add(normalized(record.label+' '+record.url))
+ }
+ return {records,notes:notes.filter(note=>!captions.has(normalized(note))),asOf:typeof data.asOf==='string'?data.asOf:typeof dataset?.asOf==='string'?dataset.asOf:'',range:typeof data.range==='string'?data.range:''}
 }
 export function openComponentSource(sessionId,node,mode,trigger,info=getComponentSourceInfo(node)){
  const owner=trigger?.closest?.('[data-research-node-id]')
@@ -162,7 +199,7 @@ export const componentSourceCss=`
 .ew-component-source-files .ew-delivery-card:hover{background:var(--dsw-alias-interactive-bg-hover,#f2f3f5)}.ew-component-source-files .ew-delivery-card .ew-delivery-open:hover{background:transparent}.ew-component-source-files .ew-delivery-card:hover .ew-delivery-options{background:transparent}
 .ew-component-source-files{overflow:visible;max-width:600px}.ew-component-source-files .ew-delivery{max-height:60vh;overflow:auto}.ew-component-source-files{background:var(--dsw-alias-bg-base,#242424);color:var(--dsw-alias-label-primary,#eee)}
 `
-export function componentSourceDefinitions(){return [componentRecordedProvenance,getComponentSourceInfo,openComponentSource,ComponentSourceDetailsTab,componentSourceReferencedFiles,ComponentSourceFilesPopup,ComponentSourceHost].map(fn=>fn.toString()).join('\n')}
+export function componentSourceDefinitions(){return [componentRecordedProvenance,componentSavedSourceModel,componentLinkedDatasetProvenance,getComponentSourceInfo,openComponentSource,ComponentSourceDetailsTab,componentSourceReferencedFiles,ComponentSourceFilesPopup,ComponentSourceHost].map(fn=>fn.toString()).join('\n')}
 export function patchComponentSourceHost(source){
  const marker='/* EWORK_COMPONENT_SOURCE_HOST */'
  if(source.includes(marker))return source.replace('children:[react_jsx_runtime.jsx(ComponentSourceHost,{coordinator:researchSidebar})','children:[!subagentPanel&&react_jsx_runtime.jsx(ComponentSourceHost,{coordinator:researchSidebar})')

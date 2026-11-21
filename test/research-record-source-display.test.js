@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest'
 import {Window} from 'happy-dom'
 import audit from './fixtures/research-etf-original-order-view.json'
 import {renderDatasetViewArtifact} from '../packages/dsh-research-task-runtime/dataset-view-artifact.js'
+import {componentDataStatusView} from '../scripts/lib/component-data-status.mjs'
 import {getComponentSourceInfo} from '../scripts/lib/component-source-info.mjs'
 
 function table(value){
@@ -35,10 +36,15 @@ describe('saved official original-order disclosure',()=>{
    expect(info.records).toHaveLength(1)
    expect(info.records[0]).toMatchObject(expected)
    expect(info.asOf).toBe('2025-12-31')
+   expect(componentDataStatusView(null,null,node)).toMatchObject({source:expected.label,time:'数据 2025-12-31',detail:'静态快照'})
   }
-  expect(getComponentSourceInfo({containerSpec:{...audit,view:{dataset:'other'}}}).records).toEqual([])
+  const detached={containerSpec:{...audit,view:{dataset:'other'}}}
+  expect(getComponentSourceInfo(detached).records).toEqual([])
+  expect(componentDataStatusView(null,null,detached).source).toBe('来源未标注')
   for(const sourceUrl of ['javascript:alert(1)','https://user:password@example.com/a','https://example.com/a?token=private']){
-   expect(getComponentSourceInfo({containerSpec:{...audit,dataset:{...audit.dataset,sourceUrl}}}).records).toEqual([])
+   const node={containerSpec:{...audit,dataset:{...audit.dataset,sourceUrl}}}
+   expect(getComponentSourceInfo(node).records).toEqual([])
+   expect(componentDataStatusView(null,null,node).source).toBe('来源未标注')
   }
  })
 })
