@@ -170,6 +170,28 @@ it('takes the first actual image discussion as the subject after an automatic te
  }
 })
 
+it('uses a complete image topic when the native byte cap would split its Chinese design instruction',async()=>{
+ const {SessionTitleService,fallbackSessionTitle}=await core()
+ const original='国债收益率晨会封面，标题放左边时怎样安排曲线？先讨论构图。'
+ async function title(text,mode='image',maxBytes=40){
+  const service=Object.create(SessionTitleService.prototype)
+  const session={id:'image-task-00000000-0000-4000-8000-000000000001',events:[],append(type,data){this.events.push({seq:this.events.length+1,type,data});return this.events.at(-1)}}
+  Object.assign(service,{config:{fallbackMaxWords:12,fallbackMaxBytes:maxBytes,maxTitleBytes:256},work:new Map(),ctx:{sessions:{get:()=>session}},serviceActive:()=>true,inFlight:new Set()})
+  session.append('session/title',{title:'新图像',messageSeqs:[],source:{kind:'fallback'}})
+  const input=session.append('user/message',{source:{kind:'user',clientMode:mode},content:[{type:'text',text}]})
+  if(mode!=='image')session.events.splice(0,1)
+  const result=await service.ensureFallback(session)
+  expect(input.data.content[0].text).toBe(text)
+  return result.title
+ }
+ expect(fallbackSessionTitle(original,12,40)).toBe('国债收益率晨会封面，标题放')
+ expect(await title(original)).toBe('国债收益率晨会封面')
+ expect(await title('长江流域春汛地图，怎样排版才能标出时间变化？')).toBe('长江流域春汛地图')
+ for(const text of ['晨会封面，请用蓝色','春天的光影，初夏的海岸与秋日的树林并置','Civic architecture, choose a brighter cover composition']){
+  expect(await title(text)).toBe(fallbackSessionTitle(text,12,40))
+ }
+ expect(await title(original,'research')).toBe(fallbackSessionTitle(original,12,40))
+})
 it('defers the first topic beyond the SDK publication guard and backfills a retained old image session once',async()=>{
  const {Context}=await import('@deepseek-ai/cordis')
  const {SessionStore}=await import('@deepseek-ai/dsh-session')

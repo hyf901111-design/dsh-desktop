@@ -195,7 +195,7 @@ export function patchSessionTitleLlmSubject(source){
 
 // Seeded image tab names have no source message. Let the first real topic
 // receive the same fallback and provider cadence as any other first prompt.
-export function patchImageSessionTitle(source) {
+function patchImageSessionTitleSeed(source) {
  const marker='/* ework:image-session-title:v2 */'
  if (source.includes(marker)) return source
  const previous='/* ework:image-session-title:v1 */'
@@ -243,4 +243,31 @@ export function patchImageSessionTitle(source) {
  // The SDK schedules this write after event publication and validates that the same Session remains live.
  return once(source,'if (accepted !== void 0) return accepted;',
   'if (accepted !== void 0 && (accepted.eventSeq !== current?.eventSeq || !this.isImageTitleSeed(session, accepted))) return accepted;')
+}
+
+// Choose a complete topic only when the normal byte/word limit actually cuts
+// into a following instruction. The provider still sees the entire message.
+function imageMessageFallbackTitle(session,first,config) {
+ const fallback=fallbackSessionTitle(first.text,config.fallbackMaxWords,config.fallbackMaxBytes)
+ const topic=fallback.match(/^([^，,]+)[，,]/u)?.[1]?.trim()
+ if(!topic||!/[\u3400-\u9fff]/u.test(topic)||Array.from(topic).length<4)return fallback
+ const event=session.events.findLast(event=>event.seq===first.seq)
+ if(event?.type!=='user/message'||event.data.source?.clientMode!=='image')return fallback
+ const sentence=sessionTitleSubject(first.text).text.split(/[。！？\n]/u)[0]
+ const start=sentence.indexOf(fallback)
+ if(start<0||start+fallback.length>=sentence.length)return fallback
+ if(/^(?:如果|假如|虽然|当我|我(?:是|有|们|想)|您好|你好|麻烦你)/u.test(topic))return fallback
+ const instruction=sentence.slice(start+topic.length+1).trimStart()
+ const directsDesign=/^(?:请|希望|需要|能否|能不能|如何|怎样|怎么|可否|帮我|(?:标题|文字|配色|色调|背景|画面|主体|构图|图例|曲线|留白|光线|尺寸|风格)(?:应该|需要|怎么|怎样|如何|请|要|用|放|排|留|调|设|选|改|做|在|靠))/u
+ return directsDesign.test(instruction)?topic:fallback
+}
+
+export function patchImageSessionTitle(source) {
+ source=patchImageSessionTitleSeed(source)
+ const marker='/* ework:image-fallback-clause:v1 */'
+ if(source.includes(marker))return source
+ const call='fallbackSessionTitle(first.text, this.config.fallbackMaxWords, this.config.fallbackMaxBytes)'
+ if(source.split(call).length!==3)throw Error('Image title fallback call sites drifted')
+ source=source.replaceAll(call,'imageMessageFallbackTitle(session, first, this.config)')
+ return once(source,'function collectSessionTitleMessages(',marker+'\n'+imageMessageFallbackTitle.toString()+'\nfunction collectSessionTitleMessages(')
 }
