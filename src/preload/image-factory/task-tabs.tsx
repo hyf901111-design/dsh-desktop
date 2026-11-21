@@ -26,6 +26,7 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
   const contextTab = popup?.scope === undefined ? undefined : tabs.find(tab => tab.scope === popup.scope)
   const press = useRef<Drag>(), suppressClick = useRef(0)
   const frozen = useRef<HTMLElement[]>([]), closing = useRef<Animation>()
+  const frozenStripWidth = useRef(0)
   const focusOnChange = useRef(false)
   const labels = tabs.map(tab => tab.title ?? (tab.scope === current ? title : undefined) ?? t('新图像', 'New image'))
   const listLabel = t('已打开的页签', 'Open tabs')
@@ -53,7 +54,11 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
   useLayoutEffect(() => {
     if (!strip.current || !header.current) return
     const list = strip.current, bar = header.current
-    const layout = () => { reserveWorkspaceRightControl(bar); revealWorkspaceTab(list) }
+    const layout = () => {
+      reserveWorkspaceRightControl(bar)
+      if (frozen.current.length && list.clientWidth !== frozenStripWidth.current) unfreeze()
+      revealWorkspaceTab(list)
+    }
     const observer = new ResizeObserver(layout)
     observer.observe(bar)
     observer.observe(list)
@@ -71,6 +76,7 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
     }
   }, [header, win])
   useLayoutEffect(() => {
+    if (frozen.current.length && tabNodes().some(node => !frozen.current.includes(node))) unfreeze()
     if (strip.current) revealWorkspaceTab(strip.current)
     if (focusOnChange.current && !busy) {
       focusOnChange.current = false
@@ -114,6 +120,7 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
     closeList()
     if (!win.matchMedia('(prefers-reduced-motion: reduce)').matches && typeof node.animate === 'function') {
       const width = node.getBoundingClientRect().width
+      frozenStripWidth.current = list.clientWidth
       frozen.current = tabNodes()
       for (const item of frozen.current) {
         const pixels = item.getBoundingClientRect().width + 'px'
@@ -130,7 +137,7 @@ export function ImageTaskTabs({ doc, header, state, current, title, t, action }:
       if (closing.current !== animation) return
       closing.current = undefined
       animation.cancel()
-      if (!header.current?.matches(':hover')) unfreeze()
+      if (!header.current?.matches(':hover') || list.clientWidth !== frozenStripWidth.current) unfreeze()
     }
     focusOnChange.current = true
     action({ kind: 'close', scope })
