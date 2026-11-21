@@ -152,3 +152,21 @@ it('directly executes a mode-bound action once, refuses a changed surface and ke
  await expect(h.action('canvas.inspect')).rejects.toThrow('先重新读取')
  await expect(h.service.request({...input,authorityId:undefined,authoritySeq:undefined,sourceInstruction:undefined})).rejects.toThrow('模式无效')
 })
+
+it('reads only the active admitted workspace metadata and leaves its execute lease untouched',async()=>{
+ const h=harness()
+ h.o.spreadsheet={referenceSettings:vi.fn(()=>({referenceScope:'ranges',referenceCount:2})),acquire:vi.fn()}
+ h.o.presentation={referenceSettings:vi.fn(()=>({mode:'presentation',referenceScope:'slide'})),handlers:vi.fn()}
+ const source={sessionId:'s',turnId:'1',method:'workspace-reference',authorityId:'human',authoritySeq:1,sourceInstruction:'总结一下'}
+ h.bind('spreadsheet')
+ expect(await h.service.request({...source,expectedMode:'spreadsheet'})).toMatchObject({referenceScope:'ranges',referenceCount:2})
+ expect(await h.service.request({...source,expectedMode:'presentation'})).toEqual({})
+ expect(h.o.presentation.referenceSettings).not.toHaveBeenCalled()
+ expect(h.o.spreadsheet.acquire).not.toHaveBeenCalled()
+ h.bind('presentation')
+ expect(await h.service.request({...source,expectedMode:'presentation'})).toMatchObject({referenceScope:'slide'})
+ expect(await h.service.request({...source,expectedMode:'spreadsheet'})).toEqual({})
+ expect(h.o.spreadsheet.referenceSettings).toHaveBeenCalledTimes(1)
+ expect(h.o.presentation.handlers).not.toHaveBeenCalled()
+ await expect(h.action('ui.zoom.in')).rejects.toThrow('目录')
+})

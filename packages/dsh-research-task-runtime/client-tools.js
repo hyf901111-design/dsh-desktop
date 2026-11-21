@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto'
 import {defineTool} from '@deepseek-ai/dsh-tools'
-import {clientModeTurn} from './client-mode-profile.js'
+import {claimedWorkspaceMessage,clientModeTurn} from './client-mode-profile.js'
 import {canvasHumanRequest} from './canvas-task-routing.js'
 import {parseConversationComponentManifest} from './conversation-component-contract.js'
 
@@ -12,7 +12,7 @@ const turnKey=value=>typeof value==='string'&&id(value)?value:typeof value==='nu
 
 // The loop owns this identity. Neither a model argument nor a child-to-parent
 // canvas binding can authorize an operation on the visible desktop session.
-function executionIdentity(exec){
+function executionIdentity(exec,claimed){
   const session=exec.agent?.session,header=session?.header
   // parentSession records ordinary user-fork lineage too. Delegate markers
   // distinguish subagents; Main still requires this exact visible session ID.
@@ -24,9 +24,11 @@ function executionIdentity(exec){
   if(index<0||turnId===undefined||events.slice(index+1).some(event=>event?.type==='turn/end'&&turnKey(event.data?.turn)===turnId))
     throw Error('客户端操作没有有效的执行轮次。')
   const admitted=events.slice(index+1).findLast(event=>event?.type==='user/message'&&event.data?.source?.kind==='user')
-  const human=admitted?canvasHumanRequest({events:[admitted]}):undefined
-  const authoritySeq=admitted?(Number.isSafeInteger(admitted.seq)&&admitted.seq>=0?admitted.seq:events.indexOf(admitted)):undefined
-  const authorityId=admitted?(id(admitted.data?.id)?admitted.data.id:String(authoritySeq)):undefined
+  const message=claimed?.message??admitted?.data
+  const event=claimed?.event??admitted
+  const human=message?canvasHumanRequest({events:[{type:'user/message',data:message}]}):undefined
+  const authoritySeq=event?(Number.isSafeInteger(event.seq)&&event.seq>=0?event.seq:events.indexOf(event)):undefined
+  const authorityId=message?(id(message.id)?message.id:String(authoritySeq)):undefined
   const instruction=human?.text??'',long=instruction.length>8000
   return {sessionId:session.id,turnId,...authorityId?{authorityId,authoritySeq,sourceInstruction:long?'':instruction,
     ...(long&&{sourceInstructionDigest:createHash('sha256').update(instruction).digest('hex')})}:{}}
@@ -39,21 +41,28 @@ function capabilityEndpoint(env){
   return endpoint.origin+'/client-capabilities'
 }
 
-// Resolve only the scope of the admitted message. Workbook cells still go
-// through the normal capability catalog and inspection tools.
-export async function readWorkspaceReference(agent,signal,{env=process.env,fetch:request=globalThis.fetch}={}){
+// Only admission metadata is read here. The scoped native inspection supplies the content.
+export async function readWorkspaceReference(agent,signal,{env=process.env,fetch:request=globalThis.fetch,expectedMode}={}){
   if(!env.SHERLOCK_RESEARCH_CONTEXT_URL)return undefined
   try{
-    const identity=executionIdentity({agent})
+    const claimed=expectedMode&&claimedWorkspaceMessage(agent.session,expectedMode)
+    if(expectedMode&&!claimed)return undefined
+    const identity=executionIdentity({agent},claimed)
     if(!identity.authorityId)return undefined
     const timeout=AbortSignal.timeout(500)
     const response=await request(capabilityEndpoint(env),{
       method:'POST',redirect:'error',signal:signal?AbortSignal.any([signal,timeout]):timeout,
       headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},
-      body:JSON.stringify({...identity,method:'workspace-reference'})
+      body:JSON.stringify({...identity,method:'workspace-reference',...expectedMode&&{expectedMode}})
     })
     if(!response.ok)return undefined
     const value=await response.json()
+    if(expectedMode){
+      if(value?.mode!==undefined&&value.mode!==expectedMode||expectedMode==='presentation'&&!value?.mode)return undefined
+      const scopes=expectedMode==='presentation'?['slide','selection','none']:['workbook','ranges','none']
+      if(!scopes.includes(value?.referenceScope))return undefined
+      return {mode:expectedMode,scope:value.referenceScope,...Number.isInteger(value.referenceCount)&&value.referenceCount>0&&{count:value.referenceCount}}
+    }
     if(value?.mode==='presentation'&&['none','slide','selection'].includes(value.referenceScope))return {mode:'presentation',scope:value.referenceScope}
     if(['workbook','ranges','none'].includes(value?.referenceScope)&&typeof value.guidance==='string')return {mode:'spreadsheet',guidance:value.guidance}
   }catch{}

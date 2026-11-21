@@ -3,6 +3,7 @@ import {isAdmittedResearchMessage} from './workbench-webpage-delivery.js'
 import {canvasHumanRequest} from './canvas-task-routing.js'
 import {COMPONENT_SURFACE_STYLE_RULES,PANEL_COLOR_INSTRUCTION} from './design-policy.js'
 import {TRUSTED_TYPES_COMPONENT_INSTRUCTION} from './html-trusted-types-validation.js'
+import {scopedModeTurn, selectedReadIssue, workspaceReferenceIntent} from './client-mode-reference.js'
 import {clientModeTurn, disallowedModeTool, modeProfilePrompt, routeModeTools} from './client-mode-profile.js'
 import {spreadsheetQuickPrompt} from './spreadsheet-quick-prompts.js'
 
@@ -152,9 +153,11 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
   if(mode==='notes')return '当前笔记裸组件应使用 notes.components.create 等既有笔记能力，不能写入研究画布。'
   if(mode==='knowledge')return '当前工作区是知识库。通过知识库能力查找和整理资料。'
  }
+ const referenceReads=new WeakMap(),effectiveTurns=new WeakMap()
  const disposeGuard=ctx.tools?.guard?.(exec=>{
-  const turn=clientModeTurn(exec.agent?.session)
-  const unsupported=turn&&disallowedModeTool(turn,exec.name,exec.arguments)
+  const original=clientModeTurn(exec.agent?.session)
+  const turn=effectiveTurns.get(original)??original
+  const unsupported=turn&&(disallowedModeTool(turn,exec.name,exec.arguments)??(exec.name==='client_action'?selectedReadIssue(turn,exec.arguments):undefined))
   return unsupported??(exec.name==='research_workbench_create'?denial(exec.agent?.session):undefined)
  })
  const disposeWire=ctx.on('agent/request-context',async({agent,signal},next)=>{
@@ -164,7 +167,22 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
   if(turn){
    const claimed=request.messages?.findLast(message=>message.role==='user'&&message.source?.kind==='user')
    if(claimed&&claimed.id!==turn.messageId)throw Error('当前输入已变化，等待本轮消息后继续。')
-   request=routeModeTools(request,turn)
+   const intent=workspaceReferenceIntent(turn)
+   let effective=turn
+   if(intent&&readWorkspaceReference){
+    let pending=referenceReads.get(turn)
+    if(!pending){
+     pending=Promise.resolve(readWorkspaceReference(agent,signal,{expectedMode:turn.mode}))
+     referenceReads.set(turn,pending)
+    }
+    const reference=await pending
+    signal?.throwIfAborted()
+    if(clientModeTurn(session)!==turn)throw Error('当前输入已变化，等待本轮消息后继续。')
+    effective=scopedModeTurn(turn,intent,reference)
+    effectiveTurns.set(turn,effective)
+    if(effective.scopeGuidance)request={...request,system:(request.system??'')+'\n【本轮已受理的引用】'+effective.scopeGuidance}
+   }
+   request=routeModeTools(request,effective)
    if(request.tools?.some(tool=>tool.name==='research_workbench_create')&&denial(session))
     return {...request,tools:request.tools.filter(tool=>tool.name!=='research_workbench_create')}
    return request
