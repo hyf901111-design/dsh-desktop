@@ -21,12 +21,39 @@ it('permits updates only to an explicitly selected research component',async()=>
  expect(await generateNoteSuggestion(ctx,{...input,context:selected})).toMatchObject({kind:'component',targetBlockId:'chart',node:{containerSpec:{title:'调整后收入'}}})
  await expect(generateNoteSuggestion(ctx,{...input,context:{scope:'note',components:selected.components}})).rejects.toThrow('引用')
 })
-it('reports actual model reasoning and writing progress while returning the document only in the final result',async()=>{
+it.each([
+ {prompt:'改写为简洁文字',pieces:['{"publicLead":"这段将按利率日期排序。"',' ,"kind":"text","markdown":"'],rest:'新正文"}',lead:'这段将按利率日期排序。',expected:{kind:'text',markdown:'新正文'}},
+ {prompt:'只讨论，不要修改笔记。3.81% 等于多少基点？',pieces:['3.','81% 相当于 381 个基点。'],rest:'每个百分点等于 100 个基点。',lead:'3.81% 相当于 381 个基点。',expected:{kind:'conversation',markdown:'3.81% 相当于 381 个基点。每个百分点等于 100 个基点。'}},
+ {prompt:'只讨论，3.81% 等于多少基点？',pieces:['{"kind":"conversation","markdown":"3.','81% 相当于 381 个基点。'],rest:'"}',lead:'3.81% 相当于 381 个基点。',expected:{kind:'conversation',markdown:'3.81% 相当于 381 个基点。'}},
+])('delivers the first public sentence before the model finishes: $prompt',async({prompt,pieces,rest,lead,expected})=>{
  const ctx=context(''),seen=[]
- ctx.llm.stream=async function*(){yield{type:'reasoning-delta',index:0,text:'先保留原意，再整理段落。'};yield{type:'text-delta',index:1,text:'{"kind":"text","markdown":"新正文"}'};yield{type:'finish',reason:{kind:'stop'}}}
- expect(await generateNoteSuggestion(ctx,input,undefined,value=>seen.push(value))).toEqual({kind:'text',markdown:'新正文'})
- expect(seen.some(row=>row.reasoning.includes('保留原意'))).toBe(true);expect(seen.at(-1)).toMatchObject({stage:'validating',reasoning:'先保留原意，再整理段落。'})
- expect(seen.every(row=>!('markdown' in row))).toBe(true)
+ let release, entered
+ const hold=new Promise(resolve=>{release=resolve}),blocked=new Promise(resolve=>{entered=resolve})
+ ctx.llm.stream=vi.fn(async function*(){
+  yield {type:'reasoning-delta',index:0,text:'私有推理哨兵。'}
+  for (const text of pieces) yield {type:'text-delta',index:1,text}
+  entered();await hold
+  yield {type:'text-delta',index:1,text:rest}
+  yield {type:'finish',reason:{kind:'stop'}}
+ })
+ const task=generateNoteSuggestion(ctx,{...input,prompt},undefined,value=>seen.push(value))
+ try {
+  await blocked
+  expect([...new Set(seen.map(row=>row.publicLead).filter(Boolean))]).toEqual([lead])
+  expect(JSON.stringify(seen)).not.toMatch(/私有推理哨兵|markdown|wireToken/)
+ }finally{release()}
+ expect(await task).toEqual(expected)
+ expect(ctx.llm.stream).toHaveBeenCalledTimes(1)
+ expect(seen.every(row=>row.reasoning==='')).toBe(true)
+})
+it('keeps private transport and unexpected literal JSON outside live Notes prose',async()=>{
+ const {notePublicLead}=await import('../packages/dsh-research-task-runtime/notes-public-lead.js')
+ expect(notePublicLead('381 bp',true,true)).toBe('381 bp')
+ expect(notePublicLead('{"kind":"conversation","markdown":"381 bp"}',true)).toBe('381 bp')
+ expect(notePublicLead('3.81% 相当于 381 个基点。每个百分点是 100 个基点。',true)).toBe('3.81% 相当于 381 个基点。每个百分点是 100 个基点。')
+ expect(notePublicLead('以下为三日收盘利率\n下一段',true)).toBe('以下为三日收盘利率')
+ for (const sample of ['{"kind":"capabilities","calls":[{"arguments":"不公开。"}]}','```json\n{"kind":"text","markdown":"未完成。"}','<think>不公开。</think>','{"publicLead":"示例字段。","x":1}']) expect(notePublicLead(sample,true)).toBe('')
+ for (const value of ['wireToken=abc。','{"capability":"notes.blocks.read"}','<think>私有</think>']) expect(notePublicLead(JSON.stringify({publicLead:value,kind:'text'}),false)).toBe('')
 })
 it('declares the attachment dependency used by the real notes HTTP handler',()=>{
  expect(inject).toContain('attachments')
@@ -50,7 +77,7 @@ it('validates a created component before returning it', async () => {
 it('uses the accepted native chart contract in its prompt and component output', async () => {
   const ctx = context('{"kind":"component","artifact":{"version":1,"type":"chart","title":"趋势","variant":"line","labels":["一月","二月"],"series":[{"name":"收入","values":[10,20]}]}}')
   expect(await generateNoteSuggestion(ctx, { ...input, mode: 'component' })).toMatchObject({ kind: 'component', node: { containerSpec: { variant: 'line' } } })
-  expect(ctx.childOptions().prompt.at(-1).text).toContain('labels/series')
+  expect(ctx.childOptions().prompt.at(-1).text).toMatch(/"labels":\{[^\n]+?"series":\[\{"name":[^\n]+?"values":/u)
   expect(ctx.childOptions().prompt.at(-1).text).not.toContain('chartType')
   expect(ctx.options()).toBeUndefined()
 })

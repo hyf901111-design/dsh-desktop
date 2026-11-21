@@ -20,10 +20,18 @@ export function createNotesActivityStore(doc) {
     if (!next || typeof next.sessionId !== 'string' || typeof next.requestId !== 'string' ||
         !['preparing','generating','ready','replied','accepted','discarded','failed','stopped'].includes(next.phase)) return
     const history = rows.get(next.sessionId) || empty, old = history.find(row => row.requestId === next.requestId)
-    if (!old && next.phase !== 'preparing') return
+    if ((!old && next.phase !== 'preparing') || (old?.finishedAt !== undefined && ['preparing','generating'].includes(next.phase))) return
     if(!old)reveals.set(JSON.stringify([next.sessionId,next.requestId]),{fresh:true,live:true,initialized:false,text:''})
     const row = { ...old, ...next, prompt: old?.prompt ?? String(next.prompt || '').slice(0,20000), startedAt: old?.startedAt ?? Date.now() }
-    if (!['preparing','generating'].includes(row.phase)) row.finishedAt = old?.finishedAt ?? Date.now()
+    if (!['preparing','generating'].includes(row.phase)) {
+      row.finishedAt = old?.finishedAt ?? Date.now()
+      const reveal = reveals.get(JSON.stringify([next.sessionId,next.requestId]))
+      if (reveal && old?.publicLead && row.result?.kind === 'conversation' && row.result.markdown?.startsWith(old.publicLead)) {
+        reveal.initialized = true
+        reveal.text = old.publicLead
+      }
+      delete row.publicLead
+    }
     rows.set(next.sessionId, [...history.filter(value => value.requestId !== row.requestId), row].slice(-20))
     notify()
   }
@@ -32,7 +40,7 @@ export function createNotesActivityStore(doc) {
   doc?.defaultView?.addEventListener('blur',background)
   doc?.addEventListener('visibilitychange',visibility)
   const reset = () => { rows.clear();reveals.clear(); notify() }
-  const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const persisted of value.rows){const row=displayRow(persisted);const old=merged.get(row.requestId);merged.set(row.requestId,old&&(['preparing','generating'].includes(old.phase)&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt||['accepted','discarded'].includes(old.phase)&&row.phase==='ready')?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
+  const history=event=>{const value=event.detail;if(typeof value?.sessionId!=='string'||!Array.isArray(value.rows))return;const merged=new Map((rows.get(value.sessionId)||[]).map(row=>[row.requestId,row]));for(const persisted of value.rows){const row=displayRow(persisted);const old=merged.get(row.requestId);merged.set(row.requestId,old&&((old.finishedAt!==undefined||['preparing','generating'].includes(old.phase))&&['preparing','generating'].includes(row.phase)||old.finishedAt>row.finishedAt||['accepted','discarded'].includes(old.phase)&&row.phase==='ready')?{...row,...old}:{...old,...row})}rows.set(value.sessionId,[...merged.values()].sort((a,b)=>a.startedAt-b.startedAt));notify()}
   doc?.addEventListener('sherlock:notes-task-state', update)
   doc?.addEventListener('sherlock:notes-reset', reset)
   doc?.addEventListener('sherlock:notes-history',history)
@@ -79,7 +87,8 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || noteUiText("根据附件撰写内容")}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
-      pending&&!liveReceipts.length?h('div',{className:'en-task-feedback','data-note-feedback':'',role:'status','aria-live':'polite'},h('p',null,noteUiText("已收到，正在处理这条笔记指令。"))):null,
+      pending&&!row.publicLead&&!liveReceipts.length?h('div',{className:'en-task-feedback','data-note-feedback':'',role:'status','aria-live':'polite'},h('p',null,noteUiText("已收到，正在处理这条笔记指令。"))):null,
+      pending&&row.publicLead?h('div',{'data-note-public-lead':'','aria-live':'polite'},h(Markdown,{blocks:[{kind:'text',text:row.publicLead}],streaming:true,t})):null,
       liveReceipts.length?h('div',{className:'en-task-feedback','data-note-client-progress':'',role:'status','aria-live':'polite'},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(liveReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:eworkNoteUiError(row.error)}],streaming:false,t}) : null,

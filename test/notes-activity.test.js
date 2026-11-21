@@ -76,6 +76,28 @@ it('shows only a short note stage for live and replayed reasoning while preservi
  delete globalThis.react
 })
 
+it('replaces the receipt with the public reply in the same row and ignores late progress on stop or failure',async()=>{
+ const {EWorkNoteConversationRow}=await import('../scripts/lib/notes-activity.mjs')
+ vi.stubGlobal('react',React)
+ const doc=new EventTarget(),store=createNotesActivityStore(doc)
+ const send=(requestId,phase,extra={})=>doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'note',requestId,phase,...extra}}))
+ const props={UserBubble:()=>null,Progress:()=>null,Markdown:({blocks})=>React.createElement('div',null,blocks.map(block=>block.text).join(''))}
+ const render=requestId=>renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:store.snapshot('note').find(row=>row.requestId===requestId)}))
+ const publicLead='3.81% 相当于 381 个基点。'
+ try{
+  for(const end of ['failed','stopped','replied']){
+   send(end,'preparing');send(end,'generating',{publicLead})
+   expect(render(end)).toContain('data-note-public-lead');expect(render(end)).not.toContain('data-note-feedback')
+   send(end,end,end==='replied'?{result:{kind:'conversation',markdown:publicLead+'每个百分点是 100 个基点。'}}:{})
+   send(end,'generating',{publicLead:'过期消息。'})
+   expect(render(end)).not.toMatch(/data-note-public-lead|过期消息/u)
+   expect(store.snapshot('note').find(row=>row.requestId===end).phase).toBe(end)
+  }
+  expect(render('replied').split(publicLead)).toHaveLength(2)
+  expect(store.reveal('note','replied').text).toBe(publicLead)
+  expect(store.snapshot('note')).toHaveLength(3)
+ }finally{store.dispose();vi.unstubAllGlobals()}
+})
 it('merges replayed durable notes with current task state and native message order',async()=>{
  const {mergeNoteConversationFlow}=await import('../scripts/lib/notes-activity.mjs')
  const doc=new EventTarget(),store=createNotesActivityStore(doc)
