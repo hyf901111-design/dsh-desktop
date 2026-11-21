@@ -4766,6 +4766,99 @@
         ],
         "generatedAt": "2026-11-21T16:33:18.511263+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复工作台演示输入位置与笔记演示总结截断",
+        "branch": "codex/feat/guide-composer-layout-20261122",
+        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
+        "tipCommit": "93749660a5cfef8cc183ff59f227ee9a66c495f8",
+        "commits": [
+          {
+            "commit": "c8cc796d04371a8d665976bdb485ad1ab17880c0",
+            "parents": [
+              "216fb30180c5941ccf8f1be873948762e933ea40"
+            ],
+            "subject": "等待研究工作台演示输入框可实际点击后开始播放"
+          },
+          {
+            "commit": "93749660a5cfef8cc183ff59f227ee9a66c495f8",
+            "parents": [
+              "c8cc796d04371a8d665976bdb485ad1ab17880c0"
+            ],
+            "subject": "保留笔记演示内完整行情图引用以完成总结和存档"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/home-notes-guide-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-workbench-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/editor.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notes/reference-context.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/workbench-preview-production-source.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/helpers/notes-resident-production-source.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-notes-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/home-notes-runtime.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-workbench.test.ts",
+              "test/home-notes-runtime.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已复验真实成交日图表、预置总结及输入区域布局，并完成针对性原生渲染验证。",
+            "verifiedCommit": "93749660a5cfef8cc183ff59f227ee9a66c495f8",
+            "completedAt": "2026-11-21T16:34:21.335788+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "原包第一步工作台输入未进可点击区域，笔记最后一步的历史图表JSON遭截断；两者都有原包回执。"
+        },
+        "acceptanceCriteria": [
+          "工作台在可点击输入框内开始",
+          "笔记演示保留两项完整组件引用并完成总结"
+        ],
+        "risks": [
+          "演示引用单项有独立上限。"
+        ],
+        "generatedAt": "2026-11-21T16:34:21.335788+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5484,6 +5577,18 @@
         "test/image-research-navigation.test.js",
         "test/image-factory-native.test.js",
         "test/workspace-surface-host.test.ts",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-workbench.test.ts",
+        "test/home-notes-runtime.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
