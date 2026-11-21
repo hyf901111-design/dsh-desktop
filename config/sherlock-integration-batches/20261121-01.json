@@ -1073,6 +1073,77 @@
         ],
         "recordedAt": "2026-11-21T08:25:04.638Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "跨页、跨表只读分析先用模型回应再核对实据",
+        "branch": "codex/feat/document-review-openings-20261121",
+        "baseCommit": "a73e0f01d1c7116a78025291026cf86b19faa204",
+        "tipCommit": "bfe2f1ad3b90ac60b0c59901f5bf7e98503a1a04",
+        "commits": [
+          {
+            "commit": "bfe2f1ad3b90ac60b0c59901f5bf7e98503a1a04",
+            "parents": [
+              "a73e0f01d1c7116a78025291026cf86b19faa204"
+            ],
+            "subject": "让跨页核对和跨表分析先自然回应并保留只读权限"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/model-task-replies.js"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-first-response-effort.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-first-response-effort.test.js",
+              "test/client-mode-profile.test.js",
+              "--maxWorkers=1",
+              "--testTimeout=20000",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "39 项通过。覆盖只读财政部演示逐页核对、跨表利差核查、方法讨论、页数查询、基点换算、仅返回结果及下一步权限。",
+            "verifiedCommit": "bfe2f1ad3b90ac60b0c59901f5bf7e98503a1a04",
+            "completedAt": "2026-11-21T08:31:02.812223+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "/private/tmp/ework-research-role-qa-20261121/real/replay-document-readonly.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "复用真实两文稿已持久化用户事件、只替换本轮业务提问；首步模型无工具，执行步分别仅 spreadsheet.inspect 与 presentation.inspect。真实财政部数据和复放证据见 /private/tmp/ework-research-role-qa-20261121/real/真实财政部文稿-只读复放证据.json",
+            "verifiedCommit": "bfe2f1ad3b90ac60b0c59901f5bf7e98503a1a04",
+            "completedAt": "2026-11-21T08:31:02.812223+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅变更主机模型首段准入条件；真实上一包签收的美国财政部工作簿和演示用户事件已离线复放。新签名包可在开启同一文稿引用时另以原生界面复核。"
+        },
+        "acceptanceCriteria": [
+          "逐页核对、跨表比较等有明确目标的复杂只读任务产生自然模型首段",
+          "既有只读执行步不暴露编辑、生图及画布工具",
+          "方法讨论、单步页数和基点查询、严格输出仍直接回答"
+        ],
+        "risks": [
+          "内容实际丰富度取决于已引用文稿与用户问题；本次签名前未向实机发送新增业务轮。"
+        ],
+        "generatedAt": "2026-11-21T08:31:02.812223+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -1190,6 +1261,26 @@
         "--reporter=dot"
       ],
       "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/conversation-first-response-effort.test.js",
+        "test/client-mode-profile.test.js",
+        "--maxWorkers=1",
+        "--testTimeout=20000",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "/private/tmp/ework-research-role-qa-20261121/real/replay-document-readonly.mjs"
+      ],
+      "timeoutMs": 120000
     }
   ],
   "mainSynchronizations": []
