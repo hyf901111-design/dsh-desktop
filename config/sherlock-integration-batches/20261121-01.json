@@ -4865,6 +4865,238 @@
         ],
         "generatedAt": "2026-11-21T16:34:21.335788+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "集成已验收的演示放映、跨页朗读与投委会演示修复",
+        "branch": "codex/feat/accepted-presentation-on-current-20261122",
+        "baseCommit": "c56255e52aa3304c5becb6dee43cb68e492acd9f",
+        "tipCommit": "a4353a6d9a189124366b75b9b246b95736c26014",
+        "commits": [
+          {
+            "commit": "a4353a6d9a189124366b75b9b246b95736c26014",
+            "parents": [
+              "c56255e52aa3304c5becb6dee43cb68e492acd9f"
+            ],
+            "subject": "集成已验收的演示放映、跨页朗读与投委会用例修复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "docs/sherlock-hosted-ai.md"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/build.mjs"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/2012595f9bbf61123f0d4d3b0df2af13edeb136b6b993f6847668a3bbf9faf0a.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/303d69a7af20f2ca692b958f7191fec08ff86d17e94eaac135ee4ff8195208e5.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/34a990ae53349d721ff82623f628fd63fb91922d369ebe0763b9b089a2e48b9e.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/3d0d28bcf9b1cab5c9ee63e8d8ce360199bcc60369866d619c76c32f72aa50cb.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/3d3456c22894434b2957a028a85d51e4554652ad06a168dc3caa9d581ba98b00.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/3e0a2fc9ea3d0e9e21eaea7009d0cbfbb96612acbb99ff5337779508237c042a.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/4d71b8da3dd0d972eb49a30c168487dc8a635f84973d5cd803e14956902f4ba5.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/5e55c75bd71d26a0c4e03b9c018556934620b967d8945672a1196fe1caf27d3f.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/7618ad451ea86c25c91979f93f7e7c20cc673eb7914c0b18fbc67626a558fd17.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/7dfe62a7a311906e750c4cfd507db8751e185f2fbed6e514ce3b2acba0d3ae08.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/8a64739a301458e8cb10ca2e0a30af5881d16e4710abf97d6b5679fe5e2c3cdb.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/8c28d3aa26eb5bb5267af6bf9fbe0c493a4795bb4b5e924866f5101bb8e1d2d8.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/910ca466632b97237cd51b0dab981bea4442fc13c13091b5d0a0fc43c463985b.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/924959557c2da83f90960177dbad7145e945c6df814da867d9a59d070b70e0ac.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/b5bde73c6cfb08eadf92408add3f2a9ca80fd13ab47ace696b9bd7fbf7c6a670.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/c4d4768598686abceb517e34c206b9fef386ddae969a0b6b5e6c8f56883cc37b.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/d120bbfe089487c862c6740bca9bf343ea0502fa2b0c235e4248e3c77096f838.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/dcdee2fa1a712c35c3b0b6df495f5b1912c92aa02296cbc4a010a367ce1b1c15.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/dd9178019ff335f3173d03737347889b58774992e8f4447cbbdf183a3c376492.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/guide-narration/def99fe70dd31851216e2f4fdc26a46a2d21b47113d971c90818d834d5611444.mp3"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/icons/footer-play.svg"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/App.vue"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/edit-guide.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/narration.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/odyssey.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-hosted-ai-worker.mjs"
+          },
+          {
+            "status": "A",
+            "path": "services/hosted-ai/speech-profile.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "services/hosted-ai/speech-profile.js"
+          },
+          {
+            "status": "A",
+            "path": "services/hosted-ai/speech.js"
+          },
+          {
+            "status": "M",
+            "path": "services/hosted-ai/worker.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/account-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/protocol.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/home-guides.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/edit-guide-chat.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/edit-guide.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/view.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/account-service.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guides.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-edit-guide-composer-browser.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-narration-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-narration.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/presentation-edit-guide-composer-browser.test.js",
+              "test/presentation-narration.test.js",
+              "test/home-guides.test.ts",
+              "test/account-service.test.ts",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "91 项相关检查通过，覆盖朗读、原生对话提交、用例流程与账户服务。",
+            "verifiedCommit": "a4353a6d9a189124366b75b9b246b95736c26014",
+            "completedAt": "2026-11-21T21:07:57.010241+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "组合包完成后以实际客户端验证。"
+        },
+        "acceptanceCriteria": [
+          "当前看板和导航修复与演示改动同时可用",
+          "投委会用例可进入放映并跨页朗读"
+        ],
+        "risks": [
+          "普通文稿首次合成朗读依赖账户语音服务。"
+        ],
+        "generatedAt": "2026-11-21T21:07:57.010241+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5595,6 +5827,20 @@
         "run",
         "test/home-guide-workbench.test.ts",
         "test/home-notes-runtime.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/presentation-edit-guide-composer-browser.test.js",
+        "test/presentation-narration.test.js",
+        "test/home-guides.test.ts",
+        "test/account-service.test.ts",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
