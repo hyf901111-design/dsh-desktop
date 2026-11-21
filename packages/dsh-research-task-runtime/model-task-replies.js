@@ -171,6 +171,11 @@ export function registerModelTaskReplies(ctx) {
     signal?.throwIfAborted()
     const turn = clientModeTurn(agent?.session)
     if (!turn) return request
+    // Image execution needs the actual provider, canvas and reference state already
+    // present in this request. A standalone text-only call sees a different toolset.
+    if (step === 1 && turn.mode === 'image' && turn.image && request.tools?.some(tool => tool.name === 'image_generate')) {
+      return {...request, system:request.system+'\n结合本轮画面的用途与约束，可以先简短说明构图取舍。按当前服务与图层状态在这一步执行，使用用户指定的参考图，交付结果以图片附件回执为准。'}
+    }
     if (firstTaskOpening(agent.session, step) && request.tools?.length) {
       const {message} = claimedWorkspaceMessage(agent.session,turn.mode) ?? {}
       if (!message) return request

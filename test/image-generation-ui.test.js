@@ -95,3 +95,12 @@ it('shows the same actions on ordinary gallery images and copies the image that 
  expect(window.dshDesktop.imageAction).toHaveBeenCalledExactlyOnceWith({action:'copy',name:'Second.png',data:second})
  expect(document.querySelector('[role=menu]')).toBeNull()
 })
+
+it('shows actual delivered pixel dimensions and aspect ratio only with the matching image attachment',async()=>{
+ const attachment={...image,width:1600,height:900};const receipt={kind:'odyssey-image-generation',ok:true,image:attachment}
+ await render({...done,content:[{type:'text',text:JSON.stringify(receipt)},{type:'image',attachment}]})
+ expect(host.querySelector('figcaption')?.textContent).toBe('1600 × 900 像素 · 16:9')
+ const failed={kind:'tool-call',data:{root:{...done,isError:true,content:[]}}}
+ await react.act(()=>root.render(jsx.jsx(ImageGenerationOutputs,{nodes:[failed],running:false,t:v=>v})))
+ expect(host.querySelector('figcaption')).toBeNull()
+})

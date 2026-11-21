@@ -102,8 +102,10 @@ it('describes only tools authorized on the execution request while the opening r
  const imageText='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，作为新素材加入这份验收画布。'
  const image=requests(imageText,{mode:'image'})
  const call=await image.run(1,{...image.current,tools:[{name:'image_generate'}]})
- expect(call.tools).toEqual([])
- expect(call.system).toContain('生成并交付实际图片')
+ expect(call.tools).toEqual([{name:'image_generate'}])
+ expect(call.messages).toBe(image.current.messages)
+ expect(call.system).toContain('在这一步执行')
+ expect(call[Symbol.for('ework.model-task-opening')]).toBeUndefined()
  expect((await image.run(1,{...image.current,tools:[{name:'existingTool'}]})).system).not.toContain('生成并交付实际图片')
  const office=requests('请核对工作簿的现有日期、再按实际观察日写入两组利差公式。',{mode:'spreadsheet'})
  const granted=ids=>[{name:'client_action',parameters:{properties:{capability:{enum:ids}}}}]
@@ -124,4 +126,19 @@ it('uses a prose-only first step only when the current request asks for an actio
   expect(first[Symbol.for('ework.native-component-opening')]===true).toBe(expected)
   if(expected){expect(first.system).toContain('只用自然语言');expect(first.tools).toEqual([]);expect((await run(2)).tools).toEqual(current.tools)}
  }
+})
+
+it('preserves real service or reference status on an admitted image turn, and leaves independently discussed images alone',async()=>{
+ const source='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，整图不要出现任何文字、数字或水印。作为新素材加入这份验收画布。'
+ for(const text of [source,'请修改当前这张图片，把主建筑移到右侧，保留左侧标题空间。']){
+  const image=requests(text,{mode:'image'}),tools=[{name:'image_generate'}]
+  const request={...image.current,system:'套餐生图服务暂时不可用。',tools}
+  const first=await image.run(1,request)
+  expect(first.tools).toBe(tools);expect(first.messages).toBe(request.messages)
+  expect(first.system).toContain(request.system);expect(first.system).not.toContain('已具备')
+  expect(first[Symbol.for('ework.model-task-opening')]).toBeUndefined()
+ }
+ const discussion=requests('这轮只讨论构图，不生成或修改图片。',{mode:'image'})
+ const first=await discussion.run(1,{...discussion.current,tools:[{name:'image_generate'}]})
+ expect(first.system).not.toContain('在这一步执行')
 })
