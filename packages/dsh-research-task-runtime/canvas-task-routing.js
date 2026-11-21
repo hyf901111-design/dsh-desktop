@@ -7,6 +7,13 @@ export function canvasHumanRequest(session) {
   return text===null?null:{messageId:message.id,text}
 }
 
+// Keep boundary tabs in a pasted range: an empty edge cell is still a column.
+// This function is also embedded in the renderer's native draft serializer.
+export function normalizeCanvasMessageText(text) {
+  const trimmed = text.trim()
+  return trimmed && text.includes('\t') && /[\r\n]/u.test(text) ? text : trimmed
+}
+
 export function canvasHumanText(text) {
   const prefix='␞SHERLOCK_RESEARCH_FILES_V1 '
   if(text.startsWith(prefix)){
@@ -21,7 +28,7 @@ export function canvasHumanText(text) {
       return ['file','folder','category','shared-category'].includes(reference?.kind)&&Array.isArray(reference.documents)?' ':original
     }catch{return original}
   })
-  return text.trim()
+  return normalizeCanvasMessageText(text)
 }
 
 export function ongoingCanvasRequest(session) {

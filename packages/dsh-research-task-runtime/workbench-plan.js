@@ -616,6 +616,9 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     const issues = [];
     const ledger = !deferred && !parallel ? authoredFinanceLedger(value.originalRequest) : undefined;
     const compilePanel = candidate => {
+        // A shared-data view already describes its presentation and has no child prompt to execute.
+        if (candidate?.view && candidate.prompt === undefined && typeof candidate.title === 'string')
+            candidate = {...candidate, prompt:candidate.title};
         if(candidate?.content!==undefined&&candidate.library!==undefined)throw Error('已取得的content不能与组件库取数配置混用。');
         let p=expandMappedWorkbenchChart(applyAuthoredFinanceLedger(resolveWorkbenchLibraryPanel(candidate,value.originalRequest,!isSimulated),ledger,value.originalRequest));
         if(!deferred&&!parallel){

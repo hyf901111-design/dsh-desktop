@@ -121,7 +121,18 @@ export function planningDataIntent(text) {
   return { simulation, sourceOnly: !simulation && (source || affirmative !== text) }
 }
 export function workbenchOfflineRequest(text = '') {
-  return /禁止联网|不要联网|无需联网|不联网|不得联网|别联网|别[^，。；\n]{1,20}或联网|只用.{0,8}(?:资料|记录)/u.test(text)
+  if (/(?:禁止|严禁|不要|无需|无须|不用|不必|不能|不得|不许|不允许|别|不)\s*联网|别[^，。；\n]{1,20}或联网/u.test(text)) return true
+  // "Use only the fund codes in this table" limits the universe, not the
+  // sources for the requested NAVs. An explicit network ban above prevails.
+  const supplemental = text.split(/[。；;，,\n]/u).some(clause =>
+    !/(?:禁止|不要|不需要|无需|无须|不用|不必|不能|不得|不许|不允许|别)/u.test(clause) &&
+    /联网|(?:补充|结合|查询|获取|核对|抓取)[^。；;\n]{0,18}(?:外部(?:数据|来源)|公开(?:市场|行情|数据|资料|来源)|最新(?:净值|行情|公告|报价))/u.test(clause))
+  if (supplemental) return false
+  if (/只用.{0,8}(?:资料|记录)/u.test(text)) return true
+  const table = /(?:只用|仅用|仅使用)(?:下表|此表|以下表格|下面的表格)/u.exec(text)
+  if (!table) return false
+  const rest = text.slice(table.index + table[0].length)
+  return !/^(?:中|里|上)?(?:列出|提供|指定|包含)?的?(?:基金|股票|证券|产品|渠道|机构)?(?:代码|名单|名称|分组|标的|分类)/u.test(rest)
 }
 function sourceCreationParameters(parameters) {
   if (!parameters?.properties) return parameters
@@ -401,7 +412,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     const prototypeSource=state.evidenceTargets.required.length>0&&!simulation
     const sourcePlanning=sourceOnly||prototypeSource
     const offline = workbenchOfflineRequest(human.text)
-    const pastedBlocks=offline?pastedWorkbenchBlocks(human.text):[]
+    const pastedBlocks=pastedWorkbenchBlocks(human.text)
     const hasPastedTable=pastedBlocks.length>0&&pastedBlocks.every(block=>block.every(row=>row.length===block[0].length))
     const observedSourceGuidance = !simulation && !documentPaths && !prototypeSource && !offline
       ? OBSERVED_SOURCE_GUIDANCE : ''
@@ -441,6 +452,17 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     })
     state.sourceSchemas = tools
     state.sourceProgress.updateTools(tools)
+    const pastedGuidance=hasPastedTable && [
+      '【直接复用消息原表】本轮有 '+pastedBlocks.length+' 个可绑定表段。用 sharedDatasets:[{id,label,pastedTable:{block:1,header:true,numericFields:[数值列名]}}]，引用本轮用户原行。不要重抄 records、asOf、note。',
+      '首行是表头且各列名可用作字段键时直接引用原列名。否则在数据集根部按原列顺序声明 fields:[{key,label,unit?}]；表头含空格、单位或标点时用简短 key 和原文 label。无表头时省略 header。数值列以外保留文本。唯一编号可在 pastedTable.identity 指定。',
+      '明细用 type:"view"，view:{dataset,sections:[{kind:"records",fields:[字段键]}]}。同类别多个同单位指标对比用 type:"chart"，view:{dataset,variant:"groupedBar",unit,sections:[{kind:"records",label:分类键,fields:[数值键1,数值键2]}]}。比较两个端点可用 dumbbell。同一批客户从接触到签约的漏斗用 type:"chart" 和 variant:"funnel"，label 引用阶段列、fields 仅引用人数列，按原顺序绘制。按用户要求保留明细、单位、空值和其他交互。',
+      '差额或比率可在 pastedTable.derive 中声明 {key,label,op:"subtract|percent",left,right,unit?,digits?}。子集用 view.where。跨行汇总用 aggregate 的 groupBy、sum 或 percent，总体比率按汇总分子分母计算；指标卡引用单条汇总，时间线用 type:"timeline"，view.sections 放一个 {kind:"schedule",label:事件标题列,start:日期列,owner:负责人列,fields:[其他明细列]}。'
+    ].join(' ');
+    if (hasPastedTable && offline && !simulation && !documentPaths && !state.evidenceTargets.required.length) {
+      return {...request,tools:tools.map(tool=>tool.name===CREATE_TOOL?
+        {...tool,description:'使用当轮提供的表格和所要求的展示、交互创建看板。多卡引用同一份数据，受理后的结果以回执为准。'}:tool),
+        system:[request.system,pastedGuidance,PLANNING_PROGRESS_GUIDANCE].join('\n')};
+    }
     const standalone=!simulation && !documentPaths && !prototypeSource && !hasPastedTable
     const brief=standalone && !offline && simpleNewsBrief(human.text)
     if (brief) {
@@ -467,7 +489,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       offline && /模拟[^。；\n]{0,40}(?:账簿|台账)|模拟(?:账簿|台账)/u.test(human.text) &&
         /瀑布图/u.test(human.text) && /环形图|环图/u.test(human.text) && /风险矩阵/u.test(human.text) &&
         '【行内模拟账簿】直接提交用户指定的原生金融卡标题、prompt 与 type:"market"。瀑布图、配置环形图、风险矩阵不使用 view.variant 或 sharedDatasets。宿主解析本轮明示的期初期末、各项金额和风险等级。',
-      hasPastedTable && '【直接复用消息原表】本轮有 '+pastedBlocks.length+' 个按竖线分隔的表段。用 sharedDatasets:[{id,label,fields:[{key,label,unit?}],pastedTable:{block:1,header?:true,identity?:编号键,numericFields:[原数值键],derive?:[{key,label,op:"subtract|percent",left:原列键,right:原列键,unit?,digits?}]}}]。fields 与原表各列同序；只有首行是表头才填 header:true，不抄 records、asOf、note，不用样例替换。subtract 为左减右，percent 为左除右的百分比。图表、明细、排程共用完整表；子集用 view.where:[{field,op:"gt|ne",value:0}]。同日、同渠道按 aggregate 分组 sum，全表总计 groupBy:[]，总体百分比引用本次汇总的分子和分母。原生指标卡引用单条总计，原生时间线引用发生日期，图表用原数值单位。',
+      pastedGuidance,
       /表单|番茄钟|倒计时|日程管理|待办|任务清单|checklist/iu.test(human.text) && '【本地交互卡】文本、日期、数值范围、下拉和本地提交记录优先使用 form 原生组件，artifact 提供 fields 与 mode:local；个人待办用 tasks 和 mode:local。在用户仅要个人清单、尚未提供事项时，直接提交一张 tasks 卡，artifact 带 version:1、type:"tasks"、title、asOf:"个人清单"、mode:"local" 和 items:[]。已有事项应逐项保留。个人日程使用组件库日历。自定义计时器使用真实截止时刻与 window.sherlockShared 状态保存。',
       workbenchPomodoroSettings(human.text) && '【标准番茄钟】提交番茄钟面板的 title、prompt、type:"html"，省略 artifact。宿主从本轮需求配置专注、休息、开始、暂停、继续、重置、切换阶段和完成轮次。个人原生日历用 library:{id:"builtin-calendar"}；本地待办用 type:"tasks"，初始事项按原文提供，artifact 仅需 version、type、title、mode:"local"、asOf、items:[{id,title,completed:false}]，不加 fields。',
       '【呈现与回报】用户明确指定的卡名、张数、原生类型和图形逐一保留。柱图、横向条形图和折线图用 chart.bar、chart.horizontal、chart.line 或等效原生图；百分比是单位，普通柱图仍是 chart.bar。指标卡用 kpi，时间线用 timeline（每条提供唯一 id、title、time，只有日期时填写原 YYYY-MM-DD）。表格使用 table 或含明细及分类筛选的 view。来源、数值和联动以实际交付为准。仅报告新增结果、重要缺失或必要操作，不公开接口目录、来源选择原则或内部任务分工。'].filter(Boolean).join('\n'), tools }

@@ -236,7 +236,7 @@ export function labelRequestedReportSeries(panel,request){
 export function normalizeSharedChart(panel,datasets,request=''){
     const view=panel?.view;
     if(!view||panel.artifact!==undefined||panel.content!==undefined||panel.library||panel.publicData||panel.profile||panel.requests)return panel;
-    if(!['chart','view'].includes(panel.type)||!['bar','horizontal','line','area','groupedBar'].includes(view.variant))return panel;
+    if(!['chart','view'].includes(panel.type)||!['bar','horizontal','line','area','groupedBar','dumbbell','funnel'].includes(view.variant))return panel;
     if(Object.keys(view).some(key=>!['dataset','variant','unit','note','subject','sections'].includes(key))||
        view.subject!==undefined&&typeof view.subject!=='string')return panel;
     const dataset=datasets?.find(item=>item.id===view.dataset);
