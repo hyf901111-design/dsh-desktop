@@ -24,35 +24,35 @@ const smootherStep = (value: number) => {
   return t * t * t * (t * (t * 6 - 15) + 10)
 }
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
-export const HOME_OPERATION_EXAMPLES: readonly HomeOperationExample[] = [...CARDS, 'workbench', 'spreadsheet', 'presentation-edit']
+export const HOME_OPERATION_EXAMPLES: readonly HomeOperationExample[] = ['board', 'workbench', 'spreadsheet', 'note', 'ppt', 'presentation-edit', 'report']
 export const HOME_OPERATIONS_COPY = {
   zh: {
     demoIntro: '即将进入实例演示，\n演示过程不消耗费用',
     heading: '快速开始', wallpapers: '主题壁纸', light: '切换为浅色', dark: '切换为深色', down: '切换到快速开始', up: '返回输入区', pagination: '用例切换',
     cards: ['创建研究看板', '撰写研究笔记', '制作演示文稿', '制作研究报告'],
-    cases: [
-      ['研究看板', '快速创建行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
-      ['笔记随航', '体验有AI护航的文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
-      ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
-      ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。'],
-      ['自由搭建', '生成专属研究工作台', '描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。'],
-      ['表格分析', '复杂表格简单处理', 'AI 整理财报，生成趋势图。\n拆解现金流，动手试算回款。'],
-      ['演示编辑', '把研究简报讲给投资委员会', '从知识库拖入简报，生成逐页演讲稿，\n再圈选图表、点选标题进行修改。']
-    ]
+    cases: {
+      board: ['研究看板', '快速创建行情看板', '通过研究模式，快速创建自选行情看板，以了解研究看板基础功能。'],
+      note: ['笔记随航', '体验有AI护航的文档', '打开示例笔记，体验 AI 追问观点、\n核查事实，发现研究中的盲点。'],
+      ppt: ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
+      report: ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。'],
+      workbench: ['自由搭建', '生成专属研究工作台', '描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。'],
+      spreadsheet: ['表格分析', '复杂表格简单处理', 'AI 整理财报，生成趋势图。\n拆解现金流，动手试算回款。'],
+      'presentation-edit': ['演示编辑', '把研究简报讲给投资委员会', '从知识库拖入简报，生成逐页演讲稿，\n再圈选图表、点选标题进行修改。']
+    }
   },
   en: {
     demoIntro: 'Entering the demo.\nThere is no charge.',
     heading: 'Quick start', wallpapers: 'Wallpapers', light: 'Switch to light mode', dark: 'Switch to dark mode', down: 'Show quick start', up: 'Return to the composer', pagination: 'Examples',
     cards: ['Create a research board', 'Write research notes', 'Create a presentation', 'Create a research report'],
-    cases: [
-      ['Research board', 'Quickly create a market dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
-      ['Notes Copilot', 'Explore AI-assisted documents', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
-      ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
-      ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.'],
-      ['Build freely', 'Generate your research workbench', 'Describe your research needs and watch AI assemble\nan interactive research workbench.'],
-      ['Spreadsheet analysis', 'Simplify complex spreadsheets', 'Clean and chart financial data with AI.\nBreak down cash flow and test collections.'],
-      ['Slide editing', 'Brief the investment committee', 'Import a deck, prepare speaker notes,\nand revise a chart and a headline.']
-    ]
+    cases: {
+      board: ['Research board', 'Quickly create a market dashboard', 'Create a watchlist dashboard in Research to explore the basics of research boards.'],
+      note: ['Notes Copilot', 'Explore AI-assisted documents', 'Open an example note to see AI question ideas,\ncheck facts and uncover blind spots.'],
+      ppt: ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
+      report: ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.'],
+      workbench: ['Build freely', 'Generate your research workbench', 'Describe your research needs and watch AI assemble\nan interactive research workbench.'],
+      spreadsheet: ['Spreadsheet analysis', 'Simplify complex spreadsheets', 'Clean and chart financial data with AI.\nBreak down cash flow and test collections.'],
+      'presentation-edit': ['Slide editing', 'Brief the investment committee', 'Import a deck, prepare speaker notes,\nand revise a chart and a headline.']
+    }
   }
 } as const
 const COPY = HOME_OPERATIONS_COPY
@@ -161,15 +161,15 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (!usecase) return
     const theme = doc.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
     for (const layer of usecase.querySelectorAll<HTMLElement>('[data-odyssey-operations-case-layer]')) {
-      const index = Number(layer.dataset.case)
-      layer.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][index]}")`)
-      const trend = layer.querySelector<HTMLImageElement>('.odyssey-operations-trend');if(trend)trend.src = index === 3 && theme === 'dark' ? OPERATIONS_REPORT_TREND_DARK : OPERATIONS_TREND_UP
+      const kind = HOME_OPERATION_EXAMPLES[Number(layer.dataset.case)]!
+      layer.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][kind]}")`)
+      const trend = layer.querySelector<HTMLImageElement>('.odyssey-operations-trend');if(trend)trend.src = kind === 'report' && theme === 'dark' ? OPERATIONS_REPORT_TREND_DARK : OPERATIONS_TREND_UP
     }
   }
   const updateCase = () => {
-    const selected = copy().cases[caseIndex]!
+    const selected = copy().cases[HOME_OPERATION_EXAMPLES[caseIndex]!]
     for (const layer of usecase?.querySelectorAll<HTMLElement>('[data-odyssey-operations-case-layer]') || []) {
-      const text = copy().cases[Number(layer.dataset.case)]!
+      const text = copy().cases[HOME_OPERATION_EXAMPLES[Number(layer.dataset.case)]!]
       layer.querySelector('.odyssey-operations-title strong')!.textContent = text[0]
       layer.querySelector('.odyssey-operations-subtitle')!.textContent = text[1]
       const description=layer.querySelector('.odyssey-operations-description')!;if(!description.hasAttribute('data-odyssey-operations-intro'))description.textContent=text[2]
@@ -177,7 +177,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     if (usecase) { usecase.dataset.case = String(caseIndex); usecase.setAttribute('aria-label', `${selected[0]} · ${selected[1]}`) }
     exampleButton?.setAttribute('aria-label', (locale() === 'en' ? 'Play example: ' : '播放示例：') + selected[1])
     for (const [index, button] of pages.entries()) {
-      button.setAttribute('aria-label', copy().cases[index]![1])
+      button.setAttribute('aria-label', copy().cases[HOME_OPERATION_EXAMPLES[index]!][1])
       button.setAttribute('aria-pressed', String(index === caseIndex))
     }
     updateGlow()
@@ -432,7 +432,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     const identity=()=>hero?.querySelector<HTMLElement>('[data-odyssey-file-reference-session]')?.dataset.odysseyFileReferenceSession||root?.querySelector<HTMLElement>('[data-srb-session-header]')?.dataset.eworkNotesSession||root?.dataset.sessionId||''
     const owner=identity(),notice=copy().demoIntro,letters=Array.from(notice),opacity=description?.style.opacity||'',padding=description?.style.paddingLeft||'',sizing=description?.style.boxSizing||'',left=description?.style.left||'',heading=description?.parentElement?.querySelector<HTMLElement>('.odyssey-operations-case-copy')
     let pendingFrame=0,started:number|null=null,completeAt:number|null=null,finished=false,spinner:SVGSVGElement|null=null,spinnerArc:SVGPathElement|null=null,message:Text|null=null
-    const restore=()=>{if(description){description.style.opacity=opacity;description.style.paddingLeft=padding;description.style.boxSizing=sizing;description.style.left=left;description.textContent=copy().cases[index]![2];delete description.dataset.odysseyOperationsIntro}}
+    const restore=()=>{if(description){description.style.opacity=opacity;description.style.paddingLeft=padding;description.style.boxSizing=sizing;description.style.left=left;description.textContent=copy().cases[HOME_OPERATION_EXAMPLES[index]!][2];delete description.dataset.odysseyOperationsIntro}}
     const cleanup=()=>{if(pendingFrame)win.cancelAnimationFrame(pendingFrame);controller.signal.removeEventListener('abort',abort);doc.removeEventListener('pointerdown',takePointer,true);doc.removeEventListener('keydown',takeKey,true);doc.removeEventListener('beforeinput',takeInput,true);win.removeEventListener('blur',takeInput)}
     const abort=()=>{if(finished)return;finished=true;cleanup();restore();reject(Object.assign(Error('本次示例操作已取消。'),{name:'AbortError'}))}
     const takeInput=()=>controller.abort()
@@ -674,20 +674,21 @@ export function mountHomeOperations(doc: Document = document, options: Options =
     exampleButton.addEventListener('click', () => { if(options.embedded)options.embedded.onExample(HOME_OPERATION_EXAMPLES[caseIndex]!);else void runAction(HOME_OPERATION_EXAMPLES[caseIndex]!, true) })
     usecase.append(exampleButton)
     const createCaseLayer = (index: number) => {
-      const layer = doc.createElement('div')
+      const kind = HOME_OPERATION_EXAMPLES[index]!
+      const layer = doc.createElement('div'); layer.dataset.caseKind = kind
       const field = doc.createElement('div'); field.className = 'odyssey-operations-gradient-field'; field.setAttribute('aria-hidden', 'true')
       for (const name of ['one', 'two']) { const glow = doc.createElement('i'); glow.className = `odyssey-operations-glow glow ${name}`; field.append(glow) }
-      const text = copy().cases[index]!
+      const text = copy().cases[kind]
       const caseCopy = doc.createElement('div'); caseCopy.className = 'odyssey-operations-case-copy'
       const title = doc.createElement('h3'); title.className = 'odyssey-operations-title'
       const strong = doc.createElement('strong'); strong.textContent = text[0]
-      const trend = doc.createElement('img'); trend.className = 'odyssey-operations-trend'; trend.src = index === 3 && doc.body.hasAttribute('data-ds-dark-theme') ? OPERATIONS_REPORT_TREND_DARK : OPERATIONS_TREND_UP; trend.alt = ''; trend.setAttribute('aria-hidden', 'true'); trend.draggable = false
+      const trend = doc.createElement('img'); trend.className = 'odyssey-operations-trend'; trend.src = kind === 'report' && doc.body.hasAttribute('data-ds-dark-theme') ? OPERATIONS_REPORT_TREND_DARK : OPERATIONS_TREND_UP; trend.alt = ''; trend.setAttribute('aria-hidden', 'true'); trend.draggable = false
       title.append(strong, trend)
       const subtitle = doc.createElement('p'); subtitle.className = 'odyssey-operations-subtitle'; subtitle.textContent = text[1]
       caseCopy.append(title, subtitle)
       const description = doc.createElement('p'); description.className = 'odyssey-operations-description'; description.textContent = text[2]
       const theme = doc.body.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
-      layer.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][index]}")`)
+      layer.style.setProperty('--odyssey-operations-glow-two-image', `url("${OPERATIONS_CASE_GLOWS[theme][kind]}")`)
       layer.append(field, caseCopy, description)
       return layer
     }

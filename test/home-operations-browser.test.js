@@ -403,11 +403,7 @@ it('pages through seven use cases and keeps quick-card clicks local to the homep
       expect(await dots.nth(index).getAttribute('aria-pressed')).toBe('true')
       titles.push(await page.locator('.odyssey-operations-usecase .odyssey-operations-title').textContent())
     }
-    expect(new Set(titles).size).toBe(7)
-    expect(titles.every(Boolean)).toBe(true)
-    expect(titles[4]).toContain('自由搭建')
-    expect(titles[5]).toContain('表格分析')
-    expect(titles[6]).toContain('演示编辑')
+    expect(titles).toEqual(['研究看板', '自由搭建', '表格分析', '笔记随航', '演示文稿', '演示编辑', '研究报告'])
     const originalUrl = page.url()
     const cards = page.locator('.odyssey-operations-quick-card')
     expect(await cards.count()).toBe(4)
@@ -642,11 +638,11 @@ it('renders the exported trend arrow and distinct final Figma light fields for a
     for (const dark of [false, true]) {
       if (dark) {
         await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''))
-        expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('2')
+        expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('4')
         await expect.poll(() => page.locator('.odyssey-operations-glow.two').evaluate(glow => getComputedStyle(glow).backgroundImage)).not.toContain(allFields[2].src)
       }
       const fields = []
-      for (let index = 0; index < 3; index++) {
+      for (const index of [0, 3, 4]) {
         await page.locator('.odyssey-operations-pagination button').nth(index).click()
         await waitCase(page, index)
         fields.push(await page.locator('.odyssey-operations-glow.two').evaluate(async glow => {
@@ -1907,22 +1903,22 @@ it('starts only the visible large-card example by click or keyboard, never by it
   expect(await open.getAttribute('type')).toBe('button')
   await card.click({position:{x:70,y:90}})
   await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['board'])
-  await page.locator('.odyssey-operations-pagination button[data-case="1"]').click()
-  await waitCase(page,1)
+  await page.locator('.odyssey-operations-pagination button[data-case="3"]').click()
+  await waitCase(page,3)
   expect(await page.evaluate(()=>window.examples)).toEqual(['board'])
   await open.focus(); await page.keyboard.press('Enter')
   await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['board','note'])
-  await page.locator('.odyssey-operations-pagination button[data-case="2"]').click();await waitCase(page,2)
+  await page.locator('.odyssey-operations-pagination button[data-case="4"]').click();await waitCase(page,4)
   await open.focus();await page.keyboard.press('Space')
   await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['board','note','ppt'])
   await page.close()
 },15000)
 
-it.each([{index:0,kind:'board',en:false},{index:1,kind:'note',en:true},{index:2,kind:'ppt',en:false},{index:3,kind:'report',en:true},{index:4,kind:'workbench',en:false}])('streams the $kind demo notice in the original description before handing off its unchanged entry',async({index,kind,en})=>{
+it.each([{index:0,kind:'board',en:false},{index:3,kind:'note',en:true},{index:4,kind:'ppt',en:false},{index:-1,kind:'report',en:true},{index:1,kind:'workbench',en:false}])('streams the $kind demo notice in the original description before handing off its unchanged entry',async({index,kind,en})=>{
  const page=await fixture({reduced:false,clock:true});try{
   await page.evaluate(en=>{document.documentElement.dataset.odysseyLocale=en?'en':'zh';window.examples=[];window.homeOperations.onExample=async(card,context)=>window.examples.push({card,description:document.querySelector('[data-odyssey-operations-case-layer][aria-hidden="false"] .odyssey-operations-description').textContent,origin:context.origin});window.homeOperations.dispose();window.homeOperations.mount()},en)
   await toggle(page).click();await waitState(page,'operations');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+50))
-  await page.locator(`.odyssey-operations-pagination [data-case="${index}"]`).evaluate(e=>e.click());await page.clock.runFor(450)
+  await page.locator('.odyssey-operations-pagination button').nth(index).evaluate(e=>e.click());await page.clock.runFor(450)
   const description=page.locator('[data-odyssey-operations-case-layer][aria-hidden="false"] .odyssey-operations-description'),original=await description.textContent(),before=await page.locator('.odyssey-operations-usecase').boundingBox(),notice=en?'Entering the demo.\nThere is no charge.':'即将进入实例演示，\n演示过程不消耗费用'
   await page.locator('[data-odyssey-operations-open-example]').evaluate(e=>e.click());await page.clock.runFor(80)
   expect(await page.evaluate(()=>window.examples)).toEqual([]);expect(parseFloat(await description.evaluate(e=>getComputedStyle(e).opacity))).toBeLessThan(.9)
@@ -2392,13 +2388,13 @@ it.each([{id:'haseeb',tone:'current-aurora'},{id:'default',tone:'white'},{id:'vg
   }finally{await page.close()}
 },30000)
 
-it('offers the fourth report example with exact copy, seven keyboard tracks and a distinct large-card entry',async()=>{
+it('offers the final report example with exact copy, keyboard tracks and a distinct large-card entry',async()=>{
  const page=await fixture();try{
   await page.evaluate(()=>{window.examples=[];window.quickActions=[];window.homeOperations.onExample=async kind=>window.examples.push(kind);window.homeOperations.onAction=async kind=>window.quickActions.push(kind);window.homeOperations.dispose();window.homeOperations.mount()})
   await toggle(page).click();await waitState(page,'operations');const tracks=page.locator('.odyssey-operations-pagination button')
-  expect(await tracks.count()).toBe(7)
-  await tracks.first().focus();await page.keyboard.press('End');await waitCase(page,6);await page.keyboard.press('ArrowLeft');await waitCase(page,5);await page.keyboard.press('ArrowLeft');await waitCase(page,4);await page.keyboard.press('ArrowLeft');await waitCase(page,3)
-  expect(await tracks.nth(3).evaluate(el=>el===document.activeElement)).toBe(true)
+  const reportIndex=await tracks.count()-1
+  await tracks.first().focus();await page.keyboard.press('End');await waitCase(page,reportIndex)
+  expect(await tracks.last().evaluate(el=>el===document.activeElement)).toBe(true)
   expect(await page.locator('.odyssey-operations-title strong').textContent()).toBe('研究报告')
   expect(await page.locator('.odyssey-operations-subtitle').textContent()).toBe('从问题到研报')
   expect(await page.locator('.odyssey-operations-description').textContent()).toBe('从检索资料到形成观点，\n回看研究过程，查看完整研报。')
@@ -2406,7 +2402,7 @@ it('offers the fourth report example with exact copy, seven keyboard tracks and 
   expect(await page.locator('[data-odyssey-operations-case-layer] img').getAttribute('class')).toBe('odyssey-operations-trend')
   await page.locator('[data-odyssey-operations-open-example]').focus();await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['report'])
   await page.locator('.odyssey-operations-quick-card[data-card="report"]').click();await expect.poll(()=>page.evaluate(()=>window.quickActions)).toEqual(['report']);expect(await page.evaluate(()=>window.examples)).toEqual(['report'])
-  await tracks.nth(3).focus();await page.keyboard.press('ArrowRight');await waitCase(page,4);await page.keyboard.press('ArrowRight');await waitCase(page,5);await page.keyboard.press('ArrowRight');await waitCase(page,6);await page.keyboard.press('ArrowRight');await waitCase(page,0);await page.keyboard.press('ArrowLeft');await waitCase(page,6);await page.keyboard.press('Home');await waitCase(page,0)
+  await tracks.last().focus();await page.keyboard.press('ArrowRight');await waitCase(page,0);await page.keyboard.press('ArrowLeft');await waitCase(page,reportIndex);await page.keyboard.press('Home');await waitCase(page,0)
   expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
  }finally{await page.close()}
 },15000)
@@ -2416,14 +2412,14 @@ it.each([
  {width:830,height:640,dark:false,locale:'zh'},{width:830,height:640,dark:true,locale:'zh'},
  {width:680,height:480,dark:false,locale:'zh'},{width:680,height:480,dark:true,locale:'zh'},
  {width:680,height:640,dark:false,locale:'en'},{width:680,height:640,dark:true,locale:'en'},
-])('keeps the picture-free fourth report card readable in its unchanged shell %j',async options=>{
+])('keeps the picture-free final report card readable in its unchanged shell %j',async options=>{
  const page=await fixture({...options,themes:true,deviceScaleFactor:2});try{
   await page.evaluate(locale=>document.documentElement.dataset.odysseyLocale=locale,options.locale)
   await toggle(page).click();await waitState(page,'operations');await page.mouse.move(1,1)
   const before=await page.locator('.odyssey-operations-usecase').evaluate(card=>{const r=card.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,background:getComputedStyle(card).backgroundColor,border:getComputedStyle(card).borderWidth,overflowX:card.closest('section').scrollWidth-card.closest('section').clientWidth,overflowY:card.closest('section').scrollHeight-card.closest('section').clientHeight}})
-  await page.locator('.odyssey-operations-pagination [data-case="3"]').click();await waitCase(page,3);await page.mouse.move(1,1)
+  const report=page.locator('.odyssey-operations-pagination button').last();await report.click();await waitCase(page,Number(await report.getAttribute('data-case')));await page.mouse.move(1,1)
   const geometry=await region(page).evaluate(section=>{
-   const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}},card=section.querySelector('.odyssey-operations-usecase'),layer=card.querySelector('[data-case="3"]'),text=selector=>{const e=layer.querySelector(selector),range=document.createRange();range.selectNodeContents(e);return{...rect(e),ink:rect(range),font:parseFloat(getComputedStyle(e).fontSize)}}
+   const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}},card=section.querySelector('.odyssey-operations-usecase'),layer=card.querySelector('[data-case-kind="report"]'),text=selector=>{const e=layer.querySelector(selector),range=document.createRange();range.selectNodeContents(e);return{...rect(e),ink:rect(range),font:parseFloat(getComputedStyle(e).fontSize)}}
    return{window:{width:innerWidth,height:innerHeight},content:rect(section.parentElement),section:rect(section),card:{...rect(card),background:getComputedStyle(card).backgroundColor,border:getComputedStyle(card).borderWidth},title:text('.odyssey-operations-title strong'),subtitle:text('.odyssey-operations-subtitle'),description:text('.odyssey-operations-description'),tracks:rect(card.querySelector('.odyssey-operations-pagination')),images:layer.querySelectorAll('img').length,source:layer.querySelector('img').src,glows:[...layer.querySelectorAll('.glow')].map(e=>({animation:getComputedStyle(e).animationName,image:getComputedStyle(e).backgroundImage})),overflowX:section.scrollWidth-section.clientWidth,overflowY:section.scrollHeight-section.clientHeight}
   })
   expect({x:geometry.card.x,y:geometry.card.y,width:geometry.card.width,height:geometry.card.height,background:geometry.card.background,border:geometry.card.border}).toEqual({x:before.x,y:before.y,width:before.width,height:before.height,background:before.background,border:before.border});expect(geometry.overflowX).toBeLessThanOrEqual(Math.max(1,before.overflowX));expect(geometry.overflowY).toBeLessThanOrEqual(Math.max(1,before.overflowY))
@@ -2432,19 +2428,20 @@ it.each([
   const label=`report-${options.dark?'dark':'light'}-${options.locale}-window${options.width}x${options.height}`;await mkdir('output/ppt-markup-design-20261025/report-card-validation',{recursive:true});await writeFile(`output/ppt-markup-design-20261025/report-card-validation/${label}.json`,JSON.stringify(geometry,null,2));await region(page).screenshot({path:`output/ppt-markup-design-20261025/report-card-validation/${label}.png`})
  }finally{await page.close()}
 },20000)
-it('retargets smoothly through the fourth report pane while preserving the carousel clock and reduced motion semantics',async()=>{
+it('retargets smoothly through the final report pane while preserving the carousel clock and reduced motion semantics',async()=>{
  const page=await fixture({reduced:false,clock:true});try{
   await toggle(page).click();await waitState(page,'operations');await page.mouse.move(1,1);await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now())+100))
-  for(const index of[3,1,3]){
+  const reportIndex=await page.locator('.odyssey-operations-pagination button').count()-1
+  for(const index of[reportIndex,1,reportIndex]){
    await page.locator(`.odyssey-operations-pagination [data-case="${index}"]`).evaluate(e=>e.click());await page.clock.runFor(80)
    const weights=await page.locator('[data-odyssey-operations-case-layer]').evaluateAll(els=>els.map(e=>({opacity:parseFloat(getComputedStyle(e).opacity),inert:e.inert,hidden:e.getAttribute('aria-hidden')})))
    expect(weights.reduce((a,w)=>a+w.opacity,0)).toBeCloseTo(1,3);expect(weights.filter(w=>!w.inert&&w.hidden==='false')).toHaveLength(1)
   }
-  await page.clock.runFor(450);await waitCase(page,3)
-  const timing=await page.locator('[data-odyssey-operations-case-layer=""][data-case="3"] .glow').evaluateAll(els=>els.map(e=>e.getAnimations()[0].effect.getTiming()))
+  await page.clock.runFor(450);await waitCase(page,reportIndex)
+  const timing=await page.locator('[data-odyssey-operations-case-layer=""][data-case-kind="report"] .glow').evaluateAll(els=>els.map(e=>e.getAnimations()[0].effect.getTiming()))
   expect(timing.map(t=>[t.duration,t.direction])).toEqual([[2000,'alternate'],[2000,'alternate']])
-  await page.emulateMedia({reducedMotion:'reduce'});await page.clock.runFor(20);expect(await page.locator('[data-case="3"] .glow').evaluateAll(els=>els.every(e=>e.getAnimations().length===0))).toBe(true)
-  await page.clock.runFor(12000);expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe('3')
+  await page.emulateMedia({reducedMotion:'reduce'});await page.clock.runFor(20);expect(await page.locator('[data-case-kind="report"] .glow').evaluateAll(els=>els.every(e=>e.getAnimations().length===0))).toBe(true)
+  await page.clock.runFor(12000);expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(String(reportIndex))
  }finally{await page.close()}
 },20000)
 
@@ -2487,22 +2484,22 @@ it('keeps the homepage button hint static for reduced motion and clears an activ
   await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))});await page.clock.runFor(5000);expect(await toggle(page).getAttribute('data-odyssey-home-attention')).toBeNull()
  }finally{await page.close()}
 },15000)
-it('decodes the fourth report Figma assets locally at their native slots without adding an illustration',async()=>{
+it('decodes the final report Figma assets locally at their native slots without adding an illustration',async()=>{
  const page=await fixture();try{
   const assets=[...importedImages].filter(([path])=>/\/home-operations-assets\/case-report-/.test(path));expect(assets).toHaveLength(3)
   const decoded=await page.evaluate(async values=>Promise.all(values.map(async([path,src])=>{const image=new Image();image.src=src;await image.decode();return{path,width:image.naturalWidth,height:image.naturalHeight}})),assets)
   for(const item of decoded){if(item.path.includes('glow'))expect([item.width,item.height]).toEqual([380,448]);else{expect(Math.abs(item.width-16.9)).toBeLessThan(1);expect(Math.abs(item.height-16.9)).toBeLessThan(1)}}
-  await toggle(page).click();await waitState(page,'operations');await page.locator('.odyssey-operations-pagination [data-case="3"]').click();await waitCase(page,3)
-  const backgrounds=await page.locator('[data-odyssey-operations-case-layer][data-case="3"] .glow').evaluateAll(async els=>Promise.all(els.map(async el=>{const url=JSON.parse(getComputedStyle(el).backgroundImage.slice(4,-1)),image=new Image();image.src=url;await image.decode();return{width:image.naturalWidth,height:image.naturalHeight,slot:el.getBoundingClientRect().width}})))
+  await toggle(page).click();await waitState(page,'operations');const report=page.locator('.odyssey-operations-pagination button').last();await report.click();await waitCase(page,Number(await report.getAttribute('data-case')))
+  const backgrounds=await page.locator('[data-odyssey-operations-case-layer][data-case-kind="report"] .glow').evaluateAll(async els=>Promise.all(els.map(async el=>{const url=JSON.parse(getComputedStyle(el).backgroundImage.slice(4,-1)),image=new Image();image.src=url;await image.decode();return{width:image.naturalWidth,height:image.naturalHeight,slot:el.getBoundingClientRect().width}})))
   expect(backgrounds.every(image=>image.width>0&&image.height>0&&image.slot>0)).toBe(true)
  }finally{await page.close()}
 },15000)
 
-it.each([{dark:false,width:1380,height:900},{dark:true,width:680,height:480}])('opens the fifth workbench example with exact copy and keeps its compact card readable %j',async options=>{
+it.each([{dark:false,width:1380,height:900},{dark:true,width:680,height:480}])('opens the second workbench example with exact copy and keeps its compact card readable %j',async options=>{
  const page=await fixture({...options,themes:true});try{
   await page.evaluate(()=>{window.examples=[];window.homeOperations.onExample=async kind=>window.examples.push(kind);window.homeOperations.dispose();window.homeOperations.mount()})
-  await toggle(page).click();await waitState(page,'operations');await page.locator('.odyssey-operations-pagination button').first().focus();await page.keyboard.press('End');await waitCase(page,4)
-  const layer=page.locator('[data-odyssey-operations-case-layer][data-case="4"]')
+  await toggle(page).click();await waitState(page,'operations');await page.locator('.odyssey-operations-pagination button').first().focus();await page.keyboard.press('ArrowRight');await waitCase(page,1)
+  const layer=page.locator('[data-odyssey-operations-case-layer][data-case-kind="workbench"]')
   expect(await layer.locator('.odyssey-operations-title strong').textContent()).toBe('自由搭建')
   expect(await layer.locator('.odyssey-operations-subtitle').textContent()).toBe('生成专属研究工作台')
   expect(await layer.locator('.odyssey-operations-description').textContent()).toBe('描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。')

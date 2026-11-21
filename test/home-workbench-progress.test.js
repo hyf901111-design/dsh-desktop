@@ -57,6 +57,24 @@ it('projects and restores the typed plan through the real SessionRuntime event r
  const runtime=new rt.SessionRuntime(ctx,{sessions:{}},{},{events,views}),session=runtime.manager.get('demo')
  const rows=[{type:'turn/start',data:{turn:1}},{type:'home-guide/workbench',data},{type:'home-guide/workbench',data:{...data,kind:'playback',playing:false}},{type:'home-guide/workbench',data:{...data,kind:'stopped'}}].map((event,seq)=>({event:{...event,seq:seq+1,time:seq+1},surface:'append'}))
  for(let repeat=0;repeat<2;repeat++){session.installWindow(rows,false);const chat=session.getSnapshot().chat,receipts=chat.nodes.values().filter(n=>n.kind==='home-workbench-plan');expect(receipts).toHaveLength(1);expect(receipts[0].data).toMatchObject({turn:1,phase:'stopped',plans:data.plans});expect(chat.nodes.values().some(n=>n.kind==='tool-call')).toBe(false);const anchors=native.__anchors(native.__flow(chat.order,chat.nodes,1),chat.nodes,()=>({plans:[]}),native.__turn);expect([...anchors.values()].flat()).toHaveLength(3)}
+ const legacyError={code:'UNKNOWN',message:'演示仅接受当前固定研究需求，已停止自动执行。'}
+ for(const [receiptTurn,kind,error,hidden] of [
+  [1,'completed',legacyError,true],
+  [2,'completed',legacyError,false],
+  [1,'stopped',legacyError,false],
+  [1,'completed',{...legacyError,message:'工作台保存失败'},false]
+ ]){
+  const history=[
+   {type:'turn/start',data:{turn:1}},
+   {type:'home-guide/workbench',data},
+   {type:'home-guide/workbench',data:{...data,kind,turn:receiptTurn}},
+   {type:'turn/end',data:{turn:1,reason:{kind:'error',error}}}
+  ].map((event,seq)=>({event:{...event,seq:seq+1,time:seq+1},surface:'append'}))
+  session.installWindow(history,false)
+  const nodes=session.getSnapshot().chat.nodes.values()
+  expect(nodes.find(node=>node.kind==='home-workbench-plan')?.data.phase).toBe(receiptTurn===1?kind:'running')
+  expect(nodes.some(node=>node.kind==='turn-error')).toBe(!hidden)
+ }
  window.__sherlockWorkbenchGenerationV1=new Map([['demo',snapshot(5,'cancelled')]]);vm.document.documentElement.dataset.odysseyLocale='zh'
  const stoppedPlans=plans().map(p=>({...p,replay:{...p.replay,phase:'stopped'}})),html=require('react-dom/server').renderToString(require('react').createElement(native.__Progress,{sessionId:'demo',plans:stoppedPlans,footer:true}));expect(html).toContain('data-research-workbench-progress="partial"');expect(html).not.toContain('<button');expect(html).not.toContain('animateTransform');expect(html).toContain('未开始 10');
  const target=new EventTarget();let retries=0;target.addEventListener('sherlock:workbench-retry',()=>retries++);return native.__retry(target,'demo',plans(),{...snapshot(15,'cancelled'),retryAvailable:true}).then(ok=>{expect(ok).toBe(false);expect(retries).toBe(0)})
