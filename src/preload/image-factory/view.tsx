@@ -1,3 +1,4 @@
+import { startsNewImage } from '../../../packages/dsh-research-task-runtime/image-canvas-intent.js'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { WorkspaceSurfaceHost } from '../workspace-surface-host'
@@ -127,11 +128,6 @@ function requestGalleryTask(doc: Document): Promise<string | undefined> {
   })
 }
 
-function startsNewImage(prompt: string) {
-  const text = prompt.trim()
-  return /^(?:请(?:帮我)?|帮我)?\s*(?:(?:另|从头|从零)(?:生成|制作|设计|创建|做|画)\s*一[张幅]|(?:生成|制作|设计|创建|做|画)\s*一[张幅]\s*(?:全新的?|新的))/u.test(text) ||
-    /^(?:please\s+)?(?:generate|create|make|draw|design)\s+a\s+(?:brand[- ]new|new)\s+(?:(?:square|landscape|portrait|\d+:\d+)\s+)?(?:image|poster|illustration|cover|graphic)\b/iu.test(text)
-}
 function blobData(doc: Document, blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new doc.defaultView!.FileReader()

@@ -302,6 +302,7 @@ it.each(['Backspace', 'Delete'])('deletes the selected text layer with %s after 
 })
 
 it.each([
+  ['晨会封面需求：现在生成一张新的16:9封面，标题为「国债曲线复盘」。', '国债曲线复盘', 1600, 900],
   ['生成一张全新的 1:1 插画，标题为「柚子气泡水」。', '柚子气泡水', 1024, 1024],
   ['Please create a brand-new poster titled “Summer Market”.', 'Summer Market', 1080, 1350],
   ['给当前画布的标题换个配色。', '旧海报', 800, 1000],
