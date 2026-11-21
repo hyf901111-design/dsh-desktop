@@ -431,70 +431,50 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "演示工具栏响应式收纳以及对话回复插入当前页",
+        "featureName": "演示回复正文与引用下方编辑区",
         "branch": "codex/feat/presentation-cross-page-20261121",
-        "baseCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
-        "tipCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
+        "baseCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
+        "tipCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
         "commits": [
           {
-            "commit": "7c92546329eee33333c4e9f4b6b39d7f41833ecb",
+            "commit": "db87c888f530e0571dcc17b4682de9c58f6ed8d8",
             "parents": [
-              "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf"
+              "a777ab03f6da163701093cc2df30c3696e9aa651"
             ],
-            "subject": "演示工具栏按实际可用宽度收纳溢出按钮"
+            "subject": "让带演示引用的输入框覆盖标签下方的可点击空行"
           },
           {
-            "commit": "a777ab03f6da163701093cc2df30c3696e9aa651",
+            "commit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
             "parents": [
-              "7c92546329eee33333c4e9f4b6b39d7f41833ecb"
+              "db87c888f530e0571dcc17b4682de9c58f6ed8d8"
             ],
-            "subject": "演示模式下可将对话回复作为可撤销的文本框插入当前页"
+            "subject": "插入幻灯片时保留回复的正文、段落和列表并去除 Markdown 标记"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/presentation-editor/overlay/App.vue"
+            "path": "package-lock.json"
           },
           {
             "status": "M",
-            "path": "packages/presentation-editor/overlay/edit-guide.js"
+            "path": "package.json"
           },
           {
             "status": "M",
-            "path": "packages/presentation-editor/overlay/odyssey.css"
-          },
-          {
-            "status": "A",
             "path": "packages/presentation-editor/overlay/reply-text.js"
           },
           {
-            "status": "A",
-            "path": "packages/presentation-editor/overlay/ribbon-overflow.js"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/presentation-reply-action.mjs"
+            "status": "M",
+            "path": "src/preload/presentation/view.css"
           },
           {
             "status": "M",
-            "path": "scripts/lib/spreadsheet-client.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/edit-guide.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/view.ts"
+            "path": "test/presentation-edit-guide-composer-browser.test.js"
           },
           {
             "status": "A",
-            "path": "test/presentation-reply-action.test.js"
+            "path": "test/presentation-reply-text.test.js"
           }
         ],
         "checks": [
@@ -506,8 +486,8 @@
             ],
             "outcome": "passed",
             "summary": "编译演示编辑器",
-            "verifiedCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
-            "completedAt": "2026-11-21T00:38:24.140457Z",
+            "verifiedCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
+            "completedAt": "2026-11-21T00:56:13.454572Z",
             "timeoutMs": 180000
           },
           {
@@ -518,8 +498,8 @@
             ],
             "outcome": "passed",
             "summary": "客户端类型检查",
-            "verifiedCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
-            "completedAt": "2026-11-21T00:38:35.402792Z",
+            "verifiedCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
+            "completedAt": "2026-11-21T00:56:26.275273Z",
             "timeoutMs": 180000
           },
           {
@@ -527,6 +507,7 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/presentation-reply-text.test.js",
               "test/presentation-reply-action.test.js",
               "test/presentation-workspace.test.ts",
               "test/presentation-edit-guide-content.test.ts",
@@ -538,21 +519,21 @@
             ],
             "outcome": "passed",
             "summary": "标注、输入框和用例聚焦验证",
-            "verifiedCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
-            "completedAt": "2026-11-21T00:38:41.442706Z",
+            "verifiedCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
+            "completedAt": "2026-11-21T00:56:33.140458Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "12 次窗口宽度切换，实际隐藏的按钮与更多菜单逐项匹配；在第12页插入多段回复，验证只读、切页、撤销和重做。"
+          "summary": "实际客户端卡片引用下方的点击区域分别验证为标签下12px、左侧21px；段落、文字、代码与列表可插入为安全可编辑的文本。"
         },
         "acceptanceCriteria": [
-          "更多紧随最后一个工具，仅在有工具放不下时出现。",
-          "右侧助手回复写入当前幻灯片，可编辑、可撤销，并跟随会话和锁状态。"
+          "幻灯片只显示回复正文及可阅读的列表，无 Markdown 加粗符号。",
+          "已带引用的输入框在标签下方提供原生可点击的文字行。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-21T00:38:48.127242Z"
+        "generatedAt": "2026-11-21T00:56:40.017149Z"
       }
     }
   ],
