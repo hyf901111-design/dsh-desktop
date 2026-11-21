@@ -467,7 +467,8 @@ export function compileSharedDatasetCard(type,config,datasets,title){
   check(section.kind==='records'&&dataset.records.length===1,'共同数据指标卡使用一个 records 区引用单条汇总结果，整体统计使用 groupBy:[]。');
   const [row]=dataset.records;
   const fields=section.fields.map(key=>dataset.fields.find(field=>field.key===key));
-  return {...metadata,items:fields.map(field=>({label:field.label,value:row[field.key],...(field.unit?{unit:field.unit}:{}),
+  return {...metadata,...(dataset.sourceUrl?{sources:[{name:dataset.note.split('\n',1)[0],url:dataset.sourceUrl}]}:{}),items:fields.map(field=>({label:field.label,value:row[field.key],...(field.unit?{unit:field.unit}:{}),
+   ...(Number.isInteger(field.minimumFractionDigits)?{minimumFractionDigits:field.minimumFractionDigits}:{}),
    ...(row[field.key]===null?{missing:'来源缺值或计算条件不成立'}:{})}))};
  }
  check(section.kind==='schedule','共同数据时间线使用 schedule 区，以 label 指定事件标题，start 指定发生日期，单点事件 end 同 start。');
