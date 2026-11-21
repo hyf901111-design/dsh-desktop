@@ -4531,6 +4531,85 @@
         ],
         "generatedAt": "2026-11-21T16:21:11.542612+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "将新建普通对话归入用户选择的工作区",
+        "branch": "codex/feat/chat-workspace-20261122",
+        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
+        "tipCommit": "10f4d9ec5b381c06b111de1ff31db63f29d5b7a8",
+        "commits": [
+          {
+            "commit": "10f4d9ec5b381c06b111de1ff31db63f29d5b7a8",
+            "parents": [
+              "216fb30180c5941ccf8f1be873948762e933ea40"
+            ],
+            "subject": "普通对话切换工作区时创建并显示目标会话"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/chat-workspace-switch.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/chat-workspace-switch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/new-chat-view-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/pending-conversation-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/new-chat-view-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/chat-workspace-switch.test.js",
+              "test/pending-conversation.test.js",
+              "test/new-chat-view-browser.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "覆盖无会话首页、重复切换、用户草稿和原有表格共存。",
+            "verifiedCommit": "10f4d9ec5b381c06b111de1ff31db63f29d5b7a8",
+            "completedAt": "2026-11-21T16:22:21.194406+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "已记录原签名版、原生工作区运行时与实际侧边栏渲染结果。"
+        },
+        "acceptanceCriteria": [
+          "切换后保持普通对话，在目标文件夹即时显示新会话",
+          "首发复用正确会话并保留草稿"
+        ],
+        "risks": [
+          "连续快速切换以后一次用户选择为准。"
+        ],
+        "generatedAt": "2026-11-21T16:22:21.194406+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5210,6 +5289,19 @@
         "test/browser-app-rendered.test.js",
         "-t",
         "hides the session switcher|keeps the shared switcher expanded",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/chat-workspace-switch.test.js",
+        "test/pending-conversation.test.js",
+        "test/new-chat-view-browser.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
