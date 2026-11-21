@@ -3220,7 +3220,7 @@
         "featureName": "演示画布上下文菜单和标尺切换主题",
         "branch": "codex/feat/slide-context-ruler-theme-20261121",
         "baseCommit": "48c29f9a883512b2235ece2874fa0c91fc3fc256",
-        "tipCommit": "2c78ce777acb97465bb5a5af6d92cb96355d8370",
+        "tipCommit": "3623fac4db848f05ab6fb67300e27e8192a710f5",
         "commits": [
           {
             "commit": "2c78ce777acb97465bb5a5af6d92cb96355d8370",
@@ -3228,9 +3228,35 @@
               "48c29f9a883512b2235ece2874fa0c91fc3fc256"
             ],
             "subject": "演示画布右键菜单、子菜单和双向标尺跟随深色主题"
+          },
+          {
+            "commit": "f589db2be6c69ce7f41969bae085400e6fe3d74d",
+            "parents": [
+              "2c78ce777acb97465bb5a5af6d92cb96355d8370"
+            ],
+            "subject": "演示工具栏专项验证先构建当前源码的编辑器"
+          },
+          {
+            "commit": "3623fac4db848f05ab6fb67300e27e8192a710f5",
+            "parents": [
+              "f589db2be6c69ce7f41969bae085400e6fe3d74d"
+            ],
+            "subject": "让演示画布右键菜单按实际视口翻转和避让"
           }
         ],
         "files": [
+          {
+            "status": "M",
+            "path": "package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/build.mjs"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/context-menu-position.ts"
+          },
           {
             "status": "M",
             "path": "packages/presentation-editor/overlay/odyssey.css"
@@ -3243,16 +3269,14 @@
         "checks": [
           {
             "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
+              "npm",
               "run",
-              "test/presentation-toolbar-popovers-browser.test.ts",
-              "--reporter=dot"
+              "test:presentation:toolbar"
             ],
             "outcome": "passed",
             "summary": "构建真实内嵌编辑器，点击右键、展开网格线、开关标尺，连续切换深浅深，原工具栏交互同时通过。",
-            "verifiedCommit": "2c78ce777acb97465bb5a5af6d92cb96355d8370",
-            "completedAt": "2026-11-21T13:56:58.755899+00:00",
+            "verifiedCommit": "3623fac4db848f05ab6fb67300e27e8192a710f5",
+            "completedAt": "2026-11-21T14:07:11.107478+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -3262,12 +3286,13 @@
         },
         "acceptanceCriteria": [
           "画布菜单、网格线子菜单、快捷键和指示符适配深色",
-          "水平与垂直标尺、刻度、选择范围在深色可见，浅色仍跟随切换"
+          "水平与垂直标尺、刻度、选择范围在深色可见，浅色仍跟随切换",
+          "靠近画布边缘时仍能看到并选择完整网格线子菜单。"
         ],
         "risks": [
           "不同显示器的物理观感由用户确认。"
         ],
-        "generatedAt": "2026-11-21T13:56:58.755899+00:00"
+        "generatedAt": "2026-11-21T14:07:11.107478+00:00"
       }
     },
     {
