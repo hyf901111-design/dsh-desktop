@@ -38,6 +38,53 @@ body[data-ds-dark-theme] {
   --accent: #99beff;
   color-scheme: dark;
 }
+/* The canvas menu is mounted on the iframe body, outside .deck-app. */
+.contextmenu .menu-content {
+  box-sizing: border-box;
+  max-width: calc(100vw - 8px);
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+}
+.contextmenu .menu-item .menu-item-content.has-children.opens-left::before {
+  transform: translateY(-50%) rotate(-135deg);
+}
+body[data-ds-dark-theme] .contextmenu .menu-content {
+  background: var(--bar);
+  border-color: var(--line);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 38%);
+}
+body[data-ds-dark-theme] .contextmenu .menu-item {
+  background: transparent;
+  color: var(--ink);
+}
+body[data-ds-dark-theme] .contextmenu .menu-item:not(.disable):hover {
+  background: var(--hover);
+}
+body[data-ds-dark-theme] .contextmenu .menu-item.divider,
+body[data-ds-dark-theme] .contextmenu .has-children.has-handler::after {
+  background: var(--line);
+}
+body[data-ds-dark-theme] .contextmenu .sub-text,
+body[data-ds-dark-theme] .contextmenu .menu-item.disable {
+  color: var(--muted);
+  opacity: 1;
+}
+body[data-ds-dark-theme] .contextmenu .menu-item-content.has-children::before {
+  border-color: var(--muted) var(--muted) transparent transparent;
+}
+body[data-ds-dark-theme] .ruler > :is(.h, .v) {
+  background: var(--bar);
+  border-color: var(--line);
+  color: var(--ink);
+}
+body[data-ds-dark-theme] .ruler .ruler-marker-100::before,
+body[data-ds-dark-theme] .ruler .ruler-marker-100:not(:last-child)::after {
+  background: var(--muted);
+}
+body[data-ds-dark-theme] .ruler .range {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  pointer-events: none;
+}
 .deck-app {
   display: flex;
   position: relative;

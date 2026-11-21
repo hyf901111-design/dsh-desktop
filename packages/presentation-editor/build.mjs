@@ -40,11 +40,20 @@ function edit(path, edits) {
   const target = join(work, path)
   let text = readFileSync(target, 'utf8')
   for (const [before, after] of edits) {
-    if (!text.includes(before)) throw Error('PPTist upstream anchor changed: ' + before)
-    text = text.replaceAll(before, after)
+    if (!(before instanceof RegExp ? before.test(text) : text.includes(before))) throw Error('PPTist upstream anchor changed: ' + before)
+    text = before instanceof RegExp ? text.replace(before, after) : text.replaceAll(before, after)
   }
   writeFileSync(target, text)
 }
+// Fit both levels to the editor iframe using their rendered dimensions.
+edit('src/components/Contextmenu/index.vue', [
+  [/:style="\{\s*left: style\.left \+ 'px',\s*top: style\.top \+ 'px',\s*\}"/, 'v-fit-context-menu="axis"'],
+  ["import { computed } from 'vue'", "import { vFitContextMenu } from '@/context-menu-position'"],
+  [/const style = computed\(\(\) => \{[\s\S]*?\n\}\)\n/, '']
+])
+edit('src/components/Contextmenu/MenuContent.vue', [
+  ['width: $subMenuWidth;\n    position: absolute;', 'width: $subMenuWidth;\n    position: fixed;']
+])
 // The upstream pickers listen for pointer events. Expose the same selection
 // actions to the keyboard without changing the shape/chart/table definitions.
 edit('src/views/Editor/CanvasTool/ShapePool.vue', [

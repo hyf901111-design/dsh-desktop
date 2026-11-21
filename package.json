@@ -31,6 +31,7 @@
     "preprepare:bundled-plugin-profile": "node scripts/ensure-local-dependencies.mjs",
     "dev": "npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && npm run build:native:power && electron-vite dev",
     "build:presentation": "node packages/presentation-editor/build.mjs",
+    "test:presentation:toolbar": "npm run build:presentation && vitest run test/presentation-toolbar-popovers-browser.test.ts",
     "build": "npm run build:presentation && npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && npm run build:native:power && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "preview": "electron-vite preview",
