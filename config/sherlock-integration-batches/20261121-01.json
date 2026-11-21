@@ -2449,6 +2449,98 @@
         ],
         "recordedAt": "2026-11-21T10:59:35.849Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "根据持仓晨会的读数目的精简重复排名并附披露出处",
+        "branch": "codex/feat/holding-weight-rank-scope-20261121",
+        "baseCommit": "4622e3f51fcc2cc5f1654616571d1753683753d6",
+        "tipCommit": "c0947311efed1589644a3fc928187a4bbc026f8d",
+        "commits": [
+          {
+            "commit": "d40f07d26ee61896db2ade017fc8a8cfa1d3a9bb",
+            "parents": [
+              "4622e3f51fcc2cc5f1654616571d1753683753d6"
+            ],
+            "subject": "按持仓集中度需求合并重复排名并继承原表披露链接"
+          },
+          {
+            "commit": "c0947311efed1589644a3fc928187a4bbc026f8d",
+            "parents": [
+              "d40f07d26ee61896db2ade017fc8a8cfa1d3a9bb"
+            ],
+            "subject": "让已披露的持仓排名和逐笔勾稽直接使用现有原表"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/holding-weight-ranking.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-reading-purpose.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-holding-weight-ranking.json"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-disclosure-source-scope.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-holding-weight-ranking.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-holding-weight-ranking.test.js",
+              "test/workbench-pasted-source-link.test.js",
+              "test/workbench-role-source-first-calls.test.js",
+              "test/workbench-pasted-spreadsheet.test.js",
+              "test/workbench-disclosure-source-scope.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "上交所真实前五持仓、同一原文与真实模型规划受理。逐卡核对来源、金额留在明细、排名和明确对照约束。",
+            "verifiedCommit": "c0947311efed1589644a3fc928187a4bbc026f8d",
+            "completedAt": "2026-11-21T12:00:23.825544+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实右栏出现额外排名后复现，修复构建在同组角色任务重投。"
+        },
+        "acceptanceCriteria": [
+          "保留权重比较和核账需要的明细",
+          "仅精简明确同用途的额外排名，保留全部原始金额及官方出处"
+        ],
+        "risks": [
+          "其他数据源及问题的图形选择仍由相应任务决定。"
+        ],
+        "generatedAt": "2026-11-21T12:00:23.825544+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2712,6 +2804,21 @@
         "tsconfig.node.json"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-holding-weight-ranking.test.js",
+        "test/workbench-pasted-source-link.test.js",
+        "test/workbench-role-source-first-calls.test.js",
+        "test/workbench-pasted-spreadsheet.test.js",
+        "test/workbench-disclosure-source-scope.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
     }
   ],
   "mainSynchronizations": []
