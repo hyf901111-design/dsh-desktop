@@ -161,9 +161,26 @@ function nativeTool(tool, entries) {
   }
 }
 
+// Supply the arithmetic for a single, explicitly ordered pair from this message.
+// A level spread or a longer series needs the user's own comparison convention.
+function basisPointChange(text) {
+  if (!text || !/基点|\bb(?:p|ps)\b|\bbasis points?\b/iu.test(text)) return ''
+  const normalized = text.normalize('NFKC').replaceAll('−', '-')
+  const rates = [...normalized.matchAll(/(?<![\d.,+-])([+-]?\d{1,3}(?:\.\d{1,6})?)\s*%/gu)]
+  if (rates.length !== 2) return ''
+  const [start, end] = rates
+  const transition = normalized.slice(start.index + start[0].length, end.index).trim()
+  if (!/^(?:(?:下降|上升|下行|上行|降|升|跌|涨|变)?(?:至|到)|→|->|to)$/iu.test(transition)) return ''
+  const points = Number((Number(end[1]) - Number(start[1])).toFixed(6))
+  const bp = Number((points * 100).toFixed(4))
+  return '\n本条消息所给区间的有符号变动已核算：末值 ' + end[1] + '% − 初值 ' + start[1] + '% = ' +
+    points + ' 个百分点 = ' + bp + ' bp。围绕所问区间作答，说明方向时保持算式和结论一致。'
+}
+
 export function modeProfilePrompt(turn) {
   return '【本轮应用】' + modes[turn.mode] +
-    ' 当前界面只说明此刻能协作的对象，每种模式都能自由问答。普通问题直接作答。短任务可直接处理。复杂任务先用自己的话回应具体目标，再执行并根据新发现回报进展。宿主已提供当前模式和工具协议，直接读取用户指定的对象或执行明确操作，无需先探测界面、环境、源码或目录。只在用户要求改变内容时修改，依据真实回执说明完成状态。'
+    ' 当前界面只说明此刻能协作的对象，每种模式都能自由问答。普通问题直接作答。短任务可直接处理。复杂任务先用自己的话回应具体目标，再执行并根据新发现回报进展。宿主已提供当前模式和工具协议，直接读取用户指定的对象或执行明确操作，无需先探测界面、环境、源码或目录。只在用户要求改变内容时修改，依据真实回执说明完成状态。' +
+    basisPointChange(turn.text)
 }
 
 export function routeModeTools(request, turn) {
