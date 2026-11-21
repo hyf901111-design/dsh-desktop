@@ -1,6 +1,7 @@
 // A canonical snapshot plus declarative field references. No model-authored
 // executable code or independently restated record values are part of a view.
 import {compactDatasetGroupLabel,materializeDatasetAggregate} from './dataset-aggregate.js'
+import {publicTableSourceHref} from './component-provenance.js'
 import {parseDerivedSpec} from './derived-template-contract.js'
 import {chartDataIssue,chartFieldUnit,orderDatedChartRows} from './chart-template-contract.js'
 // Complete host data has a bounded storage budget independent of display or
@@ -44,6 +45,10 @@ export function resolveWorkbenchPanelLabels(panel,datasets){
    panel={...panel,type:recordsView?'view':type,view};
   }
  }
+ // Some planners call a continuous record view “stack”. Keep the stored
+ // navigation canonical without changing an independently declared layout.
+ if(['view','table'].includes(panel?.type)&&panel.view?.navigation==='stack')
+  panel={...panel,view:{...panel.view,navigation:'flow'}};
  const declared=panel?.view;
  if(panel?.type==='kpi'&&declared?.sections===undefined&&
     datasets?.some(dataset=>dataset.id===declared?.dataset&&dataset.groupBy?.length===0&&dataset.records.length===1))
@@ -176,15 +181,17 @@ export function validateWorkbenchDatasets(value,panels=[]){
    const {identity,...dataset}=d
    d=dataset
   }
-  check(exact(d,['id','label','asOf','note','fields','records'],['recordScope','groupBy']),`共同数据集 ${d?.id??'未命名'} 字段无效，必须提供id、label、asOf、note、fields和records；缺少：${['id','label','asOf','note','fields','records'].filter(k=>!object(d)||!Object.hasOwn(d,k)).join('、')||'无'}；多余：${object(d)?Object.keys(d).filter(k=>!['id','label','asOf','note','fields','records','recordScope','groupBy'].includes(k)).join('、')||'无':'无'}。`)
+  check(exact(d,['id','label','asOf','note','fields','records'],['recordScope','groupBy','sourceUrl']),`共同数据集 ${d?.id??'未命名'} 字段无效，必须提供id、label、asOf、note、fields和records；缺少：${['id','label','asOf','note','fields','records'].filter(k=>!object(d)||!Object.hasOwn(d,k)).join('、')||'无'}；多余：${object(d)?Object.keys(d).filter(k=>!['id','label','asOf','note','fields','records','recordScope','groupBy','sourceUrl'].includes(k)).join('、')||'无':'无'}。`)
   check(id(d.id)&&!ids.has(d.id),'共同数据集编号无效或重复。');ids.add(d.id)
+  check(d.sourceUrl===undefined||typeof d.sourceUrl==='string'&&publicTableSourceHref(d.sourceUrl)===d.sourceUrl,'共同记录来源需使用公开披露链接。')
   check(d.recordScope===undefined||id(d.recordScope),'共同记录对象范围recordScope无效。')
   check(text(d.label,200)&&text(d.asOf,500)&&text(d.note,8000),'共同数据名称、时点和来源/演练说明不能为空或超过上限。')
   check(Array.isArray(d.fields)&&d.fields.length>=1&&d.fields.length<=WORKBENCH_DATASET_LIMITS.fields,'共同数据需要1–24个已命名字段。')
   check(bytes(d)<=WORKBENCH_DATASET_LIMITS.datasetBytes,`单份共同数据超过${WORKBENCH_DATASET_LIMITS.datasetBytes}字节的宿主存储配额；不能丢弃记录或字段。`)
   const keys=new Set(),fields=d.fields.map(f=>{
-   check(exact(f,['key','label'],['unit'])&&fieldKey(f.key)&&!keys.has(f.key)&&text(f.label,100)&&(f.unit===undefined||text(f.unit,64)),'共同数据字段键、标签或单位无效或重复。')
-   keys.add(f.key);return {key:f.key,label:f.label,...(f.unit===undefined?{}:{unit:f.unit})}
+   check(exact(f,['key','label'],['unit','minimumFractionDigits'])&&
+    (f.minimumFractionDigits===undefined||Number.isInteger(f.minimumFractionDigits)&&f.minimumFractionDigits>=0&&f.minimumFractionDigits<=12)&&fieldKey(f.key)&&!keys.has(f.key)&&text(f.label,100)&&(f.unit===undefined||text(f.unit,64)),'共同数据字段键、标签或单位无效或重复。')
+   keys.add(f.key);return {key:f.key,label:f.label,...(f.unit===undefined?{}:{unit:f.unit}),...(f.minimumFractionDigits===undefined?{}:{minimumFractionDigits:f.minimumFractionDigits})}
   })
   // Stable identity is required on every record; its display label is host
   // metadata. Filling only that omitted descriptor never invents an identity
@@ -201,7 +208,7 @@ export function validateWorkbenchDatasets(value,panels=[]){
    return entry
   })
   check(d.groupBy===undefined||Array.isArray(d.groupBy)&&d.groupBy.length<=4&&(d.groupBy.length>0||records.length===1)&&new Set(d.groupBy).size===d.groupBy.length&&d.groupBy.every(key=>key!=='id'&&keys.has(key)),'汇总分组标识必须引用实际字段，全表汇总只有一条记录。')
-  const copy={id:d.id,...(d.groupBy===undefined?{}:{groupBy:[...d.groupBy]}),...(d.recordScope===undefined?{}:{recordScope:d.recordScope}),label:d.label,asOf:d.asOf,note:d.note,fields,records}
+  const copy={id:d.id,...(d.groupBy===undefined?{}:{groupBy:[...d.groupBy]}),...(d.recordScope===undefined?{}:{recordScope:d.recordScope}),label:d.label,asOf:d.asOf,note:d.note,...(d.sourceUrl?{sourceUrl:d.sourceUrl}:{}),fields,records}
   applySharedChartUnits(copy,panels)
   check(bytes(copy)<=WORKBENCH_DATASET_LIMITS.datasetBytes,`单份共同数据超过${WORKBENCH_DATASET_LIMITS.datasetBytes}字节的宿主存储配额；不能丢弃记录或字段。`);result.push(copy)
  }
@@ -352,7 +359,7 @@ export function compileDatasetChart(config,datasets,title,variant,intent=''){
  check(config.note===undefined||text(config.note,2000),'共同数据图表的说明过长或无效。')
  check(config.subject===undefined||text(config.subject,256),'共同数据图表的副标题无效。')
  const note=[...new Set([dataset.note,config.note].filter(Boolean))].join('\n');
- const base={version:1,type:'chart',title,variant,...(unit?{unit}:{}),...(config.subject?{subtitle:config.subject}:{}),asOf:dataset.asOf,note,sources:[{label:dataset.note.split('\n',1)[0]}]}
+ const base={version:1,type:'chart',title,variant,...(unit?{unit}:{}),...(config.subject?{subtitle:config.subject}:{}),asOf:dataset.asOf,note,sources:[{label:dataset.note.split('\n',1)[0],...(dataset.sourceUrl?{url:dataset.sourceUrl}:{})}]}
  if(variant==='funnel'){
   check(axes.length===1&&fields.length===1&&measures.length===1,'漏斗图引用一列有序阶段及一列同批次的数值。')
   const artifact={...base,stages:records.map(row=>({label:row[axes[0].key],value:row[measures[0].key]}))}
@@ -524,7 +531,7 @@ export const DATASET_HIERARCHY_SCHEMA={type:'object',additionalProperties:false,
  dataset:{type:'string',required:true},levels:{...fieldKeysSchema,required:true},details:{...fieldKeysSchema,description:'可选。来源快照内额外保留的原表字段。'}
 }};
 export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{
- dataset:{type:'string',required:true},label:{type:'string',description:'图表分类字段；优先放在唯一的 sections[0].label。'},type:{type:'string',enum:['view','table','chart','kpi','timeline'],description:'通常省略，面板类型由 panel.type 声明。'},variant:{type:'string',enum:['bar','horizontal','line','area','groupedBar','dumbbell','funnel','candlestick','scatter'],description:'原生图表变体。用户贴出的完整金融台账可用 candlestick 或 scatter。'},unit:{type:'string',description:'仅 type:chart 的来源原单位。'},note:{type:'string',description:'组件的额外业务说明，不替代共同数据来源。'},subject:{type:'string'},filters:{...fieldKeysSchema,description:'最多4个用户可切换筛选字段；范围子集另用where声明。'},details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs']},layout:{type:'string',enum:['stack','split']},
+ dataset:{type:'string',required:true},label:{type:'string',description:'图表分类字段；优先放在唯一的 sections[0].label。'},type:{type:'string',enum:['view','table','chart','kpi','timeline'],description:'通常省略，面板类型由 panel.type 声明。'},variant:{type:'string',enum:['bar','horizontal','line','area','groupedBar','dumbbell','funnel','candlestick','scatter'],description:'原生图表变体。用户贴出的完整金融台账可用 candlestick 或 scatter。'},unit:{type:'string',description:'仅 type:chart 的来源原单位。'},note:{type:'string',description:'组件的额外业务说明，不替代共同数据来源。'},subject:{type:'string'},filters:{...fieldKeysSchema,description:'最多4个用户可切换筛选字段；范围子集另用where声明。'},details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs','stack'],description:'连续显示各分区用 flow（兼容 stack），标签切换用 tabs。'},layout:{type:'string',enum:['stack','split']},
  where:{type:'array',description:'最多8个默认范围条件，多个条件为且。in用values；gt（大于）、ne（不等于）对数值列用value；notNull不提供值。',items:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},op:{type:'string',required:true,enum:['in','notNull','gt','ne']},value:{type:'number'},values:{type:'array',items:{type:'json',description:'来源字段的原始字符串、数字、布尔或null，不接受对象或表达式。'}}}}},
  groupBy:{...fieldKeysSchema,description:'可省略。仅用于引用全表汇总的指标卡时可写 []，计算项仍须在 sharedDatasets.aggregate 声明。'},
  sections:{type:'array',description:'显式声明记录、图表和排程字段。只引用一条全表汇总的指标卡，或直接显示已声明筛选范围内所有字段的记录表，可省略。',items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}

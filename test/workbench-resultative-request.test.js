@@ -1,5 +1,6 @@
 import {expect,it} from 'vitest'
 import {pathToFileURL} from 'node:url'
+import {readFileSync} from 'node:fs'
 import {componentCreationRequest} from '../packages/dsh-research-task-runtime/conversation-components-policy.js'
 import {workbenchCreationRequest,registerWorkbenchExecutionPolicy} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
@@ -14,6 +15,17 @@ it.each(['弄个美元兑人民币的看板。','帮我弄个一周待办看板�
 })
 it.each(['别给我弄个看板','给我别弄个新看板','我刚弄了个看板','如何弄个看板？','他说“帮我弄个看板”','把这个看板弄得清楚点','帮我弄个看板的截图','来个看板的链接'])('keeps non-creation uses out of the planner: %s',text=>{
  expect(classifyResearchCreationRequest(text)).toBeNull()
+ expect(workbenchCreationRequest(session(text))).toBeNull()
+})
+const publicTableRequests=JSON.parse(readFileSync(new URL('./fixtures/workbench-public-table-requests.json',import.meta.url),'utf8'))
+it.each(Object.entries(publicTableRequests))('plans the entire board from the published %s data in the original request',(_role,text)=>{
+ expect(classifyResearchCreationRequest(text)?.kind).toBe('workbench')
+ expect(workbenchCreationRequest(session(text))).toMatchObject({target:'workbench',text})
+})
+it.each(['请按这份台账建一张研究看板','使用所附数据建风险研究工作台','依据这份报告建经营看板','根据所附文件建经营看板'])('recognizes an imperative with a named source: %s',text=>{
+ expect(workbenchCreationRequest(session(text))?.target).toBe('workbench')
+})
+it.each(['不要仅用所附原表建工作台','请解释“仅用所附原表建工作台”的含义','他说“请按这份台账建一张研究看板”','如何用原表建工作台？','用原表建工作台的截图在哪里？','请只做一张原生折线卡','给我做一张可交互网页'])('keeps other destinations or quoted instructions out of workbench planning: %s',text=>{
  expect(workbenchCreationRequest(session(text))).toBeNull()
 })
 it('rejects a planning placeholder before it can become a durable receipt',()=>{

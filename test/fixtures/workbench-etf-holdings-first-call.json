@@ -1,0 +1,97 @@
+{
+  "title": "510310 易方达沪深300ETF 2025年四季报前五名持仓复核",
+  "requestId": "wb-510310-2025q4-top5",
+  "dataMode": "source",
+  "sharedDatasets": [
+    {
+      "id": "holdings",
+      "label": "易方达沪深300ETF（510310）2025年四季报第5.3.1节前五名持仓",
+      "pastedTable": {
+        "block": 1,
+        "header": true,
+        "identity": "code",
+        "numericFields": [
+          "shares",
+          "value",
+          "ratio"
+        ]
+      },
+      "fields": [
+        {
+          "key": "rank",
+          "label": "序号"
+        },
+        {
+          "key": "code",
+          "label": "股票代码"
+        },
+        {
+          "key": "name",
+          "label": "股票名称"
+        },
+        {
+          "key": "shares",
+          "label": "数量（股）",
+          "unit": "股"
+        },
+        {
+          "key": "value",
+          "label": "公允价值（元）",
+          "unit": "元"
+        },
+        {
+          "key": "ratio",
+          "label": "占基金资产净值比例（%）",
+          "unit": "%"
+        }
+      ]
+    }
+  ],
+  "panels": [
+    {
+      "title": "前五名持仓·占基金资产净值比例（%，降序）",
+      "type": "chart",
+      "size": "large",
+      "layout": "standard",
+      "view": {
+        "dataset": "holdings",
+        "variant": "horizontal",
+        "unit": "%",
+        "sections": [
+          {
+            "kind": "records",
+            "label": "name",
+            "fields": [
+              "ratio"
+            ]
+          }
+        ],
+        "note": "截止日 2025-12-31；横条按占基金资产净值比例（%）由高到低排列，用于晨会判断前五名的集中度与位次差距。比例均为占基金资产净值口径的原披露值，未对五只股票做归一化（合计 14.94% 不等于 100%）。"
+      }
+    },
+    {
+      "title": "前五名持仓复核明细（2025-12-31，全部原文字段）",
+      "type": "view",
+      "size": "large",
+      "layout": "wide",
+      "view": {
+        "dataset": "holdings",
+        "navigation": "stack",
+        "sections": [
+          {
+            "kind": "records",
+            "fields": [
+              "rank",
+              "code",
+              "name",
+              "shares",
+              "value",
+              "ratio"
+            ]
+          }
+        ],
+        "note": "单位：数量为股，公允价值为人民币元（保留至分），占比为占基金资产净值比例（%）。来源：上海证券交易所披露的易方达沪深300 ETF 2025年四季报第10页第5.3.1节「前五名股票投资明细」，截止日 2025-12-31。本表仅含该节前五名五行，未补数据、未重算金额、未换算比例。"
+      }
+    }
+  ]
+}

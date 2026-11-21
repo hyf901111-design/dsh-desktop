@@ -52,6 +52,20 @@ it('saves a portable file before reporting its inline panel prepared and reuses 
   expect(await readdir(root)).toHaveLength(2)
 })
 
+it('writes the source-bound observation comparison as one real file in the research workspace',async()=>{
+  const app=await host()
+  const request=await readFile(new URL('./fixtures/workbench-yield-comparison.tsv.txt',import.meta.url),'utf8')
+  app.session.events=[{type:'user/message',data:{id:'observations',role:'user',source:{kind:'user'},content:[{type:'text',text:request}]}}]
+  const result=await app.create({title:'收益率复盘',panels:[{title:'利差比较',type:'files',htmlFile:{name:'利差比较.html',observationComparison:true}}]})
+  expect(result.status).toBe('prepared')
+  expect(app.prepared).toHaveLength(1)
+  const artifact=app.prepared[0].artifact
+  expect(artifact).toMatchObject({type:'files',presentation:'webpage'})
+  const saved=await readFile(join(app.root,artifact.items[0].relativePath),'utf8')
+  expect(saved).toContain('select name="baseline"')
+  expect(saved).toContain('美国财政部 Daily Treasury Par Yield Curve Rates')
+})
+
 it('keeps native and referenced-file requests native and rejects unmounted URLs or invalid generated pages',()=>{
   const native={panels:[{type:'tasks',title:'待办'}]}
   expect(prepareWorkbenchWebpages(native,'s','参考网页来个待办看板').args).toBe(native)
