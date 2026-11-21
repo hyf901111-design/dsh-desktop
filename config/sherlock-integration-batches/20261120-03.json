@@ -1137,6 +1137,112 @@
         ],
         "recordedAt": "2026-11-21T01:30:51.527Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图像发送、首页工作区切换与白酒工作台演示模型修复",
+        "branch": "codex/feat/image-workbench-composer-20261121",
+        "baseCommit": "3f9e694907bc6a8ae8b0112392fc31639a9e5a2c",
+        "tipCommit": "97171310ad150cd53921fa5007d529f59e92aafc",
+        "commits": [
+          {
+            "commit": "961c87ec4035e04a263136f540959ec0372007c5",
+            "parents": [
+              "3f9e694907bc6a8ae8b0112392fc31639a9e5a2c"
+            ],
+            "subject": "修复图像发送拦截与首页工作区切换"
+          },
+          {
+            "commit": "97171310ad150cd53921fa5007d529f59e92aafc",
+            "parents": [
+              "961c87ec4035e04a263136f540959ec0372007c5"
+            ],
+            "subject": "恢复白酒研究工作台演示的模型显示"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/pending-conversation-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-entry-native.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "97171310ad150cd53921fa5007d529f59e92aafc",
+            "completedAt": "2026-11-21T01:53:51.461Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "生产前端补丁生成通过。",
+            "verifiedCommit": "97171310ad150cd53921fa5007d529f59e92aafc",
+            "completedAt": "2026-11-21T01:53:51.461Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "test",
+              "--",
+              "test/browser-app-native.test.js",
+              "test/image-factory-native.test.js",
+              "test/home-guide-entry-native.test.ts",
+              "test/figma-model-menu.test.ts",
+              "test/pending-conversation-rendered.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "5 个直接相关的测试文件共 141 项通过。",
+            "verifiedCommit": "97171310ad150cd53921fa5007d529f59e92aafc",
+            "completedAt": "2026-11-21T01:53:51.461Z",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "通过 Playwright 验证生产前端组件中首页切换项目、返回并发送保留的草稿，以及图像页签和工作区切换。通过原生模型组件与演示入口测试验证显示数据。桌面包尚未构建和复测。"
+        },
+        "acceptanceCriteria": [
+          "从看板进入图像并选中已有任务后，可以提交图像编辑请求。延迟完成的看板切换不会抢占图片任务。",
+          "使用首页输入框的项目选择器切换或清除工作区，保留草稿且无 imageFactoryActive 引用错误。",
+          "白酒龙头研究工作台演示的输入框显示来源会话的模型与可用推理档位，来源会话无可用模型时回退到首页模型。"
+        ],
+        "risks": [
+          "桌面客户端实测与实际图像服务调用待在集成版本完成。"
+        ],
+        "generatedAt": "2026-11-21T01:53:51.461Z"
+      }
     }
   ],
   "integrationChecks": [
@@ -1288,6 +1394,19 @@
         "--maxWorkers=2"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "test",
+        "--",
+        "test/browser-app-native.test.js",
+        "test/image-factory-native.test.js",
+        "test/home-guide-entry-native.test.ts",
+        "test/figma-model-menu.test.ts",
+        "test/pending-conversation-rendered.test.js"
+      ],
+      "timeoutMs": 240000
     }
   ],
   "mainSynchronizations": [
