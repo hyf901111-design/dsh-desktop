@@ -150,19 +150,21 @@ it('uses a provisional board title and refreshes it for added components, genera
  expect(service.get(session).title).toBe('我的指数看板')
 })
 
-it('takes the first actual image discussion as the subject after an automatic template name and preserves explicit renames',async()=>{
+it.each(['image','conversation'])('uses the first %s discussion in a seeded image task and preserves explicit renames',async(mode)=>{
  const {SessionTitleService,collectSessionTitleMessages}=await core()
  for (const initial of ['新图像','主动有章法']) {
   const session={id:'image-task-55a0d0bd-89ff-4815-9b3f-7991e6a42f14',header:{},events:[],append(type,data){const e={seq:this.events.length+1,type,data,time:0};this.events.push(e);return e}}
   const service=Object.create(SessionTitleService.prototype)
   Object.assign(service,{config:{fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256},work:new Map(),ctx:{sessions:{get:()=>session}},serviceActive:()=>true,inFlight:new Set(),registration:{closing:false,provider:{automatic:'first-prompt'}}})
   session.append('session/title',{title:initial,messageSeqs:[],source:{kind:'fallback'}})
-  const user=session.append('user/message',{source:{kind:'user',clientMode:'image'},content:[{type:'text',text:'国债曲线晨会封面构图\n<odyssey-image-workspace-v1>\n{"title":"画布内部信息"}\n</odyssey-image-workspace-v1>'}]})
+  const topic=mode==='image'?'国债曲线晨会封面构图':'核算季报持仓比例'
+  const text=mode==='image'?topic+'\n<odyssey-image-workspace-v1>\n{"title":"画布内部信息"}\n</odyssey-image-workspace-v1>':topic
+  const user=session.append('user/message',{source:{kind:'user',clientMode:mode},content:[{type:'text',text}]})
   service.onUserMessage(session,user)
   expect(service.get(session).title).toBe(initial)
   await service.drain(service.inFlight)
-  expect(collectSessionTitleMessages([user])[0].text).toBe('国债曲线晨会封面构图')
-  expect(service.get(session)).toMatchObject({title:'国债曲线晨会封面构图',messageSeqs:[user.seq],source:{kind:'fallback'}})
+  expect(collectSessionTitleMessages([user])[0].text).toBe(topic)
+  expect(service.get(session)).toMatchObject({title:topic,messageSeqs:[user.seq],source:{kind:'fallback'}})
   expect(service.stateFor(session).pending.throughSeq).toBe(user.seq)
   service.rename(session,'我设定的名称')
   service.onUserMessage(session,user)
@@ -231,4 +233,26 @@ it('defers the first topic beyond the SDK publication guard and backfills a reta
   await service.drain(service.inFlight)
   expect(service.get(live)).toMatchObject({title:'国债晨会封面：资料和排版',messageSeqs:[accepted.seq]})
  } finally { await ctx.fiber.dispose() }
+})
+
+it('repairs only an automatic seed followed by ordinary human conversation and rechecks races on restoration', async()=>{
+ const {SessionTitleService}=await core()
+ for(const variant of ['retained','manual','mixed','doc','other-id','late-seed','previous-topic','no-human','changed-before-write']) {
+  const session={id:variant==='other-id'?'session-not-an-image':'image-task-73b2319b-d774-413b-af4b-344a50cee0eb',header:{},events:[],append(type,data){const e={seq:this.events.length+3,type,data};this.events.push(e);return e}}
+  const service=Object.create(SessionTitleService.prototype)
+  Object.assign(service,{ctx:{sessions:{get:()=>session}},config:{fallbackMaxWords:12,fallbackMaxBytes:128,maxTitleBytes:256},work:new Map(),serviceActive:()=>true,inFlight:new Set()})
+  const seed=()=>session.append('session/title',{title:'主动有章法',messageSeqs:[],source:{kind:'fallback'}})
+  const human=mode=>session.append('user/message',{source:{kind:'user',clientMode:mode},content:[{type:'text',text:'季报持仓比例换算'}]})
+  seed();const prompt=variant==='no-human'?undefined:human('conversation')
+  if(variant==='manual')service.rename(session,'主动有章法')
+  if(variant==='mixed')human('image')
+  if(variant==='doc')session.append('workspace-research/title-context',{components:[]})
+  if(variant==='late-seed')seed()
+  if(variant==='previous-topic')session.append('session/title',{title:'主动有章法',messageSeqs:[prompt.seq],source:{kind:'fallback'}})
+  if(variant==='changed-before-write'){const pending=service.ensureFallback(session);human('research');await pending}
+  const start=session.events.length;service.restoreImageTitle(session);service.restoreImageTitle(session);await service.drain(service.inFlight)
+  expect(session.events.length-start).toBe(variant==='retained'?1:0)
+  expect(service.get(session).title).toBe(variant==='retained'?'季报持仓比例换算':'主动有章法')
+  if(variant==='retained')expect(service.get(session).messageSeqs).toEqual([prompt.seq])
+ }
 })
