@@ -1,3 +1,5 @@
+// The local playback validates the full embedded chart, including all 243 trading days.
+export const HOME_NOTES_GUIDE_REFERENCE_LIMIT=48000
 /** Verified recorded research; ordinary user generation remains unrestricted. */
 export const HOME_NOTES_TASK_PROMPT="用两三句话总结这篇笔记，先给我预览。"
 export const HOME_NOTES_RESEARCH_AS_OF="2026-10-23"

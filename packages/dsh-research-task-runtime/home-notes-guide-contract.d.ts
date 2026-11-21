@@ -1,3 +1,4 @@
+export const HOME_NOTES_GUIDE_REFERENCE_LIMIT:number
 export const HOME_NOTES_TASK_PROMPT:string
 export const HOME_NOTES_RESEARCH_AS_OF:string
 export const HOME_NOTES_RESEARCH_FACTS:{period:string[];values:Record<string,number[]>}

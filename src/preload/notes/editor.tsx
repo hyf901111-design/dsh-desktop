@@ -35,6 +35,7 @@ import {useNoteReplyInsertion} from './reply-insertion'
 import {withNoteIndentSpecs,changeNoteIndent} from './paragraph-indent'
 import {changeNoteAlignment,selectedNoteParagraphIds} from './block-alignment'
 import {changeNoteList,type NoteListType} from './paragraph-style'
+import {HOME_NOTES_GUIDE_REFERENCE_LIMIT} from '../../../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {useNoteReferenceContext,type NoteReferenceContext} from './reference-context'
 import {noteMessageReferences} from '../../../packages/dsh-research-task-runtime/notes-message-references.js'
 import {exportNoteWithSnapshots} from './component-snapshots'
@@ -289,7 +290,8 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   } as any))
   editor.dictionary = document.documentElement.dataset.odysseyLocale==='en'?en:zh
   const pinnedSelection = useRef<(typeof selection.current) & { fingerprint: string }>()
-  const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false||!!props.sharedReadOnly)
+  const references=useNoteReferenceContext(editor,props.sessionId,scroll,!!props.recovery||props.active===false||!!props.sharedReadOnly,
+    props.guide ? HOME_NOTES_GUIDE_REFERENCE_LIMIT : undefined)
   const [assistantVisible,setAssistantVisible]=useState(false),[writing,setWriting]=useState(false),anchorVersion=useRef(0)
   const [documentWriting,setDocumentWriting]=useState(false),composerPlans=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];projected?:any[];fingerprint:string}>(),composerPreview=useRef<{requestId:string;plans:NativeNotePreviewPlan[];components:any[];updates?:any[];markdown?:string;inlineOrder?:string}>(),composerChildren=useRef(new Set<string>())
   const [guideSummaryRequest,setGuideSummaryRequest]=useState(''),guideSummary=useRef<{lease():boolean;requestId?:string}>()

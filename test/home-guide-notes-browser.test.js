@@ -12,7 +12,7 @@ import {join,dirname} from 'node:path'
 import {NotesStore} from '../src/main/notes/store'
 import {noteMarkdown} from '../src/main/notes/export'
 import {HOME_NOTES_GUIDE_TITLE,HOME_NOTES_GUIDE_BLOCKS,HOME_NOTES_CONSENSUS_REPLACEMENT} from '../src/preload/home-guide-notes-data'
-import {HOME_NOTES_CHART_SPEC,HOME_NOTES_TASK_RESULT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_REWRITE_RESULT,HOME_NOTES_REWRITE_PROMPT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
+import {HOME_NOTES_GUIDE_REFERENCE_LIMIT,HOME_NOTES_CHART_SPEC,HOME_NOTES_TASK_RESULT,HOME_NOTES_GUIDE_SELECTION,HOME_NOTES_REWRITE_RESULT,HOME_NOTES_REWRITE_PROMPT} from '../packages/dsh-research-task-runtime/home-notes-guide-contract.js'
 import {homeNoteChallengeSidebarSource} from './fixtures/home-note-challenge-sidebar.js'
 import {homeNoteRewritePortalBrowser} from './fixtures/home-note-rewrite-portal-browser.js'
 import {Session} from '@deepseek-ai/dsh-session'
@@ -241,7 +241,7 @@ it('checks three actual evidence cards, corrects the consensus and returns the s
    if(step==='note-task-apply'){expect(parts).toHaveLength(8);expect(parts.at(-1).type).toBe('paragraph');expect(parts.at(-1).content.map(p=>p.text||'').join('')).toBe(HOME_NOTES_TASK_RESULT);expect(components).toHaveLength(2);writeFileSync(join(evidenceDir,'completed-blocks.json'),JSON.stringify(blocks,null,2));await page.screenshot({path:join(evidenceDir,'summary-added.png')})}
   }
   const requests=await page.evaluate(()=>window.nativeGuideRequests);expect(requests).toHaveLength(3);expect(requests[1].selection).toBe(HOME_NOTES_GUIDE_SELECTION);expect(requests[2].context.components).toHaveLength(2);expect(requests[2].markdown).toContain(HOME_NOTES_REWRITE_RESULT)
-  const chartReference=requests[2].context.components.find(c=>c.content.includes('data-note-chart-compact'));expect(chartReference).toBeDefined();const reference=JSON.parse(chartReference.content);expect(reference.spec.html).toContain('data-note-chart-compact');expect(reference.spec.html.length).toBeGreaterThan(20000);expect(chartReference.content.length).toBeLessThan(30000)
+  const chartReference=requests[2].context.components.find(c=>c.content.includes('data-note-chart-compact'));expect(chartReference).toBeDefined();const reference=JSON.parse(chartReference.content);expect(reference.spec.html).toContain('data-note-chart-compact');expect(reference.spec.html.length).toBeGreaterThan(20000);expect(chartReference.content.length).toBeLessThan(HOME_NOTES_GUIDE_REFERENCE_LIMIT)
   writeFileSync(join(evidenceDir,'actor-stages.json'),JSON.stringify(snapshots,null,2));writeFileSync(join(evidenceDir,'actor-requests.json'),JSON.stringify(requests,null,2))
   const writing=await page.evaluate(()=>window.guideCues.filter(c=>c.label==='在首行文字光标处落笔'));expect(writing).toHaveLength(3)
   await page.emulateMedia({reducedMotion:'no-preference'})
