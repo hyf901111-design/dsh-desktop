@@ -31,7 +31,7 @@ export function createPendingConversation({makeShell,sessions,workspaces,getInpu
   if(!control)shell.setResearchContextPreparing(true);
   let handedOff;
   try{
-   const context=control?undefined:await prepareContext?.();
+   const context=control?undefined:await prepareContext?.(draft,Boolean(external));
    if(!ownsProject()||sessions.list.getSnapshot().current!==before||(!control&&shell.snapshot.draftRev!==draft.draftRev))throw Error('输入或项目已变化，请重试。');
    const options=standalone?{cwd:await standaloneDirectory()}:{workspaceId:project.workspaceId};
    if(!ownsProject()||sessions.list.getSnapshot().current!==before||(!control&&shell.snapshot.draftRev!==draft.draftRev))throw Error('输入或项目已变化，请重试。');
@@ -160,6 +160,23 @@ export function EWorkPendingInputBar(props){
   placeholder:props.eworkImageFactory
    ? (document.documentElement.dataset.odysseyLocale==='en'?'Ask a question or describe an image…':'提问，或描述想做的图片…')
    : props.placeholder||'输入你的问题…',onRequestWorkspace:props.onRequestWorkspace});
+}
+// Resolve only the implicit current-page attachment. Explicit chips, images,
+// selections and actions keep the same snapshot/ownership path as before.
+export function browserTurnContext(read, text, draft = {}, external = false) {
+ if (typeof text !== 'string' || !text.trim()) return read()
+ const references = external || draft.imageIds?.length || draft.occurrences?.length ||
+   /[\uFFFC]|<browser-source>|〔[^〕]+〕/u.test(text)
+ if (references) return read()
+ const independent = /(?:不(?:用|要|必)?|无需|不要)(?:再|另外|重新)?(?:打开|访问|读取|查阅|浏览|参考|查看)(?:当前|任何|这个|该|其他|其它)?(?:网页|页面|网站)|(?:不联网|无需联网)|\b(?:without (?:opening|reading|using)|(?:do not|don't) (?:open|read|use)) (?:the |this |any )?(?:web ?pages?|websites?|current (?:page|tab))\b/giu
+ const authored = text.replace(independent,' ')
+ // An instruction to stay on the current page may accompany a real page read.
+ const page = /https?:\/\/|(?:当前|这篇|此篇|这张|这个|这份|本|此|该|眼前)(?:的)?(?:网页|网[站页]|页面|页|文章|报道|表格|链接|页面标题|选区|标签页)|选中|所选|划线|页面上|网页上|页内|文中|表中|页面标题|总结一下|概括一下|这段|这篇|上面的内容|上述(?:资料|内容|文章)|打开|访问|浏览器.{0,8}(?:返回|刷新|前进)|\b(?:this|current|selected|highlighted) (?:web ?page|page|site|article|table|selection|text|tab|link)\b/iu
+ if (page.test(authored)) return read()
+ const suppliedRates = /\d+(?:\.\d+)?[%％][^。？?\n]{0,80}\d+(?:\.\d+)?[%％]/u.test(authored) &&
+   /(?:多少|几个|变化|变动|下降|上升).{0,15}(?:基点|百分点)|\b(?:basis points?|bps)\b/iu.test(authored)
+ const selfContained = authored !== text || suppliedRates || /(?:只|仅)(?:需|要)?(?:在对话中|在侧栏)?(?:解释|回答|给出|说明)(?:这道)?(?:换算|算式|定义|概念)|(?:什么是|如何理解|解释一下)(?!这|该|本|上|下)[^。！？？\n]{2,45}(?:[?？。！]|$)|\b(?:what is|define) (?!this|that|it\b|the (?:above|following))[^?\n]{2,80}\?/iu.test(authored)
+ return selfContained ? null : read()
 }
 export function browserPromptReference(source){
  if(source===undefined||source===null)return '';

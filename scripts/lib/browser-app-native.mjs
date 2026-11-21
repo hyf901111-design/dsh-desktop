@@ -1,7 +1,7 @@
 import {installImageFactoryContext,imageFactoryNativeSource} from './image-factory-native.mjs'
 import {createRightProjectDrafts,installSidebarWorkspaceHandoff} from './right-project-drafts.mjs'
 import {createPendingComposerPreferences} from './pending-composer-preferences.mjs'
-import {createPendingConversation,EWorkPendingInputBar,EWorkPendingHomeHeader,browserPromptReference} from './pending-conversation.mjs'
+import {createPendingConversation,EWorkPendingInputBar,EWorkPendingHomeHeader,browserPromptReference,browserTurnContext} from './pending-conversation.mjs'
 import {initializeWorkspaceSession} from './sidebar-new-note.mjs'
 /** Keep the native session and view underneath a sequence of workspace apps. */
 export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSession,viewFor,showError,doc=document}) {
@@ -224,7 +224,7 @@ export function patchBrowserAppNative(input){
  const canvasAction=source.includes(splitCanvasAction)?splitCanvasAction:'"aria-label": workbenchText(notes?"添加到笔记":"添加到画布"),';
  replace(canvasAction,'"data-browser-canvas-action": "",\n'+canvasAction);
  const root='function HomeGuideNativeOriginalConversationRoot('
- replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nlet eworkPendingConversation=null,eworkRightProjects=null,eworkSidebarWorkspace=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkPendingHomeHeader.toString()}\n${imageFactoryNativeSource}\n`+root)
+ replace(root,`const ABSENT_PENDING_RESEARCH_SNAPSHOT=Object.freeze({...ABSENT_RESEARCH_WORKSPACE.getSnapshot(),pendingMessageJump:null});\nconst eworkBrowserTurnContext=${browserTurnContext.toString()};\nlet eworkPendingConversation=null,eworkRightProjects=null,eworkSidebarWorkspace=null;const eworkPreparedBrowserContexts=new Map();\n${browserPromptReference.toString()}\n${EWorkPendingHomeHeader.toString()}\n${imageFactoryNativeSource}\n`+root)
  const controller='const conversationController = new ConversationController(ctx, { input: inputHub, blocks: composerBlocks });'
  replace(controller,controller+`\n${EWorkPendingInputBar.toString()}\n
 ctx.effect(()=>{
@@ -311,7 +311,7 @@ ctx.effect(()=>{
    if(context!==undefined)eworkPreparedBrowserContexts.set(id,context);
   },
   prepareSession:async id=>{await window[Symbol.for('sherlock:pending-preset-flush')]?.(id);await preferences.apply(id);if(document.body.dataset.workspaceSurface==='knowledge')await window.dshDesktop?.clientCapabilities?.bind({sessionId:id,mode:'knowledge',active:true})},
-  prepareContext:async()=>{await permissionPreferences.ready();return document.body.dataset.workspaceSurface==='browser'?await window.dshDesktop?.browserApp?.context():undefined},
+  prepareContext:async(draft,external)=>{await permissionPreferences.ready();return document.body.dataset.workspaceSurface==='browser'?await eworkBrowserTurnContext(()=>window.dshDesktop?.browserApp?.context(),draft.draft,draft,external):undefined},
   releaseImages:ids=>{for(const id of ids)conversationController.releaseDraftImage(id)}
  };
  const makePending=(${createPendingConversation.toString()});
@@ -507,7 +507,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace(browserSendAnchor,`if((document.body.dataset.workspaceSurface==='browser'||eworkPreparedBrowserContexts.has(session.sessionId)) && !session.getSnapshot?.()?.subagent && this.rootCtx.get('sessions')?.list.getSnapshot().current===session.sessionId){
  const prepared=eworkPreparedBrowserContexts.has(session.sessionId),browserShell=this.shells.get(session.sessionId),revision=browserShell?.snapshot.draftRev;
  browserShell?.setResearchContextPreparing?.(true);
- try{const source=eworkPreparedBrowserContexts.has(session.sessionId)?eworkPreparedBrowserContexts.get(session.sessionId):await window.dshDesktop?.browserApp?.context();eworkPreparedBrowserContexts.delete(session.sessionId);
+ try{const source=eworkPreparedBrowserContexts.has(session.sessionId)?eworkPreparedBrowserContexts.get(session.sessionId):await eworkBrowserTurnContext(()=>window.dshDesktop?.browserApp?.context(),text,{...browserShell?.snapshot,imageIds});eworkPreparedBrowserContexts.delete(session.sessionId);
  if(!prepared&&document.body.dataset.workspaceSurface!=='browser'||this.rootCtx.get('sessions')?.list.getSnapshot().current!==session.sessionId||this.shells.get(session.sessionId)!==browserShell||browserShell?.snapshot.draftRev!==revision)return;
  text+=browserPromptReference(source);
  }catch(error){browserShell?.notify('error',error.message||'当前网页正文暂不可用，输入已保留。');return}finally{browserShell?.setResearchContextPreparing?.(false)}

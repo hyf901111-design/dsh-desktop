@@ -1,5 +1,5 @@
 import {expect,it,vi} from 'vitest'
-import {createPendingConversation,browserPromptReference,EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
+import {createPendingConversation,browserPromptReference,browserTurnContext,EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
 import {createRightProjectDrafts} from '../scripts/lib/right-project-drafts.mjs'
 import {initializeWorkspaceSession} from '../scripts/lib/sidebar-new-note.mjs'
 
@@ -41,7 +41,7 @@ it('creates and names the chosen workspace session once before opening it',async
  expect(f.real.submit).not.toHaveBeenCalled()
 })
 
-function fixture(extra={}){let sink;const original={draft:'请总结当前网页',draftRev:3,imageIds:[],occurrences:[]},shell={snapshot:{...original},notify:vi.fn(),setResearchContextPreparing:vi.fn(),commitSend:vi.fn(),dispose:vi.fn()},real={snapshot:{draft:'',imageIds:[]},restoreDraftState:vi.fn(),submit:vi.fn(),addImages:vi.fn(()=>true)},session={current:undefined},projects={items:[{workspaceId:'A',title:'A项目',path:'/a'},{workspaceId:'B',title:'B项目',path:'/b'}],recentWorkspaceId:'A'},sessions={list:{getSnapshot:()=>session},create:vi.fn(async()=> 'new'),open:vi.fn(id=>{session.current=id})},onCreated=vi.fn();const pending=createPendingConversation({makeShell:deps=>{sink=deps.defaultSink;return shell},sessions,workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated,prepareContext:async()=>({title:'当前页',text:'真实正文'}),...extra});return{session,pending,shell,real,sessions,onCreated,send:()=>sink(original.draft,[],'queue',original)}}
+function fixture(extra={}){let sink;const original={draft:'请总结当前网页',draftRev:3,imageIds:[],occurrences:[]},shell={snapshot:{...original},notify:vi.fn(),setResearchContextPreparing:vi.fn(),commitSend:vi.fn(),dispose:vi.fn()},real={snapshot:{draft:'',imageIds:[]},restoreDraftState:vi.fn(),submit:vi.fn(),addImages:vi.fn(()=>true)},session={current:undefined},projects={items:[{workspaceId:'A',title:'A项目',path:'/a'},{workspaceId:'B',title:'B项目',path:'/b'}],recentWorkspaceId:'A'},sessions={list:{getSnapshot:()=>session},create:vi.fn(async()=> 'new'),open:vi.fn(id=>{session.current=id})},onCreated=vi.fn();const pending=createPendingConversation({makeShell:deps=>{sink=deps.defaultSink;return shell},sessions,workspaces:{list:{getSnapshot:()=>projects,subscribe:()=>()=>{}}},getInput:()=>real,onCreated,prepareContext:async()=>({title:'当前页',text:'真实正文'}),...extra});return{session,pending,shell,real,sessions,onCreated,send:(admitted=original)=>sink(admitted.draft,admitted.imageIds,'queue',admitted)}}
 it('selects a project and opens no session until the first nonempty send',async()=>{const f=fixture();f.pending.selectWorkspace('B');expect(f.sessions.create).not.toHaveBeenCalled();await f.send();expect(f.sessions.create).toHaveBeenCalledExactlyOnceWith({workspaceId:'B'});expect(f.real.restoreDraftState).toHaveBeenCalledWith(expect.objectContaining({draft:'请总结当前网页',draftRev:3}));expect(f.real.submit).toHaveBeenCalledExactlyOnceWith('queue');expect(f.onCreated).toHaveBeenCalledWith('new',expect.objectContaining({text:'真实正文'}));expect(f.shell.commitSend).toHaveBeenCalled()})
 it('does not allocate an output folder until a first send, and keeps an explicit no-project choice through a list refresh', async () => {
  let refresh
@@ -187,3 +187,28 @@ it('discards the requested menu when the mounted input has since been edited',as
  expect(f.pending.getSnapshot().command).toBeUndefined();
  expect(f.real.submit).not.toHaveBeenCalled();
 });
+
+it('admits the independent Treasury question while loading, preserving the strict page path for source and attachment operations',async()=>{
+ const text='浏览讨论D1：美国财政部公布的10年期收益率由4.62%降至4.58%，变化几个基点？只回答换算，不打开网页。'
+ const read=vi.fn(async()=>{throw Error('网页正在加载，请稍候再发送。')})
+ expect(await browserTurnContext(read,text)).toBe(null)
+ expect(await browserTurnContext(read,'什么是剩余期限？')).toBe(null)
+ expect(read).not.toHaveBeenCalled()
+ const current='不打开网页。请读取当前页里的十年期收益率并核对原表。'
+ for(const [prompt,draft] of [[current,{}],['不联网，总结一下。',{}],['打开财政部公告页 https://home.treasury.gov/',{}],[text,{occurrences:[{source:'browser-source'}]}],[text,{imageIds:['qa-chart']}],[text+'<browser-source>',{}],['解释一下选中段落。',{}]]) {
+  await expect(browserTurnContext(read,prompt,draft)).rejects.toThrow('网页正在加载')
+ }
+ expect(await browserTurnContext(()=>({url:'https://home.treasury.gov/'}),current)).toEqual({url:'https://home.treasury.gov/'})
+})
+
+it('hands the no-page decision off to the new session without reading the loading page',async()=>{
+ const prompt='浏览讨论D1：美国财政部公布的10年期收益率由4.62%降至4.58%，变化几个基点？只回答换算，不打开网页。'
+ const read=vi.fn(async()=>{throw Error('网页正在加载，请稍候再发送。')})
+ const pending=fixture({prepareContext:(draft,external)=>browserTurnContext(read,draft.draft,draft,external)})
+ const current={...pending.shell.snapshot,draft:prompt}
+ pending.shell.snapshot=current
+ await pending.send(current)
+ expect(read).not.toHaveBeenCalled()
+ expect(pending.onCreated).toHaveBeenCalledWith('new',null)
+ expect(pending.real.submit).toHaveBeenCalledExactlyOnceWith('queue')
+})
