@@ -197,7 +197,10 @@ function pastedDisclosure(request,firstTableStart){
  const labeledLine=/^(?:数据|资料)?(?:来源|出处)/u.test(link[0].trim());
  const declarations=preceding.match(/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)(?=[:：为是\s]|标注|写为|保留)/gu)??[];
  if(declarations.length+(labeledLine?1:0)>1)return;
- let label=/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)\s*(?:标注为|标为|写为|保留|为|[:：])?\s*([^。；;，,、\n:/]{1,100}?)[。.]?$/u.exec(preceding)?.[1]?.trim();
+ // A citation can end with an observation date and a printed page/section.
+ // Only strip bibliographic locators, never a free-text second attribution.
+ const attribution=preceding.replace(/(?:[，,]\s*(?:(?:持仓日|报告期末|数据截止日|截至日期|截止日)\s*[:：]?\s*(?:19|20)\d{2}[-/]\d{1,2}[-/]\d{1,2}|第\s*\d+\s*页(?:\s*第\s*\d+(?:\.\d+)*\s*节)?(?:\s*前[一二三四五六七八九十\d]+行)?))+[。.]?$/u,'');
+ let label=/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)\s*(?:标注为|标为|写为|保留|为|[:：])?\s*([^。；;，,、\n:/]{1,100}?)[。.]?$/u.exec(attribution)?.[1]?.trim();
  const end=link.index+link[0].length;
  if(end>=firstTableStart||request.slice(end,firstTableStart).trim())return;
  const url=publicTableSourceHref(link[1]);

@@ -1,3 +1,4 @@
+import {omitRedundantHoldingValueRanking} from './holding-weight-ranking.js';
 import {preparePomodoroCompanion,prepareWorkbenchPomodoro} from './workbench-pomodoro.js';
 import {resolveWorkbenchLibraryPanel,validateWorkbenchLinks} from './workbench-library.js';
 import {validateWorkbenchTabs} from './workbench-tabs.js';
@@ -864,7 +865,7 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
         seen.add(declaredTitle);
         return panel;
     };
-    const panels = resolveWorkbenchSamples(value.panels).flatMap((candidate,index) => {
+    const compiledPanels = resolveWorkbenchSamples(value.panels).flatMap((candidate,index) => {
         try { return [compilePanel(candidate)]; }
         catch (error) {
             // An authored source workbench can re-read its verified material.
@@ -885,6 +886,9 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     if (issues.length === 1) throw Error(issues[0].message);
     if (issues.length) throw Error('工作台有多个面板需要修正。保留其余面板与原需求，并在同一次提交修正以下问题：\n'+
         issues.map(({title,message}) => `「${title}」${message.slice(0,350)}`).join('\n'));
+    const mayConsolidate = !isSimulated && !deferred && !parallel && !tabs && !value.links &&
+        typeof value.originalRequest === 'string' && datasets?.length && !value.panels.some(p=>p?.artifact) && compiledPanels.filter(p => p.type === 'chart' && p.view).length > 1;
+    const panels = mayConsolidate ? omitRedundantHoldingValueRanking(compiledPanels,datasets,pastedWorkbenchInput(value.originalRequest).context) : compiledPanels;
     if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');
