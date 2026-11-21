@@ -1515,24 +1515,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "首段依据当轮真实原表与可用能力回答用户",
+        "featureName": "结合实际回执在长任务主动报告已取得的进展",
         "branch": "codex/feat/ark-opening-thinking-20261121",
-        "baseCommit": "13bcac01a9442f1dee257443736999f861aa74bb",
-        "tipCommit": "f760fe207914d87a68776279aeed0c7eac4007e1",
+        "baseCommit": "f760fe207914d87a68776279aeed0c7eac4007e1",
+        "tipCommit": "25de22e4f0080d2128016bfb288bc75b68b064bf",
         "commits": [
           {
-            "commit": "30152ab187002d26424215475336ac81fac3703b",
+            "commit": "3715f8c44d8c5d040708561d16f0a8d96f1a66c3",
             "parents": [
-              "13bcac01a9442f1dee257443736999f861aa74bb"
+              "f760fe207914d87a68776279aeed0c7eac4007e1"
             ],
-            "subject": "让模型首段看见已给原表行列和带单位的首行事实"
+            "subject": "在真实工具回执后按阶段引导模型公开当前发现和修正"
           },
           {
-            "commit": "f760fe207914d87a68776279aeed0c7eac4007e1",
+            "commit": "25de22e4f0080d2128016bfb288bc75b68b064bf",
             "parents": [
-              "30152ab187002d26424215475336ac81fac3703b"
+              "3715f8c44d8c5d040708561d16f0a8d96f1a66c3"
             ],
-            "subject": "向独立开场传递当轮可执行的图像与办公能力"
+            "subject": "对仅报告实际命中条数的知识库查询直接执行检索"
           }
         ],
         "files": [
@@ -1542,7 +1542,7 @@
           },
           {
             "status": "M",
-            "path": "test/model-task-opening-context.test.js"
+            "path": "test/conversation-first-response-effort.test.js"
           }
         ],
         "checks": [
@@ -1558,9 +1558,9 @@
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "已提供原表和确有执行能力时，自然首段不重复索要上传、不否认当前能力。",
-            "verifiedCommit": "f760fe207914d87a68776279aeed0c7eac4007e1",
-            "completedAt": "2026-11-21T12:45:19.735636+00:00",
+            "summary": "窄范围知识查询直接实查，与长任务真实回执阶段及错误纠正一并核对。",
+            "verifiedCommit": "25de22e4f0080d2128016bfb288bc75b68b064bf",
+            "completedAt": "2026-11-21T12:50:07.535250+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -1575,7 +1575,7 @@
         "risks": [
           "模型自由措辞与托管服务响应时间随运行而变。"
         ],
-        "generatedAt": "2026-11-21T12:45:19.735636+00:00"
+        "generatedAt": "2026-11-21T12:50:07.535250+00:00"
       }
     },
     {
