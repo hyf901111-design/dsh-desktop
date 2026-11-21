@@ -41,7 +41,8 @@ export function matchesDatasetViewScope(record,where=[]){
  return where.every(rule=>{
   const value=record[rule.field];
   if(rule.op==='notNull')return value!==null;
-  if(rule.op==='in')return rule.values.some(candidate=>candidate===value);
+  if(rule.op==='in')return rule.values.some(candidate=>candidate===value ||
+   rule.field==='id' && Number.isSafeInteger(candidate) && String(candidate)===value);
   if(typeof value!=='number'||!Number.isFinite(value))return false;
   if(rule.op==='lt')return value<rule.value;
   if(rule.op==='lte')return value<=rule.value;

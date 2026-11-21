@@ -1,9 +1,7 @@
 import {tableSourceHref,tableSourceLink} from './component-provenance.js'
 import {parseDatasetViewArtifact} from './dataset-view-contract.js'
 import {DATASET_VIEW_DEFAULT_PAGE_SIZE,datasetViewValue,datasetViewRecordFields,datasetViewSchedule,datasetViewRuntime,matchesDatasetViewScope} from './dataset-view-runtime.js'
-const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const json=value=>JSON.stringify(value).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')
-const titleOf=s=>s.title??({records:'记录',compare:'两项对比',schedule:'资源排程'}[s.kind])
 export const DATASET_VIEW_CSS=`
 *{box-sizing:border-box}html,body{margin:0;min-width:0;background:var(--sherlock-bg);color:var(--sherlock-text)}
 .dv-shell{container:dv / inline-size;display:grid;gap:12px;min-width:0;padding:4px 2px;font:13px/20px var(--sherlock-font-sans);font-variant-numeric:tabular-nums}
@@ -20,7 +18,12 @@ export const DATASET_VIEW_CSS=`
 .dv-records th button[data-view-sort]{font:inherit;color:inherit;text-align:left;cursor:pointer}
 .dv-records .dv-identity{position:sticky;left:0;z-index:1;box-shadow:1px 0 var(--sherlock-border)}.dv-records td.dv-identity{background:inherit!important}.dv-records .dv-record-select:disabled{color:inherit!important;opacity:1!important}.dv-records tr[aria-selected=true] .dv-identity{background:var(--sherlock-row-selected)}.dv-records .dv-number{text-align:right;font-variant-numeric:tabular-nums}.dv-records .dv-number button{text-align:right}.dv-shell[data-records-first] .dv-section h3{margin-bottom:4px}
 `
-function body(spec){
+// Share the static snapshot renderer with the saved host view upgrade.
+export function datasetViewBody(spec,tools){
+ const {valueText:datasetViewValue,recordFields:datasetViewRecordFields,schedule:datasetViewSchedule,
+  matchesScope:matchesDatasetViewScope,sourceLink:tableSourceLink,pageSize:DATASET_VIEW_DEFAULT_PAGE_SIZE}=tools
+ const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+ const titleOf=s=>s.title??({records:'记录',compare:'两项对比',schedule:'资源排程'}[s.kind])
  const {dataset,view}=spec,fields=new Map(dataset.fields.map(f=>[f.key,f])),value=(r,key,signContext)=>esc(datasetViewValue(r[key],fields.get(key),view.signedFields?.includes(key)||signContext))
  const cell=(r,key,signContext)=>tableSourceLink(fields.get(key).label,r[key])??value(r,key,signContext)
  const numericFields=new Set(dataset.fields.filter(({key})=>dataset.records.some(row=>typeof row[key]==='number')&&dataset.records.every(row=>row[key]===null||typeof row[key]==='number')).map(field=>field.key))
@@ -57,8 +60,9 @@ function body(spec){
  const toolbar=`<div class="dv-toolbar"><input class="dv-search" data-view-search type="search" aria-label="搜索完整数据" placeholder="搜索完整数据" disabled>${filters}<output class="dv-count" data-view-count>显示 ${scoped.length} / ${dataset.records.length} 条记录</output></div>`
  return `<main class="dv-shell"${recordsFirst?' data-records-first=""':''} aria-label="${esc(spec.title)}">${view.subject?`<h2 class="dv-heading">${esc(view.subject)}</h2>`:''}<div class="dv-meta">${esc(dataset.asOf)}</div>${recordsFirst?'':toolbar}${tabs}<div class="dv-main" data-layout="${view.layout}"><div class="dv-sections" data-navigation="${view.navigation}">${sections}</div><aside class="dv-detail"${view.details.length?'':' hidden'}><h3>点选记录查看详情</h3><p class="dv-muted">选择记录后显示完整字段和备注。</p></aside></div>${recordsFirst?toolbar:''}<aside hidden data-component-source-info><p>${esc(dataset.note)}</p>${dataset.sourceUrl?'<p>'+tableSourceLink('原文',dataset.sourceUrl)+'</p>':''}${view.note?'<p>'+esc(view.note)+'</p>':''}${spec.context?`<p data-view-context>规划备注（实际事实以完整记录为准）：${esc(spec.context)}</p>`:''}</aside></main>`
 }
+export const datasetViewBodyTools={valueText:datasetViewValue,recordFields:datasetViewRecordFields,schedule:datasetViewSchedule,matchesScope:matchesDatasetViewScope,sourceLink:tableSourceLink,pageSize:DATASET_VIEW_DEFAULT_PAGE_SIZE}
 export function renderDatasetViewArtifact(value){
  if(value?.type!=='view')return null
  let spec;try{spec=parseDatasetViewArtifact(value)}catch{return null}
- return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${DATASET_VIEW_CSS}</style></head><body data-research-kind="view" data-view-signed-fields="v1">${body(spec)}<script id="dataset-view-source" type="application/json">${json(spec)}</script><script>(${datasetViewRuntime.toString()})(${datasetViewValue.toString()},${matchesDatasetViewScope.toString()},${tableSourceHref.toString()},${DATASET_VIEW_DEFAULT_PAGE_SIZE},${datasetViewRecordFields.toString()});</script></body></html>`}
+ return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${DATASET_VIEW_CSS}</style></head><body data-research-kind="view" data-view-signed-fields="v1">${datasetViewBody(spec,datasetViewBodyTools)}<script id="dataset-view-source" type="application/json">${json(spec)}</script><script>(${datasetViewRuntime.toString()})(${datasetViewValue.toString()},${matchesDatasetViewScope.toString()},${tableSourceHref.toString()},${DATASET_VIEW_DEFAULT_PAGE_SIZE},${datasetViewRecordFields.toString()});</script></body></html>`}
 }
