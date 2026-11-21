@@ -199,10 +199,10 @@ export async function mountPresentationEditGuide(
     chat ??= await mountPresentationEditGuideChat(doc, options)
     return chat
   }
-  const request = async (prompt: string, existing = false) => {
+  const request = async (prompt: string, { existing = false, draftHoldMs = 1200, referenceText = '' } = {}) => {
     const c = chat ?? (await openChat())
-    await c.draft(prompt, { existing })
-    await wait(1200)
+    await c.draft(prompt, { existing, referenceText })
+    if (draftHoldMs > 0) await wait(draftHoldMs)
     await c.send()
     await wait(content.executionMs)
   }
@@ -279,7 +279,7 @@ export async function mountPresentationEditGuide(
           tableMarkId = await markObject('table')
           break
         case 'revise-chart':
-          await request(content.chart.comment + '\n' + content.table.comment, true)
+          await request(content.chart.comment + '\n' + content.table.comment, { existing: true })
           await until(s => !s.commentOpen, '已发送的标记评论框尚未收起。')
           await native('chart', chartMarkId)
           await until((s) => s.page === content.table.page && !s.marking, '表格调整尚未显示。')
@@ -324,11 +324,10 @@ export async function mountPresentationEditGuide(
             }
           })
           await command('select-notes', { target: 'notes', ...selection, commit: true })
-          await wait(1700)
           break
         }
         case 'revise-notes':
-          await request(content.notesSelection.prompt)
+          await request(content.notesSelection.prompt, { draftHoldMs: 0, referenceText: content.notesSelection.quote })
           await native('notes-selection')
           await until(s => s.notes.includes(content.notesSelection.replacement), '所选逐字稿尚未优化。')
           await chat!.reply(content.replies['notes-selection'])

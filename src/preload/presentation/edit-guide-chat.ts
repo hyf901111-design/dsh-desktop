@@ -140,7 +140,7 @@ export async function mountPresentationEditGuideChat(document: Document, options
   document.addEventListener('pointerdown', takeover, true)
   document.addEventListener('beforeinput', takeover, true)
   return {
-    async draft(text: string, { existing = false } = {}) {
+    async draft(text: string, { existing = false, referenceText = '' } = {}) {
       check()
       if (!text.trim() || !stages[index] || pending || sent) throw Error('演示对话步骤已变化。')
       if (!prepared) {
@@ -154,7 +154,12 @@ export async function mountPresentationEditGuideChat(document: Document, options
       const initial = await waitFor(() => {
         if (!composer()) return
         const refs = chips()
-        if (refs.length === expectedChips) return refs
+        if (refs.length !== expectedChips) return
+        if (referenceText) {
+          const label = refs[0] && chipLabel(refs[0])
+          if (!label || !referenceText.startsWith(label)) return
+        }
+        return refs
       }, '当前演示会话的输入框或选区尚未就绪。')
       const marks = expectedChips === 2 ? initial.map(el => chipLabel(el) || '') : undefined
       const referenceLabel = expectedChips === 1 ? chipLabel(initial[0]!) : undefined
@@ -183,7 +188,7 @@ export async function mountPresentationEditGuideChat(document: Document, options
         input.setSelectionRange(next.length, next.length)
         input.dispatchEvent(new win.InputEvent('input', { bubbles: true, inputType: 'insertText', data: chunk }))
         written += chunk
-        await options.wait(48, controller.signal)
+        if (written.length < text.length) await options.wait(48, controller.signal)
       }
       pending = { text, referenceLabel }
     },

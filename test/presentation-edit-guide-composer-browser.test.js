@@ -34,12 +34,15 @@ it('clicks the editable line below a long presentation chip that covers the text
       const submitted=[]
       // The guide switches to its recorded agent before the native directory enables input.
       textarea.disabled=true
-      let readyWaits=0, remounted=false
+      let readyWaits=0, remounted=false, publishNotesReference
       button.addEventListener('click', onSend)
       function onSend(){submitted.push(textarea.value);textarea.value='';document.querySelectorAll('[data-reference-source]').forEach(el=>el.remove())}
       const guide=await guideFixture.mountPresentationEditGuideChat(document,{
         sessionId:'example',runId:'run',cwd:'/tmp/example',fresh:true,signal:new AbortController().signal,
-        wait:async()=>{if(textarea.disabled && ++readyWaits===3)textarea.disabled=false},waitUntilPlaying:async()=>{},
+        wait:async()=>{
+          if(textarea.disabled && ++readyWaits===3)textarea.disabled=false
+          if(publishNotesReference){publishNotesReference();publishNotesReference=undefined}
+        },waitUntilPlaying:async()=>{},
         point:async action=>{
           if(!remounted && action.target===button){
             const replacement=button.cloneNode(true)
@@ -72,7 +75,14 @@ it('clicks the editable line below a long presentation chip that covers the text
           chip.dataset.referenceSource='presentation-reference';chip.textContent='标注 2';textarea.parentElement.append(chip)
           textarea.value += '调整图表\uE002 表格文字上下居中'
         }
-        await guide.draft(prompt,{existing:label==='标注 1'});await guide.send();await guide.reply('已完成。')
+        const selectedNotes=label==='这里请大家记住一个门槛'
+        if(selectedNotes){
+          const chip=textarea.parentElement.querySelector('[data-reference-source]')
+          chip.textContent='AI 投资回报的 NPV 敏感性'
+          publishNotesReference=()=>{chip.textContent=label}
+        }
+        await guide.draft(prompt,{existing:label==='标注 1',referenceText:selectedNotes?label+'。':undefined})
+        await guide.send();await guide.reply('已完成。')
       }
       guide.dispose();return {submitted,covered,readyWaits,remounted}
     })
