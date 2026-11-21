@@ -80,6 +80,10 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
     assert.equal(input.stream_options.include_usage, true)
     assert.equal(input.messages[0].role, 'user')
     assert.equal(input.upstream, undefined)
+    if (input.model === 'kimi-k3.1-pro' && input.temperature !== undefined && input.temperature !== 1) {
+      return Response.json({ error: { code: 'InvalidParameter' } }, { status: 400 })
+    }
+    if (input.messages[0].content === 'temperature-control') assert.equal(input.temperature, 0.7)
     if (Array.isArray(input.messages[0].content)) {
       assert.deepEqual(input.messages[0].content, [
         {type:'text',text:'读图'},
@@ -330,6 +334,17 @@ try {
   assert.equal(calls - beforeRetry, 1)
   assert.deepEqual(await db.prepare('SELECT held_units,billed_units FROM ai_quota_requests WHERE request_id=?')
     .bind('image-download-retry').first(), { held_units: 43_300_000, billed_units: 43_300_000 })
+  for (const [index, temperature] of [0, 0.7].entries()) {
+    const id = 'kimi-temperature-' + index
+    const reply = await send('chat/completions', token, { ...chat(), model: 'kimi-k3.1-pro', temperature }, id)
+    assert.equal(reply.status, 200, `Kimi must accept clients sending temperature=${temperature}`)
+    assert.match(await reply.text(), /你好[\s\S]*\[DONE\]/)
+    assert.deepEqual(await db.prepare('SELECT billed_units FROM ai_quota_requests WHERE request_id=?').bind(id).first(),
+      { billed_units: 21_000 })
+  }
+  const temperatureControl = await send('chat/completions', token, { ...chat('temperature-control'), temperature: 0.7 })
+  assert.equal(temperatureControl.status, 200)
+  assert.match(await temperatureControl.text(), /你好[\s\S]*\[DONE\]/)
   await db.prepare('UPDATE ai_quota_pool SET monthly_limit_units=? WHERE id=1').bind(0).run()
   assert.equal((await admin.user('alice')).fiveHour.remaining,0)
   await assert.rejects(admin.reserve({userId:'alice',requestId:'month-hard-limit',amountUnits:1}),{code:'AI_QUOTA_MONTH'})
