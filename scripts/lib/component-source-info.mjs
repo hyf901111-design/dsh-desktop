@@ -11,13 +11,20 @@ export function getComponentSourceInfo(node){
  if(typeof spec.html==='string'){
   const raw=spec.html.match(/<script id="sherlock-template-data" type="application\/json">([^<]*)<\/script>/)?.[1]
   if(raw){try{data=JSON.parse(raw).data||spec}catch{}}
+  if(data===spec){
+   const legacy=spec.html.match(/<script id="dataset-view-source" type="application\/json">([^<]*)<\/script>/)?.[1]
+   if(legacy){try{const saved=JSON.parse(legacy);if(saved?.type==='view')data=saved}catch{}}
+  }
  }
+ const dataset=data.type==='view'&&typeof data.dataset?.id==='string'&&data.view?.dataset===data.dataset.id?data.dataset:undefined
+ let datasetHref=''
  const add=value=>{
   if(!value)return
   const row=typeof value==='string'?{label:value}:value
   if(typeof row!=='object')return
   const label=[row.label,row.name,row.title,row.provider].find(v=>typeof v==='string'&&v.trim())?.trim()||''
   let url='';try{const u=new URL(row.url||row.sourceUrl||(/^https?:\/\//i.test(label)?label:''));if(['http:','https:'].includes(u.protocol)&&!u.username&&!u.password)url=u.href}catch{}
+  if(datasetHref&&url===datasetHref&&records.some(record=>record.url===url))return
   const explicit=typeof row.path==='string'?row.path:typeof row.filePath==='string'?row.filePath:''
   const fileLabel=label.replace(/^(?:(?:来源文件|参考文件|整理文档|来源文档|文档|文件|附件)\s*[:：]\s*)+/u,'')
   const filename=fileLabel.match(/(?:^|[：:\s])([^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?))(?=$|[\s·（(])/i)?.[1]?.trim()||fileLabel.match(/[（(]([^/\\\n（()）]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?))[）)]/i)?.[1]?.trim()||(/^[^/\\\n]+\.(?:pdf|docx?|pptx?|xlsx?|csv|txt|md|html?)$/i.test(fileLabel)?fileLabel:'')
@@ -28,6 +35,16 @@ export function getComponentSourceInfo(node){
  }
  for(const row of Array.isArray(data.sources)?data.sources:[])add(row)
  add(data.source)
+ if(typeof dataset?.sourceUrl==='string'){
+  try{
+   const url=new URL(dataset.sourceUrl)
+   if(['http:','https:'].includes(url.protocol)&&!url.username&&!url.password&&
+     ![...url.searchParams.keys()].some(key=>/token|secret|credential|auth|signature|api[_-]?key/iu.test(key))){
+    datasetHref=url.href
+    add({label:dataset.note?.split?.('\n')[0]||dataset.label,url:datasetHref})
+   }
+  }catch{}
+ }
  // Frozen prose sources keep their exact text, plus actionable original URLs.
  // Do not reinterpret business paragraphs or guess an endpoint from a domain.
  for(const source of [data.source,...(Array.isArray(data.sources)?data.sources:[])]){
@@ -57,7 +74,7 @@ export function getComponentSourceInfo(node){
    for(const a of el.querySelectorAll('a[href]'))add({label:a.textContent,url:a.getAttribute('href')})
   }
  }
- return {records,notes,asOf:typeof data.asOf==='string'?data.asOf:'',range:typeof data.range==='string'?data.range:''}
+ return {records,notes,asOf:typeof data.asOf==='string'?data.asOf:typeof dataset?.asOf==='string'?dataset.asOf:'',range:typeof data.range==='string'?data.range:''}
 }
 export function openComponentSource(sessionId,node,mode,trigger,info=getComponentSourceInfo(node)){
  const owner=trigger?.closest?.('[data-research-node-id]')

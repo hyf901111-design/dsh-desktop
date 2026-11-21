@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "type": "view",
+  "title": "510310 期末股票投资明细（5.3.1，原序逐笔）",
+  "dataset": {
+    "id": "h510310",
+    "label": "易方达沪深300ETF（510310）2025年四季报 5.3.1 期末按公允价值占净值比例排序的股票投资明细",
+    "asOf": "2025-12-31",
+    "note": "上海证券交易所披露的易方达沪深300 ETF 2025 年四季报第 10 页第 5.3.1 节 · 表段 1",
+    "sourceUrl": "https://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf",
+    "fields": [
+      {
+        "key": "id",
+        "label": "记录编号"
+      },
+      {
+        "key": "seq",
+        "label": "序号"
+      },
+      {
+        "key": "code",
+        "label": "股票代码"
+      },
+      {
+        "key": "name",
+        "label": "股票名称"
+      },
+      {
+        "key": "shares",
+        "label": "数量（股）"
+      },
+      {
+        "key": "value",
+        "label": "公允价值（元）",
+        "minimumFractionDigits": 2
+      },
+      {
+        "key": "ratio",
+        "label": "占基金资产净值比例（%）",
+        "unit": "%",
+        "minimumFractionDigits": 2
+      }
+    ],
+    "records": [
+      {
+        "id": "row-1",
+        "seq": "1",
+        "code": "300750",
+        "name": "宁德时代",
+        "shares": 31173566,
+        "value": 11448803849.16,
+        "ratio": 3.81
+      },
+      {
+        "id": "row-2",
+        "seq": "2",
+        "code": "600519",
+        "name": "贵州茅台",
+        "shares": 7377868,
+        "value": 10160652252.24,
+        "ratio": 3.38
+      },
+      {
+        "id": "row-3",
+        "seq": "3",
+        "code": "601318",
+        "name": "中国平安",
+        "shares": 125580047,
+        "value": 8589675214.8,
+        "ratio": 2.86
+      },
+      {
+        "id": "row-4",
+        "seq": "4",
+        "code": "300308",
+        "name": "中际旭创",
+        "shares": 13089026,
+        "value": 7984305860,
+        "ratio": 2.66
+      },
+      {
+        "id": "row-5",
+        "seq": "5",
+        "code": "601899",
+        "name": "紫金矿业",
+        "shares": 194034163,
+        "value": 6688357598.61,
+        "ratio": 2.23
+      }
+    ]
+  },
+  "view": {
+    "dataset": "h510310",
+    "note": "截止日 2025-12-31。来源：上海证券交易所披露的易方达沪深300ETF（510310）2025年四季报第10页第5.3.1节。按原表序号顺序逐笔核对，公允价值保留到人民币分（两位小数），比例为占基金资产净值百分比（%）。",
+    "filters": [],
+    "details": [],
+    "reorder": false,
+    "navigation": "flow",
+    "layout": "stack",
+    "sections": [
+      {
+        "kind": "records",
+        "title": "期末股票投资明细（原序）",
+        "fields": [
+          "seq",
+          "code",
+          "name",
+          "shares",
+          "value",
+          "ratio"
+        ]
+      }
+    ]
+  }
+}

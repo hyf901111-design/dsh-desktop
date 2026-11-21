@@ -13,8 +13,12 @@ export function datasetViewValue(value,field){
  }
  return display+(field?.unit?' '+field.unit:'')
 }
-export function datasetViewRecordFields(section){
- return section.fields.includes('id')?section.fields:['id',...section.fields]
+export function datasetViewRecordFields(section,dataset){
+ if(section.fields.includes('id'))return section.fields
+ const identity=dataset.fields.find(field=>field.key==='id')
+ const internal=/^(?:记录编号|附件行号|原型记录行号)$/u.test(identity?.label??'')&&
+  dataset.records.every((record,index)=>record.id==='row-'+(index+1))
+ return internal?section.fields:['id',...section.fields]
 }
 
 export function datasetViewSchedule(dataset,section){
@@ -83,6 +87,7 @@ export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPage
  }
  const make=(tag,text,className)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el}
  const sectionNodes=[...root.querySelectorAll('[data-view-section]')]
+ const columns=new Map(view.sections.filter(section=>section.kind==='records').map(section=>[section,recordFields(section,data)]))
  const scheduleRows=sectionNodes.map(el=>new Map([...el.querySelectorAll('.dv-schedule-row')].map(row=>[row.dataset.recordId,row])))
  function recordRow(id,section){
   const record=records.get(id),row=make('tr')
@@ -93,7 +98,7 @@ export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPage
    rank.dataset.viewRank=''
    row.appendChild(rank)
   }
-  for(const key of recordFields(section)){
+  for(const key of columns.get(section)){
    const field=fields.get(key),value=record[key],cell=make('td')
    if(key==='id'){
     cell.className='dv-identity'
@@ -169,8 +174,10 @@ export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPage
      const seq=row.querySelector('[data-view-rank]');if(seq)seq.textContent=String(s.order.indexOf(id)+1)
      row.querySelectorAll('[data-view-move]').forEach(button=>{const index=visible.indexOf(id);button.disabled=disabled||Boolean(sort)||(button.dataset.viewMove==='up'?index===0:index===visible.length-1)})
      const select=row.querySelector('[data-view-select]')
-     select.disabled=disabled
-     select.setAttribute('aria-pressed',String(id===s.selected))
+     if(select){
+      select.disabled=disabled
+      select.setAttribute('aria-pressed',String(id===s.selected))
+     }
     }
     if(mounted.length!==nextRows.length||nextRows.some((row,index)=>row!==mounted[index])){
      const focused=document.activeElement

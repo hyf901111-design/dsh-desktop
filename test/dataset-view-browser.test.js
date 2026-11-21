@@ -3,6 +3,7 @@ import {pathToFileURL} from 'node:url'
 import {acceptArtifactOutput} from '../packages/dsh-research-task-runtime/artifact-output.js'
 import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../packages/dsh-research-task-runtime/workbench-scrollbars.js'
+import audit from './fixtures/research-etf-original-order-view.json'
 import {bookDataset,archiveView,scheduleView,priorityView} from './fixtures/book-workbench-dataset.js'
 let browser
 beforeAll(async()=>{
@@ -299,3 +300,18 @@ it('keeps disabled column labels readable and exposes the selected wide table sc
   expect(await wrap.evaluate(el=>el.scrollLeft)).toBeGreaterThan(50)
  }finally{await close()}
 },15000)
+
+it('filters the original six disclosure columns and keeps keyboard selection after lookup',async()=>{
+ const c=await open(audit.view,{dataset:audit.dataset,width:440})
+ try{
+  const search=c.frame.getByRole('searchbox',{name:'搜索完整数据'})
+  await search.fill('宁德时代')
+  await expect.poll(()=>order(c.frame)).toEqual(['row-1'])
+  await search.fill('')
+  await expect.poll(()=>order(c.frame)).toEqual(audit.dataset.records.map(row=>row.id))
+  const row=c.frame.locator('tbody tr').first()
+  expect(await row.locator('td').count()).toBe(6)
+  await row.focus();await row.press('Enter')
+  await expect.poll(()=>row.getAttribute('aria-selected')).toBe('true')
+ }finally{await c.close()}
+})
