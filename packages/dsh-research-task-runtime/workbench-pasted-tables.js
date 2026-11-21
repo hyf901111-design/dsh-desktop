@@ -1,5 +1,6 @@
 import {readDelimitedRow} from './delimited-row.js';
 import {addDecimal,decimalParts,decimalPercentage,subtractDecimal} from './workbench-decimal.js';
+import {publicTableSourceHref} from './component-provenance.js';
 import {mapWorkbenchPanelFields} from './dataset-view-contract.js';
 
 const fieldKey=/^\p{L}[\p{L}\p{N}\p{M}_-]{0,63}$/u;
@@ -12,9 +13,12 @@ const rawDecimal=/^[+-]?(?:0|[1-9]\d{0,14})(?:\.\d{1,12})?$/u;
 
 function scanPastedTables(request, strict = false) {
  const blocks = [], context = [], lineBreak = /[\r\n]/gu;
- let block = [], format;
+ let block = [], format, blockStart, firstTableStart;
  function finishBlock() {
-  if (block.length >= 2) blocks.push(block);
+  if (block.length >= 2) {
+   firstTableStart ??= blockStart;
+   blocks.push(block);
+  }
   block = [];
  }
  for (let start = 0; start < request.length;) {
@@ -51,11 +55,14 @@ function scanPastedTables(request, strict = false) {
   if (kind !== format || !kind) finishBlock();
   format = kind;
   if (!kind) context.push(line);
-  else if (kind !== 'pipe' || !cells.every(value => /^:?-{3,}:?$/u.test(value))) block.push(cells);
+  else if (kind !== 'pipe' || !cells.every(value => /^:?-{3,}:?$/u.test(value))) {
+   if (!block.length) blockStart = start;
+   block.push(cells);
+  }
   start = next;
  }
  finishBlock();
- return {blocks, context:context.join('\n')};
+ return {blocks, firstTableStart, context:context.join('\n')};
 }
 
 export function pastedWorkbenchBlocks(request = '') {
@@ -149,19 +156,41 @@ function completeNamedCalculationPlan(plan,blocks,source){
  return {...prepared,sharedDatasets,panels};
 }
 
+function pastedDisclosure(request,firstTableStart){
+ // The cited locator is on its own line between the source attribution and
+ // the one pasted table. Never mine data cells or other links for provenance.
+ if((request.match(/https?:\/\//giu)??[]).length!==1)return;
+ const link=/^[ ]*(?:(?:数据|资料)?(?:来源|出处)[ ]*[:：][ ]*)?(https?:\/\/[^\s]+)[ ]*\r?$/imu.exec(request);
+ if(!link)return;
+ const preceding=request.slice(0,link.index).trimEnd();
+ const labeledLine=/^(?:数据|资料)?(?:来源|出处)/u.test(link[0].trim());
+ const declarations=preceding.match(/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)(?=[:：为是\s]|标注|写为|保留)/gu)??[];
+ if(declarations.length+(labeledLine?1:0)>1)return;
+ const label=/(?:^|[。；;，,\n])\s*(?:数据|资料)?(?:来源|出处)\s*(?:标注为|标为|写为|保留|为|[:：])?\s*([^。；;，,、\n:/]{1,100}?)[。.]?$/u.exec(preceding)?.[1]?.trim();
+ const end=link.index+link[0].length;
+ if(end>=firstTableStart||request.slice(end,firstTableStart).trim())return;
+ if(!labeledLine&&(!label||!/[\p{L}]/u.test(label)||/以及|与|和|\band\b|\\/iu.test(label)))return;
+ const url=publicTableSourceHref(link[1]);
+ if(url)return {source:labeledLine?new URL(url).hostname:label,url};
+}
+
 export function resolvePastedWorkbenchPlan(plan){
  const request=plan.originalRequest;
  const direct=Array.isArray(plan.sharedDatasets)&&plan.sharedDatasets.some(dataset=>dataset?.pastedTable!==undefined);
  const recoverCopied=typeof request==='string'&&/(?:禁止|不要|不用|不)\s*联网/u.test(request);
  if(!direct&&!recoverCopied)return plan;
  if(typeof request!=='string'||!request)fail('只引用本轮用户消息中的表格。');
- const {blocks,context}=scanPastedTables(request,direct);
- const source=/(?:^|[。；;，,\n])\s*(?:来源|出处)\s*(?:标(?:为|注(?:为)?)?|写(?:为)?|[:：])?\s*[「“]?([^。；;，、」”\n]{1,100})/u.exec(context)?.[1]?.trim()??
+ const {blocks,context,firstTableStart}=scanPastedTables(request,direct);
+ const citation=blocks.length===1&&plan.sharedDatasets?.length===1&&direct?pastedDisclosure(request,firstTableStart):undefined;
+ const namedSource=/(?:^|[。；;，,\n])\s*(?:来源|出处)\s*(?:标(?:为|注(?:为)?)?|写(?:为)?|[:：])?\s*[「“]?([^。；;，、」”\n]{1,100})/u.exec(context)?.[1]?.trim();
+ const source=citation?.source??(namedSource&&!/(?:https?|file):\/\//iu.test(namedSource)?namedSource:undefined)??
   /(?:^|[。；;，,\n])\s*(模拟[\p{L}]{2,16})\s+\d{4}-\d{2}-\d{2}/u.exec(context)?.[1];
  if(recoverCopied)plan=completeNamedCalculationPlan(plan,blocks,source);
  const datasets=plan.sharedDatasets;
  if(!Array.isArray(datasets))return plan;
- const dateMatches=[...new Set([...context.matchAll(/\b\d{4}-\d{2}-\d{2}\b/gu)].map(match=>match[0]))];
+ // A publication date inside a locator is not the as-of date of the records.
+ const narrative=context.replace(/(?:https?|file):\/\/[^\s<>，。；！？]+/giu,'');
+ const dateMatches=[...new Set([...narrative.matchAll(/\b\d{4}-\d{2}-\d{2}\b/gu)].map(match=>match[0]))];
  const asOf=dateMatches.length===1?dateMatches[0]:'用户消息所附原表，时点以记录为准';
  const identities=new Map();
  const pastedSources=new Map();
@@ -247,7 +276,7 @@ export function resolvePastedWorkbenchPlan(plan){
   const origin=`${source||'用户消息中的原始表格'} · 表段 ${block}`;
   const note=origin+(draft.note?'\n规划备注：'+draft.note.trim():'');
   pastedSources.set(id,note);
-  return {id,label,asOf,note,fields:columns,records,...(recordScope===undefined?{}:{recordScope})};
+  return {id,label,asOf,note,...(citation?{sourceUrl:citation.url}:{}),fields:columns,records,...(recordScope===undefined?{}:{recordScope})};
  });
  const sharedDatasets=resolved.map(draft=>{
   const origin=pastedSources.get(draft?.aggregate?.dataset);

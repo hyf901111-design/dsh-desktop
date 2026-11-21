@@ -1,3 +1,5 @@
+import {includesRequestCredentials} from './component-request-credentials.js'
+
 const native=new Set(['timeline','chart','table','market','kpi'])
 const fields=new Set(['label','name','title','url','text','fetchedAt'])
 const esc=value=>String(value).replace(/[&<>"']/gu,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
@@ -10,6 +12,17 @@ export function tableSourceHref(label, value) {
   const url = new URL(href)
   if (url.username || url.password) return null
  } catch { return null }
+ return href
+}
+
+// A source copied from the user's disclosure must be a public web address.
+// Do not persist a local navigation target or an access-bearing URL in cards.
+export function publicTableSourceHref(value) {
+ const href=tableSourceHref('原文',value)
+ if(!href||href.length>2048||includesRequestCredentials(href))return null
+ const url=new URL(href)
+ if(!/\.[a-z]{2,}$/iu.test(url.hostname)||/\.(?:localhost|local|internal|lan|home|test|invalid|onion)$/iu.test(url.hostname)||
+    url.port||url.hash||url.searchParams.size&&[...url.searchParams.values()].some(value=>includesRequestCredentials(value)))return null
  return href
 }
 
