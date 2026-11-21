@@ -11,52 +11,21 @@
         "schemaVersion": 1,
         "featureName": "研究对话主智能体直接规划与交付",
         "branch": "codex/feat/research-generation-20261121",
-        "baseCommit": "97680333ef3f4339be6f0b12519bb0210cf977cb",
-        "tipCommit": "216f312bd6c4be13af9fa05961d4997fa490a1be",
+        "baseCommit": "216f312bd6c4be13af9fa05961d4997fa490a1be",
+        "tipCommit": "33aa7c14bc06be7b7fd9446d6245298a65b11005",
         "commits": [
           {
-            "commit": "dc1fd289a3c7737ccccf0aa17e13b035429cceb3",
+            "commit": "33aa7c14bc06be7b7fd9446d6245298a65b11005",
             "parents": [
-              "97680333ef3f4339be6f0b12519bb0210cf977cb"
+              "216f312bd6c4be13af9fa05961d4997fa490a1be"
             ],
-            "subject": "研究看板对话新增组件由主代理直接规划挂载"
-          },
-          {
-            "commit": "216f312bd6c4be13af9fa05961d4997fa490a1be",
-            "parents": [
-              "dc1fd289a3c7737ccccf0aa17e13b035429cceb3"
-            ],
-            "subject": "研究对话仅在用户指定可视化交付物时新建组件"
+            "subject": "保留研究对话中明确指定智能容器的手动操作"
           }
         ],
         "files": [
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/workbench-webpage-delivery.js"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-creation-progress.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/lib/research-planning-feedback.mjs"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-components-policy.test.js"
           },
           {
             "status": "M",
@@ -77,8 +46,8 @@
             ],
             "outcome": "passed",
             "summary": "Test Files  3 passed (3)，Tests  326 passed (326)",
-            "verifiedCommit": "216f312bd6c4be13af9fa05961d4997fa490a1be",
-            "completedAt": "2026-11-21T06:15:08.034780+00:00",
+            "verifiedCommit": "33aa7c14bc06be7b7fd9446d6245298a65b11005",
+            "completedAt": "2026-11-21T06:24:21.983590+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -93,115 +62,7 @@
         "risks": [
           "弱关联或多义来源不自动绑定"
         ],
-        "generatedAt": "2026-11-21T06:15:08.034780+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-        "verificationCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-pasted-spreadsheet.test.js",
-              "test/workbench-fund-decisions.test.js",
-              "test/workbench-delivery-recovery.test.js",
-              "test/workbench-execution-policy.test.js",
-              "test/workbench-delimited-evidence.test.js",
-              "test/dataset-view-contract.test.js",
-              "test/workbench-content-metric-view.test.js",
-              "test/workbench-content-delivery.test.js",
-              "test/workbench-dataset-view.test.js",
-              "test/workbench-public-data.test.js",
-              "test/workbench-deferred.test.js",
-              "--maxWorkers=2",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-pasted-spreadsheet.test.js test/workbench-fund-decisions.test.js test/workbench-delivery-recovery.test.js test/workbench-execution-policy.test.js test/workbench-delimited-evidence.test.js test/dataset-view-contract.test.js test/workbench-content-metric-view.test.js test/workbench-content-delivery.test.js test/workbench-dataset-view.test.js test/workbench-public-data.test.js test/workbench-deferred.test.js --maxWorkers=2 --reporter=dot",
-            "verifiedCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-            "completedAt": "2026-11-21T06:15:22.186Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/cartesian-chart-template.test.js",
-              "test/cartesian-chart-label-spacing.test.js",
-              "test/component-provenance-compatibility.test.js",
-              "test/market-trend-presentation-browser.test.js",
-              "test/component-reading-footer-browser.test.js",
-              "-t",
-              "grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels",
-              "--maxWorkers=2",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/cartesian-chart-template.test.js test/cartesian-chart-label-spacing.test.js test/component-provenance-compatibility.test.js test/market-trend-presentation-browser.test.js test/component-reading-footer-browser.test.js -t grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels --maxWorkers=2 --reporter=dot",
-            "verifiedCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-            "completedAt": "2026-11-21T06:15:22.186Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "packages/presentation-editor/build.mjs"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node packages/presentation-editor/build.mjs",
-            "verifiedCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-            "completedAt": "2026-11-21T06:15:22.186Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workspace-empty-layout-browser.test.js",
-              "test/presentation-toolbar-popovers-browser.test.ts",
-              "--maxWorkers=1",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workspace-empty-layout-browser.test.js test/presentation-toolbar-popovers-browser.test.ts --maxWorkers=1 --reporter=dot",
-            "verifiedCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-            "completedAt": "2026-11-21T06:15:22.186Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/research-board-sidebar-overflow.test.ts",
-              "-t",
-              "管理者工作台",
-              "--reporter=dot"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-board-sidebar-overflow.test.ts -t 管理者工作台 --reporter=dot",
-            "verifiedCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-            "completedAt": "2026-11-21T06:15:22.186Z",
-            "timeoutMs": 240000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "2d02c0272594cde0b080fe4e784581c336ec782f",
-            "completedAt": "2026-11-21T06:15:22.186Z",
-            "timeoutMs": 240000
-          }
-        ],
-        "recordedAt": "2026-11-21T06:15:22.186Z"
+        "generatedAt": "2026-11-21T06:24:21.983590+00:00"
       }
     },
     {
