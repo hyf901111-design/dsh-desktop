@@ -51,6 +51,14 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
     if (!el || !el.getBoundingClientRect().width) throw Error('操作控件尚未显示。')
     return el
   }
+  if (d.command === 'directory-position' || d.command === 'scroll-directory') {
+    const list = document.querySelector('.pages')
+    if (!list?.clientHeight) throw Error('幻灯片目录尚未显示。')
+    if (d.command === 'directory-position') return { ...box(list.getBoundingClientRect()), scrollTop: list.scrollTop }
+    if (!Number.isFinite(d.top) || d.top < 0) throw Error('目录滚动位置无效。')
+    list.scrollTo({ top: d.top, behavior: 'instant' })
+    return
+  }
   if (d.command === 'in-overflow') {
     return d.target === 'mark' && !!document.querySelector('.ribbon [data-ribbon-folded][aria-label="标注"]')
   }

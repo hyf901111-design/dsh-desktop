@@ -137,6 +137,23 @@ export async function mountPresentationEditGuide(
     await until((s) => s.page === number, '所选幻灯片未打开。')
     await wait(200)
   }
+  async function returnToCover() {
+    const list = await command<Bounds & { scrollTop: number }>('directory-position')
+    await point?.({
+      target: frame()!, action: 'move', hover: 'none',
+      targetPoint: () => screenPoint({ x: list.left + list.width / 2, y: list.top + list.height / 2 })
+    })
+    if (list.scrollTop > 0) {
+      const reduced = win.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const duration = Math.min(900, Math.sqrt(list.scrollTop) * 26)
+      const steps = reduced ? 1 : Math.max(1, Math.ceil(duration / 24))
+      for (let i = 1; i <= steps; i++) {
+        if (!reduced) await wait(duration / steps)
+        await command('scroll-directory', { top: list.scrollTop * (1 - i / steps) ** 2 })
+      }
+    }
+    await page(1)
+  }
   async function markObject(target: 'chart' | 'table') {
     const spec = content[target]
     await page(spec.page)
@@ -334,7 +351,7 @@ export async function mountPresentationEditGuide(
           await wait(2400)
           break
         case 'return-first':
-          await page(1)
+          await returnToCover()
           break
         case 'play':
           await hit('play')
