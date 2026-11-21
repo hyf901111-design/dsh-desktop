@@ -154,6 +154,37 @@ describe('main-window navigation security', () => {
     expect(shellOpenExternal).not.toHaveBeenCalled()
   })
 
+  it('loads the packaged presentation editor as a direct child of its own shell', () => {
+    const { listeners, mainFrame } = secureWindowFixture()
+    const url = 'odyssey-presentation://editor/index.html?host=' + encodeURIComponent(new URL(mainFrame.url).origin)
+    const navigate = listeners.get('will-frame-navigate')!
+    const child = { url:'about:blank', parent:mainFrame, processId:3, routingId:4 }
+    for (const [target, initiator, parent, allowed] of [
+      [url, mainFrame, mainFrame, true], [url, child, mainFrame, false], [url, mainFrame, child, false],
+      [url + '&extra=1', mainFrame, mainFrame, false],
+      [url.replace('index.html','other.html'), mainFrame, mainFrame, false]
+    ] as const) {
+      const preventDefault = vi.fn()
+      navigate({ url:target, isMainFrame:false, initiator, frame:{...child,parent}, preventDefault })
+      expect(preventDefault).toHaveBeenCalledTimes(allowed ? 0 : 1)
+    }
+  })
+
+  it('grants fullscreen to the packaged presentation editor in the active main window', () => {
+    const {webContents, mainFrame} = secureWindowFixture()
+    const handler = webContents.session.setPermissionRequestHandler.mock.calls[0]![0]
+    const url = 'odyssey-presentation://editor/index.html?host=' + encodeURIComponent(new URL(mainFrame.url).origin)
+    Object.assign(mainFrame, {frames:[{url}]})
+    for (const [requester, requestingUrl, isMainFrame, allowed] of [
+      [webContents,url,false,true], [null,url,false,false], [webContents,url,true,false],
+      [webContents,'https://example.com',false,false]
+    ] as const) {
+      const callback = vi.fn()
+      handler(requester, 'fullscreen', callback, {requestingUrl,isMainFrame})
+      expect(callback).toHaveBeenCalledWith(allowed)
+    }
+  })
+
   it('does not turn sidebar preview admission into access to other local origins, routes or generated documents', () => {
     const { listeners, mainFrame } = secureWindowFixture()
     for (const url of [

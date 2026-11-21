@@ -72,8 +72,8 @@ export function attachPptxAnnotationViewer(host,options){
  const setTool=value=>{cancelGesture();closeMarkList();tool=value;render();options.onTool?.(value)}
  const slideFor=target=>{
   const item=target?.closest?.('[data-slide-index]');if(!item||!host.contains(item)||item.dataset.pptxThumbnail==='true')return null
-  const wrapper=item.firstElementChild,content=wrapper?.firstElementChild,index=Number(item.dataset.slideIndex),slide=snapshot().scene?.slides.find(s=>s.index===index)
-  if(!wrapper||!content||wrapper.dataset.mounted!=='1'||!slide)return null
+  const mapped=options.slideElements?.(item),wrapper=mapped?.wrapper??item.firstElementChild,content=mapped?.content??wrapper?.firstElementChild,index=Number(item.dataset.slideIndex),slide=snapshot().scene?.slides.find(s=>s.index===index)
+  if(!wrapper||!content||(!mapped&&wrapper.dataset.mounted!=='1')||!slide)return null
   const rect=content.getBoundingClientRect();if(rect.width<=0||rect.height<=0)return null
   return{item,wrapper,content,index,slide,rect}
  }

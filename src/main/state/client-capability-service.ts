@@ -7,10 +7,10 @@ import type {NoteDocumentAdapter,NoteDocumentLease} from '../notes/document-capa
 import {registerTrustedMainWindowHandler,type TrustedWindow} from '../ipc-trust'
 const validId=(v:any)=>typeof v==='string'&&v.length>0&&v.length<=256
 import type {SpreadsheetService} from '../spreadsheet/service'
-const modes=['conversation','research','notes','spreadsheet','knowledge']
+const modes=['conversation','research','notes','spreadsheet','presentation','knowledge']
 type Binding={sessionId:string;mode:ClientCapabilityContext['mode'];owner:string;generation:string;expires:number;controller:AbortController;windowIdentity:unknown}
 type CapabilityHandlers=NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>
-type Options={spreadsheet?:SpreadsheetService;sharedKnowledge?(current:()=>boolean,sessionId:string):CapabilityHandlers;knowledge?(current:()=>boolean,sessionId:string):NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>;conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
+type Options={presentation?:ReturnType<typeof import('../presentation/service').installPresentation>;spreadsheet?:SpreadsheetService;sharedKnowledge?(current:()=>boolean,sessionId:string):CapabilityHandlers;knowledge?(current:()=>boolean,sessionId:string):NonNullable<Parameters<typeof createClientCapabilityHost>[0]['handlers']>;conversationComponents?:ConversationComponentCapabilityAdapter;notes?():NoteDocumentAdapter|undefined;owner():string;canRead(id:string):boolean;canWrite?(id:string):boolean;windowIdentity?():unknown;scheduled(id:string):boolean;send(value:any):void;canvasAvailable(id:string):boolean;canvas(id:string,method:string,args:any,signal?:AbortSignal):Promise<any>;window(action:string,args:any):Promise<any>;now?():number}
 /** A fresh visible-header binding is distinct from the long-lived canvas data
  * binding. A background task or child can never borrow a visible parent lease. */
 export class ClientCapabilityService{
@@ -36,13 +36,17 @@ export class ClientCapabilityService{
   return binding?{ownerAccountId:binding.owner,sessionId:binding.sessionId,mode:binding.mode,generation:binding.generation}:undefined
  }
  async request(input:any,signal?:AbortSignal){
-  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference'].includes(input.method)||['catalog','spreadsheet-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
+  if(!input||Object.keys(input).some(k=>!['sessionId','turnId','method','call','sourceInstruction','sourceInstructionDigest','authorityId','authoritySeq'].includes(k))||!validId(input.sessionId)||!validId(input.turnId)||!['catalog','execute','receipt','spreadsheet-reference','workspace-reference'].includes(input.method)||['catalog','spreadsheet-reference','workspace-reference'].includes(input.method)&&input.call!==undefined)throw Error('客户端操作请求无效。')
   if(input.sourceInstruction!==undefined&&(typeof input.sourceInstruction!=='string'||input.sourceInstruction.length>8000)||input.authorityId!==undefined&&!validId(input.authorityId)||(input.authorityId===undefined)!==(input.sourceInstruction===undefined)||(input.authorityId===undefined)!==(input.authoritySeq===undefined)||input.authoritySeq!==undefined&&(!Number.isSafeInteger(input.authoritySeq)||input.authoritySeq<0))throw Error('客户端请求来源无效。')
   if(input.sourceInstructionDigest!==undefined&&(input.sourceInstruction!==''||typeof input.sourceInstructionDigest!=='string'||!/^[a-f0-9]{64}$/.test(input.sourceInstructionDigest)))throw Error('客户端请求来源无效。')
   signal?.throwIfAborted()
-  if(input.method==='spreadsheet-reference'){
+  if(input.method==='spreadsheet-reference'||input.method==='workspace-reference'){
    const binding=this.current(input.sessionId)
-   if(binding?.mode!=='spreadsheet'||input.authorityId===undefined)return {}
+   if(!binding||input.authorityId===undefined)return {}
+   if(input.method==='workspace-reference'&&binding.mode==='presentation'){
+    return this.options.presentation?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest)??{}
+   }
+   if(binding.mode!=='spreadsheet')return {}
    return this.options.spreadsheet?.referenceSettings({owner:binding.owner,sessionId:binding.sessionId},input.sourceInstruction,input.sourceInstructionDigest)??{}
   }
   if(input.method==='receipt')return this.recoverReceipt(input,signal)
@@ -82,7 +86,7 @@ export class ClientCapabilityService{
      ...(authorityId?{authorityId,authoritySeq:sequence}:{}),windowGeneration:binding.generation,
      current:()=>!!current()&&(this.options.canWrite?.(binding.sessionId)??true)
     }:undefined
-    const host=createClientCapabilityHost({current,handlers:{...sheet?.handlers,...notes?.handlers,...this.options.sharedKnowledge?.(()=>!!current(),binding.sessionId),...(binding.mode==='knowledge'?this.options.knowledge?.(()=>!!current(),binding.sessionId):undefined),...conversationIdentity&&conversationComponents?{
+    const host=createClientCapabilityHost({current,handlers:{...sheet?.handlers,...(binding.mode==='presentation'?this.options.presentation?.handlers(sheetKey,leaseCurrent,instruction,input.sourceInstructionDigest):undefined),...notes?.handlers,...this.options.sharedKnowledge?.(()=>!!current(),binding.sessionId),...(binding.mode==='knowledge'?this.options.knowledge?.(()=>!!current(),binding.sessionId):undefined),...conversationIdentity&&conversationComponents?{
      createConversationComponent:async(args,_context,signal,requestId)=>{
       if(!signal||!requestId||!conversationIdentity.current())throw Error('当前对话组件操作身份已失效。')
       signal.throwIfAborted();return conversationComponents.create(args,conversationIdentity,signal,requestId)
@@ -101,7 +105,7 @@ export class ClientCapabilityService{
    }
    const guidance=binding.mode==='knowledge'
     ?'先用 knowledge.inspect 获取当前列表、目录标识和筛选版本。使用 knowledge.filter 更新中间文件列表，依据客户端回执说明匹配结果。'
-    :binding.mode==='spreadsheet'
+    :binding.mode==='presentation'?'使用 presentation.inspect 查看用户引用。useSlide 为 false 时仅使用明确引用或用户指定的页面。按稳定标识调用 presentation.apply，仅在保存回执后确认修改。':binding.mode==='spreadsheet'
      ?(turn.sheet?.guidance??'')+'表格能力只作用于当前工作簿。使用 spreadsheet.inspect 获取版本、工作表和目标范围，用户明确要求修改时才调用 spreadsheet.apply。依据已保存回执确认结果。'
      :'切换视图后重新读取目录；只有available:true的能力可执行。笔记能力使用当下可见编辑器捕获的文档与选区，较新输入或其它请求占用时拒绝旧操作。'
    return{mode:binding.mode,capabilities:turn.host.registry.catalog(turn.context),guidance,...turn.sheet&&{referenceScope:turn.sheet.referenceScope}}

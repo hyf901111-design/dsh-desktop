@@ -8,7 +8,7 @@ import { createHomeThemeGallery, homeAppearanceIcon, type HomeThemeGallery } fro
 type Section = 'input' | 'operations'
 type Motion = 'idle' | 'settling'
 export type HomeOperationCard = 'board' | 'note' | 'ppt' | 'report'
-export type HomeOperationExample = HomeOperationCard | 'workbench' | 'spreadsheet'
+export type HomeOperationExample = HomeOperationCard | 'workbench' | 'spreadsheet' | 'presentation-edit'
 export type HomeOperationActionContext = { signal: AbortSignal; origin?: {x:number;y:number}; revealComposer(): Promise<void>; handoff?():void; demoEntry?:{closeTarget:HTMLElement;closeOwned():Promise<void>} }
 type Card = HomeOperationCard
 export type HomeOperationsDeck = {element:HTMLElement;usecase:HTMLElement;example:HTMLButtonElement;cards:HTMLButtonElement[];pages:HTMLButtonElement[];refresh():void;layout():void;setVisible(visible:boolean,autoplay?:boolean):void;dispose():void}
@@ -24,7 +24,7 @@ const smootherStep = (value: number) => {
   return t * t * t * (t * (t * 6 - 15) + 10)
 }
 const CARDS: Card[] = ['board', 'note', 'ppt', 'report']
-export const HOME_OPERATION_EXAMPLES: readonly HomeOperationExample[] = [...CARDS, 'workbench', 'spreadsheet']
+export const HOME_OPERATION_EXAMPLES: readonly HomeOperationExample[] = [...CARDS, 'workbench', 'spreadsheet', 'presentation-edit']
 export const HOME_OPERATIONS_COPY = {
   zh: {
     demoIntro: '即将进入实例演示，\n演示过程不消耗费用',
@@ -36,7 +36,8 @@ export const HOME_OPERATIONS_COPY = {
       ['演示文稿', '了解PPT制作能力', '通过案例回看从需求到成稿的过程，\n了解 EWork 制作 PPT 的效果。'],
       ['研究报告', '从问题到研报', '从检索资料到形成观点，\n回看研究过程，查看完整研报。'],
       ['自由搭建', '生成专属研究工作台', '描述研究需求，观看 AI 自由组合组件，\n生成可交互的研究工作台。'],
-      ['表格分析', '复杂表格简单处理', 'AI 整理财报，生成趋势图。\n拆解现金流，动手试算回款。']
+      ['表格分析', '复杂表格简单处理', 'AI 整理财报，生成趋势图。\n拆解现金流，动手试算回款。'],
+      ['演示编辑', '把研究简报讲给投资委员会', '从知识库拖入简报，生成逐页演讲稿，\n再圈选图表、点选标题进行修改。']
     ]
   },
   en: {
@@ -49,7 +50,8 @@ export const HOME_OPERATIONS_COPY = {
       ['Presentations', 'Explore presentation creation', 'Follow an example from brief to finished slides\nto see what EWork can create.'],
       ['Research reports', 'From question to report', 'Follow the research from sources to conclusions,\nthen revisit the process and read the full report.'],
       ['Build freely', 'Generate your research workbench', 'Describe your research needs and watch AI assemble\nan interactive research workbench.'],
-      ['Spreadsheet analysis', 'Simplify complex spreadsheets', 'Clean and chart financial data with AI.\nBreak down cash flow and test collections.']
+      ['Spreadsheet analysis', 'Simplify complex spreadsheets', 'Clean and chart financial data with AI.\nBreak down cash flow and test collections.'],
+      ['Slide editing', 'Brief the investment committee', 'Import a deck, prepare speaker notes,\nand revise a chart and a headline.']
     ]
   }
 } as const
@@ -496,7 +498,7 @@ export function mountHomeOperations(doc: Document = document, options: Options =
       if(controller.signal.aborted)return
       const context = { signal: controller.signal, ...(example&&bounds?{origin:{x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2}}:{}), revealComposer: () => revealComposer(controller.signal),handoff:()=>{if(actionController!==controller||controller.signal.aborted)throw Error('本次卡片操作已取消。');actionHandedOff=true} }
       if (example) await options.onExample!(card, context)
-      else if (card !== 'workbench' && card !== 'spreadsheet') await options.onAction!(card, context)
+      else if (card !== 'workbench' && card !== 'spreadsheet' && card !== 'presentation-edit') await options.onAction!(card, context)
     }
     catch (error) {
       if (controller.signal.aborted || disposed || error instanceof Error && error.name==='AbortError') return

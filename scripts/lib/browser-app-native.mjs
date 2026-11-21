@@ -307,7 +307,7 @@ ctx.effect(()=>{
  const pending=makePending(conversationOptions);
  const right=(${createRightProjectDrafts.toString()})({globalDraft:pending,getInput:conversationOptions.getInput,makeDraft(entry,ownership){
    const draft=makePending({...conversationOptions,initialWorkspace:entry.workspaceId,detached:{
-     ...ownership,get sessionId(){return entry.sessionId},mode:['notes','research','spreadsheet'].includes(entry.mode)?entry.mode:'chat',
+     ...ownership,get sessionId(){return entry.sessionId},mode:['notes','research','spreadsheet','presentation'].includes(entry.mode)?entry.mode:'chat',
      isCommandCurrent:()=>!entry.tabId||document.body.dataset.browserActiveTab===entry.tabId,
      open:id=>sessions.open(id)
    },prepareSession:async id=>{
@@ -402,7 +402,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('const inert = sessionId === void 0 || hero && chipTitle === void 0;', 'const inert = imageTaskCreating || (sessionId === undefined ? !pendingConversation || pendingChatState?.workspaceId === undefined : hero && chipTitle === undefined && !cwd);')
  const inputRow='const inputBar = renderSlot("conversation.composer.bar", {';
  replace(inputRow,`const rightProjectMode=browserAppActive?composerApp:activeView??'chat';
- const locksRightProject=['notes','spreadsheet','research'].includes(rightProjectMode);
+ const locksRightProject=['notes','spreadsheet','research','presentation'].includes(rightProjectMode);
  const rightProjectLocked=locksRightProject&&directoryLocked;
  const canChooseRightProject=sidebarMode&&!subagentPanel&&!rightProjectLocked&&(pendingConversation||conversationVacant);
  const sessionScopedWorkspace=sessionId!==undefined&&document.body.dataset.sessionWorkspaceSwitch===sessionId;
@@ -505,7 +505,7 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  `+browserSendAnchor)
  replace('const researchActive = this.researchActiveSessions.has(session.sessionId);',"const researchActive = this.researchActiveSessions.has(session.sessionId) && !['browser','image-factory'].includes(document.body.dataset.workspaceSurface);")
  replace('const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(', `const researchConversationPortal = sidebarMode && researchSidebarSnapshot.conversationHost !== null ? (0, react_dom.createPortal)(rightProjectDraft
-  ? (imageFactoryActive ? react.createElement(EWorkImageFactoryWelcome) : ['research','notes','spreadsheet'].includes(rightProjectMode) ? react.createElement(EWorkModeWelcome,{sessionId,mode:rightProjectMode}) : researchConversationView)
+  ? (imageFactoryActive ? react.createElement(EWorkImageFactoryWelcome) : ['research','notes','spreadsheet','presentation'].includes(rightProjectMode) ? react.createElement(EWorkModeWelcome,{sessionId,mode:rightProjectMode}) : researchConversationView)
   : imageFactoryActive ? (imageTaskCreating || pendingRight || conversationVacant ? react.createElement(EWorkImageFactoryWelcome) : researchConversationView) : `)
  replace("activeView === 'notes' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation", "pendingRight ? researchConversationView : activeView === 'notes' && document.body.dataset.workspaceSurface!=='browser' ? (0,react_jsx_runtime.jsx)(EWorkNotesConversation")
  const project='function projectUserText(text, openFile) {'

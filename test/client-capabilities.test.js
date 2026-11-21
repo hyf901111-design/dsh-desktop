@@ -8,6 +8,7 @@ it('registers bounded semantic handlers with schemas instead of accepting arbitr
   'knowledge.shared.search', 'knowledge.shared.read', 'knowledge.inspect', 'knowledge.filter',
   'knowledge.filter.undo', 'knowledge.file.read', 'knowledge.markdown.inspect',
   'knowledge.markdown.save', 'knowledge.file.organize',
+  'presentation.open', 'presentation.inspect', 'presentation.apply',
   'spreadsheet.inspect', 'spreadsheet.apply', 'spreadsheet.undo',
   'notes.blocks.read', 'notes.blocks.apply', 'notes.blocks.undo',
   'conversation.components.create', 'notes.components.create', 'notes.export', 'notes.components.style',

@@ -71,7 +71,9 @@ it('renders prominent named cards, custom final formats, and collapsed auxiliary
 it.each([
  ['/work/研究笔记.markdown', '在笔记中打开', 'notes'],
  ['/work/成本.xlsx', '在表格中打开', 'spreadsheet'],
- ['/work/会议.pptx', undefined, undefined]
+ ['/work/会议.pptx', '在演示中打开', 'presentation'],
+ ['/work/旧演示.PPT', '在演示中打开', 'presentation'],
+ ['/work/附件.zip', undefined, undefined]
 ])('offers the compatible editor for %s on the OS menu', async (path, label, mode) => {
  const openFileInEditor=vi.fn(async()=>{})
  const showFileContextMenu=vi.fn(async items=>items.some(item=>item.id==='open-editor')?'open-editor':null)

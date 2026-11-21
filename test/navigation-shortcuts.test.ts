@@ -187,3 +187,12 @@ it('persists an empty or occupied slot across starts and keeps account configura
     expect(read().config).toEqual(config)
   } finally { rmSync(directory, { force: true, recursive: true }) }
 })
+
+it('restores the presentation shortcut independently in the sidebar and four configurable top slots', () => {
+  const top = replaceNavigationShortcut(defaultNavigationShortcuts, 'top', 3, 'presentation')
+  const chosen = replaceNavigationShortcut(top, 'side', 1, 'presentation')
+  const restored = normalizeNavigationShortcuts(JSON.parse(JSON.stringify(chosen)))
+  expect(restored.top).toEqual(['research', 'note', 'spreadsheet', 'presentation'])
+  expect(restored.side[1]).toBe('presentation')
+  expect(navigationAppIcon('presentation')).not.toBe(navigationAppIcon('spreadsheet'))
+})

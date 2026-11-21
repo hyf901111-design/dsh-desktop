@@ -72,14 +72,14 @@ it('opens a personal board after the startup catalog arrives and respects interv
   expect(f.opened).toEqual([board.id])
 })
 
-it.each(['board','workbench','note','spreadsheet','ppt','report'])('sets the right conversation visibility for the %s demo before navigation',async kind=>{
+it.each(['board','workbench','note','spreadsheet','ppt','report','presentation-edit'])('sets the right conversation visibility for the selected %s demo after navigation',async kind=>{
  const f=await fixture(),entry=await f.reply(f.send(kind))
  expect(entry.ok).toBe(true)
  expect(f.panelEvents).toEqual([])
  expect(await f.reply(f.send(kind,'open',{sessionId:entry.sessionId}))).toMatchObject({ok:true})
- expect(f.panelEvents).toEqual(kind==='ppt'||kind==='report'?[['state',false,entry.sessionId,'original']]:[
-  ['activate','sherlock-research-conversation',entry.sessionId,'original'],
-  ['state',true,entry.sessionId,'original'],
+ expect(f.panelEvents).toEqual(kind==='ppt'||kind==='report'?[['state',false,entry.sessionId,entry.sessionId]]:[
+  ['activate','sherlock-research-conversation',entry.sessionId,entry.sessionId],
+  ['state',true,entry.sessionId,entry.sessionId],
  ])
  expect(f.opened).toEqual([entry.sessionId])
 })

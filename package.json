@@ -26,11 +26,12 @@
   ],
   "scripts": {
     "postinstall": "patch-package && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && install-electron --no",
-    "predev": "node scripts/ensure-local-dependencies.mjs",
+    "predev": "node scripts/ensure-local-dependencies.mjs && npm run build:presentation",
     "prebuild": "node scripts/ensure-local-dependencies.mjs && node scripts/prepare-memory-model.mjs",
     "preprepare:bundled-plugin-profile": "node scripts/ensure-local-dependencies.mjs",
     "dev": "npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && npm run build:native:power && electron-vite dev",
-    "build": "npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && npm run build:native:power && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
+    "build:presentation": "node packages/presentation-editor/build.mjs",
+    "build": "npm run build:presentation && npm run build:native:voice && npm run build:native:computer && npm run build:native:youtube && npm run build:native:power && node scripts/patch-web-frontend-loading.mjs && node scripts/install-brand-assets.mjs && node scripts/install-pdfjs-assets.mjs && electron-vite build",
     "icons:generate": "node scripts/generate-app-icons.mjs",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json",
@@ -171,6 +172,7 @@
     "files": [
       "out/**/*",
       "node_modules/**/*",
+      "!node_modules/.cache/odyssey-pptist/**",
       "!node_modules/pdfjs-dist/**",
       "!node_modules/@napi-rs/canvas/**",
       "!node_modules/@napi-rs/canvas-*/**",

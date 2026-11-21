@@ -40,7 +40,7 @@ function capabilityEndpoint(env){
 
 // Resolve only the scope of the admitted message. Workbook cells still go
 // through the normal capability catalog and inspection tools.
-export async function readSpreadsheetReference(agent,signal,{env=process.env,fetch:request=globalThis.fetch}={}){
+export async function readWorkspaceReference(agent,signal,{env=process.env,fetch:request=globalThis.fetch}={}){
   if(!env.SHERLOCK_RESEARCH_CONTEXT_URL)return undefined
   try{
     const identity=executionIdentity({agent})
@@ -49,11 +49,12 @@ export async function readSpreadsheetReference(agent,signal,{env=process.env,fet
     const response=await request(capabilityEndpoint(env),{
       method:'POST',redirect:'error',signal:signal?AbortSignal.any([signal,timeout]):timeout,
       headers:{authorization:`Bearer ${env.SHERLOCK_RESEARCH_CONTEXT_TOKEN}`,'content-type':'application/json'},
-      body:JSON.stringify({...identity,method:'spreadsheet-reference'})
+      body:JSON.stringify({...identity,method:'workspace-reference'})
     })
     if(!response.ok)return undefined
     const value=await response.json()
-    if(['workbook','ranges','none'].includes(value?.referenceScope)&&typeof value.guidance==='string')return value.guidance
+    if(value?.mode==='presentation'&&['none','slide','selection'].includes(value.referenceScope))return {mode:'presentation',scope:value.referenceScope}
+    if(['workbook','ranges','none'].includes(value?.referenceScope)&&typeof value.guidance==='string')return {mode:'spreadsheet',guidance:value.guidance}
   }catch{}
   return undefined
 }
@@ -160,9 +161,9 @@ export function registerClientTools(ctx,{env=process.env,fetch:request=globalThi
             throw error
           }
           if(savedReceipt(result))return rememberSaved(result)
-          if(call?.capability==='spreadsheet.apply'&&result?.capability===call.capability&&result.requestId===call.requestId&&
-            result.status==='succeeded'&&result.data?.saved===true&&result.data.changed===true&&identity.authoritySeq!==undefined){
-            try{ctx.sessionTitle?.scheduleSpreadsheetTitle?.(exec.agent.session,identity.authoritySeq)}
+          if(['spreadsheet.apply','presentation.apply'].includes(call?.capability)&&result?.capability===call.capability&&result.requestId===call.requestId&&
+            result.status==='succeeded'&&result.data?.saved===true&&(call.capability==='presentation.apply'||result.data.changed===true)&&identity.authoritySeq!==undefined){
+            try{ctx.sessionTitle?.scheduleSpreadsheetTitle?.(exec.agent.session,identity.authoritySeq,...(call.capability==='presentation.apply'?['presentation']:[]))}
             catch(error){ctx.logger?.warn?.('Spreadsheet title generation could not start: '+String(error))}
           }
           controller.signal.throwIfAborted()

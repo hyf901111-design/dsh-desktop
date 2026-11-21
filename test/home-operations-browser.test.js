@@ -388,25 +388,26 @@ it('updates all four illustrations when appearance changes without replacing the
   } finally { await page.close() }
 })
 
-it('pages through six use cases and keeps quick-card clicks local to the homepage preview', async () => {
+it('pages through seven use cases and keeps quick-card clicks local to the homepage preview', async () => {
   const page = await fixture()
   try {
     await toggle(page).click()
     await waitState(page, 'operations')
     const dots = page.locator('.odyssey-operations-pagination button')
-    expect(await dots.count()).toBe(6)
+    expect(await dots.count()).toBe(7)
     const titles = []
-    for (let index = 0; index < 6; index++) {
+    for (let index = 0; index < 7; index++) {
       await dots.nth(index).click()
       expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(String(index))
       expect(await page.locator('.odyssey-operations-pagination [aria-pressed="true"]').count()).toBe(1)
       expect(await dots.nth(index).getAttribute('aria-pressed')).toBe('true')
       titles.push(await page.locator('.odyssey-operations-usecase .odyssey-operations-title').textContent())
     }
-    expect(new Set(titles).size).toBe(6)
+    expect(new Set(titles).size).toBe(7)
     expect(titles.every(Boolean)).toBe(true)
     expect(titles[4]).toContain('自由搭建')
     expect(titles[5]).toContain('表格分析')
+    expect(titles[6]).toContain('演示编辑')
     const originalUrl = page.url()
     const cards = page.locator('.odyssey-operations-quick-card')
     expect(await cards.count()).toBe(4)
@@ -419,7 +420,7 @@ it('pages through six use cases and keeps quick-card clicks local to the homepag
   } finally { await page.close() }
 }, 15000)
 
-it('fills the active case track and automatically loops the six examples on the browser clock', async () => {
+it('fills the active case track and automatically loops the seven examples on the browser clock', async () => {
   const page = await fixture({ reduced: false, clock: true })
   try {
     await toggle(page).click()
@@ -432,7 +433,7 @@ it('fills the active case track and automatically loops the six examples on the 
     const track = await page.locator('.odyssey-operations-pagination [aria-pressed="true"] i').evaluate(track => parseFloat(getComputedStyle(track, '::before').width) / track.clientWidth)
     expect(track).toBeGreaterThan(.4)
     expect(track).toBeLessThan(.6)
-    for (const nextCase of ['1', '2', '3', '4', '5', '0']) {
+    for (const nextCase of ['1', '2', '3', '4', '5', '6', '0']) {
       const elapsed = await page.locator('.odyssey-operations-usecase').evaluate(card => parseFloat(getComputedStyle(card).getPropertyValue('--odyssey-operations-case-progress')))
       await page.clock.runFor((1 - elapsed) * 6000 + 500)
       expect(await page.locator('.odyssey-operations-usecase').getAttribute('data-case')).toBe(nextCase)
@@ -2391,12 +2392,12 @@ it.each([{id:'haseeb',tone:'current-aurora'},{id:'default',tone:'white'},{id:'vg
   }finally{await page.close()}
 },30000)
 
-it('offers the fourth report example with exact copy, six keyboard tracks and a distinct large-card entry',async()=>{
+it('offers the fourth report example with exact copy, seven keyboard tracks and a distinct large-card entry',async()=>{
  const page=await fixture();try{
   await page.evaluate(()=>{window.examples=[];window.quickActions=[];window.homeOperations.onExample=async kind=>window.examples.push(kind);window.homeOperations.onAction=async kind=>window.quickActions.push(kind);window.homeOperations.dispose();window.homeOperations.mount()})
   await toggle(page).click();await waitState(page,'operations');const tracks=page.locator('.odyssey-operations-pagination button')
-  expect(await tracks.count()).toBe(6)
-  await tracks.first().focus();await page.keyboard.press('End');await waitCase(page,5);await page.keyboard.press('ArrowLeft');await waitCase(page,4);await page.keyboard.press('ArrowLeft');await waitCase(page,3)
+  expect(await tracks.count()).toBe(7)
+  await tracks.first().focus();await page.keyboard.press('End');await waitCase(page,6);await page.keyboard.press('ArrowLeft');await waitCase(page,5);await page.keyboard.press('ArrowLeft');await waitCase(page,4);await page.keyboard.press('ArrowLeft');await waitCase(page,3)
   expect(await tracks.nth(3).evaluate(el=>el===document.activeElement)).toBe(true)
   expect(await page.locator('.odyssey-operations-title strong').textContent()).toBe('研究报告')
   expect(await page.locator('.odyssey-operations-subtitle').textContent()).toBe('从问题到研报')
@@ -2405,7 +2406,7 @@ it('offers the fourth report example with exact copy, six keyboard tracks and a 
   expect(await page.locator('[data-odyssey-operations-case-layer] img').getAttribute('class')).toBe('odyssey-operations-trend')
   await page.locator('[data-odyssey-operations-open-example]').focus();await page.keyboard.press('Enter');await expect.poll(()=>page.evaluate(()=>window.examples),{timeout:4000}).toEqual(['report'])
   await page.locator('.odyssey-operations-quick-card[data-card="report"]').click();await expect.poll(()=>page.evaluate(()=>window.quickActions)).toEqual(['report']);expect(await page.evaluate(()=>window.examples)).toEqual(['report'])
-  await tracks.nth(3).focus();await page.keyboard.press('ArrowRight');await waitCase(page,4);await page.keyboard.press('ArrowRight');await waitCase(page,5);await page.keyboard.press('ArrowRight');await waitCase(page,0);await page.keyboard.press('ArrowLeft');await waitCase(page,5);await page.keyboard.press('Home');await waitCase(page,0)
+  await tracks.nth(3).focus();await page.keyboard.press('ArrowRight');await waitCase(page,4);await page.keyboard.press('ArrowRight');await waitCase(page,5);await page.keyboard.press('ArrowRight');await waitCase(page,6);await page.keyboard.press('ArrowRight');await waitCase(page,0);await page.keyboard.press('ArrowLeft');await waitCase(page,6);await page.keyboard.press('Home');await waitCase(page,0)
   expect(await page.locator('textarea').inputValue()).toBe('保留原生输入草稿\n第二行 🔎')
  }finally{await page.close()}
 },15000)

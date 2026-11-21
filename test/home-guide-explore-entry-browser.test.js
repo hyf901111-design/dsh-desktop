@@ -42,7 +42,7 @@ beforeAll(async()=>{
    actions.push('more');const menu=document.createElement('div');menu.className='st-menu';menu.dataset.sidebarMore='true';
    menu.setAttribute('popover','manual');menu.setAttribute('role','menu');
    const collapsed=sidebar.querySelector('[data-sidebar-home]');
-   menu.innerHTML=(collapsed?'<button role="menuitem">新建对话</button><button role="menuitem">新建研究</button>':'')+'<button role="menuitem">新笔记</button><button role="menuitem">新建表格</button>';
+   menu.innerHTML=(collapsed?'<button role="menuitem">新建对话</button><button role="menuitem">新建研究</button>':'')+'<button role="menuitem">新笔记</button><button role="menuitem">新建表格</button><button role="menuitem">演示</button>';
    document.body.append(menu);menu.showPopover();more.setAttribute('aria-expanded','true');
    for(const button of menu.querySelectorAll('button'))button.onclick=()=>{nativeClicks.push(button.textContent);menu.remove();more.setAttribute('aria-expanded','false')};
   };
@@ -120,6 +120,15 @@ it('uses collapsed More then its actual Note menu item and keeps the pointer abo
 })
 it.each(['surface','knowledge-surface','browser-over-image'])('uses the visible New Chat entry directly from %s',async start=>{const{context,page}=await fixture(start,'report');try{await page.evaluate(()=>window.entryProbe.start());expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close','activate:new-chat'])}finally{await context.close()}})
 it('stops if settings has no visible exit control',async()=>{const{context,page}=await fixture('unsupported','report');try{const result=await page.evaluate(async()=>{try{await window.entryProbe.start();return'ok'}catch(error){return error.message}});expect(result).toContain('返回应用');expect(await page.evaluate(()=>window.entryProbe.actions)).toEqual(['close'])}finally{await context.close()}})
+it.each(['home','chat','knowledge-collapsed'])('opens the presentation editor from the visible More menu on %s',async start=>{
+ const {context,page}=await fixture(start,'presentation-edit')
+ try{
+  const before=await page.evaluate(()=>window.entryProbe.snapshot())
+  await page.evaluate(()=>window.entryProbe.start())
+  expect(await page.evaluate(()=>({actions:window.entryProbe.actions,clicks:window.entryProbe.nativeClicks,state:window.entryProbe.snapshot()})))
+   .toEqual({actions:['close','more','activate:new-presentation'],clicks:['更多','演示'],state:{...before,activated:true}})
+ }finally{await context.close()}
+})
 it.each(['knowledge-collapsed','knowledge-surface','home','chat'])('uses sidebar More to create the spreadsheet demo from %s',async start=>{
  const {context,page}=await fixture(start,'spreadsheet')
  try{

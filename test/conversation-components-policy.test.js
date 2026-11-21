@@ -16,11 +16,22 @@ function harness(s,options){
 }
 it('uses the injected desktop scope in the initial model request for a spreadsheet question',async()=>{
  const s=session('这批数据有哪些异常？')
- const readSpreadsheetReference=vi.fn(async()=> '本轮默认参考当前工作簿。')
- const h=harness(s,{readSpreadsheetReference})
+ const readWorkspaceReference=vi.fn(async()=> ({mode:'spreadsheet',guidance:'本轮默认参考当前工作簿。'}))
+ const h=harness(s,{readWorkspaceReference})
  try{
   expect((await h.wire()).system).toContain('【当前表格参考范围】本轮默认参考当前工作簿。')
-  expect(readSpreadsheetReference).toHaveBeenCalledWith(h.agent,undefined)
+  expect(readWorkspaceReference).toHaveBeenCalledWith(h.agent,undefined)
+ }finally{h.dispose()}
+})
+it('resolves the visible presentation before interpreting a short inline edit',async()=>{
+ const s=session('改成“三季度营收环比增长 18%”。')
+ const h=harness(s,{readWorkspaceReference:async()=>({mode:'presentation',scope:'selection'})})
+ try{
+  const first=await h.wire()
+  expect(first.tools.map(t=>t.name)).toEqual(['client_capabilities'])
+  expect(first.system).toContain('演示选区标签')
+  catalog(s,'presentation')
+  expect((await h.wire()).tools.map(t=>t.name)).toContain('client_action')
  }finally{h.dispose()}
 })
 describe('direct conversation component routing',()=>{

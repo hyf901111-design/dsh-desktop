@@ -17,6 +17,7 @@ type Adapters = {
  prepareHandoff?(session: Session & {kind:HomeGuideKind},signal:AbortSignal): void | (()=>void) | Promise<void | (()=>void)>
  revealConversation?():void
  mountNotes(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
+ mountPresentationEdit?(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
  mountSpreadsheet?(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
  mountWorkbench?(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
  mountPresentation(document: Document, host: HTMLElement, options: HomeGuideMountOptions): Promise<HomeGuideAdapter>
@@ -79,6 +80,23 @@ const EXAMPLES: Record<HomeGuideKind,{title:string;view:string;intro:string;step
   ["note-task-apply","点击主区卡片的插入笔记","通过公开添加动作，把这条总结追加到末尾。",1200],
   ["note-task-saved","核对末尾内容并保存","总结只加入一次，原有段落、图表、行情与修订均保留。",1200],
   ["note-return-top","自然回到笔记开头","笔记已保存，回到标题看完整复盘。",700]
+ ]},
+ 'presentation-edit':{title:'把研究简报讲给投资委员会',view:'演示',intro:'从知识库导入研究简报，准备逐页演讲稿，局部修改图表、标题和讲稿后开始放映。',steps:[
+  ['enter','打开演示工作区','在独立的演示会话中准备投委会汇报。',900],
+  ['library','打开知识库','找到《人工智能周期与资产配置》演示文稿。',1200],
+  ['drag-import','拖入研究简报','文稿已导入，可逐页查看。',1500],
+  ['ask-notes','向右侧对话请求演讲稿','请为投资委员会听众准备逐页讲解。',950],
+  ['notes','生成逐页演讲稿','演讲稿已写入各页备注。',1400],
+  ['review-notes','翻页查看演讲稿','检查不同页的讲解重点与转场。',1800],
+  ['mark-chart','圈选第 10 页的就业图表','在原图上标记本次要调整的区域。',1250],
+  ['revise-chart','从右侧发送框选图表修改意见','保留原布局与易方达配色，只将选区改为横向条形图。',2400],
+  ['select-title','点选第 13 页的标题','将所选标题带入右侧对话。',1250],
+  ['revise-title','把标题改为投资判断','新标题点明五种情景中仅一种净现值为正。',2500],
+  ['select-notes','框选一段演讲逐字稿','把选中的备注作为引用带入右侧对话。',1400],
+  ['revise-notes','从右侧对话优化选中讲稿','保留数字与判断条件，将这段话改成更自然的口头表达。',2500],
+  ['return-first','回到演示文稿第一页','查看封面，准备开始汇报。',1400],
+  ['play','点击放映','从第一页开始播放修改后的演示文稿。',1800],
+  ['finish','完成汇报准备','文稿与四轮对话已保存，当前停在第一页放映。',1200]
  ]},
  ppt:{title:'公司风格演示文稿',view:'对话',intro:'从投资研报整理成公司风格汇报，查看需求、内容规划、文件交付和预览。',steps:[
   ['brief','选择 PPT 技能、添加研报并输入要求','公司 PPT 技能和研报附件已加入，制作要求已填写。',1600],
@@ -159,7 +177,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const hideCue=()=>active?.pointer?.hide()
  let recovery:HTMLButtonElement|undefined
  const clearRecovery=()=>{recovery?.remove();recovery=undefined}
- const showRecovery=(sessionId:string|undefined, label:string, resume:()=>void)=>{
+ const showRecovery=(sessionId:string|undefined, label:string, resume:()=>void, pause=false)=>{
   if(disposed||selected()!==sessionId)return
   const surface=document.body.dataset.workspaceSurface
   const header=(surface&&document.querySelector(`[data-workspace-surface="${CSS.escape(surface)}"]:not([hidden]) .workspace-app-topbar`))||
@@ -169,7 +187,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   clearRecovery()
   const button=document.createElement('button');button.type='button';button.className='odyssey-home-guide-resume'
   button.setAttribute('aria-label',label);button.title=label
-  button.innerHTML='<svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16"><path d="M4 2.9a.7.7 0 0 1 1.06-.6l7.62 5.1a.72.72 0 0 1 0 1.2l-7.62 5.1a.7.7 0 0 1-1.06-.6z" fill="currentColor"/></svg>'
+  button.innerHTML=pause?'<svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16"><path fill="currentColor" d="M4 3h3v10H4zm5 0h3v10H9z"/></svg>':'<svg aria-hidden="true" width="15" height="15" viewBox="0 0 16 16"><path d="M4 2.9a.7.7 0 0 1 1.06-.6l7.62 5.1a.72.72 0 0 1 0 1.2l-7.62 5.1a.7.7 0 0 1-1.06-.6z" fill="currentColor"/></svg>'
   button.onclick=()=>{if(selected()!==sessionId)return;clearRecovery();resume()}
   const utilities=header.querySelector('[data-srb-utilities]')
   if(utilities)utilities.prepend(button);else header.append(button)
@@ -185,6 +203,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   // A save can outlive navigation or wait on persistence. Its old editor stays
   // connected until flush completes, but must not retain input/hover ownership
   // over the resident DOM that React may already be reusing for another view.
+  if(run.kind==='presentation-edit')run.abort.abort()
   run.cleanup();run.root.style.display='none';run.root.inert=true
   if(run.center.dataset.homeGuideActive===run.id){delete run.center.dataset.homeGuideActive;delete run.center.dataset.homeGuideKind;run.center.style.removeProperty('--odyssey-home-guide-controls-height')}
   if(run.resident.dataset.homeGuideResident===run.id){delete run.resident.dataset.homeGuideResident;delete run.resident.dataset.homeGuideLive}
@@ -339,8 +358,8 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   }
   const blocked=new Map<HTMLElement,boolean>()
   const run:Run={id,kind,sessionId:session.sessionId,abort:controller,root,resident,center,content,status,cleanup:()=>{}}
-  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report'||kind==='workbench'||kind==='spreadsheet')resident.dataset.homeGuideLive='true';if(kind==='ppt'||kind==='report')resident.dataset.homeGuidePlanning=id
-  const blockResident=()=>{if(kind==='ppt'||kind==='report'||kind==='workbench'||kind==='spreadsheet')return;const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');for(const child of resident.children){if(!(child instanceof win.HTMLElement)||child===chrome||child.contains(chrome))continue;if(!blocked.has(child))blocked.set(child,child.inert);child.inert=true}}
+  active=run;resident.dataset.homeGuideResident=id;center.dataset.homeGuideActive=id;center.dataset.homeGuideKind=kind;if(kind==='ppt'||kind==='report'||kind==='workbench'||kind==='spreadsheet'||kind==='presentation-edit')resident.dataset.homeGuideLive='true';if(kind==='ppt'||kind==='report')resident.dataset.homeGuidePlanning=id
+  const blockResident=()=>{if(kind==='ppt'||kind==='report'||kind==='workbench'||kind==='spreadsheet'||kind==='presentation-edit')return;const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');for(const child of resident.children){if(!(child instanceof win.HTMLElement)||child===chrome||child.contains(chrome))continue;if(!blocked.has(child))blocked.set(child,child.inert);child.inert=true}}
   blockResident();center.append(root);releaseTransition();playback(run,false)
   const position=()=>{if(!root.isConnected)return;const bounds=center.getBoundingClientRect(),chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header')?.getBoundingClientRect(),top=Math.max(bounds.top,chrome?.bottom??bounds.top+44);root.style.left=bounds.left+'px';root.style.top=top+'px';root.style.width=bounds.width+'px';root.style.height=Math.max(1,bounds.bottom-top)+'px'}
   const resize=new win.ResizeObserver(position);resize.observe(center);const chrome=resident.querySelector('[data-srb-session-header],.wSkVaW_header');if(chrome)resize.observe(chrome);win.addEventListener('resize',position);position()
@@ -355,8 +374,8 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
   try{
    // Saved workspaces hydrate through their native editors.
    // The generation actor only accepts a new, empty session.
-   if((kind==='workbench'||kind==='spreadsheet')&&session.fresh===false){await close(false,true);return}
-   const adapter=await(kind==='board'?mountBoard(document,content,options):kind==='note'?adapters.mountNotes(document,content,options):kind==='workbench'?adapters.mountWorkbench?.(document,content,options):kind==='spreadsheet'?adapters.mountSpreadsheet?.(document,content,options):adapters.mountPresentation(document,content,options))
+   if((kind==='workbench'||kind==='spreadsheet'||kind==='presentation-edit')&&session.fresh===false){await close(false,true);return}
+   const adapter=await(kind==='board'?mountBoard(document,content,options):kind==='note'?adapters.mountNotes(document,content,options):kind==='workbench'?adapters.mountWorkbench?.(document,content,options):kind==='presentation-edit'?adapters.mountPresentationEdit?.(document,content,options):kind==='spreadsheet'?adapters.mountSpreadsheet?.(document,content,options):adapters.mountPresentation(document,content,options))
    if(!adapter)throw Error('示例尚未就绪，请重试。')
    if(active!==run||controller.signal.aborted){adapter.dispose();throw aborted()}run.adapter=adapter;ensure()
    if(session.fresh===false){await close(false,true);return}
@@ -373,7 +392,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
     try{
      if((kind==='ppt'||kind==='report')&&step==='plan')resident.dataset.homeGuidePlanReady=run.id
      if(!applied.has(step)){await adapter.runStep(step);ensure();applied.add(step)}
-     if(kind==='spreadsheet'&&step==='import-file'||kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
+     if(kind==='presentation-edit'&&step==='drag-import'||kind==='spreadsheet'&&step==='import-file'||kind==='workbench'&&step==='wb-03'||kind==='board'&&step==='board-indices'||kind==='note'&&step==='write'||(kind==='ppt'||kind==='report')&&step==='send'){
       await options.waitUntilPlaying();ensure()
       await exchangeSession(document,{kind,command:'activate-title',sessionId:run.sessionId},controller.signal);ensure()
      }
@@ -382,6 +401,13 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
    },onChange:state=>{
     if(active!==run||state.phase==='disposed')return
     if(run.diagnosticPhase!==state.phase){
+     if(kind==='presentation-edit'&&(state.phase==='playing'||state.phase==='paused')){
+      const playing=state.phase==='playing'
+      showRecovery(run.sessionId,playing?'暂停演示':'继续播放演示',()=>{
+       run.hiddenPause=false
+       if(playing)run.timeline?.pause();else run.timeline?.play()
+      },playing)
+     }
      if(state.phase==='paused')diagnostic(run,'paused',run.pauseReason??'timeline-paused')
      else if(state.phase==='playing')diagnostic(run,'resumed',run.resumeReason??'playback')
      else if(state.phase==='completed')diagnostic(run,'completed','step-complete')
@@ -413,7 +439,7 @@ export function mountHomeGuides(document:Document,adapters:Adapters){
  const escape=(event:KeyboardEvent)=>{if((active||preparing)&&event.key==='Escape'){event.preventDefault();if(preparing){generation++;preparing.controller.abort();preparing=undefined;releaseTransition()}void close(true,false,'escape')}}
  // The native note reviewer also pauses on window blur. Its actor must share
  // that gate so background time cannot consume a foreground review budget.
- const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||(run.kind==='note'||run.kind==='workbench'||run.kind==='spreadsheet')&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.pauseReason=document.hidden?'document-hidden':'window-blur';run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.resumeReason='foreground-restored';run.timeline.play()}}
+ const visibility=()=>{const run=active;if(!run?.timeline)return;if(document.hidden||(run.kind==='note'||run.kind==='workbench'||run.kind==='spreadsheet'||run.kind==='presentation-edit')&&!document.hasFocus()){if(run.timeline.snapshot().phase==='playing'){run.hiddenPause=true;run.pauseReason=document.hidden?'document-hidden':'window-blur';run.timeline.pause()}}else if(run.hiddenPause){run.hiddenPause=false;run.resumeReason='foreground-restored';run.timeline.play()}}
  const cueTarget=(value:any,key:'target'|'fromTarget')=>{
   const token=value?.[key+'Token']
   if(token===undefined)return value?.[key]

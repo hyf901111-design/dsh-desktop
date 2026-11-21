@@ -782,11 +782,11 @@ body .JObwrW_trigger{box-sizing:border-box!important;display:flex!important;alig
 body .JObwrW_trigger>svg{display:block!important;width:14px!important;height:14px!important;margin:0!important;transform:none!important;flex:none}
 body .JObwrW_trigger:is(:hover,[aria-expanded=true]){background:var(--odyssey-menu-row)!important}
 
-/* Shared icon actions on the research, notes and spreadsheet session headers. */
+/* Shared session header actions. */
 body{--odyssey-header-icon-bg:#fafafa;--odyssey-header-icon-hover:#fff}
 body[data-ds-dark-theme]{--odyssey-header-icon-bg:#292929;--odyssey-header-icon-hover:#3a3a3a}
-body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,[data-ework-spreadsheet-actions]>button){background:var(--odyssey-header-icon-bg)}
-body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,[data-ework-spreadsheet-actions]>button):not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]){background:var(--odyssey-header-icon-hover)}
+body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,:is([data-ework-spreadsheet-actions],[data-ework-presentation-actions])>button){background:var(--odyssey-header-icon-bg)}
+body [data-srb-session-header] :is(.srb-actions .srb-header-control,.en-header-export,.en-header-view-mode,:is([data-ework-spreadsheet-actions],[data-ework-presentation-actions])>button):not(:disabled):is(:hover,:focus-visible,[aria-expanded=true]){background:var(--odyssey-header-icon-hover)}
 body:has([data-srb-session-header]:not([aria-hidden=true])) [data-dsh-panel-host][data-odyssey-panel-right=closed] [data-odyssey-panel-entry=right]{background:var(--odyssey-header-icon-bg)!important}
 body:has([data-srb-session-header]:not([aria-hidden=true])) [data-dsh-panel-host][data-odyssey-panel-right=closed] [data-odyssey-panel-entry=right]:is(:hover,:focus-visible){background:var(--odyssey-header-icon-hover)!important}
 .en-header-icon-group{display:inline-flex;align-items:center;gap:4px;flex:none;-webkit-app-region:no-drag}

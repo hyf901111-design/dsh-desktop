@@ -1,6 +1,6 @@
 /** Pure-data bridge to the native workspace/session owner; never a demo route. */
-export function createSidebarNewNoteAction(document:Document,beforeCreate:()=>Promise<void>,kind:'note'|'spreadsheet'='note'){
- const noun=kind==='spreadsheet'?'表格':'笔记'
+export function createSidebarNewNoteAction(document:Document,beforeCreate:()=>Promise<void>,kind:'note'|'spreadsheet'|'presentation'='note'){
+ const noun=kind==='spreadsheet'?'表格':kind==='presentation'?'演示':'笔记'
  const win=document.defaultView!;let flight:Promise<void>|null=null,controller:AbortController|null=null
  const request=(phase:'prepare'|'create'|'cancel',token:string|undefined,signal:AbortSignal)=>new Promise<{token?:string;sessionId?:string}>((resolve,reject)=>{
   const requestId=crypto.randomUUID(),cleanup=()=>{clearTimeout(timer);win.removeEventListener('sherlock:sidebar-new-note-reply',reply);signal.removeEventListener('abort',abort)}
@@ -9,7 +9,7 @@ export function createSidebarNewNoteAction(document:Document,beforeCreate:()=>Pr
   const timer=setTimeout(()=>{cleanup();reject(Error('新建'+noun+'超时，请重试。'))},30_000)
   win.addEventListener('sherlock:sidebar-new-note-reply',reply);signal.addEventListener('abort',abort,{once:true})
   if(signal.aborted){abort();return}
-  win.dispatchEvent(new CustomEvent('sherlock:sidebar-new-note-request',{detail:{requestId,phase,...kind==='spreadsheet'?{kind}:{},...token?{token}:{}}}))
+  win.dispatchEvent(new CustomEvent('sherlock:sidebar-new-note-request',{detail:{requestId,phase,...kind!=='note'?{kind}:{},...token?{token}:{}}}))
  })
  const create=(signal?:AbortSignal):Promise<void>=>{
   if(flight){
@@ -23,7 +23,7 @@ export function createSidebarNewNoteAction(document:Document,beforeCreate:()=>Pr
   if(signal?.aborted)abort();else signal?.addEventListener('abort',abort,{once:true})
   flight=(async()=>{let token:string|undefined
    try{token=(await request('prepare',undefined,owned.signal)).token;if(!token)throw Error('新'+noun+'入口不可用。');await beforeCreate();if(owned.signal.aborted)throw new DOMException('已取消新建'+noun+'。','AbortError');await request('create',token,owned.signal)}
-   finally{signal?.removeEventListener('abort',abort);if(token)win.dispatchEvent(new CustomEvent('sherlock:sidebar-new-note-request',{detail:{requestId:crypto.randomUUID(),phase:'cancel',token,...kind==='spreadsheet'?{kind}:{}}}));if(controller===owned)controller=null;flight=null}
+   finally{signal?.removeEventListener('abort',abort);if(token)win.dispatchEvent(new CustomEvent('sherlock:sidebar-new-note-request',{detail:{requestId:crypto.randomUUID(),phase:'cancel',token,...kind!=='note'?{kind}:{}}}));if(controller===owned)controller=null;flight=null}
   })();return flight
  }
  return {create,reset:()=>controller?.abort(),dispose:()=>controller?.abort()}

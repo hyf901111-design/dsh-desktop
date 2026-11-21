@@ -57,7 +57,7 @@ export interface KnowledgeDocument {
   folderId?: string
   sessionId?: string
   sessionTitle?: string
-  generatedBy?: 'image-factory'
+  generatedBy?: 'image-factory' | 'presentation-guide'
   imageProject?: { canvasId: string; scope: import('./image-factory-canvas').CanvasScope }
   saved: boolean
   starred: boolean
@@ -85,7 +85,7 @@ export interface KnowledgeFilter {
 
 const extensions: Record<Exclude<KnowledgeFormat, 'other'>, string[]> = {
   pdf: ['pdf'],
-  ppt: ['ppt', 'pptx', 'odp'],
+  ppt: ['ppt', 'pptx', 'pptm', 'pps', 'ppsx', 'ppsm', 'pot', 'potx', 'potm', 'odp'],
   markdown: ['md', 'markdown', 'mdx'],
   word: ['doc', 'docx', 'odt', 'rtf'],
   excel: ['xls', 'xlsx', 'xlsm', 'csv', 'tsv', 'ods'],
@@ -100,6 +100,10 @@ const formatsByExtension = new Map(Object.entries(extensions).flatMap(([format, 
 export function knowledgeFormat(name: string): KnowledgeFormat {
   const dot = name.lastIndexOf('.')
   return dot > 0 ? formatsByExtension.get(name.slice(dot + 1).toLowerCase()) ?? 'other' : 'other'
+}
+
+export function canOpenKnowledgeImage(name: string) {
+  return /\.(png|jpe?g)$/i.test(name)
 }
 
 export function canAutomaticallyCollect(name: string): boolean {

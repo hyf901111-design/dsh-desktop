@@ -66,14 +66,17 @@ export function patchSessionTitleSubject(source){
   source=once(source,'truncateTitleUtf8(cleanTitleText(input).split(" ")','truncateTitleUtf8(cleanTitleText(sessionTitleFallbackSubject(input)).split(" ")')
   source=once(source,'function fallbackSessionTitle(',block+'\nfunction fallbackSessionTitle(')
  }
- if(source.includes('scheduleSpreadsheetTitle(session, messageSeq)'))return source
+ const oldSchedule='scheduleSpreadsheetTitle(session, messageSeq)'
+ const docSchedule="scheduleSpreadsheetTitle(session, messageSeq, kind = 'spreadsheet')"
+ if(source.includes(docSchedule))return source
+ if(source.includes(oldSchedule))return source.replace(oldSchedule,docSchedule).replace("const created = session.events.find(event => event.type === 'workspace-spreadsheet/created');","const created = session.events.find(event => event.type === 'workspace-'+kind+'/created');")
  const messages='const messages = collectSessionTitleMessages(session.events, work.throughSeq);'
  source=once(source,messages,'const collected = collectSessionTitleMessages(session.events, work.throughSeq);\n\t\t\tconst messages = work.spreadsheetMessageSeq === void 0 ? collected : collected.filter(message => message.seq === work.spreadsheetMessageSeq);')
  const anchor='/** Schedule fallback creation and any provider cadence for one eligible event. */'
  return once(source,anchor,`/** Use the saved edit message as the title source, until the user renames. */
- scheduleSpreadsheetTitle(session, messageSeq) {
+ ${docSchedule} {
   if (!this.serviceActive() || this.ctx.sessions.get(session.id) !== session) return;
-  const created = session.events.find(event => event.type === 'workspace-spreadsheet/created');
+  const created = session.events.find(event => event.type === 'workspace-'+kind+'/created');
   const current = this.get(session);
   if (!created || current?.eventSeq !== created.data.titleSeq) return;
   const message = collectSessionTitleMessages(session.events, messageSeq).find(message => message.seq === messageSeq);
@@ -111,7 +114,7 @@ export function patchResearchSessionTitle(source) {
   const previous = session.events.findLast(event => event.type === 'workspace-research/title-context');
   const current = this.get(session);
   const sheet = session.events.find(event => event.type === 'workspace-spreadsheet/created');
-  const otherSurface = session.events.some(event => ['workspace-spreadsheet/edited', 'workspace-note/edited', 'workspace-knowledge/copied'].includes(event.type));
+  const otherSurface = session.events.some(event => ['workspace-presentation/edited','workspace-spreadsheet/edited', 'workspace-note/edited', 'workspace-knowledge/copied'].includes(event.type));
   const blankSheet = !previous && sheet?.data.provisional === true && sheet.data.titleSeq === current?.eventSeq;
   if (otherSurface || current?.source.kind === 'user' && !blankSheet) return false;
   if (previous && JSON.stringify(previous.data.components) === JSON.stringify(components)) return true;

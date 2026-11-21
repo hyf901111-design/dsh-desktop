@@ -95,7 +95,7 @@ function validHomeGuideRegistry(key: string, value: string): boolean {
     if (!record || Array.isArray(record) || Object.keys(record).sort().join(',') !== 'entries,scope,version' || record.version !== 1 || record.scope !== scope || !Array.isArray(record.entries)) return false
     const ids = new Set<string>()
     return record.entries.every((entry: any) => {
-      if (!entry || Array.isArray(entry) || Object.keys(entry).sort().join(',') !== 'createdAt,cwd,kind,sessionId,title' || !['board','note','ppt','report','workbench','spreadsheet'].includes(entry.kind) || typeof entry.sessionId !== 'string' || !/^[a-zA-Z0-9:_-]{1,256}$/.test(entry.sessionId) || ids.has(entry.sessionId) || typeof entry.cwd !== 'string' || !path.isAbsolute(entry.cwd) || entry.cwd.length > 4096 || /[\x00-\x1f]/.test(entry.cwd) || typeof entry.title !== 'string' || !entry.title.trim() || entry.title.length > 256 || /[\x00-\x1f]/.test(entry.title) || !Number.isSafeInteger(entry.createdAt) || entry.createdAt <= 0) return false
+      if (!entry || Array.isArray(entry) || Object.keys(entry).sort().join(',') !== 'createdAt,cwd,kind,sessionId,title' || !['board','note','ppt','report','workbench','spreadsheet','presentation-edit'].includes(entry.kind) || typeof entry.sessionId !== 'string' || !/^[a-zA-Z0-9:_-]{1,256}$/.test(entry.sessionId) || ids.has(entry.sessionId) || typeof entry.cwd !== 'string' || !path.isAbsolute(entry.cwd) || entry.cwd.length > 4096 || /[\x00-\x1f]/.test(entry.cwd) || typeof entry.title !== 'string' || !entry.title.trim() || entry.title.length > 256 || /[\x00-\x1f]/.test(entry.title) || !Number.isSafeInteger(entry.createdAt) || entry.createdAt <= 0) return false
       ids.add(entry.sessionId); return true
     })
   } catch { return false }
@@ -134,7 +134,7 @@ export class ResearchCanvasStorage {
     if (key.startsWith('sherlock.research.canvas.viewport.v1:') && value.length > 256) return false
     if (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(value)) return false
     if (key.startsWith(RESPONSIVE_ARRANGE_PREFIX) && value !== 'auto' && value !== 'manual') return false
-    if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet'].includes(value)) return false
+    if (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet', 'presentation'].includes(value)) return false
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
     if (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(value)) return false
     if (key.startsWith('sherlock.workbench.auto-arrange.v1:') && !validWorkbenchArrange(value)) return false
@@ -180,7 +180,7 @@ export class ResearchCanvasStorage {
           (key.startsWith('sherlock.research.canvas.viewport.v1:') && record.value.length > 256) ||
           (key.startsWith('ework.research.preview.v1:') && !['preview', 'edit'].includes(record.value)) ||
           (key.startsWith(RESPONSIVE_ARRANGE_PREFIX) && record.value !== 'auto' && record.value !== 'manual') ||
-          (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet'].includes(record.value)) ||
+          (key.startsWith('ework.session.view.v1:') && !['', 'chat', 'research', 'notes', 'trajectory', 'spreadsheet', 'presentation'].includes(record.value)) ||
           (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(record.value)) ||
           (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(record.value)) ||
           (key.startsWith('sherlock.workbench.auto-arrange.v1:') && !validWorkbenchArrange(record.value))) return null

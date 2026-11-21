@@ -41,11 +41,14 @@ export function mountKnowledgePanels(document: Document, bridge: PanelBridge) {
       entry.root.unmount()
     }
     const guide = document.querySelector<HTMLElement>('[data-home-guide][data-kind="ppt"] [data-home-presentation-reference-file]')
+    const editGuide = document.querySelector<HTMLElement>('[data-ework-presentation-view][data-ework-presentation-guide-file]')
     for (const host of document.querySelectorAll<HTMLElement>('[data-knowledge-panel-host]')) {
       const id = host.dataset.knowledgePanelFile
       const session = host.dataset.knowledgePanelSession
-      const referenceFile = !id && session && guide?.dataset.homePresentationReferenceSession === session &&
-        host.closest('#odyssey-right-workspace-panel') ? guide.dataset.homePresentationReferenceFile : undefined
+      const inSidebar = !id && session && host.closest('#odyssey-right-workspace-panel')
+      const referenceFile = inSidebar && editGuide?.dataset.eworkPresentationView === session ?
+        editGuide.dataset.eworkPresentationGuideFile : inSidebar && guide?.dataset.homePresentationReferenceSession === session ?
+          guide.dataset.homePresentationReferenceFile : undefined
       const existing = roots.get(host)
       if (existing && existing.referenceFile === referenceFile) continue
       const root = existing?.root ?? createRoot(host)
@@ -55,7 +58,7 @@ export function mountKnowledgePanels(document: Document, bridge: PanelBridge) {
   }
   const observer = new MutationObserver(scan)
   observer.observe(document.body, { childList: true, subtree: true, attributes: true,
-    attributeFilter: ['data-home-presentation-reference-file', 'data-knowledge-panel-session'] })
+    attributeFilter: ['data-home-presentation-reference-file', 'data-ework-presentation-guide-file', 'data-knowledge-panel-session'] })
   scan()
   return () => {
     observer.disconnect()
@@ -431,7 +434,16 @@ function FilePicker({ document, bridge, referenceFile }: Omit<PanelProps, 'id'>)
         const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
         const title = session ? session.title : row.name
         const published = row.publishedSession
-        return <div className="knowledge-panel-row" key={row.id} data-knowledge-file-id={row.id}
+        return <div className="knowledge-panel-row" key={row.id} data-knowledge-file-id={row.id} data-knowledge-file-context-menu
+          onContextMenu={event => {
+            event.preventDefault()
+            event.stopPropagation()
+            const bounds = event.currentTarget.getBoundingClientRect()
+            event.currentTarget.dispatchEvent(new CustomEvent('sherlock:knowledge-panel-file-menu', {
+              bubbles: true, detail: { row, folders: snapshot.folders, shares: snapshot.sessionShares,
+                left: event.clientX || bounds.left, top: event.clientY || bounds.bottom }
+            }))
+          }}
           draggable={!session && !published} onDragStart={event => {
             if (session || published) return
             event.dataTransfer.effectAllowed = 'copy'
@@ -453,7 +465,7 @@ function FilePicker({ document, bridge, referenceFile }: Omit<PanelProps, 'id'>)
             <span title={title}>{title}</span>
             <small>{row.received ? [session && sharedModeLabels[session.mode], row.received.category, row.received.owner].filter(Boolean).join(' · ')
               : published ? [sharedModeLabels[published.mode], row.share?.category].join(' · ')
-                : snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.source === 'generated' ? '会话生成' : '手动上传')}</small>
+                : snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? (row.generatedBy === 'presentation-guide' ? '公司风格演示示例' : row.source === 'generated' ? '会话生成' : '手动上传')}</small>
           </button>
           <div className="knowledge-panel-action" data-session={session || published ? true : undefined}>
             <small>{published && !row.size ? '—' : size(row.size)}</small>

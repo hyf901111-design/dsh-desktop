@@ -356,7 +356,10 @@ class SpreadsheetView{
  syncHeader(){
   if(this.sharedReadOnly)return
   const next=this.host.closest('[data-odyssey-page=spreadsheet]')?.querySelector<HTMLElement>('[data-ework-spreadsheet-actions]')??undefined
-  if(next===this.headerActions)return
+  if(next===this.headerActions){
+   if(next && !next.querySelector('[data-action=view-mode]'))this.paintHeader()
+   return
+  }
   this.headerActions?.removeEventListener('click',this.click)
   this.headerActions?.removeEventListener('keydown',this.key)
   this.headerActions=next
@@ -367,8 +370,7 @@ class SpreadsheetView{
  private paintHeader(){
   const header=this.headerActions
   if(!header)return
-  header.hidden=!this.record.workbook
-  if(!this.record.workbook){header.replaceChildren();return}
+  header.hidden=false
   const locked=this.preview||!this.canEdit
   const mode=locked?'preview':'edit'
   const label=!this.canEdit?headerEditLock.readOnly:locked?headerEditLock.locked:headerEditLock.unlocked
@@ -378,7 +380,7 @@ class SpreadsheetView{
    header.innerHTML=button('view-mode','',{glyph:locked?'lock':'lock-open',label:copy,pressed:locked})+
     button('menu','',{glyph:'more',label:'更多表格操作',value:'book'})
   }
-  header.querySelector<HTMLButtonElement>('[data-action=view-mode]')!.disabled=!this.canEdit||this.busy||this.switchingMode
+  header.querySelector<HTMLButtonElement>('[data-action=view-mode]')!.disabled=!this.record.workbook||!this.canEdit||this.busy||this.switchingMode
  }
  private sessionTitle(){return this.headerActions?.dataset.eworkSpreadsheetTitle?.trim()||undefined}
  private paint(){
@@ -786,7 +788,7 @@ class SpreadsheetView{
    ]
    case 'book':return [
     {label:'导入 Excel / CSV…',action:'import',browserIcon:'external',disabled:!this.editable||this.busy},
-    {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:this.busy||this.sharedReadOnly},
+    {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:!this.record.workbook||this.busy||this.sharedReadOnly},
     ...(this.incoming?[{label:'载入最新版本',action:'load-incoming',browserIcon:'refresh' as const,divider:true}]:[]),
     ...(this.record.canRedoAI?[{label:'重新应用 AI 修改',action:'redo-ai',browserIcon:'forward' as const,divider:true,disabled:!this.editable}]:[]),
     ...(this.record.lastAction?[{label:'撤销最近的 AI 修改',action:'undo-ai',browserIcon:'back' as const,divider:!this.record.canRedoAI,disabled:!this.editable}]:[])

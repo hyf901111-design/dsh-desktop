@@ -82,7 +82,7 @@ export function secureWindow(
     // must not inherit the shell's access to local document routes.
     const mainFrame = window.webContents.mainFrame
     if (sameFrame(event.initiator, mainFrame) && sameFrame(event.frame?.parent, mainFrame) &&
-      isSidebarPreviewUrl(event.url, mainFrame.url)) return
+      (isSidebarPreviewUrl(event.url, mainFrame.url) || isPresentationEditorUrl(event.url, mainFrame.url))) return
     try {
       if (options.allowsResearchFrameUrl?.(event.url) === true) return
     } catch {
@@ -109,7 +109,13 @@ export function secureWindow(
       )
   )
   window.webContents.session.setPermissionRequestHandler(
-    (_webContents, permission, callback, details) => {
+    (requester, permission, callback, details) => {
+      if (permission === 'fullscreen' && requester === window.webContents && !details.isMainFrame &&
+          isPresentationEditorUrl(details.requestingUrl, requester.mainFrame.url) &&
+          requester.mainFrame.frames.some(frame => frame.url === details.requestingUrl)) {
+        callback(true)
+        return
+      }
       callback(
         canGrantWindowPermission(permission, details.requestingUrl, details.isMainFrame)
       )
@@ -141,6 +147,16 @@ function sameFrame(
   mainFrame: { processId: number; routingId: number }
 ): boolean {
   return !!frame && frame.processId === mainFrame.processId && frame.routingId === mainFrame.routingId
+}
+
+function isPresentationEditorUrl(rawUrl: string, shellUrl: string): boolean {
+  try {
+    const shell = new URL(shellUrl)
+    return shell.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(shell.hostname) &&
+      rawUrl === 'odyssey-presentation://editor/index.html?host=' + encodeURIComponent(shell.origin)
+  } catch {
+    return false
+  }
 }
 
 function isSidebarPreviewUrl(rawUrl: string, shellUrl: string): boolean {

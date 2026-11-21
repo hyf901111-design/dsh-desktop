@@ -14,11 +14,12 @@ import { registerHomeReportRuntime } from './home-report-runtime.js'
 import { registerHomeNotesRuntime } from './home-notes-runtime.js'
 import { registerHomeBoardSmartRuntime } from './home-board-smart-runtime.js'
 import { registerHomeWorkbenchRuntime } from './home-workbench-runtime.js'
+import { registerPresentationEditGuideChat } from './presentation-edit-guide-chat.js'
 import { registerHomeSpreadsheetRuntime } from './home-spreadsheet-runtime.js'
-import {registerSpreadsheetSessions} from './spreadsheet-sessions.js'
+import {registerSpreadsheetSessions,registerDocumentSessions} from './spreadsheet-sessions.js'
 import { registerResearchSessionTitles } from './research-session-title.js'
 import {registerKnowledgeSessions} from './knowledge-sessions.js'
-import {readSpreadsheetReference,registerClientTools} from './client-tools.js'
+import {readWorkspaceReference,registerClientTools} from './client-tools.js'
 import {registerResearchReportTool} from './research-report-tool.js'
 import {registerPresentationFiles} from './presentation-files.js'
 import {applicableExplicitScope,usesHumanSourceScope} from './workbench-explicit-scope.js'
@@ -3732,7 +3733,7 @@ export async function apply(ctx) {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence })
-    const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readSpreadsheetReference})
+    const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readWorkspaceReference})
     const disposeModelQueue = registerWorkbenchModelQueue(ctx)
     const disposeCompletionNotifications = registerSessionCompletionNotifications(ctx)
     const disposeRoutes = registerResearchTaskRoutes(ctx.webServer, runtime)
@@ -3742,6 +3743,7 @@ export async function apply(ctx) {
     const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
     const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
+    const disposePresentationSessions = registerDocumentSessions(ctx,{isTrustedRequest, readJsonBody},'presentation')
     const disposeSpreadsheetSessions = registerSpreadsheetSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposeResearchSessionTitles = registerResearchSessionTitles(ctx, {isTrustedRequest, readJsonBody})
     const disposeKnowledgeSessions = registerKnowledgeSessions(ctx, {isTrustedRequest, readJsonBody})
@@ -3750,6 +3752,7 @@ export async function apply(ctx) {
     const disposeHomeNotes = registerHomeNotesRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomeBoardSmart = registerHomeBoardSmartRuntime(ctx, runtime, {isTrustedRequest, readJsonBody})
     const disposeHomeWorkbench = registerHomeWorkbenchRuntime(ctx, runtime, {isTrustedRequest, readJsonBody})
+    const disposePresentationEditGuideChat = registerPresentationEditGuideChat(ctx, {isTrustedRequest, readJsonBody})
     const disposeHomeSpreadsheet = registerHomeSpreadsheetRuntime(ctx, {isTrustedRequest, readJsonBody})
     const disposeCanvasTools = registerCanvasTools(ctx)
     const disposeClientTools = registerClientTools(ctx)
@@ -3777,12 +3780,13 @@ export async function apply(ctx) {
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
-      disposeNoteSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeKnowledgeSessions()
+      disposeNoteSessions();disposePresentationSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeKnowledgeSessions()
       void disposeHomePresentation()
       void disposeHomeReport()
       void disposeHomeNotes()
       disposeHomeBoardSmart()
       void disposeHomeWorkbench()
+      void disposePresentationEditGuideChat()
       void disposeHomeSpreadsheet()
       throw error
     }
@@ -3809,12 +3813,13 @@ export async function apply(ctx) {
       disposeScheduledTaskTool()
       disposeNotesAi()
       disposeNotesChallenge()
-      disposeNoteSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeKnowledgeSessions()
+      disposeNoteSessions();disposePresentationSessions();disposeSpreadsheetSessions();disposeResearchSessionTitles();disposeKnowledgeSessions()
       await disposeHomePresentation()
       await disposeHomeReport()
       await disposeHomeNotes()
       disposeHomeBoardSmart()
       await disposeHomeWorkbench()
+      await disposePresentationEditGuideChat()
       await disposeHomeSpreadsheet()
       await runtime.dispose()
     }

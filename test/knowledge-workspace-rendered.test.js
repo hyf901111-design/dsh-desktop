@@ -247,6 +247,7 @@ beforeAll(async () => {
       }
       mountKnowledgeWorkspace(document, host, {
         memory,
+        async openFileInEditor(source, mode) { window.openFileRequest = { source, mode } },
         async openImageFactoryCopy(id) { window.openImageRequest = { id, action: 'copy' } },
         async openImageFactorySource(id) { window.openImageRequest = { id, action: 'source' } },
         async request(method, args) {
@@ -1335,6 +1336,33 @@ it('opens the same file actions from a row right-click and the more button', asy
     expect(await menu.getByRole('button').allTextContents()).toEqual(actions)
     await menu.getByRole('button', { name: '重命名' }).click()
     expect(await library.getByRole('dialog', { name: '重命名文件' }).locator('input').inputValue()).toBe('消费行业周报')
+  } finally { await page.close() }
+})
+
+it('opens the same presentation actions from the sidebar and full library', async () => {
+  const page = await browser.newPage({ viewport: { width: 1350, height: 800 } })
+  try {
+    await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
+    await page.goto('https://knowledge.test/')
+    await page.setContent('<div class="pI_x6G_centerCol" style="position:fixed;inset:10px 350px 10px 10px"></div><aside data-knowledge-panel-host style="position:fixed;inset:10px 10px 10px auto;width:320px"></aside>')
+    await page.addScriptTag({ content: bundle })
+    const library = page.getByRole('region', { name: '知识库', exact: true })
+    await library.getByRole('button', { name: '演示文稿.pptx的更多操作' }).click()
+    const expected = await library.locator('.knowledge-action-menu button').allTextContents()
+    expect(expected).toContain('在演示中打开')
+    await page.keyboard.press('Escape')
+    const row = page.locator('.knowledge-panel-row[data-knowledge-file-id="c"]')
+    await row.click({ button: 'right' })
+    const menu = page.locator('.knowledge-panel .knowledge-action-menu')
+    expect(await menu.locator('button').allTextContents()).toEqual(expected)
+    await menu.getByRole('button', { name: '重命名' }).click()
+    const dialog = page.locator('.knowledge-panel').getByRole('dialog')
+    expect(await dialog.locator('input').inputValue()).toBe('演示文稿')
+    await dialog.getByRole('button', { name: '取消' }).click()
+    await row.click({ button: 'right' })
+    await menu.getByRole('button', { name: '在演示中打开' }).click()
+    expect(await page.evaluate(() => window.openFileRequest)).toEqual({ source: { id: 'c', sessionId: undefined }, mode: 'presentation' })
+    expect(await menu.count()).toBe(0)
   } finally { await page.close() }
 })
 

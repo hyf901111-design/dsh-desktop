@@ -7,13 +7,15 @@ import { copyFile, readFile, realpath, rename, rm, stat } from 'node:fs/promises
 import { basename, dirname, extname, isAbsolute, join, relative, sep } from 'node:path'
 import { atomicWrite } from '../integrations/store'
 import { registerTrustedMainWindowHandler } from '../ipc-trust'
-import { type KnowledgeEdit } from '../../shared/knowledge-library'
+import { canOpenKnowledgeImage, type KnowledgeEdit } from '../../shared/knowledge-library'
 import type { KnowledgeSharing } from './sharing'
 import type { ImageFactoryCanvases } from '../state/image-factory-canvases'
 import type { KnowledgeStore } from './store'
 import { sharedKnowledgeSessionFile, knowledgeSessionLabels, knowledgeSessionShareKey, type KnowledgeSessionEvidence, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 import { maximumCanvasImageBytes, validCanvasSize } from '../../shared/image-factory-canvas'
 import { fileEditorMode } from '../../shared/file-editor.mjs'
+import type { Deck } from '../presentation/store'
+import { presentationFileBytes, readDroppedPresentation } from '../presentation/import-file'
 import { readNoteDocumentContent } from '../notes/document-import'
 import { validateNoteContent } from '../notes/store'
 import { readWorkbookFile, readWorkbookPath } from '../spreadsheet/files'
@@ -58,7 +60,7 @@ export function installKnowledgeIpc({
   sessionSnapshot(owner: string, id: string, mode: KnowledgeSessionMode, displayTitle: string, check: () => void): Promise<{ name: string; data: Buffer }>
 }) {
   const activeCopies = new Set<string>()
-  const preparedNotes = new Map<string, { identity: ReturnType<typeof identity>; expires: number; title: string; fromSession?: string }>()
+  const preparedImports = new Map<string, { mode: 'notes' | 'presentation'; identity: ReturnType<typeof identity>; expires: number; title: string; fromSession?: string }>()
   const workspaceFile = async (sessionId: unknown, candidate: unknown) => {
     if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 256 ||
         typeof candidate !== 'string' || candidate.length > 8192 || !isAbsolute(candidate)) throw Error('会话文件来源无效。')
@@ -74,7 +76,7 @@ export function installKnowledgeIpc({
   const transfers = new Map<string, { controller: AbortController; sender: WebContents }>()
   const observedSenders = new WeakSet<WebContents>()
   registerTrustedMainWindowHandler(ipcMain, 'knowledge:request', window, async (event, method: unknown, input?: unknown) => {
-    if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input) || JSON.stringify(input).length > (method === 'finish-note-file-import' ? 4 * 1024 * 1024 : 550_000))) {
+    if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input) || JSON.stringify(input).length > (method === 'finish-presentation-file-import' ? 96 * 1024 * 1024 : method === 'finish-note-file-import' ? 4 * 1024 * 1024 : 550_000))) {
       throw Error('知识库请求无效。')
     }
     const args = (input ?? {}) as Record<string, unknown>
@@ -227,28 +229,36 @@ export function installKnowledgeIpc({
         } finally { activeCopies.delete(key) }
       }
       case 'copy-image-factory-file': {
-        const documentId = id(args.id)
+        const documentId = previewId(args.id)
         const key = owner.owner + ':image:' + documentId
         if (activeCopies.has(key)) throw Error('正在创建这张图片的副本。')
         activeCopies.add(key)
         try {
-          const { document, path } = await store.file(documentId)
+          const file = documentId.length === 32 ? await sharing.read(documentId, AbortSignal.timeout(20_000)) : await store.file(documentId)
           check()
-          if (document.generatedBy !== 'image-factory' || document.size > maximumCanvasImageBytes) {
-            throw Error('请选择在「图像」中生成的图片。')
-          }
-          const image = await readFile(path)
+          const { document } = file
+          if (!canOpenKnowledgeImage(document.name) || document.size > maximumCanvasImageBytes)
+            throw Error('请选择容量限制内的 PNG 或 JPEG 图片。')
+          const data = 'data' in file ? file.data : await readFile(file.path)
           check()
-          if (image.length < 24 || image.length > maximumCanvasImageBytes || image.toString('ascii', 12, 16) !== 'IHDR') {
-            throw Error('归档 PNG 图片无法读取。')
-          }
-          const width = image.readUInt32BE(16), height = image.readUInt32BE(20)
-          if (!validCanvasSize(width, height)) throw Error('图片尺寸超出「图像」画布限制。')
-          if (nativeImage.createFromBuffer(image).isEmpty()) throw Error('归档 PNG 图片无法读取。')
+          if (data.length > maximumCanvasImageBytes) throw Error('图片超出画布容量限制。')
+          const bitmap = nativeImage.createFromBuffer(data)
+          const { width, height } = bitmap.getSize()
+          if (bitmap.isEmpty() || !validCanvasSize(width, height)) throw Error('图片无法读取或尺寸超出画布限制。')
+          const image = bitmap.toPNG()
+          if (image.length > maximumCanvasImageBytes) throw Error('图片超出画布容量限制。')
           const title = basename(document.name, extname(document.name)).trim() || '生成图片'
           return await copySession(owner.owner, { mode: 'image-factory', title, image, width, height, epoch: owner.generation },
             document.sessionId, check)
         } finally { activeCopies.delete(key) }
+      }
+      case 'presentation-drop-file': {
+        const fileId = previewId(args.id)
+        const file = fileId.length === 32 ? await sharing.read(fileId, AbortSignal.timeout(20_000)) : await store.file(fileId)
+        check()
+        const result = await readDroppedPresentation(file.document, args.label, 'data' in file ? file.data : file.path)
+        check()
+        return result
       }
       case 'open-file-in-editor': {
         const fromSession = typeof args.sessionId === 'string' && args.sessionId.length <= 256 ? args.sessionId : undefined
@@ -276,23 +286,30 @@ export function installKnowledgeIpc({
           const session = await copySession(owner.owner, { title, version: 1, mode, workbook }, fromSession, check, true)
           return { session }
         }
-        const locale = args.locale === 'en' ? 'en' : undefined
-        const note = await readNoteDocumentContent(file.document, 'data' in file ? file.data : file.path, content, signal, locale)
+        const sourceData = 'data' in file ? file.data : file.path
+        const contents = mode === 'presentation'
+          ? { bytes: await presentationFileBytes(name, file.document.size, sourceData), name: title + '.pptx' }
+          : { note: await readNoteDocumentContent(file.document, sourceData, content, signal, args.locale === 'en' ? 'en' : undefined) }
         check()
         const now = Date.now()
-        for (const [token, entry] of preparedNotes) {
-          if (entry.expires <= now || !identityMatches(entry.identity, owner)) preparedNotes.delete(token)
+        for (const [token, entry] of preparedImports) {
+          if (entry.expires <= now || !identityMatches(entry.identity, owner)) preparedImports.delete(token)
         }
-        if (preparedNotes.size >= 16) throw Error('正在导入多份笔记，请稍后重试。')
+        if (preparedImports.size >= 16) throw Error('正在导入多份文件，请稍后重试。')
         const token = randomUUID()
-        preparedNotes.set(token, { identity: owner, expires: now + 60_000, title, fromSession })
-        return { token, note }
+        preparedImports.set(token, { mode, identity: owner, expires: now + 180_000, title, fromSession })
+        return { token, ...contents }
       }
+      case 'finish-presentation-file-import':
       case 'finish-note-file-import': {
         const token = id(args.token)
-        const entry = preparedNotes.get(token)
-        if (!entry || entry.expires <= Date.now() || !identityMatches(entry.identity, owner)) throw Error('导入已过期，请重新打开文件。')
-        preparedNotes.delete(token)
+        const entry = preparedImports.get(token)
+        const presentation = method === 'finish-presentation-file-import'
+        if (!entry || entry.mode !== (presentation ? 'presentation' : 'notes') || entry.expires <= Date.now() || !identityMatches(entry.identity, owner)) throw Error('导入已过期，请重新打开文件。')
+        preparedImports.delete(token)
+        if (presentation) return { session: await copySession(owner.owner, {
+          title: entry.title, mode: 'presentation', deck: args.deck as Deck
+        }, entry.fromSession, check, true) }
         const note = validateNoteContent({ title: entry.title, blocks: args.blocks, yjs: '' })
         if (!note.blocks.length) throw Error('文档中没有可导入的内容。')
         return { session: await copySession(owner.owner, { title: entry.title, mode: 'notes', note }, entry.fromSession, check, true) }

@@ -1,8 +1,17 @@
+import {presentationCodec,installPresentationReferences,presentationMessageParts} from './presentation-references.mjs'
 import {spreadsheetRangeCodec,collectSpreadsheetReferences,installSpreadsheetReferences,spreadsheetMessageParts} from './spreadsheet-inline-references.mjs'
 import {SPREADSHEET_QUICK_PROMPTS} from '../../packages/dsh-research-task-runtime/spreadsheet-quick-prompts.js'
 import {eworkWorkspaceDraftText,eworkWorkspaceDraftRevision,eworkBindWorkspaceDraft,eworkRestoreWorkspaceDraft,eworkWorkspaceDraftImages} from './workspace-draft-state.mjs'
 
 const modeWelcome={
+ presentation:{
+  zh:{heading:['从一个主题，','开始一份演示。'],body:['描述汇报主题，或导入已有 PowerPoint。','可以编排幻灯片、修改图表，也可以撰写讲稿。'],
+   labels:['起草季度经营汇报','优化当前页的标题','为当前页撰写讲稿'],
+   prompts:['请用易方达版式起草一份季度经营汇报，包含封面、经营表现和下一季度行动。请先向我确认汇报的季度和可用资料。','请阅读当前幻灯片，把标题改成一句有依据的结论，保留原始数据与其他内容。','请根据当前幻灯片的内容撰写一段一分钟讲稿，写入本页备注。如果还没有幻灯片，请先问我要讲什么。']},
+  en:{heading:['Start with a topic,','build a presentation.'],body:['Describe your presentation or import a PowerPoint file.','Arrange slides, revise charts, or write speaker notes.'],
+   labels:['Draft a quarterly review','Improve this slide’s title','Write speaker notes'],
+   prompts:['Draft a quarterly business review using the E Fund layouts, including a cover, performance and next-quarter actions. First ask me which quarter and source materials to use.','Read the current slide and give it a clear takeaway title supported by the data. Keep the figures and other content intact.','Write one minute of speaker notes for the current slide and save them in its notes. If there is no slide yet, ask what I want to present.']}
+ },
  spreadsheet:{
   zh:{heading:['从一个问题，','开始一张表格。'],body:['导入已有 Excel，或直接描述需要的分析。','我可以创建工作表、填写公式、整理格式。'],
    labels:['制作消费行业可比估值表','整理上传的数据并去重','创建现金流预测模型'],prompts:SPREADSHEET_QUICK_PROMPTS.zh},
@@ -52,6 +61,12 @@ ${marker}
 function EWorkSpreadsheetView({sessionId}){
  return react.createElement(react.Fragment,null,react.createElement('div',{'data-ework-spreadsheet-view':sessionId}),react.createElement(EWorkNoteComponentViews,{sessionId,active:false,spreadsheet:true}));
 }
+function EWorkPresentationView({sessionId}){
+ return react.createElement('div',{'data-ework-presentation-view':sessionId});
+}
+slots.register({name:'conversation.view',id:'presentation',order:11,label:()=>document.documentElement.dataset.odysseyLocale==='en'?'Presentation':'演示',inject:sessionId=>({sessionId})},EWorkPresentationView);
+ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').registerSource((${presentationCodec.toString()})()),'Presentation reference codec'));
+ctx.effect(()=>(${installPresentationReferences.toString()})({win:window,doc:document,sessions,getInput:id=>eworkActiveInput(id,inputHub.shell(id))}),'Presentation inline references');
 slots.register({name:'conversation.view',id:'spreadsheet',order:10,label:()=>document.documentElement.dataset.odysseyLocale==='en'?'Spreadsheet':'表格',inject:sessionId=>({sessionId})},EWorkSpreadsheetView);
 ctx.effect(()=>{
  const fill=event=>{
@@ -60,6 +75,7 @@ ctx.effect(()=>{
   const {sessionId,mode,index}=detail,surface=document.body.dataset.workspaceSurface;
   if(mode==='notes'?surface!=='notes':surface)return;
   if(mode==='spreadsheet'&&document.body.dataset.eworkSpreadsheetSession!==sessionId)return;
+  if(mode==='presentation'&&document.body.dataset.eworkPresentationSession!==sessionId)return;
   const prompt=eworkModeWelcome[mode]?.[eworkModeLocale()]?.prompts[index];
   if(typeof prompt!=='string')return;
   const shell=eworkActiveInput(sessionId,inputHub.shell(sessionId)),draft=shell?.snapshot;
@@ -117,12 +133,12 @@ ctx.effect(()=>(${installSpreadsheetReferences.toString()})({win:window,doc:docu
  const committedRev='const committedDraftRev = shell?.snapshot.draftRev;'
  change(committedRev,'const committedDraftRev = admissionCore ? eworkWorkspaceDraftRevision(admissionCore) : undefined;','remember original draft revision after send')
  const mode="const sidebarMode=(research || activeView==='notes' || browserAppActive || pendingRight)&&(!homeGuideResident||homeGuideSidebar||browserAppActive||pendingRight);"
- change(mode,mode.replace("research || activeView==='notes'","research || activeView==='notes' || !subagentPanel&&activeView==='spreadsheet'").replace('||homeGuideSidebar||browserAppActive','||homeGuideSidebar||activeView===\'spreadsheet\'||browserAppActive'),'shared conversation')
+ change(mode,mode.replace("research || activeView==='notes'","research || activeView==='notes' || !subagentPanel&&['presentation','spreadsheet'].includes(activeView)").replace('||homeGuideSidebar||browserAppActive','||homeGuideSidebar||[\'presentation\',\'spreadsheet\'].includes(activeView)||browserAppActive'),'shared conversation')
  const page='"data-phase": phase,\n\t\t\t\t"data-odyssey-page": research ? "research" : hero ? "home" : "conversation",'
- change(page,page.replace('research ?','activeView===\'spreadsheet\'&&!subagentPanel ? "spreadsheet" : research ?'),'resident layout')
+ change(page,page.replace('research ?','[\'presentation\',\'spreadsheet\'].includes(activeView)&&!subagentPanel ? activeView : research ?'),'resident layout')
  const welcomeAnchor='function HomeGuideNativeOriginalConversationRoot('
  change(welcomeAnchor,`const eworkModeWelcome=${JSON.stringify(modeWelcome)};
-const eworkSheetContextOptOut=new WeakSet();
+const eworkSheetContextOptOut=new WeakSet(),eworkPresentationContextOptOut=new WeakSet();
 const eworkModeLocale=()=>document.documentElement.dataset.odysseyLocale==='en'?'en':'zh';
 function subscribeEWorkModeLocale(notify){
  const observer=new MutationObserver(notify);
@@ -134,7 +150,7 @@ function EWorkModeWelcome({sessionId,mode}){
  const {heading,body,labels}=eworkModeWelcome[mode][language];
  const choose=index=>window.dispatchEvent(new CustomEvent('sherlock:mode-quick-prompt',{detail:{sessionId,mode,index}}));
  const h=react.createElement,br=()=>h('br');
- return h('div',{className:'ew-sheet-welcome','data-mode-welcome':mode,'data-research-empty-state':mode==='spreadsheet'?undefined:'','data-note-empty-state':mode==='notes'?'':undefined},
+ return h('div',{className:'ew-sheet-welcome','data-mode-welcome':mode,'data-research-empty-state':['notes','research'].includes(mode)?'':undefined,'data-note-empty-state':mode==='notes'?'':undefined},
   h('div',{className:'ew-sheet-welcome-content'},
   h('h2',null,heading[0],br(),heading[1]),
   h('p',null,body[0],br(),body[1]),
@@ -143,18 +159,19 @@ function EWorkModeWelcome({sessionId,mode}){
     h('path',{d:'M12 3l2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3z'})),
    h('span',null,title))))));
 }
-function EWorkSpreadsheetContextBadge({keyboard,input,disabled}){
+function EWorkSpreadsheetContextBadge({keyboard,input,disabled,presentation=false}){
  const language=react.useSyncExternalStore(subscribeEWorkModeLocale,eworkModeLocale,eworkModeLocale);
- const [optOut,setOptOut]=react.useState(()=>eworkSheetContextOptOut.has(keyboard));
+ const preference=presentation?eworkPresentationContextOptOut:eworkSheetContextOptOut;
+ const [,update]=react.useReducer(n=>n+1,0),optOut=preference.has(keyboard);
  const [open,setOpen]=react.useState(false);
- const id=react.useId(),hasRange=input?.occurrences?.some(item=>item.source==='spreadsheet-range');
+ const id=react.useId(),hasRange=input?.occurrences?.some(item=>item.source===(presentation?'presentation-reference':'spreadsheet-range'));
  react.useEffect(()=>{if(hasRange)setOpen(false)},[hasRange]);
  if(!keyboard||hasRange)return null;
- const [use,skip]=language==='en'?['Use current workbook','Skip current workbook']:['参考当前表格内容','不参考当前表格内容'];
+ const [use,skip]=presentation?(language==='en'?['Use current slide','Skip current slide']:['参考当前幻灯片内容','不参考当前幻灯片内容']):language==='en'?['Use current workbook','Skip current workbook']:['参考当前表格内容','不参考当前表格内容'];
  const toggle=()=>{
-  if(optOut)eworkSheetContextOptOut.delete(keyboard);
-  else eworkSheetContextOptOut.add(keyboard);
-  setOptOut(!optOut);setOpen(false);
+  if(optOut)preference.delete(keyboard);
+  else preference.add(keyboard);
+  update();setOpen(false);
  };
  const h=react.createElement;
  return h('div',{'data-sheet-context-anchor':'',
@@ -166,31 +183,32 @@ function EWorkSpreadsheetContextBadge({keyboard,input,disabled}){
 }
 ${welcomeAnchor}`,'right pane welcome component')
  const portal='pendingRight ? researchConversationView : activeView === \'notes\' && document.body.dataset.workspaceSurface!==\'browser\' ?'
- change(portal,"pendingRight ? researchConversationView : activeView==='spreadsheet'&&!browserAppActive&&!subagentPanel ? (conversationVacant ? react.createElement(EWorkModeWelcome,{sessionId,mode:'spreadsheet'}) : sessionPresentation.conversationView) : activeView==='notes'&&!browserAppActive&&!subagentPanel ?",'right pane welcome')
+ change(portal,"pendingRight ? researchConversationView : activeView==='presentation'&&!browserAppActive&&!subagentPanel ? (conversationVacant ? react.createElement(EWorkModeWelcome,{sessionId,mode:'presentation'}) : sessionPresentation.conversationView) : activeView==='spreadsheet'&&!browserAppActive&&!subagentPanel ? (conversationVacant ? react.createElement(EWorkModeWelcome,{sessionId,mode:'spreadsheet'}) : sessionPresentation.conversationView) : activeView==='notes'&&!browserAppActive&&!subagentPanel ?",'right pane welcome')
  const notePortal='EWorkNotesConversation,{sessionId,t,empty:conversationVacant,children:sessionPresentation.conversationView}'
  change(notePortal,"EWorkNotesConversation,{sessionId,t,empty:conversationVacant,welcomeView:react.createElement(EWorkModeWelcome,{sessionId,mode:'notes'}),children:sessionPresentation.conversationView}",'notes welcome without replacing native history')
  const researchWelcome=': researchEmpty ? (0, react_jsx_runtime.jsx)("div", {\n\t\t\t\tclassName: "sRp_emptyState",'
  change(researchWelcome,": researchEmpty && research && !browserAppActive && !subagentPanel ? react.createElement(EWorkModeWelcome,{sessionId,mode:'research'}) "+researchWelcome,'research welcome without replacing personal history')
  const inputBar='function InputBar({ subagentPanel=false,'
- change(inputBar,inputBar.replace('subagentPanel=false','eworkSpreadsheet=false, eworkNoteContext, subagentPanel=false'),'spreadsheet context composer input')
+ change(inputBar,inputBar.replace('subagentPanel=false','eworkSpreadsheet=false, eworkPresentation=false, eworkNoteContext, subagentPanel=false'),'spreadsheet context composer input')
  const barProps='eworkNotes:activeView === "notes",'
- change(barProps,barProps+"\n eworkSpreadsheet:activeView==='spreadsheet'&&!browserAppActive&&!pendingRight&&!subagentPanel,", 'spreadsheet context surface')
+ change(barProps,barProps+"\n eworkPresentation:activeView==='presentation'&&!browserAppActive&&!pendingRight&&!subagentPanel, eworkSpreadsheet:activeView==='spreadsheet'&&!browserAppActive&&!pendingRight&&!subagentPanel,", 'spreadsheet context surface')
  const canvasContext='researchCanvasWorkspace: research && sessionId !== void 0 ? researchWorkspace : void 0,'
  change(canvasContext,canvasContext.replace('research &&','research && !browserAppActive && !pendingRight && !subagentPanel &&'),'research context surface')
  const badge='researchCanvasWorkspace !== void 0 && (0, react_jsx_runtime.jsx)(ResearchCanvasContextBadge, { workspace: researchCanvasWorkspace, input, keyboard, t, disabled }, sessionId),'
- change(badge,"eworkNoteContext,\n "+badge+"\n eworkSpreadsheet && react.createElement(EWorkSpreadsheetContextBadge,{key:sessionId,keyboard,input,disabled}),",'spreadsheet context badge')
- for(const [before,after] of [["notes:'新笔记',trajectory:", "notes:'新笔记',spreadsheet:'新表格',trajectory:"],["notes:'New Note',trajectory:", "notes:'New Note',spreadsheet:'New Spreadsheet',trajectory:"]]){
+ change(badge,"eworkNoteContext,\n "+badge+"\n (eworkSpreadsheet||eworkPresentation) && react.createElement(EWorkSpreadsheetContextBadge,{key:sessionId+String(eworkPresentation),keyboard,input,disabled,presentation:eworkPresentation}),",'spreadsheet context badge')
+ for(const [before,after] of [["notes:'新笔记',trajectory:", "notes:'新笔记',spreadsheet:'新表格',presentation:'新演示',trajectory:"],["notes:'New Note',trajectory:", "notes:'New Note',spreadsheet:'New Spreadsheet',presentation:'New Presentation',trajectory:"]]){
   const nativeTitle=source.split('/* browser-app-native:v1 */')[0]
   if(nativeTitle.split(before).length===2)change(before,after,'spreadsheet blank title '+before)
  }
  const utilities=`children: [active?.id === 'notes' && (0,react_jsx_runtime.jsx)(EWorkNoteExportMenu,{sessionId}), renderSlot("conversation.session.header.utilities", {})]`
- change(utilities,utilities.replace('children: [', "children: [active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId,'data-ework-spreadsheet-title':explicitSessionTitle?.trim()||(!blankResearchTitle&&ancestry.at(-1)?.displayTitle)||(document.documentElement.dataset.odysseyLocale==='en'?'New Spreadsheet':'新表格')}),"),'spreadsheet top bar actions')
+ change(utilities,utilities.replace('children: [', "children: [active?.id==='presentation' && react.createElement('div',{'data-ework-presentation-actions':sessionId}),active?.id==='spreadsheet' && react.createElement('div',{'data-ework-spreadsheet-actions':sessionId,'data-ework-spreadsheet-title':explicitSessionTitle?.trim()||(!blankResearchTitle&&ancestry.at(-1)?.displayTitle)||(document.documentElement.dataset.odysseyLocale==='en'?'New Spreadsheet':'新表格')}),"),'spreadsheet top bar actions')
  const binding="const mode=active.id==='notes'?'notes':active.id==='research'?'research':'conversation';"
- change(binding,binding.replace(":'conversation'",":active.id==='spreadsheet'?'spreadsheet':'conversation'"),'tool mode')
+ change(binding,binding.replace(":'conversation'",":['presentation','spreadsheet'].includes(active.id)?active.id:'conversation'"),'tool mode')
  const select='const selectView = (0, react.useCallback)((viewId) => {'
  change(select,select+`
-                if(active?.id==='spreadsheet'&&viewId!=='spreadsheet'&&document.body.dataset.eworkSpreadsheetSession===sessionId){
-                  void window.dshDesktop?.spreadsheetFlush?.(sessionId).then(()=>{if(document.body.dataset.eworkSpreadsheetSession===sessionId){
+                const leavingPresentation=active?.id==='presentation'&&viewId!=='presentation'&&document.body.dataset.eworkPresentationSession===sessionId;
+                if(leavingPresentation||active?.id==='spreadsheet'&&viewId!=='spreadsheet'&&document.body.dataset.eworkSpreadsheetSession===sessionId){
+                  void (leavingPresentation?window.dshDesktop.presentationFlush(sessionId):window.dshDesktop.spreadsheetFlush(sessionId)).then(()=>{if((leavingPresentation?document.body.dataset.eworkPresentationSession:document.body.dataset.eworkSpreadsheetSession)===sessionId){
                     explicitHomeViewSessions.delete(sessionId);explicitResearchViewSessions.add(sessionId);
                     if(viewId!=='research')clearInitialResearchSession(sessionId);
                     actions.setView(viewId);
@@ -202,9 +220,9 @@ ${welcomeAnchor}`,'right pane welcome component')
  change(selectEnd,selectEnd.replace('[actions, sessionId]','[actions, sessionId, active?.id]'),'view lifecycle')
  const chip='children: [chip.source === "pptx-annotation" && renderPptxAnnotationPin'
  const gridIcon=`react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('rect',{x:4,y:4,width:16,height:16,rx:2}),react.createElement('path',{d:'M4 9h16M4 14h16M10 4v16'}))`
- change(chip,chip.replace('children: [',`children: [chip.source==='image-factory-layer' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5'})), chip.source==='spreadsheet-range' && ${gridIcon}, chip.source==='knowledge-reference' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1zm0 0v14'})), `),'range chip icon')
+ change(chip,chip.replace('children: [',`children: [chip.source==='image-factory-layer' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5'})), chip.source==='presentation-reference' && react.createElement('span',{'aria-hidden':true,className:'ew-presentation-chip-icon'}), chip.source==='spreadsheet-range' && ${gridIcon}, chip.source==='knowledge-reference' && react.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'currentColor',strokeWidth:1.5,'aria-hidden':true},react.createElement('path',{d:'M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1zm0 0v14'})), `),'range chip icon')
  const remove='(researchReference !== null || chip.source === "pptx-annotation") && selectedResearchOccurrenceId'
- change(remove,remove.replace('|| chip.source', '|| chip.source === "spreadsheet-range" || chip.source === "knowledge-reference" || chip.source === "image-factory-layer" || chip.source'),'range chip removal')
+ change(remove,remove.replace('|| chip.source', '|| chip.source === "presentation-reference" || chip.source === "spreadsheet-range" || chip.source === "knowledge-reference" || chip.source === "image-factory-layer" || chip.source'),'range chip removal')
  const nativeDrag='draggable: researchReference !== null && !provisionalResearchReferences.has(chip.occurrenceId) && !locked && !machineBusy,'
  change(nativeDrag,nativeDrag.replace('researchReference !== null', '(researchReference !== null || chip.source === "image-factory-layer")')
   .replace('&& !locked', '&& !isImageLayerPreview(chip) && !locked'),'layer chip dragging')
@@ -216,13 +234,20 @@ ${welcomeAnchor}`,'right pane welcome component')
  }
  const history='function projectUserText(text, openFile) {'
  change(history,history+`
- const sheetParts=(${spreadsheetMessageParts.toString()})(text)
+ const sheetParts=(${presentationMessageParts.toString()})(text)??(${spreadsheetMessageParts.toString()})(text)
  if(sheetParts)return react.createElement(react.Fragment,null,sheetParts.map((part,i)=>part.label?
-  react.createElement('span',{key:i,className:MessageItem_module_css_default.refChip,'data-ref-chip':'spreadsheet-range',title:part.label},${gridIcon},part.label):
+  react.createElement('span',{key:i,className:MessageItem_module_css_default.refChip,'data-ref-chip':part.source||'spreadsheet-range',title:part.label},part.source==='presentation-reference'?react.createElement('span',{className:'ew-presentation-chip-icon','aria-hidden':true}):${gridIcon},part.label):
   react.createElement(react.Fragment,{key:i},projectUserText(part.text,openFile))))
  `,'sent range chip')
  const commit='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
  change(commit,`if(!ownsWorkspaceDraft())return;
+                if(document.body.dataset.eworkPresentationSession===session.sessionId){
+                  try{
+                    const refs=attempt.draftState.occurrences.filter(o=>o.source==='presentation-reference').map(o=>JSON.parse(o.ref));
+                    await window.dshDesktop.presentationAdmission(session.sessionId,attempt.text,refs,!eworkPresentationContextOptOut.has(shell));
+                    if(!ownsWorkspaceDraft()||document.body.dataset.eworkPresentationSession!==session.sessionId||this.researchSendAttempts.get(session.sessionId)!==sendAttempt)return;
+                  }catch(error){shell?.notify('error',error?.message??'演示尚未同步，草稿已保留。');return}
+                }else if(attempt.draftState.occurrences.some(o=>o.source==='presentation-reference')){shell?.notify('error','请回到演示发送选区引用。');return}
                 if(document.body.dataset.eworkSpreadsheetSession===session.sessionId){
                   try{
                     const sheetRefs=(${collectSpreadsheetReferences.toString()})(attempt.draftState);

@@ -325,7 +325,7 @@ export function installKnowledgeSourceNavigation({ sessions, workspaces, selectV
   const { id, requestId, view = 'chat', retained } = event.detail ?? {}
   event.preventDefault()
   const reply = ok => dispatch('sherlock:knowledge-source-result', { requestId, ok })
-  if (typeof requestId !== 'string' || !['chat', 'research', 'notes', 'spreadsheet'].includes(view)) return reply(false)
+  if (typeof requestId !== 'string' || !['chat', 'research', 'notes', 'spreadsheet', 'presentation'].includes(view)) return reply(false)
   const activate = () => {
    const summary = usable(sessions.list.getSnapshot(), id)
    if (!summary) return reply(false)

@@ -1,6 +1,7 @@
 import { mountSharedKnowledgeSessions } from './knowledge/shared-session'
 import { mountKnowledgePanels } from './knowledge/panel'
 import { knowledgeOpenEvent, mountKnowledgeWorkspace } from './knowledge/workspace'
+import { mountPresentation } from './presentation/view'
 import { mountSpreadsheet } from './spreadsheet/view'
 import { mountCashFlowGuide } from './spreadsheet/cash-flow-guide'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
@@ -19,7 +20,7 @@ import {
 import { noteBlocksFromFile } from './notes/editor'
 import { openKnowledgeSession } from './knowledge/session-directory'
 import type { FileEditorMode, FileEditorSource } from '../shared/file-editor.mjs'
-import type { KnowledgeSessionCopy } from '../shared/knowledge-sessions'
+import { parsePresentationFile } from './presentation/import-file'
 import { mountNotes } from './notes/mount'
 import {createSidebarNewNoteAction} from './sidebar-new-note'
 import {createNoteHistoryLoader} from './notes/history-loader'
@@ -67,6 +68,7 @@ import { mountExploreMenu } from './explore-menu'
 import { playHomeGuideFromExplore } from './explore-menu-actions'
 import { mountHomeGuides } from './home-guides'
 import { mountHomeNotesGuide } from './home-guide-notes'
+import { mountPresentationEditGuide } from './presentation/edit-guide'
 import { mountHomePresentationGuide } from './home-guide-presentation'
 import { mountHomeWorkbenchGuide } from './home-guide-workbench'
 import { createHomeOperationsActions } from './home-operations-actions'
@@ -93,6 +95,7 @@ import { createResearchCanvasExportBridge } from './research-canvas-export'
 import { createResearchClipboardBridge } from './research-canvas-clipboard'
 
 if (process.isMainFrame) {
+let presentationView:ReturnType<typeof mountPresentation>|undefined
 let spreadsheetView:ReturnType<typeof mountSpreadsheet>|undefined
 let notesComponentDataAccess:{request:(method:string,input:any)=>Promise<any>;owns:(sessionId:string,owner:string)=>boolean}|undefined
 
@@ -294,9 +297,12 @@ function initializeUi(): void {
     try {
       const locale = document.documentElement.dataset.odysseyLocale
       let result = await ipcRenderer.invoke('knowledge:request', 'open-file-in-editor', { ...source, mode, locale }) as {
-        session?: KnowledgeSessionCopy; token?: string; note?: { format: 'markdown' | 'text'; text: string }
+        session?: { id: string; mode: FileEditorMode }; token?: string; bytes?: Uint8Array; name?: string; note?: { format: 'markdown' | 'text'; text: string }
       }
-      if (result.token && result.note) {
+      if (result.token && result.bytes && result.name) {
+        const deck = await parsePresentationFile(document, result.bytes, result.name)
+        result = await ipcRenderer.invoke('knowledge:request', 'finish-presentation-file-import', { token: result.token, deck })
+      } else if (result.token && result.note) {
         const blocks = noteBlocksFromFile(result.note)
         result = await ipcRenderer.invoke('knowledge:request', 'finish-note-file-import', { token: result.token, blocks })
       }
@@ -448,23 +454,44 @@ function initializeUi(): void {
   }
   const sidebarNewNote=createSidebarNewNoteAction(document,flushBeforeCreate)
   const sidebarNewSpreadsheet=createSidebarNewNoteAction(document,flushBeforeCreate,'spreadsheet')
+  const sidebarNewPresentation=createSidebarNewNoteAction(document,flushBeforeCreate,'presentation')
+  presentationView=mountPresentation(document, ipcRenderer)
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
   const skillCommand = installSkillCommandBridge(document,{...integrationBridge,useSkill:skillUse.useSkill})
   const homeActions = createHomeOperationsActions(document, { ...integrationBridge, useSkill: skillUse.useSkill }, { beforeNavigate: () => notes.flushCurrent() })
-  const homeGuides = mountHomeGuides(document, { beforeOpen: async session => { if(session.kind==='spreadsheet'){const id=document.body.dataset.eworkSpreadsheetSession;if(id)await spreadsheetView?.flush(id)} await notes.prepareGuideFromCurrent(session.sessionId) }, prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined, revealConversation: () => workspaceSurfaceHost.revealConversation(), mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }), mountPresentation: async (doc, host, options) => {
+  const homeGuides = mountHomeGuides(document, {
+    beforeOpen: async session => {
+      if (session.kind === 'spreadsheet' || session.kind === 'presentation-edit') {
+        const id = document.body.dataset.eworkSpreadsheetSession
+        if (id) await spreadsheetView?.flush(id)
+      }
+      if (session.kind === 'presentation-edit') {
+        const id = document.body.dataset.eworkPresentationSession
+        if (id) await presentationView?.flush(id)
+      }
+      await notes.prepareGuideFromCurrent(session.sessionId)
+    },
+    prepareHandoff: (session,signal) => session.kind==='note'?notes.finishGuide(session.sessionId,signal):undefined,
+    revealConversation: () => workspaceSurfaceHost.revealConversation(),
+    mountNotes: (document, host, options) => mountHomeNotesGuide(document, host, { ...options, persistence: notesBridge }),
+    mountPresentation: async (doc, host, options) => {
       const librarySource = options.kind === 'ppt' && options.fresh
         ? await ipcRenderer.invoke('knowledge:presentation-guide-source') : undefined
       return mountHomePresentationGuide(doc, host, { ...options, librarySource })
+    },
+    mountPresentationEdit: async (doc, host, options) => {
+      const adapter = await mountPresentationEditGuide(doc, host, options)
+      return { ...adapter, flush: async () => { await presentationView?.flush(options.sessionId) } }
     },
     mountWorkbench: mountHomeWorkbenchGuide,
     mountSpreadsheet: async (doc, _host, options) => mountCashFlowGuide(doc, options, spreadsheetView!) })
   const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, { themeController: getHomeThemeController(document)!, onBeforeOpen:()=>{void homeGuides.reset(false)}, onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample:(kind, context)=>playHomeGuideFromExplore(homeGuides,kind,context) }) : () => {}
   integrationView.mount()
-  const openSidebarDocument = async (app: 'note' | 'spreadsheet', signal?: AbortSignal) => {
+  const openSidebarDocument = async (app: 'note' | 'spreadsheet' | 'presentation', signal?: AbortSignal) => {
     const previousSurface = workspaceSurfaceHost.current()?.surface
-    await (app === 'note' ? sidebarNewNote : sidebarNewSpreadsheet).create(signal)
+    await (app === 'note' ? sidebarNewNote : app === 'spreadsheet' ? sidebarNewSpreadsheet : sidebarNewPresentation).create(signal)
     if (previousSurface && workspaceSurfaceHost.current()?.surface === previousSurface &&
         !(app === 'note' && previousSurface === 'notes')) workspaceSurfaceHost.close(previousSurface)
   }
@@ -474,7 +501,7 @@ function initializeUi(): void {
     workspaces: () => ipcRenderer.invoke('scheduled-tasks:request', 'workspaces'),
     save: (input, id) => ipcRenderer.invoke('scheduled-tasks:request', 'save', { input, id }),
     action: (id, action) => ipcRenderer.invoke('scheduled-tasks:request', action, { id })
-  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote: () => openSidebarDocument('note'), newSpreadsheet: () => openSidebarDocument('spreadsheet'),
+  }, workspaceSurfaceHost, { request: command => ipcRenderer.invoke('integrations:request', command) }, {newNote: () => openSidebarDocument('note'), newSpreadsheet: () => openSidebarDocument('spreadsheet'), newPresentation: () => openSidebarDocument('presentation'),
     pinnedApps: () => navigationShortcuts?.sidebar() ?? defaultNavigationShortcuts.side,
     visibleApps: () => navigationShortcuts?.visibleSidebar() ?? [],
     sidebarFull: () => navigationShortcuts?.sidebarFull() ?? true,
@@ -543,7 +570,7 @@ function initializeUi(): void {
       if (!signal.aborted) { inheritSidebarWorkspace(); imageFactory.open() }
       return
     }
-    if (app === 'spreadsheet') { await openSidebarDocument('spreadsheet', signal); return }
+    if (app === 'spreadsheet' || app === 'presentation') { await openSidebarDocument(app, signal); return }
     if (app === 'research') {
       await homeActions.run('board', { signal, revealComposer: async () => {} })
       return
@@ -578,10 +605,10 @@ function initializeUi(): void {
     document.removeEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
     window.removeEventListener(imageFactoryOpenEvent, openImageFactory)
   }, { once: true })
-  const resetIntegrationIdentity = () => { navigationShortcuts?.reload(); imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { navigationShortcuts?.reload(); imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();sidebarNewPresentation.reset();presentationView?.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
-  window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
+  window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();sidebarNewPresentation.dispose();presentationView?.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
   checkBootFailureInDom()
   domObserver.observe(document.documentElement, {
     childList: true,
@@ -634,6 +661,8 @@ contextBridge.exposeInMainWorld('sherlockPptAnnotations', Object.freeze({
 contextBridge.exposeInMainWorld(
   'dshDesktop',
   Object.freeze({
+    presentationAdmission:(id:string,prompt:string,refs:unknown,useSlide:boolean)=>{if(!presentationView)throw Error('演示尚未就绪。');return presentationView.admit(id,prompt,refs,useSlide)},
+    presentationFlush:(id:string)=>presentationView?.flush(id),
     spreadsheetAdmission:(sessionId:string,prompt:string,references:unknown,useWorkbook?:boolean)=>{if(!spreadsheetView)throw Error('表格尚未就绪。');return spreadsheetView.admit(sessionId,prompt,references,useWorkbook)},
     spreadsheetFlush:(sessionId:string)=>spreadsheetView?.flush(sessionId),
     browserApp: Object.freeze({

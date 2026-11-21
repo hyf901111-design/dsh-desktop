@@ -80,6 +80,9 @@ import {
   ResearchBoardsService,
   registerResearchBoardsHandlers
 } from './research-boards-service'
+import { installPresentation } from './presentation/service'
+import { PresentationStore } from './presentation/store'
+import { handleEditorAsset } from './presentation/protocol'
 import { installSpreadsheet } from './spreadsheet/ipc'
 import { SpreadsheetStore } from './spreadsheet/store'
 import { isTrustedMainWindowEvent, registerTrustedMainWindowHandler } from './ipc-trust'
@@ -205,7 +208,7 @@ import {
   researchCanvasExportFileOperations
 } from './state/research-canvas-export'
 
-protocol.registerSchemesAsPrivileged([{
+protocol.registerSchemesAsPrivileged([{scheme:'odyssey-presentation',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}, {
   scheme: RESEARCH_PREVIEW_SCHEME,
   privileges: {
     standard: true,
@@ -1386,16 +1389,21 @@ async function bootstrap(): Promise<void> {
       sendKnowledgeChange()
     }, 150)
   })
-  registerTrustedMainWindowHandler(ipcMain, 'knowledge:presentation-guide-source', () => mainWindow, async () => {
+  registerTrustedMainWindowHandler(ipcMain, 'knowledge:presentation-guide-source', () => mainWindow, async (_event, asset?: unknown) => {
+    const identity = knowledgeIdentity()
+    const companyDeck = asset === 'delivered-pptx'
     const directory = join(app.getAppPath(), 'node_modules/dsh-research-task-runtime/assets/home-presentation')
     const [manifest, source] = await Promise.all([
       readFile(join(directory, 'source-metadata.json'), 'utf8'),
-      readFile(join(directory, 'source-report.pdf'))
+      readFile(join(directory, companyDeck ? 'company-research-briefing.pptx' : 'source-report.pdf'))
     ])
-    if (source.subarray(0, 5).toString() !== '%PDF-' ||
-        createHash('sha256').update(source).digest('hex') !== JSON.parse(manifest).sourceSha256)
-      throw Error('演示参考 PDF 校验失败。')
-    return knowledge.ensurePresentationGuideSource('Vanguard-2026经济与市场展望.pdf', source)
+    const metadata = JSON.parse(manifest)
+    if ((!companyDeck && source.subarray(0, 5).toString() !== '%PDF-') ||
+        createHash('sha256').update(source).digest('hex') !== (companyDeck ? metadata.presentationSha256 : metadata.sourceSha256))
+      throw Error(companyDeck ? '公司风格演示文稿校验失败。' : '演示参考 PDF 校验失败。')
+    const current = knowledgeIdentity()
+    if (identity.owner !== current.owner || identity.generation !== current.generation) throw Error('当前账号已变化，请重试。')
+    return knowledge.ensurePresentationGuideSource(companyDeck ? '人工智能周期与资产配置.pptx' : 'Vanguard-2026经济与市场展望.pdf', source, companyDeck)
   })
   const factoryCanvases = new ImageFactoryCanvases(join(app.getPath('userData'), 'image-factory-canvases'), () => {
     const owner = integrationOwner()
@@ -1482,12 +1490,16 @@ async function bootstrap(): Promise<void> {
   })
   registerTrustedMainWindowHandler(ipcMain, 'knowledge:view-reply', () => mainWindow, (_event, value) => knowledgeView.reply(value))
   const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
+  protocol.handle('odyssey-presentation', request=>handleEditorAsset(app.getAppPath(),request))
+  const presentationStore=new PresentationStore(join(app.getPath('userData'),'presentation-v1'))
+  const presentation:ReturnType<typeof installPresentation>=installPresentation({ipcMain,getWindow:()=>mainWindow,store:presentationStore,workspaceRoot:id=>new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),runtimeUrl:()=>runtime?.snapshot().url,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet})
+  app.once('before-quit',()=>presentationStore.close())
   const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',canPlayCashFlowGuide:({owner,sessionId})=>{
     const scope=owner==='local'?'local':'account:'+owner
     const raw=researchCanvasStorage.peekItem('sherlock.home-guide.sessions.v1:'+encodeURIComponent(scope))
     return !!raw&&JSON.parse(raw).entries.some((entry:{sessionId:string;kind:string})=>entry.sessionId===sessionId&&entry.kind==='spreadsheet')
   }})
-  const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({spreadsheet,sharedKnowledge:(current,id)=>!accountService?.authenticated||researchBoardsService?.isSharedSession(id)?{}:sharedKnowledgeCapabilityHandlers(knowledgeShared,knowledgeContent,current),knowledge:(current,id)=>researchBoardsService?.isSharedSession(id)?{}:knowledgeCapabilityHandlers(knowledge,knowledgeShared,knowledgeContent,knowledgeView,current),get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
+  const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({presentation,spreadsheet,sharedKnowledge:(current,id)=>!accountService?.authenticated||researchBoardsService?.isSharedSession(id)?{}:sharedKnowledgeCapabilityHandlers(knowledgeShared,knowledgeContent,current),knowledge:(current,id)=>researchBoardsService?.isSharedSession(id)?{}:knowledgeCapabilityHandlers(knowledge,knowledgeShared,knowledgeContent,knowledgeView,current),get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
   const researchPdfRenderer = new ResearchPdfRenderer()
@@ -1644,6 +1656,7 @@ async function bootstrap(): Promise<void> {
       views.some(view => !workspaceContentViews.includes(view))) throw Error('应用内容状态请求无效。')
     const identity = knowledgeIdentity()
     const populated = await Promise.all(workspaceContentViews.filter(view => views.includes(view)).map(async view => {
+      if (view === 'presentation') return scope && presentationStore.recent({owner:integrationOwner()||'local',sessionId:scope}).length ? view : undefined
       if (view === 'image-factory') {
         return scope && await factoryCanvases.hasEditedCanvas(scope).catch(() => false) ? view : undefined
       }
@@ -1666,7 +1679,7 @@ async function bootstrap(): Promise<void> {
     identity: knowledgeIdentity, filePreview: knowledgeFilePreview, imageCanvases: factoryCanvases,
     copySession: createKnowledgeSessionCopier({
       rpc: taskRpc, retain: retainKnowledgeCopy, notes: calendarNotes, workbooks: knowledgeWorkbooks, research: researchCanvasStorage,
-      canvases: factoryCanvases,
+      canvases: factoryCanvases, presentations: presentationStore,
       fallbackWorkspacePath: join(app.getPath('userData'), 'knowledge-workspaces', '知识库副本')
     }),
     sessionEvidence: knowledgeSessionEvidence,
