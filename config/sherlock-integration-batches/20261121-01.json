@@ -4125,6 +4125,84 @@
         ],
         "generatedAt": "2026-11-21T15:36:00.662055+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "估值逐笔勾稽的原序单表与代码检索",
+        "branch": "codex/feat/research-ledger-single-table-20261121",
+        "baseCommit": "ee45603163aa52edba2a546896b9b5ae41529860",
+        "tipCommit": "3085de7c235db2ae59c50fb3f555ac43f6c8d82e",
+        "commits": [
+          {
+            "commit": "3085de7c235db2ae59c50fb3f555ac43f6c8d82e",
+            "parents": [
+              "ee45603163aa52edba2a546896b9b5ae41529860"
+            ],
+            "subject": "将按披露原序的逐笔估值核对收敛为可检索明细"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-disclosure-ledger.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-disclosed-ledger-submission.json"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-disclosed-ledger.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-disclosure-source-scope.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-disclosed-ledger.test.js",
+              "test/workbench-disclosure-source-scope.test.js",
+              "test/workbench-disclosed-split-unit.test.js",
+              "test/workbench-holding-weight-ranking.test.js",
+              "test/workbench-execution-policy.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "五份聚焦测试56项通过；包括K真实六卡首参、轻量合同、逐字段来源、外部来源和多目标反例。",
+            "verifiedCommit": "3085de7c235db2ae59c50fb3f555ac43f6c8d82e",
+            "completedAt": "2026-11-21T15:39:21.956968+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "K实机原会话前台主表检索可用，额外五卡经两档浏览器独立核查均为0行。以原人类消息和首参执行功能提交的正式注册工具得到单卡，一次prepared。Chromium沙盒断网440/720均5×6、0页面溢出，代码/中文名称检索及恢复、元至分和PDF出处全部核过。该项为原首参回放，未重复向模型提问。"
+        },
+        "acceptanceCriteria": [
+          "逐笔勾稽在一份含唯一序号且字段齐全的公开披露中按原序生成一张明细",
+          "每格显示遵循股数、人民币元和净值占比披露值，可用证券代码或名称定位并清除",
+          "确实要求分卡、多业务、比较、来源补查时继续提供原有通用规划及数据能力"
+        ],
+        "risks": [
+          "受控单表路径限具备公开出处、数字与原始序号完整的小型股票持仓；其他数据或复杂需求由原流程处理。旧卡持久化的筛选兼容性由另一独立功能修正。"
+        ],
+        "generatedAt": "2026-11-21T15:39:21.956968+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4737,6 +4815,21 @@
         "test/dataset-view-contract.test.js",
         "test/dataset-view-artifact.test.js",
         "test/dataset-view-browser.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-disclosed-ledger.test.js",
+        "test/workbench-disclosure-source-scope.test.js",
+        "test/workbench-disclosed-split-unit.test.js",
+        "test/workbench-holding-weight-ranking.test.js",
+        "test/workbench-execution-policy.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
