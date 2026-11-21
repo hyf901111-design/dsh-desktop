@@ -121,6 +121,7 @@ export async function mountPresentationEditGuide(
     return { x: rect.left + rect.width * p.x, y: rect.top + rect.height * p.y }
   }
   async function hit(target: string, details: Record<string, unknown> = {}) {
+    if ((target === 'mark' || target === 'play') && await command<boolean>('in-overflow', {target})) await hit('overflow')
     const args = { target, ...details },
       bounds = await command<Bounds>('bounds', args)
     const p = {
