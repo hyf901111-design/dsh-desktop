@@ -40,3 +40,15 @@ export function sidebarNoteConversationOnly(input){
  }))return false
  return /[？?]|(?:为什么|为何|如何|怎么|什么|是否|能否|可否)|(?:只|仅)(?:需|要|用)?(?:回答|答复|解释|讨论)|(?:不(?:要|必|用|需)?|无需|别)(?:修改|改(?:动|写)?|编辑|更新|写入)(?:当前|这篇|这份)?(?:笔记|正文|文档)|\b(?:what|why|how|explain|describe|answer|discuss)\b/iu.test(prompt)||/^(?:(?:请|帮我|麻烦|先|只(?:需|要|用)?|仅(?:需|要|用)?)\s*)*(?:总结|概括|解释|解读|说明|讨论|核对|分析|评估|判断|比较)/u.test(prompt)
 }
+
+
+// A single explicitly supplied percentage suffices to answer a basis-point
+// conversion. An actual reference or request to verify the note keeps its scope.
+export function standaloneNoteBasisPoints(input,references){
+ if(references.scope==='selection'||references.components.length||input.selection.trim()||
+    input.images?.length||input.clientReceipts?.length)return false
+ const instruction=input.prompt.normalize('NFKC').replace(/(?:不(?:要|用|必|需(?:要)?)?|无需|别)\s*(?:修改|编辑|改动|改写|写入|更新|改)\s*(?:当前|这篇|这份)?(?:的)?(?:笔记|正文|文档)|(?:do not|don't) (?:edit|change|modify) (?:this |the )?note/giu,'')
+ if(/(?:当前|这篇|该|我的|本篇|从|参考|结合|根据|对照|按照)笔记|笔记(?:原文|中|里|内|上|的|《|提到|所述|记载)|正文|选区|上文|前文|前面|刚才|之前|对照|核对|核查|验证|比较|对比|另(?:外|一)|顺便|再帮我|然后|总结|附件|来源|查找|是否正确|\b(?:note|previous|compare|verify|in the document|attachment|source)\b/iu.test(instruction))return false
+ const rates=instruction.match(/[+−-]?\d+(?:\.\d+)?\s*%/gu)
+ return rates?.length===1&&/(?:等于|相当于|折合|折算|转换|换算|是|有).{0,18}(?:基点|bps?\b)|(?:几个?|多少)(?:个)?(?:基点|bps?\b)|\b(?:how many (?:bps?|basis points?)|(?:convert|express).{0,50}(?:in|to) (?:bps?|basis points?))\b/iu.test(instruction)
+}

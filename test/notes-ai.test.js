@@ -186,3 +186,23 @@ it('keeps inline writing bound to the provided insertion anchor and refuses malf
  await expect(generateNoteSuggestion(ctx,{...request,clientContext:{documentId:'other-doc'}})).rejects.toThrow('插入位置')
  await expect(generateNoteSuggestion(ctx,{...request,insertionAnchor:{...insertionAnchor,position:null}})).rejects.toThrow('插入位置')
 })
+
+it('answers a fully specified sidebar conversion without attaching unrelated note or prior-turn evidence',async()=>{
+ const prompt='笔记讨论D1：季报披露的宁德时代占比3.81%，折合几个基点？只在侧栏回答，不修改笔记。'
+ const options={...input,selection:'',prompt,markdown:'10 年期 4.58%，2 年期 4.25%，相差 33bp。',context:{scope:'note',components:[]}}
+ const ctx=context('3.81% 折合 381 个基点。')
+ expect(await generateNoteSuggestion(ctx,options)).toEqual({kind:'conversation',markdown:'3.81% 折合 381 个基点。'})
+ expect(ctx.options().messages[0].content).toEqual([{type:'text',text:prompt}])
+ expect(ctx.options().system).toContain('100 个基点')
+ expect(JSON.stringify(ctx.options())).not.toContain('4.58%')
+ for(const next of [
+  {...options,prompt:'对照笔记核对：3.81% 折合多少个基点？只在侧栏回答。'},
+  {...options,prompt:'笔记里提到的 3.81% 折合几个基点？'},
+  {...options,selection:'10 年期 4.58%',context:{scope:'selection',components:[]}},
+  {...options,prompt:'3.81% 和 4.58% 两个数具体差几个基点？'}
+ ]){
+  await generateNoteSuggestion(ctx,next)
+  const sent=JSON.parse(ctx.options().messages[0].content[0].text)
+  expect(sent.document||sent.selection).toContain('4.58%')
+ }
+})
