@@ -82,6 +82,24 @@ export function knowledgeCapabilityHandlers(store: KnowledgeStore, sharing: Know
   }
   const shared = sharedKnowledgeCapabilityHandlers(sharing, content, current)
   return {
+    searchLocalKnowledge: async ({ query, offset = 0, limit = 10 }, _context, signal) => {
+      check(signal)
+      const words = query.normalize('NFKC').toLowerCase().trim().split(/\s+/u).filter(Boolean)
+      if (!words.length) throw Error('请提供要在本机查找的文件标题或关键词。')
+      const snapshot = await store.snapshot()
+      check(signal)
+      const documents = snapshot.documents.filter(document => {
+        const name = document.name.normalize('NFKC').toLowerCase()
+        return words.every(word => name.includes(word))
+      })
+      const matches = listKnowledgeDocuments({ folders: [], documents }, { category: 'all' })
+      const end = offset + limit
+      return {
+        status: 'succeeded',
+        data: { scope: 'local', count: matches.length, documents: matches.slice(offset, end).map(({ id, name }) => ({ id, name })),
+          nextOffset: end < matches.length ? end : null }
+      }
+    },
     inspectKnowledge: async (_args, _context, signal) => {
       check(signal)
       const state = await view.run({ action: 'inspect' }, signal)

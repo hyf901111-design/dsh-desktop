@@ -11,7 +11,7 @@ const modes = {
   spreadsheet: '表格。用户要求读取或编辑时，直接用 spreadsheet.inspect 获取工作簿、引用与 revision；用 spreadsheet.apply 保存真实单元格、公式和图表。只以保存回执确认。',
   presentation: '演示。实际读稿和改稿先用 presentation.inspect 读取引用、稳定 slideId 和 revision。按 nextPage 读取多页，按标注的 slideId、节点和范围执行 presentation.apply，按保存回执确认。',
   image: '图像。可讨论任何话题，也可分析用户引用的图片和图层。当前画布、选区和历史成图都是参考。本轮明确要求出图、改图或操作图层时才使用对应图像工具。',
-  knowledge: '知识库。查看列表或筛选先用 knowledge.inspect。查找共享资料直接用 knowledge.shared.search，再按真实标识读取和引用。',
+  knowledge: '知识库。按标题检索本人资料使用 knowledge.local.search。查看列表或筛选先用 knowledge.inspect。查找共享资料直接用 knowledge.shared.search，再按真实标识读取和引用。',
   browser: '浏览器。用户问当前页面时先用随消息附带的网页正文。需要补读、刷新或定位控件时，用 browser_use 的 observe 读取当前标签；明确要求打开网址时用 open，后续操作沿用实际观察回执。',
   trajectory: '轨迹。可以讨论工作过程及其他话题。仅依据可见会话记录或用户提供的证据说明执行状态。',
 }
@@ -85,6 +85,10 @@ const nativeSubject = /(?:这(?:张|份|篇|页|个|段)|当前|选(?:中|区)|�
 const nativeEdit = /(?:改(?:成|为|写|下|一下|大|小)|设(?:为|成|置)|调(?:成|为|大|小)|加(?:入|上)|标(?:为|成)|变(?:大|小|为|成)|补上|换成|翻到|美化|润色|调整|修改|插入|新增|新建|创建|制作|写入|补充|添加|删除|去重|整理|替换|移动|导入|导出|筛选|排序|撤销|保存|做(?:一|个|份|张)|翻译成|\b(?:add|insert|update|edit|create|make|build|filter|sort|rename|replace|remove|write|apply|undo|export|import)\b)/iu
 const nativeRead = /(?:读|看看|查看|什么|哪些|总结|摘要|概述|重点|讲了|在讲|分析|概括|讲.{0,8}内容|对比|比较|有几|列出|\b(?:inspect|read|summari[sz]e|check|list|what|show|compare)\b)/iu
 const sharedSearch = /(?:同事|共享|他人分享|\bshared (?:documents?|files?)\b)/iu
+const knowledgeLookup = /检索|查找|搜索|搜(?:一下|下|一搜)|查询|找一下|找出|找找|有没有|\b(?:search|find|look up)\b/iu
+const localLibrary = /本机|本地|我的(?:知识库|文件)|知识库|\b(?:local (?:files?|library)|knowledge base|my library)\b/iu
+const offlineOnly = /(?:不(?:要|用|必|许|需(?:要)?)?|无需|禁止|别)\s*(?:再|去)?(?:联网|上网|使用网络|搜索网络)|离线|\b(?:offline|no internet|do not (?:go online|use the internet)|without (?:the )?internet)\b/iu
+const negativeLookup = /(?:别|不要|不用|无需|禁止)\s*(?:在.{0,12})?(?:查找|搜索|检索|查询)|\b(?:do not|don't|never) (?:search|find|look up)\b/iu
 const activeFile = /(?:附件|📎|https?:\/\/|\.xlsx?\b|\.pptx?\b|\.pdf\b|\.csv\b|\.html?\b|\battachment\b)/iu
 const explicitlyReadOnly = /(?:只(?:需|要)?|仅(?:需|要)?)(?:回答|解释|讨论|分析|建议|说明)|(?:不用|不需(?:要)?|不要|别|无需)(?:实际|直接|动手)?(?:修改|改动|写入|编辑|操作|动手)|\b(?:read.only|just (?:explain|answer|discuss)|do not (?:edit|change|modify))\b/iu
 
@@ -117,15 +121,21 @@ function describeTurn(mode, text, factory) {
   })
   const coherentWrites = clauses.some(part => nativeEdit.test(part) && !advice.test(part) && !denied.test(part) && !explicitlyReadOnly.test(part))
   const readOnly = discussionAt >= 0 && !image || !coherentWrites && (advice.test(text) || explicitlyReadOnly.test(text))
-  const shared = sharedSearch.test(text) && (nativeRead.test(text) || externalEvidence.test(text))
+  const offline = offlineOnly.test(actionable)
+  const shared = !offline && sharedSearch.test(actionable) && (nativeRead.test(actionable) || externalEvidence.test(actionable))
+  const offlineShared = mode === 'knowledge' && offline && sharedSearch.test(actionable) && knowledgeLookup.test(actionable)
+  const localSearch = mode === 'knowledge' && !shared && !offlineShared && clauses.some(part =>
+    localLibrary.test(part) && knowledgeLookup.test(part) && !negativeLookup.test(part) && !advice.test(part))
+  const localOnly = localSearch && !coherentWrites && !/(?:正文|内容里|打开文件|读(?:取|一下).{0,8}(?:报告|文件)|\b(?:contents?|open|read)\b)/iu.test(actionable)
+    && (offline || !/(?:再|并|同时|也|然后|and)\s*(?:搜索|查找|检索|查询|check|search)?\s*(?:网络|官网|互联网|网页|the web|online)/iu.test(actionable))
   const requestedSurface = /看板|工作台|组件|卡片|仪表盘|表格|图表|原型|页面|画布|\b(?:dashboard|workbench|component|widget|chart|table|prototype|canvas)\b/iu.test(actionable)
   const create = requestedSurface && !readOnly && !image && !promptRequest ? classifyResearchCreationRequest(text) : null
-  const appRead = nativeSubject.test(text) && nativeRead.test(text)
+  const appRead = localSearch || nativeSubject.test(text) && nativeRead.test(text)
   const worksheetRequest = mode === 'spreadsheet' && /(?:[\p{Script=Han}]{1,10}(?:统计表|分析表|明细表|工资表|清单表|台账)|工资表|数据分析任务|\bpayroll\b)/iu.test(text)
   const appEdit = !readOnly && coherentWrites && (worksheetRequest || nativeSubject.test(text) || ['presentation','spreadsheet','notes','knowledge'].includes(mode) && /(?:字[号体]|第.{1,6}[页行列]|颜色|单元格|标题|备注|行高|列宽|公式)/u.test(text))
   const direct = image || shared || appRead || appEdit || Boolean(create)
   const simple = !direct && !externalEvidence.test(text) && (simpleConversation.test(text) || readOnly)
-  return {mode, text, factory, image, shared, create, readOnly, appRead, appEdit, simple, hasFile:activeFile.test(text)}
+  return {mode, text, factory, image, shared, localSearch, localOnly, offlineLocal:localSearch && offline, offlineShared, create, readOnly, appRead, appEdit, simple, hasFile:activeFile.test(text)}
 }
 
 const imageTools = new Set(['image_generate', 'image_edit_layer'])
@@ -136,6 +146,9 @@ function turnCapabilities(turn) {
   catalog ??= createClientCapabilityRegistry().catalog({})
   const entries = catalog.filter(item => {
     const id = item.id
+    if (turn.offlineShared) return false
+    if (turn.localOnly) return id === 'knowledge.local.search'
+    if (id === 'knowledge.local.search') return turn.localSearch
     if (id.startsWith('ui.')) return windowAction.test(turn.text)
     if (id.startsWith('knowledge.shared.')) return turn.shared
     if (!id.startsWith(turn.mode + '.')) return false
@@ -184,6 +197,8 @@ function basisPointChange(text) {
 export function modeProfilePrompt(turn) {
   return '【本轮应用】' + modes[turn.mode] +
     ' 当前界面只说明此刻能协作的对象，每种模式都能自由问答。普通问题直接作答。已给齐数据且只问一项换算时，按本轮所问对象和区间答完即止。用户要求回顾、核对或延续此前工作时才补充相关历史读数。短任务可直接处理。复杂任务先用自己的话回应具体目标，再执行并根据新发现回报进展。宿主已提供当前模式和工具协议，直接读取用户指定的对象或执行明确操作，无需先探测界面、环境、源码或目录。只在用户要求改变内容时修改，依据真实回执说明完成状态。' +
+    (turn.offlineShared ? '\n用户指定了离线且目标为他人共享文件。当前共享目录需要联网；如实说明该范围无法离线核实。' : '') +
+    (turn.localSearch ? '\n请先用 client_action 执行 knowledge.local.search，将用户指定的标题或检索词原样作为 query，只要首条时传 limit=1。仅用成功回执中的 count 和 documents 回答匹配情况。工具报错时说明实际错误。' : '') +
     basisPointChange(turn.text)
 }
 
@@ -213,8 +228,9 @@ export function routeModeTools(request, turn) {
   const exclusiveBrowser = turn.mode === 'browser' && (turn.appRead || turn.appEdit || /(?:打开|访问).{0,24}https?:|\bopen https?:/iu.test(turn.text)) && !additionalEvidence.test(turn.text)
   const exclusiveImage = turn.image && !research && !turn.shared && !(turn.appEdit && turn.mode !== 'image') && !turn.hasFile && !additionalEvidence.test(turn.text)
   const tools = request.tools.flatMap(tool => {
-    if (turn.simple) return []
+    if (turn.simple || turn.offlineShared) return []
     if (tool.name === 'client_action') return entries.length ? [nativeTool(tool, entries)] : []
+    if (turn.localOnly || turn.offlineLocal) return []
     if (tool.name === 'client_capabilities') return []
     if (imageTools.has(tool.name)) return imageToolAllowed(turn, tool.name) ? [tool] : []
     if (tool.name === 'browser_use') return wantsBrowser && !exclusiveNative && !exclusiveImage ? [tool] : []
@@ -227,6 +243,8 @@ export function routeModeTools(request, turn) {
 }
 
 export function disallowedModeTool(turn, name, args) {
+  if (turn.offlineShared) return '他人共享文件需要联网，本轮只允许离线。'
+  if ((turn.localOnly || turn.offlineLocal) && name !== 'client_action') return '请用本轮的本机知识库检索能力取得真实匹配回执。'
   if (imageTools.has(name) && !imageToolAllowed(turn, name)) return '本轮没有要求生成或修改图片；请直接回答用户的问题。'
   if (name === 'client_action' && !turnCapabilities(turn).some(item => item.id === args?.capability))
     return '该操作不在本轮当前应用或用户请求的范围内。'
