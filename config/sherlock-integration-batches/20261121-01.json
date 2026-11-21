@@ -3838,6 +3838,64 @@
         ],
         "generatedAt": "2026-11-21T14:44:16.062547+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "易方达持仓明细表头和排序反白",
+        "branch": "codex/feat/efund-table-heading-20261121",
+        "baseCommit": "01e481a2532b35af05048a2aa1d75b4e4fee5aec",
+        "tipCommit": "46ed380065ce8975ca94d36892b786ae6bd9d42b",
+        "commits": [
+          {
+            "commit": "46ed380065ce8975ca94d36892b786ae6bd9d42b",
+            "parents": [
+              "01e481a2532b35af05048a2aa1d75b4e4fee5aec"
+            ],
+            "subject": "易方达持仓表头与排序箭头统一反白并保持可读对比度"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-style.js"
+          },
+          {
+            "status": "M",
+            "path": "test/dataset-view-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/dataset-view-browser.test.js",
+              "-t",
+              "E Fund disclosure headers",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "真实上交所季报、列名及伪元素、升降序、悬停、主题切换与至少4.5:1的对比度。",
+            "verifiedCommit": "46ed380065ce8975ca94d36892b786ae6bd9d42b",
+            "completedAt": "2026-11-21T15:08:35.568811+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实上交所季报、列名及伪元素、升降序、悬停、主题切换与至少4.5:1的对比度。"
+        },
+        "acceptanceCriteria": [
+          "新生成和留存的企业模式明细表头反白",
+          "可排序箭头正常切换，正文与其他主题独立"
+        ],
+        "risks": [
+          "签名客户端按原问题再次验收。"
+        ],
+        "generatedAt": "2026-11-21T15:08:35.568811+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4400,6 +4458,18 @@
         "node_modules/vitest/vitest.mjs",
         "run",
         "test/composer-context-layout.test.js",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/dataset-view-browser.test.js",
+        "-t",
+        "E Fund disclosure headers",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
