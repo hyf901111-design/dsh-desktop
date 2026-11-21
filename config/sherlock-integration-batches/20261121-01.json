@@ -12,7 +12,7 @@
         "featureName": "研究对话主智能体直接规划与交付",
         "branch": "codex/feat/research-generation-20261121",
         "baseCommit": "33aa7c14bc06be7b7fd9446d6245298a65b11005",
-        "tipCommit": "63fae9b8d1df8f56088f5ce89ef35e22087a5120",
+        "tipCommit": "321e41498fb334d7d086e7ff1972690241212ddc",
         "commits": [
           {
             "commit": "b76551b824f0163d8514463081b2f94508a6c792",
@@ -34,6 +34,13 @@
               "85caacc4d1c8f63b032bad393eab41766a8317e4"
             ],
             "subject": "恢复研究看板对明确日历创建请求的交付"
+          },
+          {
+            "commit": "321e41498fb334d7d086e7ff1972690241212ddc",
+            "parents": [
+              "63fae9b8d1df8f56088f5ce89ef35e22087a5120"
+            ],
+            "subject": "兼容已安装议息日历路由修改前的会话活动层"
           }
         ],
         "files": [
@@ -68,6 +75,14 @@
           {
             "status": "M",
             "path": "packages/dsh-research-task-runtime/workbench-planning-context.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/conversation-live-activity.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-live-activity.test.js"
           },
           {
             "status": "A",
@@ -107,14 +122,16 @@
               "test/dataset-view-contract.test.js",
               "test/workbench-resultative-request.test.js",
               "test/workbench-planning-phase.test.js",
+              "test/conversation-live-activity.test.js",
+              "test/conversation-live-activity-browser.test.js",
               "--maxWorkers=2",
               "--testTimeout=20000",
               "--reporter=dot"
             ],
             "outcome": "passed",
-            "summary": "Test Files  6 passed (6)，Tests  212 passed (212)",
-            "verifiedCommit": "63fae9b8d1df8f56088f5ce89ef35e22087a5120",
-            "completedAt": "2026-11-21T06:51:29.091613+00:00",
+            "summary": "Test Files  8 passed (8)，Tests  234 passed (234)",
+            "verifiedCommit": "321e41498fb334d7d086e7ff1972690241212ddc",
+            "completedAt": "2026-11-21T07:04:17.949506+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -130,7 +147,7 @@
         "risks": [
           "表格引用含混、默认日期不唯一、额外操作或要求查验官网时沿通用规划器处理"
         ],
-        "generatedAt": "2026-11-21T06:51:29.091613+00:00"
+        "generatedAt": "2026-11-21T07:04:17.949506+00:00"
       }
     },
     {
