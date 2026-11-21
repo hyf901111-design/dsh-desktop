@@ -6,7 +6,7 @@ import {initializeWorkspaceSession} from './sidebar-new-note.mjs'
 /** Keep the native session and view underneath a sequence of workspace apps. */
 export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSession,viewFor,showError,doc=document}) {
  const apps=new Set(['browser','image-factory','knowledge'])
- let origin, revision=0
+ let origin, pendingBoard, revision=0
  const current=()=>sessions.list.getSnapshot().current
  const restore=({id,view})=>{
   if(id===undefined){
@@ -21,32 +21,40 @@ export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSessi
   }
   if(current()!==id)sessions.open(id)
  }
+ const clearPending=()=>{
+  pendingBoard=undefined
+  delete doc.body.dataset.boardWorkspacePending
+ }
+ const offSelection=sessions.list.subscribe?.(()=>{
+  if(pendingBoard!==undefined && current()!==pendingBoard){
+   revision++
+   clearPending()
+  }
+ })
  const reset=()=>{
   revision++
   origin=undefined
-  delete doc.body.dataset.boardWorkspacePending
+  clearPending()
  }
  const surfaceChanged=({detail})=>{
   const turn=++revision
+  clearPending()
   const selected=current()
   if(detail?.appInHistory && !origin){
    origin={id:selected,view:selected&&!isBoardOnly(selected)?viewFor(selected).getSnapshot().view:undefined}
   }
   if(apps.has(detail?.surface)){
-   if(!selected||!isBoardOnly(selected)){
-    delete doc.body.dataset.boardWorkspacePending
-    return
-   }
+   if(!selected||!isBoardOnly(selected))return
+   pendingBoard=selected
    doc.body.dataset.boardWorkspacePending='true'
    void workspaceSession(selected).then(id=>{
     if(turn!==revision || current()!==selected || doc.body.dataset.homeGuideEntryRun)return
     sessions.open(id)
-    delete doc.body.dataset.boardWorkspacePending
+    if(turn===revision)clearPending()
    }).catch(error=>{
     if(turn===revision && current()===selected && error?.name!=='AbortError')showError(error)
    })
   }else{
-   delete doc.body.dataset.boardWorkspacePending
    if(detail?.appInHistory)return
    const previous=origin
    origin=undefined
@@ -57,6 +65,7 @@ export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSessi
  doc.addEventListener('sherlock:knowledge-identity-changed',reset)
  return()=>{
   reset()
+  offSelection?.()
   doc.removeEventListener('sherlock:workspace-surface-change',surfaceChanged,true)
   doc.removeEventListener('sherlock:knowledge-identity-changed',reset)
  }
@@ -456,7 +465,6 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')
  replace('selectWorkspace: async (workspaceId) => {',`selectWorkspace: async (workspaceId) => {
- if(imageFactoryActive)return eworkImageFactory?.switchWorkspace(workspaceId,rightWorkspaceId);
  if(sessionId===undefined&&eworkPendingConversation){eworkPendingConversation.selectWorkspace(workspaceId);return;}
  if(workspaceId===null){
   const surface=document.body.dataset.workspaceSurface;

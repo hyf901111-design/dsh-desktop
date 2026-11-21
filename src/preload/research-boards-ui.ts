@@ -1018,6 +1018,12 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   const pageWindow = win as Window & { [guideModelKey]?: (id: string) => ComposerModelSnapshot | undefined }
   let guideModel: { sessionId: string; snapshot: ComposerModelSnapshot } | undefined
   const readGuideModel = (id: string) => guideModel?.sessionId === id ? guideModel.snapshot : undefined
+  const copySelectedGuideModel = (snapshot?: ComposerModelSnapshot): ComposerModelSnapshot | undefined => {
+    if (!snapshot?.current) return
+    const { current, groups } = snapshot
+    if (groups.some(group => group.id === current.provider && group.models.some(model => model.id === current.model)))
+      return { current: { ...current }, groups }
+  }
   const setGuideModel = (value?: typeof guideModel) => {
     if (guideModel === value) return
     guideModel = value
@@ -1196,9 +1202,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         if (previous) { await ensureGuideWorkspace(previous, valid); return previous }
         const sourceSession = current()
         let sourceModel: ComposerModelSnapshot | undefined
-        if (kind === 'ppt' || kind === 'report' || kind === 'presentation-edit') {
-          sourceModel = (sourceSession ? readGuideModel(sourceSession) : undefined) ?? deps.composerModel?.(sourceSession)
-          if (sourceSession && !sourceModel?.current) sourceModel = deps.composerModel?.()
+        if (kind === 'ppt' || kind === 'report' || kind === 'presentation-edit' || kind === 'workbench') {
+          sourceModel = copySelectedGuideModel((sourceSession ? readGuideModel(sourceSession) : undefined) ?? deps.composerModel?.(sourceSession))
+          if (sourceSession && !sourceModel) sourceModel = copySelectedGuideModel(deps.composerModel?.())
         }
         const title = homeGuideSessionTitle(kind,replay)
         const basePath = await defaultDirectory(); valid()
@@ -1231,10 +1237,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         const next = [...latest, entry]
         if (guideStorage().setItem(guidePrefix + encodeURIComponent(owner), JSON.stringify({ version: 1, scope: owner, entries: next })) !== true) throw Error('示例保存失败，已创建的会话仍保留在本地。')
         guideRecords.set(owner, next)
-        if (sourceModel?.current && sourceModel.groups.some(group =>
-          group.id === sourceModel.current?.provider && group.models.some(model => model.id === sourceModel.current?.model))) {
-          setGuideModel({ sessionId, snapshot: { current: { ...sourceModel.current }, groups: sourceModel.groups } })
-        }
+        if (sourceModel) setGuideModel({ sessionId, snapshot: sourceModel })
         notify()
         return entry
       })()

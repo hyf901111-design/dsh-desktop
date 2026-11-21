@@ -84,12 +84,12 @@ it.each(['ppt','report'] as const)('opens the prepared %s session at the collaps
  expect(f.ordinary.snapshot.draft).toBe('用户未发送的文字')
  client.dispose()
 })
-it.each(['ppt','report'] as const)('keeps the source model and effort visible throughout the %s demonstration',async kind=>{
+it.each(['ppt','report','workbench'] as const)('keeps the source model and effort visible throughout the %s demonstration',async kind=>{
  const snapshot = { current: { provider: 'custom', model: 'model-x', reasoningEffort: 'high' },
   groups: [{ id: 'custom', models: [{ id: 'model-x', name: 'Model X' }] }] }
  const composerModel = vi.fn((id?:string)=> id === 'A' ? snapshot : undefined)
  const f=await fixture({composerModel}),client=await f.client(kind),target=f.target(kind)
- const entry=await client.prepare(target,'new-chat')
+ const entry=await client.prepare(target,kind==='workbench'?'new-research':'new-chat')
  const modelFor=(f.win as any)[Symbol.for('sherlock:home-guide-model')]
  expect(modelFor(entry.sessionId)).toEqual(snapshot)
  expect(modelFor('A')).toBeUndefined()
@@ -102,6 +102,17 @@ it.each(['ppt','report'] as const)('keeps the source model and effort visible th
  }
  f.win.dispatchEvent(new f.win.CustomEvent('sherlock:home-guide-playback',{detail:{sessionId:entry.sessionId,ending:true}}))
  expect(modelFor(entry.sessionId)).toBeUndefined()
+ client.dispose()
+})
+it('uses the Home model for the workbench demonstration when the source session has no available model',async ()=>{
+ const snapshot = { current: { provider: 'custom', model: 'model-x' },
+  groups: [{ id: 'custom', models: [{ id: 'model-x', name: 'Model X' }] }] }
+ const f=await fixture({composerModel:id=>id===undefined?snapshot:{current:{provider:'other',model:'missing'},groups:[]}})
+ const client=await f.client('workbench'),target=f.target('workbench')
+ const entry=await client.prepare(target,'new-research')
+ await client.commit(target)
+ const modelFor=(f.win as any)[Symbol.for('sherlock:home-guide-model')]
+ expect(modelFor(entry.sessionId)).toEqual(snapshot)
  client.dispose()
 })
 it.each([['board','home-research','research'],['note','home-notes','notes'],['ppt','home-chat','chat']]as const)('uses the %s homepage tab as final native entry without changing the old view',async(kind,action,mode)=>{

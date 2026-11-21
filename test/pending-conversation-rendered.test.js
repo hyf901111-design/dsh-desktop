@@ -32,6 +32,9 @@ beforeAll(async()=>{
  const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;exports.__testSetRightProjects=value=>eworkRightProjects=value;exports.__testSetSidebarWorkspace=value=>eworkSidebarWorkspace=value;exports.__testSetImageFactory=value=>eworkImageFactory=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(patchBoardDirectoryWorkspace(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspacePicker'])}
  input.triggers=expose(await readFile(base+'dsh-client-ui-input-trigger/lib/client.js','utf8'),['MenuView'])
+ const optionsStart = raw.indexOf('const odysseyConversationOptions=')
+ const optionsEnd = raw.indexOf('slots.register({...odysseyConversationOptions', optionsStart)
+ input.conversationOptions = raw.slice(optionsStart, optionsEnd)
  const assets=base+'dsh-web-frontend/dist/assets',name=(await readdir(assets)).find(n=>/^index-.*\.css$/.test(n));css=await readFile(assets+'/'+name,'utf8')
  const result=await build({entryPoints:['test/fixtures/pending-conversation-browser.tsx'],bundle:true,platform:'browser',format:'iife',outfile:'pending.js',write:false,logLevel:'silent',define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl','.ttf':'dataurl'},plugins:[imageAssets,{name:'raw',setup(b){b.onResolve({filter:/\?raw$/},async args=>({path:(await b.resolve(args.path.slice(0,-4),{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'raw'}));b.onLoad({filter:/.*/,namespace:'raw'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))}}]});script=result.outputFiles.find(file=>file.path.endsWith('.js')).text;css+='\n'+(result.outputFiles.find(file=>file.path.endsWith('.css'))?.text||'')
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
@@ -281,6 +284,8 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
  page.setDefaultTimeout(4500);
  page.on('pageerror',error=>errors.push(error.message));
  try {
+  await page.route('http://workspace.test/',route=>route.fulfill({contentType:'text/html',body:'<meta charset="utf-8">'}))
+  await page.goto('http://workspace.test/')
   await page.setContent('<html><head><style>'+css+'body{margin:0}#app{height:100vh;width:740px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style></head><body><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside></body></html>');
   await page.evaluate(input=>window.pendingInput=input,input);
   await page.addScriptTag({content:script});
@@ -295,10 +300,10 @@ it.each(['back', 'home'])('restores the conversation homepage with the right pan
   expect(await filesTab.getAttribute('aria-selected')).toBe('true');
   expect(await chatTab.count()).toBe(0);
   expect(await center.isVisible()).toBe(true);
-  await page.evaluate(()=>{
-   window.pendingFixture.record.selectWorkspace('B');
-   window.pendingFixture.openSurface('browser');
-  });
+  await home.locator('.pXSMma_workspace').click()
+  await page.getByRole('menuitem',{name:'研究项目 B',exact:true}).click()
+  await home.getByText('研究项目 B',{exact:true}).waitFor()
+  await page.evaluate(()=>window.pendingFixture.openSurface('browser'))
   await chatTab.waitFor({state:'visible'});
   const right=page.locator('#right textarea');
   await right.waitFor({state:'visible'});
