@@ -2524,6 +2524,60 @@
         ],
         "generatedAt": "2026-11-21T12:51:12.995239+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "网页导航后自动恢复一次正在变化的正文观察",
+        "branch": "codex/feat/browser-observation-settle-20261121",
+        "baseCommit": "e1b086d8d1615396d80e8b8211bc941f08b2a7a1",
+        "tipCommit": "9ae05541413b9f5f656ad85b9d0f40c436288c49",
+        "commits": [
+          {
+            "commit": "9ae05541413b9f5f656ad85b9d0f40c436288c49",
+            "parents": [
+              "e1b086d8d1615396d80e8b8211bc941f08b2a7a1"
+            ],
+            "subject": "打开真实网页后自动重读一次加载中发生变化的正文"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/main/browser/service.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-page-agent.test.ts",
+              "test/browser-use-route.test.ts",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "保持旧页面版本与编辑校验，观察进行中发生变化时可在原标签重读一次。",
+            "verifiedCommit": "9ae05541413b9f5f656ad85b9d0f40c436288c49",
+            "completedAt": "2026-11-21T12:53:41.329637+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实财政部月表第一次导航后读取恰遇DOM变化，随后手动重读成功。"
+        },
+        "acceptanceCriteria": [
+          "新打开的网页只导航一次",
+          "持续变化、跨页或取消不冒充成功"
+        ],
+        "risks": [
+          "其他数据源及问题的图形选择仍由相应任务决定。"
+        ],
+        "generatedAt": "2026-11-21T12:53:41.329637+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2860,6 +2914,18 @@
         "node_modules/vitest/vitest.mjs",
         "run",
         "test/notes-ai.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/browser-page-agent.test.ts",
+        "test/browser-use-route.test.ts",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
