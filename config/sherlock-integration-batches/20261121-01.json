@@ -3111,6 +3111,108 @@
         ],
         "generatedAt": "2026-11-21T13:30:27.673913+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "从全局搜索与工作区历史恢复图像画布与会话",
+        "branch": "codex/feat/image-session-history-view-20261121",
+        "baseCommit": "48c29f9a883512b2235ece2874fa0c91fc3fc256",
+        "tipCommit": "a99067d656e152307112d343bbf7955f030b88f3",
+        "commits": [
+          {
+            "commit": "a99067d656e152307112d343bbf7955f030b88f3",
+            "parents": [
+              "48c29f9a883512b2235ece2874fa0c91fc3fc256"
+            ],
+            "subject": "从工作区左栏与全局搜索恢复原图像画布及对应对话"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-history-mode.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/browser-app-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/image-history-navigation.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-session-recency.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-menu.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/explore-search.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-session-search.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/image-history-navigation.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-history-navigation.test.js",
+              "test/image-factory-native.test.js",
+              "test/sidebar-session-search.test.ts",
+              "test/sidebar-session-recency.test.ts",
+              "test/explore-search.test.ts",
+              "test/browser-app-native.test.js",
+              "test/workspace-surface-host.test.ts",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "覆盖历史搜索、左栏、保存的图像和同会话后续切换模式。",
+            "verifiedCommit": "a99067d656e152307112d343bbf7955f030b88f3",
+            "completedAt": "2026-11-21T13:55:36.226129+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "实际已保存模板、讨论、生图以及后来被研究使用的旧会话四组原始记录均已核对。"
+        },
+        "acceptanceCriteria": [
+          "点击左栏和全局搜索的图像会话直接恢复原任务",
+          "已有最后一次活动为研究的会话打开研究画布"
+        ],
+        "risks": [
+          "签名集成客户端再次核对。"
+        ],
+        "generatedAt": "2026-11-21T13:55:36.226129+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3551,6 +3653,22 @@
         "test/model-task-opening-context.test.js",
         "test/conversation-first-response-effort.test.js",
         "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-history-navigation.test.js",
+        "test/image-factory-native.test.js",
+        "test/sidebar-session-search.test.ts",
+        "test/sidebar-session-recency.test.ts",
+        "test/explore-search.test.ts",
+        "test/browser-app-native.test.js",
+        "test/workspace-surface-host.test.ts",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
