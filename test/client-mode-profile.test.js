@@ -185,3 +185,26 @@ it('admits the signed presentation append-and-readback turn and keeps discussion
   expect(wire.tools.flatMap(x=>x.parameters?.properties?.capability?.enum??[])).not.toContain('presentation.apply')
  }
 })
+
+it('projects self-contained numeric discussions onto the current turn while preserving permissions, instructions and follow-ups',()=>{
+ const samples=[
+  ['browser','浏览讨论D1：美国财政部公布的10年期收益率由4.62%降至4.58%，变化几个基点？只回答换算，不打开网页。'],
+  ['research','估值讨论D1：净值占比为3.81%时换算为多少个基点？只回答换算，不新建或修改任何卡。'],
+  ['presentation','晨会讨论D1：4.62%降至4.58%，十年期美债收益率向哪个方向变动了几个基点？只在对话回答，不编辑演示。'],
+  ['conversation','仅用本条数字，2加3是多少？'],
+ ]
+ const original={role:'assistant',content:[{type:'text',text:'旧应用数据'}]},system={role:'developer',content:[{type:'text',text:'权限不变'}]}
+ const project=(mode,text,extra=[])=>{
+  const {turn}=route(mode,text);const current={id:turn.messageId,role:'user',source:{kind:'user'},content:[{type:'text',text},...extra]}
+  const tool={role:'tool',content:[{type:'tool-result',content:[{type:'text',text:'旧工具结果'}]}]}
+  const reply={role:'assistant',content:[{type:'text',text:'本轮内容'}]};const request={system:'原模式协议',tools:schemas,messages:[system,original,tool,current,reply]};return {request,wire:routeModeTools(request,turn),expected:[system,current,reply],turn}
+ }
+ for(const [mode,text] of samples){
+  const {request,wire,expected,turn}=project(mode,text);expect(wire.messages).toEqual(expected)
+  expect(wire.system).toBe(request.system);expect(wire.tools).toEqual(routeModeTools({...request,messages:[expected[1]]},turn).tools)
+ }
+ for(const t of ['沿用刚才的口径，3.81%相当于多少个基点？只回答换算。','前面第二项和这次的3.81%差多少个基点？只回答数值。','请读取当前工作簿，按表中数值换算成基点。','**接着上文**：只用本条数字，按上一版算法换算3.81%。','同一报告的来源是什么？','请评价“只用本条数字”这个表达。','请用上次的口径把3.81%换算为基点，只回答数值。','3.81%相当于多少个基点？']){
+  const {request,wire}=project('conversation',t);expect(wire.messages).toBe(request.messages)
+ }
+ const attached=project('research',samples[1][1],[{type:'image',attachment:{attachmentId:'current'}}]);expect(attached.wire.messages).toBe(attached.request.messages)
+})
