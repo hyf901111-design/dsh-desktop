@@ -214,6 +214,36 @@ export function modeProfilePrompt(turn) {
     basisPointChange(turn.text)
 }
 
+// The full user turn remains in history. Project only this explicitly
+// standalone question onto the wire; retain trusted instructions and the
+// current turn's subsequent assistant/tool messages.
+function independentDiscussionMessages(messages, turn) {
+  if (!Array.isArray(messages) || !turn.messageId || turn.workspaceTagged || turn.hasFile
+    || turn.image || turn.create || turn.appEdit || turn.shared || turn.localSearch) return messages
+
+  const text = turn.text.normalize('NFKC').replace(/`{3}[\s\S]*?`{3}|^>[^\n]*|[“「][^”」]*[”」]|"[^"\n]*"/gmu, ' ')
+  const currentOnly = /(?:只|仅)(?:需|要)?(?:按|用|依据|基于|根据|使用)(?:这条|本条|本轮|当前)(?:消息)?(?:中)?(?:已(?:经)?提供|已给出|已给)?的?(?:数据|数字|数值|事实|文字|内容)|\bonly (?:use|consider) (?:the )?(?:data|numbers|facts) (?:in|from) this message\b/iu
+  const noHistory = /(?:无需|不要|不用|不必|不需要|不)(?:再)?(?:参考|结合|沿用|使用|看)(?:前文|上文|前面的对话|之前的对话|聊天历史)|\b(?:ignore|without) (?:the )?(?:previous|prior) (?:messages|conversation|context)\b/giu
+  const scoped = text.replace(noHistory, ' ').replace(/(?:不(?:要|用|必)?|无需|别)(?:再|另外)?(?:打开|访问|读取|参考|查看|编辑|改(?:动)?)(?:当前|这份|这张|本)?(?:文档|工作簿|演示|网页|页面|表格|表)/gu, ' ')
+  const references = /(?:上文|前文|上述|上面|前面|刚才|刚刚|上次|上一|上期|之前|那[个项份张]|该[项份]|另一个|另一项|同上|其中|照旧|延续|沿用|对照|结合|根据.{0,5}(?:报告|网页|文稿)|当前(?:页|表|选区|工作簿|文档)|选中|选区|\b(?:previous|earlier|above|selected|same as|as before|continue)\b)/iu
+  if (references.test(scoped)) return messages
+
+  const answerOnly = /(?:只|仅)(?:需|要)?(?:在对话(?:中)?)?(?:回答|解释|给出|说明)|\b(?:only|just) (?:answer|respond|explain)\b/iu.test(scoped)
+  const values = scoped.match(/[-+−]?\d+(?:\.\d+)?\s*%/gu) ?? []
+  const suppliedCalculation = answerOnly && /基点|\bbps?\b|\bbasis points?\b/iu.test(scoped) && (
+    values.length === 1 && /换算|折合|相当于|\bconvert\b/iu.test(scoped)
+    || values.length === 2 && Boolean(basisPointChange(scoped))
+  )
+  if (!suppliedCalculation && !currentOnly.test(text) && !(text.match(noHistory) && answerOnly)) return messages
+
+  const at = messages.findLastIndex(message => message.id === turn.messageId && message.role === 'user' && message.source?.kind === 'user')
+  if (at < 1 || messages[at].content?.some(part => part.type !== 'text'
+    || /<browser-source>|〔(?:表格选区|演示引用)|<odyssey-[\w-]+-v\d+>/u.test(part.text))) return messages
+  const instructions = messages.slice(0, at).filter(message => ['system', 'developer'].includes(message.role)
+    || message.source?.kind === 'plugin' && message.source?.form === 'instructions')
+  return [...instructions, ...messages.slice(at)]
+}
+
 // An explicitly independent image brief should not replay an unrelated old
 // image tool receipt. Keep the admitted message and everything from this turn.
 function independentImageMessages(request, turn) {
@@ -250,7 +280,7 @@ export function routeModeTools(request, turn) {
     if (exclusiveNative || exclusiveImage || exclusiveBrowser) return []
     return [tool]
   })
-  const messages=independentImageMessages(request,turn)
+  const messages=independentDiscussionMessages(independentImageMessages(request,turn),turn)
   return {...request, tools, ...(messages !== request.messages && {messages})}
 }
 
