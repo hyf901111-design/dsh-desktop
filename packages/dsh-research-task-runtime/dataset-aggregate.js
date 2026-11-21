@@ -60,7 +60,7 @@ export function materializeDatasetAggregate(dataset,source){
   const knownUnit=unit??(op==='percent'?'%':op==='sum'?fields.get(field).unit:undefined);
   return {key,label,...(knownUnit===undefined?{}:{unit:knownUnit})};
  });
- return {id:dataset.id,groupBy:[...a.groupBy],label:dataset.label,asOf:source.asOf,note:dataset.note,fields:[{key:'id',label:'记录编号'},...groups,...derivedFields],records:[...grouped.values()]}
+ return {id:dataset.id,groupBy:[...a.groupBy],label:dataset.label,asOf:source.asOf,note:dataset.note,...(source.sourceUrl?{sourceUrl:source.sourceUrl}:{}),fields:[{key:'id',label:'记录编号'},...groups,...derivedFields],records:[...grouped.values()]}
 }
 // Match every displayed group and count against the retained source records.
 // A label or total supplied by the planner does not establish coverage.

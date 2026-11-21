@@ -221,12 +221,20 @@ function pastedHeaderFields(labels,declared,derivedKeys,aliases){
  if(!Array.isArray(labels)||new Set(labels).size!==labels.length)return declared;
  const fields=declared??labels.map(label=>({key:label,label}));
  if(!Array.isArray(fields))return fields;
- const reserved=new Set([...labels,...derivedKeys,...fields.map(field=>field?.key)]);
+ const declaredKeys=new Set([...derivedKeys,...fields.map(field=>field?.key)]);
+ const reserved=new Set([...labels,...declaredKeys]);
  let index=0;
  return fields.map(field=>{
   if(derivedKeys.has(field?.key))return field;
   const sourceIndex=index++,label=labels[sourceIndex];
-  if(validKey(field?.key))return field;
+  if(validKey(field?.key)){
+   // A planner may split the printed unit into its structured unit field.
+   // Bind that spelling only at the same position, retaining the raw heading.
+   const splitUnit=typeof field.label==='string'&&typeof field.unit==='string'&&field.unit.trim()&&
+    [field.label+'（'+field.unit+'）',field.label+'('+field.unit+')'].includes(label);
+   if((field.label===label||splitUnit)&&!declaredKeys.has(label))aliases.set(label,field.key);
+   return splitUnit?{...field,label}:field;
+  }
   if(typeof label!=='string'||field?.key!==label||field?.label!==label||label!==label.trim()||label.length>100)return declared?field:undefined;
   const numbered=/^\p{N}[\p{L}\p{N}\p{M} _()（）%％./-]*$/u.test(label);
   const withUnit=/^\p{L}[\p{L}\p{N}\p{M} _.-]*(?:\([\p{L}\p{N}\p{M} %％/.-]{1,32}\)|（[\p{L}\p{N}\p{M} %％/.-]{1,32}）)$/u.test(label);
@@ -278,7 +286,7 @@ export function resolvePastedWorkbenchPlan(plan){
  if(!direct&&!recoverCopied)return plan;
  if(typeof request!=='string'||!request)fail('只引用本轮用户消息中的表格。');
  const {blocks,context,firstTableStart}=scanPastedTables(request,direct);
- const citation=blocks.length===1&&plan.sharedDatasets?.length===1&&direct?pastedDisclosure(request,firstTableStart):undefined;
+ const citation=blocks.length===1&&direct?pastedDisclosure(request,firstTableStart):undefined;
  const namedSource=/(?:^|[。；;，,\n])\s*(?:来源|出处)\s*(?:标(?:为|注(?:为)?)?|写(?:为)?|[:：])?\s*[「“]?([^。；;，、」”\n]{1,100})/u.exec(context)?.[1]?.trim();
  const source=citation?.source??(namedSource&&!/(?:https?|file):\/\//iu.test(namedSource)?namedSource:undefined)??
   /(?:^|[。；;，,\n])\s*(模拟[\p{L}]{2,16})\s+\d{4}-\d{2}-\d{2}/u.exec(context)?.[1];

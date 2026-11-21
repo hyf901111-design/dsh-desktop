@@ -1,0 +1,222 @@
+{
+  "request": "我是这只 ETF 的估值核算员，收盘后要照着季报和托管系统逐笔勾稽。请把下面五笔持仓整理到研究看板，我打开就按披露顺序从第一笔核到第五笔。每笔要对得上序号、代码、名称、股数、公允价值和占基金净值比例，公允价值按人民币元保留到分，包括末尾的零。若托管同事只报证券代码，我也需要快速定位该笔。\n\n来源为上交所披露的《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》，持仓日2025-12-31，第10页第5.3.1节前五行。\nhttps://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf\n\n序号\t股票代码\t股票名称\t数量（股）\t公允价值（元）\t占基金资产净值比例（%）\n1\t300750\t宁德时代\t31173566\t11448803849.16\t3.81\n2\t600519\t贵州茅台\t7377868\t10160652252.24\t3.38\n3\t601318\t中国平安\t125580047\t8589675214.80\t2.86\n4\t300308\t中际旭创\t13089026\t7984305860.00\t2.66\n5\t601899\t紫金矿业\t194034163\t6688357598.61\t2.23",
+  "arguments": {
+    "requestId": "etf-510310-2025q4-top5-holdings",
+    "title": "易方达沪深300ETF（510310）2025Q4 前五大持仓勾稽",
+    "sharedDatasets": [
+      {
+        "id": "holdings",
+        "label": "易方达沪深300ETF 2025年第4季度报告 5.3.1 前五大股票持仓",
+        "asOf": "持仓日 2025-12-31",
+        "note": "来源：《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》第10页第5.3.1节前五行，上交所披露（2026-01-22）。公允价值为人民币元，按原文保留至分。",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "identity": "code",
+          "numericFields": [
+            "shares",
+            "weight"
+          ]
+        },
+        "fields": [
+          {
+            "key": "seq",
+            "label": "序号"
+          },
+          {
+            "key": "code",
+            "label": "股票代码"
+          },
+          {
+            "key": "name",
+            "label": "股票名称"
+          },
+          {
+            "key": "shares",
+            "label": "数量",
+            "unit": "股"
+          },
+          {
+            "key": "fairValue",
+            "label": "公允价值",
+            "unit": "元"
+          },
+          {
+            "key": "weight",
+            "label": "占基金资产净值比例",
+            "unit": "%"
+          }
+        ]
+      }
+    ],
+    "panels": [
+      {
+        "type": "view",
+        "title": "前五大股票持仓逐笔勾稽（2025-12-31）",
+        "size": "large",
+        "layout": "wide",
+        "view": {
+          "dataset": "holdings",
+          "navigation": "flow",
+          "filters": [
+            "code",
+            "name"
+          ],
+          "sections": [
+            {
+              "kind": "records",
+              "title": "按季报披露顺序：第1笔 → 第5笔",
+              "fields": [
+                "seq",
+                "code",
+                "name",
+                "shares",
+                "fairValue",
+                "weight"
+              ]
+            }
+          ],
+          "note": "六列与季报原表一一对应；公允价值沿用原文文本，保留到分（含末尾零，如 8589675214.80、7984305860.00），不做四舍五入或数值格式化。可用股票代码直接检索定位单笔。"
+        }
+      }
+    ]
+  },
+  "managerRequest": "我是指数投资部的组合经理，晨会上要判断易方达沪深300 ETF（510310）这五项季末重仓有多集中。请把下面的持仓做成研究看板，让我一眼比较五家公司的净值占比和排名，知道前五合计多少。会上会追问第一名比第二名高多少个百分点，结果要能回到五个披露数复核。只分析这五项，百分比按季报披露的精度。\n\n来源为上交所披露的《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》，持仓日2025-12-31，第10页第5.3.1节前五行。\nhttps://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf\n\n序号\t股票代码\t股票名称\t数量（股）\t公允价值（元）\t占基金资产净值比例（%）\n1\t300750\t宁德时代\t31173566\t11448803849.16\t3.81\n2\t600519\t贵州茅台\t7377868\t10160652252.24\t3.38\n3\t601318\t中国平安\t125580047\t8589675214.80\t2.86\n4\t300308\t中际旭创\t13089026\t7984305860.00\t2.66\n5\t601899\t紫金矿业\t194034163\t6688357598.61\t2.23",
+  "managerFirstSchema": {
+    "id": "holdings",
+    "label": "510310 2025Q4 前五大重仓（持仓日 2025-12-31）",
+    "pastedTable": {
+      "block": 1,
+      "header": true,
+      "identity": "seq",
+      "numericFields": [
+        "数量（股）",
+        "公允价值（元）",
+        "占基金资产净值比例（%）"
+      ]
+    },
+    "fields": [
+      {
+        "key": "seq",
+        "label": "序号"
+      },
+      {
+        "key": "code",
+        "label": "股票代码"
+      },
+      {
+        "key": "name",
+        "label": "股票名称"
+      },
+      {
+        "key": "shares",
+        "label": "数量（股）",
+        "unit": "股"
+      },
+      {
+        "key": "value",
+        "label": "公允价值（元）",
+        "unit": "元"
+      },
+      {
+        "key": "weight",
+        "label": "占基金资产净值比例（%）",
+        "unit": "%"
+      }
+    ]
+  },
+  "managerSubmitted": {
+    "dataMode": "source",
+    "panels": [
+      {
+        "size": "medium",
+        "title": "前五合计净值占比",
+        "type": "kpi",
+        "view": {
+          "dataset": "holdings-summary",
+          "groupBy": []
+        }
+      },
+      {
+        "size": "large",
+        "title": "五家公司净值占比排名",
+        "type": "chart",
+        "view": {
+          "dataset": "holdings",
+          "note": "来源：易方达沪深300ETF 2025年第4季度报告 5.3.1 节前五行，持仓日 2025-12-31；排序沿用披露序号，即占比由高到低。",
+          "sections": [
+            {
+              "fields": [
+                "占基金资产净值比例（%）"
+              ],
+              "kind": "records",
+              "label": "股票名称"
+            }
+          ],
+          "unit": "%",
+          "variant": "horizontal"
+        }
+      },
+      {
+        "size": "large",
+        "title": "五项披露数原表（复核用）",
+        "type": "view",
+        "view": {
+          "dataset": "holdings",
+          "filters": [
+            "股票名称"
+          ],
+          "navigation": "flow",
+          "note": "数量（股）、公允价值（元）保留原披露精度，仅用于核对；净值占比比较以占基金资产净值比例列为准。来源：上交所披露《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》第10页 5.3.1 节。",
+          "sections": [
+            {
+              "fields": [
+                "序号",
+                "股票代码",
+                "股票名称",
+                "数量（股）",
+                "公允价值（元）",
+                "占基金资产净值比例（%）"
+              ],
+              "kind": "records"
+            }
+          ]
+        }
+      }
+    ],
+    "requestId": "510310-top5-q4-2025",
+    "sharedDatasets": [
+      {
+        "id": "holdings",
+        "label": "510310 2025Q4 前五大重仓（持仓日 2025-12-31）",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "identity": "序号",
+          "numericFields": [
+            "数量（股）",
+            "公允价值（元）",
+            "占基金资产净值比例（%）"
+          ]
+        }
+      },
+      {
+        "aggregate": {
+          "dataset": "holdings",
+          "groupBy": [],
+          "measures": [
+            {
+              "field": "占基金资产净值比例（%）",
+              "key": "totalWeight",
+              "label": "前五合计净值占比",
+              "op": "sum"
+            }
+          ]
+        },
+        "id": "holdings-summary",
+        "label": "前五合计与首位占比"
+      }
+    ],
+    "title": "易方达沪深300 ETF（510310）前五大重仓集中度"
+  }
+}
