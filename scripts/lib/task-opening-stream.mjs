@@ -43,8 +43,9 @@ export async function* publicTaskOpeningStream(stream) {
   const blocks = new Map()
   let edited = false, protocolIndex
   for await (const chunk of stream) {
-    if (chunk.type === 'tool-call-delta' || chunk.type === 'block-start' && chunk.blockType === 'tool-call' ||
-        chunk.type === 'block-end' && chunk.block.type === 'tool-call') {
+    if (chunk.type === 'reasoning-delta' || chunk.type === 'tool-call-delta' ||
+        chunk.type === 'block-start' && ['reasoning','tool-call'].includes(chunk.blockType) ||
+        chunk.type === 'block-end' && ['reasoning','tool-call'].includes(chunk.block.type)) {
       edited = true
       continue
     }
@@ -90,13 +91,45 @@ export async function* publicTaskOpeningStream(stream) {
 // prepareCall binds both the adapter and the exact call configuration. The
 // opening gets its own capped call; execution keeps the selected model budget.
 export async function* boundedTaskOpeningStream(llm, prepared, request, signal, mark, freeze) {
-  const maxTokens = Math.min(request.maxTokens ?? 384, 384)
-  if (request.maxTokens === maxTokens) {
-    yield* publicTaskOpeningStream(prepared?.stream(request) ?? llm.stream(request))
-    return
+  // The hosted Flash route counts mandatory reasoning against the same
+  // output limit as public text. Respect a smaller explicit session limit.
+  const hostedFlash = request.provider === 'ework-ark' && request.model === 'deepseek-v4.1-flash'
+  const limit = request.maxTokens ?? (hostedFlash ? 2048 : 384)
+  const budgets = [Math.min(limit,hostedFlash ? 1024 : 384)]
+  if (hostedFlash && limit > 1024) budgets.push(Math.min(limit,2048))
+  const usage = {}
+  for (const [attempt,maxTokens] of budgets.entries()) {
+    const capped = prepared && (request.maxTokens === maxTokens ? prepared :
+      await llm.prepareCall({...prepared.config, maxTokens}, signal))
+    signal.throwIfAborted()
+    const opening = request.maxTokens === maxTokens ? request : mark(freeze({...request,maxTokens,...capped?.config}))
+    const stream = publicTaskOpeningStream(capped?.stream(opening) ?? llm.stream(opening))
+    let publicText = false
+    const pending = []
+    for await (const chunk of stream) {
+      if (chunk.type === 'usage') {
+        for (const [key,value] of Object.entries(chunk.usage)) {
+          if (typeof value === 'number') usage[key] = (usage[key] ?? 0) + value
+        }
+      } else if (chunk.type === 'finish') {
+        // Only retry actual token exhaustion with zero words. Never repeat a
+        // public introduction, transport error or cancelled request.
+        if (chunk.reason.kind === 'max-tokens' && !publicText && attempt + 1 < budgets.length) break
+        if (Object.keys(usage).length) yield {type:'usage',usage}
+        yield chunk
+        return
+      } else if (publicText) {
+        yield chunk
+      } else {
+        pending.push(chunk)
+        const words = chunk.type === 'text-delta' ? chunk.text :
+          chunk.type === 'block-end' && chunk.block.type === 'text' ? chunk.block.text : ''
+        if (words?.trim()) {
+          publicText = true
+          yield* pending
+          pending.length = 0
+        }
+      }
+    }
   }
-  const capped = prepared && await llm.prepareCall({...prepared.config, maxTokens}, signal)
-  signal.throwIfAborted()
-  const opening = mark(freeze({...request, maxTokens, ...capped?.config}))
-  yield* publicTaskOpeningStream(capped?.stream(opening) ?? llm.stream(opening))
 }

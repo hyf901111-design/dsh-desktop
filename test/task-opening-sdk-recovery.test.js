@@ -108,3 +108,43 @@ it('honors a smaller explicit output budget and explicit reasoning setting witho
  for await(const chunk of boundedTaskOpeningStream(llm,prepared,request,new AbortController().signal,x=>x,x=>x))chunks.push(chunk)
  expect(calls).toEqual([request]);expect(calls[0]).toBe(request);expect(chunks.at(-1).reason.kind).toBe('stop')
 })
+
+it.each([
+ ['ework-ark','deepseek-v4.1-flash',16384,1024],['ework-ark','deepseek-v4.1-flash',256,256],
+ ['ework-ark','other-model',16384,384],['other-provider','deepseek-v4.1-flash',4096,384],
+])('caps %s/%s with a %i session limit and omits private opening blocks',async(provider,model,limit,expected)=>{
+ const request={provider,model,maxTokens:limit,reasoningEffort:'high'},wire=[]
+ const stream=options=>{
+  wire.push(options)
+  return [{type:'block-start',index:0,blockType:'reasoning'},{type:'reasoning-delta',index:0,text:'private deliberation'},
+   {type:'block-end',index:0,block:{type:'reasoning',text:'private deliberation'}},
+   ...textStream(['我先核对披露日期。']).map(c=>c.index===0?{...c,index:1}:c).slice(0,-1),
+   {...close(),replayState:{reasoning:'private deliberation'}}]
+ }
+ const prepared={config:request,stream}
+ const llm={prepareCall:async config=>({config,stream})}
+ const chunks=[]
+ for await(const chunk of boundedTaskOpeningStream(llm,prepared,request,new AbortController().signal,x=>x,x=>x))chunks.push(chunk)
+ expect(wire).toEqual([{...request,maxTokens:expected}])
+ expect(chunks.filter(c=>c.type==='text-delta').map(c=>c.text).join('')).toBe('我先核对披露日期。')
+ expect(JSON.stringify(chunks)).not.toMatch(/private deliberation|reasoning|replayState/)
+ expect(request.maxTokens).toBe(limit)
+})
+
+it('recovers once from a real reasoning-only opening limit without double counting public text or losing usage',async()=>{
+ const route={provider:'ework-ark',model:'deepseek-v4.1-flash',maxTokens:16384,reasoningEffort:'high'}
+ const budgets=[]
+ const llm={prepareCall:async config=>({config,stream:()=>{
+  budgets.push(config.maxTokens)
+  if (budgets.length===1) return [{type:'block-start',index:0,blockType:'reasoning'},
+   {type:'block-end',index:0,block:{type:'reasoning',text:'private'}},{type:'usage',usage:{inputTokens:257,outputTokens:1024}},
+   {type:'finish',reason:{kind:'max-tokens'}}]
+  return [...textStream(['我先核对两个交易日的曲线。']).slice(0,-1),{type:'usage',usage:{inputTokens:257,outputTokens:350}},close()]
+ }})}
+ const chunks=[]
+ for await(const chunk of boundedTaskOpeningStream(llm,{config:route},route,new AbortController().signal,x=>x,x=>x))chunks.push(chunk)
+ expect(budgets).toEqual([1024,2048]);expect(chunks.filter(c=>c.type==='finish')).toHaveLength(1)
+ expect(chunks.at(-2)).toEqual({type:'usage',usage:{inputTokens:514,outputTokens:1374}})
+ expect(chunks.filter(c=>c.type==='text-delta').map(c=>c.text)).toEqual(['我先核对两个交易日的曲线。'])
+ expect(JSON.stringify(chunks)).not.toContain('private')
+})

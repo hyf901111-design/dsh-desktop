@@ -49,3 +49,14 @@ it('preserves selected office reference labels with their range, without the int
  const first=await run(1),text=first.messages[0].content[0].text
  expect(text).toContain('收益率原表');expect(text).toContain('A1:B4');expect(text).not.toContain('aaaaaaaaaaaa')
 })
+
+it('uses a short task outline on the hosted reasoning route and retains a requested response language',async()=>{
+ const prompt=treasuryLines.join('\n')+'\nReply in English.'
+ const {current,run}=requests(prompt)
+ const route={...current,provider:'ework-ark',model:'deepseek-v4.1-flash'}
+ const first=await run(1,route),text=first.messages[0].content[0].text
+ expect(text).toContain('断网');expect(text).toContain('Reply in English')
+ expect(text).toContain('日期、2年、5年、10年、30年');expect(text).toContain('完整表格留待执行时读取');expect(text.length).toBeLessThan(220)
+ const second=await run(2,route)
+ expect(second.messages.at(-1).content[0].text).toBe(prompt)
+})
