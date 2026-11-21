@@ -203,7 +203,7 @@ export async function mountPresentationEditGuide(
     }
     await command('comment', { target: 'comment', text })
     await until((s) => s.comment === text, '图表批注尚未保存。')
-    await wait(1500)
+    if (target === 'chart') await wait(1500)
     return markId
   }
   async function openChat() {
@@ -296,7 +296,7 @@ export async function mountPresentationEditGuide(
           tableMarkId = await markObject('table')
           break
         case 'revise-chart':
-          await request(content.chart.comment + '\n' + content.table.comment, { existing: true })
+          await request(content.chart.comment + '\n' + content.table.comment, { existing: true, draftHoldMs: 0 })
           await until(s => !s.commentOpen, '已发送的标记评论框尚未收起。')
           await native('chart', chartMarkId)
           await until((s) => s.page === content.table.page && !s.marking, '表格调整尚未显示。')
@@ -316,7 +316,7 @@ export async function mountPresentationEditGuide(
           break
         }
         case 'revise-title':
-          await request(content.title.prompt)
+          await request(content.title.prompt, { referenceText: content.title.original })
           await native('title', titleId)
           await chat!.reply(content.replies.title)
           break

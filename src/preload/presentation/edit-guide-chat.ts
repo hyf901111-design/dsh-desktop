@@ -170,11 +170,24 @@ export async function mountPresentationEditGuideChat(document: Document, options
         return
       }
       // Focusing is the normal action that pins a provisional selection in the native composer.
-      await click(composer, input => {
+      const focusInput = (input: HTMLTextAreaElement) => {
         if (chips()[0]?.getAttribute('data-provisional') === 'true' && document.activeElement === input) input.blur()
         input.focus({ preventScroll: true })
-      }, '当前演示会话的输入框尚未就绪。')
-      await waitFor(() => { const input = composer(); return input && matches(input, existing ? text : '', referenceLabel) || undefined }, '输入框已有草稿，或选区尚未就绪。')
+      }
+      await click(composer, focusInput, '当前演示会话的输入框尚未就绪。')
+      let retriedChip: Element | undefined
+      await waitFor(() => {
+        const input = composer()
+        if (!input) return
+        if (matches(input, existing ? text : '', referenceLabel)) return true
+        // A re-render can replace the provisional chip after the original focus event.
+        const chip = chips()[0]
+        if (!input.value && referenceLabel && document.hasFocus() && chip && chip !== retriedChip &&
+            chip.getAttribute('data-provisional') === 'true' && chipLabel(chip) === referenceLabel) {
+          retriedChip = chip
+          focusInput(input)
+        }
+      }, '输入框已有草稿，或选区尚未就绪。')
       if (existing) { pending = { text, referenceLabel }; return }
       const setValue = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value')!.set!
       let written = ''

@@ -75,6 +75,17 @@ it('clicks the editable line below a long presentation chip that covers the text
           chip.dataset.referenceSource='presentation-reference';chip.textContent='标注 2';textarea.parentElement.append(chip)
           textarea.value += '调整图表\uE002 表格文字上下居中'
         }
+        if(label==='AI 投资回报的 NPV 敏感性'){
+          const chip=textarea.parentElement.querySelector('[data-reference-source]')
+          textarea.value='';chip.dataset.provisional='true'
+          textarea.addEventListener('focusin',()=>{
+            chip.replaceWith(chip.cloneNode(true))
+            textarea.addEventListener('focusin',()=>{
+              delete textarea.parentElement.querySelector('[data-reference-source]').dataset.provisional
+              textarea.value='\uE001 '
+            },{once:true})
+          },{once:true})
+        }
         const selectedNotes=label==='这里请大家记住一个门槛'
         if(selectedNotes){
           const chip=textarea.parentElement.querySelector('[data-reference-source]')
