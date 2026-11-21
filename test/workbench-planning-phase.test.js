@@ -8,6 +8,7 @@ import ToolRuntime from '@deepseek-ai/dsh-tools'
 import { validateJsonSchemaValue } from '@deepseek-ai/dsh-tools'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { registerWorkbenchExecutionPolicy, workbenchCreationRequest } from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
@@ -49,6 +50,28 @@ async function registeredCreationSchema() {
 }
 
 describe('工作台数据获取与用户预算', () => {
+  it('accepts the first ETF holdings submission through the tool schema and preserves the disclosed chart and detail',async()=>{
+    const readFixture=name=>JSON.parse(readFileSync(new URL('./fixtures/'+name,import.meta.url),'utf8'))
+    const args=readFixture('workbench-etf-holdings-first-call.json')
+    const originalRequest=readFixture('workbench-public-table-requests.json')['ETF持仓']
+    const tool=await registeredCreationSchema()
+    expect(validateJsonSchemaValue(tool.parameters,args)).toEqual([])
+    const namedPlan=value=>validateWorkbench({...value,originalRequest})
+    const result=namedPlan(args)
+    const [chart,detail]=result.panels.map(panel=>panel.artifact)
+    const rows=originalRequest.trim().split('\n').slice(-5).map(line=>line.split('\t'))
+    expect(chart).toMatchObject({variant:'horizontal',unit:'%',labels:rows.map(row=>row[2]),series:[{values:rows.map(row=>Number(row[5]))}]})
+    expect(detail.view).toMatchObject({navigation:'flow',layout:'stack',sections:[{fields:['rank','id','name','shares','value','ratio']}]})
+    expect(detail.dataset.records).toEqual(rows.map(([rank,code,name,shares,value,ratio])=>({id:code,rank,code,name,shares:Number(shares),value:Number(value),ratio:Number(ratio)})))
+    expect(validateWorkbench(result).panels).toEqual(result.panels)
+    const invalid=structuredClone(args)
+    invalid.panels[1].view.navigation='carousel'
+    expect(validateJsonSchemaValue(tool.parameters,invalid)).not.toEqual([])
+    expect(()=>namedPlan(invalid)).toThrow(/导航/)
+    invalid.panels[1].view.navigation='stack'
+    invalid.panels[1].view.sections[0].fields=['unknown']
+    expect(()=>namedPlan(invalid)).toThrow(/字段/)
+  })
   it('accepts an incomplete acquisition receipt without converting it to an invalid tool output',async()=>{
     const tool=await registeredCreationSchema()
     expect(validateJsonSchemaValue(tool.output.schema,{planId:'same-plan',panels:['比较明细'],templateIds:['table'],status:'incomplete',detail:'来源暂不可用，保留当前计划。'})).toEqual([])
