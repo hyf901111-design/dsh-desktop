@@ -1,13 +1,14 @@
 import {expect,it,vi} from 'vitest'
 import {Window} from 'happy-dom'
 import {createRequire} from 'node:module'
+const {stripTurnModeConversation}=createRequire(import.meta.url)('../scripts/lib/turn-client-mode.mjs')
 import {stripComposerWorkspaceBar} from '../scripts/lib/patch-figma-final-shell.mjs'
 import {stripKnowledgeSharedResearch} from '../scripts/lib/knowledge-shared-research.mjs'
 import {stripSpreadsheetClient} from '../scripts/lib/spreadsheet-client.mjs'
 import {stripResearchBoardHeaderClient} from '../scripts/lib/research-board-header-client.mjs'
 import {stripConversationPermissionDefault} from '../scripts/lib/conversation-permission-default.mjs'
 import {imageFactoryPrompt,readImageFactoryContext,stripImageFactoryContext} from '../packages/dsh-research-task-runtime/image-factory-context.js'
-const stripNewer = source => stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(stripComposerWorkspaceBar(source)))))
+const stripNewer = source => stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(stripComposerWorkspaceBar(stripTurnModeConversation(source))))))
 import {installBrowserNative,installWorkspaceAppSessions,browserSourceCodec,patchBrowserAppNative,stripBrowserAppNative,browserUserTextSegments} from '../scripts/lib/browser-app-native.mjs'
 import {installImageFactoryContext} from '../scripts/lib/image-factory-native.mjs'
 import {installKnowledgeSourceNavigation} from '../scripts/lib/knowledge-client.mjs'
