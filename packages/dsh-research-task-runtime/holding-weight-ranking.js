@@ -1,10 +1,14 @@
 // A holding's fair value and its weight have the same fund NAV denominator.
 // A second ranking is unnecessary only when the requested weighting, evidence
 // and already visible original amounts establish that relationship on this card.
+export function requestsHoldingWeightRanking(userText){
+ return /持仓|重仓/u.test(userText)&&/(?:净值占比|占(?:基金)?(?:资产)?净值(?:比例|比重)?|持仓权重)/u.test(userText)&&
+  /排名|排序|名次|第一名|居首/u.test(userText)&&!/不(?:要|用|必|需)|无需/u.test(userText.match(/[^，。；;\n]{0,12}(?:权重|净值占比)(?:排名|排序)/u)?.[0]??'')
+}
+
 function singleHoldingWeightRanking(narrative) {
  const userText=narrative.split(/\r?\n/u).filter(line=>!/^\s*(?:https?:\/\/|(?:数据|资料)?(?:来源|出处)\s*[:：为])/iu.test(line)).join(' ')
- if(!/持仓|重仓/u.test(userText)||!/(?:净值占比|占(?:基金)?(?:资产)?净值(?:比例|比重)?|持仓权重)/u.test(userText)||
-    !/排名|排序|名次|第一名|居首/u.test(userText))return false
+ if(!requestsHoldingWeightRanking(userText))return false
  // An explicit count, additional comparison, amount or prescribed secondary
  // display is a choice by the author, even when its rankings coincide.
  return !/公允价值|金额|市值|估值|持仓额|绝对规模|绝对体量|双重|双视角|双口径|分别(?:排名|排序)|各(?:一|自)|每[项种列个].{0,8}(?:[一1]张|成图)|[\d零〇一二两三四五六七八九十百]+\s*(?:张|幅)|(?:[\d零〇一二两三四五六七八九十百]+|若干)\s*(?:张|个|幅|组|套)\s*(?:独立|不同|并列|研究|对照)?(?:图|表|卡|组件|面板)|全部(?:做成|画出|绘制)(?:图|排名)/u.test(userText)

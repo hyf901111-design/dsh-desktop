@@ -1,5 +1,6 @@
 import {readFileSync} from 'node:fs'
 import {expect,it} from 'vitest'
+import {workbenchReadingPurpose} from '../packages/dsh-research-task-runtime/workbench-reading-purpose.js'
 import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 
 const {originalRequest,args}=JSON.parse(readFileSync('test/fixtures/workbench-holding-weight-ranking.json','utf8'))
@@ -44,4 +45,8 @@ it('rejects unclear citation adjacency and conflicting source declarations, and 
   const p=compile(plan=>plan.originalRequest=alter(plan.originalRequest))
   expect(p.sharedDatasets[0].sourceUrl).toBeUndefined()
  }
+})
+
+it('recognizes a disclosure ledger task described with the accounting term 勾稽',()=>{
+ expect(workbenchReadingPurpose('我是估值核算员，收盘后要照着季报和托管系统逐笔勾稽。')).toBe('reconcile')
 })
