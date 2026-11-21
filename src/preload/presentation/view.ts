@@ -52,12 +52,21 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       })
     )
   let switching = false
+  let lastReplyTarget = ''
   const paintHeader = () => {
     const e = current,
       node =
         e?.host
           .closest('[data-odyssey-page=presentation]')
           ?.querySelector<HTMLElement>('[data-ework-presentation-actions]') ?? null
+    const replyStatus = !e?.documentId || !e.ready ? 'empty' : !e.editable || e.locked || switching || e.failure ? 'readonly' : 'editable'
+    const target = e ? e.sessionId + ':' + replyStatus : ''
+    if (lastReplyTarget !== target) {
+      lastReplyTarget = target
+      if (e) doc.body.dataset.eworkPresentationReply = replyStatus
+      else delete doc.body.dataset.eworkPresentationReply
+      doc.dispatchEvent(new CustomEvent('sherlock:presentation-reply-target'))
+    }
     header.paint(node, {
       hasDeck: !!e?.documentId,
       writable: !!e?.editable,
@@ -158,7 +167,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     }
   }
   const barriers = new Map<string, (error?: string) => void>()
-  async function flushEditor(e: Editor, locking = false) {
+  async function editorCommand(e: Editor, type: string, data: Record<string, unknown>) {
     if (!e.ready) throw Error('演示尚未就绪。')
     const id = win.crypto.randomUUID()
     await new Promise<void>((resolve, reject) => {
@@ -172,11 +181,12 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
         if (error) reject(Error(error))
         else resolve()
       })
-      post(e, 'flush', { id, locking })
+      post(e, type, { id, ...data })
     })
     await e.queue
     if (current !== e || e.failure) throw Error(e.failure || '演示页签已切换。')
   }
+  const flushEditor = (e: Editor, locking = false) => editorCommand(e, 'flush', {locking})
   const reset = () => {
     if (current) {
       publishSelection(current)
@@ -190,8 +200,8 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       current.frame.remove()
     }
     current = undefined
-    paintHeader()
     delete doc.body.dataset.eworkPresentationSession
+    paintHeader()
   }
   const sync = () => {
     if (disposed) return
@@ -222,6 +232,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       queue: Promise.resolve()
     }
     doc.body.dataset.eworkPresentationSession = current.sessionId
+    paintHeader()
     host.append(frame)
     const e = current
     e.disposeDrop = mountPresentationKnowledgeDrop(host, {
@@ -344,7 +355,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
           /^Error invoking remote method '[^']+': (?:Error: )?/,
           ''
         )
-        if (d.type === 'save') e.failure = message
+        if (d.type === 'save') { e.failure = message; paintHeader() }
         post(e, 'error', { message, conflict: d.type === 'save' })
       })
   }
@@ -414,6 +425,14 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       const e = current
       if (!e?.ready || e.sessionId !== sessionId) return
       await flushEditor(e)
+    },
+    async insertReply(sessionId: string, text: string) {
+      const e = current
+      if (!e?.ready || e.sessionId !== sessionId || !e.documentId || !e.slideId || e.failure)
+        throw Error('请先打开可编辑的演示文稿。')
+      if (e.locked || !e.editable || switching) throw Error('请先解锁演示文稿。')
+      if (typeof text !== 'string' || !text.trim()) throw Error('这条回复没有可插入的文字。')
+      await editorCommand(e, 'insert-reply', { documentId: e.documentId, slideId: e.slideId, text })
     },
     async admit(sessionId: string, prompt: string, references: unknown, useSlide = true) {
       const e = current

@@ -34,7 +34,7 @@
       <p v-if="notice" class="empty-notice" role="status">{{ notice }}</p>
     </div>
     <template v-else-if="slide">
-      <nav class="ribbon" aria-label="演示编辑工具">
+      <nav ref="ribbon" class="ribbon" aria-label="演示编辑工具">
         <button aria-label="菜单" @click="toggle('commands')">
           <Glyph name="menu" />
           <span>菜单</span>
@@ -92,7 +92,6 @@
           <span>插入</span>
           <Glyph name="down" />
         </button>
-        <div class="grow" />
         <button :disabled="!editable" aria-label="标注" :aria-pressed="marking" @click="marking = !marking">
           <Glyph name="mark" />
           <span>标注</span>
@@ -101,7 +100,8 @@
           <Glyph name="play" />
           <span>放映</span>
         </button>
-        <button aria-label="更多" @click="toggle('more')"><Glyph name="more" /></button>
+        <button data-ribbon-more data-ribbon-folded aria-label="更多工具" title="更多工具" aria-haspopup="menu" aria-controls="ribbon-overflow" @keydown.down.prevent="focusOverflow"
+          :aria-expanded="menu === 'overflow'" @click="toggle('overflow')"><Glyph name="more" /></button>
       </nav>
       <SelectionFormatBar v-if="editable" />
       <CommandMenu
@@ -121,18 +121,28 @@
       <div
         v-else-if="menu && menu !== 'recent'"
         class="menu"
-        :class="{ 'layout-menu': menu === 'layout' }"
+        :id="menu === 'overflow' ? 'ribbon-overflow' : undefined"
+        :role="menu === 'overflow' ? 'menu' : undefined"
+        @keydown="overflowKeys"
+        :class="{ 'layout-menu': menu === 'layout', 'ribbon-overflow': menu === 'overflow' }"
         :style="menuPos"
       >
-        <template v-if="menu === 'more'">
-          <button @click="menu = 'commands'">
-            <Glyph name="menu-slide" />
-            演示文稿
-          </button>
-          <button @click="menuAction('reload')">
-            <Glyph name="redo" />
-            重新载入已保存版本
-          </button>
+        <template v-if="menu === 'overflow'">
+          <template v-for="tool in overflowTools" :key="toolLabel(tool)">
+            <label v-if="tool.tagName === 'SELECT'" class="overflow-select">
+              <span>{{ toolLabel(tool) }}</span>
+              <select :aria-label="toolLabel(tool)" :value="tool.value" :disabled="tool.disabled"
+                @change="chooseOverflowValue(tool, $event.target.value)">
+                <option v-for="option in Array.from(tool.options)" :key="option.value" :value="option.value">{{ option.text }}</option>
+              </select>
+            </label>
+            <button v-else role="menuitem" :data-ribbon-command="toolLabel(tool)" :disabled="tool.disabled"
+              :aria-pressed="tool.getAttribute('aria-pressed')" @mousedown.prevent @click="runOverflowTool(tool)">
+              <img v-if="tool.querySelector('.glyph')" class="glyph" alt="" :src="tool.querySelector('.glyph').src" />
+              <span v-else class="overflow-letter" aria-hidden="true">{{ tool.textContent.trim() }}</span>
+              {{ toolLabel(tool) }}
+            </button>
+          </template>
         </template>
         <template v-if="menu === 'insert'">
           <button v-for="item in insertCommands" :key="item.id" @click="runCommand(item.id)">
@@ -312,6 +322,8 @@ import { protectMaster } from './master-protection'
 import { finalizePptx } from './finalize-pptx'
 import { reconcilePointColors } from './powerpoint-point-colors'
 import { attachEditorMarks } from './annotations'
+import { replyTextBox } from './reply-text'
+import { useRibbonOverflow } from './ribbon-overflow'
 import { runEditGuideAction } from './edit-guide'
 
 const Glyph = defineComponent({
@@ -348,6 +360,41 @@ const docId = ref(''),
   playing = ref(false),
   marking = ref(false),
   screenWidth = ref(1000)
+const ribbon = ref()
+const overflowTools = useRibbonOverflow(ribbon, (more, count) => {
+  if (menu.value !== 'overflow') return
+  if (count) menuPos.value = menuPosition('overflow', more)
+  else menu.value = ''
+})
+function focusOverflow() {
+  if (menu.value !== 'overflow') toggle('overflow')
+  nextTick(() => document.querySelector('#ribbon-overflow :is(button,select):enabled')?.focus())
+}
+function overflowKeys(event) {
+  if (menu.value !== 'overflow') return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    menu.value = ''
+    ribbon.value.querySelector('[data-ribbon-more]').focus()
+  } else if (event.target.tagName !== 'SELECT' && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+    event.preventDefault()
+    const items = [...event.currentTarget.querySelectorAll(':is(button,select):enabled')]
+    if (items.length) items[(items.indexOf(event.target) + items.length + (event.key === 'ArrowDown' ? 1 : -1)) % items.length].focus()
+  }
+}
+const toolLabel = tool => tool.getAttribute('aria-label') || tool.title
+function runOverflowTool(tool) {
+  menu.value = ''
+  if (!tool.isConnected || tool.disabled) return
+  ribbon.value.querySelector('[data-ribbon-more]').focus({preventScroll: true})
+  tool.click()
+}
+function chooseOverflowValue(tool, value) {
+  if (tool.disabled) return
+  tool.value = value
+  tool.dispatchEvent(new Event('change', {bubbles: true}))
+  menu.value = ''
+}
 const slide = computed(() => store.currentSlide),
   index = computed(() => store.slideIndex)
 const ratio = computed(() =>
@@ -499,6 +546,22 @@ function receive(event) {
     stylesOpen.value = false
   } else if (d.type === 'workspace-focus') workspaceFocused.value = !!d.active
   else if (d.type === 'load') void hydrate(d)
+  else if (d.type === 'insert-reply') {
+    if (!editable.value || freeze || loading || importing || d.documentId !== docId.value ||
+        !slide.value || d.slideId !== slide.value.id || typeof d.text !== 'string' || !d.text.trim())
+      return send('flushed', {id:d.id, error:'当前页面已切换或不可编辑。'})
+    try {
+      if (playing.value) stopPlaying()
+      marking.value = false
+      menu.value = ''
+      const w = store.viewportSize
+      const {position, content} = replyTextBox(d.text, w, w * store.viewportRatio, store.theme?.fontName)
+      elements.createTextElement(position, {content})
+      nextTick(() => { save(); send('flushed', {id:d.id}) })
+    } catch (error) {
+      send('flushed', {id:d.id, error:String(error.message || error)})
+    }
+  }
   else if (d.type === 'flush') {
     if (d.locking && (importing || loading)) return send('flushed', { id: d.id, error: '文稿正在载入，请稍后锁定。' })
     document.dispatchEvent(new Event('odyssey:flush-text'))
@@ -756,10 +819,13 @@ function toggle(name) {
     menu.value = ''
     return
   }
-  const rect = document.activeElement?.getBoundingClientRect()
-  const width = name === 'layout' ? Math.min(520, innerWidth - 16) : 210
-  menuPos.value = { left: Math.max(8, Math.min(rect?.left || 8, innerWidth - width - 8)) + 'px', top: '40px' }
+  menuPos.value = menuPosition(name, document.activeElement)
   menu.value = name
+}
+function menuPosition(name, anchor) {
+  const rect = anchor?.getBoundingClientRect()
+  const width = name === 'layout' ? Math.min(520, innerWidth - 16) : 210
+  return { left: Math.max(8, Math.min(rect?.left || 8, innerWidth - width - 8)) + 'px', top: '40px' }
 }
 function rename(input) {
   const title = input.value.trim()

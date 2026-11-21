@@ -162,9 +162,9 @@ footer {
   gap: 3px;
   padding: 6px 8px;
   background: var(--bar);
-  overflow-x: auto;
-  scrollbar-width: none;
+  overflow: hidden;
 }
+.ribbon > [data-ribbon-folded] { display: none; }
 .ribbon > button,
 .ribbon > .color,
 .ribbon select {
@@ -185,6 +185,7 @@ footer button:hover,
   background: var(--hover);
 }
 .ribbon > i {
+  flex: none;
   height: 16px;
   border-left: 1px solid var(--line);
   margin: 0 4px;
@@ -222,7 +223,12 @@ footer button:hover,
   min-width: 2px;
 }
 .ribbon .glyph {
-  max-width: 18px;
+  width: 16px;
+  height: 16px;
+}
+.ribbon .glyph[src$='/down.svg'] {
+  width: 12px;
+  height: 12px;
 }
 .doc-line {
   background: var(--sub);
@@ -548,3 +554,26 @@ footer > span {
 .style-popover{background:var(--bar);border-color:var(--line);color:var(--ink);color-scheme:normal}
 .style-popover :is(input,select,.select,.input,.select-custom,.number-input){color:#303030}
 .style-tabs button[aria-pressed=true]{background:var(--hover);color:var(--ink)}
+
+.ribbon-overflow {
+  width: min(210px, calc(100% - 16px));
+  min-width: 0;
+  box-sizing: border-box;
+}
+.ribbon-overflow .overflow-letter {
+  width: 16px;
+  text-align: center;
+}
+.ribbon-overflow .overflow-select {
+  min-height: 32px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.overflow-select select {
+  max-width: 125px;
+  color: var(--ink);
+  background: var(--bg);
+}
