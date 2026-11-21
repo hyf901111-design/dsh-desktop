@@ -11,18 +11,21 @@ const fail=message=>{throw Error('消息中的原始表格：'+message);};
 const rawDecimal=/^[+-]?(?:0|[1-9]\d{0,14})(?:\.\d{1,12})?$/u;
 
 function scanPastedTables(request, strict = false) {
- const blocks = [], context = [];
+ const blocks = [], context = [], lineBreak = /[\r\n]/gu;
  let block = [], format;
  function finishBlock() {
   if (block.length >= 2) blocks.push(block);
   block = [];
  }
  for (let start = 0; start < request.length;) {
-  const end = request.indexOf('\n', start);
-  const line = request.slice(start, end < 0 ? undefined : end).replace(/\r$/u,'');
-  let next = end < 0 ? request.length : end + 1;
+  lineBreak.lastIndex = start;
+  const end = lineBreak.exec(request)?.index ?? request.length;
+  const line = request.slice(start, end);
+  let next = end === request.length ? end : end + (request.startsWith('\r\n',end) ? 2 : 1);
   let cells, kind;
-  if (line.includes('\t') || (format === 'tsv' && line.startsWith('"'))) {
+  const visibleTab = line.includes('\t');
+  // A quoted header can span lines before the first actual column boundary.
+  if (visibleTab || line.startsWith('"')) {
    try {
     const row = readDelimitedRow(request, start, '\t');
     if (row.cells.length >= 2) {
@@ -32,10 +35,14 @@ function scanPastedTables(request, strict = false) {
     }
    } catch (error) {
     // Never offer a partial table or renumber later blocks after a broken quote.
-    if (strict) fail(error.message);
-    return {blocks:[], context:request};
+    // A leading quote in standalone prose is not a spreadsheet declaration.
+    if (visibleTab || format === 'tsv') {
+     if (strict) fail(error.message);
+     return {blocks:[], context:request};
+    }
    }
-  } else if (/[|｜]/u.test(line)) {
+  }
+  if (!kind && !visibleTab && /[|｜]/u.test(line)) {
    const text = line.trim();
    const inner = /^[|｜].*[|｜]$/u.test(text) ? text.slice(1,-1) : text;
    cells = inner.split(/[|｜]/u).map(value => value.trim());

@@ -28,6 +28,18 @@ it('preserves quoted clipboard cells, line breaks, pipes, empty edges and block 
     [['部门','件数'],['风控','2']]
   ])
 })
+it('preserves CR-only spreadsheet ranges after an instruction and before the next block',()=>{
+  const request='做一个经营复盘看板。\r渠道\t目标\t实际\r直销\t5\t\r\r|部门|件数|\r|风控|2|'
+  expect(pastedWorkbenchBlocks(request)).toEqual([[['渠道','目标','实际'],['直销','5','']],[['部门','件数'],['风控','2']]])
+  expect(validateWorkbench({...plan,originalRequest:request}).panels[0].artifact.series[1].values).toEqual([null])
+})
+it('reads a multiline first header before its first delimiter and ignores quotation marks in prose',()=>{
+  const request='用下表做渠道比较。\n"业务提示，接下来是原表。\n"渠道\r\n名称"\t目标\t实际\r\n银行\t12\t10'
+  expect(pastedWorkbenchBlocks(request)).toEqual([[['渠道\r\n名称','目标','实际'],['银行','12','10']]])
+  const fields=[{key:'channel',label:'渠道\r\n名称'},...dataset.fields.slice(1)]
+  const compiled=validateWorkbench({...plan,originalRequest:request,sharedDatasets:[{...dataset,fields}]})
+  expect(compiled.panels[0].artifact.labels).toEqual(['银行'])
+})
 it('does not assign an observation date found inside a pasted row to the whole dataset',()=>{
   const result=validateWorkbench({...plan,originalRequest:plan.originalRequest.replaceAll('银行','2026-11-02')})
   expect(result.panels[1].artifact.dataset.asOf).not.toBe('2026-11-02')
