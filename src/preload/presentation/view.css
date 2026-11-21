@@ -19,6 +19,16 @@
   overflow: hidden;
   -webkit-app-region: no-drag;
 }
+[data-ework-presentation-view][data-presentation-frame-pending] {
+  background: #fff;
+}
+:is(body[data-ds-dark-theme], html[data-theme='dark']) [data-presentation-frame-pending] {
+  background: #1e1e1e;
+}
+[data-ework-presentation-view][data-presentation-frame-pending] > iframe {
+  opacity: 0;
+  pointer-events: none;
+}
 [data-ework-presentation-view] > iframe {
   width: 100%;
   height: 100%;

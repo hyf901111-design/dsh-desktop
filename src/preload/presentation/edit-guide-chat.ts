@@ -46,15 +46,26 @@ export async function mountPresentationEditGuideChat(document: Document, options
     const left = Math.max(0, box.left), right = Math.min(win.innerWidth, box.right)
     const top = Math.max(0, box.top), bottom = Math.min(win.innerHeight, box.bottom)
     if (right <= left || bottom <= top) return
-    // An inline title can cover the middle of the textarea. Aim beside its chip,
-    // or on the next line when it wraps in a narrow conversation pane.
-    const offsets: [number, number][] = target instanceof win.HTMLTextAreaElement
-      ? [[.5,.5],[.94,.27],[.94,.78],[.14,.78],[.5,.86],[.04,.95]]
-      : [[.5,.5]]
-    for (const [u, v] of offsets) {
-      const x = left + (right-left)*u, y = top + (bottom-top)*v
-      if (target.contains(document.elementFromPoint(x, y))) return {x, y}
+    if (target instanceof win.HTMLTextAreaElement) {
+      const chips = [...(target.closest('.uV2eYG_root')?.querySelectorAll('[data-reference-source="presentation-reference"]') ?? [])]
+        .map(chip => chip.getBoundingClientRect()).filter(r => r.width && r.height && r.left < right && r.right > left && r.top < bottom && r.bottom > top)
+      if (chips.length) {
+        const style = win.getComputedStyle(target)
+        const row = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5
+        const x = Math.min(right - 2, left + (parseFloat(style.paddingLeft) || 0) + 4)
+        const lastBottom = Math.max(...chips.map(r => r.bottom))
+        const y = Math.min(bottom - 2, lastBottom + row / 2)
+        if (y > lastBottom && target.contains(document.elementFromPoint(x, y))) return {x, y}
+      }
+      for (const [u, v] of [[.14,.78],[.94,.78],[.5,.86],[.94,.22],[.5,.5]] as const) {
+        const x = left + (right-left)*u, y = top + (bottom-top)*v
+        if (!chips.some(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) &&
+            target.contains(document.elementFromPoint(x, y))) return {x, y}
+      }
+      return
     }
+    const x = (left + right)/2, y = (top + bottom)/2
+    if (target.contains(document.elementFromPoint(x, y))) return {x, y}
   }
   const click = async (target: HTMLElement, commit: () => void) => {
     const where = () => { check(); const result = point(target); if (!result) throw Error('对话控件已变化。'); return result }
@@ -121,16 +132,16 @@ export async function mountPresentationEditGuideChat(document: Document, options
       const marks = existing && index === 1 && initial.length === 2 ? initial.map(el => chipLabel(el) || '') : undefined
       const referenceLabel = index > 0 && initial.length === 1 ? chipLabel(initial[0]!) : undefined
       if ((index > 0 && !marks && !referenceLabel) || (index === 0 && initial.length)) throw Error('未找到本步骤的演示选区。')
-      // Focusing is the normal action that pins a provisional selection in the native composer.
-      await click(input, () => {
-        if (initial[0]?.hasAttribute('data-provisional') && document.activeElement === input) input.blur()
-        input.focus({ preventScroll: true })
-      })
       if (marks) {
         await waitFor(() => matchesMarks(input, text.split('\n'), marks) || undefined, '两条标注和修改意见尚未就绪。')
         pending = { input, text, marks }
         return
       }
+      // Focusing is the normal action that pins a provisional selection in the native composer.
+      await click(input, () => {
+        if (initial[0]?.hasAttribute('data-provisional') && document.activeElement === input) input.blur()
+        input.focus({ preventScroll: true })
+      })
       await waitFor(() => matches(input, existing ? text : '', referenceLabel) ? true : undefined, '输入框已有草稿，或选区尚未就绪。')
       if (existing) { pending = { input, text, referenceLabel }; return }
       const setValue = Object.getOwnPropertyDescriptor(win.HTMLTextAreaElement.prototype, 'value')!.set!

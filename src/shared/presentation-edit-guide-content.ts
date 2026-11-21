@@ -33,7 +33,7 @@ export const PRESENTATION_EDIT_GUIDE_CONTENT = {
   filename: '人工智能周期与资产配置.pptx',
   notesPrompt: '给这份 PPT 每页写一段能直接照着讲的逐字稿，放在演讲者备注里，翻页时衔接自然一点。',
   notes,
-  reviewPages: [5, 12, 20],
+  reviewPages: [4, 8],
   table: {
     page: 12,
     comment: '把框选表格的文字全部上下居中，保留各列原有的水平对齐、字号、底色和数据。'

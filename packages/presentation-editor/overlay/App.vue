@@ -189,7 +189,9 @@
           >
             <span class="num">{{ i + 1 }}</span>
             <div class="page-detail">
-              <div class="thumb"><ThumbnailSlide :slide="page" :size="106" /></div>
+              <div class="thumb" :ref="i === 0 ? observeThumbnail : undefined">
+                <ThumbnailSlide v-if="thumbnailWidth" :slide="page" :size="thumbnailWidth" />
+              </div>
               <span>{{ caption(page) || '幻灯片 ' + (i + 1) }}</span>
             </div>
           </button>
@@ -459,6 +461,9 @@ async function hydrate(d) {
   await nextTick()
   if (seq !== hydration) return
   loading = false
+  requestAnimationFrame(() => {
+    if (seq === hydration) send('painted', { documentId: docId.value })
+  })
   if (migrated && editable.value) save()
   if (deck) {
     void snapshots.initSnapshotDatabase()
@@ -502,6 +507,8 @@ function receive(event) {
       if (d.locking) setEditMode(false)
       send('flushed', { id: d.id })
     })
+  } else if (d.type === 'submitted-marks') {
+    if (d.documentId === docId.value && Array.isArray(d.ids)) markViewer?.dismissSubmitted(d.ids)
   } else if (d.type === 'referenced-marks') {
     committedMarkIds = new Set(d.ids)
     markViewer?.redraw()
@@ -525,6 +532,7 @@ function receive(event) {
   else if (d.type === 'error') {
     notice.value = d.message
     if (d.conflict) freeze = true
+    if (!ready.value) requestAnimationFrame(() => send('painted', { documentId: docId.value }))
   }
 }
 function create() {
@@ -1011,6 +1019,19 @@ function play() {
     resize()
   })
 }
+// All directory rows share a grid track. Size the slide renderer to that track's
+// content box so scrollbars, pane resizing and selection borders cannot crop it.
+const thumbnailWidth = ref(0)
+let measuredThumbnail
+const thumbnailObserver = new ResizeObserver(([entry]) => {
+  if (entry?.target === measuredThumbnail) thumbnailWidth.value = entry.contentRect.width
+})
+function observeThumbnail(node) {
+  if (!node || node === measuredThumbnail) return
+  thumbnailObserver.disconnect()
+  measuredThumbnail = node
+  thumbnailObserver.observe(node)
+}
 function resize() {
   screenWidth.value = Math.min(innerWidth, innerHeight / store.viewportRatio)
 }
@@ -1062,6 +1083,7 @@ onMounted(() => {
   send('ready')
 })
 onUnmounted(() => {
+  thumbnailObserver.disconnect()
   markViewer?.destroy()
   window.removeEventListener('message', receive)
   window.removeEventListener('odyssey:export', exported)

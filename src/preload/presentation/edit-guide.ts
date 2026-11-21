@@ -16,6 +16,9 @@ type EditorState = {
   markId?: string
   comment?: string
   marking: boolean
+  rectReady: boolean
+  rectSelected: boolean
+  commentOpen: boolean
   playing?: boolean
 }
 
@@ -136,7 +139,8 @@ export async function mountPresentationEditGuide(
     const spec = content[target]
     await page(spec.page)
     if (!(await command<EditorState>('state')).marking) await hit('mark')
-    await hit('rect')
+    const tools = await until(s => s.marking && s.rectReady, '标注工具尚未显示。')
+    if (!tools.rectSelected) await hit('rect')
     const rect = await command<Bounds>('bounds', { target })
     const start = { x: rect.left + rect.width * 0.06, y: rect.top + rect.height * 0.12 }
     const end = { x: rect.left + rect.width * 0.95, y: rect.top + rect.height * 0.88 }
@@ -274,7 +278,7 @@ export async function mountPresentationEditGuide(
           break
         case 'revise-chart':
           await request(content.chart.comment + '\n' + content.table.comment, true)
-          await hit('close')
+          await until(s => !s.commentOpen, '已发送的标记评论框尚未收起。')
           await native('chart', chartMarkId)
           await until((s) => s.page === content.table.page && !s.marking, '表格调整尚未显示。')
           await chat!.reply(content.replies.chart)
@@ -299,17 +303,22 @@ export async function mountPresentationEditGuide(
           break
         case 'select-notes': {
           await command('expand-notes')
-          await hit('notes')
           const selection = content.notesSelection
-          const bounds = await command<{ start: Position; end: Position }>('notes-selection-bounds', selection)
+          const bounds = await command<{ start: Position; end: Position; lines: { y: number; stops: {x: number; length: number}[] }[] }>('notes-selection-bounds', selection)
+          let previousLength = -1
           if (point) await point({
             target: frame()!, fromTarget: frame()!, action: 'drag', hover: 'none',
             canvasPoints: { from: () => screenPoint(bounds.start), to: () => screenPoint(bounds.end) },
             onFrame: ({ phase, x, y }) => {
-              const from = screenPoint(bounds.start), to = screenPoint(bounds.end)
-              const dx = to.x - from.x, dy = to.y - from.y
-              const fraction = ((x - from.x) * dx + (y - from.y) * dy) / (dx * dx + dy * dy || 1)
-              if (phase === 'dragging') post('select-notes', { target: 'notes', ...selection, fraction })
+              if (phase !== 'pressed' && phase !== 'dragging') return
+              const viewport = frame()!.getBoundingClientRect()
+              const px = (x - viewport.left) / viewport.width, py = (y - viewport.top) / viewport.height
+              const line = bounds.lines.reduce((a, b) => Math.abs(a.y - py) <= Math.abs(b.y - py) ? a : b)
+              const stop = line.stops.reduce((a, b) => Math.abs(a.x - px) <= Math.abs(b.x - px) ? a : b)
+              if (stop.length !== previousLength) {
+                previousLength = stop.length
+                post('select-notes', { target: 'notes', ...selection, length: stop.length })
+              }
             }
           })
           await command('select-notes', { target: 'notes', ...selection, commit: true })

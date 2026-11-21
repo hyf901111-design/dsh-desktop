@@ -37,7 +37,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
     }
     const selector = {
       mark: 'button[aria-label="标注"]',
-      rect: '.pptxa-tool',
+      rect: '.pptxa-tool[data-pptx-tool="rect"]',
       comment: '.pptxa-bubble:not([hidden]) textarea',
       close: '.pptxa-bubble:not([hidden]) .pptxa-bubble-close',
       notes: '.notes textarea',
@@ -59,6 +59,9 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
       })(),
       selected: activeIds.at(-1),
       marking: document.querySelector('button[aria-label="标注"]')?.getAttribute('aria-pressed') === 'true',
+      rectSelected: document.querySelector('.pptxa-tool[data-pptx-tool="rect"]')?.getAttribute('aria-pressed') === 'true',
+      rectReady: !!document.querySelector('.pptxa-tool[data-pptx-tool="rect"][aria-pressed]'),
+      commentOpen: !!document.querySelector('.pptxa-bubble:not([hidden])'),
       markId: slide.marks?.at(-1)?.id,
       comment: slide.marks?.at(-1)?.comment
     }
@@ -130,24 +133,46 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
     if (!Number.isInteger(d.start) || typeof d.quote !== 'string' || el.value.slice(d.start, d.start + d.quote.length) !== d.quote)
       throw Error('演讲稿选区已变化。')
     el.focus({ preventScroll: true })
-    el.setSelectionRange(d.start, d.start + Math.round(d.quote.length * (Number.isFinite(d.fraction) ? Math.max(0, Math.min(1, d.fraction)) : 1)))
+    const length = d.commit ? d.quote.length : d.length
+    if (!Number.isInteger(length) || length < 0 || length > d.quote.length) throw Error('逐字稿选区已变化。')
+    el.setSelectionRange(d.start, d.start + length, 'forward')
     if (d.commit) el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
     return
   }
   if (d.command === 'notes-selection-bounds') {
     const el = document.querySelector('.notes textarea')
     if (el.value.slice(d.start, d.start + d.quote.length) !== d.quote) throw Error('演讲稿选区已变化。')
-    el.scrollTop = el.scrollHeight
     const rect = el.getBoundingClientRect(), style = getComputedStyle(el), mirror = document.createElement('div')
-    for (const key of ['font', 'lineHeight', 'letterSpacing', 'padding', 'border', 'boxSizing', 'wordBreak', 'overflowWrap']) mirror.style[key] = style[key]
-    Object.assign(mirror.style, { position: 'fixed', visibility: 'hidden', whiteSpace: 'pre-wrap', width: rect.width + 'px', left: rect.left + 'px', top: rect.top - el.scrollTop + 'px' })
-    mirror.append(document.createTextNode(el.value.slice(0, d.start)))
-    const span = document.createElement('span'); span.textContent = d.quote; mirror.append(span); document.body.append(mirror)
+    for (const key of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'lineHeight', 'letterSpacing', 'wordSpacing', 'textIndent', 'textAlign', 'padding', 'wordBreak', 'overflowWrap', 'tabSize']) mirror.style[key] = style[key]
+    // Use the textarea's actual scrollport. A scrollbar changes where its text wraps.
+    Object.assign(mirror.style, { position: 'fixed', visibility: 'hidden', pointerEvents: 'none', whiteSpace: 'pre-wrap', boxSizing: 'border-box', width: el.clientWidth + 'px', left: rect.left + el.clientLeft + 'px', top: rect.top + el.clientTop + 'px' })
+    const text = document.createTextNode(el.value)
+    mirror.append(text)
+    document.body.append(mirror)
     try {
-      const range = document.createRange(); range.selectNodeContents(span)
-      const lines = [...range.getClientRects()], first = lines[0], last = lines.at(-1)
-      if (!first || !last) throw Error('逐字稿尚未显示。')
-      return { start: { x: (first.left + 1) / innerWidth, y: (first.top + first.height / 2) / innerHeight }, end: { x: last.right / innerWidth, y: (last.top + last.height / 2) / innerHeight } }
+      const range = document.createRange(), lines = []
+      let length = 0
+      for (const char of d.quote) {
+        range.setStart(text, d.start + length)
+        range.setEnd(text, d.start + length + char.length)
+        const glyph = range.getBoundingClientRect(), y = glyph.top + glyph.height / 2
+        let line = lines.at(-1)
+        if (!line || Math.abs(line.y - y) > 1) {
+          line = {y, stops: [{x: glyph.left / innerWidth, length}]}
+          lines.push(line)
+        }
+        length += char.length
+        line.stops.push({x: glyph.right / innerWidth, length})
+      }
+      if (!lines.length) throw Error('逐字稿尚未显示。')
+      // Bring the ending line into view while keeping the beginning visible when possible.
+      const halfLine = (parseFloat(style.lineHeight) || parseFloat(style.fontSize)) / 2
+      const scrollportTop = rect.top + el.clientTop
+      const top = lines[0].y - halfLine - scrollportTop
+      const bottom = lines.at(-1).y + halfLine - scrollportTop
+      el.scrollTop = Math.max(0, Math.min(top, Math.max(el.scrollTop, bottom - el.clientHeight)))
+      for (const line of lines) line.y = (line.y - el.scrollTop) / innerHeight
+      return {lines, start: {x: lines[0].stops[0].x, y: lines[0].y}, end: {x: lines.at(-1).stops.at(-1).x, y: lines.at(-1).y}}
     } finally { mirror.remove() }
   }
   throw Error('未知演示动作。')

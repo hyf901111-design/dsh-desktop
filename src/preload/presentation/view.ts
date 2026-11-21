@@ -125,7 +125,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     delete e.host.dataset.presentationDisplayedDocument
     e.documentId = record.deck?.id ?? null
     e.failure = undefined
-    e.host.dataset.presentationEmptyReady = String(e.ready && !e.documentId)
+    e.host.dataset.presentationEmptyReady = String(e.ready && !e.documentId && !e.host.hasAttribute('data-presentation-frame-pending'))
     paintHeader()
     if (!e.documentId) restoreSidebars(doc, e)
     post(e, 'load', { record, recent, dark: dark(), editable: e.editable && !e.locked, slideId: e.slideId, focused: !!e.beforeFocus })
@@ -149,6 +149,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
         return
       } catch (err) {
         if (i === 44) {
+          post(e, 'theme', {dark: dark()})
           post(e, 'error', { message: String(err) })
           return
         }
@@ -184,6 +185,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       restoreSidebars(doc, current)
       current.disposeDrop?.()
       delete current.host.dataset.presentationDisplayedDocument
+      delete current.host.dataset.presentationFramePending
       delete current.host.dataset.presentationEmptyReady
       current.frame.remove()
     }
@@ -203,6 +205,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     reset()
     if (!host?.dataset.eworkPresentationView) return
     const frame = doc.createElement('iframe')
+    host.dataset.presentationFramePending = 'true'
     frame.title = '演示文稿编辑器'
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-downloads')
     frame.allow = 'fullscreen'
@@ -274,6 +277,11 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       void load(e)
       return
     }
+    if (d.type === 'painted' && (d.documentId || null) === e.documentId) {
+      delete e.host.dataset.presentationFramePending
+      e.host.dataset.presentationEmptyReady = String(e.ready && !e.documentId)
+      return
+    }
     if (!e.ready) return
     if (d.type === 'open-archive') { openArchive(); return }
     if (d.type === 'workspace-focus') {
@@ -340,6 +348,12 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
         post(e, 'error', { message, conflict: d.type === 'save' })
       })
   }
+  const submittedMarks = (event: Event) => {
+    const e = current, detail = (event as CustomEvent).detail
+    if (e?.ready && detail?.sessionId === e.sessionId && detail.documentId === e.documentId)
+      post(e, 'submitted-marks', { documentId: e.documentId, ids: detail.ids })
+  }
+  win.addEventListener('sherlock:presentation-marks-submitted', submittedMarks)
   const committedMarks = (event: Event) => {
     const e = current,
       d = (event as CustomEvent).detail
@@ -420,6 +434,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       observer.disconnect()
       theme.disconnect()
       win.removeEventListener('sherlock:presentation-referenced-marks', committedMarks)
+      win.removeEventListener('sherlock:presentation-marks-submitted', submittedMarks)
       ipc.removeListener('presentation:import', openFile)
       ipc.removeListener('presentation:changed', changed)
       win.removeEventListener('message', onMessage)
