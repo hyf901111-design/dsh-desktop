@@ -43,7 +43,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
       close: '.pptxa-bubble:not([hidden]) .pptxa-bubble-close',
       notes: '.notes textarea',
       narrate: '.theater .narration-button',
-      play: '.ribbon button[aria-label="从当前页放映"]'
+      play: 'footer button[aria-label="播放演示文稿"]'
     }[d.target]
     let el = selector && document.querySelector(selector)
     if (el?.hasAttribute('data-ribbon-folded') && d.target !== 'overflow')
@@ -52,8 +52,7 @@ export function runEditGuideAction(d, { store, documentId, editable, activeIds, 
     return el
   }
   if (d.command === 'in-overflow') {
-    const label = {mark: '标注', play: '从当前页放映'}[d.target]
-    return !!label && !!document.querySelector('.ribbon [data-ribbon-folded][aria-label="' + label + '"]')
+    return d.target === 'mark' && !!document.querySelector('.ribbon [data-ribbon-folded][aria-label="标注"]')
   }
   if (d.command === 'state')
     return {

@@ -23,7 +23,7 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
   try {
     const page = await browser.newPage({ viewport: { width: 1350, height: 760 } })
     const deck = blankDeck('用例放映')
-    deck.slides = [guide.notes[0], guide.notes[1], ' ', guide.notes[3]].map((note, i) => ({
+    deck.slides = [guide.notes[0], guide.notes[1], guide.notes[2], ' ', guide.notes[4]].map((note, i) => ({
       ...deck.slides[0]!, id: 'page-' + i, remark: note!.split('\n').map(line => '<p>' + line + '</p>').join('')
     }))
     await page.route('http://localhost/**', async (route: any) => {
@@ -58,7 +58,11 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
       document.body.append(frame)
     }, deck)
     const editor = page.frameLocator('iframe')
-    await editor.getByRole('button', { name: '从当前页放映', exact: true }).click()
+    await editor.locator('footer').getByRole('button', { name: '播放演示文稿' }).waitFor()
+    await page.evaluate((id: string) => document.querySelector('iframe')!.contentWindow!.postMessage({
+      channel: 'odyssey-presentation', type: 'edit-guide', command: 'click', target: 'play', documentId: id
+    }, location.origin), deck.id)
+    await editor.locator('.theater .narration-button').waitFor()
     await page.evaluate((id: string) => document.querySelector('iframe')!.contentWindow!.postMessage({
       channel: 'odyssey-presentation', type: 'edit-guide', command: 'click', target: 'narrate', documentId: id
     }, location.origin), deck.id)
@@ -75,8 +79,11 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
     await control.click()
     await expect.poll(time).toBeGreaterThan(paused)
     const nav = editor.locator('.theater nav')
-    await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('2 / 4')
-    await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('3 / 4')
+    await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('2 / 5')
+    await expect.poll(state).toBe('playing')
+    await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('3 / 5')
+    await expect.poll(state).toBe('playing')
+    await expect.poll(() => nav.innerText(), { timeout: 10000 }).toContain('4 / 5')
     expect(await control.isDisabled()).toBe(true)
     await editor.getByRole('button', { name: '下一页' }).click()
     expect(await control.isEnabled()).toBe(true)
@@ -84,7 +91,7 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
     await control.click()
     await expect.poll(state).toBe('playing')
     await expect.poll(state, { timeout: 10000 }).toBe('idle')
-    expect(await nav.innerText()).toContain('4 / 4')
+    expect(await nav.innerText()).toContain('5 / 5')
     expect(await page.locator('body').getAttribute('data-cloud')).toBe('0')
     await editor.getByRole('button', { name: /退出放映/ }).click()
     await page.setViewportSize({ width: 800, height: 650 })
@@ -97,7 +104,7 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
     })
     expect(await footerInk('播放演示文稿')).toEqual(await footerInk('全屏'))
     await footer.getByRole('button', { name: '播放演示文稿' }).click()
-    expect(await nav.innerText()).toContain('2 / 4')
+    expect(await nav.innerText()).toContain('2 / 5')
     await page.keyboard.press('Escape')
     await expect.poll(() => nav.count()).toBe(0)
     expect(await secondSlide.getAttribute('aria-current')).toBe('page')

@@ -122,7 +122,7 @@ export async function mountPresentationEditGuide(
     return { x: rect.left + rect.width * p.x, y: rect.top + rect.height * p.y }
   }
   async function hit(target: string, details: Record<string, unknown> = {}) {
-    if ((target === 'mark' || target === 'play') && await command<boolean>('in-overflow', {target})) await hit('overflow')
+    if (target === 'mark' && await command<boolean>('in-overflow', {target})) await hit('overflow')
     const args = { target, ...details },
       bounds = await command<Bounds>('bounds', args)
     const p = {
@@ -336,12 +336,10 @@ export async function mountPresentationEditGuide(
           break
         case 'return-first':
           await page(1)
-          await wait(1500)
           break
         case 'play':
           await hit('play')
           await until(s => s.page === 1 && s.playing === true, '首页放映尚未开始。')
-          await wait(2200)
           break
         case 'narrate':
           await hit('narrate')
