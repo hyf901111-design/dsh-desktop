@@ -174,11 +174,26 @@ const trustedUsage = usage => object(usage) && validCount(usage.prompt_tokens) &
 // Forward model events and report failures without passing upstream error bodies through.
 function chatStream(body, settle, estimate, interruptedLog, requestId) {
   let buffer = '', billed = false, finished = false, done = false
+  let pending = '', flushTimer, sent = false
   const decoder = new TextDecoder()
   const reader = body.getReader()
+  const flush = controller => {
+    clearTimeout(flushTimer)
+    flushTimer = undefined
+    if (!pending) return
+    controller.enqueue(encoder.encode(pending))
+    pending = ''
+    sent = true
+  }
+  const sendEvent = (controller, data) => {
+    pending += 'data: ' + data + '\n\n'
+    // Forward the first event promptly, then group short deltas into bounded writes.
+    if (!sent || pending.length >= 16_384) flush(controller)
+    else flushTimer ??= setTimeout(() => flush(controller), 100)
+  }
   const complete = controller => {
     done = true
-    controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+    sendEvent(controller, '[DONE]')
   }
   async function drain(controller) {
     while (!done) {
@@ -205,7 +220,7 @@ function chatStream(body, settle, estimate, interruptedLog, requestId) {
       const event = { id: frame.id, object: 'chat.completion.chunk', created: frame.created, model: frame.model,
         choices: frame.choices.map(choice => ({ index: choice.index, delta: choice.delta, finish_reason: choice.finish_reason })),
         ...(hasUsage ? { usage: frame.usage } : {}) }
-      controller.enqueue(encoder.encode('data: ' + JSON.stringify(event) + '\n\n'))
+      sendEvent(controller, JSON.stringify(event))
       if (terminal) finished = true
     }
     if (!done && buffer.length > 2_000_000) throw Error('Hosted AI frame too large')
@@ -213,7 +228,7 @@ function chatStream(body, settle, estimate, interruptedLog, requestId) {
   const interrupted = (controller, reason) => {
     done = true
     interruptedLog({ billed, finished, reason })
-    controller.enqueue(encoder.encode('data: ' + JSON.stringify({error:{message:'方舟输出中断，未自动重试。',type:'server_error',code:'HOSTED_AI_STREAM_INTERRUPTED',requestId}}) + '\n\n'))
+    sendEvent(controller, JSON.stringify({error:{message:'方舟输出中断，未自动重试。',type:'server_error',code:'HOSTED_AI_STREAM_INTERRUPTED',requestId}}))
   }
   const finish = (controller, reason) => {
     // A terminal choice and successfully settled usage establish completion
@@ -237,11 +252,17 @@ function chatStream(body, settle, estimate, interruptedLog, requestId) {
         }
       }
       if (done && controller.desiredSize !== null) {
+        flush(controller)
         controller.close()
         void reader.cancel().catch(() => {})
       }
     },
-    cancel(reason) { done = true; return reader.cancel(reason) }
+    cancel(reason) {
+      done = true
+      clearTimeout(flushTimer)
+      pending = ''
+      return reader.cancel(reason)
+    }
   })
 }
 

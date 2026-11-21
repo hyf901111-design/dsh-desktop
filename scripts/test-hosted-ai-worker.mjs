@@ -103,6 +103,25 @@ const mf = new Miniflare(convertV4MiniflareOptions({ workers: [{
       { id: 'chat', created: 123, model: input.model, choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] },
       { id: 'chat', created: 123, model: input.model, choices: [], usage: { prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 } }
     ]
+    if (input.messages[0].content === 'small-stream-frames') {
+      const encoder = new TextEncoder()
+      const encode = frame => encoder.encode('data: ' + JSON.stringify(frame) + '\n\n')
+      return new Response(new ReadableStream({
+        async start(controller) {
+          for (let index = 0; index < 40; index++) {
+            controller.enqueue(encode({
+              ...frames[0],
+              choices: [{ index: 0, delta: { content: String(index) }, finish_reason: null }]
+            }))
+            await new Promise(resolve => setTimeout(resolve, 4))
+          }
+          controller.enqueue(encode(frames[1]))
+          controller.enqueue(encode(frames[2]))
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          controller.close()
+        }
+      }), { headers: { 'content-type': 'text/event-stream' } })
+    }
     if (input.messages[0].content === 'cut') frames.splice(1)
     if (input.messages[0].content === 'cut-after-finish') {
       frames[0].choices[0].finish_reason = 'stop'
@@ -357,6 +376,27 @@ try {
   const temperatureControl = await send('chat/completions', token, { ...chat('temperature-control'), temperature: 0.7 })
   assert.equal(temperatureControl.status, 200)
   assert.match(await temperatureControl.text(), /你好[\s\S]*\[DONE\]/)
+  const burstId = 'small-stream-frames'
+  const burst = await send('chat/completions', token, chat(burstId), burstId)
+  assert.equal(burst.status, 200)
+  const burstReader = burst.body.getReader()
+  const decoder = new TextDecoder()
+  let chunks = 0, output = ''
+  for (;;) {
+    const { value, done } = await burstReader.read()
+    if (done) break
+    chunks++
+    output += decoder.decode(value, { stream: true })
+  }
+  output += decoder.decode()
+  const events = output.trim().split('\n\n').map(line => line.slice(6))
+  assert.equal(events.pop(), '[DONE]')
+  const deltas = events.map(JSON.parse).flatMap(event => event.choices)
+  assert.equal(deltas.pop()?.finish_reason, 'stop')
+  assert.deepEqual(deltas.map(delta => delta.delta.content), Array.from({ length: 40 }, (_, index) => String(index)))
+  assert.deepEqual(await db.prepare('SELECT billed_units FROM ai_quota_requests WHERE request_id=?').bind(burstId).first(),
+    { billed_units: 1500 })
+  assert.ok(chunks < 16, `Expected the relay to combine small frames, received ${chunks} chunks`)
   await db.prepare('UPDATE ai_quota_pool SET monthly_limit_units=? WHERE id=1').bind(0).run()
   assert.equal((await admin.user('alice')).fiveHour.remaining,0)
   await assert.rejects(admin.reserve({userId:'alice',requestId:'month-hard-limit',amountUnits:1}),{code:'AI_QUOTA_MONTH'})
