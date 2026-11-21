@@ -81,12 +81,15 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
     return edge(chars).join('')+'…'+edge(chars.reverse()).reverse().join('');
   };
   const lastLabel=spec.labels[n-1],lastShort=lastLabel.length>10?lastLabel.slice(0,9)+'…':lastLabel;
-  const lastStart=w-right-textWidth(lastShort);
+  const grouped=kind==='groupedBar';
+  const groupLabelX=(i,width)=>Math.max(left+width/2,Math.min(w-right-width/2,cat(i)));
+  const lastWidth=textWidth(lastShort);
+  const lastStart=grouped?groupLabelX(n-1,lastWidth)-lastWidth/2:w-right-lastWidth;
   let previousEnd=-Infinity;
   for (const i of indices) {
     const label=spec.labels[i], short=horizontal?fitCategory(label):label.length>10?label.slice(0,9)+'…':label;
-    const size=textWidth(short),x=n===1?left+pw/2:i===0?left:i===n-1?w-right:cat(i);
-    const anchor=n===1?'middle':i===0?'start':i===n-1?'end':'middle';
+    const size=textWidth(short),x=grouped?groupLabelX(i,size):n===1?left+pw/2:i===0?left:i===n-1?w-right:cat(i);
+    const anchor=grouped||n===1?'middle':i===0?'start':i===n-1?'end':'middle';
     const start=x-(anchor==='start'?0:anchor==='end'?size:size/2),end=start+size;
     const hidden=!horizontal&&i>0&&i<n-1&&(start<previousEnd+10||end>lastStart-10);
     if(!hidden)previousEnd=end;

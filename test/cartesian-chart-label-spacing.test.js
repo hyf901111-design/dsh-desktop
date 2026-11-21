@@ -28,3 +28,14 @@ it.each(['horizontal','lollipop','dumbbell'])('fits long Chinese organization na
   for(const el of parts)expect(el.attributes.x-Array.from(el.children.at(-1)).length*11).toBeGreaterThanOrEqual(0)
  }
 })
+
+it('centers each short channel label beneath its own group of actual and target bars',()=>{
+ const spec={version:1,type:'chart',variant:'groupedBar',title:'渠道对比',labels:['直销','银行','互联网'],series:[{name:'实际',values:[null,0,-.4]},{name:'目标',values:[2.2,1.3,.5]}]}
+ for(const width of [280,320,656]){
+  const result=cartesianChartSvg(spec,width),labels=ticks(result),groups=result.elements.filter(el=>el.attributes.class==='hit')
+  for(const [i,label] of labels.entries()){
+   expect(label.attributes['text-anchor']).toBe('middle')
+   expect(label.attributes.x).toBeCloseTo(groups[i].attributes.x+groups[i].attributes.width/2)
+  }
+ }
+})
