@@ -59,7 +59,7 @@ it('streams the selected model’s brief first step, then restores tools and pas
   expect(suggestions).toEqual(['low'])
   expect(intro[Symbol.for('ework.model-task-opening')]).toBe(true)
   expect(intro.tools).toEqual([])
-  expect(intro.messages).toBe(request.messages)
+  expect(intro.messages).toMatchObject([{id:'treasury-dec',role:'user',source:{kind:'user'},content:[{type:'text',text:curveReview}]}])
   expect(intro.model).toBe(request.model)
   request.messages.push({role:'assistant',content:[{type:'text',text:'这次复盘要定位两组期限利差在十二月变化最大的一天。'}]})
   const execute = await run(2)

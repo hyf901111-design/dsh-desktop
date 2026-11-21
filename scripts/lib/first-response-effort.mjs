@@ -1,6 +1,28 @@
+import {boundedTaskOpeningStream,publicTaskOpeningStream,taskOpeningText} from './task-opening-stream.mjs'
+
+const openingFilter = '\n/* ework:public-task-opening:v3 */\n'+taskOpeningText.toString()+'\n'+publicTaskOpeningStream.toString()+'\n'+boundedTaskOpeningStream.toString()+'\n'
+const openAttempt = 'const system = renderPrompt(assembly);\n\t\twhile (true) {'
+const openingScope = [
+  [openAttempt,openAttempt+'\n\t\t\tlet opening = false;'],
+  ['const opening = step === 1 && request[Symbol.for("ework.model-task-opening")]', 'opening = step === 1 && request[Symbol.for("ework.model-task-opening")]'],
+  ['const stream = preparedCall?.stream(request) ?? this.loopCtx.llm.stream(request);','const stream = opening ? boundedTaskOpeningStream(this.loopCtx.llm, preparedCall, request, signal, markAgentLoopRequest, deepFreeze) : preparedCall?.stream(request) ?? this.loopCtx.llm.stream(request);'],
+]
+function transformOpeningScope(source, inverse) {
+  for (const [from,to] of openingScope) {
+    const expected=inverse?to:from
+    if (source.split(expected).length!==2) throw Error('Task opening scope or stream anchor drifted')
+    source=source.replace(expected,inverse?from:to)
+  }
+  return source
+}
+
 // A plugin can suggest an initial reasoning default only if the selected route
 // has no explicit effort. Like an adapter default, it expires before the next step.
 export function patchFirstResponseEffort(source) {
+  if (source.includes('/* ework:public-task-opening:v3 */')) {
+    if (source.split(openingFilter).length!==2) throw Error('Task opening public stream definition drifted')
+    source=transformOpeningScope(source.replace(openingFilter,''),true)
+  }
   const changes = [
     ['const proposedConfig = await this.dispatch.waterfall("agent/request", {\n\t\t\tturn,',
      'let firstResponseEffort;\n\t\tconst proposedConfig = await this.dispatch.waterfall("agent/request", {\n\t\t\tsuggestFirstResponseEffort: effort => { firstResponseEffort = effort; },\n\t\t\tturn,'],
@@ -36,5 +58,5 @@ export function patchFirstResponseEffort(source) {
     if (source.split(hasOpening ? replacement : original).length !== 2) throw Error('Model task opening anchor drifted')
     if (!hasOpening) source = source.replace(original, replacement)
   }
-  return source
+  return transformOpeningScope(source,false)+openingFilter
 }
