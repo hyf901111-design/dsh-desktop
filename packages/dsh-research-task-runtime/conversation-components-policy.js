@@ -5,7 +5,8 @@ import {canvasHumanRequest} from './canvas-task-routing.js'
 import {COMPONENT_SURFACE_STYLE_RULES,PANEL_COLOR_INSTRUCTION} from './design-policy.js'
 import {TRUSTED_TYPES_COMPONENT_INSTRUCTION} from './html-trusted-types-validation.js'
 import {scopedModeTurn, selectedReadIssue, workspaceReferenceIntent} from './client-mode-reference.js'
-import {clientModeTurn, disallowedModeTool, modeProfilePrompt, routeModeTools} from './client-mode-profile.js'
+import {LOST_VIEW_GUIDANCE,isVisibleCapabilityTool} from './client-visible-binding.js'
+import {clientModeTurn, disallowedModeTool, lostVisibleClientView, modeProfilePrompt, routeModeTools} from './client-mode-profile.js'
 import {spreadsheetQuickPrompt} from './spreadsheet-quick-prompts.js'
 
 // Prompt assembly runs before the first claimed message is committed as
@@ -163,6 +164,7 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
  const referenceReads=new WeakMap(),effectiveTurns=new WeakMap()
  const disposeGuard=ctx.tools?.guard?.(exec=>{
   const original=clientModeTurn(exec.agent?.session)
+  if(isVisibleCapabilityTool(exec.name)&&lostVisibleClientView(exec.agent?.session,original))return LOST_VIEW_GUIDANCE
   const turn=effectiveTurns.get(original)??original
   const unsupported=turn&&(disallowedModeTool(turn,exec.name,exec.arguments)??(exec.name==='client_action'?selectedReadIssue(turn,exec.arguments):undefined))
   return unsupported??(exec.name==='research_workbench_create'?denial(exec.agent?.session):undefined)
@@ -174,6 +176,11 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
   if(turn){
    const claimed=request.messages?.findLast(message=>message.role==='user'&&message.source?.kind==='user')
    if(claimed&&claimed.id!==turn.messageId)throw Error('当前输入已变化，等待本轮消息后继续。')
+   if(lostVisibleClientView(session,turn)){
+    const routed=routeModeTools(request,effectiveTurns.get(turn)??turn)
+    return {...routed,system:(routed.system||'')+'\n'+LOST_VIEW_GUIDANCE,
+     tools:routed.tools?.filter(tool=>!isVisibleCapabilityTool(tool.name))}
+   }
    const intent=workspaceReferenceIntent(turn)
    let effective=turn
    if(intent&&readWorkspaceReference){
