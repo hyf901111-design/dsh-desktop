@@ -60,6 +60,13 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
       await entry('插入')
       await frame.locator('[data-tool-menu=insert]').getByRole('button', { name: label, exact: true }).click()
       await inside('.toolbar-popup')
+      if (label === '形状') {
+        const scroller = frame.locator('.shape-pool')
+        expect(await scroller.evaluate((el: HTMLElement) => getComputedStyle(el).scrollbarWidth)).toBe('none')
+        await scroller.evaluate((el: HTMLElement) => el.scrollTop = el.scrollHeight)
+        expect(await scroller.evaluate((el: HTMLElement) => el.scrollHeight <= el.clientHeight || el.scrollTop > 0)).toBe(true)
+        await scroller.evaluate((el: HTMLElement) => el.scrollTop = 0)
+      }
       expect(await frame.locator('.toolbar-popup').evaluate((el: HTMLElement) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1)
     }
     const button = (name: string) => frame.getByRole('button', { name, exact: true })
