@@ -125,7 +125,7 @@ export function createSharedMainAgentAdapter(ctx) {
         off(); offChildren(); offStart(); offEnd(); offStatus(); for (const unbind of bindings.reverse()) unbind(); release?.(); signal.removeEventListener('abort', cancel); active.delete(cancel)
       }
       try {
-        agent.send({ id: requestId, role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: prompt }] }, 'next-turn', true)
+        agent.send({ id: requestId, role: 'user', source: { kind: 'user', clientMode: 'research' }, content: [{ type: 'text', text: prompt }] }, 'next-turn', true)
         return { result: settle().then(() => {
           signal.throwIfAborted()
           if (failure) throw failure

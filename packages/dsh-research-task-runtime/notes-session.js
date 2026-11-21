@@ -22,7 +22,7 @@ export function noteConversationRows(session){
 }
 export function recordNoteConversation(session,row){
  if(!session||typeof row.requestId!=='string'||row.requestId.length>128||!['preparing','ready','replied','failed','stopped','accepted','discarded'].includes(row.phase))throw Error('笔记会话记录无效。')
- const event=session.append(NOTE_CONVERSATION_EVENT,row)
+ const event=session.append(NOTE_CONVERSATION_EVENT,{...row,clientMode:'notes'})
  return {seq:event.seq,startedAt:event.time}
 }
 
