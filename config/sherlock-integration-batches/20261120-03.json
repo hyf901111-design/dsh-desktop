@@ -431,31 +431,24 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "演示目录缩略图、投委会用例入场选区及发送标记反馈",
+        "featureName": "演示工具栏响应式收纳以及对话回复插入当前页",
         "branch": "codex/feat/presentation-cross-page-20261121",
-        "baseCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
-        "tipCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
+        "baseCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
+        "tipCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
         "commits": [
           {
-            "commit": "eafd3a80eb5d067fe8067da2e006befad158a0a2",
+            "commit": "7c92546329eee33333c4e9f4b6b39d7f41833ecb",
             "parents": [
-              "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05"
+              "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf"
             ],
-            "subject": "优化投委会演示的入场与逐字稿选区，发送标记后自动收起评论"
+            "subject": "演示工具栏按实际可用宽度收纳溢出按钮"
           },
           {
-            "commit": "69e9a40a3527b2999f50f68e1d14f60e06e7996f",
+            "commit": "a777ab03f6da163701093cc2df30c3696e9aa651",
             "parents": [
-              "eafd3a80eb5d067fe8067da2e006befad158a0a2"
+              "7c92546329eee33333c4e9f4b6b39d7f41833ecb"
             ],
-            "subject": "让幻灯片目录缩略图按可用宽度完整显示"
-          },
-          {
-            "commit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
-            "parents": [
-              "69e9a40a3527b2999f50f68e1d14f60e06e7996f"
-            ],
-            "subject": "给标记浏览器回归测试提供原生输入组件需要的文档环境"
+            "subject": "演示模式下可将对话回复作为可撤销的文本框插入当前页"
           }
         ],
         "files": [
@@ -472,8 +465,16 @@
             "path": "packages/presentation-editor/overlay/odyssey.css"
           },
           {
-            "status": "M",
-            "path": "scripts/lib/pptx-annotation-viewer.mjs"
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/reply-text.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/ribbon-overflow.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/presentation-reply-action.mjs"
           },
           {
             "status": "M",
@@ -481,11 +482,7 @@
           },
           {
             "status": "M",
-            "path": "src/preload/home-guides.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/edit-guide-chat.ts"
+            "path": "src/preload/index.ts"
           },
           {
             "status": "M",
@@ -493,27 +490,11 @@
           },
           {
             "status": "M",
-            "path": "src/preload/presentation/view.css"
-          },
-          {
-            "status": "M",
             "path": "src/preload/presentation/view.ts"
           },
           {
-            "status": "M",
-            "path": "src/shared/presentation-edit-guide-content.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/pptx-annotation-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/presentation-edit-guide-composer-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/presentation-edit-guide-content.test.ts"
+            "status": "A",
+            "path": "test/presentation-reply-action.test.js"
           }
         ],
         "checks": [
@@ -525,8 +506,8 @@
             ],
             "outcome": "passed",
             "summary": "编译演示编辑器",
-            "verifiedCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
-            "completedAt": "2026-11-21T00:29:14.338262Z",
+            "verifiedCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
+            "completedAt": "2026-11-21T00:38:24.140457Z",
             "timeoutMs": 180000
           },
           {
@@ -537,8 +518,8 @@
             ],
             "outcome": "passed",
             "summary": "客户端类型检查",
-            "verifiedCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
-            "completedAt": "2026-11-21T00:29:26.582107Z",
+            "verifiedCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
+            "completedAt": "2026-11-21T00:38:35.402792Z",
             "timeoutMs": 180000
           },
           {
@@ -546,7 +527,7 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/pptx-annotation-browser.test.js",
+              "test/presentation-reply-action.test.js",
               "test/presentation-workspace.test.ts",
               "test/presentation-edit-guide-content.test.ts",
               "test/presentation-edit-guide-composer-browser.test.js",
@@ -557,21 +538,21 @@
             ],
             "outcome": "passed",
             "summary": "标注、输入框和用例聚焦验证",
-            "verifiedCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
-            "completedAt": "2026-11-21T00:30:40.901078Z",
+            "verifiedCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
+            "completedAt": "2026-11-21T00:38:41.442706Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "在两种画布宽度用真实鼠标验证逐字稿换行坐标；发送相关标记收起气泡并保留评论，不同文档或无关标记不收起。四种画布宽度下全部 20 页的缩略图实测裁切为 0。"
+          "summary": "12 次窗口宽度切换，实际隐藏的按钮与更多菜单逐项匹配；在第12页插入多段回复，验证只读、切页、撤销和重做。"
         },
         "acceptanceCriteria": [
-          "收到双标记发送确认后立即收起对应评论框，所有标记和评论仍可打开。",
-          "入场沿用主题；查看第4、8页，默认矩形直接拖动；备注选区跟随鼠标并从引用下方输入。"
+          "更多紧随最后一个工具，仅在有工具放不下时出现。",
+          "右侧助手回复写入当前幻灯片，可编辑、可撤销，并跟随会话和锁状态。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-21T00:30:43.882999Z"
+        "generatedAt": "2026-11-21T00:38:48.127242Z"
       }
     }
   ],
