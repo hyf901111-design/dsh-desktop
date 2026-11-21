@@ -8,7 +8,7 @@ type Range = {from:number;to:number;text:string;cursor:string}
 export type NoteReferenceContext = {scope:'note'|'selection'|'none';components:Component[];range?:Range}
 
 /** Selection belongs to the note, so moving focus to its composer keeps the reference. */
-export function useNoteReferenceContext(editor:any,sessionId:string,root:React.RefObject<HTMLElement>,readOnly:boolean){
+export function useNoteReferenceContext(editor:any,sessionId:string,root:React.RefObject<HTMLElement>,readOnly:boolean,contentLimit=30000){
  const state=useRef({enabled:true,ids:[] as string[],range:undefined as Range|undefined}),publishRef=useRef(()=>{})
  const components=(includeContent=true):Component[]=>{
   const result:Component[]=[]
@@ -17,7 +17,7 @@ export function useNoteReferenceContext(editor:any,sessionId:string,root:React.R
     let node:any;try{node=JSON.parse(block.props.payload)}catch{node={}}
     const element=includeContent?root.current?.querySelector<HTMLElement>('[data-id="'+CSS.escape(block.id)+'"] .en-research'):undefined
     const content=includeContent?JSON.stringify({spec:node.containerSpec,excerpt:node.excerpt,sourceText:node.sourceText,visibleText:element?.innerText?.slice(0,16000),status:node.generationStatus||node.importStatus}):''
-    result.push({blockId:block.id,title:node.displayName||node.title||node.name||(block.type==='attachment'?'文件':'研究组件'),type:block.type,content:content.length>30000?content.slice(0,29970)+'\n[组件内容已截断]':content,...includeContent&&block.type==='attachment'&&typeof node.id==='string'&&typeof node.authorizationId==='string'?{file:{nodeId:node.id,authorizationId:node.authorizationId}}:{}})
+    result.push({blockId:block.id,title:node.displayName||node.title||node.name||(block.type==='attachment'?'文件':'研究组件'),type:block.type,content:content.length>contentLimit?content.slice(0,contentLimit-30)+'\n[组件内容已截断]':content,...includeContent&&block.type==='attachment'&&typeof node.id==='string'&&typeof node.authorizationId==='string'?{file:{nodeId:node.id,authorizationId:node.authorizationId}}:{}})
    }
    if(block.children?.length)visit(block.children)
   }};visit(editor.document);return result
