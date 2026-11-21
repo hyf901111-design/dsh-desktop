@@ -3966,6 +3966,82 @@
         ],
         "generatedAt": "2026-11-21T15:08:46.527226+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "可见页面解绑后的本轮原生操作收束",
+        "branch": "codex/feat/client-view-lost-turn-20261121",
+        "baseCommit": "01e481a2532b35af05048a2aa1d75b4e4fee5aec",
+        "tipCommit": "c47f5d94aac725fd6240ab407f67e22e3548fa26",
+        "commits": [
+          {
+            "commit": "c47f5d94aac725fd6240ab407f67e22e3548fa26",
+            "parents": [
+              "01e481a2532b35af05048a2aa1d75b4e4fee5aec"
+            ],
+            "subject": "可见客户端解绑后按本轮真实回执结束原生操作"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-mode-profile.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-visible-binding.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/client-visible-binding.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/client-capability-service.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/client-mode-lost-view.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/presentation-view-lost-events.json"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/client-mode-lost-view.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "251 项直接相关测试全部通过。使用实际宿主拒绝，验证路由与执行守卫同步按本轮收束；后继人类与新模式恢复，普通错误、成功数据及不相关结果保持原行为。",
+            "verifiedCommit": "c47f5d94aac725fd6240ab407f67e22e3548fa26",
+            "completedAt": "2026-11-21T15:09:29.865293+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实J会话turn22中原生5页增至6页后切换，重复拒绝3次，复用实际回执验证。"
+        },
+        "acceptanceCriteria": [
+          "真正宿主的解绑回执后停止当轮可见文档操作",
+          "可在下一轮或新模式继续正常执行"
+        ],
+        "risks": [
+          "真实跨应用时间与短时回执需再实测。"
+        ],
+        "generatedAt": "2026-11-21T15:09:29.865293+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4553,6 +4629,16 @@
         "test/workbench-planning-phase.test.js",
         "-t",
         "keeps identifiers|first ETF holdings submission",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/client-mode-lost-view.test.js",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
