@@ -196,17 +196,51 @@ export function patchSessionTitleLlmSubject(source){
 // Seeded image tab names have no source message. Let the first real topic
 // receive the same fallback and provider cadence as any other first prompt.
 export function patchImageSessionTitle(source) {
- const marker='/* ework:image-session-title:v1 */'
+ const marker='/* ework:image-session-title:v2 */'
  if (source.includes(marker)) return source
- const collection='const text = event.data.content.filter((block) => block.type === "text").map((block) => block.text).join("\\n");'
- source=once(source,collection,collection.replace('const text =','const rawText =')+String.raw`
-		const text = event.data.source.clientMode === "image" ? rawText.replace(/\n<odyssey-image-workspace-v1>\n\{[^\n]+\}\n<\/odyssey-image-workspace-v1>$/u,"") : rawText;`)
- const hook='if (this.get(session)?.source.kind === "user") return;\n\t\tconst registration = this.registration;'
- source=once(source,hook,`if (this.get(session)?.source.kind === "user") return;
-  ${marker}
+ const previous='/* ework:image-session-title:v1 */'
+ const hook='const registration = this.registration;'
+ const seed="const imageSeed = event.data.source.clientMode === 'image' && this.isImageTitleSeed(session);"
+ const cadence='messages.length === 1 && (this.get(session) === void 0 || imageSeed)'
+ if (source.includes(previous)) {
+  const old=previous+`
   const imageSeed = event.data.source.clientMode === 'image' && /^image-task-[a-f0-9-]+$/i.test(session.id) &&
     this.get(session)?.source.kind === 'fallback' && this.get(session).messageSeqs.length === 0;
-  if (imageSeed) this.appendFallback(session, collectSessionTitleMessages([event])[0]);
-		const registration = this.registration;`)
- return once(source,'messages.length === 1 && this.get(session) === void 0','messages.length === 1 && (this.get(session) === void 0 || imageSeed)')
+  if (imageSeed) this.appendFallback(session, collectSessionTitleMessages([event])[0]);`
+  source=once(source,old,seed)
+ } else {
+  const collection='const text = event.data.content.filter((block) => block.type === "text").map((block) => block.text).join("\\n");'
+  source=once(source,collection,collection.replace('const text =','const rawText =')+String.raw`
+		const text = event.data.source.clientMode === "image" ? rawText.replace(/\n<odyssey-image-workspace-v1>\n\{[^\n]+\}\n<\/odyssey-image-workspace-v1>$/u,"") : rawText;`)
+  const before='if (this.get(session)?.source.kind === "user") return;\n\t\t'+hook
+  source=once(source,before,before.replace(hook,seed+'\n\t\t'+hook))
+  source=once(source,'messages.length === 1 && this.get(session) === void 0',cadence)
+ }
+ const user='onUserMessage(session, event) {'
+ source=once(source,user,`${marker}
+ isImageTitleSeed(session, value) {
+  if (!/^image-task-[a-f0-9-]+$/i.test(session.id)) return false;
+  const name = value ?? this.get(session);
+  return name?.source.kind === 'fallback' && name.messageSeqs.length === 0;
+ }
+ restoreImageTitle(session) {
+  if (this.isImageTitleSeed(session)) this.defer(() => this.ensureFallback(session));
+ }
+ ${user}`)
+ const subscribe='ctx.on("session/event", (session, event) => {'
+ source=once(source,subscribe,`ctx.on("session/created", session => this.restoreImageTitle(session));
+  for (const session of ctx.sessions?.list?.() ?? []) this.restoreImageTitle(session);
+  ${subscribe}`)
+ const current='if (current !== void 0) return current;\n\t\tconst [first] = collectSessionTitleMessages(session.events);'
+ source=once(source,current,`if (current !== void 0 && !this.isImageTitleSeed(session, current)) return current;
+  const [first] = collectSessionTitleMessages(session.events);
+  if (current !== void 0) {
+   const recent = session.events.findLast(event => event.type === 'user/message' && event.data?.source?.kind === 'user' ||
+    event.type === 'workspace-research/title-context' || /^workspace-(?:note|spreadsheet|presentation)\\/(?:created|edited|conversation)$/.test(event.type));
+   if (!first || recent?.data?.source?.clientMode !== 'image' ||
+       session.events.find(event => event.seq === first.seq)?.data?.source?.clientMode !== 'image') return current;
+  }`)
+ // The SDK schedules this write after event publication and validates that the same Session remains live.
+ return once(source,'if (accepted !== void 0) return accepted;',
+  'if (accepted !== void 0 && (accepted.eventSeq !== current?.eventSeq || !this.isImageTitleSeed(session, accepted))) return accepted;')
 }

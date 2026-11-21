@@ -155,10 +155,12 @@ it('takes the first actual image discussion as the subject after an automatic te
  for (const initial of ['新图像','主动有章法']) {
   const session={id:'image-task-55a0d0bd-89ff-4815-9b3f-7991e6a42f14',header:{},events:[],append(type,data){const e={seq:this.events.length+1,type,data,time:0};this.events.push(e);return e}}
   const service=Object.create(SessionTitleService.prototype)
-  Object.assign(service,{config:{fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256},work:new Map(),ctx:{sessions:{get:()=>session}},serviceActive:()=>true,defer:()=>{},registration:{closing:false,provider:{automatic:'first-prompt'}}})
+  Object.assign(service,{config:{fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256},work:new Map(),ctx:{sessions:{get:()=>session}},serviceActive:()=>true,inFlight:new Set(),registration:{closing:false,provider:{automatic:'first-prompt'}}})
   session.append('session/title',{title:initial,messageSeqs:[],source:{kind:'fallback'}})
   const user=session.append('user/message',{source:{kind:'user',clientMode:'image'},content:[{type:'text',text:'国债曲线晨会封面构图\n<odyssey-image-workspace-v1>\n{"title":"画布内部信息"}\n</odyssey-image-workspace-v1>'}]})
   service.onUserMessage(session,user)
+  expect(service.get(session).title).toBe(initial)
+  await service.drain(service.inFlight)
   expect(collectSessionTitleMessages([user])[0].text).toBe('国债曲线晨会封面构图')
   expect(service.get(session)).toMatchObject({title:'国债曲线晨会封面构图',messageSeqs:[user.seq],source:{kind:'fallback'}})
   expect(service.stateFor(session).pending.throughSeq).toBe(user.seq)
@@ -166,4 +168,45 @@ it('takes the first actual image discussion as the subject after an automatic te
   service.onUserMessage(session,user)
   expect(service.get(session)).toMatchObject({title:'我设定的名称',source:{kind:'user'}})
  }
+})
+
+it('defers the first topic beyond the SDK publication guard and backfills a retained old image session once',async()=>{
+ const {Context}=await import('@deepseek-ai/cordis')
+ const {SessionStore}=await import('@deepseek-ai/dsh-session')
+ const {SessionTitleService}=await core()
+ const ctx=new Context()
+ const storage=new SessionStore(ctx)
+ const make=suffix=>storage.create('image-task-00000000-0000-4000-8000-'+suffix,{meta:{cwd:'/tmp'}})
+ const service=Object.create(SessionTitleService.prototype)
+ Object.assign(service,{ctx,config:{fallbackMaxWords:12,fallbackMaxBytes:120,maxTitleBytes:256},work:new Map(),serviceActive:()=>true,inFlight:new Set()})
+ const appendUser=(session,mode='image')=>session.append('user/message',{id:'user-1',role:'user',source:{kind:'user',clientMode:mode},content:[{type:'text',text:'国债晨会封面：资料和排版'}]},{surfaceOp:'append'})
+ const seed=session=>session.append('session/title',{title:'新图像',messageSeqs:[],source:{kind:'fallback'}})
+ const old=make('000000000001'), live=make('000000000002'), manual=make('000000000003'), reused=make('000000000004')
+ try {
+  seed(old);const prior=appendUser(old)
+  seed(manual);appendUser(manual)
+  seed(reused);appendUser(reused);appendUser(reused,'research')
+  service.restoreImageTitle(old);service.restoreImageTitle(old)
+  service.restoreImageTitle(manual);service.rename(manual,'我给封面起的名称')
+  service.restoreImageTitle(reused)
+  await service.drain(service.inFlight)
+  expect(service.get(old).messageSeqs).toEqual([prior.seq])
+  expect(old.events.filter(e=>e.type==='session/title')).toHaveLength(2)
+  expect(service.get(manual)).toMatchObject({title:'我给封面起的名称',source:{kind:'user'}})
+  expect(service.get(reused).title).toBe('新图像')
+  seed(live)
+  let guarded=false, publishedTitle
+  ctx.on('session/event',(session,event)=>{
+    if (session!==live || event.type!=='user/message')return
+    try {session.append('session/title',{title:'违规同步写入',messageSeqs:[],source:{kind:'fallback'}})}
+    catch(error){guarded=error.message.includes('cannot reenter')}
+    service.onUserMessage(session,event)
+    publishedTitle=service.get(session).title
+  })
+  const accepted=appendUser(live)
+  expect(guarded).toBe(true)
+  expect(publishedTitle).toBe('新图像')
+  await service.drain(service.inFlight)
+  expect(service.get(live)).toMatchObject({title:'国债晨会封面：资料和排版',messageSeqs:[accepted.seq]})
+ } finally { await ctx.fiber.dispose() }
 })
