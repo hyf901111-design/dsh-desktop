@@ -3719,6 +3719,69 @@
         ],
         "generatedAt": "2026-11-21T14:37:28.946917+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "财政部折线原表外层唯一标识兼容",
+        "branch": "codex/feat/disclosed-table-identity-20261121",
+        "baseCommit": "1ebfb04ed73dfd85d49dd00d3b599929f4924f68",
+        "tipCommit": "2e89d32142ed7528bea64ac64855fda7190a429f",
+        "commits": [
+          {
+            "commit": "2e89d32142ed7528bea64ac64855fda7190a429f",
+            "parents": [
+              "1ebfb04ed73dfd85d49dd00d3b599929f4924f68"
+            ],
+            "subject": "兼容披露原表外层唯一标识并保留逐行校验"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-treasury-identity-first-call.json"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-pasted-source-link.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-pasted-source-link.test.js",
+              "test/workbench-role-source-first-calls.test.js",
+              "test/workbench-pasted-spreadsheet.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦23项通过。H真实首提等价；不同身份、虚构、重复行、重抄记录与数值身份继续拒绝。",
+            "verifiedCommit": "2e89d32142ed7528bea64ac64855fda7190a429f",
+            "completedAt": "2026-11-21T14:38:13.761939+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "从H正式客户端session.history取完整首提及一次重试，分别通过正式注册research_workbench_create读取同一真实原文和原行，均首次prepared，chart.line，SVG和官方来源，三个值4.62%、4.55%、4.58%一致。"
+        },
+        "acceptanceCriteria": [
+          "单一合法源字段可在数据集外层或表段内声明。",
+          "原始表头、唯一键、重复数据和数值约束仍须通过现有校验。"
+        ],
+        "risks": [
+          "模型也可能直接生成合法形态；正式线上生成时间不能从离线回放推定。"
+        ],
+        "generatedAt": "2026-11-21T14:38:13.761939+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4257,6 +4320,19 @@
         "test/client-mode-profile.test.js",
         "test/client-mode-workspace-reference.test.js",
         "test/model-task-opening-context.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-pasted-source-link.test.js",
+        "test/workbench-role-source-first-calls.test.js",
+        "test/workbench-pasted-spreadsheet.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
