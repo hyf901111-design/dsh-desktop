@@ -6,6 +6,8 @@ import { ARK_TEXT_MODELS, ARK_PLAN_BASE } from './ark-catalog.js'
 import { hostedChatUpstreamTimeoutMs } from '../../packages/dsh-research-task-runtime/hosted-ai-timeouts.js'
 import { hostedImageModel, legacyHostedImageModels } from '../../packages/dsh-research-task-runtime/hosted-image-model.js'
 
+import { speechUrl, speechInput, decodeSpeech } from './speech.js'
+
 const ROOT = '/v1/hosted-ai/'
 const headers = { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
 const json = (body, status = 200) => Response.json(body, { status, headers })
@@ -267,7 +269,7 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
   return async function handle(request, env, ctx) {
     const url = new URL(request.url)
     const action = url.pathname.slice(ROOT.length)
-    if (url.search || !url.pathname.startsWith(ROOT) || !['catalog','quota','chat/completions','images','memory'].includes(action)) return fail('NOT_FOUND', 404)
+    if (url.search || !url.pathname.startsWith(ROOT) || !['catalog','quota','chat/completions','images','memory','speech'].includes(action)) return fail('NOT_FOUND', 404)
     const readOnly = action === 'catalog' || action === 'quota'
     if (request.method !== (readOnly ? 'GET' : 'POST')) return fail('METHOD_NOT_ALLOWED', 405)
     const suppliedId = request.headers.get('x-ework-request-id')
@@ -306,10 +308,11 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         return json(await vikingMemory(send, request, memoryKey, user.id, await readJson(request, 8000), readJson))
       }
       const image = action === 'images'
+      const speech = action === 'speech'
       if (!active || image && env.ARK_ENABLE_SEEDREAM !== 'true') return fail('HOSTED_AI_NOT_ENABLED', 403, '当前账号未开通该云端能力。')
       if (!env.ARK_LIMITER || !(await env.ARK_LIMITER.limit({ key: user.id })).success) return fail('HOSTED_AI_BUSY', 429, '请求较多，请稍后重试。')
       let input
-      try { input = (image ? imageInput : chatInput)(await readJson(request, 12_000_000)) }
+      try { input = (speech ? speechInput : image ? imageInput : chatInput)(await readJson(request, speech ? 5000 : 12_000_000)) }
       catch { return fail('INVALID_REQUEST', 400, '方舟请求参数无效或超出大小限制。') }
       const key = { userId: user.id, requestId }
       stage = 'reserve'
@@ -324,10 +327,12 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         return fail('HOSTED_AI_CANCELLED', 499)
       }
       stage = 'upstream'
-      const response = await send(ARK_PLAN_BASE + (image ? '/images/generations' : '/chat/completions'), {
+      const response = await send(speech ? speechUrl : ARK_PLAN_BASE + (image ? '/images/generations' : '/chat/completions'), {
         method: 'POST', redirect: 'manual',
-        signal: image ? AbortSignal.any([request.signal, AbortSignal.timeout(240000)]) : AbortSignal.timeout(hostedChatUpstreamTimeoutMs),
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.ARK_AGENT_PLAN_KEY },
+        signal: speech ? AbortSignal.any([request.signal, AbortSignal.timeout(90000)]) : image ? AbortSignal.any([request.signal, AbortSignal.timeout(240000)]) : AbortSignal.timeout(hostedChatUpstreamTimeoutMs),
+        headers: speech ? { 'content-type': 'application/json', 'X-Api-Key': env.ARK_AGENT_PLAN_KEY,
+          'X-Api-Resource-Id': 'seed-tts-2.0', 'X-Api-Request-Id': crypto.randomUUID(), 'X-Control-Require-Usage-Tokens-Return': '*'
+        } : { 'content-type': 'application/json', authorization: 'Bearer ' + env.ARK_AGENT_PLAN_KEY },
         body: input.wire
       })
       if (!response.ok) {
@@ -336,6 +341,13 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         // On a definitive validation/auth/rate-limit rejection no generation occurred.
         if ([400, 401, 403, 404, 422, 429].includes(response.status)) await settle(0)
         return requestFailure('HOSTED_AI_UPSTREAM', response.status === 429 ? 429 : 502, '方舟暂时未能完成请求。')
+      }
+      if (speech) {
+        stage = 'speech-delivery'
+        const body = await readBounded(response, 8_000_000, AbortSignal.any([request.signal, AbortSignal.timeout(90000)]))
+        const { audio, units } = decodeSpeech(body, input.amountUnits)
+        await settle(units)
+        return new Response(audio, { headers: { ...requestHeaders, 'content-type': 'audio/mpeg' } })
       }
       if (!image) {
         stage = 'stream'
