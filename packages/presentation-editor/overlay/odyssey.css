@@ -481,6 +481,10 @@ footer > span {
   background: #454545;
 }
 .theater nav .narration-button:hover:enabled { background: #555; }
+.theater nav .narration-button:focus-visible {
+  outline: none;
+  background: #686868;
+}
 .theater .narration-error {
   position: absolute;
   right: 16px;

@@ -70,6 +70,11 @@ it('plays bundled notes, resumes mid-sentence, advances on audio end and waits o
     const state = () => control.getAttribute('data-state')
     const time = () => control.evaluate((el: Element) => (el.ownerDocument.defaultView as any).testAudio.currentTime)
     await expect.poll(state).toBe('playing')
+    // Tab focus remains visible on the dark controls without a blue focus ring.
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Shift+Tab')
+    expect(await control.evaluate((el: Element) => [el.matches(':focus-visible'), getComputedStyle(el).outlineStyle, getComputedStyle(el).backgroundColor]))
+      .toEqual([true, 'none', 'rgb(104, 104, 104)'])
     await expect.poll(time).toBeGreaterThan(0.5)
     await control.click()
     expect(await state()).toBe('paused')
