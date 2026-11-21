@@ -139,3 +139,16 @@ it('reads an existing committed receipt without creating, restoring an old autho
  await expect(h.service.request({sessionId:'s',turnId:'1',method:'receipt',call,...newer})).rejects.toThrow('不一致')
  h.bind('notes');expect(await read()).toMatchObject({status:'succeeded'});h.changeOwner();expect(await read()).toMatchObject({status:'cancelled'});expect(create).toHaveBeenCalledTimes(1)
 })
+
+it('directly executes a mode-bound action once, refuses a changed surface and keeps legacy catalog requirements',async()=>{
+ const h=harness()
+ const input={sessionId:'s',turnId:'direct',method:'execute',expectedMode:'research',authorityId:'user1',authoritySeq:2,sourceInstruction:'读取当前画布。',call:{requestId:'first-read',capability:'canvas.inspect',arguments:{}}}
+ expect((await Promise.all([h.service.request(input),h.service.request(input)])).map((receipt:any)=>receipt.status)).toEqual(['succeeded','succeeded'])
+ expect(h.o.canvas).toHaveBeenCalledTimes(1)
+ h.bind('conversation')
+ await expect(h.service.request(input)).rejects.toThrow('视图已切换')
+ h.bind('research')
+ await expect(h.service.request(input)).rejects.toThrow('重新读取')
+ await expect(h.action('canvas.inspect')).rejects.toThrow('先重新读取')
+ await expect(h.service.request({...input,authorityId:undefined,authoritySeq:undefined,sourceInstruction:undefined})).rejects.toThrow('模式无效')
+})

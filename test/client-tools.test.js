@@ -193,3 +193,10 @@ it('preserves the existing Notes creation budget while retaining a bounded trans
     await vi.advanceTimersByTimeAsync(140000);await assertion;expect(finished).toBe(true)
   }finally{f.dispose();vi.useRealTimers()}
 })
+
+it('sends only the admitted foreground mode to Main with the first useful operation',async()=>{
+ const f=fixture()
+ const events=[{type:'turn/start',data:{turn:9}},{type:'user/message',seq:12,data:{id:'u',source:{kind:'user',clientMode:'spreadsheet'},content:[{type:'text',text:'看看当前工作簿有几张工作表。'}]}}]
+ await f.tools.get('client_action').execute({requestId:'read',capability:'spreadsheet.inspect',arguments:{scope:'workbook'}},execution(events))
+ expect(f.calls.map(value=>value.body)).toEqual([expect.objectContaining({method:'execute',expectedMode:'spreadsheet',authorityId:'u',authoritySeq:12})])
+})

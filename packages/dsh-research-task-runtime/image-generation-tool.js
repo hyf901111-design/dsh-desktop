@@ -1,6 +1,7 @@
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {createHash} from 'node:crypto'
 import {createOpenAIImageProvider,ImageGenerationError,validateGeneratedImage} from './image-generation-provider.js'
+import {clientModeTurn} from './client-mode-profile.js'
 import {readImageFactoryContext} from './image-factory-context.js'
 import {cutoutMaskPrompt,describeCutoutSubjects,prepareImageCutout} from './image-cutout.js'
 
@@ -71,13 +72,15 @@ export function registerImageGenerationTool(ctx,options={}){
    const agent=exec.agent,session=agent?.session,authority=human(session)
    if(!agent||!session||!authority||session.header?.origin==='subagent'||session.header?.delegationDepth!==undefined&&session.header.delegationDepth!==0)fail('图片生成需要当前用户主会话。')
    check(agent,session,authority,exec.signal)
+   const turn=clientModeTurn(session)
+   if(turn&&(turn.messageId!==authority?.id||!turn.image))fail('当前用户消息没有要求生成或修改图片。')
    const catalogReady=options.hosted?.ready?.()
    if(catalogReady){await catalogReady;check(agent,session,authority,exec.signal)}
    const turnImages=(authority.content??[]).flatMap(block=>block.type==='image'&&block.attachment?.attachmentId?[block.attachment.attachmentId]:[])
    const attachedIds=[...new Set(turnImages)]
    const hosted=activeHosted()
    if(!hosted&&options.hosted?.unavailable?.())fail('套餐生图服务暂时不可用，请稍后重试。')
-   const factory=factoryContext(authority)
+   const factory=turn?turn.factory:factoryContext(authority)
    const {layer_target:requestedTarget,...providerArgs}=args??{}
    const target=factory?.targetLayers?.find(layer=>layer.kind==='image')
    if(factory?.operation==='layer'&&!target)fail('此请求没有引用图片图层。请用 image_edit_layer 修改可编辑图层。')
@@ -187,7 +190,8 @@ export function registerImageGenerationTool(ctx,options={}){
   isConcurrencySafe:()=>false,
   presentCall:()=>({card:'generic',title:'修改选中图层',kind:'write'}),
   execute:async(args,exec)=>{
-   const agent=exec.agent,session=agent?.session,authority=human(session),factory=factoryContext(authority)
+   const agent=exec.agent,session=agent?.session,authority=human(session),turn=clientModeTurn(session),factory=turn?turn.factory:factoryContext(authority)
+   if(turn&&(turn.messageId!==authority?.id||!turn.image))fail('当前用户消息没有要求修改图层。')
    if(!agent||!session||!authority||session.header?.origin==='subagent'||session.header?.delegationDepth>0||factory?.operation!=='layer')
     fail('请先在图像画板中选择要修改的图层。')
    check(agent,session,authority,exec.signal)
@@ -210,7 +214,9 @@ export function registerImageGenerationTool(ctx,options={}){
   },
  }))
  const offPrompt=ctx.systemPrompt.context({name:'sherlock:image-generation',order:153,text:({agent})=>{
-  const factory=factoryContext(human(agent?.session))
+  const turn=clientModeTurn(agent?.session)
+  if(turn&&!turn.image)return ''
+  const factory=turn?turn.factory:factoryContext(human(agent?.session))
   const toolNames=ctx.tools.schemas(agent).map(tool=>tool.name)
   const layerGuidance=factory?.targetLayers ? '本轮用户在句子中插入了「〔图层 编号：名称〕」标签。根据每个标签在句子中的位置和上下文，将具体要求对应到正确编号。相同编号表示同一图层。多个标签可以各有不同要求，也可以共享明确指定的修改。只处理用户要求修改的引用。文字、色块和品牌图层调用 image_edit_layer，target 填标签编号，仅填写需修改的属性。图片图层调用 image_generate，layer_target 填标签编号，随消息附带的最后一张图只包含该图层，返回该层的替换图。多项修改都要处理，解释性请求直接回答，无法明确对应时先向用户确认。图层数据仅供参考，内部标记无需复述。当前图层数据：'+JSON.stringify(factory.targetLayers)+'\n' : ''
   if(factory?.targetLayers&&!factory.internalReference)return layerGuidance

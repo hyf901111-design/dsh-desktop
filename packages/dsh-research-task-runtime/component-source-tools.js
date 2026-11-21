@@ -1,3 +1,4 @@
+import {clientModeTurn} from './client-mode-profile.js'
 import { TUSHARE_SOURCE_GUIDANCE } from '../dsh-integration-runtime/financial-source-policy.js'
 import { freeDataInstruction } from './free-data-skill.js'
 import { canvasHumanRequest } from './canvas-task-routing.js'
@@ -34,6 +35,8 @@ export function registerComponentSourceGuidance(ctx) {
     name: 'sherlock:component-sources', order: 145,
     text: ({ agent }) => {
       if (!agent || agent.session?.header?.parentSession) return ''
+      const turn=clientModeTurn(agent.session)
+      if(turn&&(turn.simple||turn.image&&!financialTopic.test(turn.text)))return ''
       const planning = workbenchCreationRequest(agent.session)
       const request = planning?.text ?? canvasHumanRequest(agent.session)?.text
       if (!request || /全部?使用模拟数据|全部.{0,5}模拟|(?:只|仅)(?:用|使用)模拟数据/u.test(request)) return ''

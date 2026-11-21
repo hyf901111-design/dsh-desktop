@@ -68,9 +68,25 @@ children: [active?.id === 'notes' && (0, react_jsx_runtime.jsxs)('button', {
     if(end<0)throw Error('知识库无法定位客户端工作区绑定。')
     source=source.slice(0,start)+capabilityHook.trimStart()+source.slice(end+'},[sessionId,active?.id,selectView]);'.length)
   }
+  source=patchBoundAppMode(source)
   source=source.replace("label:()=> '笔记'", "label:()=> document.documentElement.dataset.odysseyLocale==='en'?'Notes':'笔记'")
   source=patchNotesChallengeClient(patchNotesExportMenu(source))
   return source.includes('function createResearchWorkspaceSession(') ? patchCanvasSessionActivity(source) : source
+}
+
+const boundAppMode=`/* ework:bound-app-mode:v1 */
+ const visible=()=>{
+  const surface=document.body.dataset.workspaceSurface;
+  if(surface==='image-factory')return 'image';
+  if(['knowledge','browser','notes'].includes(surface))return surface;
+  return active.id==='trajectory'?'trajectory':mode;
+ };`
+
+export function patchBoundAppMode(source) {
+  if (source.includes('ework:bound-app-mode:v1')) return source
+  const old = "const visible=()=>document.body.dataset.workspaceSurface==='knowledge'?'knowledge':mode;"
+  if (source.split(old).length!==2) throw Error('无法定位当前应用的客户端能力绑定。')
+  return source.replace(old,boundAppMode)
 }
 
 export const capabilityHook = `
@@ -79,7 +95,7 @@ export const capabilityHook = `
 (0,react.useLayoutEffect)(()=>{
  const bridge=window.dshDesktop?.clientCapabilities;if(!bridge||!active||!sessionId)return;
  const mode=active.id==='notes'?'notes':active.id==='research'?'research':'conversation';
- const visible=()=>document.body.dataset.workspaceSurface==='knowledge'?'knowledge':mode;
+ ${boundAppMode}
  let live=true,boundMode;
  const bind=async()=>{
   try{
