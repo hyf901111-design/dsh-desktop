@@ -940,7 +940,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       if(value?.sessionId!==props.sessionId||value.requestId!==request.current)return
       publishTask(value.requestId,'generating',{
         ...value.stage===undefined?{}:{stage:value.stage},
-        ...value.reasoning===undefined?{}:{reasoning:value.reasoning},
+        ...typeof value.publicLead==='string'?{publicLead:value.publicLead}:{},
         ...value.outputChars===undefined?{}:{outputChars:value.outputChars},
         ...value.capabilityProgress===undefined?{}:{capabilityProgress:value.capabilityProgress},
         ...value.seq===undefined?{}:{seq:value.seq,startedAt:value.startedAt}
