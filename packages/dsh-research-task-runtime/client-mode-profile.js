@@ -76,7 +76,7 @@ export function claimedWorkspaceMessage(session, mode) {
 
 const visualObject = /图片|图像|插[图画]|海报|照片|封面|壁纸|头像|图标|摄影|视觉稿|宣传画|配图|logo|poster|image|picture|photo|illustration|wallpaper|portrait|icon/iu
 const advice = /(?:如何|怎么(?:样)?|怎样|为什么|什么是|讲讲|讲解|讨论|聊聊|解释|建议|提示词|[文图]案.{0,5}(?:创意|方案)|以前.{0,30}(?:方式|过程|方法)|(?:生成|编辑|修改)(?:图片|图像)需要多久|能否介绍|是否(?:应该|适合)|好看吗|合适吗|prompt\b|\b(?:why|how (?:can|do|to|should)|explain|suggest|advice|critique)\b)/iu
-const denied = /(?:别|不(?:要|用|必|许|打算)|无需|禁止|暂缓)\s*(?:实际|直接|再|真的|自动)?\s*(?:生图|出图|画|生成|制作|编辑|改|调|换|添加|调整|去除|执行|动)|\b(?:do not|don't|never)\s+(?:draw|generate|make|create|edit|change|modify)\b/iu
+const denied = /(?:别|(?<!不得|不能)不(?:要|用|必|许|打算)?|无需|禁止|暂缓)\s*(?:实际|直接|再|真的|自动)?\s*(?:生图|出图|画|生成|制作|编辑|改|调|换|添加|调整|去除|执行|动)|\b(?:do not|don't|never)\s+(?:draw|generate|make|create|edit|change|modify)\b/iu
 const visualEdit = /(?:去(?:除|掉)?背(?:景)?|抠图|去除.{0,14}背景|换背景|调(?:暖|冷|亮|暗)|裁(?:剪|切)|扩图|重绘|放大.{0,8}分辨率|改(?:成|为)|换(?:成|为)|调(?:成|为)|删(?:掉|除)|移(?:到|除)|替换|加(?:上|个)|添加|调整|修改|去掉|\b(?:remove|crop|resize|recolou?r|replace|move|edit|change|make it|brighten|darken)\b)/iu
 const visualMake = /(?:生图|出图|创作|生成|制作|设计|绘制|做[一两二三四五六七八九十几\d]*张|来[一两二三四五六七八九十几\d]*张|\b(?:generate|make|create|design|render|produce)\b)/iu
 const simpleConversation = /^(?:你是谁[？?。!！]*|你能做什么[？?。!！]*|(?:你好|您好|嗨|你好呀|谢谢|早上好|早安|晚安|hi|hello|hey|thanks)[呀啊哦!！。，.\s]*|(?:什么是|解释(?:下|一下)?|说说|聊聊|介绍一下|what is |explain ).{1,100})$/iu
@@ -101,7 +101,11 @@ function describeTurn(mode, text, factory) {
     /(?:一[只朵匹艘幢座辆支]|(?:正面|侧面|全景|近景)的|\b(?:a|an) .{2,35}\b)/iu.test(actionable) &&
     /(?:水彩|油画|写实|插画风|扁平风|摄影风|赛博朋克|极简风|逆光|浅景深|俯拍|特写|\b(?:watercolou?r|oil paint(?:ing)?|photorealistic|cinematic|isometric|close.up)\b)/iu.test(actionable)
   const dataDrawing = /(?:图表|曲线图|柱状图|折线图|流程图|走势图|散点图|数据点|这[些几个两三四五六七八九十\d]+(?:个)?点|以下数据|上述数据|\b(?:data points?|line chart|scatter ?plot|flowchart)\b)/iu
-  const image = visualBrief || clauses.some(part => {
+  // A later discussion-only instruction scopes an earlier hypothetical brief.
+  // A subsequent affirmative request can still authorize an actual image.
+  const discussionAt = mode === 'image' ? clauses.findLastIndex(part => /(?:只|仅)(?:需|要)?(?:讨论|聊聊|分析|给.{0,8}建议)|\b(?:only discuss|just discuss|discussion only)\b/iu.test(part)) : -1
+  const image = visualBrief || clauses.some((part,index) => {
+    if (index < discussionAt) return false
     if (mode==='research' && dataDrawing.test(part) && !visualObject.test(part)) return false
     if (/(?:之前|刚才|以前|已经|刚刚|曾经).{0,12}(?:生成|制作|设计|画|修改|调整)|(?:翻译|复述|改写)(?:这|下|一)/u.test(part) || denied.test(part) || advice.test(part) || /(?:生图|出图|生成图片|画画|编辑图片)(?:的)?(?:功能|能力|工具|时间|费用|价格|限制|模型|需要|要多久|流程|失败|原理)|(?:能|会|可以)(?:生图|生成图片|画画|编辑图片)[吗么]$|(?:怎样|怎么样|好不好|是否合适)$|\b(?:can you|do you) (?:generate|edit|create) (?:images|pictures)\b/iu.test(part) || /(?:是否|能不能|可以).{0,28}吗$|(?:可行|怎样|怎么样|好吗|合适吗|能生成吗)$|^can (?:this|the) /iu.test(part)) return false
     if (promptRequest && !/^(?:然后|再|接着|并且?|同时|最后|and |then )(?:请|直接|实际|用.{0,12})?/iu.test(part)) return false
@@ -112,7 +116,7 @@ function describeTurn(mode, text, factory) {
       mode === 'image' && (factory?.internalReference || factory?.targetLayers || factory?.targetLayer) && visualEdit.test(part)
   })
   const coherentWrites = clauses.some(part => nativeEdit.test(part) && !advice.test(part) && !denied.test(part) && !explicitlyReadOnly.test(part))
-  const readOnly = !coherentWrites && (advice.test(text) || explicitlyReadOnly.test(text))
+  const readOnly = discussionAt >= 0 && !image || !coherentWrites && (advice.test(text) || explicitlyReadOnly.test(text))
   const shared = sharedSearch.test(text) && (nativeRead.test(text) || externalEvidence.test(text))
   const requestedSurface = /看板|工作台|组件|卡片|仪表盘|表格|图表|原型|页面|画布|\b(?:dashboard|workbench|component|widget|chart|table|prototype|canvas)\b/iu.test(actionable)
   const create = requestedSurface && !readOnly && !image && !promptRequest ? classifyResearchCreationRequest(text) : null
@@ -183,6 +187,23 @@ export function modeProfilePrompt(turn) {
     basisPointChange(turn.text)
 }
 
+// An explicitly independent image brief should not replay an unrelated old
+// image tool receipt. Keep the admitted message and everything from this turn.
+function independentImageMessages(request, turn) {
+  const messages = request.messages
+  if (turn.mode !== 'image' || !Array.isArray(messages) || !turn.messageId || turn.hasFile || turn.shared) return messages
+  const factory = turn.factory
+  if (factory && (factory.operation !== 'generate' || factory.internalReference || factory.targetLayer || factory.targetLayers?.length)) return messages
+  const referenced = /刚才|刚刚|上次|上一[版张幅]|之前|前面|上述|上面|沿用|照着|同款|续做|接着|延续|原图|旧图|保留原|(?:这|那)[幅张](?:画|图|照片|海报|封面)|(?:点评|评估|评价|查看|分析|参照|参考|基于|仿照).{0,15}(?:画布|封面|图片|图层|配色|方案)|\b(?:previous|earlier|as discussed|same (?:image|design|style)|this (?:image|canvas)|based on)\b/iu
+  if (referenced.test(turn.text)) return messages
+  const standaloneAdvice = turn.simple && /(?:只|仅)(?:需|要)?(?:讨论|聊聊|给.{0,8}建议)|\b(?:only discuss|just discuss|discussion only)\b/iu.test(turn.text)
+  const newArtwork = turn.image && /(?:全新|独立|新的?)[^。？！；，,\n]{0,22}(?:图像|图片|封面|海报|插画|素材|作品)|(?:新建|另做)一[张幅]|\b(?:new|fresh|separate) (?:image|cover|illustration|artwork|poster)\b/iu.test(turn.text)
+  if (!standaloneAdvice && !newArtwork) return messages
+  const index = messages.findLastIndex(message => message.role === 'user' && message.source?.kind === 'user' && message.id === turn.messageId)
+  if (index < 1 || messages[index].content?.some(part => part.type !== 'text')) return messages
+  return messages.slice(index)
+}
+
 export function routeModeTools(request, turn) {
   if (!Array.isArray(request.tools)) return request
   const entries = turnCapabilities(turn)
@@ -201,7 +222,8 @@ export function routeModeTools(request, turn) {
     if (exclusiveNative || exclusiveImage || exclusiveBrowser) return []
     return [tool]
   })
-  return {...request, tools}
+  const messages=independentImageMessages(request,turn)
+  return {...request, tools, ...(messages !== request.messages && {messages})}
 }
 
 export function disallowedModeTool(turn, name, args) {

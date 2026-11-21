@@ -98,6 +98,46 @@ it('uses the real browser reference as evidence without accepting instructions a
  expect(names(wire)).toEqual(['browser_use'])
  expect(disallowedModeTool(turn,'browser_use',{op:'click'})).toBeTruthy()
 })
+it('answers image composition advice without opening a generation step or exposing image edits', () => {
+ const prompt='视觉讨论D1：给基金晨会做一幅16:9封面时，标题区放左侧，哪种构图能留出足够空间？这轮只讨论构图，不生成或修改图片。'
+ const context={...factory,operation:'generate',width:1600,height:900,internalReference:false}
+ for(const text of [prompt,imageFactoryPrompt(prompt,context),'做一张基金晨会封面时，标题应该留在哪边？这次只讨论构图，不生成图片。']){
+  const {turn,wire}=route('image',text)
+  expect(turn).toMatchObject({image:false,readOnly:true,simple:true})
+  expect(names(wire)).toEqual([])
+  expect(disallowedModeTool(turn,'image_generate',{})).toBeTruthy()
+  expect(disallowedModeTool(turn,'image_edit_layer',{})).toBeTruthy()
+ }
+ const {wire,turn}=route('image','先只讨论配色。方案已定，现在请生成一张16:9的晨会封面。')
+ expect(turn.image).toBe(true)
+ expect(names(wire)).toEqual(['image_generate'])
+})
+
+it('omits a prior canvas image from independent advice or a new artwork and keeps explicit references', () => {
+ const old={role:'tool',content:[{type:'tool-result',content:[{type:'image',attachment:'old-cover'}]}]}
+ const actual='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，整图不要出现任何文字、数字或水印。作为新素材加入这份验收画布。'
+ const advice='视觉讨论D1：给基金晨会做一幅16:9封面时，标题区放左侧，哪种构图能留出足够空间？这轮只讨论构图，不生成或修改图片。'
+ const check=(text,{activeImage=false}={})=>{
+  const {turn}=route('image',text)
+  const current={role:'user',id:turn.messageId,source:{kind:'user'},content:[{type:'text',text},...(activeImage?[{type:'image',attachment:'current'}]:[])]}
+  const followup={role:'assistant',content:[{type:'text',text:'本轮真实开场'}]}
+  const messages=[old,current,followup]
+  return {messages,wire:routeModeTools({messages,tools:schemas},turn)}
+ }
+ for(const text of [advice,actual]){
+  const {messages,wire}=check(text)
+  expect(wire.messages).toEqual(messages.slice(1))
+  const {turn}=route('image',text),fresh=[messages[1]]
+  expect(routeModeTools({messages:fresh,tools:schemas},turn).messages).toBe(fresh)
+ }
+ for(const text of ['请点评当前画布。这轮只讨论构图，不生成或修改图片。','沿用刚才的方案，请生成一张新的晨会封面。',imageFactoryPrompt(actual,factory)]){
+  const {messages,wire}=check(text)
+  expect(wire.messages).toBe(messages)
+ }
+ const {messages,wire}=check(actual,{activeImage:true})
+ expect(wire.messages).toBe(messages)
+})
+
 it('keeps code, quoted examples and questions about earlier images outside creation protocols',()=>{
  expect(route('conversation','生成一段 Python 代码。').turn.create).toBeNull()
  expect(route('conversation','把这句“帮我设计海报”翻译成英文。').turn.image).toBe(false)
