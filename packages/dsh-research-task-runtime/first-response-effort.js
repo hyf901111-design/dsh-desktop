@@ -12,7 +12,7 @@ function quickFirstStep(profile) {
 export function registerFirstResponseEffort(ctx) {
   return ctx.on('agent/request', async ({agent, step, signal, suggestFirstResponseEffort, supportsTaskOpening}, next) => {
     const config = await next()
-    if (step !== 1) return config
+    if (step !== 1 || config.provider?.startsWith('sherlock-home-')) return config
     const turn = clientModeTurn(agent?.session)
     const staged = supportsTaskOpening && wantsTaskOpening(turn)
     if (staged) allowTaskOpening(turn)
