@@ -4610,6 +4610,72 @@
         ],
         "generatedAt": "2026-11-21T16:22:21.194406+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "演示回放等待本会话的内置模型输入框就绪",
+        "branch": "codex/feat/explore-playback-20261122",
+        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
+        "tipCommit": "03d2b362b54d9ad651e8dab346790e9047bbee5e",
+        "commits": [
+          {
+            "commit": "03d2b362b54d9ad651e8dab346790e9047bbee5e",
+            "parents": [
+              "216fb30180c5941ccf8f1be873948762e933ea40"
+            ],
+            "subject": "等待离线示例会话输入就绪再操作原生对话框"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/edit-guide-chat.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-presentation-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/presentation-edit-guide-composer-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-presentation-browser.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot",
+              "-t",
+              "scoped offline model|serializes the native report skill"
+            ],
+            "outcome": "passed",
+            "summary": "聚焦研报与演示两条内置模型就绪路径。",
+            "verifiedCommit": "03d2b362b54d9ad651e8dab346790e9047bbee5e",
+            "completedAt": "2026-11-21T16:32:12.028040+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "在无个人模型的隔离签名客户端记录了准备和输入更新的先后顺序。"
+        },
+        "acceptanceCriteria": [
+          "首次演示可用内置回放输入通路进入实际任务"
+        ],
+        "risks": [
+          "业务会话模型权限仍由现行配置决定。"
+        ],
+        "generatedAt": "2026-11-21T16:32:12.028040+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5304,6 +5370,19 @@
         "test/new-chat-view-browser.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-presentation-browser.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot",
+        "-t",
+        "scoped offline model|serializes the native report skill"
       ],
       "timeoutMs": 240000
     }
