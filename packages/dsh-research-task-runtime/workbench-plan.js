@@ -38,7 +38,7 @@ import {marketPanelSchema} from './market-artifact.js';
 import {verifiedAggregateRecordCount,verifiedChartRecordCount,verifiedKpiRecordCount} from './dataset-aggregate.js';
 import {resolvePastedWorkbenchPlan} from './workbench-pasted-tables.js';
 import {datasetViewValue,matchesDatasetViewScope} from './dataset-view-runtime.js';
-import {comparisonNamesForScope,componentCohortRequest,componentDeliveryModel,componentDeliveryScopeIssue,datedRecordIdentities,isActionScope,isDatedRecordScope,isDecimalPrecisionScope,verifiesFundManagerGroups,verifiedOutlineCoverage} from './component-delivery-scope.js';
+import {comparisonNamesForScope,componentCohortRequest,componentDeliveryModel,componentDeliveryScopeIssue,datedRecordIdentities,isActionScope,isCalendarDateScope,isDatedRecordScope,isDecimalPrecisionScope,verifiesFundManagerGroups,verifiedOutlineCoverage} from './component-delivery-scope.js';
 import {wordOutlineCoverage} from './workbench-word-grid.js';
 import {prepareAuthoredLocalForm} from './workbench-authored-form.js';
 import {verifiedFundComparisonOverview} from './workbench-fund-comparison.js';
@@ -71,12 +71,12 @@ export function workbenchQuantityDeclarations(text='') {
         return [{expected,entity,unit:match[2],sourceOnly,displayCount,...(reportedCount?{reportedCount:true}:{})}];
     });
 }
-function panelScopeData(panel,visible=true) {
+function panelScopeData(panel,visible=true,datesOnly=false) {
     const data=componentDeliveryModel(panel.artifact);
     if(data?.type!=='view')return data;
     const dataset=data.dataset,displayed=new Set(['id',...data.view.details,...data.view.sections.flatMap(section=>section.fields??[section.label,section.start,section.end,section.owner,section.resource])]);
     const fields=dataset.fields.filter(field=>!visible||displayed.has(field.key));
-    return {version:1,type:'table',title:panel.title,columns:fields.map(field=>field.key==='id'?'记录编号':field.label),rows:dataset.records.filter(record=>!visible||matchesDatasetViewScope(record,data.view.where)).map(record=>fields.map(field=>record[field.key]))};
+    return {version:1,type:'table',title:panel.title,columns:fields.map(field=>field.key==='id'&&!datesOnly?'记录编号':field.label),rows:dataset.records.filter(record=>!visible||matchesDatasetViewScope(record,data.view.where)).map(record=>fields.map(field=>record[field.key]))};
 }
 function scopeIdentities(data) {
     if(data?.type==='financial-widget'&&Array.isArray(data.symbols))return data.symbols.map(symbol=>`${symbol.market}:${symbol.code}`);
@@ -97,9 +97,9 @@ function scopeIdentities(data) {
         if(items.length&&items.every(Boolean))return items;
     }
 }
-export function countWorkbenchRecords(panel,{visible=true,dated=false}={}) {
-    const data=panelScopeData(panel,visible);
-    const identities=(dated ? datedRecordIdentities(data) : undefined) ?? scopeIdentities(data);
+export function countWorkbenchRecords(panel,{visible=true,dated=false,datesOnly=false}={}) {
+    const data=panelScopeData(panel,visible,datesOnly);
+    const identities=datesOnly ? datedRecordIdentities(data,undefined,true) : (dated ? datedRecordIdentities(data) : undefined) ?? scopeIdentities(data);
     return identities?new Set(identities.filter(value=>value!==undefined&&value!==null&&String(value).trim())).size:null;
 }
 function countedOutlineGroup(outline,scope,prompt){
@@ -166,7 +166,7 @@ export function workbenchScopeDeficits(plan) {
                     .some(match=>scopeNumber(match[1])===scope.expected)?data.items.filter(item=>item.value!==null).length:undefined;
             const actual=comparisonNamesForScope(data,scope.unit,scope.entity)?.length??kpiItems??(aggregateSourceScope(scope)?aggregateCount:
                 outlineCount??wordCoverage?.(scope)??prototypeReportCount(panel,scope,plan.sharedDatasets)??workbenchReadingScopeCount(data,scope.entity)??
-                countWorkbenchRecords(panel,{visible:scope.visible,dated:isDatedRecordScope(scope.unit,scope.entity)}));
+                countWorkbenchRecords(panel,{visible:scope.visible,dated:isDatedRecordScope(scope.unit,scope.entity),datesOnly:isCalendarDateScope(scope.unit,scope.entity)}));
             if(actual!==null&&actual>=scope.expected)continue;
             if(deficits.some(issue=>issue.panel===panel.title&&issue.expected>=scope.expected&&issue.actual===actual))continue;
             deficits.push({panel:panel.title,expected:scope.expected,actual,missing:actual===null?null:scope.expected-actual,unit:scope.unit,entity:scope.entity,reason:actual===null?'unverifiable':'missing-records'});

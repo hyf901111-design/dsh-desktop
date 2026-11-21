@@ -1,0 +1,44 @@
+{
+  "originalRequest": "我需要快速复核 2024 年最后三个交易日美国 10 年期国债的官方历史收益率。只做一张原生折线卡，能看到这三个日期的具体读数即可，单位 %。数据已定稿，无须定时更新。\nhttps://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202412\n日期\t10年期收益率\n2024-12-27\t4.62\n2024-12-30\t4.55\n2024-12-31\t4.58",
+  "toolArgs": {
+    "title": "美国10年期国债收益率｜2024年末三个交易日复核",
+    "dataMode": "source",
+    "sharedDatasets": [
+      {
+        "id": "ust10y_2024ye",
+        "label": "美国10年期国债收益率（2024-12-27 至 2024-12-31）",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "identity": "日期",
+          "numericFields": [
+            "10年期收益率"
+          ]
+        }
+      }
+    ],
+    "panels": [
+      {
+        "title": "美国10年期国债收益率｜2024年最后三个交易日",
+        "type": "chart",
+        "size": "medium",
+        "layout": "standard",
+        "note": "来源：美国财政部 Daily Treasury Yield Curve Rates（daily_treasury_yield_curve，2024年12月），历史定稿数据，无需定时更新；单位 %，按原表日期顺序。",
+        "view": {
+          "dataset": "ust10y_2024ye",
+          "variant": "line",
+          "unit": "%",
+          "sections": [
+            {
+              "kind": "records",
+              "label": "日期",
+              "fields": [
+                "10年期收益率"
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
