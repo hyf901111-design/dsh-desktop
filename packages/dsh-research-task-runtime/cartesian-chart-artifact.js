@@ -1,3 +1,4 @@
+import {chartExceptionLedger,CHART_READING_LAYOUT_CSS} from './chart-reading-layout.js';
 import {CARTESIAN_CHART_TEMPLATES,chartDataIssue} from './chart-template-contract.js';
 
 // Pure SVG geometry is also used in the sandbox. Never evaluates model code.
@@ -46,7 +47,23 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   if (high===low) high=low+1;
   // Five stable grid nodes keep saved interaction routes intact. Round the
   // display domain outwards to readable steps; never round the observations.
-  if (['horizontal','lollipop'].includes(kind)) {
+  const datedTrend=['line','step'].includes(kind)&&spec.labels.every(label=>/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/u.test(label));
+  const signedBars=['bar','groupedBar'].includes(kind)&&low<0&&high>0;
+  if (datedTrend||signedBars) {
+    // Use the real extrema to pick the smallest legible five-tick domain.
+    // A constant line retains its padded range; a bar always includes zero.
+    const observedMin=Math.min(...all),observedMax=Math.max(...all);
+    const rangeMin=datedTrend&&observedMin!==observedMax?observedMin:low;
+    const rangeMax=datedTrend&&observedMin!==observedMax?observedMax:high;
+    const rawStep=(rangeMax-rangeMin)/4, magnitude=10**Math.floor(Math.log10(rawStep));
+    for(const factor of [1,1.5,2,2.5,3,4,5,10,15,20]) {
+      const step=factor*magnitude;
+      if(!(step>0)||step+rawStep*1e-10<rawStep)continue;
+      const floor=Math.floor(rangeMin/step+1e-10)*step;
+      if(floor+4*step<rangeMax-step*1e-9)continue;
+      low=Number(floor.toPrecision(14));high=Number((floor+4*step).toPrecision(14));break;
+    }
+  }else if (['horizontal','lollipop'].includes(kind)) {
     const rawStep=(high-low)/4, magnitude=10**Math.floor(Math.log10(rawStep));
     let step=[1,2,2.5,3,4,5,10].find(value=>value*magnitude>=rawStep)*magnitude;
     let floor=Math.floor(low/step)*step;
@@ -55,11 +72,14 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
   }
   const pos = value => horizontal ? left+(value-low)/(high-low)*pw : top+(high-value)/(high-low)*ph;
   const cat = i => horizontal ? top+(i+.5)*ph/n : left+(i+.5)*pw/n;
-  const tickText = value => fmt(value)+(percent?'%':'');
+  const stepText=Number(((high-low)/4).toPrecision(12)).toString();
+  const tickDigits=datedTrend&&/^\d+\.\d{1,6}$/u.test(stepText)?stepText.split('.')[1].length:0;
+  const tickText = value => (tickDigits?value.toLocaleString('en-US',{minimumFractionDigits:tickDigits,maximumFractionDigits:tickDigits}):fmt(value))+(percent?'%':'');
   const axes = [];
   for (let i=0;i<=4;i++) {
-    const v=low+(high-low)*i/4, p=pos(v);
-    axes.push(node('line', horizontal ? {class:'grid',x1:p,x2:p,y1:top,y2:h-bottom} : {class:'grid',x1:left,x2:w-right,y1:p,y2:p}));
+    const raw=low+(high-low)*i/4,v=Math.abs(raw)<(high-low)*1e-12?0:raw,p=pos(v);
+    const grid=v===0&&low<0&&high>0?'grid chart-zero':'grid';
+    axes.push(node('line', horizontal ? {class:grid,x1:p,x2:p,y1:top,y2:h-bottom} : {class:grid,x1:left,x2:w-right,y1:p,y2:p}));
     axes.push(node('text', horizontal ? {x:p,y:h-9,'text-anchor':'middle'} : {x:left-8,y:p+4,'text-anchor':'end'}, [tickText(v)]));
   }
   // Keep endpoint dates and a stable set of passive nodes on resize. Hide only
@@ -81,19 +101,17 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
     return edge(chars).join('')+'…'+edge(chars.reverse()).reverse().join('');
   };
   const lastLabel=spec.labels[n-1],lastShort=lastLabel.length>10?lastLabel.slice(0,9)+'…':lastLabel;
-  const grouped=kind==='groupedBar';
-  const groupLabelX=(i,width)=>Math.max(left+width/2,Math.min(w-right-width/2,cat(i)));
+  const categoryLabelX=(i,width)=>Math.max(left+width/2,Math.min(w-right-width/2,cat(i)));
   const lastWidth=textWidth(lastShort);
-  const lastStart=grouped?groupLabelX(n-1,lastWidth)-lastWidth/2:w-right-lastWidth;
+  const lastStart=categoryLabelX(n-1,lastWidth)-lastWidth/2;
   let previousEnd=-Infinity;
   for (const i of indices) {
     const label=spec.labels[i], short=horizontal?fitCategory(label):label.length>10?label.slice(0,9)+'…':label;
-    const size=textWidth(short),x=grouped?groupLabelX(i,size):n===1?left+pw/2:i===0?left:i===n-1?w-right:cat(i);
-    const anchor=grouped||n===1?'middle':i===0?'start':i===n-1?'end':'middle';
-    const start=x-(anchor==='start'?0:anchor==='end'?size:size/2),end=start+size;
+    const size=textWidth(short),x=categoryLabelX(i,size);
+    const start=x-size/2,end=start+size;
     const hidden=!horizontal&&i>0&&i<n-1&&(start<previousEnd+10||end>lastStart-10);
     if(!hidden)previousEnd=end;
-    axes.push(node('text', horizontal ? {x:left-8,y:cat(i)+4,'text-anchor':'end'} : {x,y:h-10,'text-anchor':anchor,...(hidden?{visibility:'hidden','aria-hidden':'true'}:{})}, [node('title',{},[label]),short]));
+    axes.push(node('text', horizontal ? {x:left-8,y:cat(i)+4,'text-anchor':'end'} : {x,y:h-10,'text-anchor':'middle',...(hidden?{visibility:'hidden','aria-hidden':'true'}:{})}, [node('title',{},[label]),short]));
   }
   const groups=[], count=spec.series.filter((s,si)=>visible[si] && (kind!=='combo'||(s.kind??(si===0?'bar':'line'))==='bar')).length || 1;
   let barIndex=0;
@@ -139,7 +157,21 @@ export function cartesianChartSvg(spec, width = 620, visible = spec.series.map((
     ? {class:'hit','data-point':i,x:left,y:top+i*ph/n,width:pw,height:ph/n,fill:'transparent'}
     : {class:'hit','data-point':i,x:left+i*pw/n,y:top,width:pw/n,height:ph,fill:'transparent'}));
   const cursor=node('line',horizontal?{class:'chart-cursor',x1:left,x2:w-right,y1:cat(0),y2:cat(0)}:{class:'chart-cursor',x1:cat(0),x2:cat(0),y1:top,y2:h-bottom});
-  const elements=[...axes,...groups,cursor,...hits];
+  // A short observed series fits its actual values above the marks. Dense
+  // series keep the interactive readout and never crowd the plot with labels.
+  const observations=[];
+  if(spec.series.length===1&&visible[0]&&['bar','line','step'].includes(kind)&&n>=2&&n<=6) {
+    const labels=spec.series[0].values.map(value=>value===null?'':String(value));
+    if(labels.every(label=>textWidth(label)+10<pw/n)) {
+      for(const [i,label] of labels.entries()) {
+        if(!label)continue;
+        const value=spec.series[0].values[i],point=pos(value);
+        const y=kind==='bar'&&value<0?Math.min(h-bottom-2,point+13):Math.max(11,point-7);
+        observations.push(node('text',{class:'observation-label',x:cat(i),y,'text-anchor':'middle','pointer-events':'none','aria-hidden':'true'},[label]));
+      }
+    }
+  }
+  const elements=[...axes,...groups,cursor,...hits,...observations];
   return {markup:elements.map(serialize).join(''),elements,width:w,height:h,horizontal,categoryStart:horizontal?top:left,categorySize:(horizontal?ph:pw)/n};
 }
 
@@ -196,7 +228,7 @@ export function cartesianChartRuntime(spec, geometry) {
     const compactFooter=document.querySelector('.component-reading-footer');
     const tabBar=document.querySelector('.component-reading-tabs:not([hidden])');
     const footerHeight=tabBar?outerHeight(tabBar):compactFooter?Math.max(0,...disclosures):disclosures.reduce((sum,h)=>sum+h,0);
-    const chrome=[...document.querySelectorAll('.chart-context,.legend,.chart-readout,figcaption')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+footerHeight+2;
+    const chrome=[...document.querySelectorAll('.chart-exceptions,.chart-context,.legend,.chart-readout,figcaption')].reduce((sum,el)=>sum+outerHeight(el),0)+parseFloat(bodyStyle.paddingTop)+parseFloat(bodyStyle.paddingBottom)+footerHeight+2;
     // The host fits the card to its open records. Use an intrinsic plot height
     // here instead of feeding the newly enlarged iframe back into the plot.
     // This also keeps the tabs in place when switching between detail panels.
@@ -225,6 +257,7 @@ export function renderCartesianChart(spec) {
   // Keep the original native line/bar data path for existing saved consumers.
   if(['line','bar'].includes(spec.variant)&&!['asOf','unit','subtitle','note','axisDecimals','detailRows'].some(k=>spec[k]!==undefined)&&spec.labels.length<=24&&spec.series.length<=6)return undefined;
   const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const exceptions=chartExceptionLedger(spec,esc);
   const precise=spec.axisDecimals!==undefined,geometryProgram=precise?'('+cartesianChartAxisPrecision.toString()+')('+cartesianChartSvg.toString()+')':cartesianChartSvg.toString();
   const geometry=(precise?cartesianChartAxisPrecision(cartesianChartSvg):cartesianChartSvg)(spec);
   const {seriesNames,seriesHeaders,detailColumns,selectedDetails}=cartesianChartPresentation(spec);
@@ -251,7 +284,8 @@ figure>svg,.chart-readout,figcaption{grid-column:1/-1}
 .chart-readout-category{color:var(--sherlock-muted)}
 .chart-readout-series strong{font-weight:650;font-variant-numeric:tabular-nums}
 figcaption{font-size:11px;white-space:pre-wrap}details{border-top:1px solid var(--sherlock-border);margin-top:8px;padding-top:6px}summary{cursor:pointer}.data-scroll{max-height:200px;overflow:auto}table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:11px}th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--sherlock-border)}th:first-child,td:first-child{text-align:left}thead{color:var(--sherlock-text);background:var(--sherlock-surface-muted)}tbody tr:hover{background:var(--sherlock-surface-muted)}
-</style></head><body data-research-kind="chart" data-chart-template="${spec.variant}"><figure><div class="chart-context">${esc([spec.subtitle,spec.variant==='percentBar'?'占比 · 原值单位：'+(spec.unit||'未提供'):spec.unit].filter(Boolean).join(' · '))}</div><div class="legend">${spec.series.map((_,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" aria-label="显示或隐藏${esc(seriesNames[i])}"><i style="--series:var(--sherlock-chart-${i%8+1},var(--sherlock-chart-${i%6+1}))"></i>${esc(seriesNames[i])}</button>`).join('')}</div><svg class="template-chart" viewBox="0 0 ${geometry.width} ${geometry.height}" height="240" role="img" tabindex="0" aria-label="${esc(spec.title)}">${geometry.markup}</svg><div class="chart-readout" role="status" aria-live="polite">${esc(spec.labels[0])}</div><figcaption>${esc([spec.asOf,spec.note].filter(Boolean).join(' · '))}</figcaption></figure><details><summary>查看完整数据</summary><div class="data-scroll"><table><thead><tr><th>${esc(headers[0])}</th>${headers.slice(1).map(name=>`<th>${esc(name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details><script>${program}</script></body></html>`;
+${CHART_READING_LAYOUT_CSS}
+</style></head><body data-research-kind="chart" data-chart-template="${spec.variant}"><figure>${exceptions}<div class="chart-context">${esc([spec.subtitle,spec.variant==='percentBar'?'占比 · 原值单位：'+(spec.unit||'未提供'):spec.unit].filter(Boolean).join(' · '))}</div><div class="legend">${spec.series.map((_,i)=>`<button type="button" data-chart-series="${i}" aria-pressed="true" aria-label="显示或隐藏${esc(seriesNames[i])}"><i style="--series:var(--sherlock-chart-${i%8+1},var(--sherlock-chart-${i%6+1}))"></i>${esc(seriesNames[i])}</button>`).join('')}</div><svg class="template-chart" viewBox="0 0 ${geometry.width} ${geometry.height}" height="240" role="img" tabindex="0" aria-label="${esc(spec.title)}">${geometry.markup}</svg><div class="chart-readout" role="status" aria-live="polite">${esc(spec.labels[0])}</div><figcaption>${esc([spec.asOf,spec.note].filter(Boolean).join(' · '))}</figcaption></figure><details><summary>查看完整数据</summary><div class="data-scroll"><table><thead><tr><th>${esc(headers[0])}</th>${headers.slice(1).map(name=>`<th>${esc(name)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details><script>${program}</script></body></html>`;
   const content=spec.detailRows?html.replace('</body>',`<script>(${installCartesianChartDetails.toString()})(${encoded},${JSON.stringify(selectedDetails)});</script></body>`):html;
   return {version:1,type:'html',title:spec.title,html:content};
 }
@@ -444,7 +478,7 @@ export function cartesianChartAxisPrecision(base) {
   return function preciseCartesianChart(spec,...args) {
     const result=base(spec,...args),digits=spec.axisDecimals;
     for(const element of result.elements) {
-      if(element.tag!=='text'||element.children.length!==1||typeof element.children[0]!=='string')continue;
+      if(element.tag!=='text'||element.attributes.class==='observation-label'||element.children.length!==1||typeof element.children[0]!=='string')continue;
       const text=element.children[0],percent=text.endsWith('%'),number=Number(text.replace(/,/g,'').replace(/%$/,''));
       if(!/^-?[\d,]+(?:\.\d+)?%?$/.test(text)||!Number.isFinite(number))continue;
       element.children[0]=number.toLocaleString('en-US',{maximumFractionDigits:digits})+(percent?'%':'');

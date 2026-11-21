@@ -63,6 +63,7 @@ export const WORKBENCH_MODE_CSS=workbenchModeCss()+workbenchStructureDepthCss(en
 
 :root[data-workbench-style="enterprise"] body th{background:var(--sherlock-table-heading)!important;color:var(--sherlock-table-heading-text)!important}
 :root[data-workbench-style="enterprise"] body th button{color:inherit!important}
+:root[data-workbench-style="enterprise"] body :is(.dv-records,.market-table-wrap[data-audit-table]) th{color:var(--sherlock-text)!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div){background:var(--sherlock-chart-1)!important;padding:12px!important;border:0!important;box-shadow:none!important;border-radius:0!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n+2){background:var(--sherlock-chart-5)!important}
 :root[data-workbench-style="enterprise"] body :is(.market-metric,.fund-kpi,.research-metric,.kpi-card,.kpi-row>.kpi,.rScV5Q_containerKpis>div):nth-child(3n){background:var(--sherlock-chart-4)!important}

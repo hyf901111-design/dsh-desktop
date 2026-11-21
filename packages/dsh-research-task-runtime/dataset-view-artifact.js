@@ -1,6 +1,6 @@
 import {tableSourceHref,tableSourceLink} from './component-provenance.js'
 import {parseDatasetViewArtifact} from './dataset-view-contract.js'
-import {DATASET_VIEW_DEFAULT_PAGE_SIZE,datasetViewValue,datasetViewSchedule,datasetViewRuntime,matchesDatasetViewScope} from './dataset-view-runtime.js'
+import {DATASET_VIEW_DEFAULT_PAGE_SIZE,datasetViewValue,datasetViewRecordFields,datasetViewSchedule,datasetViewRuntime,matchesDatasetViewScope} from './dataset-view-runtime.js'
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const json=value=>JSON.stringify(value).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')
 const titleOf=s=>s.title??({records:'记录',compare:'两项对比',schedule:'资源排程'}[s.kind])
@@ -18,10 +18,14 @@ export const DATASET_VIEW_CSS=`
 @container dv (min-width:960px){.dv-main[data-layout=split]:has(.dv-detail:not([hidden])){grid-template-columns:minmax(0,1fr) minmax(240px,28%)}.dv-main[data-layout=split]:not(:has(.dv-detail:not([hidden])))>.dv-sections[data-navigation=flow]{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .dv-records td>a[aria-label^="打开链接："]{display:inline-block;max-inline-size:22ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .dv-records th button[data-view-sort]{font:inherit;color:inherit;text-align:left;cursor:pointer}
+.dv-records .dv-identity{position:sticky;left:0;z-index:1;box-shadow:1px 0 var(--sherlock-border)}.dv-records td.dv-identity{background:inherit!important}.dv-records .dv-record-select:disabled{color:inherit!important;opacity:1!important}.dv-records tr[aria-selected=true] .dv-identity{background:var(--sherlock-row-selected)}.dv-records .dv-number{text-align:right;font-variant-numeric:tabular-nums}.dv-records .dv-number button{text-align:right}.dv-shell[data-records-first] .dv-section h3{margin-bottom:4px}
 `
 function body(spec){
  const {dataset,view}=spec,fields=new Map(dataset.fields.map(f=>[f.key,f])),value=(r,key)=>esc(datasetViewValue(r[key],fields.get(key)))
  const cell=(r,key)=>tableSourceLink(fields.get(key).label,r[key])??value(r,key)
+ const numericFields=new Set(dataset.fields.filter(({key})=>dataset.records.some(row=>typeof row[key]==='number')&&dataset.records.every(row=>row[key]===null||typeof row[key]==='number')).map(field=>field.key))
+ const cellClass=key=>key==='id'?'dv-identity':numericFields.has(key)?'dv-number':''
+ const recordsFirst=view.sections.length===1&&view.sections[0].kind==='records'&&!view.reorder&&!view.filters.length&&!view.details.length&&dataset.records.length<=DATASET_VIEW_DEFAULT_PAGE_SIZE
  const paginated=dataset.records.length>30
  const scoped=dataset.records.filter(record=>matchesDatasetViewScope(record,view.where))
  const firstPage=paginated?scoped.slice(0,DATASET_VIEW_DEFAULT_PAGE_SIZE):scoped
@@ -31,9 +35,9 @@ function body(spec){
  const sections=view.sections.map((s,i)=>{
   let content=''
   if(s.kind==='records'){
-   const recordFields=['id',...s.fields.filter(key=>key!=='id')]
-   const head=`${view.reorder?'<th class="dv-rank">优先级</th>':''}${recordFields.map(key=>`<th scope="col"><button type="button" data-view-sort="${esc(key)}" aria-label="按${esc(fields.get(key).label)}排序" disabled>${esc(fields.get(key).label)}</button></th>`).join('')}${view.reorder?'<th class="dv-actions">调整顺序</th>':''}`
-   const rows=firstPage.map(r=>`<tr data-record-id="${esc(r.id)}" tabindex="0" aria-selected="false">${ranks?`<td class="dv-rank" data-view-rank>${ranks.get(r.id)}</td>`:''}${recordFields.map((key,j)=>`<td>${j===0?`<button type="button" class="dv-record-select" data-view-select aria-label="查看${esc(r.id)}完整详情" disabled>${value(r,key)}</button>`:cell(r,key)}</td>`).join('')}${view.reorder?`<td class="dv-actions"><span class="dv-action-buttons"><button type="button" data-view-move="up" data-id="${esc(r.id)}" aria-label="上移${esc(r.id)}" title="上移${esc(r.id)}" disabled>↑</button><button type="button" data-view-move="down" data-id="${esc(r.id)}" aria-label="下移${esc(r.id)}" title="下移${esc(r.id)}" disabled>↓</button></span></td>`:''}</tr>`).join('')
+   const recordFields=datasetViewRecordFields(s)
+   const head=`${view.reorder?'<th class="dv-rank">优先级</th>':''}${recordFields.map(key=>`<th scope="col" class="${cellClass(key)}"><button type="button" data-view-sort="${esc(key)}" aria-label="按${esc(fields.get(key).label)}排序" disabled>${esc(fields.get(key).label)}</button></th>`).join('')}${view.reorder?'<th class="dv-actions">调整顺序</th>':''}`
+   const rows=firstPage.map(r=>`<tr data-record-id="${esc(r.id)}" tabindex="0" aria-selected="false">${ranks?`<td class="dv-rank" data-view-rank>${ranks.get(r.id)}</td>`:''}${recordFields.map(key=>`<td class="${cellClass(key)}">${key==='id'?`<button type="button" class="dv-record-select" data-view-select aria-label="查看${esc(r.id)}完整详情" disabled>${value(r,key)}</button>`:cell(r,key)}</td>`).join('')}${view.reorder?`<td class="dv-actions"><span class="dv-action-buttons"><button type="button" data-view-move="up" data-id="${esc(r.id)}" aria-label="上移${esc(r.id)}" title="上移${esc(r.id)}" disabled>↑</button><button type="button" data-view-move="down" data-id="${esc(r.id)}" aria-label="下移${esc(r.id)}" title="下移${esc(r.id)}" disabled>↓</button></span></td>`:''}</tr>`).join('')
    const pager=paginated?`<nav class="dv-pagination" aria-label="表格分页"><output data-view-range></output><select data-view-page-size="${i}" aria-label="每页显示数量" disabled>${[10,20,50,100].map(n=>`<option value="${n}"${n===DATASET_VIEW_DEFAULT_PAGE_SIZE?' selected':''}>${n} 条/页</option>`).join('')}</select><button data-view-page="${i}" data-page-delta="-1" aria-label="上一页" disabled>‹</button><select data-view-page-index="${i}" aria-label="表格页码" disabled><option>1 / 1</option></select><button data-view-page="${i}" data-page-delta="1" aria-label="下一页" disabled>›</button></nav>`:''
    content=`<div class="dv-table-wrap"><table class="dv-records" aria-label="${esc(titleOf(s))}"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>${pager}<p class="dv-muted" data-view-empty hidden>没有符合筛选的记录。</p>`
   }else if(s.kind==='compare'){
@@ -50,10 +54,11 @@ function body(spec){
   }
   return `<section id="dv-section-${i}" class="dv-section" data-view-section="${i}" data-section-kind="${s.kind}"${view.navigation==='tabs'&&i!==0?' hidden':''}><h3>${esc(titleOf(s))}</h3>${content}</section>`
  }).join('')
- return `<main class="dv-shell" aria-label="${esc(spec.title)}">${view.subject?`<h2 class="dv-heading">${esc(view.subject)}</h2>`:''}<div class="dv-meta">${esc(dataset.asOf)}</div><div class="dv-toolbar"><input class="dv-search" data-view-search type="search" aria-label="搜索完整数据" placeholder="搜索完整数据" disabled>${filters}<output class="dv-count" data-view-count>显示 ${scoped.length} / ${dataset.records.length} 条记录</output></div>${tabs}<div class="dv-main" data-layout="${view.layout}"><div class="dv-sections" data-navigation="${view.navigation}">${sections}</div><aside class="dv-detail"${view.details.length?'':' hidden'}><h3>点选记录查看详情</h3><p class="dv-muted">选择记录后显示完整字段和备注。</p></aside></div><aside hidden data-component-source-info><p>${esc(dataset.note)}</p>${dataset.sourceUrl?'<p>'+tableSourceLink('原文',dataset.sourceUrl)+'</p>':''}${view.note?'<p>'+esc(view.note)+'</p>':''}${spec.context?`<p data-view-context>规划备注（实际事实以完整记录为准）：${esc(spec.context)}</p>`:''}</aside></main>`
+ const toolbar=`<div class="dv-toolbar"><input class="dv-search" data-view-search type="search" aria-label="搜索完整数据" placeholder="搜索完整数据" disabled>${filters}<output class="dv-count" data-view-count>显示 ${scoped.length} / ${dataset.records.length} 条记录</output></div>`
+ return `<main class="dv-shell"${recordsFirst?' data-records-first=""':''} aria-label="${esc(spec.title)}">${view.subject?`<h2 class="dv-heading">${esc(view.subject)}</h2>`:''}<div class="dv-meta">${esc(dataset.asOf)}</div>${recordsFirst?'':toolbar}${tabs}<div class="dv-main" data-layout="${view.layout}"><div class="dv-sections" data-navigation="${view.navigation}">${sections}</div><aside class="dv-detail"${view.details.length?'':' hidden'}><h3>点选记录查看详情</h3><p class="dv-muted">选择记录后显示完整字段和备注。</p></aside></div>${recordsFirst?toolbar:''}<aside hidden data-component-source-info><p>${esc(dataset.note)}</p>${dataset.sourceUrl?'<p>'+tableSourceLink('原文',dataset.sourceUrl)+'</p>':''}${view.note?'<p>'+esc(view.note)+'</p>':''}${spec.context?`<p data-view-context>规划备注（实际事实以完整记录为准）：${esc(spec.context)}</p>`:''}</aside></main>`
 }
 export function renderDatasetViewArtifact(value){
  if(value?.type!=='view')return null
  let spec;try{spec=parseDatasetViewArtifact(value)}catch{return null}
- return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${DATASET_VIEW_CSS}</style></head><body data-research-kind="view">${body(spec)}<script id="dataset-view-source" type="application/json">${json(spec)}</script><script>(${datasetViewRuntime.toString()})(${datasetViewValue.toString()},${matchesDatasetViewScope.toString()},${tableSourceHref.toString()},${DATASET_VIEW_DEFAULT_PAGE_SIZE});</script></body></html>`}
+ return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${DATASET_VIEW_CSS}</style></head><body data-research-kind="view">${body(spec)}<script id="dataset-view-source" type="application/json">${json(spec)}</script><script>(${datasetViewRuntime.toString()})(${datasetViewValue.toString()},${matchesDatasetViewScope.toString()},${tableSourceHref.toString()},${DATASET_VIEW_DEFAULT_PAGE_SIZE},${datasetViewRecordFields.toString()});</script></body></html>`}
 }
