@@ -431,50 +431,27 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "演示回复正文与引用下方编辑区",
+        "featureName": "保存演示至知识库弹窗的深浅外观",
         "branch": "codex/feat/presentation-cross-page-20261121",
-        "baseCommit": "a777ab03f6da163701093cc2df30c3696e9aa651",
-        "tipCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
+        "baseCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
+        "tipCommit": "b370ef67967226b32d26cf5679379983fea0a371",
         "commits": [
           {
-            "commit": "db87c888f530e0571dcc17b4682de9c58f6ed8d8",
+            "commit": "b370ef67967226b32d26cf5679379983fea0a371",
             "parents": [
-              "a777ab03f6da163701093cc2df30c3696e9aa651"
+              "2e6aa26bb3816506365e1a1a5c0c31bbea580130"
             ],
-            "subject": "让带演示引用的输入框覆盖标签下方的可点击空行"
-          },
-          {
-            "commit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
-            "parents": [
-              "db87c888f530e0571dcc17b4682de9c58f6ed8d8"
-            ],
-            "subject": "插入幻灯片时保留回复的正文、段落和列表并去除 Markdown 标记"
+            "subject": "修复演示保存至知识库弹窗在深色主题下的背景与文字对比度"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "package-lock.json"
-          },
-          {
-            "status": "M",
-            "path": "package.json"
-          },
-          {
-            "status": "M",
-            "path": "packages/presentation-editor/overlay/reply-text.js"
-          },
-          {
-            "status": "M",
             "path": "src/preload/presentation/view.css"
           },
           {
-            "status": "M",
-            "path": "test/presentation-edit-guide-composer-browser.test.js"
-          },
-          {
             "status": "A",
-            "path": "test/presentation-reply-text.test.js"
+            "path": "test/presentation-archive-dialog-browser.test.js"
           }
         ],
         "checks": [
@@ -486,8 +463,8 @@
             ],
             "outcome": "passed",
             "summary": "编译演示编辑器",
-            "verifiedCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
-            "completedAt": "2026-11-21T00:56:13.454572Z",
+            "verifiedCommit": "b370ef67967226b32d26cf5679379983fea0a371",
+            "completedAt": "2026-11-21T01:00:16.324546Z",
             "timeoutMs": 180000
           },
           {
@@ -498,8 +475,8 @@
             ],
             "outcome": "passed",
             "summary": "客户端类型检查",
-            "verifiedCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
-            "completedAt": "2026-11-21T00:56:26.275273Z",
+            "verifiedCommit": "b370ef67967226b32d26cf5679379983fea0a371",
+            "completedAt": "2026-11-21T01:00:27.434742Z",
             "timeoutMs": 180000
           },
           {
@@ -507,6 +484,7 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/presentation-archive-dialog-browser.test.js",
               "test/presentation-reply-text.test.js",
               "test/presentation-reply-action.test.js",
               "test/presentation-workspace.test.ts",
@@ -519,21 +497,21 @@
             ],
             "outcome": "passed",
             "summary": "标注、输入框和用例聚焦验证",
-            "verifiedCommit": "2e6aa26bb3816506365e1a1a5c0c31bbea580130",
-            "completedAt": "2026-11-21T00:56:33.140458Z",
+            "verifiedCommit": "b370ef67967226b32d26cf5679379983fea0a371",
+            "completedAt": "2026-11-21T01:00:34.326655Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际客户端卡片引用下方的点击区域分别验证为标签下12px、左侧21px；段落、文字、代码与列表可插入为安全可编辑的文本。"
+          "summary": "以正式弹窗表单、客户端主题和原生样式验证深色和浅色外观。标题、标签、字段、说明及两个按钮对比度均过 4.5:1，改名与 PDF 提交正常。"
         },
         "acceptanceCriteria": [
-          "幻灯片只显示回复正文及可阅读的列表，无 Markdown 加粗符号。",
-          "已带引用的输入框在标签下方提供原生可点击的文字行。"
+          "深浅主题下原生保存弹窗的正文、字段、主按钮和取消按钮都清晰可见。",
+          "默认 PowerPoint，可改名并以 PDF 保存。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-21T00:56:40.017149Z"
+        "generatedAt": "2026-11-21T01:00:41.185295Z"
       }
     }
   ],
