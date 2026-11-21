@@ -2189,6 +2189,82 @@
         ],
         "generatedAt": "2026-11-21T12:00:23.825544+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "让带任务背景的直接生图请求在已有画布获得正确的新图操作",
+        "branch": "codex/feat/native-image-brief-20261121",
+        "baseCommit": "f50e52b25c16fdc4199148a98303c2d41b965752",
+        "tipCommit": "d216e426c86400a050df8f8c2c98e6d5c1b3b246",
+        "commits": [
+          {
+            "commit": "d216e426c86400a050df8f8c2c98e6d5c1b3b246",
+            "parents": [
+              "f50e52b25c16fdc4199148a98303c2d41b965752"
+            ],
+            "subject": "修复带任务标题的新图请求无法绑定原生画布"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-canvas-intent.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/image-canvas-intent.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-factory-native.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "-t",
+              "labeled cover brief|ordinary messages|prepares a canvas request",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "实机原文和任务抬头的明确执行、普通讨论、显式编辑与现有画布复核通过。",
+            "verifiedCommit": "d216e426c86400a050df8f8c2c98e6d5c1b3b246",
+            "completedAt": "2026-11-21T12:09:59.386585+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实右栏验收重现了明确新图需求没有绑定画布，集成包中继续用原会话和原文重投。"
+        },
+        "acceptanceCriteria": [
+          "生成命令进入画布协议并保留完整用户描述和指定比例",
+          "讨论与引用指令仍走普通对话，显式编辑沿用原画布"
+        ],
+        "risks": [
+          "图像模型与推理模型的可用性需在实际签名运行时另行核实。"
+        ],
+        "generatedAt": "2026-11-21T12:09:59.386585+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2463,6 +2539,20 @@
         "test/workbench-role-source-first-calls.test.js",
         "test/workbench-pasted-spreadsheet.test.js",
         "test/workbench-disclosure-source-scope.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-factory-native.test.js",
+        "test/image-factory-layer-gesture.test.ts",
+        "-t",
+        "labeled cover brief|ordinary messages|prepares a canvas request",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
