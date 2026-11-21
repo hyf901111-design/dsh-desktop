@@ -124,6 +124,9 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   // Inspect only affirmative action clauses. Generation status is a noun,
   // and temporary negation must not suppress a separate requested addition.
   // The same classifier is serialized into the renderer.
+  const boardVisual = /折线卡|柱状卡|行情卡|净值卡|指标卡|数据卡|条形图|柱图|曲线图|饼图|环形图|瀑布图|漏斗图|雷达图|箱线图|桑基图|时间线|热图|独立明细|交互网页|复盘网页|自包含网页/u
+  const otherDeliverable = /(?:代码(?:片段|示例)?|脚本|图片|图像|插画|照片|海报|摘要|名称)(?:给我)?(?:吧|即可)?$/u
+  const creationQuestion = /(?:生成|创建|绘制|制作)[^，。；;\n]{0,50}(?:需要多久|要多久|多长时间|要几分钟|要多少时间|为什么.{0,6}慢|的成功率(?:是|有)?多少)/u
   const targets=shortBoardCard ? ['component'] : []
   const text = deliveryClauses(request).filter(clause => {
     // Past creation describes an existing object; it is not a new action.
@@ -142,7 +145,12 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
     const create = delivery || createBuild || !!explicit || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|重新规划|\b(?:create|build|generate)\b/iu.test(action)
     const denied = creationDenied(clause)
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
-    const accepted=create&&!denied&&!inspection&&!readOnlyComponentDelivery(action)
+    // “生成” also introduces ordinary text, images and code. A confirmed board
+    // identifies the destination, while the human still authorizes the object.
+    const namesBoardOutput = explicit || componentObject.test(action) || boardVisual.test(action)
+    const acceptsObject = scope !== 'research' || (namesBoardOutput && !clause.includes('\t') &&
+      !otherDeliverable.test(action) && !creationQuestion.test(action))
+    const accepted=create&&acceptsObject&&!denied&&!inspection&&!readOnlyComponentDelivery(action)
     if(accepted){const object=action.match(componentObject);targets.push(explicit?.target??(object&&boardObject.test(object[0])?'workbench':'component'))}
     return accepted
   }).join('；')

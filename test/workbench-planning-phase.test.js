@@ -75,7 +75,7 @@ describe('工作台数据获取与用户预算', () => {
       expect((await h.context(agent,wire)).tools.map(tool=>tool.name)).not.toContain('research_canvas_use')
       expect(h.guard(invocation(agent,'research_canvas_use',{op:'create'}))).toContain('research_workbench_create')
     }
-    for (const text of ['请建一个空白智能容器，我来填内容', '在现有智能容器中生成一张折线图', '在这张卡片中新增一个明细表', '把当前图表改为折线图', '把刚才生成的图表改成折线图', '修改刚才生成的卡片标题', '请编辑指定的已有组件，新增一列名称', '智能容器里生成一张图，不要新增组件', '帮我生成一个留白的智能容器', '这三个点说明什么？', '请解释“再加一张明细”的含义', '不要画这三个点']) {
+    for (const text of ['请建一个空白智能容器，我来填内容', '在现有智能容器中生成一张折线图', '在这张卡片中新增一个明细表', '把当前图表改为折线图', '把刚才生成的图表改成折线图', '修改刚才生成的卡片标题', '请编辑指定的已有组件，新增一列名称', '智能容器里生成一张图，不要新增组件', '帮我生成一个留白的智能容器', '这三个点说明什么？', '生成图片需要多久？', '生成图表一般要多久？', '请生成一张产品宣传图片', '给我生成一段 Python 代码', '生成一个研究用的指标名称', '生成一份摘要，用文字回答', '请生成一段读取图表数据的 Python 代码', '请解释“再加一张明细”的含义', '不要画这三个点']) {
       const h = harness(), agent = {session: marked(text)}
       expect(workbenchCreationRequest(agent.session), text).toBeNull()
       expect(await h.context(agent, wire)).toBe(wire)
