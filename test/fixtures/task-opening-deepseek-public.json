@@ -1,0 +1,29 @@
+{
+  "request": "固收组收盘要复盘这张表里的 2024 年 12 月美国国债曲线。请把 10 年减 2 年、30 年减 5 年两组期限利差逐日写入右侧空白 F、G 列，单位基点，保留原来的观测值，用可以复算的公式。找出 10 年减 2 年利差单日变动绝对值最大的一次，并列的话都列出。最后用三句交接说明月初和月末两组利差各是多少、期间哪天变化最剧烈、怎样理解方向。只使用本工作簿的实际观察日，缺日期不要补。",
+  "deltas": [
+    "我先打开当前",
+    "工作簿，确认表",
+    "头",
+    "、实际观测日期",
+    "和 F",
+    "、",
+    "G 列",
+    "现有内容，再决定",
+    "公式",
+    "写法",
+    "。\n\n",
+    "<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜",
+    " invoke name=\"bash\">\n<",
+    "｜｜DSML｜｜ parameter name=\"command\"",
+    " string=\"true\">pwd",
+    " && ls -la</｜｜DSML｜｜",
+    " parameter>\n<｜｜DSML｜｜ parameter name",
+    "=\"description\" string=\"true",
+    "\">List",
+    " working directory contents</｜｜DSML｜｜ parameter",
+    ">\n</｜｜DSML｜｜ invoke>\n</",
+    "｜｜DSML｜｜",
+    " calls",
+    ">"
+  ]
+}

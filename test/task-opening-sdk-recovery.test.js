@@ -1,0 +1,110 @@
+import {afterEach,expect,it} from 'vitest'
+import {mkdtemp,readFile,writeFile,symlink,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {pathToFileURL} from 'node:url'
+import {createRequire} from 'node:module'
+import {Context} from '@deepseek-ai/cordis'
+import {SessionStore} from '@deepseek-ai/dsh-session'
+import AgentRegistry from '@deepseek-ai/dsh-agent'
+import LlmRuntime,{LlmAdapter,createUserMessage} from '@deepseek-ai/dsh-llm'
+import ToolRuntime,{defineTool} from '@deepseek-ai/dsh-tools'
+import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
+import {registerModelTaskReplies} from '../packages/dsh-research-task-runtime/model-task-replies.js'
+import {registerFirstResponseEffort} from '../packages/dsh-research-task-runtime/first-response-effort.js'
+import sample from './fixtures/task-opening-deepseek-public.json'
+const require=createRequire(import.meta.url)
+const {patchHumanSteeringYield}=require('../scripts/lib/human-steering-yield.mjs')
+const {patchMemoryRequestContext}=require('../scripts/lib/memory-request-context.mjs')
+const {patchFirstResponseEffort}=require('../scripts/lib/first-response-effort.mjs')
+const {boundedTaskOpeningStream,publicTaskOpeningStream}=require('../scripts/lib/task-opening-stream.mjs')
+const closing='已核对实际工作簿。'
+const intro=sample.deltas.join('').split('\n\n')[0]
+const marker='<｜｜DSML｜｜ calls>'
+const tool={type:'tool-call',id:'inspect-sheet',name:'inspect_workbook',arguments:'{}'}
+const close=()=>({type:'finish',reason:{kind:'stop'}})
+function textStream(deltas) {
+ return [{type:'block-start',index:0,blockType:'text'},...deltas.map(text=>({type:'text-delta',index:0,text})),
+  {type:'block-end',index:0,block:{type:'text',text:deltas.join('')}},close()]
+}
+const callStream=()=>[{type:'block-start',index:0,blockType:'tool-call'},{type:'block-end',index:0,block:tool},{type:'finish',reason:{kind:'tool-calls'}}]
+const cleanup=[]
+afterEach(async()=>{for(const dispose of cleanup.splice(0).reverse())await dispose()})
+async function fullTurn(prompt,produce) {
+ const folder=await mkdtemp(join(tmpdir(),'sherlock-opening-sdk-'))
+ cleanup.push(()=>rm(folder,{force:true,recursive:true}))
+ await symlink(join(process.cwd(),'node_modules'),join(folder,'node_modules'),'dir')
+ const vendor=await readFile('node_modules/@deepseek-ai/dsh-agent-loop/lib/index.js','utf8')
+ const prior=patchHumanSteeringYield(patchMemoryRequestContext(vendor))
+ const upgraded=patchFirstResponseEffort(prior)
+ expect(patchFirstResponseEffort(patchHumanSteeringYield(upgraded))===upgraded).toBe(true)
+ const modulePath=join(folder,'loop.mjs')
+ await writeFile(modulePath,upgraded)
+ const {default:AgentLoop}=await import(pathToFileURL(modulePath).href)
+ const ctx=new Context(),requests=[],actions=[],errors=[]
+ new SessionStore(ctx);new AgentRegistry(ctx);new LlmRuntime(ctx);new SystemPrompt(ctx,{})
+ new ToolRuntime(ctx);new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1})
+ cleanup.push(()=>ctx.fiber.dispose())
+ ctx.on('agent/error',({error})=>errors.push(error.message))
+ ctx.tools.register(defineTool({name:'inspect_workbook',description:'读取工作表',parameters:{},
+  output:{schema:{type:'string'},render:(_args,data)=>[{type:'text',text:data}]},
+  execute:async()=>{actions.push('inspect_workbook');return '工作表包含真实观测日。'}}))
+ registerFirstResponseEffort(ctx);registerModelTaskReplies(ctx)
+ class Adapter extends LlmAdapter {
+  async resolveModel(provider,id){return {provider,id,name:id,defaultMaxTokens:1000}}
+  async *stream(req){requests.push(req);yield*produce(requests.length,req)}
+ }
+ ctx.llm.registerAdapter(['fixture'],new Adapter())
+ const {agent}=await ctx.agents.create({sessionId:'native-task-opening',agentOptions:{provider:'fixture',model:'selected',maxTokens:1000}})
+ agent.followup(createUserMessage({source:{kind:'user',clientMode:'spreadsheet'},content:[{type:'text',text:prompt}]}))
+ await agent.whenIdle()
+ return {events:agent.session.events, requests, actions, errors}
+}
+const endOf=events=>events.findLast(e=>e.type==='turn/end').data.reason
+const publicChunks=events=>events.filter(e=>e.type==='assistant/chunk'&&e.data.chunk.type==='text-delta').map(e=>e.data.chunk.text).join('')
+it('replays the public DeepSeek wire chunks through the actual steering-enabled SDK and executes the next model step',async()=>{
+ const {events,requests,actions,errors}=await fullTurn(sample.request,n=>[textStream(sample.deltas),callStream(),textStream([closing])][n-1])
+ expect(errors).toEqual([]);expect(endOf(events)).toEqual({kind:'completed'});expect(requests).toHaveLength(3)
+ expect(requests[0].tools??[]).toEqual([]);expect(requests[1].tools.map(t=>t.name)).toContain('inspect_workbook')
+ expect(actions).toEqual(['inspect_workbook']);expect(events.filter(e=>e.type==='tool/call').map(e=>e.data.name)).toEqual(actions)
+ expect(events.filter(e=>e.type==='tool/result')).toHaveLength(1)
+ expect(publicChunks(events)).toContain(intro);expect(publicChunks(events)).toContain(closing)
+ expect(JSON.stringify(events.filter(e=>['assistant/chunk','assistant/message'].includes(e.type)))).not.toMatch(/DSML|pwd && ls/)
+ expect(requests[2].messages.some(msg=>msg.source?.kind==='tool' && msg.source.callId==='inspect-sheet')).toBe(true)
+ expect(requests.map(req=>req.maxTokens)).toEqual([384,1000,1000])
+})
+it('passes a normal user-requested protocol example unchanged in one ordinary reply',async()=>{
+ const example='字面示例\n'+sample.deltas.join('').split('\n\n')[1]
+ const {events,requests,errors}=await fullTurn('请解释这段工具协议的格式，用示例回答。',()=>textStream([example]))
+ expect(requests).toHaveLength(1);expect(errors).toEqual([]);expect(endOf(events).kind).toBe('completed');expect(publicChunks(events)).toBe(example)
+})
+it('continues after an opening stream error and keeps the actual execution error on the correct step',async()=>{
+ const {events,requests,errors}=await fullTurn(sample.request,n=>{if(n===1)throw Error('opening transport error');return [{type:'finish',reason:{kind:'error',failure:{code:'UPSTREAM',message:'execution transport error'}}}]})
+ expect(requests).toHaveLength(2);expect(errors.join(' ')).toContain('execution transport error')
+ expect(endOf(events)).toMatchObject({kind:'error',error:{message:'execution transport error'}})
+})
+it('protects partial markers without swallowing Markdown examples or unrelated inline syntax',async()=>{
+ const prefix='说明\n```xml\n'+marker+'\n```\n> '+marker+'\n句内 '+marker+'\n    '+marker+'\n'
+ const text=prefix+sample.deltas.join('').split('\n\n')[1]
+ const filter=async wire=>{const chunks=[];for await(const chunk of publicTaskOpeningStream(wire))chunks.push(chunk);return chunks}
+ const safe=await filter(textStream([...text]))
+ expect(safe.filter(c=>c.type==='text-delta').map(c=>c.text).join('')).toBe(prefix)
+ expect(safe.find(c=>c.type==='block-end').block.text).toBe(prefix)
+ const snapshot=await filter([{type:'block-end',index:4,block:{type:'text',text}},...callStream(),{...close(),replayState:{unredacted:text}}])
+ expect(snapshot.find(c=>c.type==='block-end').block.text).toBe(prefix)
+ expect(snapshot.at(-1)).not.toHaveProperty('replayState')
+ expect(snapshot.some(c=>c.block?.type==='tool-call')).toBe(false)
+ const crossed=await filter([{type:'text-delta',index:0,text:'首句。\n'+marker},{type:'text-delta',index:1,text:'private-parameters'},{type:'block-end',index:1,block:{type:'text',text:'private-parameters'}},close()])
+ expect(JSON.stringify(crossed)).not.toContain('private-parameters')
+ const truncated=await filter([{type:'text-delta',index:0,text:'首句。\n<｜｜DSML｜｜ ca'},close()])
+ expect(truncated.filter(c=>c.type==='text-delta').map(c=>c.text).join('')).toBe('首句。\n')
+})
+
+it('honors a smaller explicit output budget and explicit reasoning setting without rebinding the prepared adapter',async()=>{
+ const request={maxTokens:128,reasoningEffort:'high'},calls=[]
+ const prepared={stream:wire=>{calls.push(wire);return textStream(['已确认目标。'])}}
+ const llm={prepareCall:()=>{throw Error('the original prepared call already has the right budget')}}
+ const chunks=[]
+ for await(const chunk of boundedTaskOpeningStream(llm,prepared,request,new AbortController().signal,x=>x,x=>x))chunks.push(chunk)
+ expect(calls).toEqual([request]);expect(calls[0]).toBe(request);expect(chunks.at(-1).reason.kind).toBe('stop')
+})
