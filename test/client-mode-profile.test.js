@@ -106,3 +106,12 @@ it.each(['画一下这三个点','再加一张明细'])('preserves research plan
  expect(turn.image).toBe(false)
  expect(names(wire)).toContain('research_workbench_create')
 })
+
+it('applies the native research creation guard to the mode-routed wire for a file deliverable',async()=>{
+ const agent={session:session('research','请创建一份 Word 文档，将图表写入文档。')},hooks={},guards=[]
+ registerConversationComponentsPolicy({systemPrompt:{context:()=>()=>{}},tools:{guard:fn=>{guards.push(fn);return()=>{}}},on:(name,fn)=>{hooks[name]=fn;return()=>{}}})
+ const wire=await hooks['agent/request-context']({agent},async()=>({tools:schemas}))
+ expect(guards[0]({agent,name:'research_workbench_create'})).toBeTruthy()
+ expect(names(wire)).not.toContain('research_workbench_create')
+ expect(names(wire)).toContain('Bash')
+})
