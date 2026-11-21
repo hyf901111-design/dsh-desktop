@@ -62,10 +62,10 @@ it('keeps toolbar pickers in the iframe and applies pointer and keyboard selecti
       await inside('.toolbar-popup')
       if (label === '形状') {
         const scroller = frame.locator('.shape-pool')
-        expect(await scroller.evaluate(el => getComputedStyle(el).scrollbarWidth)).toBe('none')
-        await scroller.evaluate(el => el.scrollTop = el.scrollHeight)
-        expect(await scroller.evaluate(el => el.scrollHeight <= el.clientHeight || el.scrollTop > 0)).toBe(true)
-        await scroller.evaluate(el => el.scrollTop = 0)
+        expect(await scroller.evaluate((el: HTMLElement) => getComputedStyle(el).scrollbarWidth)).toBe('none')
+        await scroller.evaluate((el: HTMLElement) => el.scrollTop = el.scrollHeight)
+        expect(await scroller.evaluate((el: HTMLElement) => el.scrollHeight <= el.clientHeight || el.scrollTop > 0)).toBe(true)
+        await scroller.evaluate((el: HTMLElement) => el.scrollTop = 0)
       }
       expect(await frame.locator('.toolbar-popup').evaluate((el: HTMLElement) => el.scrollHeight - el.clientHeight)).toBeLessThanOrEqual(1)
     }
