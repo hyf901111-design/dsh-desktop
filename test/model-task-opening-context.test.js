@@ -72,7 +72,7 @@ it('keeps the supplied decision or facts available without prescribing a verific
  expect(first.tools).toEqual([])
 })
 
-it('carries the supplied row count, field units and two row-bound disclosed values in the short opening',async()=>{
+it('keeps identifiers, units and decimal precision for each disclosed row in a short reconciliation opening',async()=>{
  const text=`我是估值核算岗，请把五笔持仓整理到研究看板，按原序逐笔核对。
 序号	股票代码	股票名称	数量（股）	公允价值（元）	占基金资产净值比例（%）
 1	300750	宁德时代	31173566	11448803849.16	3.81
@@ -84,9 +84,12 @@ it('carries the supplied row count, field units and two row-bound disclosed valu
  const first=await run(1,{...current,provider:'ework-ark',model:'deepseek-v4.1-flash'})
  const body=first.messages[0].content[0].text
  expect(body).toContain('已识别5行记录，表头6列')
- expect(body).toContain('所提供的全部5行，仅摘数值列（公允价值（元） / 占基金资产净值比例（%））')
- expect(body).toContain('宁德时代 / 11448803849.16 / 3.81');expect(body).toContain('中际旭创 / 7984305860.00 / 2.66')
- expect(body).not.toContain('601318')
+ expect(body).toContain('已给出全部单元格')
+ for (const row of text.split('\n').slice(1)) expect(body).toContain(row)
+ const incomplete = requests(text.replace('13089026','—'))
+ const partial = await incomplete.run(1)
+ expect(partial.messages[0].content[0].text).toContain('300308\t中际旭创\t—\t7984305860.00')
+ expect(partial.messages[0].content[0].text).toContain('缺失标记')
  expect(first.system).toContain('无需用户重发')
  expect(first.tools).toEqual([])
 })
