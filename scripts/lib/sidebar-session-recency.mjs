@@ -51,6 +51,9 @@ ${anchor}`)
 }
 
 export function patchSidebarSessionExperience(source) {
+  const openRow = 'open: (sessionId) => {\n\t\t\t\t\tctx.sessions.open(sessionId);'
+  const historyEvent = 'document.dispatchEvent(new CustomEvent("sherlock:history-session-selected", { detail: { sessionId } }));'
+  if (!source.includes(historyEvent) && source.includes(openRow)) source = source.replace(openRow, openRow + '\n' + historyEvent)
   const marker='/* ework:sidebar-session-experience:v2 */'
   // Upgrade the previous click-based clock without disturbing saved manual order.
   if(source.includes(marker))return source
