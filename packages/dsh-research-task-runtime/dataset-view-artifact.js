@@ -21,7 +21,7 @@ export const DATASET_VIEW_CSS=`
 .dv-records .dv-identity{position:sticky;left:0;z-index:1;box-shadow:1px 0 var(--sherlock-border)}.dv-records td.dv-identity{background:inherit!important}.dv-records .dv-record-select:disabled{color:inherit!important;opacity:1!important}.dv-records tr[aria-selected=true] .dv-identity{background:var(--sherlock-row-selected)}.dv-records .dv-number{text-align:right;font-variant-numeric:tabular-nums}.dv-records .dv-number button{text-align:right}.dv-shell[data-records-first] .dv-section h3{margin-bottom:4px}
 `
 function body(spec){
- const {dataset,view}=spec,fields=new Map(dataset.fields.map(f=>[f.key,f])),value=(r,key,signContext)=>esc(datasetViewValue(r[key],fields.get(key),signContext))
+ const {dataset,view}=spec,fields=new Map(dataset.fields.map(f=>[f.key,f])),value=(r,key,signContext)=>esc(datasetViewValue(r[key],fields.get(key),view.signedFields?.includes(key)||signContext))
  const cell=(r,key,signContext)=>tableSourceLink(fields.get(key).label,r[key])??value(r,key,signContext)
  const numericFields=new Set(dataset.fields.filter(({key})=>dataset.records.some(row=>typeof row[key]==='number')&&dataset.records.every(row=>row[key]===null||typeof row[key]==='number')).map(field=>field.key))
  const cellClass=key=>key==='id'?'dv-identity':numericFields.has(key)?'dv-number':''
@@ -60,5 +60,5 @@ function body(spec){
 export function renderDatasetViewArtifact(value){
  if(value?.type!=='view')return null
  let spec;try{spec=parseDatasetViewArtifact(value)}catch{return null}
- return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${DATASET_VIEW_CSS}</style></head><body data-research-kind="view">${body(spec)}<script id="dataset-view-source" type="application/json">${json(spec)}</script><script>(${datasetViewRuntime.toString()})(${datasetViewValue.toString()},${matchesDatasetViewScope.toString()},${tableSourceHref.toString()},${DATASET_VIEW_DEFAULT_PAGE_SIZE},${datasetViewRecordFields.toString()});</script></body></html>`}
+ return {version:1,type:'html',title:spec.title,html:`<!doctype html><html><head><meta charset="utf-8"><style>${DATASET_VIEW_CSS}</style></head><body data-research-kind="view" data-view-signed-fields="v1">${body(spec)}<script id="dataset-view-source" type="application/json">${json(spec)}</script><script>(${datasetViewRuntime.toString()})(${datasetViewValue.toString()},${matchesDatasetViewScope.toString()},${tableSourceHref.toString()},${DATASET_VIEW_DEFAULT_PAGE_SIZE},${datasetViewRecordFields.toString()});</script></body></html>`}
 }

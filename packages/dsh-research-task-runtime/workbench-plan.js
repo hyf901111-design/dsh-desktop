@@ -36,7 +36,8 @@ import {normalizeKeyedTableProjection} from './table-projection.js';
 import {applyAuthoredFinanceLedger,authoredFinanceLedger, completeInlineFinancePlan,expandMappedWorkbenchChart,labelRequestedReportSeries,normalizeSharedChart,normalizeSharedKpi,normalizeSpecializedMarketData,preserveRequestedNativePresentation} from './workbench-native-presentation.js';
 import {marketPanelSchema} from './market-artifact.js';
 import {verifiedAggregateRecordCount,verifiedChartRecordCount,verifiedKpiRecordCount} from './dataset-aggregate.js';
-import {resolvePastedWorkbenchPlan} from './workbench-pasted-tables.js';
+import {resolvePastedWorkbenchPlan,pastedWorkbenchInput} from './workbench-pasted-tables.js';
+import {requestsSignedNetFlows} from './dataset-net-flow-display.js';
 import {datasetViewValue,matchesDatasetViewScope} from './dataset-view-runtime.js';
 import {comparisonNamesForScope,componentCohortRequest,componentDeliveryModel,componentDeliveryScopeIssue,datedRecordIdentities,isActionScope,isCalendarDateScope,isDatedRecordScope,isDecimalPrecisionScope,verifiesFundManagerGroups,verifiedOutlineCoverage} from './component-delivery-scope.js';
 import {wordOutlineCoverage} from './workbench-word-grid.js';
@@ -597,6 +598,8 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
         throw Error('工作台需要 1–30 个独立面板。');
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
     value=completeInlineFinancePlan(resolvePastedWorkbenchPlan(value));
+    const signedNetFlows = typeof value.originalRequest==='string'&&value.panels.some(panel=>panel?.type==='view'&&!panel.artifact)&&
+        requestsSignedNetFlows(pastedWorkbenchInput(value.originalRequest).context);
     const isSimulated = value.dataMode === 'simulated';
     const parallel = value.generationMode === 'parallel';
     const deferred = value.generationMode === 'deferred';
@@ -708,7 +711,7 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
         }
         if (p.type === 'view') {
             if (!datasets || p.view === undefined) throw Error('type:view必须同时提供完整sharedDatasets及每卡view配置，即使deferred也不能作为缺数据的占位类型；尚未有完整数据请选原业务组件类型。');
-            let {dataset,view} = validateDatasetView(p.view,datasets);
+            let {dataset,view} = validateDatasetView(p.view,datasets,{signedNetFlows:signedNetFlows&&p.artifact===undefined});
             // A distribution shows each group at once. The compare view
             // intentionally exposes only two selected rows at a time.
             const distribution = /分布|各组.*汇总|整体.*汇总/u.test(p.title+'\n'+p.prompt) &&

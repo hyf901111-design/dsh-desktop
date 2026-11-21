@@ -1,0 +1,116 @@
+{
+  "originalRequest": "我是管理层周会主持人，要用研究看板直接点出哪些客户及产品类别去年实际净流出、今年是否扭转。请让两类例外先出现在会上打开的组件中，带两年的带符号净流入以便点名追问；再让我对照其余类别的两年净流入。AUM 是年末余额，不与流量混算。金额单位百万美元。来源为 BlackRock 2024 年报 Form 10-K 印刷第 47 页（PDF 第 42 页）。\nhttps://s24.q4cdn.com/856567660/files/doc_financials/2025/ar/BLK_AR24.pdf\n\n客户及产品类别\t2024年末AUM\t2023年末AUM\t2024全年净流入\t2023全年净流入\n零售\t1015827\t929697\t24367\t-8473\nETF\t4230375\t3499299\t390433\t185942\n机构主动\t2136749\t1912673\t64447\t87106\n机构指数\t3247637\t2902489\t9374\t-55125\n现金管理\t920663\t764837\t152730\t79245",
+  "args": {
+    "title": "BlackRock 2024：净流出类别的扭转与两年净流入对照",
+    "sharedDatasets": [
+      {
+        "id": "blk-segments",
+        "label": "BlackRock 客户及产品类别（2023–2024 年末 AUM 与全年净流入）",
+        "asOf": "2024-12-31（2024 财年年末）",
+        "note": "来源：BlackRock 2024 年报 Form 10-K，印刷第 47 页（PDF 第 42 页）。金额单位百万美元；净流入为当年全年流量，AUM 为年末余额，两者不混算。",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "numericFields": [
+            "2024年末AUM",
+            "2023年末AUM",
+            "2024全年净流入",
+            "2023全年净流入"
+          ],
+          "derive": [
+            {
+              "key": "净流入同比变化",
+              "label": "2024较2023净流入变化",
+              "op": "subtract",
+              "left": "2024全年净流入",
+              "right": "2023全年净流入",
+              "unit": "百万美元"
+            }
+          ]
+        }
+      }
+    ],
+    "panels": [
+      {
+        "title": "两个 2023 净流出的类别：2024 年均已转正",
+        "type": "view",
+        "size": "medium",
+        "layout": "standard",
+        "view": {
+          "dataset": "blk-segments",
+          "where": [
+            {
+              "field": "2023全年净流入",
+              "op": "lt",
+              "value": 0
+            }
+          ],
+          "sections": [
+            {
+              "kind": "records",
+              "title": "2023 净流出（百万美元）",
+              "fields": [
+                "客户及产品类别",
+                "2024全年净流入",
+                "2023全年净流入",
+                "净流入同比变化"
+              ]
+            }
+          ]
+        },
+        "note": "按 2023 全年净流入为负筛出：零售、机构指数。两者 2024 全年净流入均为正，零售由 -8,473 转为 +24,367，机构指数由 -55,125 转为 +9,374（转正但规模远小于此前流出）。单位百万美元。"
+      },
+      {
+        "title": "其余类别两年净流入对照（同单位）",
+        "type": "chart",
+        "size": "wide",
+        "layout": "wide",
+        "view": {
+          "dataset": "blk-segments",
+          "variant": "groupedBar",
+          "unit": "百万美元",
+          "where": [
+            {
+              "field": "2023全年净流入",
+              "op": "gte",
+              "value": 0
+            }
+          ],
+          "sections": [
+            {
+              "kind": "records",
+              "label": "客户及产品类别",
+              "fields": [
+                "2024全年净流入",
+                "2023全年净流入"
+              ]
+            }
+          ]
+        },
+        "note": "2023 全年净流入为正的其余三类：ETF、机构主动、现金管理。单位百万美元；仅比较净流入流量，不与 AUM 余额混算。"
+      },
+      {
+        "title": "年末 AUM（余额，非流量）",
+        "type": "view",
+        "size": "medium",
+        "layout": "standard",
+        "view": {
+          "dataset": "blk-segments",
+          "sections": [
+            {
+              "kind": "records",
+              "title": "年末余额（百万美元）",
+              "fields": [
+                "客户及产品类别",
+                "2024年末AUM",
+                "2023年末AUM"
+              ]
+            }
+          ]
+        },
+        "note": "AUM 为年末余额，仅用于看规模基数，不与净流入流量相加、相减或折算为流入。"
+      }
+    ],
+    "requestId": "blk-2024-netflow-turnaround-host"
+  }
+}

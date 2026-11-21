@@ -11,8 +11,10 @@ export function datasetViewValue(value,field,signContext){
   const formatted=value.toLocaleString('en-US',{useGrouping:false,minimumFractionDigits:field.minimumFractionDigits,maximumFractionDigits:20})
   if(Number(formatted)===value)display=formatted
  }
- if(value>0&&signContext&&/(?:带|有)符号|(?:显示|标注|保留)正负号|\bsigned\b/iu.test(signContext)&&
-    /净流[入出]|净申[购赎]|净赎回|变化|变动|增减|差额|\b(?:net flows?|change|delta)\b/iu.test(field?.label??''))display='+'+display
+ // A validated field list applies even when a section has no display instruction.
+ const requested=signContext===true||typeof signContext==='string'&&/(?:带|有)符号|(?:显示|标注|保留)正负号|\bsigned\b/iu.test(signContext)
+ if(value>0&&requested&&!/AUM|余额|资产规模|净资产|资产净值|比重|占比|比例|百分比|[%％]|\b(?:balance|ratio)\b/iu.test(field?.label??'')&&
+    (signContext===true||/净流[入出]|净申[购赎]|净赎回|变化|变动|增减|差额|\b(?:net flows?|change|delta)\b/iu.test(field?.label??'')))display='+'+display
  return display+(field?.unit?' '+field.unit:'')
 }
 export function datasetViewRecordFields(section){
@@ -116,7 +118,7 @@ export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPage
     link.rel='noopener noreferrer'
     link.setAttribute('aria-label',`打开链接：${href}`)
     cell.appendChild(link)
-   }else cell.textContent=valueText(value,field,section.title)
+   }else cell.textContent=valueText(value,field,view.signedFields?.includes(key)||section.title)
    row.appendChild(cell)
   }
   if(view.reorder){
@@ -207,14 +209,14 @@ export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPage
     else {
      const header=make('div',undefined,'dv-compare-row dv-compare-head');header.setAttribute('role','row')
      for(const label of ['对比字段',...s.pair]){const cell=make('div',label);cell.setAttribute('role','columnheader');header.appendChild(cell)}body.appendChild(header)
-     for(const key of section.fields){const row=make('div',undefined,'dv-compare-row');row.setAttribute('role','row');const label=make('div',fields.get(key).label,'dv-compare-label');label.setAttribute('role','rowheader');row.appendChild(label);for(const id of s.pair){const cell=make('div',valueText(records.get(id)[key],fields.get(key)),'dv-compare-value');cell.setAttribute('role','cell');row.appendChild(cell)}body.appendChild(row)}
+     for(const key of section.fields){const row=make('div',undefined,'dv-compare-row');row.setAttribute('role','row');const label=make('div',fields.get(key).label,'dv-compare-label');label.setAttribute('role','rowheader');row.appendChild(label);for(const id of s.pair){const cell=make('div',valueText(records.get(id)[key],fields.get(key),view.signedFields?.includes(key)),'dv-compare-value');cell.setAttribute('role','cell');row.appendChild(cell)}body.appendChild(row)}
     }
    }
   })
   const detail=root.querySelector('.dv-detail')
   detail.hidden=!view.details.length||(view.navigation==='tabs'&&view.sections[s.tab].kind==='compare')
   detail.replaceChildren(make('h3',selected?`记录 ${selected.id}`:'点选记录查看详情'))
-  if(selected){const dl=make('dl');for(const key of view.details){dl.appendChild(make('dt',fields.get(key).label));dl.appendChild(make('dd',valueText(selected[key],fields.get(key))))}detail.appendChild(dl)}
+  if(selected){const dl=make('dl');for(const key of view.details){dl.appendChild(make('dt',fields.get(key).label));dl.appendChild(make('dd',valueText(selected[key],fields.get(key),view.signedFields?.includes(key))))}detail.appendChild(dl)}
   else detail.appendChild(make('p','选择记录后显示完整字段和备注。','dv-muted'))
   window.dispatchEvent(new Event('sherlock-presentation-change'))
  }
