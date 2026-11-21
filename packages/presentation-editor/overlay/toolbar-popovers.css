@@ -29,14 +29,35 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* Long option lists keep wheel, touch and keyboard scrolling within the menu. */
-.deck-app :is(.toolbar-popup,.shape-pool,.chart-pool,.table-generator,.layout-grid,.format-palette,.style-popover),
-.deck-choice-list {
-  scrollbar-width: none;
+/* These menus can be teleported to the iframe body. Their inner scroll
+   owners, including vendor option lists, use the same palette as the shell. */
+body {
+  --menu-scroll-track: #f1f1f1;
+  --menu-scroll-thumb: #b8b8b8;
+  --menu-scroll-hover: #a3a3a3;
+  --menu-scroll-active: #929292;
 }
-.deck-app :is(.toolbar-popup,.shape-pool,.chart-pool,.table-generator,.layout-grid,.format-palette,.style-popover)::-webkit-scrollbar,
-.deck-choice-list::-webkit-scrollbar {
-  display: none;
+body[data-ds-dark-theme] {
+  --menu-scroll-track: #242424;
+  --menu-scroll-thumb: #4b4b4b;
+  --menu-scroll-hover: #595959;
+  --menu-scroll-active: #646464;
+}
+:is(.toolbar-popup,.command-column,.format-palette,.style-popover,.deck-choice-list,.tippy-box[data-theme~='popover']) {
+  &, & * {
+    scrollbar-color: var(--menu-scroll-thumb) var(--menu-scroll-track);
+    scrollbar-width: thin;
+    @supports selector(::-webkit-scrollbar) {
+      /* Non-auto standard properties override custom parts in Chromium. */
+      scrollbar-color: auto;
+      scrollbar-width: auto;
+      &::-webkit-scrollbar { width: 6px; height: 6px; background-color: var(--menu-scroll-track); }
+      &::-webkit-scrollbar-track, &::-webkit-scrollbar-corner { background-color: var(--menu-scroll-track); }
+      &::-webkit-scrollbar-thumb { background-color: var(--menu-scroll-thumb); border-radius: 4px; }
+      &::-webkit-scrollbar-thumb:hover { background-color: var(--menu-scroll-hover); }
+      &::-webkit-scrollbar-thumb:active { background-color: var(--menu-scroll-active); }
+    }
+  }
 }
 .deck-app .shape-pool .category-name {
   box-sizing: border-box;
