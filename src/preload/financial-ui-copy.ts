@@ -47,7 +47,7 @@ export const financialUiCopy: Record<string,string> = {
  '刷新失败，保留上次数据':'Refresh failed; previous data retained',
  '休市':'Closed','盘前':'Pre-market','午间休市':'Lunch break','更新中':'Updating','时效待确认':'Freshness unconfirmed',
  '分市场':'Mixed market status','各市场时刻':'Local market times','时刻未确认':'Time unconfirmed','行情时点未确认':'Quote time unconfirmed',
- '资讯时点未确认':'News time unconfirmed','日期未提供':'Date unavailable','时刻未提供':'Time unavailable','时间未提供':'Time unavailable',
+ '来源未标注':'Source not specified','资讯时点未确认':'News time unconfirmed','日期未提供':'Date unavailable','时刻未提供':'Time unavailable','时间未提供':'Time unavailable',
  '每60秒刷新':'Refresh every 60 seconds','展开新闻摘要':'Expand news summary','收起新闻摘要':'Collapse news summary',
  '腾讯财经':'Tencent Finance','新浪财经':'Sina Finance','东方财富':'Eastmoney',
  '配置已变化，取消旧请求':'Configuration changed; previous request cancelled','组件已关闭':'Component closed',

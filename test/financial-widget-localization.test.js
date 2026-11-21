@@ -81,3 +81,7 @@ it('localizes actual built-in widgets and new menus live without changing source
  expect(card(quote.id).querySelector('input').value).toBe('600519 · 研究')
  expect(f.workspace.getSnapshot().artifacts.find(n=>n.id===indices.id).containerSpec.symbols[0].name).toBe('沪深300')
 })
+
+it('translates the news state before the source or publication time is known',()=>{
+ expect(['未取得数据','来源未标注','资讯时点未确认'].map(value=>translateUiCopy(value))).toEqual(['No data yet','Source not specified','News time unconfirmed'])
+})

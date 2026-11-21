@@ -45,3 +45,18 @@ it('一分钟自动刷新与手动刷新共用明显反馈，失败时不显示�
  await f.act(async()=>{await vi.advanceTimersByTimeAsync(60000)});expect(bridge.request.mock.calls.at(-1)[0].refresh).toBe(true);expect(directions(card)).toEqual(['flat','flat','flat'])
  bridge.request.mockResolvedValue({quotes:[],error:'暂不可用'});await f.act(async()=>{await vi.advanceTimersByTimeAsync(60000)});expect(directions(card)).toEqual([]);expect(card.querySelector('.ew-watch-price').textContent).toBe('100.00')
 })
+
+it('shows the actual fetch state and source of the news widget without rendering an undefined provider',async()=>{
+ const story={id:'official',title:'2024年12月份全国彩票销售情况',url:'https://zhs.mof.gov.cn/zonghexinxi/202501/t20250124_3955089.htm'}
+ const bridge={request:vi.fn(async()=>({news:[]}))}
+ const f=await financialClientFixture({financialWidget:bridge},{refreshState:true});cleanups.push(f.dispose)
+ const card=await create(f,'news')
+ const tooltip=()=>card.querySelector('.ew-financial-provenance').title
+ expect(tooltip()).toContain('未取得数据')
+ expect(tooltip()).not.toMatch(/undefined|资讯时点未确认/)
+ bridge.request.mockResolvedValueOnce({news:[story]});await refresh(f,card)
+ expect(tooltip()).toContain('来源未标注')
+ bridge.request.mockResolvedValueOnce({news:[story],source:'豆包搜索'});await refresh(f,card)
+ expect(tooltip()).toContain('豆包搜索 · 资讯时点未确认')
+ expect(tooltip()).toContain('每60秒刷新')
+})

@@ -65,6 +65,25 @@ function newsDisplayText(value?: string): string {
     .replace(/([，。！？；：、（“‘])[ \t]+/gu, '$1')
 }
 
+function isGamblingPromotion(title: string): boolean {
+  // Require an obfuscated or numbered gambling brand next to an acquisition link.
+  // Regulatory reports and coverage of scams can legitimately quote that brand.
+  const acquisition = /(?:\d{2,8}\s*(?:彩[.·。．_\s]*票|博彩)|彩[.·。．_]+票)\s*(?:APP\s*)?(?:下载|注册|开户|投注|充值|登录入口)/iu
+  return acquisition.test(title) && !/(?:反诈|诈骗|查处|警示|曝光|整治|取缔|非法|仿冒|举报)/u.test(title)
+}
+
+function categoryLanding(path: string, title: string): boolean {
+  const parts = title.split(/[_|｜]|\s*[-–—]\s*/u).map(part => part.trim()).filter(Boolean)
+  const heading = parts[0] ?? ''
+  const slug = /^\/([a-z]{2,12})\/?$/i.exec(path)?.[1]
+  // A short category route with a matching section heading and a publisher masthead.
+  if (slug && parts.length >= 3 && /^(?:与|和|及|$)/u.test(heading.slice(slug.length)) &&
+      heading.slice(0, slug.length).toLowerCase() === slug.toLowerCase()) return true
+  if (/^\/(?:newsflash|categories|category|topics|channels|tags)\/[a-z]+\/?$/i.test(path) &&
+      parts.slice(1).some(part => /^(?:简讯快报|新闻频道|快讯|频道|栏目|Archives?)$/iu.test(part))) return true
+  return /\/(?:site|portal)\/[a-z]+\/?$/i.test(path) && /^[A-Z\d]{0,12}[\p{Script=Han}]{2,15}(?:产业网|行业网|门户网站|官方网站)$/u.test(title)
+}
+
 function publisherSectionIndex(path: string, title: string): boolean {
   if (/\/(?:articles?|posts?|stor(?:y|ies)|details?|20\d{2}(?:[-/]?\d{2})*)\//i.test(path)) return false
   if (/\/(?:list|channel|category)[_-]\d+(?:\.s?html?)?\/?$/i.test(path)) return true
@@ -110,7 +129,7 @@ export async function queryAccountFinancialWidget(
       const articleKey = [...canonical.searchParams].some(([key, value]) => /^(?:p|post|article|story|item|aid|id)(?:_?id)?$/i.test(key) && value.trim())
       const pagedFeed = /(?:^|[/-])(?:[a-z]+[_-])?(?:news|archive[s]?|category|tag)(?:$|\/)/i.test(path) && canonical.searchParams.has('page')
       const archiveTitle = /\barchives?\s*[|·]|(?:的\s*微博|的\s*个人主页)$/i.test(title)
-      if (searchPage || !articleKey && (indexPage || publisherSectionIndex(canonical.pathname, title)) || pagedFeed || archiveTitle) return []
+      if (isGamblingPromotion(title) || categoryLanding(path, title) || searchPage || !articleKey && (indexPage || publisherSectionIndex(canonical.pathname, title)) || pagedFeed || archiveTitle) return []
       // An undated story has no verified publication time. A dated story must fit the requested rolling week.
       const published = Date.parse(item.publishedAt ?? '')
       const time = item.publishedAt && Number.isFinite(published) && published !== 0 ? item.publishedAt : null
