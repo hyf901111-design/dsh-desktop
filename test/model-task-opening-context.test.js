@@ -84,7 +84,8 @@ it('carries the supplied row count, field units and two row-bound disclosed valu
  const first=await run(1,{...current,provider:'ework-ark',model:'deepseek-v4.1-flash'})
  const body=first.messages[0].content[0].text
  expect(body).toContain('已识别5行记录，表头6列')
- expect(body).toContain('原表首行 宁德时代：公允价值（元）=11448803849.16，占基金资产净值比例（%）=3.81')
+ expect(body).toContain('所提供的全部5行，仅摘数值列（公允价值（元） / 占基金资产净值比例（%））')
+ expect(body).toContain('宁德时代 / 11448803849.16 / 3.81');expect(body).toContain('中际旭创 / 7984305860.00 / 2.66')
  expect(body).not.toContain('601318')
  expect(first.system).toContain('无需用户重发')
  expect(first.tools).toEqual([])
@@ -141,4 +142,19 @@ it('preserves real service or reference status on an admitted image turn, and le
  const discussion=requests('这轮只讨论构图，不生成或修改图片。',{mode:'image'})
  const first=await discussion.run(1,{...discussion.current,tools:[{name:'image_generate'}]})
  expect(first.system).not.toContain('在这一步执行')
+})
+
+it('distinguishes a complete supplied column, a retained missing value and a preview of a longer table',async()=>{
+ const goal='我是指数投资部的组合经理，请把下面的持仓做成研究看板，让我一眼比较五家公司的净值占比和排名，知道前五合计多少。'
+ const head='序号\t股票代码\t股票名称\t数量（股）\t公允价值（元）\t占基金资产净值比例（%）'
+ const rows=['1\t300750\t宁德时代\t31173566\t11448803849.16\t3.81','2\t600519\t贵州茅台\t7377868\t10160652252.24\t3.38','3\t601318\t中国平安\t125580047\t8589675214.80\t2.86','4\t300308\t中际旭创\t13089026\t7984305860.00\t2.66','5\t601899\t紫金矿业\t194034163\t6688357598.61\t2.23']
+ const opening=async rs=>(await requests([goal,head,...rs].join('\n')).run(1)).messages[0].content[0].text
+ const full=await opening(rows)
+ expect(full).toContain('所提供的全部5行，仅摘数值列（占基金资产净值比例（%））')
+ expect(full).toContain('宁德时代 / 3.81；贵州茅台 / 3.38；中国平安 / 2.86；中际旭创 / 2.66；紫金矿业 / 2.23')
+ expect(full).not.toContain('11448803849.16')
+ const absent=await opening(rows.map(r=>r.replace('2.86','—')))
+ expect(absent).toContain('原文含空值');expect(absent).toContain('中国平安 / —')
+ const long=await opening([...rows,...rows])
+ expect(long).toContain('原文已包含这10行，仅摘首行示例');expect(long).not.toContain('贵州茅台 /')
 })
