@@ -108,9 +108,18 @@ export function contentChartSelection(content, columns, scope = {}) {
  if (content.visualization !== undefined) {
   const view = content.visualization
   if (!Array.isArray(view?.values)) return
-  const fields = columns.filter(field => view.values.includes(field.key))
+  // The planner can refer to an explicit column by its displayed source header.
+  // Existing keys take precedence; repeated labels cannot identify a field.
+  const fieldFor = reference => {
+   const keyed = columns.find(field => field.key === reference)
+   if (keyed) return keyed
+   const matching = columns.filter(field => field.label === reference)
+   if (matching.length === 1) return matching[0]
+  }
+  const axis = fieldFor(view.label), fields = view.values.map(fieldFor)
+  if (!axis || !fields.length || fields.some(field => !field) || !distinct(fields)) return
   if (!chartUnit(fields,columns,rows,view.unit??content.unit,false)) return
-  return {view,rows}
+  return {view:{...view,label:axis.key,values:fields.map(field => field.key)},rows}
  }
  if (rows.length < 2 || rows.length > 366 || columns.length > 20 || rows.length*columns.length > 4000 ||
      /名录|速查|字典|\b(?:catalog(?:ue)?|directory|glossary)\b/iu.test(titles)) return

@@ -32,6 +32,22 @@ it('uses a chart hint while retaining every row and auxiliary field',()=>{
  expect(snapshot.data.detailRows).toEqual([['甲','001',3,'机构甲'],['乙','002',6,'机构乙']])
  expect(readTemplateModel(artifact).data.detailRows).toEqual(snapshot.data.detailRows)
 })
+it('renders the three disclosed Treasury observations when the explicit chart names source headers',()=>{
+ const columns=[{key:'date',label:'日期'},{key:'value',label:'收益率（%）'}]
+ const rows=[{date:'2024-12-27',value:4.62},{date:'2024-12-30',value:4.55},{date:'2024-12-31',value:4.58}]
+ const visualization={kind:'line',label:'日期',values:['收益率（%）'],unit:'%'}
+ const content={title:'美国10年期国债收益率三日走势',columns,rows,visualization}
+ const model=readTemplateModel(render(content).artifact)
+ expect(model.templateId).toBe('chart.line')
+ expect(model.data).toMatchObject({labels:rows.map(row=>row.date),series:[{name:'收益率（%）',values:[4.62,4.55,4.58]}],unit:'%',detailRows:rows.map(row=>[row.date,row.value])})
+ for(const alternate of [
+  {...content,columns:[...columns,{key:'other',label:'收益率（%）'}],rows:rows.map(row=>({...row,other:row.value}))},
+  {...content,visualization:{...visualization,values:['收益率']}},
+  {...content,visualization:{...visualization,values:['value','收益率（%）']}},
+  {...content,visualization:{...visualization,unit:'亿元'}},
+  {...content,rows:rows.map((row,i)=>i===1?{...row,value:null}:row)}
+ ])expect(readTemplateModel(render(alternate).artifact).templateId).toBe('table')
+})
 it.each(['missing','oversized'])('falls back from %s chart values without dropping records',mode=>{
  const rows=Array.from({length:mode==='oversized'?401:2},(_,i)=>({name:'项目'+i,value:mode==='missing'&&i===1?null:i,body:'原文'+i}))
  const {snapshot,artifact}=render({title:'完整数据',rows,visualization:{kind:'line',label:'name',values:['value']}})
