@@ -189,7 +189,9 @@
           >
             <span class="num">{{ i + 1 }}</span>
             <div class="page-detail">
-              <div class="thumb"><ThumbnailSlide :slide="page" :size="106" /></div>
+              <div class="thumb" :ref="i === 0 ? observeThumbnail : undefined">
+                <ThumbnailSlide v-if="thumbnailWidth" :slide="page" :size="thumbnailWidth" />
+              </div>
               <span>{{ caption(page) || '幻灯片 ' + (i + 1) }}</span>
             </div>
           </button>
@@ -1017,6 +1019,19 @@ function play() {
     resize()
   })
 }
+// All directory rows share a grid track. Size the slide renderer to that track's
+// content box so scrollbars, pane resizing and selection borders cannot crop it.
+const thumbnailWidth = ref(0)
+let measuredThumbnail
+const thumbnailObserver = new ResizeObserver(([entry]) => {
+  if (entry?.target === measuredThumbnail) thumbnailWidth.value = entry.contentRect.width
+})
+function observeThumbnail(node) {
+  if (!node || node === measuredThumbnail) return
+  thumbnailObserver.disconnect()
+  measuredThumbnail = node
+  thumbnailObserver.observe(node)
+}
 function resize() {
   screenWidth.value = Math.min(innerWidth, innerHeight / store.viewportRatio)
 }
@@ -1068,6 +1083,7 @@ onMounted(() => {
   send('ready')
 })
 onUnmounted(() => {
+  thumbnailObserver.disconnect()
   markViewer?.destroy()
   window.removeEventListener('message', receive)
   window.removeEventListener('odyssey:export', exported)
