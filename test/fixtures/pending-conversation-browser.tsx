@@ -64,6 +64,9 @@ const sidebarWorkspace=installSidebarWorkspaceHandoff({
  sessions:{list:{getSnapshot:()=>({...current,byId:emptySessions.byId})}},workspaces:options.workspaces,pending:record,right,doc:document
 })
 native.__testSetSidebarWorkspace(sidebarWorkspace)
+const createConversationOptions = new Function('NS', 'ABSENT_BLOCK', 'researchWorkspaces', 'researchSidebar', 'eworkPendingConversation',
+ data.conversationOptions + 'return odysseyConversationOptions;')
+const homeWorkspaceAction = createConversationOptions('conversation', {}, registry, coordinator, record).inject(undefined).selectWorkspace
 document.body.dataset.odysseyGlobalRightOpen='true';
 coordinator.service={getSnapshot:()=>sidebarStore.getSnapshot(),subscribeState:(fn:any)=>sidebarStore.subscribe(fn),
  openTab(){},updateTab(){},closeTab(){},activateTab(){},
@@ -92,7 +95,7 @@ function Home(){
   ? <NativePendingBar {...hooks} {...props} sessionId={sessionId} useSession={select=>select(sessionState)}
       keyboard={shell} inputActions={shell.actions} useInput={historyInput} renderSlot={()=>null}/>
   : nativeRenderSlot(name,props)
- return <native.__testHomeGuideNativeOriginalConversationRoot key={sessionId??'home'} sessionId={sessionId} useSession={(select:any)=>sessionState?select(sessionState):undefined} useSessions={(select:any)=>select(emptySessions)} useWorkspaces={useWorkspaces} useInput={shell?historyInput:()=>undefined} useComposerBlock={()=>undefined} useStore={(select:any)=>select({...view,view:views.get(sessionId)??view.view})} actions={actions} researchSidebar={coordinator} researchWorkspaces={registry} useProjection={()=>undefined} renderSlot={shell?historyRenderSlot:nativeRenderSlot} renderSlotChain={(_name:any,_props:any,{fallback}:any)=>fallback} selectWorkspace={async(id:string)=>record.selectWorkspace(id)} t={t}/>
+ return <native.__testHomeGuideNativeOriginalConversationRoot key={sessionId??'home'} sessionId={sessionId} useSession={(select:any)=>sessionState?select(sessionState):undefined} useSessions={(select:any)=>select(emptySessions)} useWorkspaces={useWorkspaces} useInput={shell?historyInput:()=>undefined} useComposerBlock={()=>undefined} useStore={(select:any)=>select({...view,view:views.get(sessionId)??view.view})} actions={actions} researchSidebar={coordinator} researchWorkspaces={registry} useProjection={()=>undefined} renderSlot={shell?historyRenderSlot:nativeRenderSlot} renderSlotChain={(_name:any,_props:any,{fallback}:any)=>fallback} selectWorkspace={sessionId===undefined?homeWorkspaceAction:async(id:string)=>record.selectWorkspace(id)} t={t}/>
 }
 function Right(){
  const sessionId=React.useSyncExternalStore(active.subscribe,active.getSnapshot)

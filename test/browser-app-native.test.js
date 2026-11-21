@@ -51,6 +51,39 @@ it.each(['browser','image-factory','knowledge'])('keeps %s and other apps in the
   expect(current).toBe('ordinary-research');
  } finally {dispose();host.dispose();await win.happyDOM.abort();}
 });
+it('releases the board send guard when Images restores an existing task', async () => {
+ const win = new Window(), doc = win.document, host = new WorkspaceSurfaceHost(doc)
+ const state = { current: 'board', byId: { board: {}, poster: {}, 'board-file-session': {} } }
+ const listeners = new Set()
+ const sessions = {
+  list: { getSnapshot: () => state, subscribe: fn => { listeners.add(fn); return () => listeners.delete(fn) } },
+  binding: id => state.byId[id],
+  open: id => { state.current = id; for (const fn of listeners) fn() },
+ }
+ let resolveWorkspace
+ const workspaceSession = () => new Promise(resolve => { resolveWorkspace = resolve })
+ const isBoardOnly = id => id === 'board'
+ const disposeApps = installWorkspaceAppSessions({ sessions, doc, isBoardOnly, workspaceSession })
+ const image = installImageFactoryContext({ sessions, doc, win, isBoardOnly,
+  getTaskWorkspace: () => 'board-files',
+  taskStorage: { read: async () => ({ epoch: 1, tabs: [{ scope: 'poster' }] }), write: async () => {} },
+ })
+ try {
+  host.register('image-factory', doc.createElement('div'))
+  host.open('image-factory')
+  expect(doc.body.dataset.boardWorkspacePending).toBe('true')
+  doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-request-session', { detail: { entry: true } }))
+  await vi.waitFor(() => expect(state.current).toBe('poster'))
+  expect(doc.body.dataset.boardWorkspacePending).toBeUndefined()
+  resolveWorkspace('board-file-session')
+  await Promise.resolve()
+  expect(state.current).toBe('poster')
+  host.back()
+  expect(state.current).toBe('board')
+ } finally {
+  image.dispose(); disposeApps(); host.dispose(); await win.happyDOM.abort()
+ }
+})
 it.each(['other-image','workspace-sheet'])('returns to the spreadsheet opened from Knowledge after selecting %s in Images', async selected => {
  const win = new Window(), doc = win.document, host = new WorkspaceSurfaceHost(doc)
  const byId = { 'workspace-sheet': { blank:false }, 'other-image': { blank:false } }
