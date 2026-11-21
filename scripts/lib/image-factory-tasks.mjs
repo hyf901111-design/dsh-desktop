@@ -3,9 +3,11 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   let tabs = [], closed = [], active, draftSession, openToken, loading, pendingSync, epoch, emitted, publishedTabs, lastCreated
   let entryProject, navigation = 0, pendingFresh = false, account = {}, freshQueue = Promise.resolve()
   const checking = new Set(), replacements = new Set(), sending = new Map()
+  const researchTransfers = new Set()
   const owned = id => [...tabs, ...closed].find(tab => tab.scope === id && tab.temporary)
   function keep(id) {
     if (!owned(id)) return
+    researchTransfers.delete(id)
     const commit = values => values.map(tab => {
       if (tab.scope !== id) return tab
       const { temporary, ...retained } = tab
@@ -48,16 +50,19 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
           (!tab.title || title !== '新图像' && title !== 'New image')) setTitle({ scope: id, title }, true)
       if (!tab.temporary || checking.has(id) || !archiveTask || !storage?.hasCanvas || epoch === undefined) continue
       const vacant = blank(id)
-      if (vacant === false) { keep(id); continue }
-      if (vacant !== true || !eligible(id)) continue
+      if (vacant === false && !researchTransfers.has(id)) { keep(id); continue }
+      if ((!researchTransfers.has(id) && vacant !== true) || !eligible(id)) continue
       const start = account
       checking.add(id)
       void storage.hasCanvas(id, epoch).then(async canvas => {
         if (account !== start || !owned(id)) return
-        if (canvas || blank(id) === false) { keep(id); return }
-        if (!eligible(id) || blank(id) !== true) return
-        await archiveTask(id)
+        const transferred = researchTransfers.has(id)
+        if (canvas || !transferred && blank(id) === false) { keep(id); return }
+        if (!eligible(id) || !transferred && blank(id) !== true) return
+        // The board now owns the native session. Retire only its empty image tab.
+        if (!transferred) await archiveTask(id)
         if (account !== start) return
+        researchTransfers.delete(id)
         tabs = tabs.filter(item => item.scope !== id)
         closed = closed.filter(item => item.scope !== id)
         if (active === id && sessions.list.getSnapshot().current !== id) active = undefined
@@ -418,6 +423,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     }
   }
   function reset() {
+    researchTransfers.clear()
     account = {}; navigation++; checking.clear(); replacements.clear(); sending.clear(); pendingFresh = false
     tabs = []
     closed = []
@@ -425,6 +431,9 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     publish()
   }
   const historyTab = id => ({ epoch, tab: [...tabs, ...closed].find(item => item.scope === id) })
+  function retainResearch(id) {
+    if (owned(id)) { researchTransfers.add(id); observe() }
+  }
   function leave() { navigation++; observe() }
-  return { historyTab, load, sync, action, enterFresh, leave, admission, observe, registerReplacement, releaseReplacement, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
+  return { historyTab, load, sync, action, enterFresh, leave, retainResearch, admission, observe, registerReplacement, releaseReplacement, setTitle, bindDraft, replaceActive, projectSelected, publish, reset, isCreating: () => !!openToken }
 }

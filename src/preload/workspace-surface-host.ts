@@ -206,7 +206,7 @@ export class WorkspaceSurfaceHost {
         if (!this.current())
             return;
         const target = event.target as Element;
-        if (target?.closest?.('[data-sidebar-home]')) return;
+        if (target?.closest?.('[data-sidebar-home]') || this.current()?.surface === 'image-factory' && target?.closest?.('[data-sidebar-research-entry]')) return;
         if (this.current()?.surface === 'notes' && target?.closest?.('[data-srb-tabs] [data-conversation-view-id]:not([data-conversation-view-id="notes"])')) { this.closeAll(); return; }
         // Account/settings entries ultimately click this existing native trigger.
         // Release inert and cancel the active surface before React mounts settings.

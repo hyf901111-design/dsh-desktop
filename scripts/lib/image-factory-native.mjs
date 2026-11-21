@@ -448,6 +448,10 @@ export function installImageFactoryContext({
       void pending.then(scope => signal('task-created', { requestId: detail.requestId,
         scope: isActive() && canvasScope() === scope ? scope : undefined }))
     }, 'task-title': event => tasks.setTitle(event.detail),
+    'retain-research': event => {
+      const id = event.detail?.sessionId
+      if (id && id === currentId() && doc.body.dataset.sessionWorkspaceSwitch === id) tasks.retainResearch(id)
+    },
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   const surfaceChange = event => {
