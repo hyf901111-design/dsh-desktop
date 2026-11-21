@@ -3040,6 +3040,77 @@
         ],
         "generatedAt": "2026-11-21T13:24:26.904370+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "已授权的可保存对话组件使用自然语言开场",
+        "branch": "codex/feat/conversation-component-opening-20261121",
+        "baseCommit": "68cc02842bbb5a45ac60e88167e3518ceb37d911",
+        "tipCommit": "f7bfba9e94655358c90a70a2d7fcf904db3de8b7",
+        "commits": [
+          {
+            "commit": "f7bfba9e94655358c90a70a2d7fcf904db3de8b7",
+            "parents": [
+              "68cc02842bbb5a45ac60e88167e3518ceb37d911"
+            ],
+            "subject": "保存对话组件时使用自然语言开场并交由原生工具生成"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/model-task-replies.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/first-response-effort.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-opening-stream.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/model-task-opening-context.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/task-opening-sdk-recovery.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/task-opening-sdk-recovery.test.js",
+              "test/model-task-opening-context.test.js",
+              "test/conversation-first-response-effort.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "29项通过，覆盖原生能力范围、还原执行工具、公开分片与正常示例、已装SDK升级、无源码的零公开开场和额度。",
+            "verifiedCommit": "f7bfba9e94655358c90a70a2d7fcf904db3de8b7",
+            "completedAt": "2026-11-21T13:30:27.673913+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "b085物理发送的通用执行E1首先输出2336字HTML。161个原分片和快照按新范围复放，公开草稿为0，避免再次耗费开场调用；非该范围原样保留全部2336字。下一签名包验证自然语言首句与真实新组件。"
+        },
+        "acceptanceCriteria": [
+          "仅在当前受理的对话组件请求且拥有对应保存工具时，先谈具体发现或呈现方式，再使用工具保存。",
+          "讨论、明确索要源码和示例继续正常显示；普通执行轮和宿主回执保留。"
+        ],
+        "risks": [
+          "旧录开场没有自然语言，可证明过滤和续步；模型首句必须用新签名包另外验证。"
+        ],
+        "generatedAt": "2026-11-21T13:30:27.673913+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3466,6 +3537,19 @@
         "run",
         "test/pending-conversation.test.js",
         "test/browser-app-native.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/task-opening-sdk-recovery.test.js",
+        "test/model-task-opening-context.test.js",
+        "test/conversation-first-response-effort.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
