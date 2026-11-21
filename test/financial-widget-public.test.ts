@@ -244,3 +244,23 @@ it('maps Doubao news source and optional publication time independently of retri
  const archive=await service.query({action:'news',query:'2026年6月科技新闻',source:'doubao'})
  expect(archive.news).toContainEqual(expect.objectContaining({title:'一周前沿科技盘点'}))
 })
+
+it('keeps the linked semiconductor stories from the desktop feed and removes the gambling download and publisher directories',async()=>{
+ const {default:items}=await import('./fixtures/research-semiconductor-published-results.json')
+ const doubao=vi.fn(async()=>({provider:'doubao' as const,truncated:false as const,sources:items}))
+ const service=createPublicFinancialWidgetData({identity:()=> 'one',accountSources:{doubao}})
+ const result=await service.query({action:'news',query:'半导体 芯片 晶圆 行业',source:'doubao'})
+ expect(result.news.map((row:{url:string})=>row.url)).toEqual(items.slice(1,4).map(item=>item.url))
+ expect(result.news.every((row:{time:string|null})=>row.time===null)).toBe(true)
+})
+
+it('preserves financial reporting and official statistics about lotteries in a separate search',async()=>{
+ const publications=[
+  {title:'2024年12月份全国彩票销售情况',url:'https://zhs.mof.gov.cn/zonghexinxi/202501/t20250124_3955089.htm'},
+  {title:'中华人民共和国财政部公告2026年第24号',url:'https://zhs.mof.gov.cn/zhengcefabu/202608/t20260826_3996112.htm'}
+ ]
+ const doubao=vi.fn(async()=>({provider:'doubao' as const,truncated:false as const,sources:publications}))
+ const service=createPublicFinancialWidgetData({identity:()=> 'one',accountSources:{doubao}})
+ const result=await service.query({action:'news',query:'全国彩票销售及监管历史公告',source:'doubao'})
+ expect(result.news.map((row:{url:string})=>row.url)).toEqual(publications.map(item=>item.url))
+})
