@@ -2400,6 +2400,95 @@
         ],
         "generatedAt": "2026-11-21T12:46:37.195443+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "保留披露表头单位、无损汇总与跨卡原始出处",
+        "branch": "codex/feat/disclosed-column-unit-header-20261121",
+        "baseCommit": "e1b086d8d1615396d80e8b8211bc941f08b2a7a1",
+        "tipCommit": "3c976ffbe31a6e9c83139d11d962265085e9dee6",
+        "commits": [
+          {
+            "commit": "1e43f1a597f9dbea9c5b67fa3a61f9f71f30d7a9",
+            "parents": [
+              "e1b086d8d1615396d80e8b8211bc941f08b2a7a1"
+            ],
+            "subject": "保留披露表头的分列单位并向汇总指标传递原始链接"
+          },
+          {
+            "commit": "3c976ffbe31a6e9c83139d11d962265085e9dee6",
+            "parents": [
+              "1e43f1a597f9dbea9c5b67fa3a61f9f71f30d7a9"
+            ],
+            "subject": "保留原始精度进行汇总并兼容按唯一序号计数"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-aggregate.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/dataset-view-contract.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-artifact.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/kpi-value-format.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/stored-template-refinements.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-pasted-tables.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/workbench-disclosed-split-unit-submission.json"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-disclosed-split-unit.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-disclosed-split-unit.test.js",
+              "test/workbench-pasted-spreadsheet.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "实收首次字段声明可解析，来源链接随派生集保留，原值计算和披露精度一致。",
+            "verifiedCommit": "3c976ffbe31a6e9c83139d11d962265085e9dee6",
+            "completedAt": "2026-11-21T12:47:24.354679+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "实际客户端曾漏报百分点差，最终包将原生重投。"
+        },
+        "acceptanceCriteria": [
+          "同原表多卡均可追溯公开季报",
+          "多列数值和证券代码保持原精度与身份"
+        ],
+        "risks": [
+          "其他数据源及问题的图形选择仍由相应任务决定。"
+        ],
+        "generatedAt": "2026-11-21T12:47:24.354679+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -2713,6 +2802,18 @@
         "test/workbench-holding-weight-ranking.test.js",
         "test/workbench-role-source-first-calls.test.js",
         "test/workbench-execution-policy.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-disclosed-split-unit.test.js",
+        "test/workbench-pasted-spreadsheet.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
