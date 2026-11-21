@@ -4,10 +4,26 @@ import {readFileSync} from 'node:fs'
 import {componentCreationRequest} from '../packages/dsh-research-task-runtime/conversation-components-policy.js'
 import {workbenchCreationRequest,registerWorkbenchExecutionPolicy} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import {validateWorkbench} from '../packages/dsh-research-task-runtime/workbench-plan.js'
+import {registerCanvasUseTool} from '../packages/dsh-research-task-runtime/canvas-use-tools.js'
 import {classifyResearchCreationRequest} from '../scripts/lib/research-creation-progress.mjs'
 const file='/Users/heyafeng/Downloads/指数运营工作台_v3_候选.html'
 const original=pathToFileURL(file).href+' 你去根据这个原型文件，在研究看板上帮我把这个原型里的指数运营看板用工作台形式做出来'
 const session=text=>({header:{},events:[{type:'user/message',data:{id:'user',role:'user',source:{kind:'user'},content:[{type:'text',text}]}}],append(type,data){this.events.push({type,data})}})
+it('plans a disclosure placed on the research board and reserves blank drafts for manual requests', async () => {
+ const text='我是这只 ETF 的估值核算员，收盘后要照着季报和托管系统逐笔勾稽。请把下面五笔持仓整理到研究看板，我打开就按披露顺序从第一笔核到第五笔。每笔要对得上序号、代码、名称、股数、公允价值和占基金净值比例。\n1\t300750\t宁德时代\t31173566\t11448803849.16\t3.81'
+ const s=session(text)
+ s.events[0].data.source.clientMode='research'
+ expect(workbenchCreationRequest(s)).toMatchObject({target:'workbench',researchComposer:true})
+ expect(classifyResearchCreationRequest('请把这张卡片放到研究看板','research')).toBeNull()
+ expect(classifyResearchCreationRequest('如果把五笔持仓整理到研究看板会怎样？','research')).toBeNull()
+ expect(classifyResearchCreationRequest('请用智能容器展示宁德时代持仓','manual-container')).toBe(true)
+ expect(classifyResearchCreationRequest('Please create a blank smart container','manual-container')).toBe(true)
+ expect(classifyResearchCreationRequest('请不要使用智能容器','manual-container')).toBe(false)
+ let tool
+ registerCanvasUseTool({tools:{register(value){tool=value}}})
+ await expect(tool.execute({op:'create',args:JSON.stringify({kind:'component'})},{agent:{session:s}}))
+   .rejects.toThrow('research_workbench_create')
+})
 it.each(['弄个美元兑人民币的看板。','帮我弄个一周待办看板。','请帮我搞个项目进度工作台','来个天气看板'])('routes a short spoken request through both canvas entry points: %s',text=>{
  expect(classifyResearchCreationRequest(text)).toMatchObject({kind:'workbench',request:text})
  expect(workbenchCreationRequest(session(text))?.target).toBe('workbench')
