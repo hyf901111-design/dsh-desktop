@@ -1,6 +1,7 @@
 import {it,expect} from 'vitest'
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
+import {gunzipSync} from 'node:zlib'
 // Strict installation bytes must use Node's untransformed function source.
 const require=createRequire(import.meta.url)
 const {conversationLiveActivity,patchConversationLiveActivity,stripConversationLiveActivity,workbenchConversationUpdate}=require('../scripts/lib/conversation-live-activity.mjs')
@@ -12,6 +13,15 @@ it('installs one reversible activity footer on both native conversation hosts',a
  expect(patchConversationLiveActivity(next)).toBe(next);expect(stripConversationLiveActivity(next)).toBe(base)
  expect(next.match(/react.createElement\(ConversationLiveActivity,/g)).toHaveLength(2)
  expect(()=>stripConversationLiveActivity(next.replace('2.4s linear infinite','1s linear infinite'))).toThrow(/drifted/)
+})
+it('upgrades the exact installed calendar classifier and rejects changes elsewhere in the same layer',async()=>{
+ const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
+ const current=patchConversationLiveActivity(source)
+ const block=current.match(/\/\* ework:conversation-live-activity:v\d+ \*\/[\s\S]*?\/\* ework:conversation-live-activity:end \*\/\n/u)[0]
+ const prior=gunzipSync(await readFile('test/fixtures/conversation-live-activity-v10-before-calendar.txt.gz')).toString('utf8')
+ expect(prior).not.toBe(block)
+ expect(patchConversationLiveActivity(current.replace(block,prior))).toBe(current)
+ expect(()=>stripConversationLiveActivity(current.replace(block,prior.replace('2.4s linear infinite','1s linear infinite')))).toThrow('definition drifted')
 })
 it('shows immediate preparation and never mistakes old completed tools for current work',()=>{
  expect(activity()).toEqual({kind:'thinking',label:'正在思考…'})

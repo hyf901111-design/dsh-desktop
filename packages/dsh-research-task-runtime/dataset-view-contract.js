@@ -49,6 +49,10 @@ export function resolveWorkbenchPanelLabels(panel,datasets){
  // navigation canonical without changing an independently declared layout.
  if(['view','table'].includes(panel?.type)&&panel.view?.navigation==='stack')
   panel={...panel,view:{...panel.view,navigation:'flow'}};
+ if(panel?.type==='chart'&&panel.view?.navigation==='flow'&&panel.view.sections?.length===1){
+  const {navigation,...view}=panel.view
+  panel={...panel,view}
+ }
  const declared=panel?.view;
  if(panel?.type==='kpi'&&declared?.sections===undefined&&
     datasets?.some(dataset=>dataset.id===declared?.dataset&&dataset.groupBy?.length===0&&dataset.records.length===1))

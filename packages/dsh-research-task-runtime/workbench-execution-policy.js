@@ -15,7 +15,7 @@ import { fundComparisonCount, fundComparisonReader, observedFundComparison } fro
 import { captureWorkbenchObservedSources, clearWorkbenchPreSpillSources, retainWorkbenchPreSpillSource } from './workbench-observed-sources.js'
 import { workbenchSourceProgress, workbenchStructuredSourceGuidance } from './workbench-source-progress.js'
 import {isWorkbenchPrototypeTableRead} from './prototype-source-authority.js'
-import {pastedWorkbenchBlocks} from './workbench-pasted-tables.js'
+import {pastedWorkbenchBlocks,hasCompletePastedSnapshot} from './workbench-pasted-tables.js'
 import {newsRecordTableGuidance} from './news-source-scope.js'
 import {WEBPAGE_GUIDANCE} from './workbench-webpage.js'
 import {observationComparison} from './workbench-observation-page.js'
@@ -132,7 +132,8 @@ export function workbenchOfflineRequest(text) {
   const supplemental = text.split(/[。；;，,\n]/u).some(clause =>
     !/(?:禁止|不要|不需要|无需|无须|不用|不必|不能|不得|不许|不允许|别)/u.test(clause) &&
     /联网|(?:补充|结合|查询|获取|核对|抓取)[^。；;\n]{0,18}(?:外部(?:数据|来源)|公开(?:市场|行情|数据|资料|来源)|最新(?:净值|行情|公告|报价))/u.test(clause))
-  if (supplemental) return false
+  if (supplemental || /(?:到|去|从)(?:官方(?:网站)?|官网|外部)[^。；;，,\n]{0,12}(?:核对|核实|复查|补充|校验)|(?:核对|核实|校验)(?:官方原文|官网原文|链接中的原始数据)/u.test(text)) return false
+  if (hasCompletePastedSnapshot(text)) return true
   if (/只用.{0,8}(?:资料|记录)/u.test(text)) return true
   const qualifier = /(?:只用|仅用|只使用|仅使用)(?:(?:这段|这份|所附|下面|下方|以下)(?:的)?(?:已核对的?|已披露的?|附带的?|提供的?)?(?:公开|历史)?(?:原表|表格|数据))/u.exec(text)
   const table = /(?:只用|仅用|仅使用)(?:下表|此表|以下表格|下面的表格)/u.exec(text)
@@ -481,11 +482,13 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     if (!simulation && !prototypeSource && !documentPaths && hasPastedTable && observationComparison(human.text)) {
       const create=tools.find(tool=>tool.name===CREATE_TOOL)
       if (create) {
+        state.restrictEvidence=true
+        state.allowedTools.clear()
         const parameters={type:'object',additionalProperties:false,required:['title','panels'],properties:{
           title:{type:'string'},panels:{type:'array',minItems:1,maxItems:1,items:{type:'object',additionalProperties:false,
             required:['type','title','htmlFile'],properties:{type:{type:'string',enum:['files']},title:{type:'string'},
-              htmlFile:{type:'object',additionalProperties:false,required:['name'],
-                properties:{name:{type:'string'},observationComparison:{type:'boolean',enum:[true]},html:{type:'string',description:'仅当另有宿主比较视图无法表达的操作或算式时，直接提交完整自包含 HTML。与 observationComparison 互斥。'}}}}}}}}
+              htmlFile:{type:'object',additionalProperties:false,required:['name','observationComparison'],
+                properties:{name:{type:'string'},observationComparison:{type:'boolean',enum:[true]}}}}}}}}
         return {...request,tools:[{...create,parameters,description:'用本轮已核实的原表和指标组合创建一张可离线操作的比较网页。'}],
           system:[request.system,'宿主已从本轮消息绑定日期、原表、来源、利差组合与单位，负责生成完整可带走网页。直接调用 research_workbench_create，传 title 和一个 panel，如 {"title":"收益率曲线复盘","panels":[{"type":"files","title":"收益率曲线复盘","htmlFile":{"name":"收益率曲线复盘.html","observationComparison":true}}]}，标题可按用户主题命名。无需编写前端、重抄数据或计算结果。根据实际回执回复。'].join('\n')}
       }

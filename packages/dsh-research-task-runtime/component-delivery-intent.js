@@ -126,7 +126,7 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
     const action = clause.replace(boardPrefix, '').replace(/(?:吧|即可)$/u, '')
     if (/^画(?:一下|出)?(?:这|那)(?:组|些|几|[一二两三四五六七八九十\d]+个)?(?:数据点|点|读数|数值)(?:的图)?$/u.test(action)) return true
     const object = /^(?:(?:画|放|加|补|新增|添加|创建|做|生成)(?:一[个张份]|张|个)|绘制|画出)(.+)$/u.exec(action)?.[1]
-    return object && object.length <= 64 && /(?:明细(?:表|卡)?|折线(?:图|卡)|柱(?:状|形)?图|条形图|散点图|趋势图|图表|表格|指标卡|组件|卡片)$/u.test(object)
+    return object && object.length <= 64 && /(?:明细(?:表|卡)?|折线(?:图|卡)|柱(?:状|形)?图|条形图|散点图|趋势图|图表|表格|指标卡|日历|组件|卡片)$/u.test(object)
   })
   // Inspect only affirmative action clauses. Generation status is a noun,
   // and temporary negation must not suppress a separate requested addition.

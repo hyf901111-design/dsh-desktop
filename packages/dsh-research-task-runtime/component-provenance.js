@@ -22,7 +22,8 @@ export function publicTableSourceHref(value) {
  if(!href||href.length>2048||includesRequestCredentials(href))return null
  const url=new URL(href)
  if(!/\.[a-z]{2,}$/iu.test(url.hostname)||/\.(?:localhost|local|internal|lan|home|test|invalid|onion)$/iu.test(url.hostname)||
-    url.port||url.hash||url.searchParams.size&&[...url.searchParams.values()].some(value=>includesRequestCredentials(value)))return null
+    url.port||url.hash||url.searchParams.size&&[...url.searchParams.values()].some(value=>
+      includesRequestCredentials(value)||value.includes('?')&&includesRequestCredentials(url.origin+'/?'+value.slice(value.lastIndexOf('?')+1))))return null
  return href
 }
 

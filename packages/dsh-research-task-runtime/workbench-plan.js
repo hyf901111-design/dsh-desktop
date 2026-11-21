@@ -690,7 +690,17 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
         }
         if (p.type === 'chart' && p.view !== undefined) {
             if (p.publicData !== undefined || p.profile !== undefined || p.requests !== undefined) throw Error('共同数据图表不能混用取数配置。');
-            const variant = p.view.variant ?? requestedChartVariant(`${p.title}\n${p.prompt}`) ?? 'bar';
+            let variant = p.view.variant ?? requestedChartVariant(`${p.title}\n${p.prompt}`) ?? 'bar';
+            // The original range can be accompanied by an independent detail card.
+            // For its sole chart, “条形图” specifies horizontal bars even when the
+            // planner chose the generic bar default. Keep mixed chart requests intact.
+            if (variant==='bar' && requestedChartVariant(value.originalRequest)==='horizontal' &&
+                value.panels.filter(item=>item?.type==='chart'||item?.view?.variant).length===1 &&
+                !/柱状图|柱形图|柱图|竖向|纵向/u.test(value.originalRequest) &&
+                !/(?:不要|不用|避免|无需)(?:用|画|绘制)?(?:横向)?(?:条形图|横条图)/u.test(value.originalRequest)) {
+                variant='horizontal';
+                p={...p,view:{...p.view,variant}};
+            }
             const title = isSimulated && !simulated(declaredTitle) ? `${declaredTitle}（模拟）` : declaredTitle;
             const artifact = compileDatasetChart(p.view,datasets,title,variant,`${p.title}\n${p.prompt}`);
             if (p.artifact !== undefined && !isDeepStrictEqual(p.artifact,artifact)) throw Error('图表内容与共同记录不一致。');
