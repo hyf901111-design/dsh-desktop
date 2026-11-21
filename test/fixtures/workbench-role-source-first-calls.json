@@ -1,0 +1,197 @@
+{
+  "ETF逐项稽核": {
+    "args": {
+      "requestId": "510310-q4-2025-holdings-recon-01",
+      "title": "510310 季末持仓逐笔核对（2025-12-31）",
+      "dataMode": "source",
+      "sharedDatasets": [
+        {
+          "id": "h510310",
+          "label": "易方达沪深300ETF（510310）2025年四季报 5.3.1 期末按公允价值占净值比例排序的股票投资明细",
+          "identity": "seq",
+          "fields": [
+            {
+              "key": "seq",
+              "label": "序号"
+            },
+            {
+              "key": "code",
+              "label": "股票代码"
+            },
+            {
+              "key": "name",
+              "label": "股票名称"
+            },
+            {
+              "key": "shares",
+              "label": "数量（股）"
+            },
+            {
+              "key": "value",
+              "label": "公允价值（元）"
+            },
+            {
+              "key": "ratio",
+              "label": "占基金资产净值比例（%）",
+              "unit": "%"
+            }
+          ],
+          "pastedTable": {
+            "block": 1,
+            "header": true,
+            "identity": "seq",
+            "numericFields": [
+              "seq",
+              "shares",
+              "value",
+              "ratio"
+            ]
+          }
+        }
+      ],
+      "panels": [
+        {
+          "title": "510310 期末股票投资明细（5.3.1，原序逐笔）",
+          "type": "view",
+          "size": "wide",
+          "layout": "wide",
+          "view": {
+            "dataset": "h510310",
+            "note": "截止日 2025-12-31。来源：上海证券交易所披露的易方达沪深300ETF（510310）2025年四季报第10页第5.3.1节。按原表序号顺序逐笔核对，公允价值保留到人民币分（两位小数），比例为占基金资产净值百分比（%）。",
+            "sections": [
+              {
+                "kind": "records",
+                "title": "期末股票投资明细（原序）",
+                "fields": [
+                  "seq",
+                  "code",
+                  "name",
+                  "shares",
+                  "value",
+                  "ratio"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "originalRequest": "我在基金估值核算岗，收盘后要把 510310 季末持仓底稿逐笔和托管系统核对。请在研究看板留一张明细卡，我打开就要按原序看证券代码、股数、公允价值到人民币分和占净值比例，核完一行再看下一行。保留原来的序号和股票名称。截止日是 2025-12-31。来源为上海证券交易所披露的易方达沪深300 ETF 2025 年四季报第 10 页第 5.3.1 节。\nhttps://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf\n\n序号\t股票代码\t股票名称\t数量（股）\t公允价值（元）\t占基金资产净值比例（%）\n1\t300750\t宁德时代\t31173566\t11448803849.16\t3.81\n2\t600519\t贵州茅台\t7377868\t10160652252.24\t3.38\n3\t601318\t中国平安\t125580047\t8589675214.80\t2.86\n4\t300308\t中际旭创\t13089026\t7984305860.00\t2.66\n5\t601899\t紫金矿业\t194034163\t6688357598.61\t2.23"
+  },
+  "资管例外追踪": {
+    "args": {
+      "title": "BlackRock 客户及产品类别净流入：2023 流出例外与 2024 扭转核对",
+      "requestId": "blk-ar24-flows-reversal-01",
+      "sharedDatasets": [
+        {
+          "id": "blk24-flows",
+          "label": "BlackRock 客户及产品类别：2023/2024 全年净流入与年末 AUM（百万美元）",
+          "pastedTable": {
+            "block": 1,
+            "header": true,
+            "identity": "客户及产品类别",
+            "numericFields": [
+              "2024年末AUM",
+              "2023年末AUM",
+              "2024全年净流入",
+              "2023全年净流入"
+            ],
+            "derive": [
+              {
+                "key": "flowChange",
+                "label": "净流入同比变化（2024−2023）",
+                "op": "subtract",
+                "left": "2024全年净流入",
+                "right": "2023全年净流入",
+                "unit": "百万美元"
+              }
+            ]
+          }
+        }
+      ],
+      "panels": [
+        {
+          "title": "两类例外：2023 年净流出、2024 年均转正",
+          "type": "view",
+          "size": "large",
+          "view": {
+            "dataset": "blk24-flows",
+            "where": [
+              {
+                "field": "2023全年净流入",
+                "op": "lt",
+                "value": 0
+              }
+            ],
+            "sections": [
+              {
+                "kind": "records",
+                "title": "仅列 2023 年净流入为负的类别（百万美元，带符号）",
+                "fields": [
+                  "客户及产品类别",
+                  "2023全年净流入",
+                  "2024全年净流入",
+                  "flowChange"
+                ]
+              }
+            ],
+            "note": "来源：BlackRock 2024 年报 Form 10-K，印刷第 47 页（PDF 第 42 页）。单位：百万美元。净流入为全年流量，本卡不混入年末 AUM。"
+          }
+        }
+      ]
+    },
+    "originalRequest": "我是管理层周会主持人，要用研究看板直接点出哪些客户及产品类别去年实际净流出、今年是否扭转。请让两类例外先出现在会上打开的组件中，带两年的带符号净流入以便点名追问；再让我对照其余类别的两年净流入。AUM 是年末余额，不与流量混算。金额单位百万美元。来源为 BlackRock 2024 年报 Form 10-K 印刷第 47 页（PDF 第 42 页）。\nhttps://s24.q4cdn.com/856567660/files/doc_financials/2025/ar/BLK_AR24.pdf\n\n客户及产品类别\t2024年末AUM\t2023年末AUM\t2024全年净流入\t2023全年净流入\n零售\t1015827\t929697\t24367\t-8473\nETF\t4230375\t3499299\t390433\t185942\n机构主动\t2136749\t1912673\t64447\t87106\n机构指数\t3247637\t2902489\t9374\t-55125\n现金管理\t920663\t764837\t152730\t79245"
+  },
+  "固收交接便签": {
+    "args": {
+      "title": "研究看板 · 债券交易员交接便签",
+      "dataMode": "source",
+      "panels": [
+        {
+          "title": "10 年期美债收益率交接",
+          "type": "note",
+          "size": "medium",
+          "layout": "standard",
+          "content": {
+            "title": "10 年期美债收益率：12 月 31 日收 4.58%，较前一交易日上行 3 个基点",
+            "body": "12 月 31 日 10 年期美债收益率收于 4.58%，较前一交易日（12 月 30 日）的 4.55% 上行 3 个基点（+0.03 个百分点），收益率方向为上行。",
+            "rows": [
+              {
+                "日期": "2024-12-27",
+                "10年期收益率（%）": 4.62
+              },
+              {
+                "日期": "2024-12-30",
+                "10年期收益率（%）": 4.55
+              },
+              {
+                "日期": "2024-12-31",
+                "10年期收益率（%）": 4.58
+              }
+            ],
+            "columns": [
+              {
+                "key": "日期",
+                "label": "日期"
+              },
+              {
+                "key": "10年期收益率（%）",
+                "label": "10 年期收益率（%）"
+              }
+            ],
+            "asOf": "2024-12-31 定稿收盘记录",
+            "sources": [
+              {
+                "label": "U.S. Department of the Treasury · Daily Treasury Yield Curve Rates（2024 年 12 月）",
+                "url": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202412"
+              }
+            ],
+            "note": "变动口径：4.58% − 4.55% = +0.03 个百分点，即上行 3 个基点；单位 %，仅取自美国财政部 2024 年 12 月定稿收益率记录。"
+          },
+          "prompt": "依据用户提供的美国财政部 2024 年 12 月定稿 10 年期收益率记录，说明 12 月 31 日收盘值及较前一交易日（12 月 30 日）的基点变动与方向。"
+        }
+      ]
+    },
+    "originalRequest": "给债券交易员在研究看板留一张小交接便签：12 月 31 日 10 年期美债收在多少，较上个交易日动了几个基点、往哪边？交易员扫一眼要能读懂这一句话。只用下列美国财政部定稿收益率记录，单位 %。\nhttps://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202412\n日期\t10年期收益率\n2024-12-27\t4.62\n2024-12-30\t4.55\n2024-12-31\t4.58"
+  }
+}

@@ -1,5 +1,6 @@
 import {readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
+import {pathToFileURL} from 'node:url'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
 import {vi} from 'vitest'
@@ -18,7 +19,8 @@ export async function prepareFinancialClientSource(options={}){
  if(options.generationProgress)source=require('../../scripts/lib/generation-progress-persistence.mjs').patchGenerationProgressPersistence(source)
  if(options.refreshState&&!options.notes){
   // Match the production unwind order before replacing serialized grid functions.
-  source=require('../fixtures/strip-conversation-transient-ui.mjs').stripConversationGridOverlays(source)
+  const {stripConversationGridOverlays}=await import(/* @vite-ignore */pathToFileURL(require.resolve('../fixtures/strip-conversation-transient-ui.mjs')).href)
+  source=stripConversationGridOverlays(source)
   source=require('../../scripts/lib/home-guide-presentation-native.mjs').stripHomeGuidePresentationNative(source)
   // Exercise the production serializers without Vite's SSR import rewrites in toString().
   const [financial,data,grid]=['financial-widget-client.mjs','component-data-refresh.mjs','research-grid-workbench.mjs'].map(name=>require('../../scripts/lib/'+name))

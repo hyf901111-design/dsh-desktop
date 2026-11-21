@@ -1,6 +1,6 @@
 export const DATASET_VIEW_DEFAULT_PAGE_SIZE=20
 
-export function datasetViewValue(value,field){
+export function datasetViewValue(value,field,signContext){
  if(value===null||value===undefined)return '未提供'
  if(Array.isArray(value))return value.length?value.map(v=>'• '+v).join('\n'):'（无条目）'
  if(typeof value==='boolean')return value?'是':'否'
@@ -11,6 +11,8 @@ export function datasetViewValue(value,field){
   const formatted=value.toLocaleString('en-US',{useGrouping:false,minimumFractionDigits:field.minimumFractionDigits,maximumFractionDigits:20})
   if(Number(formatted)===value)display=formatted
  }
+ if(value>0&&signContext&&/(?:带|有)符号|(?:显示|标注|保留)正负号|\bsigned\b/iu.test(signContext)&&
+    /净流[入出]|净申[购赎]|净赎回|变化|变动|增减|差额|\b(?:net flows?|change|delta)\b/iu.test(field?.label??''))display='+'+display
  return display+(field?.unit?' '+field.unit:'')
 }
 export function datasetViewRecordFields(section,dataset){
@@ -119,7 +121,7 @@ export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPage
     link.rel='noopener noreferrer'
     link.setAttribute('aria-label',`打开链接：${href}`)
     cell.appendChild(link)
-   }else cell.textContent=valueText(value,field)
+   }else cell.textContent=valueText(value,field,section.title)
    row.appendChild(cell)
   }
   if(view.reorder){

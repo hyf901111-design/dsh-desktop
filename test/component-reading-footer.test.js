@@ -36,7 +36,7 @@ it('ignores unknown versions and never creates executable markup from saved meta
  const malicious=spec.html.replace('"url":"https://tushare.pro/document/2?doc_id=408"','"url":"javascript:alert(1)"');
  const w=dom(refineComponentReadingFooter(malicious));try{expect(w.document.querySelector('.component-reading-footer a')).toBeNull();}finally{w.close();}
 });
-it.each(['v1','v4','v5','v9'])('upgrades %s paired disclosures while preserving original data and summary routes',version=>{
+it.each(['v1','v4','v5','v9','v10'])('upgrades %s paired disclosures while preserving original data and summary routes',version=>{
  const data={version:1,type:'chart',variant:'horizontal',title:'原排名',unit:'亿元',asOf:'2026-11-06',note:'原口径',labels:['甲','乙'],series:[{name:'净流入',values:[20,10]}]};
  const spec=render(data),legacy=spec.html.replace('</body>',`<footer class="component-reading-footer" aria-label="组件数据说明"><details><summary>口径与来源</summary><dl><div><dt>统计口径</dt><dd>原口径</dd></div></dl></details></footer><style data-component-reading-footer="${version}">details{display:inline-block}</style></body>`);
  const next=refineComponentReadingFooter(legacy),old=dom(legacy),w=dom(next);
