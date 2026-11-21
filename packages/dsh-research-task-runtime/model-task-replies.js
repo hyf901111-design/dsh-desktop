@@ -18,6 +18,10 @@ export function wantsTaskOpening(turn) {
     /数据分析|汇总|核对|逐笔|稽核|归因|报告|分析表|工资表|工作台|看板|审计|调研|利差|报告期|逐页|比较|对比|复盘|明细|复杂|分析.{0,8}(?:数据|情况|差异)|\b(?:analys[ei]s|audit|compar(?:e|ison)|forecast|reports?|dashboard|dataset|workbook)\b/iu.test(prose)
 }
 
+export function firstTaskOpening(session, step) {
+  return step === 1 && supported.has(clientModeTurn(session))
+}
+
 export function allowTaskOpening(turn) {
   if (turn) supported.add(turn)
 }
@@ -42,7 +46,7 @@ export function registerModelTaskReplies(ctx) {
     signal?.throwIfAborted()
     const turn = clientModeTurn(agent?.session)
     if (!turn) return request
-    if (step === 1 && supported.has(turn) && wantsTaskOpening(turn) && request.tools?.length) {
+    if (firstTaskOpening(agent.session, step) && request.tools?.length) {
       opened.add(turn)
       return {...request, tools:[], [publicOpening]:true,
         system:(request.system ?? '')+'\n本次先流式答复这位用户，随后同一轮会继续执行。用一两句自然的话回应其具体目标、资料或限制，并说明准备先解决哪个实际问题。尚未读取的内容不得声称已经看过。直接写给用户，不复述流程、套用示范语或展开完整分析。'}

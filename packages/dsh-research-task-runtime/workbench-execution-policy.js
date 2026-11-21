@@ -1,3 +1,4 @@
+import {firstTaskOpening} from './model-task-replies.js'
 import {HOME_WORKBENCH_PROVIDER} from './home-workbench-contract.js'
 import {workbenchPomodoroSettings} from './workbench-pomodoro.js';
 import { isDeepStrictEqual } from 'node:util'
@@ -350,7 +351,7 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     if (previous) savePlanningBudget(agent?.session, previous, 'restored')
     return base
   })
-  const disposeContext = ctx.on('agent/request-context', async ({ agent, turn, signal }, next) => {
+  const disposeContext = ctx.on('agent/request-context', async ({ agent, turn, step, signal }, next) => {
     let request
     try { signal?.throwIfAborted(); request = await next(); signal?.throwIfAborted() }
     catch (error) { releasePlanning(agent); throw error }
@@ -359,6 +360,9 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       releasePlanning(agent)
       return request
     }
+    // The tool-free public reply needs the user’s question. File parsing and
+    // planning belong to the execution step that immediately follows it.
+    if (firstTaskOpening(agent?.session, step)) return request
     const human = workbenchCreationRequest(agent?.session)
     const claimed=request.messages?.findLast(message=>message.role==='user'&&message.source?.kind==='user')
     const wireHuman=claimed&&workbenchCreationRequest({header:agent?.session?.header,events:[{type:'user/message',data:claimed}]})
