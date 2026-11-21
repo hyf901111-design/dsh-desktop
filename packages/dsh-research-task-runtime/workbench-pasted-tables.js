@@ -330,6 +330,12 @@ export function resolvePastedWorkbenchPlan(plan){
    const {identity,...rest}=draft;
    draft={...rest,pastedTable:{...nested,numericFields:nested.numericFields.filter(key=>key!==ordinal)}};
   }
+  if(Object.hasOwn(draft,'identity') && nested && typeof nested==='object' && !Array.isArray(nested)){
+   if(Object.hasOwn(nested,'identity'))fail('请在 pastedTable.identity 中唯一声明原表行标识。');
+   const {identity,...rest}=draft;
+   if(!validKey(identity))fail('原表行标识必须是有效列键。');
+   draft={...rest,pastedTable:{...nested,identity}};
+  }
   if(!exact(draft,['id','label','pastedTable'],['fields','recordScope','note','asOf'])||
      draft.asOf!==undefined&&(typeof draft.asOf!=='string'||draft.asOf.length>500)||
      draft.note!==undefined&&(typeof draft.note!=='string'||!draft.note.trim()||draft.note.length>2000)||

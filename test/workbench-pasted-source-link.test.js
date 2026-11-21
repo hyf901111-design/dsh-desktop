@@ -139,3 +139,33 @@ it('restores only a uniquely matched first ordinal from a real ETF disclosure an
  const partial=structuredClone(args);partial.sharedDatasets[0].fields.splice(1,1)
  expect(()=>validate(originalRequest,partial)).toThrow()
 })
+
+it('binds the dataset-level date identity in the original Treasury chart request to its disclosed rows', () => {
+  const plan = fixture('workbench-treasury-identity-first-call.json')
+  const originalRequest = rawFixture('workbench-treasury-dated-snapshot.txt').trim()
+  const compile = (input, request = originalRequest) => validateWorkbench({...input, originalRequest:request})
+  const canonical = structuredClone(plan)
+  const source = canonical.sharedDatasets[0]
+  source.pastedTable.identity = source.identity
+  delete source.identity
+
+  expect(compile(plan)).toEqual(compile(canonical))
+  const result = compile(plan)
+  const dates = ['2024-12-27','2024-12-30','2024-12-31']
+  expect(result.sharedDatasets[0].records.map(row => row.id)).toEqual(dates)
+  expect(result.panels[0].artifact).toMatchObject({
+    type:'chart', variant:'line', labels:dates, series:[{values:[4.62,4.55,4.58]}], unit:'%',
+    sources:[{url:originalRequest.split('\n')[1]}]
+  })
+  for (const alter of [
+    draft => { draft.pastedTable.identity = 'y10' },
+    draft => { draft.identity = 'missingDate' },
+    draft => { draft.records = [{date:'2024-12-27',y10:4.62}] },
+    draft => { draft.identity = 'y10' }
+  ]) {
+    const invalid = structuredClone(plan)
+    alter(invalid.sharedDatasets[0])
+    expect(() => compile(invalid)).toThrow()
+  }
+  expect(() => compile(plan, originalRequest.replace('2024-12-30\t','2024-12-27\t'))).toThrow()
+})
