@@ -48,9 +48,9 @@ it('shows Workbench updates in the native conversation with no reasoning visible
  const{page,errors}=await fixture();try{
   const update=page.locator('[data-workbench-conversation-progress]'),reading=page.locator(liveSelector)
   await page.evaluate(()=>window.responseFixture.workbenchPhase('initial'))
-  await expect.poll(()=>update.innerText()).toContain('已收到创建工作台的请求')
-  expect((await update.boundingBox()).y).toBeLessThan((await reading.boundingBox()).y)
-  expect(await update.evaluate(node=>getComputedStyle(node).animationName)).toBe('none')
+  await expect.poll(()=>reading.count()).toBe(1)
+  expect(await update.count()).toBe(0)
+  expect(await page.locator('body').innerText()).not.toContain('已收到创建工作台的请求')
   await page.evaluate(()=>window.responseFixture.workbenchPhase('reading'))
   await expect.poll(()=>update.innerText()).toContain('正在查找和核对')
   await page.evaluate(()=>window.responseFixture.workbenchPhase('sources'))
@@ -76,7 +76,7 @@ it('shows Workbench updates in the native conversation with no reasoning visible
   expect(errors).toEqual([])
  }finally{await page.close()}
 })
-it('shows the receipt on the native prompt acknowledgement before the new turn arrives',async()=>{
+it('shows the pending status between native admission and the first token',async()=>{
  const{page,errors}=await fixture();try{
   const update=page.locator('[data-workbench-conversation-progress]')
   await page.evaluate(()=>window.responseFixture.workbenchSubmit('queued'))
@@ -85,10 +85,12 @@ it('shows the receipt on the native prompt acknowledgement before the new turn a
   await expect.poll(()=>page.locator('[data-native-submitted-user]').count()).toBe(1)
   expect(await update.count()).toBe(0)
   await page.evaluate(()=>window.responseFixture.workbenchSubmit('accepted'))
-  await expect.poll(()=>update.innerText()).toContain('已收到创建工作台的请求')
+  await expect.poll(()=>page.locator('[data-conversation-live-activity=pending][role=status]').textContent()).toContain('等待模型响应')
+  expect(await update.count()).toBe(0)
   await page.evaluate(()=>window.responseFixture.workbenchPhase('initial'))
   await expect.poll(()=>page.locator('[data-native-submitted-user]').count()).toBe(0)
-  expect(await update.count()).toBe(1)
+  expect(await update.count()).toBe(0)
+  expect(await page.locator('[data-conversation-live-activity=pending]').count()).toBe(0)
   expect(errors).toEqual([])
  }finally{await page.close()}
 })
@@ -121,6 +123,13 @@ it('shows an actual brief reply above one animated status, with chronological de
   await expect.poll(()=>active.count()).toBe(1)
   expect(await trigger.isDisabled()).toBe(true)
   expect(await label.evaluate(node=>getComputedStyle(node).animationName)).toBe('ework-status-shimmer')
+  expect(await page.locator('[data-chat-flow-kind=assistant-step]').count()).toBe(0)
+  for (const mode of ['conversation','research','notes','spreadsheet','presentation','image','knowledge','browser','trajectory']) {
+   await page.evaluate(mode=>window.responseFixture.statusSequence('partial',mode),mode)
+   await expect.poll(()=>page.locator('[data-chat-flow-kind=assistant-step]').getByText('我先',{exact:true}).count()).toBe(1)
+   expect(await page.locator('body').innerText()).not.toMatch(/private hidden|private mixed reasoning/)
+  }
+  await page.screenshot({path:evidence+'/real-model-first-delta.png'})
   await page.evaluate(()=>window.responseFixture.statusSequence('ack'))
   await expect.poll(()=>page.locator('[data-chat-flow-kind=assistant-step]').filter({hasText:'我先核对资料来源'}).count()).toBe(1)
   const reply=page.locator('[data-chat-flow-kind=assistant-step]').filter({hasText:'我先核对资料来源'})

@@ -72,7 +72,7 @@ it('shows only a short note stage for live and replayed reasoning while preservi
  renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:{requestId:'r',phase:'generating',stage:'thinking',reasoning:'process detail'}}))
  expect(progress[0]).toMatchObject({running:true,noteTask:{status:'正在思考'}});expect(progress[0].noteTask).not.toHaveProperty('reasoning');expect(markdown).toEqual([])
  const final=renderToStaticMarkup(React.createElement(EWorkNoteConversationRow,{...props,row:{requestId:'r',phase:'accepted',reasoning:'process detail',result:{kind:'text',markdown:'正文内容'}}}))
- expect(final).toContain('本次修改已应用，以下为修改预览。');expect(final).toContain('正文内容');expect(progress.at(-1).noteTask.status).toBe('笔记已更新');expect(progress.at(-1).noteTask).not.toHaveProperty('reasoning');expect(markdown.flat().some(block=>block.kind==='reasoning')).toBe(false);expect(final).not.toContain('process detail')
+ expect(final).toContain('本次修改已应用，以下为修改预览。');expect(final).toContain('正文内容');expect(progress.at(-1).noteTask.status).toBe('笔记已更新');expect(progress.at(-1).noteTask).not.toHaveProperty('reasoning');expect(markdown.flat().some(block=>block.kind==='reasoning')).toBe(false);expect(markdown.flat().map(block=>block.text)).not.toContain('本次修改已应用，以下为修改预览。\n\n正文内容');expect(final).not.toContain('process detail')
  delete globalThis.react
 })
 
@@ -183,7 +183,7 @@ it('shows remaining public replies after real receipts in the injected projectio
  try{
   doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'s',requestId:'r',phase:'preparing',prompt:'Optimize comments'}}))
   doc.dispatchEvent(new CustomEvent('sherlock:notes-task-state',{detail:{sessionId:'s',requestId:'r',phase:'replied',result}}))
-  const live=render();expect(live).toContain(answer);expect(live).not.toContain(summary);expect(live.match(/No current comments/g)).toHaveLength(1)
+  const live=render();expect(live).toContain('role="status"');expect(live).toMatch(/<div>No current comments are available/);expect(live).toContain(answer);expect(live).not.toContain(summary);expect(live.match(/No current comments/g)).toHaveLength(1)
   const coldDoc=new EventTarget(),cold=createNotesActivityStore(coldDoc)
   coldDoc.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId:'s',rows:JSON.parse(JSON.stringify(store.snapshot('s')))}}))
   expect(renderToStaticMarkup(React.createElement(Projected,{...props,row:cold.snapshot('s')[0]}))).toBe(live)
