@@ -1,5 +1,6 @@
 import { open } from 'node:fs/promises'
 import ExcelJS from 'exceljs'
+import {DOMParser,XMLSerializer} from '@xmldom/xmldom'
 import {unzipSync,zipSync} from 'fflate'
 import {blankWorkbook,blankSheet,label,MAX_COLUMNS,MAX_ROWS,MAX_SHEETS,safeFormula,sheetName,styleOf,toFormat,validateWorkbook,type Cell,type Sheet,type Workbook} from '../../shared/spreadsheet/workbook'
 
@@ -57,6 +58,39 @@ function csv(source:string,sheet:Sheet){
  if(token||col||closed)append()
 }
 
+const sheetNamespace='http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+const relationshipNamespace='http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+const declaredSheetPrefix=/\bxmlns:[^\s:=>]+\s*=\s*["']http:\/\/schemas\.openxmlformats\.org\/spreadsheetml\/2006\/main["']/u
+const declaredRelationshipAlias=/\bxmlns:(?!r\s*=)[^\s:=>]+\s*=\s*["']http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships["']/u
+
+// ExcelJS dispatches XLSX tags by literal name. Canonicalize only names that
+// resolve to the OOXML namespaces; formulas, text and extension elements keep
+// their original meaning even when a nested element rebinds the same prefix.
+function excelJsXml(data:Uint8Array):Uint8Array {
+ const source=Buffer.from(data.buffer,data.byteOffset,data.byteLength).toString('utf8')
+ if(!declaredSheetPrefix.test(source)&&!declaredRelationshipAlias.test(source))return data
+ const doc=new DOMParser().parseFromString(source,'application/xml')
+ const root=doc.documentElement
+ if(root?.namespaceURI!==sheetNamespace)return data
+ const elements=Array.from(doc.getElementsByTagNameNS(sheetNamespace,'*'))
+ for(const element of elements.reverse()){
+  const prefixed=Boolean(element.prefix)
+  const target=prefixed?doc.createElementNS(sheetNamespace,element.localName!):element
+  for(const attr of Array.from(element.attributes)){
+   if(attr.namespaceURI===relationshipNamespace && attr.prefix!=='r'){
+    if(!prefixed)target.removeAttributeNode(attr)
+    target.setAttributeNS(relationshipNamespace,'r:'+attr.localName,attr.value)
+   }else if(prefixed)target.setAttributeNS(attr.namespaceURI,attr.name,attr.value)
+  }
+  if(prefixed){
+   if(element===root)target.setAttributeNS('http://www.w3.org/2000/xmlns/','xmlns',sheetNamespace)
+   while(element.firstChild)target.appendChild(element.firstChild)
+   element.parentNode!.replaceChild(target,element)
+  }
+ }
+ return Buffer.from(new XMLSerializer().serializeToString(doc))
+}
+
 function boundedZip(bytes:Uint8Array){
  if(bytes.length<22||bytes[0]!==80||bytes[1]!==75)throw Error('文件不是有效的 Excel 工作簿。')
  let length=0,entries=0
@@ -67,7 +101,13 @@ function boundedZip(bytes:Uint8Array){
   return !entry.name.startsWith('xl/media/')&&!entry.name.startsWith('xl/embeddings/')
  }})
  if(!Object.hasOwn(xml,'xl/workbook.xml')||!Object.hasOwn(xml,'[Content_Types].xml'))throw Error('文件缺少 Excel 工作簿内容。')
- for(const data of Object.values(xml))if(data.length>MAX_XML)throw Error('Excel 文件超出容量。')
+ let normalizedBytes=0
+ for(const [name,data] of Object.entries(xml)){
+  if(data.length>MAX_XML)throw Error('Excel 文件超出容量。')
+  if(/^xl\/(?:workbook|sharedStrings|styles|(?:worksheets|tables)\/[^/]+)\.xml$/u.test(name))xml[name]=excelJsXml(data)
+  normalizedBytes+=xml[name]!.length
+  if(normalizedBytes>MAX_XML)throw Error('Excel 文件超出容量。')
+ }
  return zipSync(xml,{level:0})
 }
 
@@ -107,12 +147,12 @@ export async function readWorkbookFile(data:Buffer,name:string,id:string):Promis
    sheet.rowCount=Math.max(sheet.rowCount,source.rowCount)
    sheet.columnCount=Math.max(sheet.columnCount,source.columnCount)
    sheet.rowData={};sheet.columnData={}
-   const frozen=source.views.find(v=>v.state==='frozen')
+   const frozen=source.views?.find(v=>v.state==='frozen')
    if(frozen?.state==='frozen'){
     const xSplit=frozen.xSplit??0,ySplit=frozen.ySplit??0
     if(Number.isInteger(xSplit)&&Number.isInteger(ySplit)&&xSplit>=0&&xSplit<sheet.columnCount&&ySplit>=0&&ySplit<sheet.rowCount)sheet.freeze={xSplit,ySplit,startColumn:xSplit||-1,startRow:ySplit||-1}
    }
-   sheet.showGridlines=source.views[0]?.showGridLines===false?0:1
+   sheet.showGridlines=source.views?.[0]?.showGridLines===false?0:1
    const merges=(source.model as {merges?:string[]}).merges??[]
    sheet.mergeData=merges.map(range=>{
     const m=/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(range)
