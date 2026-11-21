@@ -90,6 +90,16 @@ it('keeps identifiers, units and decimal precision for each disclosed row in a s
  const partial = await incomplete.run(1)
  expect(partial.messages[0].content[0].text).toContain('300308\t中际旭创\t—\t7984305860.00')
  expect(partial.messages[0].content[0].text).toContain('缺失标记')
+ const request = text.replace(text.split('\n')[0], '我是这只 ETF 的估值核算员，收盘后要照着季报和托管系统逐笔勾稽。请把下面五笔持仓整理到研究看板，我打开就按披露顺序从第一笔核到第五笔。每笔要对得上序号、代码、名称、股数、公允价值和占基金净值比例，公允价值按人民币元保留到分，包括末尾的零。若托管同事只报证券代码，我也需要快速定位该笔。\n\n来源为上交所披露的《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》，持仓日2025-12-31，第10页第5.3.1节前五行。\nhttps://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf\n')
+ const ledgerOpening = async (prose,tool) => {
+  const ctx = requests(prose)
+  return ctx.run(1,{...ctx.current,tools:[{name:tool}]})
+ }
+ const ledger = await ledgerOpening(request,'research_workbench_create')
+ expect(ledger.system).toContain('一张可检索的明细表')
+ expect(ledger.messages[0].content[0].text).toContain('300750\t宁德时代\t31173566')
+ expect((await ledgerOpening(request,'existingTool')).system).not.toContain('一张可检索的明细表')
+ expect((await ledgerOpening(request+'\n我还需要为每只股票单独建一张组件卡。','research_workbench_create')).system).not.toContain('一张可检索的明细表')
  expect(first.system).toContain('无需用户重发')
  expect(first.tools).toEqual([])
 })

@@ -1,6 +1,7 @@
 import {claimedWorkspaceMessage,clientModeTurn} from './client-mode-profile.js'
 import {classifyResearchCreationRequest} from './component-delivery-intent.js'
 import {pastedWorkbenchInput} from './workbench-pasted-tables.js'
+import {disclosureLedgerInput} from './workbench-disclosure-ledger.js'
 
 const publicOpening = Symbol.for('ework.model-task-opening')
 const supported = new WeakSet()
@@ -118,7 +119,8 @@ function openingCapabilities(turn, tools) {
 // entire analysis or inspect documents before it can acknowledge the task.
 function openingContext(message, turn, brief) {
   const authored = turn.text.replace(/```[\s\S]*?(?:```|$)/gu, ' ')
-  const {blocks,context} = pastedWorkbenchInput(authored)
+  const pasted = pastedWorkbenchInput(authored)
+  const {blocks,context} = pasted
   const lines = (blocks.length ? context : authored)
     .replace(/https?:\/\/[^\s<>"'（）]+/giu, value => {
       try { return new URL(value).hostname } catch { return '' }
@@ -161,7 +163,7 @@ function openingContext(message, turn, brief) {
   const outline = [goal,scope].filter(Boolean).join('\n')
   // Treat the original imperative as quoted material. The communication call
   // has a different job from the execution call that follows.
-  return {message:{id:message.id,role:'user',source:message.source,content:[{type:'text',text:outline}]},hasPastedTable:blocks.length>0}
+  return {message:{id:message.id,role:'user',source:message.source,content:[{type:'text',text:outline}]},pasted}
 }
 
 // A real tool receipt since the last public paragraph is the evidence for a
@@ -219,9 +221,12 @@ export function registerModelTaskReplies(ctx) {
       const component = turn.mode === 'conversation' && turn.create?.kind === 'component' &&
         request.tools.some(tool=>tool.name==='client_action' && tool.parameters?.properties?.capability?.enum?.includes('conversation.components.create')) &&
         !/(?:源码|源代码|代码示例|示例代码|代码片段|代码块|\b(?:source code|example code|code sample)\b)/iu.test(sourceRequest)
+      const ledger = turn.mode === 'research' && opening.pasted.blocks.length > 0 &&
+        request.tools.some(tool=>tool.name==='research_workbench_create') && disclosureLedgerInput(turn.text,opening.pasted)
+      const ledgerGuidance = ledger ? '本轮会按披露原序把所有行放进一张可检索的明细表。开场从原表挑一笔，用实际代码、名称和数量或金额说明如何逐笔勾稽。' : ''
       const format = component ? '本步只用自然语言说出与用户目标有关的发现或呈现方式。实际组件由下一步工具负责保存，开场不写示例、标记语言或源码。' : ''
       return {...request, tools:[], [publicOpening]:true, ...(component && {[Symbol.for('ework.native-component-opening')]:true}), messages:[opening.message],
-        system:'用用户指定的语言或用户的语言，只写一句能推进当前任务的话。已给事实足够时可直接点出结论；也可说明一个与目标有关的取舍，或接下来的具体动作怎样帮助交付。只使用已给出的事实，执行结果等实际回执，省略套话和内部指令。'+openingCapabilities(turn,request.tools)+format+(opening.hasPastedTable?'原表的已识别行在执行时可读取，无需用户重发。':'')}
+        system:'用用户指定的语言或用户的语言，只写一句能推进当前任务的话。已给事实足够时可直接点出结论；也可说明一个与目标有关的取舍，或接下来的具体动作怎样帮助交付。只使用已给出的事实，执行结果等实际回执，省略套话和内部指令。'+openingCapabilities(turn,request.tools)+format+ledgerGuidance+(opening.pasted.blocks.length?'原表的已识别行在执行时可读取，无需用户重发。':'')}
     }
     if (step === 2 && opened.has(turn) && request.messages?.at(-1)?.role === 'assistant') {
       // Wire-only instruction. The actual user's message and its permissions
