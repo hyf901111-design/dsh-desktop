@@ -256,7 +256,7 @@ async function collectRenderedPage(maxMilliseconds: number) {
     const doc = document.querySelector('.docx-page-block')
     // Do not mistake a Feishu SPA loading shell for a complete document.
     if (!doc && /(^|\.)feishu\.cn$/.test(location.hostname) && /^\/(wiki|docx)\//.test(location.pathname)) { await pause(); continue }
-    const root = doc ?? document.querySelector('main,article,[role=main]') ?? document.body
+    const root = doc ?? document.querySelector('main,[role=main]') ?? document.querySelector('article') ?? document.body
     if (!root) { await pause(); continue }
     collectLinks(root)
     if (!scroller || !scroller.isConnected) {
