@@ -3,6 +3,8 @@ import {build} from 'esbuild'
 import {readFile,readdir} from 'node:fs/promises'
 import {dirname,join,resolve} from 'node:path'
 import {pathToFileURL} from 'node:url'
+import {createRequire} from 'node:module'
+const {stripTurnModeConversation}=createRequire(import.meta.url)('../scripts/lib/turn-client-mode.mjs')
 import {EWorkPendingInputBar} from '../scripts/lib/pending-conversation.mjs'
 import {patchPendingConversationPanel} from '../scripts/lib/pending-conversation-panel.mjs'
 import {patchBrowserAppNative} from '../scripts/lib/browser-app-native.mjs'
@@ -27,7 +29,7 @@ const imageAssets={name:'image-assets',setup(build){
  });
 }};
 beforeAll(async()=>{
- const installed=stripComposerWorkspaceBar(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8'))
+ const installed=stripComposerWorkspaceBar(stripTurnModeConversation(await readFile(base+'dsh-client-ui-conversation/lib/client.js','utf8')))
  const baseConversation=stripResearchBoardHeaderClient(stripConversationPermissionDefault(stripSpreadsheetClient(stripKnowledgeSharedResearch(installed))))
  const raw=patchComposerWorkspaceBar(patchSpreadsheetClient(patchBrowserAppNative(baseConversation))),conversation=expose(raw,['SessionInputShell','InputBar','HomeGuideNativeOriginalConversationRoot','ResearchSidebarConversationTab']).replace('exports.apply = apply;','exports.apply = apply;exports.__testSetPending=value=>eworkPendingConversation=value;exports.__testSetRightProjects=value=>eworkRightProjects=value;exports.__testSetSidebarWorkspace=value=>eworkSidebarWorkspace=value;exports.__testSetImageFactory=value=>eworkImageFactory=value;')
  input={panel:expose(patchPendingConversationPanel(await readFile('build/sherlock-plugin-profile/vendor/dsh-better-sidebar/lib/client.js','utf8')),['Workbench','SidebarStore']),wrapper:EWorkPendingInputBar.toString(),runtime:await readFile(base+'dsh-client-runtime/lib/client.js','utf8'),conversation,workspace:expose(patchBoardDirectoryWorkspace(await readFile(base+'dsh-client-ui-workspace/lib/client.js','utf8')),['WorkspacePicker'])}
@@ -40,19 +42,26 @@ beforeAll(async()=>{
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await pw.chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },20000)
 afterAll(async()=>browser?.close())
-it.each(['notes','spreadsheet','research'])('hides the right project picker after editing %s', async mode => {
+it.each(['notes','spreadsheet','research','image-factory'])('hides the right project picker after editing %s', async mode => {
  const page = await browser.newPage({viewport:{width:1180,height:800}})
  page.setDefaultTimeout(4500)
  try {
   await page.route('http://workspace.test/', route=>route.fulfill({contentType:'text/html',body:
    '<style>'+css+'body{margin:0}#app{height:100vh;width:790px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>'}))
   await page.goto('http://workspace.test/')
-  await page.evaluate(({input,mode})=>{window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true,initialView:mode}}, {input,mode})
+  await page.evaluate(({input,mode})=>{window.pendingInput={...input,recentWorkspaceId:'A',verifyRightProject:true,realImageTabs:mode==='image-factory',initialView:mode==='image-factory'?'chat':mode}}, {input,mode})
   await page.addScriptTag({content:script})
+  const image=mode==='image-factory'
+  if(image)await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'))
   const picker=page.locator('#right [data-odyssey-composer-workspace]')
-  await picker.getByText('研究项目 A',{exact:true}).click()
-  await page.getByText('研究项目 B',{exact:true}).click()
-  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session')
+  if(image){
+   await picker.getByText('研究项目 A',{exact:true}).waitFor()
+  }else{
+   await picker.getByText('研究项目 A',{exact:true}).click()
+   await page.getByText('研究项目 B',{exact:true}).click()
+   await expect.poll(()=>page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session')
+  }
+  const owner=await page.evaluate(()=>window.pendingFixture.current.current)
   await page.evaluate(()=>{
    const sessionId=window.pendingFixture.current.current;
    localStorage.setItem('sherlock.research.directory-locked.v1:'+sessionId,'true')
@@ -61,7 +70,7 @@ it.each(['notes','spreadsheet','research'])('hides the right project picker afte
   await picker.waitFor({state:'detached'})
   expect(await page.locator('#right [data-right-project-draft-hint]').count()).toBe(0)
   expect(await page.locator('#right textarea').count()).toBe(1)
-  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe('new-session')
+  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBe(owner)
  } finally { await page.close() }
 })
 it.each([true, false])('shows the local work location on home and right composers and keeps the folder picker independent (dark: %s)', async dark => {
