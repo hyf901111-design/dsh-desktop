@@ -128,24 +128,43 @@ body[data-ds-dark-theme] .presentation-header-menu{background:#252525;color:#eee
 
 .presentation-archive-dialog {
   width: min(360px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px); box-sizing: border-box; margin: auto; padding: 0;
-  border: 1px solid var(--dsw-alias-border-secondary, #8884); border-radius: 12px;
-  background: var(--dsw-alias-layer-menu, #fff); color: var(--dsw-alias-label-primary, #262626);
-  box-shadow: 0 12px 48px #0004; -webkit-app-region: no-drag;
+  max-height: calc(100vh - 32px);
+  box-sizing: border-box;
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--odyssey-menu-border);
+  border-radius: 12px;
+  background: var(--odyssey-composer-solid);
+  color: var(--odyssey-text);
+  color-scheme: light;
+  box-shadow: 0 8px 32px #0004;
+  font: 400 14px/1.5 var(--odyssey-font-ui);
+  -webkit-app-region: no-drag;
 }
+body[data-ds-dark-theme] .presentation-archive-dialog { color-scheme: dark; }
 .presentation-archive-dialog::backdrop { background: #0005; }
 .presentation-archive-dialog form { display: grid; gap: 16px; padding: 22px; }
 .presentation-archive-dialog h2 { margin: 0; font-size: 17px; font-weight: 600; }
-.presentation-archive-dialog label { display: grid; gap: 6px; font-size: 13px; }
+.presentation-archive-dialog label { display: grid; gap: 6px; min-width: 0; font-size: 13px; }
 .presentation-archive-dialog :is(input, select) {
-  box-sizing: border-box; width: 100%; height: 36px; padding: 0 10px; border-radius: 6px;
-  background: var(--dsw-alias-layer-background, transparent); color: inherit; font: inherit;
-  border: 1px solid var(--dsw-alias-border-secondary, #8886);
+  box-sizing: border-box; width: 100%; min-width: 0; height: 36px; padding: 0 10px;
+  border: 1px solid var(--odyssey-reading-border); border-radius: 6px;
+  background: var(--odyssey-input); color: var(--odyssey-text); font: inherit;
 }
-.presentation-archive-dialog p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--dsw-alias-label-secondary, #777); }
-.presentation-archive-dialog [role=alert] { font-size: 13px; color: var(--dsw-alias-label-negative, #cb5448); }
+.presentation-archive-dialog option { background: var(--odyssey-composer-solid); color: var(--odyssey-text); }
+.presentation-archive-dialog p {
+  margin: 0; font-size: 12px; line-height: 1.6;
+  color: color-mix(in srgb, var(--odyssey-text) 70%, var(--odyssey-composer-solid));
+}
+.presentation-archive-dialog [role=alert] { font-size: 13px; color: var(--dsw-alias-label-negative, #b04135); }
 .presentation-archive-dialog footer { display: flex; justify-content: flex-end; gap: 8px; }
-.presentation-archive-dialog button { padding: 6px 16px; border: 1px solid #8884; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-.presentation-archive-dialog button[type=submit] { background: var(--dsw-alias-label-primary, #292929); color: var(--dsw-alias-layer-menu, white); }
+.presentation-archive-dialog button {
+  min-height: 34px; padding: 6px 16px; border: 1px solid var(--odyssey-menu-border);
+  border-radius: 6px; background: transparent; color: var(--odyssey-text); font: inherit; cursor: pointer;
+}
+.presentation-archive-dialog button[type=button]:enabled:hover { background: var(--odyssey-menu-row); }
+.presentation-archive-dialog button[type=submit] { background: var(--odyssey-text); color: var(--odyssey-composer-solid); }
+.presentation-archive-dialog button[type=submit]:enabled:hover { filter: brightness(.92); }
+.presentation-archive-dialog :is(input, select, button):focus-visible { outline: 2px solid var(--odyssey-active); outline-offset: 2px; }
 .presentation-archive-dialog button:disabled { opacity: .6; cursor: default; }
-body[data-ds-dark-theme] .presentation-archive-dialog { color-scheme: dark; }
