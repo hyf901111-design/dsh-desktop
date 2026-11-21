@@ -5097,6 +5097,54 @@
         ],
         "generatedAt": "2026-11-21T21:07:57.010241+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "补全验收客户端演示工具栏聚焦检查的类型",
+        "branch": "codex/feat/accepted-client-focused-checks-20261122",
+        "baseCommit": "b7c3c500e704ad887d81fd7e0e6a646b31a0e330",
+        "tipCommit": "a48b81e46eaf46ab22cce67d14fe4975688fa3b1",
+        "commits": [
+          {
+            "commit": "a48b81e46eaf46ab22cce67d14fe4975688fa3b1",
+            "parents": [
+              "b7c3c500e704ad887d81fd7e0e6a646b31a0e330"
+            ],
+            "subject": "补全演示工具栏回归检查的主题与 DOM 回调类型"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/presentation-toolbar-popovers-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "严格类型检查和实际浏览器演示工具栏回归均通过。",
+            "verifiedCommit": "a48b81e46eaf46ab22cce67d14fe4975688fa3b1",
+            "completedAt": "2026-11-21T21:33:28.373582+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "仅添加回归用例的编译期类型标注，已用实际浏览器运行该用例。"
+        },
+        "acceptanceCriteria": [
+          "不修改已验收客户端运行时代码",
+          "演示工具栏回归通过类型检查"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-21T21:33:28.373582+00:00"
+      }
     }
   ],
   "integrationChecks": [
