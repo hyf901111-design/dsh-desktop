@@ -68,7 +68,7 @@ w.responseFixture={
  },
  workbenchPhase(phase:string){
   const current=projection.getSnapshot(),time=Date.now(),open=!['done','final'].includes(phase),position={kind:'step',turn:{turn:8,status:open?'open':'closed'}}
-  const user={key:'workbench-user',kind:'user',location:position,data:{source:{kind:'user',rpcId:'workbench-request'},content:[{type:'text',text:submittedWorkbenchText}]}}
+  const user={key:'workbench-user',kind:'user',location:position,data:{source:{kind:'user',clientMode:'research',rpcId:'workbench-request'},content:[{type:'text',text:submittedWorkbenchText}]}}
   const read=(key:string,path:string,failure:boolean)=>({key,kind:'tool-call',location:position,data:{root:{kind:'tool-result',isError:failure,call:{name:'web_fetch',argsRaw:JSON.stringify({url:'https://example.com/'+path})},content:[{type:'text',text:failure?'Error: The browser could not load readable webpage content. Open the URL in a research link component to inspect it.':'Fetched https://example.com/'+path+' (HTTP 200)\n\n行情资料'}]}}})
   const nodes:any[]=[user,{key:'workbench-reasoning',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private workbench reasoning'}]}}]
   if(phase==='reading')nodes.push({key:'workbench-reading',kind:'tool-call',location:position,data:{root:{name:'web_fetch'}}})
@@ -101,9 +101,9 @@ w.responseFixture={
   ]
   projection.set({...current,running:false,chat:{order:items.map(item=>item.key),nodes:new Map(items.map(item=>[item.key,item])),timeline:{turns:new Map([[4,{turn:4,status:'closed',start:{time:now-6000},end:{time:now}}]])}}})
  },
- statusSequence(phase:string){
-  const current=projection.getSnapshot(),position={kind:'step',turn:{turn:3,status:phase==='done'?'closed':'open'}},items:any[]=[{key:'status-user',kind:'user',location:position,data:{content:[{type:'text',text:'核对这项资料'}]}},{key:'status-reasoning',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private hidden'}]}}]
-  if(phase!=='initial')items.push({key:'status-ack',kind:'assistant-step',location:position,data:{status:phase==='ack'?'streaming':'settled',blocks:[{kind:'reasoning',text:'private mixed reasoning'},{kind:'text',text:'我先核对资料来源，再整理关键变化。'}],finalNode:{seq:31}}})
+ statusSequence(phase:string,clientMode='conversation'){
+  const current=projection.getSnapshot(),position={kind:'step',turn:{turn:3,status:phase==='done'?'closed':'open'}},items:any[]=[{key:'status-user',kind:'user',location:position,data:{source:{kind:'user',clientMode},content:[{type:'text',text:'核对这项资料'}]}},{key:'status-reasoning',kind:'assistant-step',location:position,data:{status:'settled',blocks:[{kind:'reasoning',text:'private hidden'}]}}]
+  if(phase!=='initial')items.push({key:'status-ack',kind:'assistant-step',location:position,data:{status:['partial','ack'].includes(phase)?'streaming':'settled',blocks:[{kind:'reasoning',text:'private mixed reasoning'},{kind:'text',text:phase==='partial'?'我先':'我先核对资料来源，再整理关键变化。'}],...(phase==='partial'?{}:{finalNode:{seq:31}})}})
   if(['tools','done'].includes(phase))items.push({key:'status-search',kind:'tool-call',location:position,data:{root:{kind:'tool-call',call:{name:'web_search',argsRaw:JSON.stringify({query:'公开资料来源'})},status:'completed'}}},{key:'status-read',kind:'tool-call',location:position,data:{root:phase==='done'?{kind:'tool-call',call:{name:'read_file',argsRaw:'{}'},status:'completed'}:{name:'read_file',argsRaw:'{}'}}})
   projection.set({...current,running:phase!=='done',chat:{order:items.map(item=>item.key),nodes:new Map(items.map(item=>[item.key,item])),timeline:{turns:new Map([[3,{turn:3,status:phase==='done'?'closed':'open',start:{time:Date.now()-20000},end:phase==='done'?{time:Date.now()}:null}]])}}})
  },

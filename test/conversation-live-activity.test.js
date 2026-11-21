@@ -58,49 +58,24 @@ it('upgrades the exact installed v2 status layer while rejecting a changed histo
  const source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),next=patchConversationLiveActivity(source)
  const frozen=JSON.parse(await readFile('test/fixtures/conversation-live-activity-v2.json','utf8')).definition
  const compatible=transformWorkbenchConversationPresentation(next,true)
- const start=compatible.indexOf('/* ework:conversation-live-activity:v10 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
+ const start=compatible.indexOf('/* ework:conversation-live-activity:v11 */'),end=compatible.indexOf('/* ework:conversation-live-activity:end */',start)+'/* ework:conversation-live-activity:end */'.length+1
  const previous=compatible.slice(0,start)+frozen+compatible.slice(end)
  expect(patchConversationLiveActivity(previous)).toBe(next)
  expect(()=>patchConversationLiveActivity(previous.replace('2.4s linear infinite','1s linear infinite'))).toThrow('definition drifted')
 })
 
 const request='请创建一个工作台，包含行情与公告'
-const user=(text=request,turn=4,kind='user')=>({key:'prompt',kind,location:{turn:{turn}},data:{content:[{type:'text',text}],source:{kind:'user'}}})
+const user=(text=request,turn=4,kind='user')=>({key:'prompt',kind,location:{turn:{turn}},data:{content:[{type:'text',text}],source:{kind:'user',clientMode:'research'}}})
 const result=(key,name,root={},turn=4)=>({key,kind:'tool-call',location:{turn:{turn}},data:{root:{kind:'tool-result',call:{name,argsRaw:'{}'},...root}}})
 const update=(nodes,props={})=>workbenchConversationUpdate({running:true,runningTurn:4,openState:'open',order:nodes.map(n=>n.key),nodeStore:new Map(nodes.map(n=>[n.key,n])),flow:nodes.map(n=>({kind:'node',key:n.key})),readText:parts=>parts.map(part=>part.text).join(''),...props})
 const pending=(props={})=>({kind:'native-submitted-user',key:'submitted:r1',submission:{mode:'queue',initialImmediate:true,accepted:true,content:user().data.content,...props}})
 
-it('acknowledges only an accepted Workbench submission or its authoritative active turn',()=>{
- expect(update([], {running:false,runningTurn:null,flow:[pending()]})).toMatchObject({kind:'received',ownerKey:'submitted:r1'})
- expect(update([user()])).toMatchObject({kind:'received',ownerKey:'prompt'})
- for(const options of [{accepted:false},{initialImmediate:false},{mode:'steer'}])expect(update([],{flow:[pending(options)]})).toBeNull()
- expect(update([user('核对原有工作台的数据')])).toBeNull()
- expect(update([user(request,3)])).toBeNull()
- expect(update([user(request,4,'steering')])).toBeNull()
- expect(update([user()],{running:false})).toBeNull()
- expect(update([user()],{openState:'loading'})).toBeNull()
-})
-
-it('gives an actionable initial structure for the current request, then yields to public model text',()=>{
- const futures=user('生成一个期货衍生品研究工作台')
- expect(update([futures]).text).toMatch(/品种.*近远月结算价.*持仓分布.*明细.*交易日报.*事件/)
- expect(update([futures],{english:true}).text).toContain('open interest')
- const file=update([user('根据上传的期货附件创建一个研究工作台')]).text
- expect(file).toContain('指定材料');expect(file).not.toContain('上期所')
- expect(update([user('只看股指期货，创建一个研究工作台')]).text).not.toContain('上期所')
- const comparison=update([user('创建一个区域门店销售对比工作台')]).text
- expect(comparison).toContain('排序图');expect(comparison).not.toContain('行情')
- expect(update([user('弄个美元兑人民币的看板。')]).text).toContain('报价日期')
- expect(update([user('做个看板，每天扫一眼 AI 新闻。')]).text).toContain('点标题可读原文')
- expect(update([user('帮我弄个一周待办看板。')]).text).toContain('可添加、勾选')
- expect(update([user('做个出游预算看板，想比比两套方案，改人数就能算人均，整页还能带走。')]).text).toContain('总价与人均费用')
- expect(update([user('做个聚餐预算看板，两家店比比，改人数就能算人均，还能把网页带走。')]).text).toContain('人均费用')
- expect(update([user('给我做个科技早报看板，每天更新，点标题能看原文。')]).text).toContain('可读原文')
- expect(update([user('做个租房看板，想比两套房，调调租金和通勤天数，看每月差多少。')]).text).toContain('总额和方案间的差额')
- expect(update([user('看这个网页的新闻，做个看板')]).text).not.toContain('下载整页')
- const step={key:'first-public-step',kind:'assistant-step',location:{turn:{turn:4}},data:{blocks:[{kind:'reasoning',text:'private'}]}}
- expect(update([futures,step])?.kind).toBe('received')
- expect(update([futures,{...step,data:{blocks:[{kind:'text',text:'按到期月份看价差'}]}}])).toBeNull()
+it('shows a device status only after acknowledgement until the real run starts',()=>{
+ const options={running:false,runningTurn:null}
+ expect(activity([],{...options,flow:[pending()]})).toMatchObject({kind:'pending'})
+ for(const state of [{accepted:false},{initialImmediate:false},{mode:'steer'},{admitted:true}])
+  expect(activity([],{...options,flow:[pending(state)]})).toBeNull()
+ expect(update([],{...options,flow:[pending()]})).toBeNull()
 })
 
 it('reports actual source observations and verified plan acceptance without leaking payloads',()=>{
@@ -109,7 +84,7 @@ it('reports actual source observations and verified plan acceptance without leak
  const fetch=result('fetch','web_fetch',{meta:{statusCode:200,truncated:false},content:[{type:'text',text:'Fetched https://example.com/private (HTTP 200)\n\nactual source content'}]})
  const truncated=result('truncated','web_fetch',{meta:{statusCode:200,truncated:true},content:fetch.data.root.content})
  const plan=result('plan','research_workbench_create',{content:[{type:'text',text:'{"status":"accepted","planId":"id-1","panels":["private name","other"]}'}]})
- expect(update([user(),search,old])).toMatchObject({kind:'checking'})
+ expect(update([user(),search,old])).toMatchObject({kind:'checked'})
  expect(update([user(),search,failure])).toMatchObject({kind:'sources',text:expect.stringMatching(/未能读取/)})
  expect(update([user(),fetch,truncated])).toMatchObject({kind:'sources',text:expect.stringMatching(/读取部分.*不完整/)})
  expect(update([user(),fetch])).toMatchObject({kind:'sources',text:expect.stringMatching(/已读取/)})
@@ -119,13 +94,13 @@ it('reports actual source observations and verified plan acceptance without leak
  expect(update([user(),plan],{running:false,settledTurn:5})).toBeNull()
  expect(update([user(),search],{running:false,settledTurn:4})).toBeNull()
  expect(update([user(),{...plan,data:{root:{...plan.data.root,isError:true}}}])).toMatchObject({kind:'plan-failed'})
- expect(update([user(),{...plan,data:{root:{...plan.data.root,content:[]}}}])).toMatchObject({kind:'received'})
+ expect(update([user(),{...plan,data:{root:{...plan.data.root,content:[]}}}])).toBeNull()
  expect(JSON.stringify(update([user(),search,failure,fetch,plan]))).not.toMatch(/https|secret|private|id-1/)
 })
 
 it('distinguishes data queries from discovery calls and avoids a success claim for empty rows',()=>{
  const data=(operation,records)=>result('data','public_data_query',{call:{name:'public_data_query',argsRaw:JSON.stringify({operation})},content:[{type:'text',text:JSON.stringify({records})}]})
- expect(update([user(),data('catalog',[{value:1}])])).toMatchObject({kind:'checking'})
+ expect(update([user(),data('catalog',[{value:1}])])).toMatchObject({kind:'checked'})
  expect(update([user(),data('query',[])])).toMatchObject({kind:'sources',text:expect.stringMatching(/未能读取/)})
  expect(update([user(),data('query',[{value:123456}])],{english:true})).toMatchObject({kind:'sources',text:expect.stringMatching(/Some source material was retrieved/)})
  expect(update([user(),data('query',[{value:123456}])]).text).not.toContain('123456')
@@ -140,20 +115,12 @@ it('groups adjacent webpage read failures and preserves each original activity r
 })
 
 
-it('shows a transient native receipt on every active human conversation before public model output',()=>{
- const message=user('讨论一下展示方式')
- message.data.source.clientMode='spreadsheet'
- const options={includeReceipt:true}
- expect(update([message],options)).toMatchObject({kind:'acknowledged',text:expect.stringContaining('表格')})
- expect(update([],{...options,running:false,runningTurn:null,flow:[pending({content:message.data.content})]})).toMatchObject({kind:'acknowledged'})
- for(const props of [{initialImmediate:false},{accepted:false},{mode:'steer'}]){
-  expect(update([],{...options,running:false,runningTurn:null,flow:[pending({content:message.data.content,...props})]})).toBeNull()
- }
+it.each(['conversation','research','spreadsheet','presentation','notes','image','knowledge','browser','trajectory'])('never fabricates a %s opening before the actual answer',mode=>{
+ const message=user('生成一个期货衍生品研究工作台')
+ message.data.source.clientMode=mode
  const step={key:'answer',kind:'assistant-step',location:{turn:{turn:4}},data:{blocks:[{kind:'reasoning',text:'private'}]}}
- expect(update([message,step],options).kind).toBe('acknowledged')
- step.data.blocks.push({kind:'text',text:'先看两个口径。'})
- expect(update([message,step],options)).toBeNull()
- expect(update([message,result('action','spreadsheet_apply',{})],options)).toBeNull()
- expect(update([message],{...options,running:false,settledTurn:4})).toBeNull()
- expect(update([message],{...options,openState:'error'})).toBeNull()
+ expect(update([message])).toBeNull()
+ expect(update([message,step])).toBeNull()
+ step.data.blocks.push({kind:'text',text:'从时间看，'})
+ expect(update([message,step])).toBeNull()
 })

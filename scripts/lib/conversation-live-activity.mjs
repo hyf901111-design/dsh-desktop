@@ -1,10 +1,8 @@
 import {createHash} from 'node:crypto'
-import {classifyResearchCreationRequest} from '../../packages/dsh-research-task-runtime/component-delivery-intent.js'
-import {generalFuturesWorkbench,initialWorkbenchInformationPlan} from '../../packages/dsh-research-task-runtime/workbench-planning-context.js'
 import {stripConversationResponseHistory} from './conversation-response-history.mjs'
 import {planningResponseMetadata} from './research-planning-feedback.mjs'
 import {conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,statusPresentationCss,transformStatusPresentation,transformWorkbenchConversationPresentation} from './conversation-status-presentation.mjs'
-const START='/* ework:conversation-live-activity:v10 */',V9='/* ework:conversation-live-activity:v9 */',V8='/* ework:conversation-live-activity:v8 */',V7='/* ework:conversation-live-activity:v7 */',V6='/* ework:conversation-live-activity:v6 */',V5='/* ework:conversation-live-activity:v5 */',V4='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
+const START='/* ework:conversation-live-activity:v11 */',V10='/* ework:conversation-live-activity:v10 */',V9='/* ework:conversation-live-activity:v9 */',V8='/* ework:conversation-live-activity:v8 */',V7='/* ework:conversation-live-activity:v7 */',V6='/* ework:conversation-live-activity:v6 */',V5='/* ework:conversation-live-activity:v5 */',V4='/* ework:conversation-live-activity:v4 */',V3='/* ework:conversation-live-activity:v3 */',PREVIOUS='/* ework:conversation-live-activity:v2 */',LEGACY='/* ework:conversation-live-activity:v1 */',END='/* ework:conversation-live-activity:end */'
 
 const workbenchSourceObservationCache = new WeakMap()
 
@@ -39,38 +37,21 @@ function workbenchSourceObservation(root, name) {
  return status
 }
 
-export function workbenchConversationUpdate({ running, runningTurn, settledTurn, openState, order, nodeStore, flow, readText, english = false, includeReceipt = false, classify = classifyResearchCreationRequest, readPlans = planningResponseMetadata }) {
+export function workbenchConversationUpdate({ running, runningTurn, settledTurn, openState, order, nodeStore, english = false, readPlans = planningResponseMetadata }) {
  if (openState !== 'open') return null
  const say = (zh, en) => english ? en : zh
  const turnOf = node => node?.location?.turn?.turn ?? node?.data?.turn
- const pending = flow.findLast(entry => {
-  const submission = entry.kind === 'native-submitted-user' ? entry.submission : null
-  return submission?.accepted === true && submission.mode !== 'steer' && (submission.initialImmediate && (!Number.isSafeInteger(runningTurn) || runningTurn > submission.barrierTurn) || running && submission.admitted === true && submission.admittedTurn === runningTurn)
- })
- const scopeTurn = running ? runningTurn : pending ? null : settledTurn
+ const scopeTurn = running ? runningTurn : settledTurn
  const current = Number.isSafeInteger(scopeTurn) ? order.map(key => nodeStore.get(key)).filter(node => turnOf(node) === scopeTurn) : []
  const promptIndex = current.findLastIndex(node => ['user','steering'].includes(node.kind))
- const prompt = current[promptIndex], ownerKey = prompt?.key ?? pending?.key
- if (!ownerKey || prompt && (prompt.kind !== 'user' || prompt.data?.source?.kind !== 'user')) return null
- const request=readText(prompt?.data?.content ?? pending?.submission?.content ?? [])
- const mode = prompt?.data?.source?.clientMode ?? pending?.submission?.clientMode
+ const prompt = current[promptIndex]
+ if (prompt?.kind !== 'user' || prompt.data?.source?.kind !== 'user') return null
+ const ownerKey=prompt.key
  const milestone = (kind, zh, en) => ({ ownerKey, kind, text: say(zh, en) })
- if (classify(request)?.kind !== 'workbench' || (mode && !['research', 'conversation'].includes(mode))) {
-  if (!includeReceipt || (!pending && !running)) return null
-  // The native delivery acknowledgement covers the provider's first-token wait.
-  // Retire it as soon as the turn has a public answer or a concrete tool action.
-  const answered = current.slice(promptIndex + 1).some(node =>
-   node.kind === 'tool-call' || node.kind === 'turn-tail' ||
-   node.kind === 'assistant-step' && node.data?.blocks?.some(block => block.kind === 'image' || block.kind === 'text' && block.text?.trim()))
-  if (answered) return null
-  const names = { spreadsheet: ['表格', 'Spreadsheet'], presentation: ['演示', 'Presentation'], notes: ['笔记', 'Notes'], image: ['图像', 'Image'], research: ['研究看板', 'Research'], browser: ['浏览器', 'Browser'], knowledge: ['知识库', 'Knowledge'], trajectory: ['轨迹', 'Trajectory'] }
-  const name = Object.hasOwn(names, mode) ? names[mode] : null
-  return name ? milestone('acknowledged', name[0] + '对话已收到消息，正在准备回复。', name[1] + ' chat received your message. Preparing a reply.')
-   : milestone('acknowledged', '已收到消息，正在准备回复。', 'Message received. Preparing a reply.')
- }
  const calls = current.slice(promptIndex + 1).filter(node => node.kind === 'tool-call' && node.data?.root)
+ if (!calls.length || prompt.data.source.clientMode !== 'research' && !calls.some(node => (node.data.root.call?.name ?? node.data.root.name) === 'research_workbench_create')) return null
  const plans = readPlans(calls).plans
- if (!running && !pending) {
+ if (!running) {
   // A durable latest-turn plan can stand in for an absent closing reply.
   // There is no settled receipt for a failed or merely inferred request.
   const closing = current.findLast(node => node.kind === 'turn-tail')?.data?.closing
@@ -82,12 +63,15 @@ export function workbenchConversationUpdate({ running, runningTurn, settledTurn,
   return count ? milestone('submitted', '组件计划已受理，共 '+count+' 个组件。'+detail, 'The plan was accepted for '+count+' '+(count === 1 ? 'component' : 'components')+'. '+detail)
    : milestone('submitted', '组件计划已受理。'+detail, 'The component plan was accepted. '+detail)
  }
- let checking = false, plan = null
+ let checking = false, checked = false, plan = null
  const observed = new Map()
  for (const node of calls) {
   const root = node.data.root, name = root.call?.name ?? root.name
   if (name === 'research_workbench_create') plan = root
-  if (['web_search','web_fetch','public_data_query','financial_query','read','read_file','read_prototype','workbench_source_read'].includes(name)) checking = true
+  if (['web_search','web_fetch','public_data_query','financial_query','read','read_file','read_prototype','workbench_source_read'].includes(name)) {
+   if (root.kind) checked = true
+   else checking = true
+  }
   if (root.kind !== 'tool-result' || !['web_fetch','public_data_query','financial_query'].includes(name)) continue
   const state = workbenchSourceObservation(root, name)
   if (state) observed.set(name+'\0'+(root.call?.argsRaw || node.key), state)
@@ -97,13 +81,11 @@ export function workbenchConversationUpdate({ running, runningTurn, settledTurn,
  const outcomes = new Set(observed.values())
  const found = outcomes.has('observed') || outcomes.has('partial'), gaps = outcomes.has('missing') || outcomes.has('partial')
  if (found && gaps) return milestone('sources', '已读取部分来源资料，还有来源未能读取或返回不完整。', 'Some source material was retrieved. Other sources could not be read or returned incomplete results.')
- if (found) return milestone('sources', '已读取部分来源资料，组件计划尚未提交。', 'Some source material was retrieved. The component plan is still pending.')
+ if (found) return milestone('sources', '已读取部分来源资料。', 'Some source material was retrieved.')
  if (gaps) return milestone('sources', '有来源未能读取，可在执行详情中查看。', 'Some sources could not be read. See the activity details for more information.')
- if (checking) return milestone('checking', '正在查找和核对工作台所需的资料。', 'Finding and checking the sources needed for the workbench.')
- const hasPublicReply=current.slice(promptIndex+1).some(node=>node.kind==='assistant-step'&&node.data?.blocks?.some(block=>block.kind==='text'&&block.text?.trim()))
- if(hasPublicReply)return null
- const design=initialWorkbenchInformationPlan(request,english)
- return {ownerKey,kind:'received',text:say('已收到创建工作台的请求。','Your workbench request was received. ')+(design||say('接下来会梳理所需的内容和组件。','The next step is to work out the content and components it needs.'))}
+ if (checking) return milestone('checking', '正在查找和核对来源资料。', 'Finding and checking source material.')
+ if (checked) return milestone('checked', '来源查询已结束，详情见执行记录。', 'The source check finished. See activity details.')
+ return null
 }
 
 function workbenchConversationFlow(flow, options) {
@@ -114,7 +96,7 @@ function workbenchConversationFlow(flow, options) {
   if (Number.isSafeInteger(turn.turn) && (latest === null || turn.turn > latest.turn)) latest = turn
  }
  const settledTurn = latest?.status === 'closed' ? latest.turn : null
- const update = workbenchConversationUpdate({ ...options, settledTurn, flow, english, includeReceipt:true, readText: parts => parseResearchPrompt(contentParts(parts).text).text })
+ const update = workbenchConversationUpdate({ ...options, settledTurn, english })
  if (!update) return flow
  const owner = flow.findIndex(entry => entry.key === update.ownerKey)
  if (owner < 0) return flow
@@ -128,7 +110,7 @@ function workbenchConversationFlow(flow, options) {
 }
 
 function WorkbenchConversationUpdate({ update }) {
- return react.createElement('p', { className:ChatView_module_css_default.flowItem, 'data-workbench-conversation-progress':update.kind, 'aria-live':'polite', 'aria-atomic':true }, update.text)
+ return react.createElement('div', { role:'status', 'data-workbench-conversation-progress':update.kind, 'aria-live':'polite', 'aria-atomic':true }, update.text)
 }
 
 /** Read the current run only. Completed tools and private reasoning are never
@@ -136,6 +118,9 @@ function WorkbenchConversationUpdate({ update }) {
 export function conversationLiveActivity({running,runningTurn,order=[],nodeStore,flow=[],noteRows=[],canvasTasks=[],openState='open',labelForNode,statusForNodes,t,english=false}) {
  const copy=(zh,en)=>english?en:zh
  if(openState==='loading'||openState==='error')return null
+ if(!running && flow.some(entry=>entry.kind==='native-submitted-user' && entry.submission?.initialImmediate &&
+    entry.submission.accepted && entry.submission.mode!=='steer' && !entry.submission.admitted))
+  return {kind:'pending',label:copy('等待模型响应…','Waiting for the model…')}
  const scoped=order.map(key=>nodeStore?.get(key)).filter(node=>{
   const turn=node?.location?.turn?.turn??node?.data?.turn
   return node&&Number.isFinite(runningTurn)&&turn===runningTurn
@@ -177,7 +162,7 @@ function ConversationLiveActivity(props) {
   react.createElement('span',null,state.label+parallel))
 }
 const CSS=statusPresentationCss
-const definition=()=>START+'\nconst workbenchSourceObservationCache = new WeakMap();\n'+[conversationLiveActivity,ConversationLiveActivity,conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,workbenchSourceObservation,workbenchConversationUpdate,workbenchConversationFlow,WorkbenchConversationUpdate,classifyResearchCreationRequest,generalFuturesWorkbench,initialWorkbenchInformationPlan].map(fn=>fn.toString()).join('\n')+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-live-activity-style");if(!style){style=document.createElement("style");style.id="ework-live-activity-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
+const definition=()=>START+'\nconst workbenchSourceObservationCache = new WeakMap();\n'+[conversationLiveActivity,ConversationLiveActivity,conversationPublicReplies,ConversationActivityDetails,conversationActivityRecords,conversationToolFailureLabel,workbenchSourceObservation,workbenchConversationUpdate,workbenchConversationFlow,WorkbenchConversationUpdate].map(fn=>fn.toString()).join('\n')+'\nif(typeof document!=="undefined"){let style=document.getElementById("ework-live-activity-style");if(!style){style=document.createElement("style");style.id="ework-live-activity-style";document.head.appendChild(style)}style.textContent='+JSON.stringify(CSS)+';}\n'+END+'\n'
 const CHAT_END='\n\t\t\t\t\t\t]\n\t\t\t\t\t}), (0, react_jsx_runtime.jsx)(OdysseyReadingStatus,'
 const CHAT_NEXT=',react.createElement(ConversationLiveActivity,{running,runningTurn:runningTurnNumber,order,nodeStore,flow:nativeSubmittedFlow,noteRows,canvasTasks,openState,t})'+CHAT_END
 const SHARED_END="!ongoing&&continuations.length>0&&!tails.length&&react.createElement(MessageIconActions,{text:continuations.at(-1).reason??'',t}))"
@@ -186,7 +171,7 @@ const SHARED_NEXT=SHARED_LEGACY.replace('nodeStore,canvasTasks','nodeStore,flow:
 function scope(source,anchor,from,to){const a=source.indexOf(anchor),b=source.indexOf('\n\t\t//#endregion',a);if(a<0||b<a)throw Error('Live activity scope missing: '+anchor);const part=source.slice(a,b);if(part.split(from).length!==2)throw Error('Live activity anchor drifted: '+anchor);return source.slice(0,a)+part.replace(from,to)+source.slice(b)}
 export function stripConversationLiveActivity(source){
  source=stripConversationResponseHistory(source)
- const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),v4=source.includes(V4),v5=source.includes(V5),v6=source.includes(V6),v7=source.includes(V7),v8=source.includes(V8),v9=source.includes(V9),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:v4?V4:v5?V5:v6?V6:v7?V7:v8?V8:v9?V9:START,a=source.indexOf(marker)
+ const legacy=source.includes(LEGACY),previous=source.includes(PREVIOUS),v3=source.includes(V3),v4=source.includes(V4),v5=source.includes(V5),v6=source.includes(V6),v7=source.includes(V7),v8=source.includes(V8),v9=source.includes(V9),v10=source.includes(V10),marker=legacy?LEGACY:previous?PREVIOUS:v3?V3:v4?V4:v5?V5:v6?V6:v7?V7:v8?V8:v9?V9:v10?V10:START,a=source.indexOf(marker)
  if(a<0){if(source.includes('function ConversationLiveActivity('))throw Error('Orphan live activity layer');return source}
  const end=source.indexOf(END,a),block=source.slice(a,end+END.length+1)
  const historicalHash=legacy?'6e06340806b231098fcb8bcb5757357f79e9c630457e56e07e67b8175c0b09cf':previous?'e7f1ff04a7719a5abde00da1bd1fe91f49b155f61e1b013f5f3a0d319084b7a3':v3?'d169fef72132cd6ce5cd77d8aa6145cdba0dc3dd7bbfdc86c63032189f6963ef':v4?'578940255480b5473821c0a226b95a1d7624ce5cd75b8f1197b9f8a7327f1f2c':null
@@ -197,13 +182,14 @@ export function stripConversationLiveActivity(source){
  // v9 was installed with both shipped revisions of the shared workbench classifier.
  const previousV9=['c87623c1985c9006059264fcb21393529ff8b2082b412f4935f228a827153b3e','050873044e0ba02164c7d72b1342f8c3582a577b639271e23c6a215c8a3af89c']
  const exactDefinition=v9 ? previousV9.includes(digest) : v5 ? previousV5.includes(digest) : priorDefinition ? digest===priorDefinition : block===definition()
- // The research classifier is inlined in the owned block. Previously
- // installed SDKs may carry its exact pre-calendar bytes under the same marker.
- const installedClassifier = (marker === START || v9) && [
+ // v9/v10 inlined the shared classifier. Accept only the exact installed
+ // definitions, including the last integration build before v11 removed it.
+ const installedClassifier = (v10 || v9) && [
   'c87623c1985c9006059264fcb21393529ff8b2082b412f4935f228a827153b3e',
   '050873044e0ba02164c7d72b1342f8c3582a577b639271e23c6a215c8a3af89c',
   '55474292313d356cad43df26274c7c48c0bb6338e71c201aa7c192f6f7828c0e',
   '466f797dde689f581b7b466aff92a721c3e4b64e1904ac66d3aec9817f3e4308',
+  '5583ca7bce8a9bcb4e9230e430ac53f360a268a99ab47d0b6e65ca8af421922a',
  ].includes(digest)
  // The hash covers the version marker as well as the classifier bytes. Both
  // the research v9 and the installed integrated v10 shipped this policy.

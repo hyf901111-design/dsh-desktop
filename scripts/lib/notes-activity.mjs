@@ -78,24 +78,26 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
     const originalSummary=row.result?.capabilitySummary|| (receiptSummary?eworkNoteCapabilityReceiptText(row.result.capabilityReceipts):'')
     const reply=row.result?.requiresReply===true?String(row.result.markdown||'').trim():''
     const remainingReply=originalSummary&&reply.startsWith(originalSummary)?reply.slice(originalSummary.length).trim():reply
-    const remaining=row.result?.notice==='read-only-incomplete'&&remainingReply==='已读取当前内容，本次尚未生成修改或答复。'?noteUiText('已读取当前内容，本次尚未生成修改或答复。',document.documentElement.dataset.odysseyLocale):remainingReply
-    const conversation=receiptSummary?[receiptSummary,remaining&&remaining!==receiptSummary?remaining:''].filter(Boolean).join('\n\n'):row.result?.markdown
+    const readOnlyNotice=row.result?.notice==='read-only-incomplete'&&remainingReply==='已读取当前内容，本次尚未生成修改或答复。'
+    const resultStatus=[receiptSummary,readOnlyNotice?noteUiText(remainingReply,document.documentElement.dataset.odysseyLocale):''].filter(Boolean).join('\n\n')
+    const publicReply=receiptSummary?remainingReply:row.result?.markdown
+    const conversation=readOnlyNotice||receiptSummary&&publicReply===receiptSummary?'':publicReply
     const liveReceipts=Array.isArray(row.capabilityProgress)&&!row.result?.capabilityReceipts?.length?row.capabilityProgress.filter(receipt=>!settledPreview(receipt)):[]
     const finalReceipts=row.result?.kind!=='conversation'&&Array.isArray(row.result?.capabilityReceipts)?row.result.capabilityReceipts.filter(receipt=>!settledPreview(receipt)):[]
-    const text=['text','conversation'].includes(row.result?.kind)?String(conversation||''):row.result?.kind==='component'?noteUiText("已生成组件：")+(row.result.node?.title||noteUiText("研究组件"))+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
+    const text=['text','conversation'].includes(row.result?.kind)?[resultStatus,conversation].filter(Boolean).join('\n\n'):row.result?.kind==='component'?noteUiText("已生成组件：")+(row.result.node?.title||noteUiText("研究组件"))+'。':'',settled=!pending&&['ready','replied','accepted','discarded'].includes(row.phase)&&!!text.trim()
     // Read the durable final-event position after generation; the preparing seq is only for row ordering.
     react.useEffect(()=>{if(settled&&sessionId&&!Number.isSafeInteger(row.completedSeq))document.dispatchEvent(new CustomEvent('sherlock:notes-history-request',{detail:{sessionId}}))},[settled,sessionId,row.completedSeq])
     return h('article', {key:row.requestId, className:'en-task Md3f7G_flowItem', 'data-chat-flow-key':'note:'+row.requestId,'data-chat-anchor-key':'note:'+row.requestId, 'data-note-task':row.requestId, 'data-phase':row.phase},
       h(UserBubble,{content:row.content||[{type:'text',text:row.prompt || noteUiText("根据附件撰写内容")}],noteReferences:row.references,imageLoader:loadImage,openFile,t}),
-      pending&&!row.publicLead&&!liveReceipts.length?h('div',{className:'en-task-feedback','data-note-feedback':'',role:'status','aria-live':'polite'},h('p',null,noteUiText("已收到，正在处理这条笔记指令。"))):null,
       pending&&row.publicLead?h('div',{'data-note-public-lead':'','aria-live':'polite'},h(Markdown,{blocks:[{kind:'text',text:row.publicLead}],streaming:true,t})):null,
       liveReceipts.length?h('div',{className:'en-task-feedback','data-note-client-progress':'',role:'status','aria-live':'polite'},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(liveReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
       h(Progress,{entry:{key:'note:'+row.requestId,running:pending,preserveProgress:true,noteTask:{status}},activityNodes:[],startTime:row.startedAt,endTime:pending?null:row.finishedAt,seatProps:{},t}),
       row.error ? h(Markdown,{blocks:[{kind:'text',text:eworkNoteUiError(row.error)}],streaming:false,t}) : null,
-      finalReceipts.length?h('div',{'data-note-client-receipts':''},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(finalReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
-      row.result?.kind==='conversation' ? h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,reveal,t}) : null,
-      row.result?.kind==='text' ? h('div',{className:'en-task-result'},h(Markdown,{blocks:[{kind:'text',text:[feedback,row.result.markdown].filter(Boolean).join('\n\n')}],streaming:false,reveal,t})) : null,
-      row.result?.kind==='component' ? h(Markdown,{blocks:[{kind:'text',text:(row.phase==='accepted'?noteUiText("已创建并写入笔记组件："):noteUiText("已生成组件："))+(row.result.node.title||noteUiText("研究组件"))+'。'}],streaming:false,reveal,t}) : null,
+      finalReceipts.length?h('div',{'data-note-client-receipts':'',role:'status'},h(Markdown,{blocks:[{kind:'text',text:eworkNoteCapabilityReceiptText(finalReceipts,document.documentElement.dataset.odysseyLocale)}],streaming:false,t})):null,
+      resultStatus?h('div',{'data-note-client-receipts':'',role:'status'},h(Markdown,{blocks:[{kind:'text',text:resultStatus}],streaming:false,t})):null,
+      row.result?.kind==='conversation'&&conversation ? h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,reveal,t}) : null,
+      row.result?.kind==='text' ? h('div',{className:'en-task-result'},feedback?h('div',{role:'status'},feedback):null,h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,reveal,t})) : null,
+      row.result?.kind==='component' ? h('div',{role:'status'},(row.phase==='accepted'?noteUiText("已创建并写入笔记组件："):noteUiText("已生成组件："))+(row.result.node.title||noteUiText("研究组件"))+'。') : null,
       settled&&Actions?h(Actions,{text,time:row.finishedAt,clock:'end',onBranch:forkAt?()=>forkAt(row.completedSeq):undefined,branchUnavailable:branchUnavailable||!Number.isSafeInteger(row.completedSeq),extraActions:renderSlot?.('conversation.chat.assistant-actions',{messageId:'ework-note:'+row.requestId,text}),className:'osXY9a_actions',t}):null)
 }
 export function EWorkNotesActivity(props){useNotesActivityLocale();const rows=useNotesConversationRows(props.sessionId);return react.createElement('div',{className:'en-task-history Md3f7G_column','aria-label':noteUiText('笔记任务过程')},rows.map(row=>react.createElement(EWorkNoteConversationRow,{...props,key:row.requestId,row})))}

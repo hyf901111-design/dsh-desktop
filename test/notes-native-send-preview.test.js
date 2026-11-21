@@ -1,7 +1,8 @@
 import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import {afterAll,beforeAll,expect,it} from 'vitest'
-import {readFile} from 'node:fs/promises'
+import {mkdir,readFile} from 'node:fs/promises'
 import {createRequire} from 'node:module'
+import {join} from 'node:path'
 import {notesComposerSource,patchNotesComposer} from '../scripts/lib/notes-composer.mjs'
 import {stripHomeGuideNative} from '../scripts/lib/home-guide-native.mjs'
 import {stripHomeGuidePresentationNative} from '../scripts/lib/home-guide-presentation-native.mjs'
@@ -33,7 +34,10 @@ window.notesRoot=createRoot(document.querySelector('#notes'));window.notesRoot.r
 function NativeComposer(){const props={sessionId:'send-preview',eworkNotes:true,keyboard:ordinary,inputActions:ordinary.actions,useInput:select=>select(React.useSyncExternalStore(ordinary.state.subscribe,ordinary.state.getSnapshot)),useNotices:select=>select(React.useSyncExternalStore(ordinary.notices.subscribe,ordinary.notices.getSnapshot)),useSession:select=>select({running:false,promptError:null,subagent:null,removed:false}),useLexicon:select=>select(new Map()),useMenuLauncher:select=>select(undefined),useProjection:()=>undefined,draftImages:ids=>conversationController.draftImages(ids),resolveSubmitMode:()=> 'queue',t:key=>key,renderSlot:()=>null,stop:()=>{},command:()=>{}};return <EWorkSharedInputBar {...props}/>};
 createRoot(document.querySelector('#composer')).render(<NativeComposer/>);
 createRoot(document.querySelector('#history')).render(<nativeExports.__NoteHistory sessionId='send-preview' t={key=>key} UserBubble={undefined} Progress={({entry})=><div data-native-note-progress>{entry.noteTask.status}</div>} Markdown={()=>null} Actions={null}/>);
-`},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:require('node:path').resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]});
+`},bundle:true,platform:'browser',format:'iife',write:false,outfile:'fixture.js',conditions:['browser','import','style'],define:{'process.env.NODE_ENV':'"production"'},loader:{'.woff':'dataurl','.woff2':'dataurl','.svg':'dataurl'},plugins:[{name:'source-as-text',setup(b){
+ b.onResolve({filter:/\?raw$|\.css\?inline$/},async args=>({path:(await b.resolve(args.path.split('?')[0],{resolveDir:args.resolveDir,kind:args.kind})).path,namespace:'source-as-text'}))
+ b.onLoad({filter:/.*/,namespace:'source-as-text'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}))
+ }},{name:'expose-editor',setup(b){b.onLoad({filter:/preload\/notes\/editor\.tsx$/},async a=>({contents:(await readFile(a.path,'utf8')).replace('  const slashMenu = useMemo','  window.noteEditor=editor; const slashMenu = useMemo'),loader:'tsx'}))}},{name:'svg',setup(b){b.onResolve({filter:/\.svg\?inline$/},a=>({path:require('node:path').resolve(a.resolveDir,a.path.slice(0,-7)),namespace:'svg'}));b.onLoad({filter:/.*/,namespace:'svg'},async a=>({contents:'export default '+JSON.stringify('data:image/svg+xml;base64,'+Buffer.from(await readFile(a.path)).toString('base64')),loader:'js'}))}}]});
 
  script=output.outputFiles.find(f=>f.path.endsWith('.js')).text;css=output.outputFiles.find(f=>f.path.endsWith('.css')).text
  const playwright=await import(process.env.SHERLOCK_TEST_PLAYWRIGHT||'/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js');const {chromium}=playwright.default||playwright
@@ -42,9 +46,12 @@ createRoot(document.querySelector('#history')).render(<nativeExports.__NoteHisto
 afterAll(async()=>{await browser?.close()})
 async function fixture(dark=true){
  const context=await browser.newContext({viewport:{width:1100,height:900}}),page=await context.newPage(),errors=[];page.setDefaultTimeout(3500);page.on('pageerror',error=>errors.push(error.message))
- await page.route('http://127.0.0.1/notes-native-send',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root" data-dark="${dark}" style="left:10px;right:340px"><div id="notes" class="en-editor-host"></div></section><aside id="history" style="position:fixed;right:10px;top:20px;width:320px;max-height:450px;overflow:auto"></aside><aside id="composer" data-ework-notes-composer-host style="position:fixed;right:10px;bottom:20px;width:320px"></aside></body>`}));await page.goto('http://127.0.0.1/notes-native-send');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor();await page.locator('#composer textarea').waitFor();return {context,page,errors,input:page.locator('#composer textarea')}
+ await page.route('http://127.0.0.1/notes-native-send',route=>route.fulfill({contentType:'text/html',body:`<body ${dark?'data-ds-dark-theme':''}><section class="en-root" data-dark="${dark}" style="left:10px;right:340px"><div id="notes" class="en-editor-host"></div></section><aside id="history" style="position:fixed;right:10px;top:20px;width:320px;max-height:450px;overflow:auto"></aside><aside id="composer" data-ework-notes-composer-host style="position:fixed;right:10px;bottom:20px;width:320px"></aside></body>`}));await page.goto('http://127.0.0.1/notes-native-send');await page.addStyleTag({content:css});await page.addScriptTag({content:script});await page.locator('.en-title').waitFor().catch(error=>{throw errors.length?new Error(errors.join('\n'),{cause:error}):error});await page.locator('#composer textarea').waitFor();return {context,page,errors,input:page.locator('#composer textarea')}
 }
-async function send(page,text='请帮我改写正文。'){await page.locator('#composer textarea').fill(text);await page.locator('#composer textarea').press('Enter');await page.locator('.en-ai-loading').waitFor()}
+async function send(page,text='请帮我改写正文。'){
+ const composer=page.locator('#composer textarea');await composer.fill(text);await composer.press('Enter')
+ await page.locator('#history [data-note-task]:is([data-phase=preparing],[data-phase=generating])').last().waitFor()
+}
 it('uses the concise note reference label and requested writing placeholder',async()=>{
  const {context,page,input}=await fixture();try{expect(await page.locator('[data-note-context-badge]').textContent()).toBe('参考当前笔记内容');expect(await input.getAttribute('placeholder')).toBe('撰写、补充或改写笔记...')}finally{await context.close()}
 },15000)
@@ -149,16 +156,18 @@ for(const dark of [false,true])it(`keeps the preview handle inside an offset cli
  }finally{await context.close()}
 },15000)
 
-it('acknowledges immediately while real stages use the existing native progress region without a duplicate timer',async()=>{
+it('shows only real note stages while waiting for a validated public reply',async()=>{
  const {context,page,errors}=await fixture();try{
   await page.clock.install();await send(page,'优化本篇笔记')
-  const feedback=page.locator('#history [data-note-feedback]');await feedback.waitFor();expect(await feedback.textContent()).toContain('已收到，正在处理这条笔记指令。')
+  const history=page.locator('#history'),feedback=history.locator('[data-note-feedback]'),progress=history.locator('[data-native-note-progress]');await progress.waitFor();expect(await feedback.count()).toBe(0)
   const id=await page.evaluate(()=>window.noteTasks.find(row=>row.phase==='preparing').requestId)
   for(const [stage,label]of [['model','正在思考'],['thinking','正在思考'],['writing','正在撰写内容'],['validating','正在检查生成内容']]){
    await page.evaluate(({id,stage})=>document.dispatchEvent(new CustomEvent('sherlock:notes-generation-progress',{detail:{sessionId:'send-preview',requestId:id,stage,reasoning:'PRIVATE-REASONING',outputChars:0}})),{id,stage})
-   await expect.poll(()=>page.locator('[data-native-note-progress]').textContent()).toContain(label);expect(await feedback.textContent()).toBe('已收到，正在处理这条笔记指令。');expect(await feedback.count()).toBe(1);expect(await feedback.locator('.en-task-feedback-progress').count()).toBe(0)
+   await expect.poll(()=>progress.textContent()).toContain(label);expect(await progress.count()).toBe(1);expect(await history.innerText()).not.toMatch(/PRIVATE-REASONING|已收到，正在处理这条笔记指令/)
   }
-  await page.clock.runFor(2100);expect(await feedback.textContent()).toBe('已收到，正在处理这条笔记指令。')
+  await page.clock.runFor(2100);expect(await feedback.count()).toBe(0)
+  const evidence=process.env.SHERLOCK_LIVE_ACTIVITY_EVIDENCE
+  if(evidence){await mkdir(evidence,{recursive:true});await page.screenshot({path:join(evidence,'notes-before-validated-reply.png')})}
   await ready(page,'建议正文');await expect.poll(()=>feedback.count()).toBe(0);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
