@@ -431,31 +431,37 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "投委会用例与普通对话跨页双标记联合改稿",
+        "featureName": "演示目录缩略图、投委会用例入场选区及发送标记反馈",
         "branch": "codex/feat/presentation-cross-page-20261121",
-        "baseCommit": "8c4ccadb4b3a5ca6f95ac287d823cd40581834df",
-        "tipCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+        "baseCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+        "tipCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
         "commits": [
           {
-            "commit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
+            "commit": "eafd3a80eb5d067fe8067da2e006befad158a0a2",
             "parents": [
-              "8c4ccadb4b3a5ca6f95ac287d823cd40581834df"
+              "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05"
             ],
-            "subject": "支持跨页双标记同时改图与居中表格并更新投委会演示"
+            "subject": "优化投委会演示的入场与逐字稿选区，发送标记后自动收起评论"
+          },
+          {
+            "commit": "69e9a40a3527b2999f50f68e1d14f60e06e7996f",
+            "parents": [
+              "eafd3a80eb5d067fe8067da2e006befad158a0a2"
+            ],
+            "subject": "让幻灯片目录缩略图按可用宽度完整显示"
+          },
+          {
+            "commit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
+            "parents": [
+              "69e9a40a3527b2999f50f68e1d14f60e06e7996f"
+            ],
+            "subject": "给标记浏览器回归测试提供原生输入组件需要的文档环境"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/client-capabilities.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
-          },
-          {
-            "status": "M",
-            "path": "packages/dsh-research-task-runtime/presentation-edit-guide-chat.js"
+            "path": "packages/presentation-editor/overlay/App.vue"
           },
           {
             "status": "M",
@@ -463,19 +469,15 @@
           },
           {
             "status": "M",
-            "path": "scripts/lib/presentation-references.mjs"
+            "path": "packages/presentation-editor/overlay/odyssey.css"
           },
           {
             "status": "M",
-            "path": "src/main/presentation/edit-guide.ts"
+            "path": "scripts/lib/pptx-annotation-viewer.mjs"
           },
           {
             "status": "M",
-            "path": "src/main/presentation/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/presentation/store.ts"
+            "path": "scripts/lib/spreadsheet-client.mjs"
           },
           {
             "status": "M",
@@ -491,11 +493,19 @@
           },
           {
             "status": "M",
+            "path": "src/preload/presentation/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/presentation/view.ts"
+          },
+          {
+            "status": "M",
             "path": "src/shared/presentation-edit-guide-content.ts"
           },
           {
             "status": "M",
-            "path": "test/home-guides.test.ts"
+            "path": "test/pptx-annotation-browser.test.js"
           },
           {
             "status": "M",
@@ -504,10 +514,6 @@
           {
             "status": "M",
             "path": "test/presentation-edit-guide-content.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/presentation-reference-browser.test.js"
           }
         ],
         "checks": [
@@ -519,8 +525,8 @@
             ],
             "outcome": "passed",
             "summary": "编译演示编辑器",
-            "verifiedCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
-            "completedAt": "2026-11-20T23:56:22.290684Z",
+            "verifiedCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
+            "completedAt": "2026-11-21T00:29:14.338262Z",
             "timeoutMs": 180000
           },
           {
@@ -531,8 +537,8 @@
             ],
             "outcome": "passed",
             "summary": "客户端类型检查",
-            "verifiedCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
-            "completedAt": "2026-11-20T23:56:34.300284Z",
+            "verifiedCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
+            "completedAt": "2026-11-21T00:29:26.582107Z",
             "timeoutMs": 180000
           },
           {
@@ -540,32 +546,32 @@
               "./node_modules/node/bin/node",
               "node_modules/vitest/vitest.mjs",
               "run",
-              "test/workspace-sidebars.test.ts",
+              "test/pptx-annotation-browser.test.js",
               "test/presentation-workspace.test.ts",
               "test/presentation-edit-guide-content.test.ts",
               "test/presentation-edit-guide-composer-browser.test.js",
               "test/presentation-reference-browser.test.js",
               "test/client-capabilities.test.js",
-              "test/conversation-components-policy.test.js",
+              "test/knowledge-composer.test.js",
               "--maxWorkers=2"
             ],
             "outcome": "passed",
-            "summary": "演示归档、会话工具调用和四种侧栏布局",
-            "verifiedCommit": "420f2ccfdabfa1869b4684b0bed6bf4b6c46de05",
-            "completedAt": "2026-11-20T23:56:37.669575Z",
+            "summary": "标注、输入框和用例聚焦验证",
+            "verifiedCommit": "f66cb2f185108383dc5ae1fd5a1fd3fa1b2e17cf",
+            "completedAt": "2026-11-21T00:30:40.901078Z",
             "timeoutMs": 180000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "实际编辑器第 12 页 25 个单元格居中后实测最大中心偏差小于 0.01 像素，导出 PPTX 有 25 个 ctr 锚点并保留第 10 页八个数据。"
+          "summary": "在两种画布宽度用真实鼠标验证逐字稿换行坐标；发送相关标记收起气泡并保留评论，不同文档或无关标记不收起。四种画布宽度下全部 20 页的缩略图实测裁切为 0。"
         },
         "acceptanceCriteria": [
-          "跨页保留两个框选标签及意见并一次发送，同时修改两张幻灯片。",
-          "写好首页备注后直接翻页，先检查第 12 页表格，再回看第 10 页横向条形图。"
+          "收到双标记发送确认后立即收起对应评论框，所有标记和评论仍可打开。",
+          "入场沿用主题；查看第4、8页，默认矩形直接拖动；备注选区跟随鼠标并从引用下方输入。"
         ],
         "risks": [],
-        "generatedAt": "2026-11-20T23:56:39.009923Z"
+        "generatedAt": "2026-11-21T00:30:43.882999Z"
       }
     }
   ],
