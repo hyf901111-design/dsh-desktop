@@ -207,7 +207,7 @@ export function patchImageSessionTitle(source) {
   const imageSeed = event.data.source.clientMode === 'image' && /^image-task-[a-f0-9-]+$/i.test(session.id) &&
     this.get(session)?.source.kind === 'fallback' && this.get(session).messageSeqs.length === 0;
   if (imageSeed) this.appendFallback(session, collectSessionTitleMessages([event])[0]);`
-  source=once(source,old,seed)
+  source=once(source,'  '+old,'\t\t'+seed)
  } else {
   const collection='const text = event.data.content.filter((block) => block.type === "text").map((block) => block.text).join("\\n");'
   source=once(source,collection,collection.replace('const text =','const rawText =')+String.raw`
