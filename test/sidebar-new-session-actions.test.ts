@@ -400,6 +400,7 @@ it('opens Home directly and keeps New Chat and New Research as separate actions'
   let selected: string | undefined = 'image-task'
   w.document.addEventListener('sherlock:sidebar-home-opened', () => { imageActive = false })
   const openHome = vi.fn(runInNewContext('(' + handler + ')', {
+    sidebarNavigation: 0,
     document: w.document,
     CustomEvent: w.CustomEvent,
     ctx: { sessions: { clear() { selected = imageActive ? 'image-task' : undefined } } },

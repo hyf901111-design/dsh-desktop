@@ -87,6 +87,7 @@ export function navigateWorkspaceView(document: Document, sessionId: string, vie
   }
   const tab = workspaceViewButton(document, sessionId, view)
   if (!tab?.isConnected || tab.disabled) return false
+  const transferImage = view === 'research' && document.body.dataset.workspaceSurface === 'image-factory'
   document.body.dataset.sessionWorkspaceSwitch = sessionId
   keepWorkspaceViewsExpanded(document, sessionId, view)
   reveal()
@@ -97,6 +98,7 @@ export function navigateWorkspaceView(document: Document, sessionId: string, vie
   }
   document.documentElement.setAttribute(workspaceModeNavigationAttribute, '')
   current.click()
+  if (transferImage) document.dispatchEvent(new document.defaultView!.CustomEvent('sherlock:image-factory-retain-research', {detail:{sessionId}}))
   return true
 }
 

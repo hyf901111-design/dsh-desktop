@@ -110,6 +110,38 @@ export function installSidebarNewNote({sessions,workspaces,chatStore,inputHub,ge
   return()=>{disposed=true;invalidate();unsubscribe();window.removeEventListener('sherlock:sidebar-new-note-request',listener);window.removeEventListener('sherlock:notes-reset',invalidate);window.removeEventListener('sherlock:skill-menu-reset',invalidate);document.removeEventListener('sherlock:notes-edited',edited);document.removeEventListener('sherlock:workspace-surface-change',invalidate);document.removeEventListener('click',navigation,true)}
 }
 
+// Hiding an empty image before finding its destination lets the image cleanup
+// archive the selected session while the new board is being created.
+export async function openResearchFromImage(ctx, project, currentProject, isLatest) {
+  const before = ctx.sessions.list.getSnapshot().current
+  const originalProject = currentProject()
+  const owns = () => isLatest() && document.body.dataset.workspaceSurface === 'image-factory' &&
+    ctx.sessions.list.getSnapshot().current === before && currentProject() === originalProject
+  let target = project
+  if (target === undefined) {
+    const workspaces = ctx.workspaces.list.getSnapshot()
+    target = workspaces.items.find(item => item.sessionIds.includes(before))?.workspaceId ?? workspaces.recentWorkspaceId
+  }
+  let id
+  if (target == null) {
+    const cwd = await window.dshDesktop.standaloneConversationDirectory()
+    if (!owns()) return
+    id = await ctx.sessions.create({cwd})
+  } else {
+    const preferences = window[Symbol.for('sherlock:conversation-permission-default')]
+    const allows = await preferences?.prepareReuse()
+    if (!owns()) return
+    const canReuse = id => id !== before && !id.startsWith('image-task-') &&
+      [undefined,'新看板','New Board'].includes(ctx.sessions.list.getSnapshot().byId[id]?.title)
+    id = await ctx.workspaces.connectWorkspace(target,canReuse,allows)
+  }
+  if (!owns() || !id || id === before || !ctx.sessions.list.getSnapshot().ids.includes(id)) return
+  document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'))
+  try { window.sessionStorage.setItem('sherlock.conversation.initial-research-session.v1',id) } catch {}
+  window.dispatchEvent(new CustomEvent('sherlock:conversation-initial-research',{detail:{sessionId:id,newResearch:true}}))
+  ctx.sessions.open(id)
+}
+
 const PREFIX='/* sherlock:sidebar-new-note:',END='/* sherlock:sidebar-new-note:end */'
 function exact(source,from,to){if(source.split(from).length!==2)throw Error('Sidebar New Note anchor drift: '+from.slice(0,80));return source.replace(from,to)}
 function restore(source,kind){
@@ -156,6 +188,8 @@ export function patchSidebarNewNoteShell(input){
     [group,'wide && newSessionControls'],
     [props,props.replace('startSession,','openHome, startSession,')],
     [inject,`
+            let sidebarNavigation = 0;
+            const openImageResearch = ${openResearchFromImage.toString()};
             const currentProject = () => {
                 const pending = window[Symbol.for("sherlock:pending-conversation")];
                 return pending?.getCurrentWorkspace ? pending.getCurrentWorkspace() : pending?.getManualWorkspace();
@@ -179,17 +213,24 @@ export function patchSidebarNewNoteShell(input){
             };
             `+inject+`
                 openHome: () => {
+                    sidebarNavigation++;
                     // Hide workspace apps before notifying their session-selection listeners.
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
                     ctx.sessions.clear();
                 },`],
     ['startSession: (workspaceId) => {', `startSession: (workspaceId) => {
+                    sidebarNavigation++;
                     const selected = workspaceId === undefined ? currentProject() : workspaceId;
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
                     if (selected === null) { void startWithoutProject('chat'); return; }
                     workspaceId = selected;`],
     ['startResearchSession: (workspaceId) => {', `startResearchSession: (workspaceId) => {
+                    const revision = ++sidebarNavigation;
                     const selected = workspaceId === undefined ? currentProject() : workspaceId;
+                    if (document.body.dataset.workspaceSurface === 'image-factory') {
+                        void openImageResearch(ctx,selected,currentProject,() => revision === sidebarNavigation).catch(error=>console.warn('new research session failed:',error));
+                        return;
+                    }
                     document.dispatchEvent(new CustomEvent('sherlock:sidebar-home-opened'));
                     if (selected === null) { void startWithoutProject('research'); return; }
                     workspaceId = selected;`],
