@@ -37,7 +37,7 @@ export function allowTaskOpening(turn) {
 // The opening is its own model call, with no ability to act. Keep the user's
 // goals on both sides of pasted tables, without making the model solve the
 // entire analysis or inspect documents before it can acknowledge the task.
-function openingMessage(message, turn) {
+function openingMessage(message, turn, brief) {
   const authored = turn.text.replace(/```[\s\S]*?(?:```|$)/gu, ' ')
   const {blocks,context} = pastedWorkbenchInput(authored)
   const lines = (blocks.length ? context : authored)
@@ -54,7 +54,14 @@ function openingMessage(message, turn) {
     line.split(',').every(cell=>cell.length<=24) && line.split(',').length===lines[i+1].split(',').length)
   const prose = lines.filter((line,i) => line && !/^[{[<]/u.test(line) && !csvHeader[i] &&
     !(numericCsv[i] && (numericCsv[i-1] || numericCsv[i+1] || csvHeader[i-1]))).join(' ')
-  const goal = prose.length > 640 ? prose.slice(0, 480) + ' … ' + prose.slice(-156) : prose
+  let goal = prose.length > 640 ? prose.slice(0, 480) + ' … ' + prose.slice(-156) : prose
+  if (brief && goal.length > 120) {
+    const head = goal.slice(0,120)
+    const boundary = Math.max(head.lastIndexOf('。'),head.lastIndexOf('；'),head.lastIndexOf('. '))
+    const language = goal.match(/(?:用|使用|请以)[^，。；\n]{1,12}(?:回复|回答|作答)|\b(?:reply|respond|answer|write) in [a-z -]{2,25}/iu)?.[0]
+    goal = boundary >= 42 ? head.slice(0,boundary+1) : head+'…'
+    if (language && !goal.includes(language)) goal += ' '+language
+  }
   const labels = blocks.slice(0,2).map(rows=>rows[0].slice(0,8)
     .filter(cell=>/[\p{L}]/u.test(cell))
     .map(cell=>cell.replace(/\s+/gu,' ').slice(0,24)).join('、')).filter(Boolean)
@@ -75,7 +82,11 @@ function openingMessage(message, turn) {
     message.content?.some(part=>part.type==='image') && '本轮附有图片。',
     ...labels.map(header=>'原表字段：'+header),
   ].filter(Boolean).join('\n')
-  return {id:message.id,role:'user',source:message.source,content:[{type:'text',text:[goal,scope].filter(Boolean).join('\n')}]}
+  const outline = [goal,scope].filter(Boolean).join('\n')
+  // Treat the original imperative as quoted material. The communication call
+  // has a different job from the execution call that follows.
+  const text = brief ? '稍后要处理的任务摘录：'+JSON.stringify(outline)+'\n'+(blocks.length?'完整表格留待执行时读取，不评价资料齐全性。':'')+'现在只用一句话告诉我准备先核对什么。' : outline
+  return {id:message.id,role:'user',source:message.source,content:[{type:'text',text}]}
 }
 
 function milestone(session, turnNumber, firstFinding) {
@@ -102,7 +113,7 @@ export function registerModelTaskReplies(ctx) {
       const {message} = claimedWorkspaceMessage(agent.session,turn.mode) ?? {}
       if (!message) return request
       opened.add(turn)
-      return {...request, tools:[], [publicOpening]:true, messages:[openingMessage(message,turn)],
+      return {...request, tools:[], [publicOpening]:true, messages:[openingMessage(message,turn,request.provider==='ework-ark' && request.model==='deepseek-v4.1-flash')],
         system:'用用户的语言或指定的语言，直接写一句简短具体的开场。只陈述准备先核对什么，不追问、不解题、不声称已经执行，不输出工具格式或内部思考。'}
     }
     if (step === 2 && opened.has(turn) && request.messages?.at(-1)?.role === 'assistant') {

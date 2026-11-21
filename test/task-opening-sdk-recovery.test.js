@@ -130,3 +130,21 @@ it.each([
  expect(JSON.stringify(chunks)).not.toMatch(/private deliberation|reasoning|replayState/)
  expect(request.maxTokens).toBe(limit)
 })
+
+it('recovers once from a real reasoning-only opening limit without double counting public text or losing usage',async()=>{
+ const route={provider:'ework-ark',model:'deepseek-v4.1-flash',maxTokens:16384,reasoningEffort:'high'}
+ const budgets=[]
+ const llm={prepareCall:async config=>({config,stream:()=>{
+  budgets.push(config.maxTokens)
+  if (budgets.length===1) return [{type:'block-start',index:0,blockType:'reasoning'},
+   {type:'block-end',index:0,block:{type:'reasoning',text:'private'}},{type:'usage',usage:{inputTokens:257,outputTokens:1024}},
+   {type:'finish',reason:{kind:'max-tokens'}}]
+  return [...textStream(['我先核对两个交易日的曲线。']).slice(0,-1),{type:'usage',usage:{inputTokens:257,outputTokens:350}},close()]
+ }})}
+ const chunks=[]
+ for await(const chunk of boundedTaskOpeningStream(llm,{config:route},route,new AbortController().signal,x=>x,x=>x))chunks.push(chunk)
+ expect(budgets).toEqual([1024,2048]);expect(chunks.filter(c=>c.type==='finish')).toHaveLength(1)
+ expect(chunks.at(-2)).toEqual({type:'usage',usage:{inputTokens:514,outputTokens:1374}})
+ expect(chunks.filter(c=>c.type==='text-delta').map(c=>c.text)).toEqual(['我先核对两个交易日的曲线。'])
+ expect(JSON.stringify(chunks)).not.toContain('private')
+})

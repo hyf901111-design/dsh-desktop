@@ -1,7 +1,7 @@
 import {createHash} from 'node:crypto'
 import {boundedTaskOpeningStream,publicTaskOpeningStream,taskOpeningText} from './task-opening-stream.mjs'
 
-const openingFilter = '\n/* ework:public-task-opening:v4 */\n'+taskOpeningText.toString()+'\n'+publicTaskOpeningStream.toString()+'\n'+boundedTaskOpeningStream.toString()+'\n'
+const openingFilter = '\n/* ework:public-task-opening:v5 */\n'+taskOpeningText.toString()+'\n'+publicTaskOpeningStream.toString()+'\n'+boundedTaskOpeningStream.toString()+'\n'
 const openAttempt = 'const system = renderPrompt(assembly);\n\t\twhile (true) {'
 const openingScope = [
   [openAttempt,openAttempt+'\n\t\t\tlet opening = false;'],
@@ -20,18 +20,21 @@ function transformOpeningScope(source, inverse) {
 // A plugin can suggest an initial reasoning default only if the selected route
 // has no explicit effort. Like an adapter default, it expires before the next step.
 export function patchFirstResponseEffort(source) {
-  // Recognize the exact v3 helper bundle already installed on clients.
-  const legacyMarker = '\n/* ework:public-task-opening:v3 */\n'
-  const legacyStart = source.indexOf(legacyMarker)
-  if (legacyStart >= 0) {
-    const legacy = source.slice(legacyStart,legacyStart + 3895)
-    if (source.lastIndexOf(legacyMarker) !== legacyStart ||
-        createHash('sha256').update(legacy).digest('hex') !== 'ecdf392e35e052b5b630d0a5e2cf4f5e1518306c1e4fa1b18ae4b527fcf39c29') {
+  // Recognize only historical bytes produced by our own installer.
+  for (const [version,length,digest] of [
+    [3,3895,'ecdf392e35e052b5b630d0a5e2cf4f5e1518306c1e4fa1b18ae4b527fcf39c29'],
+    [4,4239,'ec2227cc59a8a2a3fd2240f31104e6245720ee479790c620e232f421401fa88b'],
+  ]) {
+    const marker = '\n/* ework:public-task-opening:v'+version+' */\n'
+    const start = source.indexOf(marker)
+    if (start < 0) continue
+    const legacy = source.slice(start,start + length)
+    if (source.lastIndexOf(marker) !== start || createHash('sha256').update(legacy).digest('hex') !== digest) {
       throw Error('Legacy task opening public stream definition drifted')
     }
     source=transformOpeningScope(source.replace(legacy,''),true)
   }
-  if (source.includes('/* ework:public-task-opening:v4 */')) {
+  if (source.includes('/* ework:public-task-opening:v5 */')) {
     if (source.split(openingFilter).length!==2) throw Error('Task opening public stream definition drifted')
     source=transformOpeningScope(source.replace(openingFilter,''),true)
   }
