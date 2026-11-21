@@ -117,3 +117,25 @@ it.each(fixture('workbench-etf-unit-header-first-calls.json').map((args,i)=>[i+1
   expect(()=>validateWorkbench({...malformed,requestId:'wrong-header',originalRequest})).toThrow()
   expect(()=>validateWorkbench({...args,requestId:'duplicate-header',originalRequest:originalRequest.replace('数量（股）\t公允价值（元）','公允价值（元）\t公允价值（元）')})).toThrow()
 })
+
+it('restores only a uniquely matched first ordinal from a real ETF disclosure and its full detail view',()=>{
+ const args=fixture('workbench-etf-omitted-ordinal-first-call.json'),originalRequest=requests.ETF持仓
+ const validate=(raw=originalRequest,call=args)=>validateWorkbench({...call,requestId:'source-ordinal',originalRequest:raw})
+ const {sharedDatasets:[source],panels:[chart,detail]}=validate()
+ const original=originalRequest.trim().split('\n').slice(-6).map(row=>row.split('\t'))
+ expect(source.fields.filter(f=>f.key!=='id').map(f=>f.label)).toEqual(original[0])
+ expect(source.records.map(row=>row['序号'])).toEqual(original.slice(1).map(row=>row[0]))
+ expect(source.records.map(row=>row.id)).toEqual(original.slice(1).map(row=>row[1]))
+ expect(chart.artifact.series[0].values).toEqual([3.81,3.38,2.86,2.66,2.23])
+ expect(detail.artifact.view.sections[0].fields[0]).toBe('序号')
+ expect(source.fields.find(f=>f.key==='fairValue').minimumFractionDigits).toBe(2)
+ expect(source.sourceUrl).toContain('sse.com.cn')
+ expect(validate(originalRequest.replace('全部字段','字段，不含序号')).panels[1].artifact.view.sections[0].fields).not.toContain('序号')
+ for(const raw of [
+  originalRequest.replace('序号\t','排名\t'),originalRequest.replace('序号\t股票代码','股票代码\t序号'),
+  originalRequest.replace('股票代码\t股票名称','股票名称\t股票名称'),originalRequest.replace('2\t600519','9\t600519'),
+  originalRequest.replace('数量（股）\t公允价值（元）','公允价值（元）\t数量（股）'),
+ ])expect(()=>validate(raw)).toThrow()
+ const partial=structuredClone(args);partial.sharedDatasets[0].fields.splice(1,1)
+ expect(()=>validate(originalRequest,partial)).toThrow()
+})

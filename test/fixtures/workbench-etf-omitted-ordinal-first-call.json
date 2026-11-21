@@ -1,0 +1,97 @@
+{
+  "title": "510310 易方达沪深300ETF · 2025年四季报前五大持仓复核",
+  "dataMode": "source",
+  "sharedDatasets": [
+    {
+      "id": "holdings510310",
+      "label": "510310 2025年四季报第5.3.1节 前五名持仓（截止日 2025-12-31）",
+      "pastedTable": {
+        "block": 1,
+        "header": true,
+        "identity": "code",
+        "numericFields": [
+          "shares",
+          "fairValue",
+          "ratio"
+        ]
+      },
+      "fields": [
+        {
+          "key": "code",
+          "label": "股票代码"
+        },
+        {
+          "key": "name",
+          "label": "股票名称"
+        },
+        {
+          "key": "shares",
+          "label": "数量（股）",
+          "unit": "股"
+        },
+        {
+          "key": "fairValue",
+          "label": "公允价值（元）",
+          "unit": "元"
+        },
+        {
+          "key": "ratio",
+          "label": "占基金资产净值比例（%）",
+          "unit": "%"
+        }
+      ],
+      "asOf": "2025-12-31（基金季报截止日）",
+      "note": "来源：上海证券交易所披露的《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》第10页第5.3.1节「报告期末按公允价值占基金资产净值比例大小排序的前五名股票投资明细」，原始披露文件 510310_20260122_JCA4.pdf。数量单位为股，公允价值单位为人民币元（保留至分），占比为占基金资产净值比例（%）原值，未做五只股票归一化处理。"
+    }
+  ],
+  "panels": [
+    {
+      "title": "前五大持仓 · 占基金资产净值比例（%）降序",
+      "type": "chart",
+      "size": "large",
+      "layout": "standard",
+      "note": "截止日 2025-12-31；横条长度为占基金资产净值比例（%）原值，单位：%。五只股票占比合计 14.94%，仅为前五名合计，未按 100% 归一化。",
+      "view": {
+        "dataset": "holdings510310",
+        "variant": "horizontal",
+        "unit": "%",
+        "label": "name",
+        "sections": [
+          {
+            "kind": "records",
+            "label": "name",
+            "fields": [
+              "ratio",
+              "code"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "前五大持仓全字段复核明细（截止日 2025-12-31）",
+      "type": "view",
+      "size": "large",
+      "layout": "wide",
+      "note": "保留原表全部字段与原顺序：序号、股票代码、股票名称、数量（股）、公允价值（元，保留至分）、占基金资产净值比例（%）。来源：上海证券交易所披露的基金季报（510310_20260122_JCA4.pdf，第5.3.1节）。",
+      "view": {
+        "dataset": "holdings510310",
+        "navigation": "flow",
+        "layout": "stack",
+        "sections": [
+          {
+            "kind": "records",
+            "title": "前五名股票投资明细",
+            "fields": [
+              "code",
+              "name",
+              "shares",
+              "fairValue",
+              "ratio"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -219,6 +219,16 @@ function pastedHeaderFields(labels,declared,derivedKeys,aliases){
   return {...field,key};
  });
 }
+// A disclosed ordinal can be omitted from the model's field declaration even
+// when every business column is present. Read the ordinal from the source.
+function omittedSourceOrdinal(raw,declared,identity,derivedKeys){
+ if(identity==='id'||derivedKeys.size||!Array.isArray(declared)||!Array.isArray(raw)||raw.length<2)return false;
+ const labels=raw[0];
+ return labels[0]==='序号'&&labels.length===declared.length+1&&new Set(labels).size===labels.length&&
+  declared.every((field,i)=>field?.label===labels[i+1]&&validKey(field.key)&&field.key!=='序号')&&
+  raw.slice(1).every((row,i)=>row.length===labels.length&&row[0]===String(i+1));
+}
+
 export function resolvePastedWorkbenchPlan(plan){
  const request=plan.originalRequest;
  const direct=Array.isArray(plan.sharedDatasets)&&plan.sharedDatasets.some(dataset=>dataset?.pastedTable!==undefined);
@@ -238,7 +248,7 @@ export function resolvePastedWorkbenchPlan(plan){
  const dateMatches=[...new Set([...narrative.matchAll(/\b\d{4}-\d{2}-\d{2}\b/gu)].map(match=>match[0]))];
  const asOf=dateMatches.length===1?dateMatches[0]:'用户消息所附原表，时点以记录为准';
  const identities=new Map(), fieldAliases=new Map();
- const pastedSources=new Map();
+ const pastedSources=new Map(), ordinalDetails=new Map();
  const aggregateIds=new Map(),datasetIds=new Set(datasets.map(dataset=>dataset?.id));
  const split=datasets.flatMap(draft=>{
   if(draft?.pastedTable===undefined||draft.aggregate?.dataset!==draft.id||draft.aggregate?.groupBy?.length!==0||typeof draft.id!=='string'||
@@ -269,7 +279,12 @@ export function resolvePastedWorkbenchPlan(plan){
   const raw=Number.isInteger(block)&&blocks[block-1];
   const aliases=new Map();
   const derivedKeys=new Set(Array.isArray(pastedTable.derive)?pastedTable.derive.map(field=>field?.key):[]);
-  const sourceFields=header&&raw ? pastedHeaderFields(raw[0],declared,derivedKeys,aliases) : declared;
+  const omitted=header===true&&omittedSourceOrdinal(raw,declared,pastedTable.identity,derivedKeys);
+  const rawDeclarations=omitted?[{key:'序号',label:'序号'},...declared]:declared;
+  if(omitted&&/(?:全部|所有|完整|全)(?:原始|原文)?字段|(?:保留|包含|包括|列出)[^。；;\n]{0,16}序号|\ball (?:original )?(?:fields|columns)\b/iu.test(context)&&
+     !/(?:不要|无须|无需|不含|省略|去掉|排除)[^。；;\n]{0,8}序号|除序号(?:以?外)?/u.test(context))
+   ordinalDetails.set(id,declared.map(field=>field.key));
+  const sourceFields=header&&raw ? pastedHeaderFields(raw[0],rawDeclarations,derivedKeys,aliases) : declared;
   if(declared===undefined&&(!sourceFields||sourceFields.some(field=>!field)))
    fail('请按原表头的列顺序声明 fields，每列提供有效的 key 与原文 label。');
   let {identity,numericFields=[],derive=[]}=pastedTable;
@@ -347,6 +362,13 @@ export function resolvePastedWorkbenchPlan(plan){
  return {...plan,sharedDatasets,panels:plan.panels.map(panel=>{
   const totals=panel?.type==='kpi'?aggregateIds.get(panel.view?.dataset):undefined;
   if(totals)return {...panel,view:{...panel.view,dataset:totals}};
+  const remaining=ordinalDetails.get(panel?.view?.dataset);
+  if(remaining&&panel.type==='view'&&Array.isArray(panel.view.sections)){
+   const sections=panel.view.sections.map(section=>section?.kind==='records'&&Array.isArray(section.fields)&&
+    section.fields.length===remaining.length&&remaining.every((key,i)=>section.fields[i]===key)?
+    {...section,fields:['序号',...section.fields]}:section);
+   panel={...panel,view:{...panel.view,sections}};
+  }
   return mapWorkbenchPanelFields(panel,(dataset,key)=>identities.get(dataset)?.has(key)?'id':key);
  })};
 }
