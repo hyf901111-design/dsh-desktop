@@ -18,6 +18,8 @@ it('keeps end-minus-start signs consistent for changes between disclosed Treasur
  expect(prompt('晨会讨论D1：4.62%降至4.58%，十年期美债收益率向哪个方向变动了几个基点？只在对话回答，不编辑演示。'))
    .toContain('末值 4.58% − 初值 4.62% = -0.04 个百分点 = -4 bp')
  expect(prompt('How many basis points from 4.55% to 4.58%?')).toContain('0.03 个百分点 = 3 bp')
+ expect(prompt('固收讨论D1：如果十年期4.58%、两年期4.25%，利差是多少个基点？只在对话中解释，不要改这份表。'))
+   .toContain('按本轮所问对象和区间答完即止')
  expect(prompt('4.58% 和 4.25% 两个期限的利差是多少基点？')).not.toContain('有符号变动已核算')
  expect(prompt('三天分别为 4.62%、4.55%、4.58%，请比较各日的基点变化。')).not.toContain('有符号变动已核算')
 })
