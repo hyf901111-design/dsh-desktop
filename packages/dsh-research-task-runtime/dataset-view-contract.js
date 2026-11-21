@@ -102,7 +102,14 @@ export function resolveWorkbenchPanelLabels(panel,datasets){
   if(resolved.type==='chart')return {...content,label:date.key};
   return {...content,...(Array.isArray(content.fields)&&!content.fields.includes(date.key)?{fields:[date.key,...content.fields]}:{})};
  });
- return {...resolved,view:{...resolved.view,sections}};
+ // A table has no separate category axis. An explicit table hint can repeat
+ // the single record section's leading field after resolving source headers.
+ const view={...resolved.view,sections};
+ if(recordsView&&sections.length===1&&sections[0]?.kind==='records'&&
+    typeof view.label==='string'&&Array.isArray(sections[0].fields)&&
+    sections[0].fields[0]===view.label&&fields?.some(field=>field.key===view.label))
+  delete view.label;
+ return {...resolved,view};
 }
 function check(condition,message){if(!condition)throw Error(message)}
 function exact(value,required,optional=[]){return object(value)&&required.every(k=>Object.hasOwn(value,k))&&Object.keys(value).every(k=>required.includes(k)||optional.includes(k))}
@@ -543,7 +550,7 @@ export const DATASET_HIERARCHY_SCHEMA={type:'object',additionalProperties:false,
  dataset:{type:'string',required:true},levels:{...fieldKeysSchema,required:true},details:{...fieldKeysSchema,description:'可选。来源快照内额外保留的原表字段。'}
 }};
 export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{
- dataset:{type:'string',required:true},label:{type:'string',description:'图表分类字段；优先放在唯一的 sections[0].label。'},type:{type:'string',enum:['view','table','chart','kpi','timeline'],description:'通常省略，面板类型由 panel.type 声明。'},variant:{type:'string',enum:['bar','horizontal','line','area','groupedBar','dumbbell','funnel','candlestick','scatter'],description:'原生图表变体。用户贴出的完整金融台账可用 candlestick 或 scatter。'},unit:{type:'string',description:'仅 type:chart 的来源原单位。'},note:{type:'string',description:'组件的额外业务说明，不替代共同数据来源。'},subject:{type:'string'},filters:{...fieldKeysSchema,description:'最多4个用户可切换筛选字段；范围子集另用where声明。'},details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs','stack'],description:'连续显示各分区用 flow（兼容 stack），标签切换用 tabs。'},layout:{type:'string',enum:['stack','split']},
+ dataset:{type:'string',required:true},label:{type:'string',description:'仅图表使用分类字段，优先放在唯一的 sections[0].label。明细表只填 records 分区的 fields。'},type:{type:'string',enum:['view','table','chart','kpi','timeline'],description:'面板类型由 panel.type 声明。明细表使用 panel.type=view 和 records 分区，省略内层 type。'},variant:{type:'string',enum:['bar','horizontal','line','area','groupedBar','dumbbell','funnel','candlestick','scatter'],description:'原生图表变体。用户贴出的完整金融台账可用 candlestick 或 scatter。'},unit:{type:'string',description:'仅 type:chart 的来源原单位。'},note:{type:'string',description:'组件的额外业务说明，不替代共同数据来源。'},subject:{type:'string'},filters:{...fieldKeysSchema,description:'最多4个用户可切换筛选字段；范围子集另用where声明。'},details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs','stack'],description:'连续显示各分区用 flow（兼容 stack），标签切换用 tabs。'},layout:{type:'string',enum:['stack','split']},
  where:{type:'array',description:'最多8个默认范围条件，多个条件为且。in用values；gt/gte（大于/含等号）、lt/lte（小于/含等号）、ne（不等于）对数值列用value；notNull不提供值。',items:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},op:{type:'string',required:true,enum:['in','notNull','gt','gte','lt','lte','ne']},value:{type:'number'},values:{type:'array',items:{type:'json',description:'来源字段的原始字符串、数字、布尔或null，不接受对象或表达式。'}}}}},
  groupBy:{...fieldKeysSchema,description:'可省略。仅用于引用全表汇总的指标卡时可写 []，计算项仍须在 sharedDatasets.aggregate 声明。'},
  sections:{type:'array',description:'显式声明记录、图表和排程字段。只引用一条全表汇总的指标卡，或直接显示已声明筛选范围内所有字段的记录表，可省略。',items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
