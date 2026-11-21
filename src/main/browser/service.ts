@@ -422,7 +422,17 @@ export function registerBrowserApp(options:Options){
    const check=()=>{if(current().id!==tab.id||live.get(tab.id)?.epoch!==epoch||!appActive||ownerEpoch!==owner||ownerSessionId!==sessionId)throw Error('当前网页已变化，请重新观察。')};check()
    // Chromium can resolve loadURL just before its loading flag clears.
    const wc=live.get(tab.id)!.view.webContents;if(wc.isLoadingMainFrame())await new Promise<void>(resolve=>{const ready=()=>{clearTimeout(timer);wc.removeListener('did-stop-loading',ready);resolve()};const timer=setTimeout(ready,1000);wc.once('did-stop-loading',ready);if(!wc.isLoadingMainFrame())ready()})
-   check();return pageAgent.run({op:'observe'},signal,authority())
+   check()
+   const authorize=authority()
+   try{return await pageAgent.run({op:'observe'},signal,authorize)}
+   catch(error){
+    // Navigation already succeeded. A page hydrating during its initial scan
+    // can be read again without opening a second tab or repeating navigation.
+    if(!(error instanceof Error)||!error.message.includes('网页在观察期间发生变化，请重新观察。'))throw error
+    signal?.throwIfAborted()
+    check()
+    return pageAgent.run({op:'observe'},signal,authorize)
+   }
   }
   const authorize=authority();authorize();const result=await pageAgent.run(input,signal,authorize);authorize();pageEdited=result.observation.canUndo;publish();return result
  }
