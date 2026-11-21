@@ -1,3 +1,6 @@
+import {validImageOutputSize as validCanvasSize} from '../../packages/dsh-research-task-runtime/image-output-size.js'
+export {validCanvasSize}
+
 export const canvasFonts = [
   { family: 'system-ui', label: '系统默认', english: 'System' },
   { family: 'Source Han Sans CN', label: '思源黑体', english: 'Source Han Sans', asset: { file: 'SourceHanSansCN.woff2', weight: '250 900' } },
@@ -47,11 +50,6 @@ export interface CanvasStorage {
   read(scope: CanvasScope): Promise<CanvasRead>
   write(value: CanvasWrite): Promise<void>
   adopt(sessionId: string, epoch: number): Promise<boolean>
-}
-
-export function validCanvasSize(width: number, height: number) {
-  return Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 &&
-    width <= 4096 && height <= 4096 && width * height <= 8_000_000
 }
 
 export function validCanvasScope(value: unknown): value is CanvasScope {

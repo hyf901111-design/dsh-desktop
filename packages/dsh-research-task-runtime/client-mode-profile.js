@@ -1,3 +1,4 @@
+import {workspaceAuthoredText} from './client-mode-reference.js'
 import {canvasHumanText} from './canvas-task-routing.js'
 import {createClientCapabilityRegistry} from './client-capabilities.js'
 import {classifyResearchCreationRequest} from './component-delivery-intent.js'
@@ -31,17 +32,27 @@ export function clientModeTurn(session) {
     const event = events[state.end], data = event.data
     state.last = event
     if (event.type === 'turn/start' || event.type === 'turn/end') state.message = undefined
-    if (event.type === 'user/message' && data?.source?.kind === 'user') state.message = data
+    if (event.type === 'user/message' && data?.source?.kind === 'user') {
+      state.message = data
+      state.messageEvent = event
+    }
     if (event.type !== 'agent/inbox/spliced') continue
     const queue = Object.hasOwn(state.queues,data?.target) && state.queues[data.target]
     if (!queue || !Number.isSafeInteger(data.start) || data.start < 0) continue
     const removed = queue.splice(data.start, data.removedCount ?? 0, ...(data.inserted ?? []))
     const claimed = data.outcome !== 'canceled' && removed.findLast(message => message.source?.kind === 'user')
-    if (claimed) state.message = claimed
+    if (claimed) {
+      state.message = claimed
+      state.messageEvent = event
+    }
   }
   const message = state.message
   if (message === state.parsedMessage) return state.profile
+  // Committing an inbox claim can reconstruct the same human message.
+  const previous = state.parsedMessage
   state.parsedMessage = message
+  if (['spreadsheet','presentation'].includes(message?.source?.clientMode) && message?.id && message.id === previous?.id && message.source?.clientMode === previous?.source?.clientMode &&
+      JSON.stringify(message.content) === JSON.stringify(previous.content)) return state.profile
   state.profile = undefined
   if (!Object.hasOwn(modes, message?.source?.clientMode)) return
   const blocks = (message.content ?? []).filter(block => block.type === 'text')
@@ -50,8 +61,17 @@ export function clientModeTurn(session) {
   // The desktop app appends full page text and cited documents to the user
   // message. Keep them on the model wire as evidence, outside action intent.
   const authored = canvasHumanText(contents.replace(/<browser-source>[\s\S]*?<\/browser-source>/gu,'')) ?? ''
-  state.profile = {...describeTurn(message.source.clientMode, authored, factory), messageId:message.id}
+  const text = workspaceAuthoredText(message.source.clientMode, authored)
+  state.profile = {...describeTurn(message.source.clientMode, text, factory), workspaceTagged:text!==authored, messageId:message.id}
   return state.profile
+}
+
+// Before user/message is committed, the loop's actual claim identifies the
+// admitted draft. Queued or cancelled messages do not enter this projection.
+export function claimedWorkspaceMessage(session, mode) {
+  if (clientModeTurn(session)?.mode !== mode) return
+  const state = projections.get(session)
+  return {message:state.message, event:state.messageEvent}
 }
 
 const visualObject = /图片|图像|插[图画]|海报|照片|封面|壁纸|头像|图标|摄影|视觉稿|宣传画|配图|logo|poster|image|picture|photo|illustration|wallpaper|portrait|icon/iu
@@ -134,7 +154,9 @@ function nativeTool(tool, entries) {
   return {...tool,
     description:'执行当前模式已声明的原生能力。直接使用所需操作；宿主在执行时校验当前账号、模式、文档、选区和权限。arguments 按所选能力的真实定义填写。' +
       entries.map(item => '\n' + item.id + '：' + item.description + ' ' + JSON.stringify(item.parameters)).join(''),
-    parameters:{...parameters, properties:{...parameters.properties, capability:{type:'string', enum:ids}}},
+    parameters:{...parameters, properties:{...parameters.properties, capability:{type:'string', enum:ids},
+      ...(parameters.properties?.arguments && {arguments:{...parameters.properties.arguments,
+        description:'按本轮已声明的 capability 定义填写。零参数操作可省略此字段。'}})}},
   }
 }
 

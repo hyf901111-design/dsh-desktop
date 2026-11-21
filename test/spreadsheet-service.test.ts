@@ -68,6 +68,7 @@ it('binds two native inline references in submitted order, even after the live s
   const instruction='读取〔表格选区 "Sheet1"!B2:B3 #0123456789ab〕，写到〔表格选区 "Sheet1"!D2:D3 #abcdef012345〕'
   spreadsheet.admit(key,instruction,bookId,[a,b])
   spreadsheet.admit(key,'另一条消息',bookId,[])
+  expect(spreadsheet.referenceSettings(key,instruction)).toMatchObject({referenceScope:'ranges',referenceCount:2})
   const lease=await acquire(instruction)
   await expect(lease.handlers.inspectSpreadsheet({scope:'selected'},context)).rejects.toThrow('多个')
   await expect(lease.handlers.inspectSpreadsheet({scope:'workbook'},context)).resolves.toMatchObject({data:{references:[{index:1,range:'B2:B3',offset:2},{index:2,range:'D2:D3',offset:instruction.indexOf('〔',3)}]}})

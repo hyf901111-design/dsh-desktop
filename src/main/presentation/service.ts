@@ -259,6 +259,39 @@ export function installPresentation(options: {
       }
       const inspectPresentation: CapabilityHandler<'presentation.inspect'> = async (args) => {
         guard()
+        if (args.scope === 'reference') {
+          if (args.slideId !== undefined || args.startPage !== undefined || !admitted?.references.length)
+            throw Error('请仅读取本轮已受理的演示选区。')
+          const pages = new Map<string, NonNullable<ReturnType<typeof store.inspect>['currentSlide']>>()
+          const references = admitted.references.map(ref => {
+            let page = pages.get(ref.slideId)
+            if (!page) {
+              page = store.inspect(key, ref.slideId, ref.slideId).currentSlide
+              if (!page) throw Error('引用的幻灯片已移除。')
+              pages.set(ref.slideId, page)
+            }
+            if (ref.kind === 'notes') {
+              if (page.notes.slice(ref.start, ref.start! + ref.quote!.length) !== ref.quote)
+                throw Error('备注选区已变化，请重新选择。')
+              return ref
+            }
+            if (ref.kind === 'element') {
+              const element = page.elements.find(el => el.id === ref.id)
+              if (!element) throw Error('引用对象已移除。')
+              return { ...ref, element }
+            }
+            const mark = page.marks.find(item => item.id === ref.id)
+            if (!mark) throw Error('引用标注已移除。')
+            const targets = page.elements.filter(el => mark.nodeIds?.includes(el.id)).map(el => {
+              const points = mark.chartPoints?.filter(point => point.elementId === el.id)
+              if (!points?.length) return el
+              return { id: el.id, type: el.type, points: points.map(point => ({ ...point,
+                value: el.data?.series?.[point.seriesIndex]?.[point.pointIndex] })) }
+            })
+            return { ...ref, comment: mark.comment, targets }
+          })
+          return { status: 'succeeded', message: '已读取演示选区。', data: { revision: store.read(key).revision, references } }
+        }
         const data = store.inspect(
           key,
           admitted?.slideId ?? store.position(key),

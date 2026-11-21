@@ -1,7 +1,8 @@
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {createHash} from 'node:crypto'
-import {createOpenAIImageProvider,ImageGenerationError,validateGeneratedImage} from './image-generation-provider.js'
+import {createOpenAIImageProvider,fitGeneratedImage,ImageGenerationError,validateGeneratedImage} from './image-generation-provider.js'
 import {clientModeTurn} from './client-mode-profile.js'
+import {providerSize,requestedImageSize} from './image-output-size.js'
 import {readImageFactoryContext} from './image-factory-context.js'
 import {cutoutMaskPrompt,describeCutoutSubjects,prepareImageCutout} from './image-cutout.js'
 
@@ -64,7 +65,7 @@ export function registerImageGenerationTool(ctx,options={}){
  const unregister=ctx.tools.register(defineTool({
   name:TOOL,
   description:'仅在用户本轮明确要求生成或修改实际图片时调用，并在当前对话中交付。参考图随本轮消息上传时，省略 reference_image_ids 即可使用这些附件，无需用 Bash 或其他工具查找。prompt 描述最终画面；一次生成一张真实图片。成功交付单纯的生图请求后结束当前轮次。用户还有后续任务时设置 continue_after_delivery。不得自动重试失败的付费请求。',
-  parameters:{prompt:{type:'string',required:true,description:'完整画面描述，保留用户要求的文字、构图与风格。'},model:{type:'string',...(options.hosted?{description:'省略时使用默认模型；仅使用系统上下文列出的模型。'}:{enum:[...models.keys()]})},size:{type:'string',enum:['auto','1024x1024','1024x1536','1536x1024']},quality:{type:'string',enum:['auto','low','medium','high','xhigh','max']},background:{type:'string',enum:['auto','opaque','transparent']},reference_image_ids:{type:'array',items:{type:'string'},description:'最多四个本会话图片附件 ID。省略时使用本轮上传图；需要引用历史图或指定图片时填入对应 ID；明确不使用参考图时传空数组。'},layer_target:{type:'number',description:'图像应用定向修改时，被引用的图片图层编号。多标签消息必须填写。'},foreground_subjects:{type:'array',items:{type:'string'},description:'仅供「去背景」按钮使用。描述画布参考图中实际应保留的主要实体，每项用一个短语注明物体及可辨认特征。'},continue_after_delivery:{type:'boolean',description:'生图后还有用户明确要求的后续工作（例如制作幻灯片）时传 true；仅需交付图片时省略。'}},
+  parameters:{prompt:{type:'string',required:true,description:'完整画面描述，保留用户要求的文字、构图与风格。'},model:{type:'string',...(options.hosted?{description:'省略时使用默认模型；仅使用系统上下文列出的模型。'}:{enum:[...models.keys()]})},size:{type:'string',enum:['auto','1024x1024','1024x1536','1536x1024'],description:'模型尺寸预设。用户指定画面宽高比或输出像素时可用 auto；保留其构图要求，宿主按指定尺寸保存生成图片。'},quality:{type:'string',enum:['auto','low','medium','high','xhigh','max']},background:{type:'string',enum:['auto','opaque','transparent']},reference_image_ids:{type:'array',items:{type:'string'},description:'最多四个本会话图片附件 ID。省略时使用本轮上传图；需要引用历史图或指定图片时填入对应 ID；明确不使用参考图时传空数组。'},layer_target:{type:'number',description:'图像应用定向修改时，被引用的图片图层编号。多标签消息必须填写。'},foreground_subjects:{type:'array',items:{type:'string'},description:'仅供「去背景」按钮使用。描述画布参考图中实际应保留的主要实体，每项用一个短语注明物体及可辨认特征。'},continue_after_delivery:{type:'boolean',description:'生图后还有用户明确要求的后续工作（例如制作幻灯片）时传 true；仅需交付图片时省略。'}},
   output:{schema:{type:'object',additionalProperties:true},render:(_args,value)=>[{type:'text',text:JSON.stringify(value)},{type:'image',attachment:value.image}]},
   isConcurrencySafe:()=>false,
   presentCall:()=>({card:'generic',title:'生成图片',kind:'write'}),
@@ -101,12 +102,16 @@ export function registerImageGenerationTool(ctx,options={}){
       : [canvasReference,...attachedIds.filter(id=>id!==canvasReference)]}),
    } : routed,models,hosted?.models[0]?.id??defaultModel,attachedIds)
    const provider=models.get(input.model).provider
-   const hostedCanvas=!!factory&&!cutout&&factory.operation!=='region'&&provider===hosted
+   const userText=turn?.text ?? factory?.text ?? (authority.content??[]).filter(block=>block.type==='text').map(block=>block.text).join('\n')
+   const outputSize=(!factory||factory.operation==='generate') ? requestedImageSize(userText,true) : undefined
+   const compositionSize=outputSize ?? factory
+   const hostedCanvas=!!compositionSize&&!cutout&&factory?.operation!=='region'&&provider===hosted
    // The hosted gateway appends its own aspect-ratio hint to preset sizes.
    // Use its resolution preset alone and supply the actual canvas proportions.
    if(hostedCanvas)input.size='auto'
+   else if(outputSize&&!factory)input.size=providerSize(outputSize)
    const composition=factory?.editBounds ? selectedRegionInstructions(factory.editBounds)
-    : hostedCanvas ? '输出画面的宽高比为 '+canvasAspectRatio(factory)+'。画面铺满该比例，保留完整主体。' : ''
+    : hostedCanvas ? '输出画面的宽高比为 '+canvasAspectRatio(compositionSize)+'。画面铺满该比例，保留完整主体。' : ''
    const referenceGuidance=canvasReference&&(factory.operation==='edit'||target)&&input.reference_image_ids.length>1
     ? '第一张参考图是要编辑的' + (factory.targetLayer||target ? '图片图层' : '画布') + '，后续图片用于参照用户指定的特征。' : ''
    const framing=[composition,referenceGuidance].filter(Boolean).join('\n')
@@ -151,7 +156,7 @@ export function registerImageGenerationTool(ctx,options={}){
      const result=await generate({...input,prompt,references:matte?[matte.reference]:loaded},{signal,maxBytes,requestId,assertCurrent:()=>check(agent,session,authority,signal)})
      check(agent,session,authority,signal)
      validateGeneratedImage(result.data,maxBytes)
-     const data=matte?await matte.applyMask(result.data):result.data
+     const data=matte?await matte.applyMask(result.data):outputSize?await fitGeneratedImage(result.data,outputSize):result.data
      check(agent,session,authority,signal)
      validateGeneratedImage(data,maxBytes)
      const name=factory?.title.replace(/[\\/\p{Cc}]/gu,' ').trim()
@@ -160,7 +165,7 @@ export function registerImageGenerationTool(ctx,options={}){
      return{kind:KIND,version:1,ok:true,requestKey:key,model:input.model,image,
       ...(factory&&{factory:{id:factory.id,title:factory.title,operation:factory.operation,...target&&{layerTarget:target.key}}}),
       guidance:cutout ? '已移除当前画布的图片背景，结果为保留透明通道的 PNG。' : factory ? '图片已放入当前图像画布。'+(factory.operation==='region' ? '' :
-       '画布目标尺寸为 '+factory.width+' × '+factory.height+' 像素。使用画布尺寸报告本轮结果。')+
+       '画布目标尺寸为 '+compositionSize.width+' × '+compositionSize.height+' 像素。使用画布尺寸报告本轮结果。')+
        '用户明确要求后续工作时继续完成。' :
        '图片已直接显示在当前会话。继续完成用户明确要求的其他工作，无需重复展示或生成。'}
     }catch(error){

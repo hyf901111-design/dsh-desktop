@@ -16,8 +16,8 @@ const referenceSettings=(admitted?:Admission)=>{
   ?'本轮只默认参考明确引用的表格选区。用 scope=reference 按引用读取；用户明确要求时再查阅其他区域。'
   :referenceScope==='none'
    ?'用户已关闭本轮的当前表格参考。不要自行读取工作簿内容；仅在用户明确要求读取或操作工作簿时使用表格工具。'
-   :'本轮默认参考当前工作簿。涉及表格内容或指代当前数据时，先用 client_capabilities 确认可用表格能力，再用 spreadsheet.inspect 检查工作表并读取相关区域。'
- return {referenceScope,guidance}
+   :'本轮默认参考当前工作簿。涉及表格内容或指代当前数据时，用 spreadsheet.inspect 检查工作表并读取相关区域。'
+ return {referenceScope,guidance,...(admitted?.references.length ? {referenceCount:admitted.references.length} : {})}
 }
 export class SpreadsheetService{
  private admitted=new Map<string,Map<string,Admission>>()
