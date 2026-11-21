@@ -4473,6 +4473,64 @@
         ],
         "generatedAt": "2026-11-21T16:18:15.406314+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "恢复空白笔记顶栏切换页签",
+        "branch": "codex/feat/note-header-switcher-20261122",
+        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
+        "tipCommit": "a84845008175eb9841ee82990220c5f4a86f3bb9",
+        "commits": [
+          {
+            "commit": "a84845008175eb9841ee82990220c5f4a86f3bb9",
+            "parents": [
+              "216fb30180c5941ccf8f1be873948762e933ea40"
+            ],
+            "subject": "在空白笔记标题后恢复工作区切换页签"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-rendered.test.js",
+              "-t",
+              "hides the session switcher|keeps the shared switcher expanded",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "复验空白笔记页签展开、收起和原会话跨模式导航。",
+            "verifiedCommit": "a84845008175eb9841ee82990220c5f4a86f3bb9",
+            "completedAt": "2026-11-21T16:21:11.542612+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "原包注册了笔记模式但误用对话首页显示条件，已记录真实控件树。"
+        },
+        "acceptanceCriteria": [
+          "新笔记进入即可点击切换页签"
+        ],
+        "risks": [
+          "专用个人或分享看板保留其原有顶栏。"
+        ],
+        "generatedAt": "2026-11-21T16:21:11.542612+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -5139,6 +5197,19 @@
         "run",
         "test/image-factory-native.test.js",
         "test/image-factory.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/browser-app-rendered.test.js",
+        "-t",
+        "hides the session switcher|keeps the shared switcher expanded",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
