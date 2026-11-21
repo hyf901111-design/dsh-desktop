@@ -4339,6 +4339,87 @@
         ],
         "generatedAt": "2026-11-21T15:40:46.765914+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复普通会话沿用图像模板标题",
+        "branch": "codex/feat/chat-title-scope-20261122",
+        "baseCommit": "216fb30180c5941ccf8f1be873948762e933ea40",
+        "tipCommit": "7c7b84e253b7d43fcab4533aec5b8b9f1c8ea28c",
+        "commits": [
+          {
+            "commit": "7c7b84e253b7d43fcab4533aec5b8b9f1c8ea28c",
+            "parents": [
+              "216fb30180c5941ccf8f1be873948762e933ea40"
+            ],
+            "subject": "按普通首问更新会话主题并保留图片模板页签名称"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-history-mode.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-title-subject.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-history-navigation.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/session-title-subject.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/session-title-subject.test.js",
+              "test/image-history-navigation.test.js",
+              "test/image-factory-native.test.js",
+              "test/image-session-title.test.js",
+              "test/browser-app-native.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "验证普通对话与图像画布标题来源和旧会话兼容。",
+            "verifiedCommit": "7c7b84e253b7d43fcab4533aec5b8b9f1c8ea28c",
+            "completedAt": "2026-11-21T16:17:10.222443+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "旧签名客户端真实会话记录已复验，集成后复测。"
+        },
+        "acceptanceCriteria": [
+          "普通历史会话标题恢复为用户实际主题",
+          "保留已编辑画布与模板页签名称"
+        ],
+        "risks": [
+          "旧会话须有明确标题来源才修复。"
+        ],
+        "generatedAt": "2026-11-21T16:17:10.222443+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4979,6 +5060,21 @@
         "test/model-task-opening-context.test.js",
         "-t",
         "keeps identifiers",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/session-title-subject.test.js",
+        "test/image-history-navigation.test.js",
+        "test/image-factory-native.test.js",
+        "test/image-session-title.test.js",
+        "test/browser-app-native.test.js",
+        "--maxWorkers=1",
         "--reporter=dot"
       ],
       "timeoutMs": 240000
