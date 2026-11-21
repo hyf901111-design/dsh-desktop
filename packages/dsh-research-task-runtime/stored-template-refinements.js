@@ -121,7 +121,7 @@ export function refineStoredTemplateHtml(html){
   const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   html=html.replace(/(<strong class="indicator-value(?: indicator-value-text)?" data-refresh-key="kpi-(\d+)"[^>]*>)[^<]*/g,(full,open,index)=>{
    const item=model.data.items[Number(index)];
-   return item&&Object.hasOwn(item,'value')?open+escape(displayKpiValue(item.value,item.label,item.unit))+(item.value!==null&&item.unit?' ':''):full;
+   return item&&Object.hasOwn(item,'value')?open+escape(displayKpiValue(item.value,item.label,item.unit,item.minimumFractionDigits))+(item.value!==null&&item.unit?' ':''):full;
   });
   return html+`<style data-kpi-value-fit="v5">${KPI_VALUE_FIT_CSS}</style>`;
  }

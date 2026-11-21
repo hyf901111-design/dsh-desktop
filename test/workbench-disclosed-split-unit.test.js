@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
+import { displayKpiValue } from '../packages/dsh-research-task-runtime/kpi-value-format.js'
 import { validateWorkbench } from '../packages/dsh-research-task-runtime/workbench-plan.js'
 
 const input = JSON.parse(readFileSync(new URL('./fixtures/workbench-disclosed-split-unit-submission.json',import.meta.url),'utf8'))
@@ -35,7 +36,7 @@ it('resolves an unambiguous original header in a keyed numeric declaration and p
   const args=structuredClone(input.managerSubmitted)
   // The manager's first submission used English keys and exact printed labels.
   // Retain its schema while keeping the successfully submitted aggregation.
-  args.sharedDatasets[0]=input.managerFirstSchema
+  args.sharedDatasets[0]=input.managerFirst.sharedDatasets[0]
   const url=input.managerRequest.match(/^https:\/\/\S+/mu)[0]
   const result=compile(args,input.managerRequest)
   const [kpi,chart,detail]=result.panels
@@ -51,4 +52,25 @@ it('resolves an unambiguous original header in a keyed numeric declaration and p
   const {sharedDatasets}=compile(mixed,input.managerRequest)
   expect(sharedDatasets.find(s=>s.id==='other')).not.toHaveProperty('sourceUrl')
   expect(fields[3].key).toBe('shares')
+})
+
+it.each(['managerFirst','managerSecond'])('compiles the manager’s %s measures without changing count or exact decimal sums', which=>{
+  const raw=input[which]
+  // The separate two-row panel still has its own scope check. Exercise these
+  // same three submitted measures independently of that panel's layout.
+  const calc={...raw,panels:raw.panels.filter(p=>p.title!=='第一名与第二名差距')}
+  const result=compile(calc,input.managerRequest)
+  expect(result.panels[0].artifact.items.map(({value})=>value)).toEqual([14.94,3.81,5])
+  expect(result.panels[0].artifact.items[0].minimumFractionDigits).toBe(2)
+  const precision=compile(calc,input.managerRequest.replace('3.81\n','3.8125\n'))
+  const aggregate=precision.panels[0].artifact.items[0]
+  expect(aggregate.value).toBe(14.9425)
+  expect(displayKpiValue(aggregate.value,aggregate.label,aggregate.unit,aggregate.minimumFractionDigits)).toBe('14.9425')
+  expect(displayKpiValue(4,'总值','元',2)).toBe('4.00')
+  const unsafe=structuredClone(raw)
+  unsafe.sharedDatasets[1].aggregate.measures[2].field='名称'
+  expect(()=>compile(unsafe,input.managerRequest)).toThrow('计数仅可引用')
+  const badDigits=structuredClone(raw)
+  badDigits.sharedDatasets[1].aggregate.measures[0].digits=13
+  expect(()=>compile(badDigits,input.managerRequest)).toThrow('求和显示精度')
 })

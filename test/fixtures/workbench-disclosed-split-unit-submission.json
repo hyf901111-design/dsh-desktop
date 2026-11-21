@@ -82,49 +82,6 @@
     ]
   },
   "managerRequest": "我是指数投资部的组合经理，晨会上要判断易方达沪深300 ETF（510310）这五项季末重仓有多集中。请把下面的持仓做成研究看板，让我一眼比较五家公司的净值占比和排名，知道前五合计多少。会上会追问第一名比第二名高多少个百分点，结果要能回到五个披露数复核。只分析这五项，百分比按季报披露的精度。\n\n来源为上交所披露的《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》，持仓日2025-12-31，第10页第5.3.1节前五行。\nhttps://www.sse.com.cn/disclosure/fund/announcement/c/new/2026-01-22/510310_20260122_JCA4.pdf\n\n序号\t股票代码\t股票名称\t数量（股）\t公允价值（元）\t占基金资产净值比例（%）\n1\t300750\t宁德时代\t31173566\t11448803849.16\t3.81\n2\t600519\t贵州茅台\t7377868\t10160652252.24\t3.38\n3\t601318\t中国平安\t125580047\t8589675214.80\t2.86\n4\t300308\t中际旭创\t13089026\t7984305860.00\t2.66\n5\t601899\t紫金矿业\t194034163\t6688357598.61\t2.23",
-  "managerFirstSchema": {
-    "id": "holdings",
-    "label": "510310 2025Q4 前五大重仓（持仓日 2025-12-31）",
-    "pastedTable": {
-      "block": 1,
-      "header": true,
-      "identity": "seq",
-      "numericFields": [
-        "数量（股）",
-        "公允价值（元）",
-        "占基金资产净值比例（%）"
-      ]
-    },
-    "fields": [
-      {
-        "key": "seq",
-        "label": "序号"
-      },
-      {
-        "key": "code",
-        "label": "股票代码"
-      },
-      {
-        "key": "name",
-        "label": "股票名称"
-      },
-      {
-        "key": "shares",
-        "label": "数量（股）",
-        "unit": "股"
-      },
-      {
-        "key": "value",
-        "label": "公允价值（元）",
-        "unit": "元"
-      },
-      {
-        "key": "weight",
-        "label": "占基金资产净值比例（%）",
-        "unit": "%"
-      }
-    ]
-  },
   "managerSubmitted": {
     "dataMode": "source",
     "panels": [
@@ -218,5 +175,324 @@
       }
     ],
     "title": "易方达沪深300 ETF（510310）前五大重仓集中度"
+  },
+  "managerFirst": {
+    "requestId": "510310-top5-q4-2025",
+    "title": "易方达沪深300 ETF（510310）前五大重仓集中度",
+    "dataMode": "source",
+    "sharedDatasets": [
+      {
+        "id": "holdings",
+        "label": "510310 2025Q4 前五大重仓（持仓日 2025-12-31）",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "identity": "seq",
+          "numericFields": [
+            "数量（股）",
+            "公允价值（元）",
+            "占基金资产净值比例（%）"
+          ]
+        },
+        "fields": [
+          {
+            "key": "seq",
+            "label": "序号"
+          },
+          {
+            "key": "code",
+            "label": "股票代码"
+          },
+          {
+            "key": "name",
+            "label": "股票名称"
+          },
+          {
+            "key": "shares",
+            "label": "数量（股）",
+            "unit": "股"
+          },
+          {
+            "key": "value",
+            "label": "公允价值（元）",
+            "unit": "元"
+          },
+          {
+            "key": "weight",
+            "label": "占基金资产净值比例（%）",
+            "unit": "%"
+          }
+        ]
+      },
+      {
+        "id": "holdings-summary",
+        "label": "前五合计与首位占比",
+        "aggregate": {
+          "dataset": "holdings",
+          "groupBy": [],
+          "measures": [
+            {
+              "key": "totalWeight",
+              "label": "前五合计净值占比",
+              "op": "sum",
+              "field": "weight",
+              "unit": "%",
+              "digits": 2
+            },
+            {
+              "key": "topWeight",
+              "label": "首位（宁德时代）净值占比",
+              "op": "sum",
+              "field": "weight",
+              "where": {
+                "field": "name",
+                "equals": "宁德时代"
+              },
+              "unit": "%",
+              "digits": 2
+            },
+            {
+              "key": "count",
+              "label": "重仓家数",
+              "op": "count",
+              "field": "seq"
+            }
+          ]
+        }
+      }
+    ],
+    "panels": [
+      {
+        "title": "前五合计净值占比",
+        "type": "kpi",
+        "size": "medium",
+        "view": {
+          "dataset": "holdings-summary",
+          "groupBy": [],
+          "note": "五项占比直接相加，按季报披露精度（0.01 个百分点）保留两位小数。"
+        }
+      },
+      {
+        "title": "五家公司净值占比排名",
+        "type": "chart",
+        "size": "large",
+        "view": {
+          "dataset": "holdings",
+          "variant": "horizontal",
+          "unit": "%",
+          "sections": [
+            {
+              "kind": "records",
+              "label": "name",
+              "fields": [
+                "weight"
+              ]
+            }
+          ],
+          "note": "来源：易方达沪深300ETF 2025年第4季度报告 5.3.1 节前五行，持仓日 2025-12-31；排序沿用披露序号，即占比由高到低。"
+        }
+      },
+      {
+        "title": "第一名与第二名差距",
+        "type": "chart",
+        "size": "small",
+        "view": {
+          "dataset": "holdings",
+          "variant": "horizontal",
+          "unit": "%",
+          "where": [
+            {
+              "field": "name",
+              "op": "in",
+              "values": [
+                "宁德时代",
+                "贵州茅台"
+              ]
+            }
+          ],
+          "sections": [
+            {
+              "kind": "records",
+              "label": "name",
+              "fields": [
+                "weight"
+              ]
+            }
+          ],
+          "note": "宁德时代 3.81% − 贵州茅台 3.38% = 0.43 个百分点，两者均为季报披露值。"
+        }
+      },
+      {
+        "title": "五项披露数原表（复核用）",
+        "type": "view",
+        "size": "large",
+        "view": {
+          "dataset": "holdings",
+          "navigation": "flow",
+          "filters": [
+            "name"
+          ],
+          "sections": [
+            {
+              "kind": "records",
+              "fields": [
+                "seq",
+                "code",
+                "name",
+                "shares",
+                "value",
+                "weight"
+              ]
+            }
+          ],
+          "note": "数量（股）、公允价值（元）保留原披露精度，仅用于核对；净值占比比较以 weight 列为准。来源：上交所披露《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》第10页 5.3.1 节。"
+        }
+      }
+    ]
+  },
+  "managerSecond": {
+    "dataMode": "source",
+    "requestId": "510310-top5-q4-2025",
+    "title": "易方达沪深300 ETF（510310）前五大重仓集中度",
+    "sharedDatasets": [
+      {
+        "id": "holdings",
+        "label": "510310 2025Q4 前五大重仓（持仓日 2025-12-31）",
+        "pastedTable": {
+          "block": 1,
+          "header": true,
+          "identity": "序号",
+          "numericFields": [
+            "数量（股）",
+            "公允价值（元）",
+            "占基金资产净值比例（%）"
+          ]
+        }
+      },
+      {
+        "id": "holdings-summary",
+        "label": "前五合计与首位占比",
+        "aggregate": {
+          "dataset": "holdings",
+          "groupBy": [],
+          "measures": [
+            {
+              "key": "totalWeight",
+              "label": "前五合计净值占比",
+              "op": "sum",
+              "field": "占基金资产净值比例（%）",
+              "unit": "%",
+              "digits": 2
+            },
+            {
+              "key": "topWeight",
+              "label": "首位（宁德时代）净值占比",
+              "op": "sum",
+              "field": "占基金资产净值比例（%）",
+              "where": {
+                "field": "股票名称",
+                "equals": "宁德时代"
+              },
+              "unit": "%",
+              "digits": 2
+            },
+            {
+              "key": "count",
+              "label": "重仓家数",
+              "op": "count",
+              "field": "序号"
+            }
+          ]
+        }
+      }
+    ],
+    "panels": [
+      {
+        "size": "medium",
+        "title": "前五合计净值占比",
+        "type": "kpi",
+        "view": {
+          "dataset": "holdings-summary",
+          "groupBy": [],
+          "note": "五项占比直接相加，按季报披露精度（0.01 个百分点）保留两位小数。"
+        }
+      },
+      {
+        "size": "large",
+        "title": "五家公司净值占比排名",
+        "type": "chart",
+        "view": {
+          "dataset": "holdings",
+          "note": "来源：易方达沪深300ETF 2025年第4季度报告 5.3.1 节前五行，持仓日 2025-12-31；排序沿用披露序号，即占比由高到低。",
+          "sections": [
+            {
+              "fields": [
+                "占基金资产净值比例（%）"
+              ],
+              "kind": "records",
+              "label": "股票名称"
+            }
+          ],
+          "unit": "%",
+          "variant": "horizontal"
+        }
+      },
+      {
+        "size": "small",
+        "title": "第一名与第二名差距",
+        "type": "chart",
+        "view": {
+          "dataset": "holdings",
+          "note": "宁德时代 3.81% − 贵州茅台 3.38% = 0.43 个百分点，两者均为季报披露值。",
+          "sections": [
+            {
+              "fields": [
+                "占基金资产净值比例（%）"
+              ],
+              "kind": "records",
+              "label": "股票名称"
+            }
+          ],
+          "unit": "%",
+          "variant": "horizontal",
+          "where": [
+            {
+              "field": "股票名称",
+              "op": "in",
+              "values": [
+                "宁德时代",
+                "贵州茅台"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "size": "large",
+        "title": "五项披露数原表（复核用）",
+        "type": "view",
+        "view": {
+          "dataset": "holdings",
+          "filters": [
+            "股票名称"
+          ],
+          "navigation": "flow",
+          "note": "数量（股）、公允价值（元）保留原披露精度，仅用于核对；净值占比比较以占基金资产净值比例列为准。来源：上交所披露《易方达沪深300交易型开放式指数发起式证券投资基金2025年第4季度报告》第10页 5.3.1 节。",
+          "sections": [
+            {
+              "fields": [
+                "序号",
+                "股票代码",
+                "股票名称",
+                "数量（股）",
+                "公允价值（元）",
+                "占基金资产净值比例（%）"
+              ],
+              "kind": "records"
+            }
+          ]
+        }
+      }
+    ]
   }
 }

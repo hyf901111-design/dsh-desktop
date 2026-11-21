@@ -21,11 +21,15 @@ export function materializeDatasetAggregate(dataset,source){
   if(!fields.has(key)||seen.has(key))fail('分组字段不存在或重复。');seen.add(key);return fields.get(key)
  })
  for(const m of a.measures){
-  if(!m||!exact(m,['key','label','op'],m.op==='percent'?['numerator','denominator','unit','digits']:['field','where','unit'])||typeof m.key!=='string'||!/^\p{L}[\p{L}\p{N}\p{M}_-]{0,63}$/u.test(m.key)||['__proto__','constructor','prototype'].includes(m.key)||seen.has(m.key)||typeof m.label!=='string'||!m.label.trim()||m.label.length>100||!['count','sum','percent'].includes(m.op))fail('计算项键、标签或操作无效。')
+  if(!m||!exact(m,['key','label','op'],m.op==='percent'?['numerator','denominator','unit','digits']:m.op==='sum'?['field','where','unit','digits']:['field','where','unit'])||typeof m.key!=='string'||!/^\p{L}[\p{L}\p{N}\p{M}_-]{0,63}$/u.test(m.key)||['__proto__','constructor','prototype'].includes(m.key)||seen.has(m.key)||typeof m.label!=='string'||!m.label.trim()||m.label.length>100||!['count','sum','percent'].includes(m.op))fail('计算项键、标签或操作无效。')
   seen.add(m.key)
   if(m.unit!==undefined&&(typeof m.unit!=='string'||!m.unit.trim()||m.unit.length>64))fail('计算单位无效。')
   if(m.op==='sum'&&!fields.has(m.field))fail(`「${dataset.id}」的「${m.key}」求和需要 field，填写来源「${source.id}」中的数值字段键。`)
-  if(m.op!=='sum'&&m.field!==undefined)fail(`「${dataset.id}」的「${m.key}」计数不接受 field。`)
+  if(m.op==='sum'&&m.digits!==undefined&&(!Number.isInteger(m.digits)||m.digits<0||m.digits>12))
+   fail('求和显示精度为0–12位。')
+  // Counting a proven, non-null row identity is equivalent to counting rows.
+  if(m.op==='count'&&m.field!==undefined&&(!fields.has(m.field)||!source.records.length||
+      !source.records.every(row=>row[m.field]===row.id)))fail(`「${dataset.id}」的「${m.key}」计数仅可引用原记录唯一标识。`)
   if(m.where!==undefined&&(!exact(m.where,['field','equals'])||!fields.has(m.where.field)||!['string','number','boolean'].includes(typeof m.where.equals)&&m.where.equals!==null))fail('筛选必须引用来源字段和一个明确原值。')
  }
  const measures=a.measures.filter(measure=>measure.op!=='percent'),ratios=a.measures.filter(measure=>measure.op==='percent');
@@ -56,9 +60,9 @@ export function materializeDatasetAggregate(dataset,source){
   for(const {key,op} of measures)if(op==='sum'&&row[key]!==null)row[key]=decimalNumber(row[key]);
   for(const {key,numerator,denominator,digits} of ratios)row[key]=decimalPercentage(row[resolveTotal(numerator)],row[resolveTotal(denominator)],digits);
  }
- const derivedFields=a.measures.map(({key,label,op,field,unit})=>{
+ const derivedFields=a.measures.map(({key,label,op,field,unit,digits})=>{
   const knownUnit=unit??(op==='percent'?'%':op==='sum'?fields.get(field).unit:undefined);
-  return {key,label,...(knownUnit===undefined?{}:{unit:knownUnit})};
+  return {key,label,...(knownUnit===undefined?{}:{unit:knownUnit}),...(op==='sum'&&digits!==undefined?{minimumFractionDigits:digits}:{})};
  });
  return {id:dataset.id,groupBy:[...a.groupBy],label:dataset.label,asOf:source.asOf,note:dataset.note,...(source.sourceUrl?{sourceUrl:source.sourceUrl}:{}),fields:[{key:'id',label:'记录编号'},...groups,...derivedFields],records:[...grouped.values()]}
 }
