@@ -1,3 +1,4 @@
+import {disclosureLedgerInput} from './workbench-disclosure-ledger.js'
 import {holdingConcentrationInput} from './workbench-holding-concentration.js'
 import {firstTaskOpening} from './model-task-replies.js'
 import {HOME_WORKBENCH_PROVIDER} from './home-workbench-contract.js'
@@ -133,6 +134,9 @@ function needsSupplementalSource(narrative) {
   const clauses = narrative.replace(/https?:\/\/\S+/gu,'').split(/[。；;，,\n]|但是|不过|但(?:请|要)|\bbut\b/iu)
   return clauses.some(clause => {
     if (/(?:无需|无须|不需要|不必|不用|不要|禁止|do not|no need to)\s*(?:再|另行)?(?:联网|查询|打开|核对|查验|读取|补)/iu.test(clause)) return false
+    // An extra way to find an existing row does not require an external source.
+    if (/^\s*(?:另外|另需|还要|还需|同时需要)(?:也|请|能|可|以|支持|允许|按|根据|用|通过|快速|直接|提供|对|原表|表内|的|逐笔|证券|股票|序号|编号|代码|名称|和|或|与|查询|查找|定位|筛选|检索|搜索|该笔|该行|记录|功能|持仓|[\s、/])+(?:[！!.]\s*)?$/u.test(clause) &&
+        /查询|查找|定位|筛选|检索|搜索/u.test(clause) && /序号|编号|代码|名称/u.test(clause)) return false
     const source = /原件|原文|年报|季报|PDF|官网|链接|外部|\b(?:filing|original report|website)\b/iu
     const check = /打开|查阅|阅读|读取|核对|核实|核验|查验|比对|\b(?:open|read|verify|check)\b/iu
     return source.test(clause) && check.test(clause) ||
@@ -512,7 +516,18 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       '明细用 type:"view"，view:{dataset,sections:[{kind:"records",fields:[字段键]}]}。同类别多个同单位指标对比用 type:"chart"，view:{dataset,variant:"groupedBar",unit,sections:[{kind:"records",label:分类键,fields:[数值键1,数值键2]}]}。比较两个端点可用 dumbbell。同一批客户从接触到签约的漏斗用 type:"chart" 和 variant:"funnel"，label 引用阶段列、fields 仅引用人数列，按原顺序绘制。按用户要求保留明细、单位、空值和其他交互。',
       '差额或比率可在 pastedTable.derive 中声明 {key,label,op:"subtract|percent",left,right,unit?,digits?}。子集用 view.where。跨行汇总用 aggregate 的 groupBy、sum 或 percent，总体比率按汇总分子分母计算；指标卡引用单条汇总，时间线用 type:"timeline"，view.sections 放一个 {kind:"schedule",label:事件标题列,start:日期列,owner:负责人列,fields:[其他明细列]}。'
     ].join(' ');
-    if ((offline || preferPasted) && !simulation && !prototypeSource && !documentPaths && holdingConcentrationInput(human.text,pasted)) {
+    const directDisclosure = (offline || preferPasted) && !simulation && !prototypeSource && !documentPaths
+    if (directDisclosure && disclosureLedgerInput(human.text,pasted)) {
+      const create = tools.find(tool => tool.name === CREATE_TOOL)
+      if (create) {
+        const parameters = {type:'object',additionalProperties:false,required:['title','panels'],properties:{
+          title:{type:'string'},panels:{type:'array',minItems:1,maxItems:1,items:{type:'object',additionalProperties:false,
+            required:['type','title'],properties:{type:{type:'string',enum:['view']},title:{type:'string'}}}}}}
+        return {...request,tools:tools.map(tool => tool === create ? {...tool,parameters,description:'从本轮披露原表生成一张完整可查的逐笔核对明细。'} : tool),
+          system:[request.system,'每笔持仓占原表一行。请为这张逐笔勾稽明细取标题，用 research_workbench_create 提交。宿主按原序绑定全部披露字段、金额精度和原始出处，可从证券代码或名称定位。'].join('\n')}
+      }
+    }
+    if (directDisclosure && holdingConcentrationInput(human.text,pasted)) {
       const create = tools.find(tool => tool.name === CREATE_TOOL)
       if (create) {
         const parameters = {type:'object',additionalProperties:false,required:['title','panels'],properties:{

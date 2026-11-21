@@ -1,3 +1,4 @@
+import {disclosureLedgerInput,expandDisclosureLedger} from './workbench-disclosure-ledger.js';
 import {bindHoldingConcentrationMetrics,expandHoldingConcentration,holdingConcentrationInput} from './workbench-holding-concentration.js';
 import {omitRedundantHoldingValueRanking} from './holding-weight-ranking.js';
 import {preparePomodoroCompanion,prepareWorkbenchPomodoro} from './workbench-pomodoro.js';
@@ -600,7 +601,8 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
         throw Error('工作台需要 1–30 个独立面板。');
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
     const concentration=value.dataMode!=='simulated' && !value.generationMode && holdingConcentrationInput(value.originalRequest);
-    const planned=expandHoldingConcentration(value,concentration);
+    const disclosureLedger=!concentration && value.dataMode!=='simulated' && !value.generationMode && disclosureLedgerInput(value.originalRequest);
+    const planned=disclosureLedger ? expandDisclosureLedger(value,disclosureLedger) : expandHoldingConcentration(value,concentration);
     value=completeInlineFinancePlan(resolvePastedWorkbenchPlan(planned));
     const signedNetFlows = typeof value.originalRequest==='string'&&value.panels.some(panel=>panel?.type==='view'&&!panel.artifact)&&
         requestsSignedNetFlows(pastedWorkbenchInput(value.originalRequest).context);
