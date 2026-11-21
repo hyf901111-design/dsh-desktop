@@ -97,3 +97,20 @@ it('reports the identified shape without assigning scalar examples to ambiguous 
  expect(first.messages[0].content[0].text).toContain('已识别2行记录，表头3列')
  expect(first.messages[0].content[0].text).not.toContain('100.00')
 })
+
+it('describes only tools authorized on the execution request while the opening remains text-only',async()=>{
+ const imageText='视觉执行E1：现在生成一张新的16:9基金晨会封面，主题是美国国债曲线复盘。深藏青底、右侧放一条细金色曲线，左侧三分之一纯净留给标题，作为新素材加入这份验收画布。'
+ const image=requests(imageText,{mode:'image'})
+ const call=await image.run(1,{...image.current,tools:[{name:'image_generate'}]})
+ expect(call.tools).toEqual([])
+ expect(call.system).toContain('生成并交付实际图片')
+ expect((await image.run(1,{...image.current,tools:[{name:'existingTool'}]})).system).not.toContain('生成并交付实际图片')
+ const office=requests('请核对工作簿的现有日期、再按实际观察日写入两组利差公式。',{mode:'spreadsheet'})
+ const granted=ids=>[{name:'client_action',parameters:{properties:{capability:{enum:ids}}}}]
+ const native=await office.run(1,{...office.current,tools:granted(['spreadsheet.inspect','spreadsheet.apply'])})
+ expect(native.tools).toEqual([])
+ expect(native.system).toContain('读取工作簿、在原生表格写入数据和公式')
+ const read=await office.run(1,{...office.current,tools:granted(['spreadsheet.inspect'])})
+ expect(read.system).toContain('读取工作簿')
+ expect(read.system).not.toContain('写入数据和公式')
+})
