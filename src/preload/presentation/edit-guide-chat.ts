@@ -74,7 +74,7 @@ export async function mountPresentationEditGuideChat(document: Document, options
   }
   const composer = () => {
     const inputs = [...document.querySelectorAll<HTMLTextAreaElement>('[data-research-composer-host] textarea[data-odyssey-file-reference-session]')]
-      .filter(el => el.dataset.odysseyFileReferenceSession === options.sessionId && !el.readOnly && el.getClientRects().length && el.checkVisibility({checkVisibilityCSS:true}))
+      .filter(el => el.dataset.odysseyFileReferenceSession === options.sessionId && !el.disabled && !el.readOnly && el.getClientRects().length && el.checkVisibility({checkVisibilityCSS:true}))
     return inputs.length === 1 ? inputs[0] : undefined
   }
   const prefix = (input: HTMLTextAreaElement, referenceLabel?: string): string | undefined => {

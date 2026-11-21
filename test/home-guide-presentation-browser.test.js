@@ -136,6 +136,25 @@ it('waits for the real pointer acknowledgement and never adds attachments after 
   expect(await page.evaluate(()=>window.probe.shell.snapshot.occurrences.length)).toBe(0);expect(f.outside).toEqual([]);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
+it.each(['ppt','report'])('waits for the scoped offline model to enable the native %s composer before starting the guide',async kind=>{
+ const f=await fixture({kind}),{page}=f
+ try{
+  await page.evaluate(()=>{
+   const input=document.querySelector('textarea[data-odyssey-file-reference-session]')
+   input.disabled=true
+   window.mountAfterModel=window.probe.mount().then(()=>{window.guideMounted=true})
+  })
+  await expect.poll(()=>f.http.some(request=>request.action==='prepare')).toBe(true)
+  await page.waitForTimeout(140)
+  expect(await page.evaluate(()=>window.guideMounted===true)).toBe(false)
+  await page.evaluate(async()=>{
+   document.querySelector('textarea[data-odyssey-file-reference-session]').disabled=false
+   await window.mountAfterModel
+  })
+  expect(await page.evaluate(()=>window.guideMounted)).toBe(true)
+  await page.evaluate(()=>window.probe.dispose())
+ }finally{await f.close()}
+})
 it('serializes the native report skill plus exactly one space and brief, delivers real HTML/PDF and opens only PDF',async()=>{
  const f=await fixture({kind:'report'}),{page}=f
  try{
