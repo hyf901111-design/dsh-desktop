@@ -85,3 +85,19 @@ it('treats editable-looking quoted slide text as a reference label and never as 
  expect(allowed(await h.wire())).toEqual(['presentation.inspect'])
  expect(h.check('presentation.apply',{})).toBeTruthy()
 })
+
+it.each([
+ ['spreadsheet','workbook',{revision:2,sheets:[{sheet:'Sheet1',cells:[{at:'B3',value:0.0455,numberFormat:'0.00%'}]}]}],
+ ['presentation','slide',{revision:4,slideId:'yield',notes:'2年期 4.24%，30年期 4.77%。',elements:[]}]
+])('supplies %s document values before the first model decision without changing the stored human message',async(mode,referenceScope,snapshot)=>{
+ const h=harness(mode,'总结一下。',{mode,referenceScope,snapshot},true)
+ const first=await h.wire(),body=JSON.parse(h.transport.mock.calls[0][1].body)
+ expect(body.includeContent).toBe(true)
+ expect(first.messages[0].content.map(p=>p.text).join('')).toContain(JSON.stringify(snapshot))
+ expect(first.system).not.toContain(JSON.stringify(snapshot))
+ expect(h.human.content).toEqual([{type:'text',text:'总结一下。'}])
+ for (const scope of ['none',mode==='spreadsheet'?'ranges':'selection']){
+  const closed=await harness(mode,'总结一下。',{mode,referenceScope:scope,snapshot}).wire()
+  expect(closed.messages[0].content).toEqual(h.human.content)
+ }
+})

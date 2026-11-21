@@ -48,6 +48,7 @@ import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPromp
 import { extractDocxEvidence } from './docx-evidence.js'
 import { completeWordReadingPanel } from './workbench-word-grid.js'
 import { loadPdfLibrary } from './pdf-library.js'
+import {registerModelTaskReplies} from './model-task-replies.js'
 import {registerFirstResponseEffort} from './first-response-effort.js'
 import {registerConversationComponentsPolicy} from './conversation-components-policy.js'
 import { registerWorkbenchModelQueue, workbenchModelQueueWaitMs, forgetWorkbenchModelQueueWait } from './workbench-model-queue.js'
@@ -3733,6 +3734,7 @@ export async function apply(ctx) {
   ctx.effect(() => {
     const disposePublicData = registerPublicDataTool(ctx)
     const disposeSourceGuidance = registerComponentSourceGuidance(ctx)
+    const disposeModelTaskReplies = registerModelTaskReplies(ctx)
     const disposeWorkbenchPolicy = registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence })
     const disposeFirstResponseEffort = registerFirstResponseEffort(ctx)
     const disposeConversationComponentsPolicy = registerConversationComponentsPolicy(ctx, {readWorkspaceReference})
@@ -3767,6 +3769,7 @@ export async function apply(ctx) {
       context = registerResearchContextRuntime(ctx, { isTrustedRequest, readJsonBody, loadFileText: loadResearchFileText, cooperativeFileCancellation: true })
     } catch (error) {
       disposePublicData(); disposeSourceGuidance?.()
+      disposeModelTaskReplies()
       disposeWorkbenchPolicy()
       disposeFirstResponseEffort()
       disposeConversationComponentsPolicy()
@@ -3795,6 +3798,7 @@ export async function apply(ctx) {
     }
     return async () => {
       disposePublicData(); disposeSourceGuidance?.()
+      disposeModelTaskReplies()
       disposeWorkbenchPolicy()
       disposeFirstResponseEffort()
       disposeConversationComponentsPolicy()

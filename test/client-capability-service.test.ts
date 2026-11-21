@@ -160,6 +160,8 @@ it('reads only the active admitted workspace metadata and leaves its execute lea
  const source={sessionId:'s',turnId:'1',method:'workspace-reference',authorityId:'human',authoritySeq:1,sourceInstruction:'总结一下'}
  h.bind('spreadsheet')
  expect(await h.service.request({...source,expectedMode:'spreadsheet'})).toMatchObject({referenceScope:'ranges',referenceCount:2})
+ await expect(h.service.request({...source,includeContent:true})).rejects.toThrow('读取范围')
+ await expect(h.service.request({...source,method:'catalog',expectedMode:'spreadsheet',includeContent:true})).rejects.toThrow('读取范围')
  expect(await h.service.request({...source,expectedMode:'presentation'})).toEqual({})
  expect(h.o.presentation.referenceSettings).not.toHaveBeenCalled()
  expect(h.o.spreadsheet.acquire).not.toHaveBeenCalled()

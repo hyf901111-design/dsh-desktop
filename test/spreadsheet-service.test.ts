@@ -24,6 +24,12 @@ it('uses the visible native client capability route and does not retarget select
   const call=(capability:string,args:unknown,requestId:string)=>client.request({...source,method:'execute',call:{capability,arguments:args,requestId}})
   const created=await call('spreadsheet.apply',{revision:0,createName:'估值',operations:[{op:'write',sheetId:'sheet-1',range:'B2',cells:[[{value:42}]]}]},'create')
   expect(created).toMatchObject({status:'succeeded',data:{saved:true,revision:1}})
+  const summary='总结一下。',bookId=store.load(key).workbook!.id
+  spreadsheet.admit(key,summary,bookId,[],true)
+  const admitted={...source,method:'workspace-reference',sourceInstruction:summary,expectedMode:'spreadsheet',includeContent:true}
+  expect(await client.request(admitted)).toMatchObject({referenceScope:'workbook',snapshot:{sheets:[{sheet:'Sheet1',cells:[{at:'B2',value:42}]}],truncated:false}})
+  spreadsheet.admit(key,summary,bookId,[],false)
+  expect(await client.request(admitted)).not.toHaveProperty('snapshot')
   const withRef={...source,turnId:'selection-turn',authorityId:'selection-user',sourceInstruction:'填写〔表格选区 "Sheet1"!B2 #f0123456789a〕'}
   spreadsheet.admit(key,withRef.sourceInstruction,store.load(key).workbook!.id,[{sessionId:key.sessionId,bookId:store.load(key).workbook!.id,sheetName:'Sheet1',sheetId:'sheet-1',range:'B2',id:'f0123456789a'}],false)
   expect(await client.request({...withRef,method:'catalog'})).toMatchObject({referenceScope:'ranges'})

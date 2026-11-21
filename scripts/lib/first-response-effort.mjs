@@ -15,5 +15,26 @@ export function patchFirstResponseEffort(source) {
     if (source.split(expected).length !== 2) throw Error('First response reasoning default anchor drifted')
     if (!installed) source = source.replace(original, replacement)
   }
+  // A model-authored introduction is an intermediate step. Only the host can
+  // flag its own empty-tool request; a tool result or user message cannot.
+  const v2 = [
+    ['turn,\n\t\t\tstep,\n\t\t\tsignal\n\t\t}, () => Promise.resolve(seedConfig))',
+     'turn,\n\t\t\tstep,\n\t\t\tsupportsTaskOpening: true,\n\t\t\tsignal\n\t\t}, () => Promise.resolve(seedConfig))'],
+    ['const stream = preparedCall?.stream(request) ?? this.loopCtx.llm.stream(request);',
+     'const opening = step === 1 && request[Symbol.for("ework.model-task-opening")] === true && request.tools?.length === 0;\n\t\t\tconst stream = preparedCall?.stream(request) ?? this.loopCtx.llm.stream(request);'],
+    ['for await (const chunk of stream) {\n\t\t\t\tsignal.throwIfAborted();',
+     'try { for await (const chunk of stream) {\n\t\t\t\tsignal.throwIfAborted();'],
+    ['assembler.push(chunk);\n\t\t\t}\n\t\t\tsignal.throwIfAborted();',
+     'assembler.push(chunk);\n\t\t\t} } catch (error) { if (opening && !signal.aborted) return null; throw error; }\n\t\t\tsignal.throwIfAborted();'],
+    ['const action = await this.dispatch.waterfall("agent/request-error", {',
+     'if (opening && finish.kind === "error") return null;\n\t\t\t\tconst action = await this.dispatch.waterfall("agent/request-error", {'],
+    ['if (finish.kind === "max-tokens") return { kind: "max-tokens" };',
+     'if (opening) return null;\n\t\t\tif (finish.kind === "max-tokens") return { kind: "max-tokens" };']
+  ]
+  const hasOpening = source.includes('supportsTaskOpening: true')
+  for (const [original, replacement] of v2) {
+    if (source.split(hasOpening ? replacement : original).length !== 2) throw Error('Model task opening anchor drifted')
+    if (!hasOpening) source = source.replace(original, replacement)
+  }
   return source
 }

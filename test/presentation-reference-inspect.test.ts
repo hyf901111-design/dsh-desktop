@@ -14,7 +14,7 @@ it('inspects only admitted notes, elements and marked chart values from their re
     const key = { owner: 'reviewer', sessionId: 'review' }
     const deck = blankDeck('美国财政部每日国债收益率')
     const first = deck.slides[0]!
-    first.remark = '<p>2024-12-27｜4.62%。2024-12-30｜4.55%。</p>'
+    first.remark = '<p>2024-12-27｜4.62%。2024-12-30｜4.55%。补充：2 年期 4.24%，30 年期 4.77%。</p>'
     const box = { left: 20, top: 20, width: 100, height: 40 }
     first.elements.push({ ...box, id: 'observed', type: 'text', content: '<p>10 年期国债收益率</p>' })
     const chart = { ...box, id: 'yield', type: 'chart', chartType: 'line',
@@ -39,7 +39,11 @@ it('inspects only admitted notes, elements and marked chart values from their re
     await admit('默认页',[],true)
     await admit('关闭当前页',[],false)
     store.setPosition(key,deck.id,'historical')
-    expect(host.referenceSettings(key,prompt).referenceScope).toBe('selection')
+    expect(host.referenceSettings(key,prompt)).toMatchObject({referenceScope:'selection'})
+    const evidence=host.referenceSettings(key,'默认页',undefined,true)
+    expect(evidence).toMatchObject({referenceScope:'slide',snapshot:{slideId:first.id,notes:expect.stringContaining('2 年期 4.24%，30 年期 4.77%'),elements:expect.arrayContaining([expect.objectContaining({text:'10 年期国债收益率'})])}})
+    expect(JSON.stringify(evidence)).not.toContain('4.58')
+    for(const instruction of ['关闭当前页',prompt,'未受理的提示'])expect(host.referenceSettings(key,instruction,undefined,true)).not.toHaveProperty('snapshot')
     const inspect=(instruction:string,args:any)=>host.handlers(key,()=>true,instruction).inspectPresentation(args,{} as any)
     const result:any=await inspect(prompt,{scope:'reference'})
     expect(result.data.references).toMatchObject([{quote:'4.62%'},{element:{text:'10 年期国债收益率'}},
