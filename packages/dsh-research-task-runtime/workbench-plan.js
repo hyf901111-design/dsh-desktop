@@ -1,3 +1,4 @@
+import {bindHoldingConcentrationMetrics,expandHoldingConcentration,holdingConcentrationInput} from './workbench-holding-concentration.js';
 import {omitRedundantHoldingValueRanking} from './holding-weight-ranking.js';
 import {preparePomodoroCompanion,prepareWorkbenchPomodoro} from './workbench-pomodoro.js';
 import {resolveWorkbenchLibraryPanel,validateWorkbenchLinks} from './workbench-library.js';
@@ -598,7 +599,9 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
     if (!value || !str(value.requestId, 100) || !str(value.title, 100) || !Array.isArray(value.panels) || value.panels.length < 1 || value.panels.length > MAX_WORKBENCH_PANELS)
         throw Error('工作台需要 1–30 个独立面板。');
     if (value.dataMode !== undefined && !['simulated', 'source'].includes(value.dataMode)) throw Error('工作台数据模式无效。');
-    value=completeInlineFinancePlan(resolvePastedWorkbenchPlan(value));
+    const concentration=value.dataMode!=='simulated' && !value.generationMode && holdingConcentrationInput(value.originalRequest);
+    const planned=expandHoldingConcentration(value,concentration);
+    value=completeInlineFinancePlan(resolvePastedWorkbenchPlan(planned));
     const signedNetFlows = typeof value.originalRequest==='string'&&value.panels.some(panel=>panel?.type==='view'&&!panel.artifact)&&
         requestsSignedNetFlows(pastedWorkbenchInput(value.originalRequest).context);
     const isSimulated = value.dataMode === 'simulated';
@@ -888,7 +891,8 @@ export function validateWorkbench(value, {recoverPreparedArtifacts = false} = {}
         issues.map(({title,message}) => `「${title}」${message.slice(0,350)}`).join('\n'));
     const mayConsolidate = !isSimulated && !deferred && !parallel && !tabs && !value.links &&
         typeof value.originalRequest === 'string' && datasets?.length && !value.panels.some(p=>p?.artifact) && compiledPanels.filter(p => p.type === 'chart' && p.view).length > 1;
-    const panels = mayConsolidate ? omitRedundantHoldingValueRanking(compiledPanels,datasets,pastedWorkbenchInput(value.originalRequest).context) : compiledPanels;
+    const distinctPanels = mayConsolidate ? omitRedundantHoldingValueRanking(compiledPanels,datasets,pastedWorkbenchInput(value.originalRequest).context) : compiledPanels;
+    const panels = bindHoldingConcentrationMetrics(distinctPanels,planned,concentration,datasets);
     if (Buffer.byteLength(JSON.stringify(panels), 'utf8') > 256_000) throw Error('工作台结构化数据总量过长。');
     const title = isSimulated && !simulated(value.title) ? `${value.title.trim()}（模拟）` : value.title.trim();
     if (title.length > 100) throw Error('工作台标题过长，无法标注模拟。');

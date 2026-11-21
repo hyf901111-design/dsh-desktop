@@ -6,7 +6,7 @@ export function requestsHoldingWeightRanking(userText){
   /排名|排序|名次|第一名|居首/u.test(userText)&&!/不(?:要|用|必|需)|无需/u.test(userText.match(/[^，。；;\n]{0,12}(?:权重|净值占比)(?:排名|排序)/u)?.[0]??'')
 }
 
-function singleHoldingWeightRanking(narrative) {
+export function singleHoldingWeightRanking(narrative) {
  const userText=narrative.split(/\r?\n/u).filter(line=>!/^\s*(?:https?:\/\/|(?:数据|资料)?(?:来源|出处)\s*[:：为])/iu.test(line)).join(' ')
  if(!requestsHoldingWeightRanking(userText))return false
  // An explicit count, additional comparison, amount or prescribed secondary
