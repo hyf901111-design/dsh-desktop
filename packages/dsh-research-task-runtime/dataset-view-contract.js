@@ -183,8 +183,9 @@ export function validateWorkbenchDatasets(value,panels=[]){
   check(Array.isArray(d.fields)&&d.fields.length>=1&&d.fields.length<=WORKBENCH_DATASET_LIMITS.fields,'共同数据需要1–24个已命名字段。')
   check(bytes(d)<=WORKBENCH_DATASET_LIMITS.datasetBytes,`单份共同数据超过${WORKBENCH_DATASET_LIMITS.datasetBytes}字节的宿主存储配额；不能丢弃记录或字段。`)
   const keys=new Set(),fields=d.fields.map(f=>{
-   check(exact(f,['key','label'],['unit'])&&fieldKey(f.key)&&!keys.has(f.key)&&text(f.label,100)&&(f.unit===undefined||text(f.unit,64)),'共同数据字段键、标签或单位无效或重复。')
-   keys.add(f.key);return {key:f.key,label:f.label,...(f.unit===undefined?{}:{unit:f.unit})}
+   check(exact(f,['key','label'],['unit','minimumFractionDigits'])&&
+    (f.minimumFractionDigits===undefined||Number.isInteger(f.minimumFractionDigits)&&f.minimumFractionDigits>=0&&f.minimumFractionDigits<=12)&&fieldKey(f.key)&&!keys.has(f.key)&&text(f.label,100)&&(f.unit===undefined||text(f.unit,64)),'共同数据字段键、标签或单位无效或重复。')
+   keys.add(f.key);return {key:f.key,label:f.label,...(f.unit===undefined?{}:{unit:f.unit}),...(f.minimumFractionDigits===undefined?{}:{minimumFractionDigits:f.minimumFractionDigits})}
   })
   // Stable identity is required on every record; its display label is host
   // metadata. Filling only that omitted descriptor never invents an identity

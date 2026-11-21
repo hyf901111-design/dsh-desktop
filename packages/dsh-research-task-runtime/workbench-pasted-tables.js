@@ -217,12 +217,21 @@ export function resolvePastedWorkbenchPlan(plan){
    keys.add(field.key);
   }
   const rawFields=new Map(fields.map(field=>[field.key,field]));
-  const schema=[...fields,...derive.map(({key,label,unit,op,left,right})=>{
+  const dataRows=raw.slice(header?1:0);
+  // Numeric records remain sortable. Preserve a uniform decimal scale printed in the source.
+  const displayedFields=fields.map((field,column)=>{
+   if(!numeric.has(field.key))return field;
+   const cells=dataRows.map(row=>row[column]).filter(value=>value!=='');
+   const fractionDigits=cells[0]?.split('.')[1]?.length;
+   if(!fractionDigits||!cells.every(cell=>cell.split('.')[1]?.length===fractionDigits))return field;
+   return {...field,minimumFractionDigits:fractionDigits};
+  });
+  const schema=[...displayedFields,...derive.map(({key,label,unit,op,left,right})=>{
    const a=rawFields.get(left).unit,b=rawFields.get(right).unit;
    const knownUnit=unit??(op==='percent'?'%':a===b?a:undefined);
    return {key,label,...(knownUnit===undefined?{}:{unit:knownUnit})};
   })];
-  const records=raw.slice(header?1:0).map((row,index)=>{
+  const records=dataRows.map((row,index)=>{
    const record=Object.fromEntries(fields.map(({key},i)=>[key,numeric.has(key)?pastedNumber(row[i]):row[i]]));
    for(const {key,op,left,right,digits} of derive){
     const a=record[left],b=record[right];

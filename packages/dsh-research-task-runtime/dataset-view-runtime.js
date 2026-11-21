@@ -5,7 +5,13 @@ export function datasetViewValue(value,field){
  if(Array.isArray(value))return value.length?value.map(v=>'• '+v).join('\n'):'（无条目）'
  if(typeof value==='boolean')return value?'是':'否'
  if(value==='')return '（空）'
- return String(value)+(typeof value==='number'&&field?.unit?' '+field.unit:'')
+ if(typeof value!=='number')return String(value)
+ let display=String(value)
+ if(field?.minimumFractionDigits){
+  const formatted=value.toLocaleString('en-US',{useGrouping:false,minimumFractionDigits:field.minimumFractionDigits,maximumFractionDigits:20})
+  if(Number(formatted)===value)display=formatted
+ }
+ return display+(field?.unit?' '+field.unit:'')
 }
 export function datasetViewSchedule(dataset,section){
  const entries=dataset.records.map(record=>({record,a:record[section.start]===null?NaN:Date.parse(record[section.start]),b:record[section.end]===null?NaN:Date.parse(record[section.end])}))
