@@ -80,6 +80,23 @@ it('uses one model answer for discussion and honors strict output even on comple
   expect(tools[0].parameters.properties.capability.enum).toContain('spreadsheet.apply')
 })
 
+it('stages a substantive read-only document review without adding any write capabilities', () => {
+  const deck = '请逐页核对这份美国财政部收益率演示的图表、正文与备注，比较不同期限在 12 月 27 日和 31 日的变化，指出不一致并注明页码。不要修改演示。'
+  const workbook = '只分析当前工作簿。先核对各工作表的美国国债原始收益率，再比较两年期至三十年期的利差，列出异常日期和对应单元格。'
+  for (const [mode,text] of [['presentation',deck], ['spreadsheet',workbook]]) {
+    const profile = clientModeTurn(turn(text,mode))
+    expect(profile).toMatchObject({readOnly:true, appRead:true, appEdit:false})
+    expect(wantsTaskOpening(profile)).toBe(true)
+    const tools = routeModeTools({tools:[{name:'client_action'},{name:'image_generate'},{name:'research_workbench_create'}]},profile).tools
+    expect(tools).toHaveLength(1)
+    expect(tools[0].parameters.properties.capability.enum).toEqual([mode+'.inspect'])
+    expect(wantsTaskOpening(clientModeTurn(turn(text+'只返回最终结果。',mode)))).toBe(false)
+  }
+  for (const text of ['这份演示有几页？','只讨论怎么比较国债利差，不要修改演示。','教我如何逐页核对演示中的数据差异，不要修改演示。','3.81% 等于多少个基点？用一句话说明。']) {
+    expect(wantsTaskOpening(clientModeTurn(turn(text,'presentation')))).toBe(false)
+  }
+})
+
 it('requests a substantive progress paragraph after a real result and a period of silence', async () => {
   let wire
   registerModelTaskReplies({on:(_name,fn)=>{wire=fn}})
