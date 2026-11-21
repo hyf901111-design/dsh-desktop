@@ -195,7 +195,7 @@ export function mountExploreMenu(doc:Document,options:Options){
       const context:HomeOperationActionContext={signal:controller.signal,origin:{x:origin.left+origin.width/2,y:origin.top+origin.height/2},revealComposer:()=>close(false,true),handoff:()=>{},...(isExample?{demoEntry:{closeTarget:closeButton,closeOwned:async()=>{if(controller.signal.aborted||!opened)throw new DOMException('操作已取消。','AbortError');ownedDemoClose=true;try{closeButton.click()}finally{ownedDemoClose=false}await closing}}}:{})}
       if(!isExample)await close(false,true);if(controller.signal.aborted)return
       if(isExample)await options.onExample(card,context);else await options.onAction(card as HomeOperationCard,context)
-    }catch(error){if(!controller.signal.aborted&&!disposed)showError(error)}finally{if(action===controller){action=undefined;busy=false;createButtons.forEach(node=>node.disabled=false);example.disabled=false;if(description){delete description.dataset.explorePreparing;delete description.dataset.odysseyOperationsIntro;description.textContent=copy().cases[caseIndex]![2]}labels()}}
+    }catch(error){if(!controller.signal.aborted&&!disposed)showError(error)}finally{if(action===controller){action=undefined;busy=false;createButtons.forEach(node=>node.disabled=false);example.disabled=false;if(description){delete description.dataset.explorePreparing;delete description.dataset.odysseyOperationsIntro;description.textContent=copy().cases[examples[caseIndex]!][2]}labels()}}
   }
   dialog.addEventListener('cancel',event=>{event.preventDefault();if(searching)setSearch(false);else void close()})
   // Electron handles the native drag without DOM pointer events. Keep the same

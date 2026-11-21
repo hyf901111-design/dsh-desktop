@@ -31,8 +31,8 @@ export type OperationsIllustrationCard = 'board' | 'note' | 'ppt' | 'report'
 
 // These static fills and the arrow retain the native Figma vector geometry.
 export const OPERATIONS_CASE_GLOWS = {
-  light: [boardGlow, noteGlow, pptGlow, reportGlow, boardGlow, pptGlow],
-  dark: [boardDarkGlow, noteDarkGlow, pptDarkGlow, reportDarkGlow, boardDarkGlow, pptDarkGlow],
+  light: {board: boardGlow, note: noteGlow, ppt: pptGlow, report: reportGlow, workbench: boardGlow, spreadsheet: pptGlow},
+  dark: {board: boardDarkGlow, note: noteDarkGlow, ppt: pptDarkGlow, report: reportDarkGlow, workbench: boardDarkGlow, spreadsheet: pptDarkGlow},
 } as const
 export const OPERATIONS_TREND_UP = trendUp
 export const OPERATIONS_REPORT_TREND_DARK = reportTrendDark

@@ -204,7 +204,7 @@ it('hands quick actions and all six example selections to the existing action ad
  const f=await fixture();try{for(const card of ['board','note','ppt','report']){await open(f.page);await f.page.locator('[data-explore-card="'+card+'"]').click();await uiExpect(f.page.locator('dialog.odyssey-explore')).not.toBeVisible();if(card==='board'||card==='note')await uiExpect(f.page.locator('[data-conversation-view-id="'+(card==='board'?'research':'notes')+'"]').first()).toHaveAttribute('aria-selected','true')}
   expect((await f.page.evaluate(()=>(window as any).calls)).filter((row:any)=>row.skill).map((row:any)=>row.skill)).toEqual(['builtin:efund-ppt-maker','builtin:ework-equity-research'])
   for(let index=0;index<6;index++){await open(f.page);await f.page.locator('.odyssey-explore-pages button').nth(index).click();await f.page.locator('.odyssey-explore-example').click();await expect.poll(()=>f.page.evaluate(()=>(window as any).calls.filter((row:any)=>row.example).length)).toBe(index+1)}
-  expect((await f.page.evaluate(()=>(window as any).calls)).filter((row:any)=>row.example).map((row:any)=>row.example)).toEqual(['board','note','ppt','report','workbench','spreadsheet']);expect(f.errors).toEqual([])
+  expect((await f.page.evaluate(()=>(window as any).calls)).filter((row:any)=>row.example).map((row:any)=>row.example)).toEqual(['board','workbench','spreadsheet','note','ppt','report']);expect(f.errors).toEqual([])
  }finally{await f.close()}
 },30000)
 it('cancels pending search opening when the menu closes and ignores late replies or a changed account owner',async()=>{
@@ -223,9 +223,9 @@ it('keeps only the latest rapid carousel selection and supports reduced-motion k
   await open(f.page);const pages=f.page.locator('.odyssey-explore-pages button')
   await pages.nth(1).click();await pages.nth(4).click();await pages.nth(2).click()
   await uiExpect(pages.nth(2)).toHaveAttribute('aria-current','true')
-  await pages.nth(2).press('End');await uiExpect(pages.nth(5)).toBeFocused();await uiExpect(pages.nth(5)).toHaveAttribute('aria-current','true')
+  await pages.nth(2).press('End');await uiExpect(pages.last()).toBeFocused();await uiExpect(pages.last()).toHaveAttribute('aria-current','true')
   expect(await f.page.locator('[data-odyssey-operations-case-layer]').count()).toBe(1)
-  await f.page.waitForTimeout(100);await uiExpect(pages.nth(5)).toHaveAttribute('aria-current','true');expect(f.errors).toEqual([])
+  await f.page.waitForTimeout(100);await uiExpect(pages.last()).toHaveAttribute('aria-current','true');expect(f.errors).toEqual([])
  }finally{await f.close()}
 },15000)
 
@@ -249,13 +249,13 @@ it('logs out through the original account owner and leaves the global Explore en
  }finally{await f.close()}
 },15000)
 
-it.each([540,760,1380])('keeps the sixth card subtitle and both description lines readable at %spx',async width=>{
+it.each([540,760,1380])('keeps the spreadsheet card subtitle and both description lines readable at %spx',async width=>{
  const f=await fixture({width,dark:true})
  try{
   await open(f.page)
-  await f.page.locator('.odyssey-explore-pages button').nth(5).click()
+  await f.page.getByRole('button',{name:'复杂表格简单处理',exact:true}).click()
   await uiExpect(f.page.getByRole('button',{name:'播放示例：复杂表格简单处理',exact:true})).toBeVisible()
-  const description=f.page.locator('[data-odyssey-operations-case-layer][data-case="5"] .odyssey-operations-description')
+  const description=f.page.locator('[data-odyssey-operations-case-layer][data-case-kind="spreadsheet"] .odyssey-operations-description')
   const lines=await description.evaluate((node:HTMLElement)=>{
    const text=node.firstChild!
    const marks=new Map<number,string>()
@@ -503,7 +503,7 @@ it.concurrent.each([[1380,true],[1380,false],[820,true],[820,false]] as const)('
     const layer=root.querySelector<HTMLElement>('.odyssey-operations-case-layer[data-case="'+index+'"]')!,card=layer.closest('.odyssey-operations-usecase')!,copy=layer.querySelector('.odyssey-operations-case-copy')!,description=layer.querySelector('.odyssey-operations-description')!,progress=card.querySelector('.odyssey-operations-pagination')!,subtitle=layer.querySelector('.odyssey-operations-subtitle')!;
     return{index,hero:{card:box(card),copy:box(copy),glyphs:glyphs(copy),description:box(description),descriptionGlyphs:glyphs(description),progress:box(progress),subtitle:subtitle.textContent,whiteSpace:getComputedStyle(subtitle).whiteSpace},quick:[...root.querySelectorAll<HTMLElement>('.odyssey-operations-quick-card')].map(card=>{const label=card.querySelector('.odyssey-operations-quick-label')!,art=card.querySelector('.odyssey-operations-illustration')!;return{card:box(card),label:box(label),glyphs:glyphs(label),art:box(art),text:label.textContent,overflow:getComputedStyle(label).textOverflow}})}
    },index);samples.push(geometry);
-   if(index===2)await dialog.screenshot({path:evidence+'/english-presentation-'+width+'-'+dark+'.png'});
+   if(index===4)await dialog.screenshot({path:evidence+'/english-presentation-'+width+'-'+dark+'.png'});
   }
   await writeFile(evidence+'/english-cards-'+width+'-'+dark+'.json',JSON.stringify(samples,null,2));
   for(const geometry of samples){
