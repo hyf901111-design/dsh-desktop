@@ -13,6 +13,10 @@ export function datasetViewValue(value,field){
  }
  return display+(field?.unit?' '+field.unit:'')
 }
+export function datasetViewRecordFields(section){
+ return section.fields.includes('id')?section.fields:['id',...section.fields]
+}
+
 export function datasetViewSchedule(dataset,section){
  const entries=dataset.records.map(record=>({record,a:record[section.start]===null?NaN:Date.parse(record[section.start]),b:record[section.end]===null?NaN:Date.parse(record[section.end])}))
  const timed=entries.filter(e=>Number.isFinite(e.a)&&Number.isFinite(e.b)),first=timed.length?Math.min(...timed.map(e=>e.a)):0,last=timed.length?Math.max(...timed.map(e=>e.b)):0,span=Math.max(1,last-first)
@@ -31,12 +35,15 @@ export function matchesDatasetViewScope(record,where=[]){
   if(rule.op==='notNull')return value!==null;
   if(rule.op==='in')return rule.values.some(candidate=>candidate===value);
   if(typeof value!=='number'||!Number.isFinite(value))return false;
+  if(rule.op==='lt')return value<rule.value;
+  if(rule.op==='lte')return value<=rule.value;
+  if(rule.op==='gte')return value>=rule.value;
   return rule.op==='gt'?value>rule.value:rule.op==='ne'&&value!==rule.value;
  });
 }
 // Serialized into the existing opaque HTML sandbox. Values always come from
 // the canonical source; state holds only view choices and record identities.
-export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPageSize){
+export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPageSize,recordFields){
  const source=document.getElementById('dataset-view-source'),root=document.querySelector('.dv-shell')
  if(!source||!root||!window.sherlockShared)return
  const spec=JSON.parse(source.textContent),data=spec.dataset,view=spec.view,records=new Map(data.records.map(r=>[r.id,r])),ids=[...records.keys()],fields=new Map(data.fields.map(f=>[f.key,f]))
@@ -86,15 +93,19 @@ export function datasetViewRuntime(valueText,matchesScope,sourceHref,defaultPage
    rank.dataset.viewRank=''
    row.appendChild(rank)
   }
-  const identity=make('td'),select=make('button',id,'dv-record-select')
-  select.type='button'
-  select.dataset.viewSelect=''
-  select.setAttribute('aria-label',`查看${id}完整详情`)
-  identity.appendChild(select)
-  row.appendChild(identity)
-  for(const key of section.fields){
-   if(key==='id')continue
+  for(const key of recordFields(section)){
    const field=fields.get(key),value=record[key],cell=make('td')
+   if(key==='id'){
+    cell.className='dv-identity'
+    const select=make('button',id,'dv-record-select')
+    select.type='button'
+    select.dataset.viewSelect=''
+    select.setAttribute('aria-label',`查看${id}完整详情`)
+    cell.appendChild(select)
+    row.appendChild(cell)
+    continue
+   }
+   if(typeof value==='number')cell.className='dv-number'
    const href=sourceHref(field.label,value)
    if(href){
     const link=make('a',value)

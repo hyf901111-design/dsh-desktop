@@ -23,7 +23,12 @@ it('honors a semantic wide comparison without altering ordinary financial layout
  expect(workbenchPanelPrompt(plan,plan.panels[0])).toContain('标题区');
 });
 it('ships the same wide placement and persistence contract through the actual client patch',()=>{
- const patched=patchResearchWorkbenchGrowth(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'));
+ // At runtime the grid wraps the growth viewport. Isolate only that call site
+ // so this inner installer can be checked against the actual installed bytes.
+ const sdk=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8');
+ const before=sdk.replace('snapshot = researchWorkspaceSnapshot(workbenchGrid.reconcile(workbenchGrid.enabled()?next:researchWorkbenchGrowthViewport(snapshot,next)));',
+  'snapshot = researchWorkspaceSnapshot(researchWorkbenchGrowthViewport(snapshot,next));');
+ const patched=patchResearchWorkbenchGrowth(before);
  const helper=patched.match(/function workbenchLayoutFrames\([^]*?\n\}/u)[0];
  const start=patched.indexOf('function researchWorkbenchMatrixNodes('),end=patched.indexOf('function researchCanvasReflowGrowth(',start);
  const serialized=runInNewContext(helper+'\n'+patched.slice(start,end)+'\nresearchWorkbenchMatrixNodes');

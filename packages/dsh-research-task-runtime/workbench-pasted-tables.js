@@ -65,6 +65,8 @@ function scanPastedTables(request, strict = false) {
  return {blocks, firstTableStart, context:context.join('\n')};
 }
 
+export {scanPastedTables as pastedWorkbenchInput};
+
 export function pastedWorkbenchBlocks(request = '') {
  return scanPastedTables(request).blocks;
 }

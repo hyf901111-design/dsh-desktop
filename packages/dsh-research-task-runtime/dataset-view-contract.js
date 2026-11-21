@@ -1,3 +1,4 @@
+import {matchesDatasetViewScope} from './dataset-view-runtime.js';
 // A canonical snapshot plus declarative field references. No model-authored
 // executable code or independently restated record values are part of a view.
 import {compactDatasetGroupLabel,materializeDatasetAggregate} from './dataset-aggregate.js'
@@ -309,7 +310,7 @@ export function compileDatasetChart(config,datasets,title,variant,intent=''){
   check(typeof label==='string'&&object(section)&&(section.label===undefined||section.label===label),'图表分类字段与记录区的分类字段不一致。');
   config={...view,sections:[{...section,label}]};
  }
- check(exact(config,['dataset','sections'],['variant','unit','note','subject'])&&id(config.dataset)&&Array.isArray(config.sections)&&config.sections.length===1,
+ check(exact(config,['dataset','sections'],['variant','unit','note','subject','where'])&&id(config.dataset)&&Array.isArray(config.sections)&&config.sections.length===1,
   '共同数据图表只使用一个完整的记录区；需要交互筛选时请保留独立 view。')
  const [section]=config.sections
  const dataset=datasets?.find(d=>d.id===config.dataset)
@@ -345,8 +346,11 @@ export function compileDatasetChart(config,datasets,title,variant,intent=''){
  const axes=dimensions.map(getField)
  const fields=selected.filter(key=>!dimensions.includes(key)).map(getField)
  check(axes.every(Boolean)&&fields.length&&fields.every(Boolean)&&new Set(fields).size===fields.length,'图表字段必须是共同记录的实际分类和数值列。')
+ validateViewScope(config.where,dataset);
+ const scoped=config.where?.length?dataset.records.filter(row=>matchesDatasetViewScope(row,config.where)):dataset.records;
+ check(scoped.length,'图表范围内没有来源记录，请用明细如实显示空结果。');
  const records=axes.length===1&&/date|日期|时间/iu.test(axes[0].key+' '+axes[0].label)
-  ?orderDatedChartRows(dataset.records,row=>row[axes[0].key]):dataset.records;
+  ?orderDatedChartRows(scoped,row=>row[axes[0].key]):scoped;
  const keys=records.map(row=>dimensions.map(key=>row[key]))
  const categories=keys.map(values=>values.join(' · '))
  check(keys.every(values=>values.every(value=>typeof value==='string'&&value.trim()))&&new Set(categories).size===categories.length,'每个绘图分类需要唯一且完整的原始名称；请先按图表分类汇总。')
@@ -474,6 +478,18 @@ export function compileSharedDatasetCard(type,config,datasets,title){
   return item;
  })};
 }
+function validateViewScope(where,dataset){
+ const ref=key=>dataset.fields.some(field=>field.key===key);
+ const scopeRule=rule=>{
+  if(!object(rule)||!ref(rule.field))return false;
+  if(rule.op==='notNull')return exact(rule,['field','op']);
+  if(['gt','gte','lt','lte','ne'].includes(rule.op))return exact(rule,['field','op','value'])&&Number.isFinite(rule.value)&&
+   dataset.records.every(record=>record[rule.field]===null||Number.isFinite(record[rule.field]));
+  return rule.op==='in'&&exact(rule,['field','op','values'])&&Array.isArray(rule.values)&&rule.values.length>0&&rule.values.length<=64&&
+   rule.values.every(value=>value===null||['string','number','boolean'].includes(typeof value)&&Number.isFinite(typeof value==='number'?value:0));
+ };
+ check(where===undefined||Array.isArray(where)&&where.length<=8&&where.every(scopeRule),'视图范围条件无效；使用in、notNull或数值列的gt、gte、lt、lte、ne，不删改共同记录。')
+}
 export function validateDatasetView(config,datasets){
  check(exact(config,['dataset','sections'],['subject','note','filters','where','details','reorder','navigation','layout']),'组合视图配置包含无效字段。')
  check(id(config.dataset),'组合视图必须引用有效的共同数据集。')
@@ -482,18 +498,10 @@ export function validateDatasetView(config,datasets){
  const keys=new Set(dataset.fields.map(f=>f.key))
  const ref=k=>typeof k==='string'&&keys.has(k)
  const refs=(list,min=0,max=24)=>Array.isArray(list)&&list.length>=min&&list.length<=max&&new Set(list).size===list.length&&list.every(ref)
- const scopeRule=rule=>{
-  if(!object(rule)||!ref(rule.field))return false;
-  if(rule.op==='notNull')return exact(rule,['field','op']);
-  if(['gt','ne'].includes(rule.op))return exact(rule,['field','op','value'])&&Number.isFinite(rule.value)&&
-   dataset.records.every(record=>record[rule.field]===null||Number.isFinite(record[rule.field]));
-  return rule.op==='in'&&exact(rule,['field','op','values'])&&Array.isArray(rule.values)&&rule.values.length>0&&rule.values.length<=64&&
-   rule.values.every(value=>value===null||['string','number','boolean'].includes(typeof value)&&Number.isFinite(typeof value==='number'?value:0));
- };
  check(config.subject===undefined||text(config.subject,256),'组合视图主题无效。')
  check(config.note===undefined||text(config.note,2000),'组合视图业务说明无效。')
  check(config.filters===undefined||refs(config.filters,0,4),'筛选字段无效、重复或超过4项。')
- check(config.where===undefined||Array.isArray(config.where)&&config.where.length<=8&&config.where.every(scopeRule),'视图范围条件无效；使用in、notNull或数值列的gt、ne，不删改共同记录。')
+ validateViewScope(config.where,dataset);
 
  check(config.details===undefined||refs(config.details),'详情字段无效或重复。')
  check(config.reorder===undefined||typeof config.reorder==='boolean','优先级排序设置无效。')
@@ -536,7 +544,7 @@ export const DATASET_HIERARCHY_SCHEMA={type:'object',additionalProperties:false,
 }};
 export const DATASET_VIEW_SCHEMA={type:'object',additionalProperties:false,properties:{
  dataset:{type:'string',required:true},label:{type:'string',description:'图表分类字段；优先放在唯一的 sections[0].label。'},type:{type:'string',enum:['view','table','chart','kpi','timeline'],description:'通常省略，面板类型由 panel.type 声明。'},variant:{type:'string',enum:['bar','horizontal','line','area','groupedBar','dumbbell','funnel','candlestick','scatter'],description:'原生图表变体。用户贴出的完整金融台账可用 candlestick 或 scatter。'},unit:{type:'string',description:'仅 type:chart 的来源原单位。'},note:{type:'string',description:'组件的额外业务说明，不替代共同数据来源。'},subject:{type:'string'},filters:{...fieldKeysSchema,description:'最多4个用户可切换筛选字段；范围子集另用where声明。'},details:fieldKeysSchema,reorder:{type:'boolean'},navigation:{type:'string',enum:['flow','tabs','stack'],description:'连续显示各分区用 flow（兼容 stack），标签切换用 tabs。'},layout:{type:'string',enum:['stack','split']},
- where:{type:'array',description:'最多8个默认范围条件，多个条件为且。in用values；gt（大于）、ne（不等于）对数值列用value；notNull不提供值。',items:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},op:{type:'string',required:true,enum:['in','notNull','gt','ne']},value:{type:'number'},values:{type:'array',items:{type:'json',description:'来源字段的原始字符串、数字、布尔或null，不接受对象或表达式。'}}}}},
+ where:{type:'array',description:'最多8个默认范围条件，多个条件为且。in用values；gt/gte（大于/含等号）、lt/lte（小于/含等号）、ne（不等于）对数值列用value；notNull不提供值。',items:{type:'object',additionalProperties:false,properties:{field:{type:'string',required:true},op:{type:'string',required:true,enum:['in','notNull','gt','gte','lt','lte','ne']},value:{type:'number'},values:{type:'array',items:{type:'json',description:'来源字段的原始字符串、数字、布尔或null，不接受对象或表达式。'}}}}},
  groupBy:{...fieldKeysSchema,description:'可省略。仅用于引用全表汇总的指标卡时可写 []，计算项仍须在 sharedDatasets.aggregate 声明。'},
  sections:{type:'array',description:'显式声明记录、图表和排程字段。只引用一条全表汇总的指标卡，或直接显示已声明筛选范围内所有字段的记录表，可省略。',items:{type:'object',additionalProperties:false,properties:{kind:{type:'string',required:true,enum:['records','compare','schedule']},title:{type:'string'},fields:fieldKeysSchema,label:{type:'string'},start:{type:'string'},end:{type:'string'},owner:{type:'string'},resource:{type:'string'}}}}
 }};
