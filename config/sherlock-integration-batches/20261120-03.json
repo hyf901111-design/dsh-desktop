@@ -344,6 +344,214 @@
           "本地预设回复用于演示；最终观感须在签名客户端中回放。"
         ],
         "generatedAt": "2026-11-20T23:25:43.654286Z"
+      },
+      "merged": {
+        "mergeCommit": "8197ae21ee1b2306c89fa9ed96b388b17a1ceada",
+        "verificationCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-canvas-storage.test.ts",
+              "test/board-tabs-contract.test.js",
+              "test/workbench-style.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "管理者工作台|默认显示五条|五条以内"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-boards-browser.mjs",
+              "--manager-workbench-focus"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "build:presentation"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run build:presentation",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-reference-browser.test.js",
+              "test/workspace-mode-welcome.test.js",
+              "test/navigation-shortcuts.test.ts",
+              "test/workspace-draft-state.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capabilities.test.js",
+              "test/browser-app-native.test.js",
+              "test/presentation-artboard-browser.test.ts",
+              "--maxWorkers=3"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：/usr/bin/env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/presentation-workspace.test.ts test/presentation-reference-browser.test.js test/workspace-mode-welcome.test.js test/navigation-shortcuts.test.ts test/workspace-draft-state.test.js test/client-capability-service.test.ts test/client-capabilities.test.js test/browser-app-native.test.js test/presentation-artboard-browser.test.ts --maxWorkers=3",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "SHERLOCK_ROUTING_RESIDENT=1",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-component-submit-routing-browser.test.js",
+              "-t",
+              "one native right-side",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：/usr/bin/env SHERLOCK_ROUTING_RESIDENT=1 ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/conversation-component-submit-routing-browser.test.js -t one native right-side --maxWorkers=1",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/pptx-annotation-browser.test.js",
+              "-t",
+              "point|rect",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/pptx-annotation-browser.test.js -t point|rect --maxWorkers=1",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-sidebars.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/knowledge-library.test.ts",
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/workspace-sidebars.test.ts test/presentation-workspace.test.ts test/knowledge-library.test.ts test/client-capabilities.test.js test/conversation-components-policy.test.js --maxWorkers=2",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-sidebars.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-edit-guide-content.test.ts",
+              "test/presentation-edit-guide-composer-browser.test.js",
+              "test/presentation-reference-browser.test.js",
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/workspace-sidebars.test.ts test/presentation-workspace.test.ts test/presentation-edit-guide-content.test.ts test/presentation-edit-guide-composer-browser.test.js test/presentation-reference-browser.test.js test/client-capabilities.test.js test/conversation-components-policy.test.js --maxWorkers=2",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-21T01:30:51.527Z"
       }
     },
     {
@@ -426,6 +634,214 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-20T23:45:28.553886Z"
+      },
+      "merged": {
+        "mergeCommit": "8c4ccadb4b3a5ca6f95ac287d823cd40581834df",
+        "verificationCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-canvas-storage.test.ts",
+              "test/board-tabs-contract.test.js",
+              "test/workbench-style.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "管理者工作台|默认显示五条|五条以内"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-boards-browser.mjs",
+              "--manager-workbench-focus"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "build:presentation"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run build:presentation",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-reference-browser.test.js",
+              "test/workspace-mode-welcome.test.js",
+              "test/navigation-shortcuts.test.ts",
+              "test/workspace-draft-state.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capabilities.test.js",
+              "test/browser-app-native.test.js",
+              "test/presentation-artboard-browser.test.ts",
+              "--maxWorkers=3"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：/usr/bin/env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/presentation-workspace.test.ts test/presentation-reference-browser.test.js test/workspace-mode-welcome.test.js test/navigation-shortcuts.test.ts test/workspace-draft-state.test.js test/client-capability-service.test.ts test/client-capabilities.test.js test/browser-app-native.test.js test/presentation-artboard-browser.test.ts --maxWorkers=3",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "SHERLOCK_ROUTING_RESIDENT=1",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-component-submit-routing-browser.test.js",
+              "-t",
+              "one native right-side",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：/usr/bin/env SHERLOCK_ROUTING_RESIDENT=1 ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/conversation-component-submit-routing-browser.test.js -t one native right-side --maxWorkers=1",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/pptx-annotation-browser.test.js",
+              "-t",
+              "point|rect",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/pptx-annotation-browser.test.js -t point|rect --maxWorkers=1",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-sidebars.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/knowledge-library.test.ts",
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/workspace-sidebars.test.ts test/presentation-workspace.test.ts test/knowledge-library.test.ts test/client-capabilities.test.js test/conversation-components-policy.test.js --maxWorkers=2",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-sidebars.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-edit-guide-content.test.ts",
+              "test/presentation-edit-guide-composer-browser.test.js",
+              "test/presentation-reference-browser.test.js",
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/workspace-sidebars.test.ts test/presentation-workspace.test.ts test/presentation-edit-guide-content.test.ts test/presentation-edit-guide-composer-browser.test.js test/presentation-reference-browser.test.js test/client-capabilities.test.js test/conversation-components-policy.test.js --maxWorkers=2",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-21T01:30:51.527Z"
       }
     },
     {
@@ -512,6 +928,214 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-21T01:00:41.185295Z"
+      },
+      "merged": {
+        "mergeCommit": "7b23d20cc2fc8285f8ea6381ac9b9f9e33ee987f",
+        "verificationCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-canvas-storage.test.ts",
+              "test/board-tabs-contract.test.js",
+              "test/workbench-style.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm exec -- vitest run test/research-canvas-storage.test.ts test/board-tabs-contract.test.js test/workbench-style.test.js",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "exec",
+              "--",
+              "vitest",
+              "run",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "管理者工作台|默认显示五条|五条以内"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm exec -- vitest run test/research-board-sidebar-overflow.test.ts -t 管理者工作台|默认显示五条|五条以内",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/test-research-boards-browser.mjs",
+              "--manager-workbench-focus"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/test-research-boards-browser.mjs --manager-workbench-focus",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "build:presentation"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run build:presentation",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "scripts/patch-web-frontend-loading.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：node scripts/patch-web-frontend-loading.mjs",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：npm run typecheck",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-reference-browser.test.js",
+              "test/workspace-mode-welcome.test.js",
+              "test/navigation-shortcuts.test.ts",
+              "test/workspace-draft-state.test.js",
+              "test/client-capability-service.test.ts",
+              "test/client-capabilities.test.js",
+              "test/browser-app-native.test.js",
+              "test/presentation-artboard-browser.test.ts",
+              "--maxWorkers=3"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：/usr/bin/env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/presentation-workspace.test.ts test/presentation-reference-browser.test.js test/workspace-mode-welcome.test.js test/navigation-shortcuts.test.ts test/workspace-draft-state.test.js test/client-capability-service.test.ts test/client-capabilities.test.js test/browser-app-native.test.js test/presentation-artboard-browser.test.ts --maxWorkers=3",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "/usr/bin/env",
+              "SHERLOCK_ROUTING_RESIDENT=1",
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/conversation-component-submit-routing-browser.test.js",
+              "-t",
+              "one native right-side",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：/usr/bin/env SHERLOCK_ROUTING_RESIDENT=1 ./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/conversation-component-submit-routing-browser.test.js -t one native right-side --maxWorkers=1",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/pptx-annotation-browser.test.js",
+              "-t",
+              "point|rect",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/pptx-annotation-browser.test.js -t point|rect --maxWorkers=1",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-sidebars.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/knowledge-library.test.ts",
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/workspace-sidebars.test.ts test/presentation-workspace.test.ts test/knowledge-library.test.ts test/client-capabilities.test.js test/conversation-components-policy.test.js --maxWorkers=2",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "./node_modules/node/bin/node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-sidebars.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/presentation-edit-guide-content.test.ts",
+              "test/presentation-edit-guide-composer-browser.test.js",
+              "test/presentation-reference-browser.test.js",
+              "test/client-capabilities.test.js",
+              "test/conversation-components-policy.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "已在当前集成提交执行：./node_modules/node/bin/node node_modules/vitest/vitest.mjs run test/workspace-sidebars.test.ts test/presentation-workspace.test.ts test/presentation-edit-guide-content.test.ts test/presentation-edit-guide-composer-browser.test.js test/presentation-reference-browser.test.js test/client-capabilities.test.js test/conversation-components-policy.test.js --maxWorkers=2",
+            "verifiedCommit": "40ca22480b8a3dd549b9c20ad6690d5698a1dbd3",
+            "completedAt": "2026-11-21T01:30:51.527Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-21T01:30:51.527Z"
       }
     }
   ],
