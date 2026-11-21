@@ -1,3 +1,4 @@
+import {HOME_WORKBENCH_PROVIDER} from './home-workbench-contract.js'
 import {workbenchPomodoroSettings} from './workbench-pomodoro.js';
 import { isDeepStrictEqual } from 'node:util'
 import {simpleNewsBrief, WORKBENCH_LIBRARY_GUIDANCE} from './workbench-library.js'
@@ -353,6 +354,11 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
     let request
     try { signal?.throwIfAborted(); request = await next(); signal?.throwIfAborted() }
     catch (error) { releasePlanning(agent); throw error }
+    // The replay persists its own plan, without a live workbench tool receipt.
+    if (request.provider === HOME_WORKBENCH_PROVIDER) {
+      releasePlanning(agent)
+      return request
+    }
     const human = workbenchCreationRequest(agent?.session)
     const claimed=request.messages?.findLast(message=>message.role==='user'&&message.source?.kind==='user')
     const wireHuman=claimed&&workbenchCreationRequest({header:agent?.session?.header,events:[{type:'user/message',data:claimed}]})

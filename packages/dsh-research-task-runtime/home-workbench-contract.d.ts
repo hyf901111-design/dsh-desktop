@@ -1,3 +1,5 @@
+export const HOME_WORKBENCH_PROVIDER:string
+export const HOME_WORKBENCH_REQUEST_MISMATCH:string
 export const HOME_WORKBENCH_PATH:string
 export const HOME_WORKBENCH_EVENT:string
 export const HOME_WORKBENCH_PURPOSE:'frozen-research-workbench-replay'

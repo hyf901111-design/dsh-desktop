@@ -5,8 +5,7 @@ import {isAbsolute,join} from 'node:path'
 import {isHomeGuideSessionTitle,homeGuideSessionTitle} from './home-guide-session-titles.js'
 import {financialWidgetDefaults} from './financial-widget-contract.js'
 import {homeWorkbenchStudySpec} from './home-workbench-study-contract.js'
-import {HOME_WORKBENCH_PATH,HOME_WORKBENCH_EVENT,HOME_WORKBENCH_PURPOSE,HOME_WORKBENCH_PROMPT,HOME_WORKBENCH_PANELS,homeWorkbenchNodeId,homeWorkbenchStage,homeWorkbenchPlanReceipt} from './home-workbench-contract.js'
-const PROVIDER='sherlock-home-workbench'
+import {HOME_WORKBENCH_PROVIDER as PROVIDER,HOME_WORKBENCH_REQUEST_MISMATCH,HOME_WORKBENCH_PATH,HOME_WORKBENCH_EVENT,HOME_WORKBENCH_PURPOSE,HOME_WORKBENCH_PROMPT,HOME_WORKBENCH_PANELS,homeWorkbenchNodeId,homeWorkbenchStage,homeWorkbenchPlanReceipt} from './home-workbench-contract.js'
 const abort=()=>new DOMException('工作台演示已结束。','AbortError')
 const identifier=value=>typeof value==='string'&&/^[\w:-]{1,128}$/.test(value)
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});promise.catch(()=>{});return {promise,resolve,reject}}
@@ -35,7 +34,7 @@ export function createHomeWorkbenchRuntime(ctx,tasks,{env=process.env}={}){
    if(request.purpose!==undefined){if(!['session-title','compaction'].includes(request.purpose))throw Error('用例不支持此辅助请求。');const text=request.purpose==='session-title'?homeGuideSessionTitle('workbench'):'白酒龙头研究工作台用例，保留固定历史数据和当前生成状态。';yield{type:'block-start',index:0,blockType:'text'};yield{type:'text-delta',index:0,text};yield{type:'block-end',index:0,block:{type:'text',text}};yield{type:'finish',reason:{kind:'stop'}};return}
    await wait(run,()=>run.playing,request.signal)
    const user=run.agent.session.events.filter(e=>e.type==='user/message'&&e.data.source?.kind==='user')
-   if(run.started||user.length!==1||user[0].data.content?.filter(p=>p.type==='text').map(p=>p.text).join('')!==HOME_WORKBENCH_PROMPT||user[0].data.content.some(p=>p.type!=='text'))throw Error('演示仅接受当前固定研究需求，已停止自动执行。')
+   if(run.started||user.length!==1||user[0].data.content?.filter(p=>p.type==='text').map(p=>p.text).join('')!==HOME_WORKBENCH_PROMPT||user[0].data.content.some(p=>p.type!=='text'))throw Error(HOME_WORKBENCH_REQUEST_MISMATCH)
    const turn=run.agent.session.events.findLast(event=>event.type==='turn/start')?.data.turn
    if(!Number.isSafeInteger(turn)||turn<1)throw Error('当前研究轮次不可用。')
    run.turn=turn;run.started=true;run.accepted.resolve();let text='';yield{type:'block-start',index:0,blockType:'text'}
@@ -96,7 +95,11 @@ export function createHomeWorkbenchRuntime(ctx,tasks,{env=process.env}={}){
     const panels=HOME_WORKBENCH_PANELS.filter(panel=>!panel.reused)
     if(!run.receipt||run.allowed!==24||run.panels.size!==panels.length||panels.some(panel=>!run.panels.has(panel.tab+':'+panel.role)))throw Error('工作台组件尚未全部就绪。')
     if(!run.complete){await wait(run,()=>run.playing);const results=await Promise.all(panels.map(panel=>run.panels.get(panel.tab+':'+panel.role)));current(run);if(results.some(result=>result?.task?.state!=='completed'||!result.task.finalOutput))throw Error('工作台组件尚未全部保存。');run.completionConfirmed=true;notify(run)}
-    await run.agent.whenIdle();current(run);if(!run.complete||await ctx.sessions.flush(run.agent.session)!==true)throw Error('工作台完成回执尚未保存。');return{stage:'completed'}
+    await run.agent.whenIdle();current(run)
+    const session=run.agent.session,terminal=session.events.findLast(event=>event.type==='turn/end'&&event.data.turn===run.turn)
+    if(!run.complete||terminal?.data.reason.kind!=='completed')throw Error('工作台演示的对话未完成。')
+    if(await ctx.sessions.flush(session)!==true)throw Error('工作台完成回执尚未保存。')
+    return{stage:'completed'}
    }
    const stage=homeWorkbenchStage(input.stage);if(stage<3||stage>24||stage>run.allowed+1)throw Error('工作台演绎步骤顺序已变化。');run.allowed=Math.max(run.allowed,stage);notify(run);await run.milestones.get(stage).promise;current(input);return {stage:input.stage}
   },

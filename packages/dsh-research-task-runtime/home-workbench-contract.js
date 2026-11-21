@@ -1,3 +1,5 @@
+export const HOME_WORKBENCH_PROVIDER='sherlock-home-workbench'
+export const HOME_WORKBENCH_REQUEST_MISMATCH='演示仅接受当前固定研究需求，已停止自动执行。'
 export const HOME_WORKBENCH_PATH='/sherlock/home-guide/workbench'
 export const HOME_WORKBENCH_EVENT='home-guide/workbench'
 export const HOME_WORKBENCH_PURPOSE='frozen-research-workbench-replay'

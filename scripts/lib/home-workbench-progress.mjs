@@ -1,3 +1,5 @@
+import {HOME_WORKBENCH_REQUEST_MISMATCH} from '../../packages/dsh-research-task-runtime/home-workbench-contract.js'
+
 /** A durable demo plan is an application event, never a fabricated model/tool call. */
 export function homeWorkbenchReceiptEvent(event){
  const data=event?.data
@@ -11,6 +13,16 @@ export function homeWorkbenchReceiptEvent(event){
   if(!prefix.startsWith('hwb:')||prefix.length<=5||prefix.length>250||!prefix.endsWith(':')||plans.some((p,i)=>p?.id!==prefix+tabs[i]||p.count!==5))return null
  }
  return data
+}
+function isLegacyHomeWorkbenchFailure(context,state,mismatch){
+ // Older builds let live planning steer again after the replay had finished.
+ const terminal=context.matches.find(match=>match.event.seq===state.failure.seq)?.event
+ const error=terminal?.data.reason?.error
+ if(error?.code!=='UNKNOWN'||error.message!==mismatch)return false
+ return context.matches.some(({event})=>{
+  const receipt=homeWorkbenchReceiptEvent(event)
+  return event.seq<terminal.seq&&receipt?.kind==='completed'&&receipt.turn===state.turn
+ })
 }
 export function registerHomeWorkbenchReceipt(ctx){
  ctx.conversationEvents.register({kind:'home-workbench-plan',target:'chat',match:event=>{const data=homeWorkbenchReceiptEvent(event);return data?{id:data.runId,role:data.kind==='plan'?'start':'update'}:null},start:(_context,match)=>{
@@ -59,6 +71,8 @@ export function homeWorkbenchGenerating(plans,current,state,retrying){
 }
 const START='/* odyssey:home-workbench-progress:start:v1 */',END='/* odyssey:home-workbench-progress:end:v1 */'
 const edits=[
+ ['error-receipt','const turn = retryTurn(event);','const receipt=homeWorkbenchReceiptEvent(event);if(receipt?.kind==="completed")return {id:String(receipt.turn),role:"update"};\n','before'],
+ ['legacy-error','const failure = state.failure;',`if(isLegacyHomeWorkbenchFailure(context,state,${JSON.stringify(HOME_WORKBENCH_REQUEST_MISMATCH)}))return null;\n`,'before'],
  ['register','function registerConversationNodes(ctx) {','\nregisterHomeWorkbenchReceipt(ctx);','after'],
  ['invisible','if (entry.kind === "node") return (0, react_jsx_runtime.jsx)(ChatNodeSeat, {','if(entry.kind==="node"&&nodeStore.get(entry.key)?.kind==="home-workbench-plan")return null;\n','before'],
  ['visible','const visiblePlans=','isHomeWorkbenchReceipt(plans)?plans:','after'],
@@ -75,7 +89,7 @@ export function stripHomeWorkbenchProgress(source){
 export function patchHomeWorkbenchProgress(source){
  source=stripHomeWorkbenchProgress(source)
  const one=(anchor,insert)=>{const re=new RegExp('^[ \\t]*'+anchor.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gm'),hits=[...source.matchAll(re)];if(hits.length!==1)throw Error('Workbench progress anchor drifted: '+anchor+' ('+hits.length+')');const index=hits[0].index+hits[0][0].length-anchor.length;source=source.slice(0,index)+insert+source.slice(index+anchor.length)}
- const functions=[homeWorkbenchReceiptEvent,registerHomeWorkbenchReceipt,homeWorkbenchReceiptAnchors,isHomeWorkbenchReceipt,homeWorkbenchProgressState,homeWorkbenchGenerating].map(fn=>fn.toString()).join('\n')
+ const functions=[homeWorkbenchReceiptEvent,isLegacyHomeWorkbenchFailure,registerHomeWorkbenchReceipt,homeWorkbenchReceiptAnchors,isHomeWorkbenchReceipt,homeWorkbenchProgressState,homeWorkbenchGenerating].map(fn=>fn.toString()).join('\n')
  const overrides=`const homeWorkbenchBaseAnchors=researchWorkbenchReceiptAnchors,homeWorkbenchBaseProgress=workbenchProgressState;
 researchWorkbenchReceiptAnchors=function(flow,store,readMetadata,readTurn=()=>null){return homeWorkbenchReceiptAnchors(flow,store,readTurn,homeWorkbenchBaseAnchors(flow,store,readMetadata,readTurn))};
 workbenchProgressState=function(plans,snapshot,english=false,refreshSnapshot=null){return homeWorkbenchProgressState(plans,snapshot,english,homeWorkbenchBaseProgress(plans,snapshot,english,refreshSnapshot))};`
