@@ -12,12 +12,12 @@ export function workbenchReadingGuidance(request, blocks = []) {
  const purpose = workbenchReadingPurpose(request)
  const choice = '优先以实际数据组织组件。保留用户明确要求的图、独立卡、原表和顺序。每张卡的主内容、占宽和先后由读者当前要完成的动作决定。'
  if (purpose === 'reconcile') return choice+'逐笔核对以可直接读的完整明细为入口，保留原始行序、业务编号、金额小数位与单位。显式声明 records.fields 的原列顺序，对账必读的多列可用 layout:"wide"。'
- if (purpose === 'handoff') return choice+'交接便签优先用一张紧凑的正文卡。将所问时点、实值、变化方向和按原单位换算的差额写入 panel.content.body；提供 content.title、asOf 和 sources 的公开出处。仅在用户另有要求时增加图或明细。'
+ if (purpose === 'handoff') return choice+'交接便签优先用一张紧凑的正文卡。将所问时点、实值、变化方向和按原单位换算的差额写入 panel.content.body；提供 content.title、asOf 和 sources 的公开出处。若只交付这一句，省略未被组件引用的 sharedDatasets；直接从指定原表计算。仅在用户另有要求时增加图或明细。'
  if (purpose === 'exceptions') {
   const signedHeaders = blocks.flatMap(block => block[0].filter((_,i) =>
    block.slice(1).some(row => /^-\d+(?:\.\d+)?$/u.test(row[i]) && Number(row[i]) < 0)
   )).slice(0,12)
-  return choice+'按用户指定的基期、阈值或状态先列出命中的对象，再呈现需要的其余对照。标题点明例外或扭转；在同一对象旁排两期有符号的可比指标，余额与流量分开。数值筛选可用 view.where:[{field:基期字段键,op:"lt",value:0}]；严格遵循原始阈值和期间。'+
+  return choice+'按用户指定的基期、阈值或状态先列出命中的对象，再呈现需要的其余对照。标题点明例外或扭转；在同一对象旁排两期有符号的可比指标，余额与流量分开。数值筛选可用 view.where:[{field:基期字段键,op:"lt",value:0}]；追踪其余类别可用互补范围 gte；严格遵循原始阈值和期间。'+
    (signedHeaders.length?'原表中实际含负值的列名为 '+JSON.stringify(signedHeaders)+'。':'')
  }
  return choice

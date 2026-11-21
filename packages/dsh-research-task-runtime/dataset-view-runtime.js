@@ -32,6 +32,8 @@ export function matchesDatasetViewScope(record,where=[]){
   if(rule.op==='in')return rule.values.some(candidate=>candidate===value);
   if(typeof value!=='number'||!Number.isFinite(value))return false;
   if(rule.op==='lt')return value<rule.value;
+  if(rule.op==='lte')return value<=rule.value;
+  if(rule.op==='gte')return value>=rule.value;
   return rule.op==='gt'?value>rule.value:rule.op==='ne'&&value!==rule.value;
  });
 }

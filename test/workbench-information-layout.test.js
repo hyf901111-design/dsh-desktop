@@ -37,6 +37,10 @@ it('uses prior-period actual outflows to choose the exception cohort and keeps t
  ]}).panels.map(panel=>panel.artifact)
  expect(outflows.labels).toEqual(['零售','机构指数'])
  expect(outflows.series.map(series=>series.values)).toEqual([[24367,9374],[-8473,-55125]])
+ const cutoff = {...where[0],field:records.view.where[0].field,value:185942}
+ const inRange = op => records.dataset.records.filter(row=>matchesDatasetViewScope(row,[{...cutoff,op}]))
+ expect(inRange('lte')).toHaveLength(5)
+ expect(inRange('gte')).toHaveLength(1)
  expect(records.dataset.records).toHaveLength(5)
  expect(records.dataset.records.filter(row=>matchesDatasetViewScope(row,records.view.where))).toHaveLength(2)
 })
