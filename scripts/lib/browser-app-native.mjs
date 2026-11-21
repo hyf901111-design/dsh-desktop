@@ -44,6 +44,7 @@ export function installWorkspaceAppSessions({sessions,isBoardOnly,workspaceSessi
    origin={id:selected,view:selected&&!isBoardOnly(selected)?viewFor(selected).getSnapshot().view:undefined}
   }
   if(apps.has(detail?.surface)){
+   if(detail.surface==='image-factory' && doc.body.dataset.imageFactoryNewSession==='true')return
    if(!selected||!isBoardOnly(selected))return
    pendingBoard=selected
    doc.body.dataset.boardWorkspacePending='true'
@@ -245,6 +246,7 @@ ctx.effect(()=>{
      const selected=eworkSidebarWorkspace?.current();
      return selected===undefined?getTaskWorkspace():selected;
    },
+   archiveTask:id=>workspaces.archiveSession(id),
    standaloneDirectory:()=>window.dshDesktop.standaloneConversationDirectory(),
    setTaskView:id=>slots.resolveStore(chatStore,id).actions.setView('chat'),taskStorage:window.dshDesktop?.imageFactoryTasks,
    send:(session,content,mode,action)=>factory.prompt(session,content,mode,action)

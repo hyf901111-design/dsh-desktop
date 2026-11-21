@@ -8,7 +8,7 @@ import { createImageFactoryTasks } from './image-factory-tasks.mjs'
 /** Connect the current canvas to native admission, without owning a message list or a composer. */
 export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
-  getTaskWorkspace, getDefaultWorkspace, standaloneDirectory, setTaskView, taskStorage, removeProvisionalReference, isBoardOnly = () => false,
+  getTaskWorkspace, getDefaultWorkspace, standaloneDirectory, setTaskView, taskStorage, archiveTask, removeProvisionalReference, isBoardOnly = () => false,
 }) {
   const jobs = new Map(), listeners = new Set()
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false, switchingWorkspace: false }
@@ -26,7 +26,11 @@ export function installImageFactoryContext({
   const nativeInput = () => currentId() ? getInput(currentId()) : getPending()?.shell
   const signal = (name, detail) => doc.dispatchEvent(new win.CustomEvent('sherlock:image-factory-' + name, { detail }))
   const tasks = createImageFactoryTasks({ sessions, win, isActive, syncSession, getWorkspace: getTaskWorkspace, getDefaultWorkspace, standaloneDirectory,
-    setView: setTaskView, storage: taskStorage, isBoardOnly,
+    setView: setTaskView, storage: taskStorage, archiveTask, isBoardOnly,
+    blankTitle: () => doc.documentElement.dataset.odysseyLocale === 'en' ? 'New image' : '新图像',
+    requestTitle: (sessionId, kind, title) => win.fetch?.('/sherlock/image-factory/session-title', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, kind, title })
+    }).catch(() => {}),
     signal(name, detail) {
       if (name === 'task-state') publishState()
       signal(name, detail)
@@ -68,7 +72,11 @@ export function installImageFactoryContext({
     focus()
     return true
   }
-  const usePrompt = event => { if (!state.current && fill(event.detail?.prompt, true)) event.preventDefault() }
+  const usePrompt = event => {
+    if (state.current || !fill(event.detail?.prompt, true)) return
+    tasks.setTitle({ scope: canvasScope(), title: event.detail.title })
+    event.preventDefault()
+  }
   let pendingLayer
   const composer = () => doc.querySelector('#odyssey-right-workspace-panel textarea')
   function clearLayerPreview(shell = pendingLayer?.shell, occurrenceId = pendingLayer?.occurrenceId) {
@@ -271,9 +279,11 @@ export function installImageFactoryContext({
     observe()
   }
   async function prompt(session, content, mode, action) {
+    const finishAdmission = tasks.admission(session.sessionId)
     let next
     try { next = await prepare(session.sessionId, content, action) }
     catch (error) {
+      finishAdmission(false)
       if (content.some(part => part.type === 'text' && imageLayerReferenceParts(part.text).length))
         getInput(session.sessionId)?.notify('error', error.message)
       throw error
@@ -281,9 +291,10 @@ export function installImageFactoryContext({
     try {
       if (next.id) watch(session, jobs.get(next.id))
       const result = await session.prompt(next.content, mode)
+      finishAdmission(result.ok)
       if (!result.ok && next.id) finish(next.id)
       return result
-    } catch (error) { if (next.id) finish(next.id); throw error }
+    } catch (error) { finishAdmission(false); if (next.id) finish(next.id); throw error }
   }
   async function submitCanvasAction(event, operation) {
     const { id, prompt: text } = event.detail ?? {}
@@ -354,6 +365,7 @@ export function installImageFactoryContext({
     const pendingState = pending?.getSnapshot?.()
     if (pendingState?.busy || pendingState?.activating) return
     const source = nativeInput()
+    let replacement
     const token = workspaceChange = {}
     const validate = () => {
       if (workspaceChange !== token || !isActive() || currentId() !== before || state.busy || committed() ||
@@ -365,6 +377,9 @@ export function installImageFactoryContext({
       const directory = workspaceId === null ? { cwd: await standaloneDirectory() } : { workspaceId }
       validate()
       const id = 'image-task-' + win.crypto.randomUUID()
+      replacement = id
+      await tasks.registerReplacement(id)
+      validate()
       const next = await sessions.create({ sessionId: id, ...directory })
       validate()
       if (next !== id || !sessions.binding(id)) throw Error('工作区会话未能打开，草稿已保留。')
@@ -398,6 +413,7 @@ export function installImageFactoryContext({
       }
     } finally {
       if (workspaceChange === token) workspaceChange = undefined
+      if (replacement) tasks.releaseReplacement(replacement)
       publishState()
     }
   }
@@ -409,7 +425,7 @@ export function installImageFactoryContext({
     publishedScope = sessionId
     signal('session', { sessionId })
   }
-  const offSession = sessions.list.subscribe?.(() => { syncSession(); syncLayerPreview() })
+  const offSession = sessions.list.subscribe?.(() => { tasks.observe(); syncSession(); syncLayerPreview() })
   const reset = () => {
     for (const id of jobs.keys()) finish(id, false)
     galleryDrafts = new WeakMap()
@@ -417,7 +433,7 @@ export function installImageFactoryContext({
     publishedScope = intendedCanvas = draftOwner = workspaceChange = undefined
     tasks.reset()
   }
-  const events = { state: stateChange, 'request-session': event => syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt, 'reference-layer': referenceLayer, 'reference-clear': () => clearLayerPreview(),
+  const events = { state: stateChange, 'request-session': event => event.detail?.fresh ? tasks.enterFresh() : syncSession(true, event.detail?.reopen, event.detail?.entry), 'use-prompt': usePrompt, 'reference-layer': referenceLayer, 'reference-clear': () => clearLayerPreview(),
     comment: event => { void submitCanvasAction(event, 'region') },
     cutout: event => { void submitCanvasAction(event, 'cutout') },
     'focus-chat': focus, reset,
@@ -433,13 +449,15 @@ export function installImageFactoryContext({
     'request-task-state': () => tasks.publish(true) }
   for (const [name, handler] of Object.entries(events)) doc.addEventListener('sherlock:image-factory-' + name, handler)
   const surfaceChange = event => {
-    if (isActive() && event.detail?.back) syncSession(true, undefined, true)
+    if (!isActive()) tasks.leave()
+    else if (event.detail?.back) syncSession(true, undefined, true)
     syncLayerPreview()
   }
   doc.addEventListener('sherlock:workspace-surface-change', surfaceChange)
   doc.addEventListener('keydown', cancelPreview, true)
   win.addEventListener('sherlock:pending-conversation-created', pendingCreated)
   signal('request-state', {})
+  if (archiveTask && taskStorage?.hasCanvas) tasks.load()
   syncSession()
   return {
     prompt, fill, focus, switchWorkspace, confirmLayerPreview, clearLayerPreview, action: kind => { if (!tasks.isCreating()) signal('action', { kind }) },

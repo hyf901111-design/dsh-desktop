@@ -23,6 +23,7 @@ type Options = {
   clientCapability?(value:unknown,signal?:AbortSignal):Promise<unknown>
   researchPdf?(html: string, signal?: AbortSignal): Promise<unknown>
   scheduledTask?(value: unknown): Promise<unknown>
+  imageTitleEvidence?(sessionId: string): Promise<{owned:boolean;tabTitle?:string;canvasTitle?:string}>
   canReadSession?(sessionId: string): boolean
   isSharedSession?(sessionId:string):boolean
   additionalSources?(sessionId:string):Source[]|Promise<Source[]>
@@ -231,7 +232,7 @@ export class ResearchContextBridge {
         res.end(serialized)
       }
       if (!this.authorized(req)) return send(403, { error: '资料请求被拒绝。' })
-      if (!['/snapshot','/board-authority','/canvas-actions','/client-capabilities','/session-completed','/scheduled-tasks','/research-pdf'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
+      if (!['/snapshot','/image-task-title','/board-authority','/canvas-actions','/client-capabilities','/session-completed','/scheduled-tasks','/research-pdf'].includes(req.url??'') || req.method !== 'POST') return send(404, { error: '资料请求无效。' })
       const isPdf = req.url === '/research-pdf'
       // Reject concurrent uploads before collecting their potentially large HTML bodies.
       if (isPdf && this.pdfRequestActive) return send(429, { error: 'PDF 生成忙碌，请稍后重试。' })
@@ -287,6 +288,12 @@ export class ResearchContextBridge {
           catch(error){if(!res.destroyed)return send(400,{error:error instanceof Error?error.message:'画布操作失败。'})}
           finally{req.off('aborted',abort);res.off('close',close)}
           return
+        }
+        if (req.url === '/image-task-title') {
+          const {sessionId} = exact(raw,['sessionId'])
+          const id = String(sessionId)
+          if (!this.options.imageTitleEvidence || this.options.isSharedSession?.(id)) return send(403,{error:'图像会话不可用。'})
+          return send(200,await this.options.imageTitleEvidence(id))
         }
         if(req.url==='/board-authority'){const input=exact(raw,['sessionId']);return send(200,{shared:this.options.isSharedSession?.(String(input.sessionId))===true})}
         const input = exact(raw, ['sessionId', 'captureId'])

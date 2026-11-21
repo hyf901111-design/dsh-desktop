@@ -23,10 +23,12 @@ function readTaskTabs(value: unknown): ImageFactoryTaskTab[] {
   return value.map(tab => {
     if (!tab || !validCanvasScope(tab.scope) || seen.has(tab.scope) ||
         (tab.title !== undefined && (typeof tab.title !== 'string' || tab.title.length > 255)) ||
-        (tab.pinned !== undefined && typeof tab.pinned !== 'boolean'))
+        (tab.pinned !== undefined && typeof tab.pinned !== 'boolean') ||
+        (tab.temporary !== undefined && (tab.temporary !== true || typeof tab.scope !== 'string' ||
+          !tab.scope.startsWith('image-task-') || !canvasUuid.test(tab.scope.slice(11)))))
       throw Error('图片任务页签数据无效。')
     seen.add(tab.scope)
-    return { scope: tab.scope, ...(tab.title && { title: tab.title }), ...(tab.pinned && { pinned: true }) }
+    return { scope: tab.scope, ...(tab.title && { title: tab.title }), ...(tab.pinned && { pinned: true }), ...(tab.temporary && { temporary: true as const }) }
   })
 }
 
@@ -137,6 +139,14 @@ export class ImageFactoryCanvases {
     })
   }
 
+  hasCanvas(sessionId: string, epoch: number) {
+    return this.run(async (owner, _epoch, current) => {
+      const canvas = await this.readCanvas(this.directory(owner, sessionId))
+      current()
+      return Boolean(canvas)
+    }, epoch)
+  }
+
   hasEditedCanvas(sessionId: string) {
     return this.run(async (owner, _epoch, current) => {
       const canvas = await this.readCanvas(this.directory(owner, sessionId))
@@ -161,14 +171,27 @@ export class ImageFactoryCanvases {
         const draft = await this.readCanvas(draftDirectory).catch(() => undefined)
         if (draft) closed = [{ scope: null, title: draft.title }, ...closed.slice(0, 31)]
       }
-      const canvasScopes = (await Promise.all(tabs.filter(tab => !tab.title).map(async ({ scope }) => {
+      const canvasScopes = (await Promise.all([...tabs, ...closed.filter(tab => tab.temporary)].filter(tab => !tab.title || tab.temporary).map(async ({ scope }) => {
         // Preserve historical canvases even if their tab title was never synced.
         const exists = await lstat(join(this.directory(owner, scope), metadataName)).then(() => true, error => !missing(error))
         return exists ? [scope] : []
       }))).flat()
+      const hasCanvas = new Set(canvasScopes)
+      for (const tab of [...tabs, ...closed]) if (hasCanvas.has(tab.scope)) delete tab.temporary
       current()
       return { epoch, tabs, ...(closed.length && { closed }), ...(canvasScopes.length && { canvasScopes }) }
     })
+  }
+
+  async titleEvidence(sessionId: string) {
+    const {tabs, closed, epoch} = await this.readTabs()
+    const tab = [...tabs, ...(closed ?? [])].find(item => item.scope === sessionId)
+    if (!tab) return {owned:false}
+    return this.run(async (owner, _epoch, current) => {
+      const canvas = await this.readCanvas(this.directory(owner, sessionId))
+      current()
+      return {owned:true, tabTitle:tab.title, canvasTitle:canvas?.title}
+    }, epoch)
   }
 
   async writeTabs(value: unknown) {

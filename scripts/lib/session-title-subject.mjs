@@ -192,3 +192,21 @@ export function patchSessionTitleLlmSubject(source){
  if(a<0||b<a)throw Error('Title LLM prompt boundary drifted')
  return source.slice(0,a)+block+'\nfunction systemPrompt(config){return sessionTitlePrompt(config)}\nfunction frameMessages(messages){return sessionTitleFramedMessages(messages)}\n'+source.slice(b)
 }
+
+// Seeded image tab names have no source message. Let the first real topic
+// receive the same fallback and provider cadence as any other first prompt.
+export function patchImageSessionTitle(source) {
+ const marker='/* ework:image-session-title:v1 */'
+ if (source.includes(marker)) return source
+ const collection='const text = event.data.content.filter((block) => block.type === "text").map((block) => block.text).join("\\n");'
+ source=once(source,collection,collection.replace('const text =','const rawText =')+String.raw`
+		const text = event.data.source.clientMode === "image" ? rawText.replace(/\n<odyssey-image-workspace-v1>\n\{[^\n]+\}\n<\/odyssey-image-workspace-v1>$/u,"") : rawText;`)
+ const hook='if (this.get(session)?.source.kind === "user") return;\n\t\tconst registration = this.registration;'
+ source=once(source,hook,`if (this.get(session)?.source.kind === "user") return;
+  ${marker}
+  const imageSeed = event.data.source.clientMode === 'image' && /^image-task-[a-f0-9-]+$/i.test(session.id) &&
+    this.get(session)?.source.kind === 'fallback' && this.get(session).messageSeqs.length === 0;
+  if (imageSeed) this.appendFallback(session, collectSessionTitleMessages([event])[0]);
+		const registration = this.registration;`)
+ return once(source,'messages.length === 1 && this.get(session) === void 0','messages.length === 1 && (this.get(session) === void 0 || imageSeed)')
+}

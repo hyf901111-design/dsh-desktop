@@ -64,7 +64,7 @@ const TemplatePreview = memo(function TemplatePreview({ example, size, photo, t 
 })
 
 export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, onUse, onTemplate, onClose, closeRef }: {
-  t: T; busy: boolean; onUse(prompt: string): void; onTemplate(example: GalleryExample): void
+  t: T; busy: boolean; onUse(prompt: string, title: string): void; onTemplate(example: GalleryExample): void
   onClose?: () => void; closeRef?: RefObject<HTMLButtonElement>
 }) {
   const [sizes, setSizes] = useState<Record<string, Size>>({})
@@ -279,7 +279,7 @@ export const ImageFactoryGallery = memo(function ImageFactoryGallery({ t, busy, 
   </div>
 })
 
-function PromptGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: string): void }) {
+function PromptGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: string, title: string): void }) {
   const viewport = useRef<HTMLDivElement>(null)
   const [columns, setColumns] = useState(3)
   useLayoutEffect(() => {
@@ -302,7 +302,7 @@ function PromptGallery({ t, busy, onUse }: { t: T; busy: boolean; onUse(prompt: 
           {examples.map(({ id, title, prompt, format }) => <button type="button" className="if-gallery-art if-prompt-image" key={id}
             tabIndex={repeated ? -1 : undefined} disabled={busy}
             aria-label={t(...title) + ' · ' + t('用同款提示词', 'Use this prompt')}
-            onClick={() => onUse(t(...prompt) + '\n' + t('画面比例为 ' + format + '。', 'Aspect ratio: ' + format + '.'))}>
+            onClick={() => onUse(t(...prompt) + '\n' + t('画面比例为 ' + format + '。', 'Aspect ratio: ' + format + '.'), t(...title))}>
             <img alt="" src={galleryArtwork(id)} draggable={false} decoding="async"/>
             <span className="if-gallery-use" aria-hidden="true">{t('做同款', 'Make something like this')}</span>
           </button>)}

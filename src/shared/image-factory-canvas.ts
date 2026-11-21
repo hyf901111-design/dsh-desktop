@@ -23,7 +23,7 @@ export const maximumCanvasImageBytes = 36 * 1024 * 1024
 export const canvasUuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/u
 
 export type CanvasScope = string | null
-export type ImageFactoryTaskTab = { scope: CanvasScope; title?: string; pinned?: boolean }
+export type ImageFactoryTaskTab = { scope: CanvasScope; title?: string; pinned?: boolean; temporary?: true }
 export type TextLayer = {
   id: string; groupId?: string; kind: 'text'; text: string; x: number; y: number; width: number
   fontSize: number; family: typeof canvasFonts[number]['family']; weight: number

@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 import {runInNewContext} from 'node:vm'
 import {parse} from '@babel/parser'
 import {it,expect} from 'vitest'
-import {sessionTitleSubject,sessionTitleFallbackSubject,sessionTitleFramedMessages,sessionTitlePrompt,patchSessionTitleSubject,patchSessionTitleLlmSubject,patchResearchSessionTitle} from '../scripts/lib/session-title-subject.mjs'
+import {sessionTitleSubject,sessionTitleFallbackSubject,sessionTitleFramedMessages,sessionTitlePrompt,patchSessionTitleSubject,patchSessionTitleLlmSubject,patchResearchSessionTitle,patchImageSessionTitle} from '../scripts/lib/session-title-subject.mjs'
 
 it('summarizes a supplied subject without skill commands, paths and opaque attachment IDs taking over',()=>{
  const prompt='/efund-ppt-maker 📎文件: "/Users/test/Downloads/events_jxp26_sessions_jxp26_11a_4977122_15812636.pdf" 把这个pdf材料做成符合公司模板要求的ppt，目的是我下周的分享要用'
@@ -22,7 +22,7 @@ it('keeps meaningful topic words, quotes and endpoint notation while limiting on
 })
 
 async function core(){
- const patch=source=>patchResearchSessionTitle(patchSessionTitleSubject(source))
+ const patch=source=>patchImageSessionTitle(patchResearchSessionTitle(patchSessionTitleSubject(source)))
  const source=patch(await readFile('node_modules/@deepseek-ai/dsh-session-title/lib/index.js','utf8'))
  parse(source,{sourceType:'module'});expect(patch(source)).toBe(source)
  let schema;schema=new Proxy(()=>schema,{get:()=>schema,apply:()=>schema})
@@ -148,4 +148,22 @@ it('uses a provisional board title and refreshes it for added components, genera
  await update(['沪深300行情','指数估值趋势','波动率'])
  expect(titles).toHaveLength(3)
  expect(service.get(session).title).toBe('我的指数看板')
+})
+
+it('takes the first actual image discussion as the subject after an automatic template name and preserves explicit renames',async()=>{
+ const {SessionTitleService,collectSessionTitleMessages}=await core()
+ for (const initial of ['新图像','主动有章法']) {
+  const session={id:'image-task-55a0d0bd-89ff-4815-9b3f-7991e6a42f14',header:{},events:[],append(type,data){const e={seq:this.events.length+1,type,data,time:0};this.events.push(e);return e}}
+  const service=Object.create(SessionTitleService.prototype)
+  Object.assign(service,{config:{fallbackMaxWords:10,fallbackMaxBytes:100,maxTitleBytes:256},work:new Map(),ctx:{sessions:{get:()=>session}},serviceActive:()=>true,defer:()=>{},registration:{closing:false,provider:{automatic:'first-prompt'}}})
+  session.append('session/title',{title:initial,messageSeqs:[],source:{kind:'fallback'}})
+  const user=session.append('user/message',{source:{kind:'user',clientMode:'image'},content:[{type:'text',text:'国债曲线晨会封面构图\n<odyssey-image-workspace-v1>\n{"title":"画布内部信息"}\n</odyssey-image-workspace-v1>'}]})
+  service.onUserMessage(session,user)
+  expect(collectSessionTitleMessages([user])[0].text).toBe('国债曲线晨会封面构图')
+  expect(service.get(session)).toMatchObject({title:'国债曲线晨会封面构图',messageSeqs:[user.seq],source:{kind:'fallback'}})
+  expect(service.stateFor(session).pending.throughSeq).toBe(user.seq)
+  service.rename(session,'我设定的名称')
+  service.onUserMessage(session,user)
+  expect(service.get(session)).toMatchObject({title:'我设定的名称',source:{kind:'user'}})
+ }
 })
