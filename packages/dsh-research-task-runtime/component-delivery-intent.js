@@ -107,10 +107,17 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   if (!request) return null
   const authoredClauses = deliveryClauses(request).map(normalizeComponentClause)
   // A manual draft or an edit inside a named destination already has an owner.
-  const existingDestination = /(?:在|往|向)(?:当前|现有|已有|指定|选中|这[个张]|那[个张]|原来)(?:的)?(?:智能容器|容器草稿|组件|卡片|图表)(?:里|内|中|上)|(?:智能容器|手动容器)(?:里|内|中)(?:来)?(?:生成|制作|添加|创建)|(?:用|通过)(?:手动|空白|这个|当前|已有|现有)?(?:智能容器|手动容器)(?:来)?(?:生成|制作|添加|创建|放)|(?:创建|新建|生成|建立|建|加|打开|放)(?:一[个张]|[个张])?(?:(?:新的?|空白的?|留白的?|手动的?)\s*)*(?:智能容器|手动容器|容器草稿)/u
+  const existingDestination = /(?:在|往|向)(?:当前|现有|已有|指定|选中|这[个张]|那[个张]|原来)(?:的)?(?:智能容器|容器草稿|组件|卡片|图表)(?:里|内|中|上)/u
+  // An explicitly named container is a destination regardless of the next verb
+  // (“用智能容器做/展示/算…”). Do not treat quoted instructions or a rejected
+  // container as a request to open a manual draft.
+  const manualDestination = /(?:用|通过|借助|采用|在|创建|新建|生成|建立|建|加|打开|放(?:进|入|到|在)?|拖(?:进|入|到)?)(?:(?:一[个张]|[个张]|新|空白|留白|手动|手工|刚才|刚建|指定|这[个张]|选中|当前|已有|现有|的)\s*)*(?:智能容器|手动容器|手工容器|容器草稿)|(?:智能容器|手动容器|手工容器|容器草稿)(?:里|内|中)/u
+  const rejectsContainer = /(?:不要|不用|不使用|无需|无须|不必|别|禁止|跳过|不通过|不需要)(?:再|额外|手动|手工|任何|先|去|新建|创建|生成|打开|使用|用|通过|借助|一个|新的?|空白的?|智能的?)*\s*(?:智能容器|手动容器|手工容器|容器草稿)/u
+  const manualClause = clause => clause.includes('\t') ? '' : clause.replace(/“[^”]+”|「[^」]+」|『[^』]+』|"[^"]+"/gu, quoted => /^(?:智能容器|手动容器|手工容器|容器草稿)$/u.test(quoted.slice(1,-1)) ? quoted.slice(1,-1) : '')
   const existingEdit = /^(?:(?:请|麻烦|帮我|先|只|继续)\s*)*(?:(?:编辑|修改|修复|更新|调整|优化)(?:当前|刚才|之前|已有|现有|指定|选中|这[个张]|那[个张])[^，。；;\n]{0,32}(?:组件|卡片|图表|智能容器)|(?:把|将)(?:刚才|之前|选中|当前|已有|现有|这[个张]|那[个张])[^，。；;\n]{0,32}(?:组件|卡片|图表|智能容器)[^，。；;\n]{0,20}(?:改成|改为|更新|修改|调整|编辑|重命名))/u
-  const independentAddition = /(?:另外|另行|同时|并且|并)(?:再)?(?:帮我)?(?:新建|新增|创建|做一|加一|生成)/u.test(request)
-  if (!independentAddition && authoredClauses.some(clause => (existingDestination.test(clause) || existingEdit.test(clause)) && !creationDenied(clause))) return null
+  const independentAddition = /(?:^|[，,。；;\n])\s*(?:另外|另行|同时|并且|并)(?:再)?(?:帮我)?(?:新建|新增|创建|做一|加一|生成)/u.test(request)
+  if (!independentAddition && authoredClauses.map(manualClause).some(clause => clause && !creationDenied(clause) &&
+      (existingDestination.test(clause) || existingEdit.test(clause) || manualDestination.test(clause) && !rejectsContainer.test(clause)))) return null
   // A short imperative can name a new chart without saying “组件”. Strip only
   // the destination board, so “在这张卡片中” continues to address an existing card.
   const boardPrefix = /^(?:(?:请|麻烦|帮我|给我|我想|想|先|再|另外)\s*)*(?:(?:在|往|给)(?:当前|这个|现有|已有)?(?:的)?(?:研究)?(?:看板|工作台|画布)(?:上|里|内|中)?\s*)?(?:再|另外)?/u
@@ -143,7 +150,7 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
     const delivery = /^(?:请|麻烦|帮我)?(?:给我|提供|我想要|我要|我需要|需要).{0,80}(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘|组件|卡片|表格|图表)/u.test(action) || /^(?:请|麻烦|帮我)?(?:用|使用|通过).{0,16}(?:表格|图表|组件|卡片)(?:来)?(?:展示|显示|呈现|比较|对比|分析)/u.test(action) || /^(?:请|麻烦|帮我)?(?:展示|显示|呈现|画出|绘制).{0,80}(?:图表|表格|组件|卡片)/u.test(action)
     const explicit = explicitComponentCreation(action)
     const create = delivery || createBuild || !!explicit || /创建|新建|新增|生成(?!(?:状态|进度|情况|失败|错误|耗时|时间|结果|记录|任务|日志|过程))|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版])|重新规划|\b(?:create|build|generate)\b/iu.test(action)
-    const denied = creationDenied(clause)
+    const denied = creationDenied(clause) || (rejectsContainer.test(action) && /^(?:请|先)?(?:不要|不用|无需|别|禁止|不需要)/u.test(action))
     const inspection = /^(?:请|帮我|麻烦)?(?:只读|只需|只|仅|先)?(?:检查|查看|查询|解释|检视|核查|核对|审查|审阅|说明|汇总)/u.test(clause.trim())
     // “生成” also introduces ordinary text, images and code. A confirmed board
     // identifies the destination, while the human still authorizes the object.
