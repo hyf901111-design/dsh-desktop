@@ -1,0 +1,55 @@
+{
+  "requestId": "ust10y-2024-last3-01",
+  "title": "2024年末美国10年期国债收益率复核",
+  "dataMode": "source",
+  "sharedDatasets": [
+    {
+      "id": "ust10y",
+      "label": "美国10年期国债收益率（2024-12-27至2024-12-31）",
+      "asOf": "2024-12-31（美国财政部每日国债收益率曲线口径）",
+      "note": "美国财政部 Daily Treasury Yield Curve 官方历史数据，2024年12月最后三个交易日收盘收益率。",
+      "identity": "date",
+      "pastedTable": {
+        "block": 1,
+        "header": true,
+        "numericFields": [
+          "y10"
+        ],
+        "fields": [
+          {
+            "key": "date",
+            "label": "日期"
+          },
+          {
+            "key": "y10",
+            "label": "10年期收益率",
+            "unit": "%"
+          }
+        ]
+      }
+    }
+  ],
+  "panels": [
+    {
+      "title": "美国10年期国债收益率：2024年最后三个交易日",
+      "prompt": "用折线卡呈现 2024-12-27、2024-12-30、2024-12-31 三个交易日的美国10年期国债收益率读数，单位 %，横轴为日期，纵轴为收益率，可直接读出每个交易日数值。数据为美国财政部官方 Daily Treasury Yield Curve 定稿历史值，只作快照展示，不设定时刷新。",
+      "type": "chart",
+      "size": "medium",
+      "layout": "standard",
+      "view": {
+        "dataset": "ust10y",
+        "variant": "line",
+        "unit": "%",
+        "sections": [
+          {
+            "kind": "records",
+            "label": "date",
+            "fields": [
+              "y10"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
