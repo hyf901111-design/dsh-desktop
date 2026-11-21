@@ -3601,6 +3601,66 @@
         ],
         "generatedAt": "2026-11-21T14:30:59.830656+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "已明确给出独立数据的纯讨论减去旧应用内容",
+        "branch": "codex/feat/explicit-standalone-discussion-20261121",
+        "baseCommit": "5e5becedc5956c8598b1c4030e3746aaae008deb",
+        "tipCommit": "508cb9f4d1610e88502e608d05614e0f0195ecb1",
+        "commits": [
+          {
+            "commit": "508cb9f4d1610e88502e608d05614e0f0195ecb1",
+            "parents": [
+              "5e5becedc5956c8598b1c4030e3746aaae008deb"
+            ],
+            "subject": "仅在当轮数据足够且明确独立作答时精简模型历史"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/client-mode-profile.js"
+          },
+          {
+            "status": "M",
+            "path": "test/client-mode-profile.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/client-mode-profile.test.js",
+              "test/client-mode-workspace-reference.test.js",
+              "test/model-task-opening-context.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "66项通过。有引用、附件、旧口径、选区、引用示例及改动的轮次照常保留原消息与工具。",
+            "verifiedCommit": "508cb9f4d1610e88502e608d05614e0f0195ecb1",
+            "completedAt": "2026-11-21T14:32:21.142743+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "对已签名 G/H 客户端实际消息完整历史通过 SDK 投影。G 浏览器103→2，H 演示112→2，H 研究8→2。真实演示追加115→115。各轮当前消息完整与工具不变。"
+        },
+        "acceptanceCriteria": [
+          "明确独立任务可只保留当轮消息和宿主协议。",
+          "当前指代、引用、附件、页面或历史内容的任务继续读取需要的信息。",
+          "既有工具授权及持久会话不变。"
+        ],
+        "risks": [
+          "真实模型时延仅能在含修复的签名包复核。"
+        ],
+        "generatedAt": "2026-11-21T14:32:21.142743+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -4126,6 +4186,19 @@
         "test/research-record-source-display.test.js",
         "test/component-observed-provenance.test.js",
         "test/component-data-status.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/client-mode-profile.test.js",
+        "test/client-mode-workspace-reference.test.js",
+        "test/model-task-opening-context.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
