@@ -236,11 +236,25 @@ export function registerConversationComponentsPolicy(ctx,{readWorkspaceReference
  const retried=new WeakMap()
  const disposeStop=ctx.on('agent/turn-stopping',({agent,turn,signal})=>{
   const session=agent?.session,human=planningHumanRequest(session)
-  if(signal?.aborted||!human||spreadsheetQuickPrompt(human.text)<0||documentOnly(session)||
-     (clientModeTurn(session)?.mode??latestClientModeForAuthority(session))!=='spreadsheet'||savedSpreadsheetWrite(session)||retried.get(agent)===turn)return
+  if(signal?.aborted||!human||retried.get(agent)===turn)return
+  const profile=clientModeTurn(session)
+  const localSearch=profile?.localOnly
+  if(!localSearch&&(spreadsheetQuickPrompt(human.text)<0||documentOnly(session)||
+     (profile?.mode??latestClientModeForAuthority(session))!=='spreadsheet'||savedSpreadsheetWrite(session)))return
   const events=session.events??[],start=Math.max(authorityBoundary(session),events.findLastIndex(event=>event.type==='turn/start'))
   const recent=events.slice(start+1),finish=recent.findLast(event=>event.type==='assistant/chunk'&&event.data?.chunk?.type==='finish')
   if(finish?.data.chunk.reason?.kind!=='stop'||recent.some(event=>event.type==='tool/result'&&/DENIED|ABORTED|APPROVAL|CANCELLED/u.test(event.data?.error?.code??'')))return
+  if(localSearch){
+   const attempted=recent.some(event=>{
+    if(event.type!=='tool/call'||event.data?.name!=='client_action')return false
+    try{const args=event.data.arguments;return (typeof args==='string'?JSON.parse(args):args)?.capability==='knowledge.local.search'}catch{return false}
+   })
+   if(attempted)return
+   retried.set(agent,turn)
+   agent.steer({id:globalThis.crypto.randomUUID(),role:'user',source:{kind:'plugin',plugin:'sherlock-knowledge',form:'notice',summary:'核对本机检索回执'},
+    content:[{type:'text',text:'本轮还没有执行本机标题检索。请现在调用 client_action 的 knowledge.local.search，凭实际回执报告条数和标题。'}]})
+   return
+  }
   retried.set(agent,turn)
   agent.steer({
    id:globalThis.crypto.randomUUID(),role:'user',

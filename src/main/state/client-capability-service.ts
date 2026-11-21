@@ -123,7 +123,7 @@ export class ClientCapabilityService{
     turn={generation:binding.generation,authorityId,authoritySeq:sequence,catalogRequired:false,context,conversationIdentity,sheet,notes,notesIdentity:notes?.context.documentId,canvasAvailable:context.canvasAvailable===true,editable:context.editable,host,receipts:turn?.receipts??new Map()};this.turns.set(key,turn)
    }
    const guidance=binding.mode==='knowledge'
-    ?'先用 knowledge.inspect 获取当前列表、目录标识和筛选版本。使用 knowledge.filter 更新中间文件列表，依据客户端回执说明匹配结果。'
+    ?'按标题查找本机文件使用 knowledge.local.search。查看或更改当前筛选时，先用 knowledge.inspect 获取当前列表、目录标识和筛选版本。使用 knowledge.filter 更新中间文件列表，依据客户端回执说明匹配结果。'
     :binding.mode==='presentation'?'使用 presentation.inspect 查看用户引用。useSlide 为 false 时仅使用明确引用或用户指定的页面。按稳定标识调用 presentation.apply，仅在保存回执后确认修改。':binding.mode==='spreadsheet'
      ?(turn.sheet?.guidance??'')+'表格能力只作用于当前工作簿。使用 spreadsheet.inspect 获取版本、工作表和目标范围，用户明确要求修改时才调用 spreadsheet.apply。依据已保存回执确认结果。'
      :'切换视图后重新读取目录；只有available:true的能力可执行。笔记能力使用当下可见编辑器捕获的文档与选区，较新输入或其它请求占用时拒绝旧操作。'
