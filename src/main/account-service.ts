@@ -1,3 +1,4 @@
+import { speechProfile } from '../../services/hosted-ai/speech-profile.js'
 import { safeStorage } from 'electron'
 import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -45,6 +46,7 @@ export class AccountService {
   private sessionRevalidation?: { generation: number; result: Promise<void> }
   private sessionGeneration = 0
   private suspended = false
+  private readonly speechRequests = new Map<string, Promise<Uint8Array>>()
   private sessionAbort = new AbortController()
   private hostedCatalog?: {
     expires: number
@@ -300,8 +302,31 @@ export class AccountService {
   }
   async narratePresentation(owner: string, text: string, signal: AbortSignal): Promise<Uint8Array> {
     if (!this.authenticated || !this.accountId || this.accountId !== owner) throw Error('请登录 EWork 后使用演讲者朗读。')
+    signal.throwIfAborted()
     const generation = this.generation
-    const response = await this.hostedRequest('speech', signal, Buffer.from(JSON.stringify({ text })))
+    const session = this.sessionAbort.signal
+    const digest = (value: string) => createHash('sha256').update(value).digest('hex')
+    const directory = join(this.directory, 'presentation-narration', digest(owner))
+    const file = join(directory, digest(JSON.stringify([speechProfile, text])) + '.mp3')
+    const key = generation + ':' + file
+    let pending = this.speechRequests.get(key)
+    if (!pending) {
+      pending = this.readOrSynthesizeSpeech(directory, file, text, generation, session)
+        .finally(() => this.speechRequests.delete(key))
+      this.speechRequests.set(key, pending)
+    }
+    const bytes = await pending
+    session.throwIfAborted()
+    signal.throwIfAborted()
+    return bytes
+  }
+  private async readOrSynthesizeSpeech(directory: string, file: string, text: string, generation: number, session: AbortSignal) {
+    const cached = await readFile(file).catch(() => undefined)
+    session.throwIfAborted()
+    if (cached?.length && cached.length <= 8_000_000) return cached
+    // Once submitted, finish and cache paid work even if the listener turns the
+    // slide. Session invalidation still cancels the upstream request.
+    const response = await this.hostedRequest('speech', session, Buffer.from(JSON.stringify({ text })))
     if (!response.ok) {
       const result = await response.json().catch(() => null)
       throw Error(response.status === 401 ? '登录已过期，请重新登录后朗读。' : result?.error?.message || '语音合成暂时不可用，请重试。')
@@ -311,6 +336,15 @@ export class AccountService {
     if (this.generation !== generation || !this.authenticated) throw Error('登录状态已变化。')
     if (!bytes.length || bytes.length > 8_000_000) throw Error('未收到有效的朗读音频。')
     this.collaborationOptions.onHostedQuotaChanged?.()
+    const temporary = file + '.' + randomBytes(8).toString('hex') + '.tmp'
+    try {
+      await mkdir(directory, { recursive: true, mode: 0o700 })
+      await writeFile(temporary, bytes, { mode: 0o600, flag: 'wx' })
+      await rename(temporary, file)
+    } catch {
+      await rm(temporary, { force: true }).catch(() => {})
+      console.warn('[presentation] Could not persist narration audio')
+    }
     return bytes
   }
   private async readHostedCatalog(): Promise<HostedCatalogResult | undefined> {

@@ -6,6 +6,7 @@ import { ARK_TEXT_MODELS, ARK_PLAN_BASE } from './ark-catalog.js'
 import { hostedChatUpstreamTimeoutMs } from '../../packages/dsh-research-task-runtime/hosted-ai-timeouts.js'
 import { hostedImageModel, legacyHostedImageModels } from '../../packages/dsh-research-task-runtime/hosted-image-model.js'
 
+import { speechProfile } from './speech-profile.js'
 import { speechUrl, speechInput, decodeSpeech } from './speech.js'
 
 const ROOT = '/v1/hosted-ai/'
@@ -331,7 +332,7 @@ export function createHostedAiHandler({ send = fetch, ledgerFor = db => new AiQu
         method: 'POST', redirect: 'manual',
         signal: speech ? AbortSignal.any([request.signal, AbortSignal.timeout(90000)]) : image ? AbortSignal.any([request.signal, AbortSignal.timeout(240000)]) : AbortSignal.timeout(hostedChatUpstreamTimeoutMs),
         headers: speech ? { 'content-type': 'application/json', 'X-Api-Key': env.ARK_AGENT_PLAN_KEY,
-          'X-Api-Resource-Id': 'seed-tts-2.0', 'X-Api-Request-Id': crypto.randomUUID(), 'X-Control-Require-Usage-Tokens-Return': '*'
+          'X-Api-Resource-Id': speechProfile.resource, 'X-Api-Request-Id': crypto.randomUUID(), 'X-Control-Require-Usage-Tokens-Return': '*'
         } : { 'content-type': 'application/json', authorization: 'Bearer ' + env.ARK_AGENT_PLAN_KEY },
         body: input.wire
       })

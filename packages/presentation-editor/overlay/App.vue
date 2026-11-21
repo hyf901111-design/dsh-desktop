@@ -442,7 +442,8 @@ const narrationState = ref('idle'), narrationError = ref('')
 const narrationActive = computed(() => ['playing', 'loading'].includes(narrationState.value))
 const narrationLabel = computed(() => ({ playing: '暂停朗读', loading: '准备朗读…', paused: '继续朗读' })[narrationState.value] || '演讲者朗读')
 const narrationTitle = computed(() => !noteText.value.trim() ? '本页没有演讲者备注' : narrationActive.value ? '暂停朗读' : narrationLabel.value)
-let pendingSpeech, demoNarration = false
+const pendingSpeech = new Map()
+let demoNarration = false, autoTurning = false
 function loadSpeech(text, demo, signal) {
   if (demo) return (async () => {
     const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
@@ -455,30 +456,32 @@ function loadSpeech(text, demo, signal) {
     const id = crypto.randomUUID()
     const cancel = () => {
       send('cancel-narration', { id })
-      pendingSpeech = undefined
+      pendingSpeech.delete(id)
       reject(new DOMException('朗读已停止', 'AbortError'))
     }
     signal.addEventListener('abort', cancel, { once: true })
-    pendingSpeech = { id, finish(d) {
+    pendingSpeech.set(id, d => {
       signal.removeEventListener('abort', cancel)
-      pendingSpeech = undefined
+      pendingSpeech.delete(id)
       if (d.error) reject(Error(d.error))
       else resolve(new Blob([d.bytes], { type: 'audio/mpeg' }))
-    } }
+    })
     send('narrate', { id, documentId: docId.value, text })
   })
 }
 const narrator = createNarrator({
   load: loadSpeech,
+  nextNotes: () => plain(store.slides[index.value + 1]?.remark),
   changed(state, error) { narrationState.value = state; narrationError.value = error },
   finished() {
     if (!playing.value || index.value + 1 >= store.slides.length) return
-    selectSlide(index.value + 1)
+    autoTurning = true
+    try { selectSlide(index.value + 1) } finally { autoTurning = false }
     narrator.toggle(noteText.value, demoNarration)
   }
 })
 watch([playing, () => slide.value?.id, docId, noteText], () => {
-  narrator.stop()
+  if (!autoTurning) narrator.stop()
   if (!playing.value) demoNarration = false
 }, { flush: 'sync' })
 const selectedFont = computed(() => (main.richTextAttrs.fontname || '华文黑体').replace(/^["']|["']$/g, ''))
@@ -590,7 +593,7 @@ function receive(event) {
     return
   const d = event.data
   if (d.type === 'narration-result') {
-    if (pendingSpeech?.id === d.id) pendingSpeech.finish(d)
+    pendingSpeech.get(d.id)?.(d)
     return
   }
   if (d.type === 'edit-guide') {

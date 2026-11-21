@@ -1,7 +1,7 @@
+import { speechProfile } from './speech-profile.js'
 import { Buffer } from 'node:buffer'
 
 export const speechUrl = 'https://openspeech.bytedance.com/api/v3/plan/tts/unidirectional'
-const voice = 'zh_male_yuanboxiaoshu_uranus_bigtts'
 // Seed TTS 2.0 costs 1350 AFP per 10,000 billable characters.
 const unitsPerCharacter = 135000
 
@@ -11,7 +11,7 @@ export function speechInput(input) {
   return {
     // The provider can count a non-ASCII character as two billing characters.
     amountUnits: Array.from(text).reduce((n, c) => n + (c.codePointAt(0) > 127 ? 2 : 1), 0) * unitsPerCharacter,
-    wire: JSON.stringify({ req_params: { text, speaker: voice, audio_params: { format: 'mp3', sample_rate: 24000 } } })
+    wire: JSON.stringify({ req_params: { text, speaker: speechProfile.speaker, audio_params: { format: speechProfile.format, sample_rate: speechProfile.sampleRate } } })
   }
 }
 

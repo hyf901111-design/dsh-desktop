@@ -36,7 +36,7 @@ export function installPresentation(options: {
   canWrite(id: string): boolean
 }) {
   const { store, getWindow } = options
-  let narration: { id: string; controller: AbortController } | undefined
+  const narrations = new Map<string, AbortController>()
   const archives = new Set<string>()
   const admissions = new Map<string, Map<string, Admission>>()
   type PendingImport = {
@@ -88,7 +88,7 @@ export function installPresentation(options: {
     getWindow,
     async (_event, action: string, input: any) => {
       if (action === 'cancel-narration') {
-        if (narration?.id === input.id) narration?.controller.abort()
+        narrations.get(input.id)?.abort()
         return
       }
       const { key, generation } = scope(
@@ -101,15 +101,16 @@ export function installPresentation(options: {
         if (!options.narrate || typeof input.text !== 'string' || !input.text.trim() || input.text.length > 600 ||
             typeof input.id !== 'string' || input.id.length > 64 || store.read(key).deck?.id !== input.documentId)
           throw Error('当前文稿或备注已变化。')
-        narration?.controller.abort()
-        const task = { id: input.id, controller: new AbortController() }
-        narration = task
+        if (narrations.has(input.id)) throw Error('语音请求已存在。')
+        const controller = new AbortController()
+        narrations.set(input.id, controller)
         try {
-          const bytes = await options.narrate(key.owner, input.text, task.controller.signal)
+          const bytes = await options.narrate(key.owner, input.text, controller.signal)
+          controller.signal.throwIfAborted()
           if (scope(key.sessionId, generation).key.owner !== key.owner) throw Error('会话已切换。')
           return bytes
         } finally {
-          if (narration === task) narration = undefined
+          narrations.delete(input.id)
         }
       }
       if (action === 'archive') {

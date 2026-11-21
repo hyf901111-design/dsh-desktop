@@ -23,7 +23,7 @@ type Editor = {
   editable: boolean
   queue: Promise<void>
   disposeDrop?: () => void
-  narrationId?: string
+  narrationIds: Set<string>
   beforeFocus?: WorkspaceSidebars
   failure?: string
 }
@@ -194,7 +194,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       closeArchive?.()
       closeArchive = undefined
       restoreSidebars(doc, current)
-      if (current.narrationId) void request(current, 'cancel-narration', { id: current.narrationId }).catch(() => {})
+      for (const id of current.narrationIds) void request(current, 'cancel-narration', { id }).catch(() => {})
       current.disposeDrop?.()
       delete current.host.dataset.presentationDisplayedDocument
       delete current.host.dataset.presentationFramePending
@@ -227,6 +227,7 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
       host,
       sessionId: host.dataset.eworkPresentationView,
       ready: false,
+      narrationIds: new Set(),
       locked: false,
       editable: false,
       documentId: null,
@@ -297,16 +298,16 @@ export function mountPresentation(doc: Document, ipc: Pick<IpcRenderer, 'invoke'
     }
     if (!e.ready) return
     if (d.type === 'narrate' && d.documentId === e.documentId && typeof d.id === 'string') {
-      e.narrationId = d.id
+      e.narrationIds.add(d.id)
       void request(e, 'narrate', { id: d.id, text: d.text, documentId: d.documentId })
-        .then(bytes => { if (e === current && e.narrationId === d.id) post(e, 'narration-result', { id: d.id, bytes }) })
-        .catch(err => { if (e === current && e.narrationId === d.id) post(e, 'narration-result', { id: d.id,
+        .then(bytes => { if (e === current && e.narrationIds.has(d.id)) post(e, 'narration-result', { id: d.id, bytes }) })
+        .catch(err => { if (e === current && e.narrationIds.has(d.id)) post(e, 'narration-result', { id: d.id,
           error: String(err.message || err).replace(/^.*?Error: /g, '') }) })
-        .finally(() => { if (e.narrationId === d.id) e.narrationId = undefined })
+        .finally(() => e.narrationIds.delete(d.id))
       return
     }
-    if (d.type === 'cancel-narration' && e.narrationId === d.id) {
-      e.narrationId = undefined
+    if (d.type === 'cancel-narration' && e.narrationIds.has(d.id)) {
+      e.narrationIds.delete(d.id)
       void request(e, 'cancel-narration', { id: d.id }).catch(() => {})
       return
     }

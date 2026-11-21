@@ -31,3 +31,48 @@ it('ignores stale synthesis after changing slides and pauses while speech is loa
   ended()
   expect(finished).not.toHaveBeenCalled()
 })
+
+it('plays the opening without waiting for later speech and carries pending audio across an automatic turn', async () => {
+  const calls = new Map(), audio = [], states = []
+  function makeAudio() {
+    const element = {play: vi.fn(async () => {}), pause() {}, load() {}, removeAttribute() {}}
+    audio.push(element)
+    return element
+  }
+  let page = 0
+  const notes = ['开场白。请看这一页。', '换页了。', '']
+  const narrator = createNarrator({ makeAudio,
+    nextNotes: () => notes[page + 1] || '',
+    changed: s => states.push(s),
+    finished() { narrator.toggle(notes[++page] || '') },
+    load(text) {
+      expect(calls.has(text)).toBe(false)
+      return new Promise(resolve => calls.set(text, () => resolve(new Blob([text]))))
+    }
+  })
+  const tick = () => new Promise(resolve => setTimeout(resolve, 0))
+  narrator.toggle(notes[0])
+  expect([...calls.keys()]).toEqual(['开场白。', '请看这一页。'])
+  calls.get('开场白。')()
+  await tick()
+  expect(states.at(-1)).toBe('playing')
+  expect(calls.has('换页了。')).toBe(true)
+  calls.get('换页了。')()
+  calls.get('请看这一页。')()
+  audio[0].onended()
+  await tick()
+  audio[1].onended()
+  await tick()
+  expect(page).toBe(1)
+  expect(states.at(-1)).toBe('playing')
+  audio[2].onended()
+  expect(page).toBe(2)
+  expect(states.at(-1)).toBe('idle')
+})
+
+it('keeps decimals intact and avoids a request per short list item', () => {
+  expect(speechChunks('先看结果。增长约 2.25%，下一页再讨论。')[0]).toBe('先看结果。')
+  const parts = speechChunks('先看结果。增长约 2.25%，下一页再讨论。')
+  expect(parts.some(s => s.includes('2.25%'))).toBe(true)
+  expect(speechChunks('开始。' + '请继续。'.repeat(30)).length).toBeLessThan(10)
+})
