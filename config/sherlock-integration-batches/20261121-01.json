@@ -3446,6 +3446,67 @@
         ],
         "generatedAt": "2026-11-21T14:00:30.066211+00:00"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "当前办公文档执行首步读取及公开新发现",
+        "branch": "codex/feat/active-office-first-20261121",
+        "baseCommit": "291bd8e65641d53a74f15ec0a5a823f973bd9e69",
+        "tipCommit": "4263a06dcb993604b4e321aa39240f4d936d86d3",
+        "commits": [
+          {
+            "commit": "4263a06dcb993604b4e321aa39240f4d936d86d3",
+            "parents": [
+              "291bd8e65641d53a74f15ec0a5a823f973bd9e69"
+            ],
+            "subject": "当前工作簿和演示的编辑首步读取真实文档并报告回读进展"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/model-task-replies.js"
+          },
+          {
+            "status": "M",
+            "path": "test/model-task-opening-context.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/model-task-opening-context.test.js",
+              "test/conversation-first-response-effort.test.js",
+              "test/client-mode-workspace-reference.test.js",
+              "test/client-mode-profile.test.js",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "4个直接相关文件73项通过，覆盖本机工作簿与演示编辑、只读讨论、缺授权、首次回读反馈。",
+            "verifiedCommit": "4263a06dcb993604b4e321aa39240f4d936d86d3",
+            "completedAt": "2026-11-21T14:01:00.048379+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "not-applicable",
+          "summary": "真实G工作簿首句要求文件，工具随后读到A1:E22。原服务G表格和演示的同轮编辑与讨论4条真实认领重放：编辑首轮可检查/修改，首次读取之后有真实进展机会；讨论不授权写入。后继签名客户端需确认真实模型首段与交付。"
+        },
+        "acceptanceCriteria": [
+          "有明确当前文档且已有相应读取和修改工具时可边答边读。",
+          "首次实际读取后模型有机会在继续执行前说明实质读数。",
+          "独立讨论、引用关闭及宿主校验保持原授权。"
+        ],
+        "risks": [
+          "首次公开模型文字和后续速度需实际在线模型比较。"
+        ],
+        "generatedAt": "2026-11-21T14:01:00.048379+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -3943,6 +4004,20 @@
         "run",
         "test/session-title-subject.test.js",
         "test/image-session-title.test.js",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/model-task-opening-context.test.js",
+        "test/conversation-first-response-effort.test.js",
+        "test/client-mode-workspace-reference.test.js",
+        "test/client-mode-profile.test.js",
         "--maxWorkers=1",
         "--reporter=dot"
       ],
