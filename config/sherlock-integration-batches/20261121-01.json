@@ -326,6 +326,205 @@
         ],
         "recordedAt": "2026-11-21T05:20:52.900Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "客户端演示工具栏、表格首页和个人看板默认项",
+        "branch": "codex/feat/workspace-ui-refinements-20261121",
+        "baseCommit": "9844dc5fd8c90259a30d9762899cdc065e3265b5",
+        "tipCommit": "8ec83de243630d8ed99c78e31d575735e2c279f4",
+        "commits": [
+          {
+            "commit": "aea4e7399d2dfe16d9478af8683128a06fa11ad1",
+            "parents": [
+              "9844dc5fd8c90259a30d9762899cdc065e3265b5"
+            ],
+            "subject": "统一表格与演示空白首页布局并修正深色幻灯片目录滚动条"
+          },
+          {
+            "commit": "fc2c8612a456a612a10da97dd9ff540ae42253d1",
+            "parents": [
+              "aea4e7399d2dfe16d9478af8683128a06fa11ad1"
+            ],
+            "subject": "移除个人看板默认管理者工作台并保留已有会话"
+          },
+          {
+            "commit": "8ec83de243630d8ed99c78e31d575735e2c279f4",
+            "parents": [
+              "fc2c8612a456a612a10da97dd9ff540ae42253d1"
+            ],
+            "subject": "修复演示工具栏弹层裁切并统一下拉选项与键盘交互"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/build.mjs"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/App.vue"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/LayoutGallery.vue"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/SelectionFormatBar.vue"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/ToolbarSelect.vue"
+          },
+          {
+            "status": "M",
+            "path": "packages/presentation-editor/overlay/odyssey.css"
+          },
+          {
+            "status": "A",
+            "path": "packages/presentation-editor/overlay/toolbar-popovers.css"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/test-research-boards-browser.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/spreadsheet/view.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/workspace-empty.css"
+          },
+          {
+            "status": "R061",
+            "path": "test/fixtures/manager-workbench/canvas.ts",
+            "previousPath": "src/preload/manager-workbench/canvas.ts"
+          },
+          {
+            "status": "R100",
+            "path": "test/fixtures/manager-workbench/china-map.ts",
+            "previousPath": "src/preload/manager-workbench/china-map.ts"
+          },
+          {
+            "status": "R100",
+            "path": "test/fixtures/manager-workbench/content.ts",
+            "previousPath": "src/preload/manager-workbench/content.ts"
+          },
+          {
+            "status": "R100",
+            "path": "test/fixtures/manager-workbench/status-icons.ts",
+            "previousPath": "src/preload/manager-workbench/status-icons.ts"
+          },
+          {
+            "status": "R100",
+            "path": "test/fixtures/manager-workbench/styles.ts",
+            "previousPath": "src/preload/manager-workbench/styles.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/fixtures/research-boards-browser.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/presentation-toolbar-popovers-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-sidebar-overflow.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/workspace-empty-layout-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "packages/presentation-editor/build.mjs"
+            ],
+            "outcome": "passed",
+            "summary": "演示网页编辑器编译成功 ",
+            "verifiedCommit": "8ec83de243630d8ed99c78e31d575735e2c279f4",
+            "completedAt": "2026-11-21T05:35:38.913100+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workspace-empty-layout-browser.test.js",
+              "test/presentation-toolbar-popovers-browser.test.ts",
+              "--maxWorkers=1",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "首页、滚动条及工具栏浏览器验证 Test Files  2 passed (2)，Tests  2 passed (2)",
+            "verifiedCommit": "8ec83de243630d8ed99c78e31d575735e2c279f4",
+            "completedAt": "2026-11-21T05:35:46.314299+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-board-sidebar-overflow.test.ts",
+              "-t",
+              "管理者工作台",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "新旧账号及同名收藏验证 Test Files  1 passed (1)，Tests  4 passed | 7 skipped (11)",
+            "verifiedCommit": "8ec83de243630d8ed99c78e31d575735e2c279f4",
+            "completedAt": "2026-11-21T05:35:47.268539+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 检查通过 ",
+            "verifiedCommit": "8ec83de243630d8ed99c78e31d575735e2c279f4",
+            "completedAt": "2026-11-21T05:36:00.570136+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "真实编辑器 iframe 与原生表格入口的六组尺寸比较，菜单在宽窄视口操作并验证样式和文稿结果。"
+        },
+        "acceptanceCriteria": [
+          "目录在深色中使用深灰滚动条",
+          "普通用户不出现预置管理者入口，保留已有的真实看板",
+          "两个空白首页的图标、标题、说明及操作对齐",
+          "演示菜单随主题变色并保持在窗口边界内",
+          "二级工具栏使用客户端下拉样式并区分鼠标和键盘焦点"
+        ],
+        "risks": [
+          "用户自己收藏或分享过的管理者看板继续按其原 ID 可见"
+        ],
+        "generatedAt": "2026-11-21T05:36:00.570171+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -364,6 +563,45 @@
         "grouped|ranking|daily NAV|unreported channel|source|narrow|saved native trend|axis|labels",
         "--maxWorkers=2",
         "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "packages/presentation-editor/build.mjs"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workspace-empty-layout-browser.test.js",
+        "test/presentation-toolbar-popovers-browser.test.ts",
+        "--maxWorkers=1",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-board-sidebar-overflow.test.ts",
+        "-t",
+        "管理者工作台",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
       ],
       "timeoutMs": 240000
     }
