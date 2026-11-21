@@ -2404,10 +2404,10 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "保留披露表头单位、无损汇总与跨卡原始出处",
+        "featureName": "保留多指标同源的集中度决策回归",
         "branch": "codex/feat/disclosed-column-unit-header-20261121",
         "baseCommit": "e1b086d8d1615396d80e8b8211bc941f08b2a7a1",
-        "tipCommit": "3c976ffbe31a6e9c83139d11d962265085e9dee6",
+        "tipCommit": "fd48587adbb9a60d7106d7cc1536cfd32a9cc5ba",
         "commits": [
           {
             "commit": "1e43f1a597f9dbea9c5b67fa3a61f9f71f30d7a9",
@@ -2422,6 +2422,13 @@
               "1e43f1a597f9dbea9c5b67fa3a61f9f71f30d7a9"
             ],
             "subject": "保留原始精度进行汇总并兼容按唯一序号计数"
+          },
+          {
+            "commit": "fd48587adbb9a60d7106d7cc1536cfd32a9cc5ba",
+            "parents": [
+              "3c976ffbe31a6e9c83139d11d962265085e9dee6"
+            ],
+            "subject": "限定披露汇总测试只核对本场关心的原始指标"
           }
         ],
         "files": [
@@ -2471,8 +2478,8 @@
             ],
             "outcome": "passed",
             "summary": "实收首次字段声明可解析，来源链接随派生集保留，原值计算和披露精度一致。",
-            "verifiedCommit": "3c976ffbe31a6e9c83139d11d962265085e9dee6",
-            "completedAt": "2026-11-21T12:47:24.354679+00:00",
+            "verifiedCommit": "fd48587adbb9a60d7106d7cc1536cfd32a9cc5ba",
+            "completedAt": "2026-11-21T12:49:52.746945+00:00",
             "timeoutMs": 240000
           }
         ],
@@ -2487,7 +2494,7 @@
         "risks": [
           "其他数据源及问题的图形选择仍由相应任务决定。"
         ],
-        "generatedAt": "2026-11-21T12:47:24.354679+00:00"
+        "generatedAt": "2026-11-21T12:49:52.746945+00:00"
       }
     }
   ],
