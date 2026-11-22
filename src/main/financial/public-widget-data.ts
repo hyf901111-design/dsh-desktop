@@ -1,3 +1,5 @@
+import type {Session} from 'electron'
+import {abortable} from '../../../packages/dsh-research-task-runtime/context-abort.js'
 import {networkFetch} from '../integrations/adapters/network-policy'
 import {normalizeFinancialBars} from './widget-data'
 import {financialIndexCatalog} from '../../../packages/dsh-research-task-runtime/financial-index-catalog.js'
@@ -50,10 +52,30 @@ function quoteTimestamp(value:string,market:string):string|null{
 // Read-only public sources use fixed origins in the main process. They need no
 // provider credentials, never execute returned scripts, and carry their own
 // source and trading date rather than inheriting an MCP provenance label.
-export function createPublicFinancialWidgetData(options:{identity:()=>string|null;fetch?:(input:string|URL,init?:RequestInit)=>Promise<Response>;accountSources?:AccountFinancialSources}){
+type MarketNetworkSession = Pick<Session, 'resolveProxy' | 'fetch'>
+
+export function createPublicFinancialFetch(session?: MarketNetworkSession) {
+ return async (input: string | URL, init: RequestInit = {}): Promise<Response> => {
+  const url = new URL(input)
+  if (!origins.includes(url.origin) || url.username || url.password) throw Error('无效的公开行情来源')
+  const timeout = AbortSignal.timeout(12000)
+  const signal = init.signal ? AbortSignal.any([init.signal, timeout]) : timeout
+  if (session) {
+   // A system proxy can resolve provider names itself. Only a direct connection needs local DNS pinning.
+   const routes = await abortable(() => session.resolveProxy(url.href), signal)
+   const firstRoute = routes.split(';', 1)[0]?.trim() ?? ''
+   if (/^(?:PROXY|HTTPS?|SOCKS[45]?)\s+\S+$/i.test(firstRoute)) {
+    return session.fetch(url.href, {...init, signal, credentials: 'omit', redirect: 'error'})
+   }
+  }
+  return networkFetch(url, {...init, signal}, {allowedOrigins: origins}, {timeoutMs: 12000})
+ }
+}
+
+export function createPublicFinancialWidgetData(options:{identity:()=>string|null;networkSession?:MarketNetworkSession;fetch?:(input:string|URL,init?:RequestInit)=>Promise<Response>;accountSources?:AccountFinancialSources}){
  let owner:string|null=null
  const cache=new Map<string,{at:number;value:Row}>(),pending=new Map<string,Promise<Row>>()
- const fetcher=options.fetch??((url,init)=>networkFetch(url,init,{allowedOrigins:origins},{timeoutMs:12000}))
+ const fetcher=options.fetch??createPublicFinancialFetch(options.networkSession)
  async function query(raw:unknown):Promise<any>{
   validQuery(raw);const q=raw as Row
   const account=options.identity()
