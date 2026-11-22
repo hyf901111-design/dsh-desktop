@@ -19,7 +19,23 @@ export function registerDocumentSessions(ctx,{isTrustedRequest,readJsonBody},kin
       const session=ctx.sessions.get(input.sessionId)
       if(!session||session.header?.origin==='subagent')throw Error(noun+'会话不可用。')
       if(input.action==='retain'){
-        if(!session.events.some(event=>event.type===editedType))session.append(editedType,{})
+        const previous = session.events.findLast(event => event.type === editedType)
+        const title = input.title
+        if (presentation && title !== undefined && (typeof title !== 'string' || title.length > 256))
+          throw Error('演示名称无效。')
+        if (!previous) session.append(editedType, {})
+        if (presentation && title?.trim()) {
+          const current = session.events.findLast(event => event.type === 'session/title')
+          const created = session.events.find(event => event.type === createdType)
+          const lastAutoSeq = previous?.data.titleSeq ?? created?.data.titleSeq
+          // A manual sidebar rename takes ownership, even if it used the same text.
+          const wanted = Array.from(title.trim().replace(/\s+/g, ' ')).slice(0, 120).join('')
+          if ((!current || current.seq === lastAutoSeq) && wanted !== current?.data.title &&
+              (wanted !== '未命名演示文稿' || previous?.data.titleSeq !== undefined)) {
+            const accepted = ctx.sessionTitle.rename(session, wanted)
+            session.append(editedType, {titleSeq: accepted.eventSeq})
+          }
+        }
         if(await ctx.sessions.flush(session)!==true)throw Error(noun+'会话尚未保存，请重试。')
         return send(200,{ok:true})
       }
