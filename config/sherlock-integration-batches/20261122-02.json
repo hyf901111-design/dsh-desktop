@@ -534,6 +534,61 @@
         ],
         "recordedAt": "2026-11-22T13:54:21.016Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "演示文稿引用知识库 PDF 后保留右侧栏",
+        "branch": "codex/feat/ppt-keep-knowledge-open-20261122",
+        "baseCommit": "930ec72aa9f4bf533bc3e8cd396ed15844aaef2c",
+        "tipCommit": "7f8e0ff73d08ef0caeb73d55cbbd1333c9e7cb70",
+        "commits": [
+          {
+            "commit": "7f8e0ff73d08ef0caeb73d55cbbd1333c9e7cb70",
+            "parents": [
+              "930ec72aa9f4bf533bc3e8cd396ed15844aaef2c"
+            ],
+            "subject": "演示文稿示例拖入参考 PDF 后保留知识库侧栏"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "opens the animated PPT sidebar"
+            ],
+            "outcome": "passed",
+            "summary": "Chromium 实际渲染验证打开知识库、拖入参考 PDF 并保持可见。",
+            "verifiedCommit": "7f8e0ff73d08ef0caeb73d55cbbd1333c9e7cb70",
+            "completedAt": "2026-11-22T13:58:18.756315+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 确认知识库文件可拖入输入框，放下文件后知识库仍可见。"
+        },
+        "acceptanceCriteria": [
+          "进入对话首页时保持默认收起",
+          "拖入知识库 PDF 后保留右栏，继续填写并生成演示文稿"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T13:58:18.756315+00:00"
+      }
     }
   ],
   "integrationChecks": [
