@@ -27,6 +27,19 @@ describe('image factory', () => {
     expect(requestedImageSize('Make it in landscape format')).toEqual({ width: 1600, height: 900 })
   })
 
+  it('uses square output descriptions without treating square or rectangular subjects as canvas sizes', () => {
+    for (const prompt of ['制作方形图片，白底单颗蓝球', '画布设为正方形，居中放一个球', '请画一张海报，方形，留白']) {
+      expect(requestedImageSize(prompt, true)).toEqual(ratios['1:1'])
+      expect(requestedImageSize(prompt)).toEqual(ratios['1:1'])
+    }
+    for (const prompt of ['画一张长方形海报', '画一个正方形盒子', '画一只方形手表', '在背景铺满方形图案', 'Draw a square table']) {
+      expect(requestedImageSize(prompt)).toBeUndefined()
+    }
+    expect(requestedImageSize('生成横版海报，在右侧放一张方形照片')).toEqual(ratios['16:9'])
+    expect(requestedImageSize('16:9 的海报里放一张方形图片')).toEqual(ratios['16:9'])
+    expect(requestedImageSize('制作一张竖版海报，中心放一块方形石头')).toEqual(ratios['4:5'])
+  })
+
   it('preserves the whole generated poster and fills the outside of an opaque image', () => {
     const image = { name: 'poster' }
     const calls = []

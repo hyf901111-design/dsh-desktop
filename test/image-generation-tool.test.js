@@ -336,6 +336,20 @@ it('saves an explicit 16:9 image at its requested aspect when a hosted preset re
  expect(await sharp(f.saved[0].data).metadata()).toMatchObject({format:'png',width:1600,height:900})
 })
 
+it('preserves a square canvas and saved attachment requested in words even with a portrait preset',async()=>{
+ const raw=await sharp({create:{width:16,height:20,channels:3,background:'#ffffff'}}).png().toBuffer()
+ const generate=vi.fn(async()=>({data:raw,mediaType:'image/png'}))
+ const f=fixture({hosted:{available:()=>true,models:[{id:'doubao-seedream-5.5',name:'Seedream'}],generate}})
+ const user=f.agent.session.events[1].data
+ user.source.clientMode='image'
+ user.content[0].text=imageFactoryPrompt('生成一张方形图片，白底，中央一颗蓝色球。',{
+  id:'11898f5e-5fab-4913-b241-267ac863be0c',title:'蓝色球',operation:'generate',
+  size:'1024x1024',width:1024,height:1024,internalReference:false})
+ await f.call({prompt:'白底蓝色球',size:'1024x1536'})
+ expect(generate.mock.calls[0][0]).toMatchObject({size:'auto',prompt:expect.stringContaining('1:1')})
+ expect(await sharp(f.saved[0].data).metadata()).toMatchObject({width:1024,height:1024})
+})
+
 it('keeps the full composition and alpha when fitting mismatched attachment dimensions',async()=>{
  const {fitGeneratedImage}=await import('../packages/dsh-research-task-runtime/image-generation-provider.js')
  const raw=Buffer.from([255,0,0,0,0,0,255,255,255,0,0,0,0,0,255,255])
