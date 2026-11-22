@@ -132,6 +132,129 @@
         ],
         "recordedAt": "2026-11-22T00:43:25.680Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复基金名称取证、研究看板建图和方形出图",
+        "branch": "codex/feat/audit-model-tools-20261122",
+        "baseCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+        "tipCommit": "f83354c502c8cbf642f4c8177be3100ad2c4ffac",
+        "commits": [
+          {
+            "commit": "e2fb11df480ab01478580c76e7e4c3661fe8fd43",
+            "parents": [
+              "fa549c214f9b7e45681487f10dd0cad3902ec7e8"
+            ],
+            "subject": "修复中文方形画幅要求未应用到生图附件的问题"
+          },
+          {
+            "commit": "0f3f349c8d28f78d9eb563019d74b657ac214066",
+            "parents": [
+              "e2fb11df480ab01478580c76e7e4c3661fe8fd43"
+            ],
+            "subject": "修复在当前研究看板新增图表时被误判为编辑请求"
+          },
+          {
+            "commit": "f83354c502c8cbf642f4c8177be3100ad2c4ffac",
+            "parents": [
+              "0f3f349c8d28f78d9eb563019d74b657ac214066"
+            ],
+            "subject": "区分基金简称并按代码核对公开档案中的基金全称与来源"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "package-lock.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/financial-tool.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-fund-research-runtime/fund-profile-names.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/package.json"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/financial-source-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-delivery-intent.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-output-size.js"
+          },
+          {
+            "status": "M",
+            "path": "services/fund-data/financial/tushare.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fund-profile-names.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-generation-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/tushare-financial-routing.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-content-delivery.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-resultative-request.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-generation-tool.test.js",
+              "test/image-factory.test.js",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-resultative-request.test.js",
+              "test/fund-profile-names.test.js",
+              "test/tushare-financial-routing.test.js",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "f83354c502c8cbf642f4c8177be3100ad2c4ffac",
+            "completedAt": "2026-11-22T01:19:28.898437+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已运行真实研究组件运行时、校验图像附件输出尺寸并联网核对三只基金的公开档案。"
+        },
+        "acceptanceCriteria": [
+          "简称和基金全称分别给出来源",
+          "在当前看板按指令创建柱状图",
+          "方形画布和输出附件均保持正方形"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T01:19:28.898437+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -144,6 +267,22 @@
         "HEAD"
       ],
       "timeoutMs": 30000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/image-generation-tool.test.js",
+        "test/image-factory.test.js",
+        "test/workbench-content-delivery.test.js",
+        "test/workbench-resultative-request.test.js",
+        "test/fund-profile-names.test.js",
+        "test/tushare-financial-routing.test.js",
+        "--maxWorkers=2",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
