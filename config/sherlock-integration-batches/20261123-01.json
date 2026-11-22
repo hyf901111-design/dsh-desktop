@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261123-01",
+  "branch": "codex/integration/20261123-01",
+  "baseMainCommit": "55219d2e951b7f4bb95c95c8463342842996786c",
+  "expectedMainCommit": "55219d2e951b7f4bb95c95c8463342842996786c",
+  "createdAt": "2026-11-22T22:41:08.792Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复研究看板演示在无代理时的行情数据",
+        "branch": "codex/feat/board-demo-direct-quotes-20261123",
+        "baseCommit": "55219d2e951b7f4bb95c95c8463342842996786c",
+        "tipCommit": "d867226af960967ef82496c9700c7b24115076de",
+        "commits": [
+          {
+            "commit": "d867226af960967ef82496c9700c7b24115076de",
+            "parents": [
+              "55219d2e951b7f4bb95c95c8463342842996786c"
+            ],
+            "subject": "修复研究看板演示直连时的苹果行情和美股指数走势"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/financial-widget-sources.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/financial/backup-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/financial/public-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-backup.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/home-board-direct-market.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-board-direct-market.test.js",
+              "test/financial-widget-backup.test.ts",
+              "test/financial-widget-network.test.ts",
+              "test/financial-widget-public.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "演示行情与公开来源51项聚焦回归通过。",
+            "verifiedCommit": "d867226af960967ef82496c9700c7b24115076de",
+            "completedAt": "2026-11-22T22:40:56.541710+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-link.test.js",
+              "-t",
+              "底部节点连接后选中自选行原子切换行情",
+              "--testTimeout",
+              "30000"
+            ],
+            "outcome": "passed",
+            "summary": "原生自选联动与刷新保存验证通过。",
+            "verifiedCommit": "d867226af960967ef82496c9700c7b24115076de",
+            "completedAt": "2026-11-22T22:40:56.541710+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "d867226af960967ef82496c9700c7b24115076de",
+            "completedAt": "2026-11-22T22:40:56.541710+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在原生组件渲染测试中验证选中自选股票后行情和重开的联动状态，系统关代理的客户端播放另在集成后验收。"
+        },
+        "acceptanceCriteria": [
+          "关闭系统 VPN 与代理后从探索开始播放",
+          "AAPL 无需点选或重试即可取得报价及日 K",
+          "保留十个指数，核对美国指数的价格和走势及切换五粮液",
+          "教程生成五只自选股观察清单并保存"
+        ],
+        "risks": [
+          "实时行情依赖各公开来源当时的可用性。"
+        ],
+        "generatedAt": "2026-11-22T22:41:07.542464+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-board-direct-market.test.js",
+        "test/financial-widget-backup.test.ts",
+        "test/financial-widget-network.test.ts",
+        "test/financial-widget-public.test.ts"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/financial-widget-link.test.js",
+        "-t",
+        "底部节点连接后选中自选行原子切换行情",
+        "--testTimeout",
+        "30000"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
