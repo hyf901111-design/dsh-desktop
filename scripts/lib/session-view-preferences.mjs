@@ -65,6 +65,13 @@ export function installInitialChatViewIntent(chatStore, sessions, researchWorksp
 // Only explicit new session callbacks attach a reuse predicate. Workspace selection
 // and automatic startup retain their native reuse and restoration paths.
 export function patchNewChatSessionRuntime(source) {
+  // Session creation may resolve before the workspace membership notification arrives.
+  const opened = 'beforeOpen?.(sessionId);\n\t\t\t\t\tthis.sessions.open(sessionId);'
+  const reconcile = 'if (!this.list.getSnapshot().items.find(item => item.workspaceId === target)?.sessionIds.includes(sessionId))'
+  if (!source.includes(reconcile)) {
+    if (source.split(opened).length !== 2) throw Error('New Chat workspace membership anchor drifted')
+    source = source.replace(opened, opened + '\n\t\t\t\t\t' + reconcile + ' void this.refresh().catch(error => console.warn("Workspace refresh failed:", error));')
+  }
   const changes = [
     ['async connectWorkspace(workspaceId) {', 'async connectWorkspace(workspaceId, canReuse) { /* ework:new-chat-reuse-filter:v1 */'],
     ['&& !researchSessionState(summary.id, false).engaged) return summary.id;', '&& !researchSessionState(summary.id, false).engaged && (typeof canReuse !== "function" || canReuse(summary.id) === true)) return summary.id;'],

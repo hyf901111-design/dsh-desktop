@@ -1003,6 +1003,10 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
    })
    window.mountSessionWorkspaceViewShortcuts(document,()=>{},app=>{
     window.homeOpens.push(app)
+    if(app==='new-chat'){
+     window.browserView.close()
+     delete document.body.dataset.workspaceSurface
+    }
     if(app==='browser'){
      document.body.dataset.workspaceSurface='browser'
      return window.browserView.open('')
@@ -1195,6 +1199,7 @@ it.each([true,false])('sizes top-bar labels and lets users drag app labels into 
   await expect.poll(()=>selectedSidebar.count()).toBe(0)
   expect(await browserControls.locator('[data-workspace-native-view=browser]').getAttribute('aria-current')).toBe('true')
   await browserControls.getByRole('button',{name:'切换到对话',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.homeOpens)).toEqual(['browser','new-chat'])
   await homeBar.getByRole('button',{name:'收起工作区页签',exact:true}).waitFor()
   await expect.poll(()=>selectedSidebar.count()).toBe(0)
   await homeBar.getByRole('button',{name:'切换到浏览器',exact:true}).click()
@@ -1526,3 +1531,24 @@ it('shares editable shortcuts between the composer and sidebar while keeping the
   expect(errors).toEqual([])
  } finally { await page.close() }
 }, 12000)
+
+it('starts Chat when its current tab is clicked on a sessionless homepage',async()=>{
+ const {page,errors}=await fixture()
+ try {
+  await page.evaluate(()=>{
+   window.browserView.close()
+   delete document.body.dataset.workspaceSurface
+   document.querySelector('.pI_x6G_centerCol').innerHTML='<section class="wSkVaW_root" data-odyssey-page="home"></section>'
+   window.opens=[]
+   window.mountSessionWorkspaceViewShortcuts(document,()=>{},app=>window.opens.push(app))
+  })
+  const bar=page.locator('.workspace-home-topbar')
+  await bar.getByRole('button',{name:'展开工作区页签'}).click()
+  const chat=bar.getByRole('button',{name:'切换到对话'})
+  expect(await chat.getAttribute('aria-current')).toBe('true')
+  expect(await page.evaluate(()=>window.opens)).toEqual([])
+  await chat.click()
+  await expect.poll(()=>page.evaluate(()=>window.opens)).toEqual(['new-chat'])
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})

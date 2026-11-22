@@ -111,6 +111,10 @@ it('opens a fresh Chat when existing blank sessions use a different default perm
   expect(events).toContainEqual({checkedPermission:'target'})
   expect(events).toContainEqual({create:{workspaceId:'active'}})
   expect(events).not.toContainEqual({open:'target'})
+  await expect.poll(()=>page.evaluate(()=>window.newChatFixture.workspaces.list.getSnapshot().items.find(w=>w.workspaceId==='active').sessionIds)).toContain('fresh-1')
+  const row=page.locator('#sidebar [role=treeitem][aria-selected=true]')
+  await expect.poll(()=>row.innerText()).toContain('新对话')
+  expect(await page.evaluate(()=>window.newChatFixture.sessions.list.getSnapshot().byId['fresh-1'].title)).toBeUndefined()
   expect(errors).toEqual([])
  }finally{await page.close()}
 })
@@ -150,3 +154,31 @@ it('opens an ordinary Chat in the chosen collapsed workspace beside a saved spre
   expect(errors).toEqual([])
  }finally{await page.close()}
 },15000)
+
+it('keeps the selected New Chat visible below five more recent conversations',async()=>{
+ const {page,errors}=await fixture({warm:true})
+ try {
+  await page.getByRole('button',{name:'新建对话',exact:true}).click()
+  await expect.poll(()=>page.evaluate(()=>window.newChatFixture.sessions.list.getSnapshot().current)).toBe('target')
+  await page.evaluate(async()=>{
+   const {sessions,workspaces}=window.newChatFixture
+   const ids=Array.from({length:7},(_,i)=>'saved-'+i)
+   for(const id of ids) await sessions.create({sessionId:id,workspaceId:'active'})
+   await workspaces.refresh()
+   sessions.list.update(state=>{
+    for(const [index,id] of ids.entries()){
+     const name='已保存 '+index
+     state.byId[id]={...state.byId[id],title:name,displayTitle:name,blank:false,updatedAt:Date.now()+100000+index}
+    }
+   })
+  })
+  const selected=page.locator('#sidebar [role=treeitem][aria-selected=true]')
+  const more=page.getByRole('button',{name:/展开其余|展开剩余|更多|展开.*[0-9]/})
+  await expect.poll(()=>more.count()).toBe(1)
+  expect(await selected.innerText()).toContain('新对话')
+  await more.click()
+  expect(await selected.innerText()).toContain('新对话')
+  expect(await page.getByText('已保存 0',{exact:true}).isVisible()).toBe(true)
+  expect(errors).toEqual([])
+ }finally{await page.close()}
+})

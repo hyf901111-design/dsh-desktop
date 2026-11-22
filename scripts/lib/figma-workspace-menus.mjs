@@ -1,9 +1,27 @@
+// A manually ordered workspace can place the active conversation below its preview.
+function visibleWorkspaceSessions(rows, current, limit) {
+  const preview = rows.slice(0, limit)
+  if (!current || preview.some(row => row.id === current)) return preview
+  const selected = rows.find(row => row.id === current)
+  return selected ? [...preview.slice(0, limit - 1), selected] : preview
+}
+
 export function patchFigmaWorkspaceMenus(source) {
   source = patchNewChatWorkspaceIntent(patchSessionEntryActions(patchWorkspaceFolderActions(source)))
   const marker = '/* odyssey:workspace-menu-search:20260912 */'
   const exact = (before, after) => {
     if (source.split(before).length !== 2) throw Error('Workspace menu anchor drifted: '+before.slice(0,60))
     source = source.replace(before, after)
+  }
+  const preview = 'group.sessions.slice(0, COLLAPSED_SESSION_LIMIT)'
+  const selectedPreview = 'visibleWorkspaceSessions(group.sessions, current, COLLAPSED_SESSION_LIMIT)'
+  if (!source.includes(selectedPreview)) {
+    exact('const COLLAPSED_SESSION_LIMIT = 5;', visibleWorkspaceSessions.toString() + '\nconst COLLAPSED_SESSION_LIMIT = 5;')
+    exact(preview, selectedPreview)
+  }
+  for (const [oldLabel, label] of [['新会话', '新对话'], ['New Session', 'New chat']]) {
+    const entry = value => '"session.new": "' + value + '"'
+    if (!source.includes(entry(label))) exact(entry(oldLabel), entry(label))
   }
   const addWorkspaceLabel = '"aria-label": t("workspace.add"),'
   const addWorkspaceAction = '"data-sidebar-add-workspace": "",'
