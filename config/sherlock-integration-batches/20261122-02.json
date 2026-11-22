@@ -734,6 +734,104 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-22T14:22:52.406297+00:00"
+      },
+      "merged": {
+        "mergeCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+        "verificationCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/research-resident-conversation.test.ts",
+              "test/pending-conversation-panel.test.js",
+              "test/home-guide-explore-entry-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-guide-entry-native.test.ts test/home-guide-session.test.ts test/research-resident-conversation.test.ts test/pending-conversation-panel.test.js test/home-guide-explore-entry-browser.test.js",
+            "verifiedCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+            "completedAt": "2026-11-22T14:23:03.839Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+            "completedAt": "2026-11-22T14:23:03.839Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "opens the animated PPT sidebar"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/knowledge-workspace-rendered.test.js -t opens the animated PPT sidebar",
+            "verifiedCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+            "completedAt": "2026-11-22T14:23:03.839Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-network.test.ts",
+              "test/financial-widget-public.test.ts",
+              "test/financial-widget-backup.test.ts",
+              "test/financial-widget-announcements-public.test.ts",
+              "test/financial-widget-kraken.test.ts",
+              "test/financial-widget-bitfinex.test.ts",
+              "test/financial-widget-futures.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/financial-widget-network.test.ts test/financial-widget-public.test.ts test/financial-widget-backup.test.ts test/financial-widget-announcements-public.test.ts test/financial-widget-kraken.test.ts test/financial-widget-bitfinex.test.ts test/financial-widget-futures.test.ts",
+            "verifiedCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+            "completedAt": "2026-11-22T14:23:03.839Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-native.test.js",
+              "-t",
+              "uses actual native components|patches installed native code|shows and commits each port"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-guide-native.test.js -t uses actual native components|patches installed native code|shows and commits each port",
+            "verifiedCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+            "completedAt": "2026-11-22T14:23:03.839Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/knowledge-workspace-rendered.test.js",
+            "verifiedCommit": "3f19f9f86f03cc313e5fbb57a8088e1f94536045",
+            "completedAt": "2026-11-22T14:23:03.839Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-22T14:23:03.839Z"
       }
     }
   ],
