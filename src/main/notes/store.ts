@@ -43,6 +43,9 @@ export class NotesStore {
     if (![owner, session].every(id => typeof id === 'string' && id.length > 0 && id.length <= 512)) throw Error('笔记身份无效。')
     return join(this.root, createHash('sha256').update(JSON.stringify([owner, session])).digest('hex') + '.json')
   }
+  hasRecord(owner: string, session: string): boolean {
+    return existsSync(this.path(owner, session))
+  }
   hasContent(owner: string, session: string): boolean {
     const data = this.read(owner, session)
     return noteHasContent(data.saved) || data.drafts.some(noteHasContent)

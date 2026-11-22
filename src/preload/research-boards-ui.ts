@@ -730,7 +730,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   function syncFavoriteTitles() {
     for (const favorite of state.favorites) {
       const title = deps.sessions.list.getSnapshot().byId[favorite.sessionId]?.title?.trim()
-      if (!title || title === favorite.title || titleWrites.has(favorite.favoriteId)) continue
+      if (!title || deps.sessions.officeDocumentTitle?.(favorite.sessionId) || title === favorite.title || titleWrites.has(favorite.favoriteId)) continue
       titleWrites.add(favorite.favoriteId)
       void call('favorite.rename', { favoriteId: favorite.favoriteId, title })
         .catch(() => {}).finally(() => {
@@ -1812,6 +1812,15 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       id => call('local.directory', { mode: 'fork', sessionId: id }),
       async () => { await deps.workspaces.refresh(); selectBoardSession('') }))
   }
+  const visibleBoardState = () => {
+    const pending = !!deps.sessions.officeSessionHidden && deps.sessions.list.getSnapshot().phase === 'pending'
+    const favorites = state.favorites.filter(f => !pending && !deps.sessions.officeSessionHidden?.(f.sessionId)).map(f => {
+      const title = deps.sessions.officeDocumentTitle?.(f.sessionId)
+      return title && title !== f.title ? {...f, title} : f
+    })
+    return favorites.length === state.favorites.length && favorites.every((f, index) => f === state.favorites[index])
+      ? state : {...state, favorites}
+  }
   const api = {
     subscribeComponent(fn: (event: any) => void) { componentListeners.add(fn); return () => { componentListeners.delete(fn) } },
     subscribe: (fn: () => void) => {
@@ -1819,7 +1828,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       return () => listeners.delete(fn)
     },
     version: () => revision,
-    getState: () => state,
+    getState: visibleBoardState,
     getView: view,
     collaborativeBoard: (id: string) => state.boards.find(board => board.localSessionId === id),
     workspaceFor: (id: string) => deps.researchWorkspaces.for(id),
@@ -1836,7 +1845,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.sessions.list.getSnapshot().byId[id]?.updatedAt as
         number | undefined,
     current,
-    searchSessions(query: string) { return sidebarSearchResults(state, deps.sessions.list.getSnapshot().byId, deps.workspaces.list.getSnapshot().archivedSessionIds ?? [], query) },
+    searchSessions(query: string) { return sidebarSearchResults(visibleBoardState(), deps.sessions.list.getSnapshot().byId, deps.workspaces.list.getSnapshot().archivedSessionIds ?? [], query) },
     subscribeSearch(listener: () => void) {
       listeners.add(listener)
       const off = deps.workspaces.list.subscribe(listener)

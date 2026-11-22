@@ -1,3 +1,4 @@
+import { showOfficeAccessNotice } from './office-access-notice'
 import { mountSharedKnowledgeSessions } from './knowledge/shared-session'
 import { mountKnowledgePanels } from './knowledge/panel'
 import { knowledgeOpenEvent, mountKnowledgeWorkspace } from './knowledge/workspace'
@@ -235,7 +236,6 @@ function initializeUi(): void {
   mountUiLocalization(document)
   mountFloatingSurfaces(document)
   const boards = createResearchBoardsBridge(ipcRenderer)
-  mountAccountUi(document, (action, input) => ipcRenderer.invoke('account:invoke', action, input), boards, {explore:process.platform==='darwin'})
   ipcRenderer.on('account:quota-changed', () => window.dispatchEvent(new Event('sherlock:ai-quota-changed')))
   const memoryListeners = new Set<() => void>()
   ipcRenderer.on('memory:changed', () => { for (const listener of memoryListeners) listener() })
@@ -414,6 +414,7 @@ function initializeUi(): void {
   const browserMenus=new NativeBrowserMenuProjection(document,{request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),subscribeAction:listener=>{const handle=(_event:unknown,value:any)=>listener(value);ipcRenderer.on('browser-app:menu-event',handle);return()=>ipcRenderer.removeListener('browser-app:menu-event',handle)}})
   ipcRenderer.on('browser-app:page-pointer-down',(_event,tabId:string)=>browserMenus.pagePointerDown(tabId))
   window.addEventListener('unload',()=>{browserMenus.dispose();browserApp.dispose()},{once:true})
+  document.addEventListener('sherlock:office-access-notice', event => showOfficeAccessNotice(document, (event as CustomEvent).detail))
   const noteOwners = new Map<string, string>()
   let noteIdentityEpoch=0
   const noteHistory=createNoteHistoryLoader({currentEpoch:()=>noteIdentityEpoch,load:sessionId=>ipcRenderer.invoke('notes:request','conversation-load',{sessionId}),accept:(sessionId,value)=>{noteOwners.set(sessionId,value.owner);document.dispatchEvent(new CustomEvent('sherlock:notes-history',{detail:{sessionId,rows:value.rows}}))},onError:error=>console.warn('[notes-history]',noteUiError(error instanceof Error?error.message:String(error)))})
@@ -456,6 +457,14 @@ function initializeUi(): void {
   const sidebarNewSpreadsheet=createSidebarNewNoteAction(document,flushBeforeCreate,'spreadsheet')
   const sidebarNewPresentation=createSidebarNewNoteAction(document,flushBeforeCreate,'presentation')
   presentationView=mountPresentation(document, ipcRenderer)
+  mountAccountUi(document, async (action, input) => {
+    if (['login', 'register', 'logout', 'password'].includes(action)) {
+      await flushBeforeCreate()
+      const id = document.body.dataset.eworkPresentationSession
+      if (id) await presentationView?.flush(id)
+    }
+    return ipcRenderer.invoke('account:invoke', action, input)
+  }, boards, {explore:process.platform==='darwin'})
   const integrationBridge = { request: (command: import('../shared/integration-ui').IntegrationCommand) => ipcRenderer.invoke('integrations:request', command) }
   const skillUse = createSkillUseBridge(document, integrationBridge, () => { integrationView.close(); workspaceSurfaceHost.revealConversation() })
   const integrationView = new IntegrationView(document, { ...integrationBridge, getPathForFile: file => safePathForFile(file,webUtils.getPathForFile), useSkill: skillUse.useSkill, revealSource: async path => { await ipcRenderer.invoke('filesystem:show-item-in-folder', path) } }, workspaceSurfaceHost)
@@ -605,7 +614,7 @@ function initializeUi(): void {
     document.removeEventListener(sessionWorkspaceViewEvent, onSessionWorkspaceView)
     window.removeEventListener(imageFactoryOpenEvent, openImageFactory)
   }, { once: true })
-  const resetIntegrationIdentity = () => { navigationShortcuts?.reload(); imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();sidebarNewPresentation.reset();presentationView?.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
+  const resetIntegrationIdentity = () => { document.getElementById('ework-office-access-notice')?.remove(); navigationShortcuts?.reload(); imageFactory.reset(); document.dispatchEvent(new Event('sherlock:knowledge-identity-changed'));window.dispatchEvent(new CustomEvent('sherlock:explore-close',{detail:{restoreFocus:false}}));sidebarNewNote.reset();sidebarNewSpreadsheet.reset();sidebarNewPresentation.reset();presentationView?.reset();noteIdentityEpoch++; homeGuides.reset(false); noteHistory.reset(); notes.resetIdentity(); noteOwners.clear(); homeActions.reset(); skillCommand.reset(); skillUse.reset(); scheduledView.resetIntegrationIdentity(); integrationView.resetIdentity(); memoryUi.resetIdentity() }
   ipcRenderer.on('integrations:identity-changed', resetIntegrationIdentity)
   window.addEventListener('unload', () => ipcRenderer.removeListener('integrations:identity-changed', resetIntegrationIdentity), { once: true })
   window.addEventListener('unload', () => { sidebarNewNote.dispose();sidebarNewSpreadsheet.dispose();sidebarNewPresentation.dispose();presentationView?.dispose();disposeHomeOperations(); homeGuides.dispose(); homeActions.dispose(); noteHistory.reset(); memoryUi.dispose(); memoryListeners.clear(); notes.dispose(); skillCommand.dispose(); skillUse.dispose(); scheduledView.close(); integrationView.dispose(); workspaceSurfaceHost.dispose() }, { once: true })
@@ -699,6 +708,10 @@ contextBridge.exposeInMainWorld(
     showFileContextMenu: (items: Array<{ id: string; label: string; disabled?: boolean }>): Promise<string | null> =>
       ipcRenderer.invoke('ui:file-context-menu', items),
     imageAction: (input: unknown) => ipcRenderer.invoke('conversation:image-action', input),
+    officeSessions: Object.freeze({
+      identity: () => ipcRenderer.sendSync('office-sessions:identity'),
+      check: (rows: unknown) => ipcRenderer.sendSync('office-sessions:check', rows)
+    }),
     standaloneConversationDirectory: (): Promise<string> => ipcRenderer.invoke('conversation:standalone-directory'),
     imageFactoryTasks: Object.freeze({
       read: () => ipcRenderer.invoke('image-factory:tabs-read'),

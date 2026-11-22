@@ -150,6 +150,9 @@ export class PresentationStore {
     const sql = locked ? 'INSERT OR IGNORE INTO edit_locks VALUES (?,?)' : 'DELETE FROM edit_locks WHERE owner=? AND session=?'
     this.db.prepare(sql).run(key.owner, key.sessionId)
   }
+  hasRecord(key: Key): boolean {
+    return !!this.db.prepare('SELECT 1 FROM decks WHERE owner=? AND session=? LIMIT 1').get(key.owner, key.sessionId)
+  }
   recent(key: Key) {
     return this.db
       .prepare(

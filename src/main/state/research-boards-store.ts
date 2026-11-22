@@ -122,6 +122,7 @@ export class ResearchBoardsStore {
   snapshot() {
     return clone(this.state)
   }
+  accountIds(): string[] { return Object.keys(this.state.accounts) }
   account(accountId: string): AccountStore {
     return clone(this.state.accounts[key(accountId)] ?? emptyAccount())
   }

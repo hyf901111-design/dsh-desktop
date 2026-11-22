@@ -1,3 +1,4 @@
+import { officeOwnerSlot } from '../state/office-session-access'
 import { createHash } from 'node:crypto'
 import { dialog, type BrowserWindow, type IpcMain } from 'electron'
 import { open, realpath, writeFile, rename, rm } from 'node:fs/promises'
@@ -25,6 +26,7 @@ type Admission = { documentId: string | null; slideId?: string; useSlide: boolea
 const who = (key: Key) => JSON.stringify([key.owner, key.sessionId])
 const hash = (s: string) => createHash('sha256').update(s.trim()).digest('hex')
 export function installPresentation(options: {
+  assertAccess?(id: string): void
   ipcMain: IpcMain
   getWindow(): BrowserWindow | undefined
   store: PresentationStore
@@ -66,7 +68,7 @@ export function installPresentation(options: {
           const response = await fetch(url, {
             method: 'POST',
             headers: { 'content-type': 'application/json', origin: url.origin },
-            body: JSON.stringify({ sessionId: key.sessionId, action: 'retain', title: target }),
+            body: JSON.stringify({ sessionId: key.sessionId, action: 'retain', title: target, officeOwner: officeOwnerSlot(key.owner) }),
             signal: AbortSignal.timeout(10000)
           })
           if (!response.ok || (await response.json()).ok !== true) break
@@ -87,6 +89,7 @@ export function installPresentation(options: {
       (generation !== undefined && c.generation !== generation)
     )
       throw Error('请回到此会话的演示页签。')
+    options.assertAccess?.(id)
     const key = { owner: c.ownerAccountId, sessionId: id }
     if (write && (!options.canWrite(id) || store.isLocked(key))) throw Error('文稿已锁定，只能查看。')
     return { key, generation: c.generation }

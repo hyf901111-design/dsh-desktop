@@ -33,11 +33,12 @@ it('initializes a blank note title without recording activity and follows its su
   registerNoteSessions(f.ctx, { isTrustedRequest: () => true, readJsonBody: async req => req.payload })
   let status
   const response = { writeHead: value => { status = value }, end() {} }
-  const initialize = () => handle({ method: 'POST', payload: { action: 'initialize', sessionId: 's', locale: 'zh' } }, response)
+  const initialize = () => handle({ method: 'POST', payload: { action: 'initialize', sessionId: 's', locale: 'zh', officeOwner:'a'.repeat(64) } }, response)
   await initialize()
   await initialize()
   expect(status).toBe(200)
   expect(f.rename).toHaveBeenCalledExactlyOnceWith(f.session, '新笔记')
+  expect(f.session.events.find(event => event.type === 'workspace-note/created').data.officeOwner).toBe('a'.repeat(64))
   expect(f.session.events.some(event => event.type === 'workspace-note/edited')).toBe(false)
 
   const reopened = fixture(structuredClone(f.session.events))
@@ -76,7 +77,7 @@ it('optimistically retains only known current-account sessions before the durabl
 it('hides provisional spreadsheets after leaving and keeps saved, legacy and conversation sessions',async()=>{
   const source=patchNoteSessionHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
   const sidebar=patchFigmaNavigationTitles(await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'))
-  const names=['sessionBlank','applySessionListMetadata','sessionListMetadata','sessionVisible','hasSavedSpreadsheetDraft']
+  const names=['foldOfficeScope','sessionBlank','applySessionListMetadata','sessionListMetadata','sessionVisible','hasSavedSpreadsheetDraft']
   const functions=new Map()
   for(const code of [source,sidebar]){
     const syntax=createSourceFile('native.js',code,ScriptTarget.Latest,false,ScriptKind.JS)
@@ -152,7 +153,7 @@ it('indexes the saved deck title, repairs legacy placeholders on replay, and pre
 it('the real native host classifies replayed note and knowledge-copy events as non-blank',async()=>{
   const source=patchNoteSessionHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
   const syntax=createSourceFile('host.js',source,ScriptTarget.Latest,false,ScriptKind.JS),functions=new Map();const visit=node=>{if(isFunctionDeclaration(node)&&node.name)functions.set(node.name.text,node.getText(syntax));forEachChild(node,visit)};visit(syntax)
-  const api=runInNewContext(['sessionBlank','applySessionListMetadata','sessionListMetadata'].map(name=>functions.get(name)).join('\n')+';({sessionBlank,sessionListMetadata})')
+  const api=runInNewContext(['foldOfficeScope','sessionBlank','applySessionListMetadata','sessionListMetadata'].map(name=>functions.get(name)).join('\n')+';({sessionBlank,sessionListMetadata})')
   const f=fixture();engageNoteSession(f.ctx,{sessionId:'s',title:'笔记'});const replay=JSON.parse(JSON.stringify(f.session.events))
   expect(api.sessionBlank({events:replay})).toBe(false);expect(api.sessionListMetadata(replay).blank).toBe(false);expect(replay.some(e=>e.type==='turn/start')).toBe(false)
   const copy = [{ type: 'workspace-knowledge/copied', data: {} }]

@@ -1,3 +1,4 @@
+import {officeSessionOwner} from './office-session-owner.js'
 export const SPREADSHEET_CREATED = 'workspace-spreadsheet/created'
 export const SPREADSHEET_EDITED = 'workspace-spreadsheet/edited'
 
@@ -23,7 +24,7 @@ export function registerDocumentSessions(ctx,{isTrustedRequest,readJsonBody},kin
         const title = input.title
         if (presentation && title !== undefined && (typeof title !== 'string' || title.length > 256))
           throw Error('演示名称无效。')
-        if (!previous) session.append(editedType, {})
+        if (!previous) session.append(editedType, officeSessionOwner(input.officeOwner))
         if (presentation && title?.trim()) {
           const current = session.events.findLast(event => event.type === 'session/title')
           const created = session.events.find(event => event.type === createdType)
@@ -44,7 +45,7 @@ export function registerDocumentSessions(ctx,{isTrustedRequest,readJsonBody},kin
         if(session.events.some(event=>['session/title','turn/start','user/message','workspace-note/edited'].includes(event.type)))
           throw Error('仅可初始化刚创建的'+noun+'会话。')
         const title=ctx.sessionTitle.rename(session,input.locale==='en'?(presentation?'New Presentation':'New Spreadsheet'):'新'+noun)
-        created=session.append(createdType,{titleSeq:title.eventSeq,provisional:true})
+        created=session.append(createdType,{titleSeq:title.eventSeq,provisional:true, ...officeSessionOwner(input.officeOwner)})
       }
       if(await ctx.sessions.flush(session)!==true)throw Error('新'+noun+'尚未保存，请重试。')
       return send(200,{ok:true,titleSeq:created.data.titleSeq})

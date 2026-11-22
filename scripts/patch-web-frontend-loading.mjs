@@ -1,3 +1,4 @@
+import {patchOfficeSessionHost, patchOfficeSessionClient, patchOfficeProjectionCache} from './lib/office-session-scope.mjs'
 import { patchKnowledgeSharedResearch, stripKnowledgeSharedResearch } from './lib/knowledge-shared-research.mjs'
 import {patchKnowledgeConversation, stripKnowledgeConversation} from './lib/knowledge-client.mjs'
 import {patchSpreadsheetClient,stripSpreadsheetClient,hideTrajectoryTab} from './lib/spreadsheet-client.mjs'
@@ -344,15 +345,17 @@ writeFileSync(notesConversationPath, patchSessionViewPreferences(readFileSync(no
 writeFileSync(notesConversationPath, patchAssistantReveal(readFileSync(notesConversationPath, 'utf8')))
 writeFileSync(notesConversationPath, patchConversationThinkingStatus(readFileSync(notesConversationPath, 'utf8')))
 const notesRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js')
-writeFileSync(notesRuntimePath, patchNoteSessionRuntime(readFileSync(notesRuntimePath, 'utf8')))
+writeFileSync(notesRuntimePath, patchOfficeSessionClient(patchNoteSessionRuntime(readFileSync(notesRuntimePath, 'utf8'))))
 const modeClientPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-ui-agent-preset/lib/client.js')
 writeFileSync(modeClientPath, patchStandardModeClient(readFileSync(modeClientPath, 'utf8')))
 const modeRuntimePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-agent-presets/lib/index.js')
 writeFileSync(modeRuntimePath, patchStandardModeRuntime(readFileSync(modeRuntimePath, 'utf8')))
 
 const noteHostPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js')
-const hostSource = patchSessionIdentityList(patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8'))))
+const hostSource = patchOfficeSessionHost(patchSessionIdentityList(patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8')))))
 writeFileSync(noteHostPath, patchModelCatalogSchema(patchHostModelCatalog(hostSource)))
+const projectionCachePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-session-projection-cache/lib/index.js')
+writeFileSync(projectionCachePath, patchOfficeProjectionCache(readFileSync(projectionCachePath, 'utf8')))
 const hostApiPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types')
 for (const [file, patch] of [
   ['api-proxy.js', patchHostModelCatalog],

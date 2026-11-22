@@ -8,12 +8,18 @@ export async function initializeWorkspaceSession(_sessions,id,view,locale) {
   if (!Object.hasOwn(routes,view)) return
   const endpoint = routes[view]
   const body = { sessionId: id, locale }
+  if (view !== 'research' && globalThis.window?.dshDesktop?.officeSessions) {
+    body.officeOwner = window.dshDesktop.officeSessions.identity()
+    if (!body.officeOwner) throw Error('账号正在切换，请重新创建文档。')
+  }
   if (view === 'notes') body.action = 'initialize'
   if (view === 'research') body.components = []
   const response = await fetch(endpoint, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
   })
   const result = await response.json()
+  if (body.officeOwner && window.dshDesktop.officeSessions.identity() !== body.officeOwner)
+    throw Error('账号已变化，请在当前空间重新创建文档。')
   if (!response.ok || result.ok !== true) throw Error(result.error || '新会话名称未能保存。')
 }
 

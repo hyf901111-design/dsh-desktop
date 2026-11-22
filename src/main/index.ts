@@ -85,7 +85,9 @@ import { PresentationStore } from './presentation/store'
 import { handleEditorAsset } from './presentation/protocol'
 import { installSpreadsheet } from './spreadsheet/ipc'
 import { SpreadsheetStore } from './spreadsheet/store'
-import { isTrustedMainWindowEvent, registerTrustedMainWindowHandler } from './ipc-trust'
+import { noteSessionTitle } from '../shared/workspace-notes'
+import { OfficeSessionAccess } from './state/office-session-access'
+import { isTrustedMainWindowEvent, registerTrustedMainWindowHandler, registerTrustedMainWindowListener } from './ipc-trust'
 import { spawn } from 'node:child_process'
 import { homedir, tmpdir } from 'node:os'
 import { localAcceptanceOrigin } from './local-acceptance-services'
@@ -1493,9 +1495,26 @@ async function bootstrap(): Promise<void> {
   const canWriteSpreadsheet=(sessionId:string)=>{try{researchBoardsService?.authorizeCanvasUse(sessionId,true);return true}catch{return false}}
   protocol.handle('odyssey-presentation', request=>handleEditorAsset(app.getAppPath(),request))
   const presentationStore=new PresentationStore(join(app.getPath('userData'),'presentation-v1'))
-  const presentation:ReturnType<typeof installPresentation>=installPresentation({ipcMain,narrate:(owner,text,signal)=>accountService!.narratePresentation(owner,text,signal),getWindow:()=>mainWindow,store:presentationStore,library:knowledge,workspaceRoot:id=>new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),runtimeUrl:()=>runtime?.snapshot().url,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet})
+  const calendarNotes = new NotesStore(join(app.getPath('userData'), 'workspace-notes'))
+  const knowledgeWorkbooks = new SpreadsheetStore(app.getPath('userData'))
+  const boardsStore = new ResearchBoardsStore(app.getPath('userData'))
+  const officeSessions = new OfficeSessionAccess(integrationOwner, (owner, sessionId, mode) => {
+    if (mode === 'note') return calendarNotes.hasRecord(owner, sessionId)
+    if (mode === 'spreadsheet') return knowledgeWorkbooks.hasRecord({owner, sessionId})
+    return presentationStore.hasRecord({owner, sessionId})
+  }, () => boardsStore.accountIds(), (owner, sessionId, mode) => {
+    if (mode === 'note') {
+      const {draft,saved} = calendarNotes.load(owner, sessionId), note = draft ?? saved
+      return noteSessionTitle(note.title, note.blocks) || '新笔记'
+    }
+    if (mode === 'spreadsheet') return knowledgeWorkbooks.load({owner, sessionId}).workbook?.name || '新表格'
+    return presentationStore.recent({owner, sessionId})[0]?.title || '新演示'
+  }, id => researchCanvasStorage.getItem('ework.session.view.v1:' + id))
+  registerTrustedMainWindowListener(ipcMain, 'office-sessions:identity', () => mainWindow, () => officeSessions.identity(), null)
+  registerTrustedMainWindowListener(ipcMain, 'office-sessions:check', () => mainWindow, (_event, rows) => officeSessions.check(rows), null)
+  const presentation:ReturnType<typeof installPresentation>=installPresentation({ipcMain,assertAccess:id=>officeSessions.assert(id,'presentation'),narrate:(owner,text,signal)=>accountService!.narratePresentation(owner,text,signal),getWindow:()=>mainWindow,store:presentationStore,library:knowledge,workspaceRoot:id=>new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),runtimeUrl:()=>runtime?.snapshot().url,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet})
   app.once('before-quit',()=>presentationStore.close())
-  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',canPlayCashFlowGuide:({owner,sessionId})=>{
+  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,assertAccess:id=>officeSessions.assert(id,'spreadsheet'),getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',canPlayCashFlowGuide:({owner,sessionId})=>{
     const scope=owner==='local'?'local':'account:'+owner
     const raw=researchCanvasStorage.peekItem('sherlock.home-guide.sessions.v1:'+encodeURIComponent(scope))
     return !!raw&&JSON.parse(raw).entries.some((entry:{sessionId:string;kind:string})=>entry.sessionId===sessionId&&entry.kind==='spreadsheet')
@@ -1578,7 +1597,7 @@ async function bootstrap(): Promise<void> {
   const boardsToken=randomUUID()
   researchBoardIntegration=new ResearchBoardIntegration({root:join(app.getPath('userData'),'research-board-runtime'),storage:researchCanvasStorage,registry:researchFilePreviewRegistry,clipboard:()=>researchClipboardService,client:collaborationClient,service:()=>researchBoardsService!,runtimeUrl:()=>runtime?.snapshot().url,runtimeToken:boardsToken,revealFile:target=>shell.showItemInFolder(target),invalidate:id=>researchContextBridge?.invalidateSession(id)})
   researchBoardsService = new ResearchBoardsService({
-    store: new ResearchBoardsStore(app.getPath('userData')),
+    store: boardsStore,
     storage: researchCanvasStorage,
     account: accountService,
     client: collaborationClient,
@@ -1635,9 +1654,11 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
-  const calendarNotes = new NotesStore(join(app.getPath('userData'), 'workspace-notes'))
-  const knowledgeWorkbooks = new SpreadsheetStore(app.getPath('userData'))
-  const retainKnowledgeCopy = knowledgeCopyRetention(() => runtime?.snapshot().url)
+  const retainKnowledgeCopy = knowledgeCopyRetention(() => runtime?.snapshot().url, id => {
+    const mode = researchCanvasStorage.getItem('ework.session.view.v1:' + id), owner = integrationOwner()
+    if (owner && (mode === 'notes' || mode === 'spreadsheet' || mode === 'presentation'))
+      return {mode:mode === 'notes' ? 'note' : mode, owner}
+  })
   const knowledgeSessionEvidence = (owner: string, id: string, mode: KnowledgeSessionMode) => {
     let hasContent = false
     try {
@@ -1793,7 +1814,7 @@ async function bootstrap(): Promise<void> {
     },
     writeFile:researchCanvasExportFileOperations().writeFile
   }
-  app.once('before-quit', installNotesService({ ipcMain, getWindow: () => mainWindow, onDocumentAdapter:adapter=>{notesDocumentAdapter=adapter},
+  app.once('before-quit', installNotesService({ ipcMain, assertAccess:id=>officeSessions.assert(id,'note'), getWindow: () => mainWindow, onDocumentAdapter:adapter=>{notesDocumentAdapter=adapter},
     root: join(app.getPath('userData'), 'workspace-notes'), owner: () => integrationOwner() || 'local',
     runtimeUrl: () => runtime?.snapshot().url, clipboard: () => researchClipboardService,
     canRead:canReadNoteSession,canWrite:sessionId=>!researchBoardsService?.isSharedSession(sessionId),canvasAvailable:sessionId=>canvasActions.isAvailable(sessionId),inspectCanvas:(sessionId,signal,args)=>canvasActions.execute({sessionId,method:'inspect',args:args??{}},signal),resetZoom:()=>executeDesktopMenuCommand('zoom-reset'),windowAction:clientWindowAction,nativeMenu:noteNativeMenu,library:()=>noteComponentLibrary,

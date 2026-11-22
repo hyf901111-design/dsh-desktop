@@ -1,3 +1,4 @@
+import {officeSessionOwner} from './office-session-owner.js'
 const copiedEvent = 'workspace-knowledge/copied'
 const copyTitleSuffix = '（副本）'
 
@@ -10,7 +11,7 @@ export function registerKnowledgeSessions(ctx, { isTrustedRequest, readJsonBody 
     }
     if (req.method !== 'POST' || !isTrustedRequest(req, true)) return send(403, { error: '请求已拒绝。' })
     try {
-      const { sessionId, title, existing, imported } = await readJsonBody(req)
+      const { sessionId, title, existing, imported, officeMode, officeOwner } = await readJsonBody(req)
       if (typeof sessionId !== 'string' || !/^session-[a-f0-9-]{36}$/u.test(sessionId) ||
           typeof title !== 'string' || !title.trim() || title.length > 256 ||
           (imported !== true && !title.endsWith(copyTitleSuffix)) || (imported !== undefined && imported !== true) ||
@@ -27,7 +28,8 @@ export function registerKnowledgeSessions(ctx, { isTrustedRequest, readJsonBody 
           throw Error('副本会话已发生变化，请重试。')
         }
         if (!existing) ctx.sessionTitle.rename(session, title)
-        session.append(copiedEvent, {})
+        const owner = officeSessionOwner(officeOwner)
+        session.append(copiedEvent, owner.officeOwner && ['note','spreadsheet','presentation'].includes(officeMode) ? {officeMode, ...owner} : {})
       }
       if (await ctx.sessions.flush(session) !== true) throw Error('副本会话尚未保存，请重试。')
       return send(200, { ok: true })
