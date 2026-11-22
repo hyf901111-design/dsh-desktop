@@ -3,6 +3,7 @@ import {mkdtemp,readFile,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {validateJsonSchemaValue} from '@deepseek-ai/dsh-tools'
+import {registerConversationComponentsPolicy} from '../packages/dsh-research-task-runtime/conversation-components-policy.js'
 import {registerWorkbench} from '../packages/dsh-research-task-runtime/workbench.js'
 import {validateWorkbench,workbenchScopeDeficits} from '../packages/dsh-research-task-runtime/workbench-plan.js'
 import {ResearchTaskRuntime} from '../packages/dsh-research-task-runtime/index.js'
@@ -44,6 +45,30 @@ it('compiles content at the public tool boundary and preserves all records throu
   const restored=new ResearchTaskRuntime({adapter:f.adapter,storage:f.storage});await restored.restore();try{expect([...restored.tasks.values()][0].finalOutput).toBe(task.finalOutput)}finally{await restored.dispose()}
   const changed=structuredClone(input);changed.panels[0].content.rows[0].value=999;await expect(f.tool.execute(changed,f.exec)).rejects.toThrow(/requestId/)
  }finally{await f.close()}
+})
+
+it('exposes board creation for a supplied sample and prepares its chart with the original labels and values',async()=>{
+ const request='用这组验收样例直接在当前看板创建一个柱状图：甲组 12、乙组 8。标题叫「两组数量」，无需联网。'
+ const f=await setup({request}), hooks={}, guards=[]
+ const human=f.exec.agent.session.events[0].data
+ human.role='user'
+ human.source.clientMode='research'
+ const dispose=registerConversationComponentsPolicy({
+  tools:{guard:fn=>{guards.push(fn);return()=>{}}},systemPrompt:{context:()=>()=>{}},
+  on:(event,fn)=>{hooks[event]=fn;return()=>{}}
+ })
+ try{
+  const wire=await hooks['agent/request-context'](f.exec,async()=>({messages:[human],tools:[f.tool]}))
+  expect(wire.tools.map(tool=>tool.name)).toContain('research_workbench_create')
+  const args={title:'两组数量',panels:[{title:'两组数量',type:'chart',content:{rows:[{组:'甲组',数量:12},{组:'乙组',数量:8}],visualization:{kind:'bar',label:'组',values:['数量']}}}]}
+  expect(guards[0]({...f.exec,name:f.tool.name,arguments:args})).toBeUndefined()
+  const receipt=await f.tool.execute(args,f.exec)
+  expect(receipt.status).toBe('prepared')
+  const [task]=f.runtime.tasks.values()
+  const artifact=JSON.parse(task.finalOutput)
+  expect(readTemplateModel(artifact).data).toMatchObject({title:'两组数量',labels:['甲组','乙组'],series:[{values:[12,8]}]})
+  expect(f.adapter.start).not.toHaveBeenCalled()
+ }finally{dispose();await f.close()}
 })
 
 it('uses actual prose or chart data independently of the suggested panel type without losing auxiliary fields',()=>{

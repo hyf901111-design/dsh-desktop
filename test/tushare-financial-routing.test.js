@@ -16,6 +16,12 @@ it('通用基金净值查询优先 Tushare，按净值口径和日期取数，�
  expect(JSON.parse(fetchImpl.mock.calls[0][1].body).params).toMatchObject({ts_code:'000001.OF',nav_date:'20261106'})
  expect(JSON.stringify(value)).not.toContain(env.TUSHARE_TOKEN)
 })
+it('以 Tushare 字段的真实名称口径返回基金简称',async()=>{
+ const fetchImpl=fixture(['ts_code','name','management','found_date'],[['110011.OF','易方达优质精选混合（QDII）','易方达基金','20080619']])
+ const {value}=await createFinancialRouter({env,clock,fetchImpl}).query({operation:'financial',intent:'profile',asset:'fund',symbols:['110011']})
+ expect(value.records[0]).toMatchObject({metric:'基金简称',value:'易方达优质精选混合（QDII）'})
+ expect(value.records.some(row=>row.metric==='基金全称')).toBe(false)
+})
 it('日线保留不复权与实际日期，拒绝错代码和重复日期；不把它当实时行情',async()=>{
  const fetchImpl=fixture(['ts_code','trade_date','open','high','low','close'],[['000300.SH','20261106',3900,4100,3800,4000]])
  const router=createFinancialRouter({env,clock,fetchImpl})

@@ -46,7 +46,7 @@ export async function tushareFinancial(q, env, fetchImpl, signal) {
   } else {
     if (raw.records.length !== 1 || !businessText(raw.records[0].name)) return null
     const row = raw.records[0]
-    add('基金名称',row.name,'text',null,'基金资料')
+    add('基金简称',row.name,'text',null,'基金资料')
     if (businessText(row.management)) add('基金管理人',row.management,'text',null,'基金资料')
     if (date(row.found_date)) add('成立日期',date(row.found_date),'date',date(row.found_date),'基金资料')
   }
