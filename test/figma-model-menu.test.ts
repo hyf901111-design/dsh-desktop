@@ -124,6 +124,17 @@ it('restores the two-level menu and keeps mouse selection alive across null-focu
     expect(win.document.querySelector('[role=menu]')?.textContent).not.toContain('Doubao Seed 2.1 Lite')
     // The footer is available without a configured provider or a hosted account.
     await updateGroups([])
+    const openAccount = vi.fn()
+    win.addEventListener('sherlock:account-open', openAccount)
+    const signIn = () => [...modelMenu().querySelectorAll('[role=menuitem]')].find(row => row.textContent === 'action.signInHosted')
+    expect(signIn()).toBeTruthy()
+    await click(signIn()!)
+    expect(openAccount).toHaveBeenCalledOnce()
+    expect(win.document.querySelector('[role=menu]')).toBeNull()
+    await showModels(trigger)
+    await toggleLogin(true)
+    expect(signIn()).toBeUndefined()
+    await toggleLogin(false)
     const footer = modelMenu().lastElementChild!
     const add = footer.querySelector('[role=menuitem]')!
     expect(add.textContent).toBe('添加自定义模型')

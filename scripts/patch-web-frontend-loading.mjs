@@ -16,6 +16,7 @@ import {patchConversationComponents} from './lib/conversation-components.mjs'
 import {patchConversationCompactionLifecycle} from './lib/conversation-compaction-lifecycle.mjs'
 import {patchConversationThinkingStatus} from './lib/conversation-thinking-status.mjs'
 import {patchConversationLiveActivity,stripConversationLiveActivity} from './lib/conversation-live-activity.mjs'
+import {patchScheduledTaskHistory} from './lib/scheduled-task-history.mjs'
 import {patchConversationResponseHistory} from './lib/conversation-response-history.mjs'
 import {stripPptxAnnotationInput,patchPptxAnnotationInput} from './lib/pptx-annotation-native.mjs'
 import {stripPptxAnnotationMessages,patchPptxAnnotationMessages} from './lib/pptx-annotation-message.mjs'
@@ -397,7 +398,7 @@ writeFileSync(conversationPath,patchPlainSlashInput(readFileSync(conversationPat
 // Read-only first-send projection and one native turn clock are the outermost layers.
 writeFileSync(conversationPath,patchConversationHistoryClient(patchConversationSubmission(patchConversationResponseProgress(readFileSync(conversationPath,'utf8')))))
 writeFileSync(conversationPath,patchConversationTurnOrder(readFileSync(conversationPath,'utf8')))
-writeFileSync(historyRuntimeBundlePath,patchConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8')))
+writeFileSync(historyRuntimeBundlePath,patchScheduledTaskHistory(patchConversationHistoryRuntime(readFileSync(historyRuntimeBundlePath,'utf8'))))
 // Board tabs wrap the final resident canvas and reverse before all earlier passes.
 writeFileSync(conversationPath,patchBoardTabsClient(readFileSync(conversationPath,'utf8')))
 // Dictation wraps the final shared controlled InputBar and unwinds before all refreshes.

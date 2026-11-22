@@ -1,5 +1,6 @@
 import {Window} from 'happy-dom'
 import {expect,it,vi} from 'vitest'
+import {browserRequest} from '../src/preload/browser/request'
 import {BrowserAppView} from '../src/preload/browser/view'
 import {WorkspaceSurfaceHost} from '../src/preload/workspace-surface-host'
 const initial=()=>({tabs:[{id:'one',url:'',title:'新标签页',private:false,pinned:false,muted:false,zoom:1,loading:false,canBack:false,canForward:false}],activeId:'one',history:[],closed:[],bookmarks:[],folders:[],downloads:[],settings:{engine:'Google',startup:'restore',bookmarksBar:true,askDownload:false,downloadPath:''}})
@@ -38,6 +39,22 @@ it('renders a real empty start page and submits a URL with the owning tab identi
  await Promise.resolve();expect(request).toHaveBeenCalledWith('navigate',{id:'one',url:'https://example.com'})
  expect(view.root.textContent).not.toContain('research.example.com')
  view.dispose();await w.happyDOM.abort()
+})
+it('shows the service reason when the address bar rejects a local client address', async () => {
+ const w = new Window(), doc = w.document as unknown as Document, host = new WorkspaceSurfaceHost(doc)
+ vi.stubGlobal('CustomEvent', w.CustomEvent)
+ const request = browserRequest(async method => {
+   if (method === 'navigate') throw new Error("Error invoking remote method 'browser-app:request': Error: 不能打开客户端本地服务地址。")
+   return structuredClone(initial())
+ })
+ const view = new BrowserAppView(doc, {request, subscribe: () => () => {}, source: vi.fn()}, host)
+ try {
+   await view.open('session')
+   const input = view.root.querySelector<HTMLInputElement>('[data-address]')!
+   input.value = 'http://127.0.0.1:18875/'
+   input.dispatchEvent(new w.KeyboardEvent('keydown', {key: 'Enter', bubbles: true}) as any)
+   await vi.waitFor(() => expect(view.root.querySelector('[role=alert]')?.textContent).toBe('不能打开客户端本地服务地址。'))
+ } finally { view.dispose(); host.dispose(); vi.unstubAllGlobals(); await w.happyDOM.abort() }
 })
 it('preserves address and find drafts during native state updates and rejects sending a source after session changes',async()=>{
  const w=new Window(),state=initial();let receive:any;const bridge={request:vi.fn(async()=>structuredClone(state)),subscribe:(f:any)=>{receive=f;return()=>{}},source:vi.fn()};const view=new BrowserAppView(w.document as any,bridge,{register:vi.fn(),open:vi.fn(),close:vi.fn(),current:()=>({surface:'browser'})} as any)

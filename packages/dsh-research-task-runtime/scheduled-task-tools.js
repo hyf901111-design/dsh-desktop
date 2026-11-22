@@ -1,3 +1,4 @@
+import {scheduledRunMode, noScheduledChanges} from './scheduled-run.js'
 import {defineTool} from '@deepseek-ai/dsh-tools'
 import {canvasSession} from './canvas-tools.js'
 import {scheduledTaskRequest} from './canvas-task-routing.js'
@@ -26,6 +27,13 @@ export function registerScheduledTaskTool(ctx,{env=process.env,request=globalThi
       return JSON.stringify(result)
     }
   }))
-  const guidance=ctx.systemPrompt.context({name:'sherlock:scheduled-task',order:151,text:({agent})=>scheduledTaskRequest(agent?.session)?'用户要求设置持久定时或阈值提醒：用 research_scheduled_task 创建，保存成功后立即结束当前回合并交付任务ID、频率及运行限制。选中的自选股组件用nodeId读取其保存的标的；不要进入research_canvas_task、等待触发或刷新可见画板。工具失败必须如实报告，不能说已创建。':''})
+  const guidance=ctx.systemPrompt.context({name:'sherlock:scheduled-task',order:151,text:({agent})=>{
+    const mode = scheduledRunMode(agent?.session)
+    if (mode) {
+      const run = '这是已经保存的定时任务。现在执行本次指令并直接回复结果，不要再创建定时任务。'
+      return mode === 'compare' ? run + '与上次完成的结果比较。有值得提醒的变化时列出变化；已有上次结果且没有新变化时，在结尾单独写“' + noScheduledChanges + '”。' : run
+    }
+    return scheduledTaskRequest(agent?.session)?'用户要求设置持久定时或阈值提醒：用 research_scheduled_task 创建，保存成功后立即结束当前回合并交付任务ID、频率及运行限制。选中的自选股组件用nodeId读取其保存的标的；不要进入research_canvas_task、等待触发或刷新可见画板。工具失败必须如实报告，不能说已创建。':''
+  }})
   return ()=>{dispose();guidance?.()}
 }

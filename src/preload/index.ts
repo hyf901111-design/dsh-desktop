@@ -6,6 +6,7 @@ import { mountSpreadsheet } from './spreadsheet/view'
 import { mountCashFlowGuide } from './spreadsheet/cash-flow-guide'
 import {question,subscribeQuestion,translationModel} from './browser/region-bridge'
 import {BrowserAppView} from './browser/view'
+import {browserRequest} from './browser/request'
 import {NativeBrowserMenuProjection} from './browser/native-menus'
 import {createComponentDataBridge} from './component-data-bridge'
 import {createClientCapabilitiesBridge} from './client-capabilities'
@@ -224,6 +225,8 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
   pick: (): Promise<string | null> => ipcRenderer.invoke('directory-picker:open')
 })
 
+const requestBrowser = browserRequest((method, input) => ipcRenderer.invoke('browser-app:request', method, input))
+
 function initializeUi(): void {
   // Native window controls do not scale with the web content zoom level.
   const syncAuthNativeScale = (): void => {
@@ -403,7 +406,7 @@ function initializeUi(): void {
   }, { once: true })
   const browserApp=new BrowserAppView(document,{
     question,subscribeQuestion,translationModel,
-    request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),
+    request:requestBrowser,
     subscribe:listener=>{const handle=(_event:unknown,value:import('../shared/browser-app').BrowserSnapshot)=>listener(value);ipcRenderer.on('browser-app:state',handle);return()=>ipcRenderer.removeListener('browser-app:state',handle)},
     source:(sessionId,source)=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-source-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve():reject(Error(d.message||'网页来源未能附加。'))};const timer=setTimeout(()=>{cleanup();reject(Error('对话输入尚未就绪。'))},5000);window.addEventListener('sherlock:browser-source-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-source-request',{detail:{requestId,sessionId,source:JSON.stringify(source)}}))})
   },workspaceSurfaceHost)
@@ -411,7 +414,7 @@ function initializeUi(): void {
   ipcRenderer.on('browser-app:context-action',(_event,value)=>browserApp.contextAction(value))
   ipcRenderer.on('browser-app:region-event',(_event,value)=>browserApp.regionEvent(value))
   ipcRenderer.on('browser-app:shortcut',(_event,value)=>window.dispatchEvent(new CustomEvent('sherlock:browser-shortcut',{detail:value})))
-  const browserMenus=new NativeBrowserMenuProjection(document,{request:(method,input)=>ipcRenderer.invoke('browser-app:request',method,input),subscribeAction:listener=>{const handle=(_event:unknown,value:any)=>listener(value);ipcRenderer.on('browser-app:menu-event',handle);return()=>ipcRenderer.removeListener('browser-app:menu-event',handle)}})
+  const browserMenus=new NativeBrowserMenuProjection(document,{request:requestBrowser,subscribeAction:listener=>{const handle=(_event:unknown,value:any)=>listener(value);ipcRenderer.on('browser-app:menu-event',handle);return()=>ipcRenderer.removeListener('browser-app:menu-event',handle)}})
   ipcRenderer.on('browser-app:page-pointer-down',(_event,tabId:string)=>browserMenus.pagePointerDown(tabId))
   window.addEventListener('unload',()=>{browserMenus.dispose();browserApp.dispose()},{once:true})
   const noteOwners = new Map<string, string>()
@@ -667,7 +670,7 @@ contextBridge.exposeInMainWorld(
     spreadsheetAdmission:(sessionId:string,prompt:string,references:unknown,useWorkbook?:boolean)=>{if(!spreadsheetView)throw Error('表格尚未就绪。');return spreadsheetView.admit(sessionId,prompt,references,useWorkbook)},
     spreadsheetFlush:(sessionId:string)=>spreadsheetView?.flush(sessionId),
     browserApp: Object.freeze({
-      context: ()=>ipcRenderer.invoke('browser-app:request','context'),
+      context: ()=>requestBrowser('context'),
       openSource: (value:{sessionId?:string;url:string})=>new Promise((resolve,reject)=>{const requestId=crypto.randomUUID();const cleanup=()=>{clearTimeout(timer);window.removeEventListener('sherlock:browser-request-reply',reply)};const reply=(event:Event)=>{const d=(event as CustomEvent).detail;if(d?.requestId!==requestId)return;cleanup();d.ok?resolve(d):reject(Error(d.message||'浏览器未能打开。'))};const timer=setTimeout(()=>{cleanup();reject(Error('浏览器入口尚未就绪。'))},8000);window.addEventListener('sherlock:browser-request-reply',reply);window.dispatchEvent(new CustomEvent('sherlock:browser-request',{detail:{...value,requestId}}))})
     }),
     conversationBrowser: Object.freeze({

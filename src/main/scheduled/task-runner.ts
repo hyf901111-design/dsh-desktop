@@ -1,3 +1,4 @@
+import { scheduledResultUnchanged, scheduledRunId } from '../../../packages/dsh-research-task-runtime/scheduled-run.js'
 import type { ComponentExecutor } from './component-executor'
 import type {MarketWatchExecutor} from './market-watch-executor'
 import { randomUUID } from 'node:crypto'
@@ -129,7 +130,7 @@ export class TaskRunner {
           (await this.rpc('session.create', { workspaceId: task.workspaceId }))
             .sessionId
         if (typeof sessionId !== 'string') throw new Error('未能创建专属对话')
-        const rpcId = randomUUID()
+        const rpcId = scheduledRunId(randomUUID(), task.notification)
         await this.store.updateRun(id, run.id, { sessionId, rpcId }, sessionId)
         const history = await this.rpc('session.history', {
           sessionId,
@@ -149,16 +150,13 @@ export class TaskRunner {
         const models = await this.rpc('session.models', { sessionId })
         if (!models.current)
           throw new Error('专属对话尚未选择模型，请打开对话选择模型后重试')
-        const text =
-          task.prompt +
-          '\n\n这是定时任务的一次执行，请现在执行本次内容，不要再创建定时任务。与本对话上次结果比较。若没有值得提醒的新内容，在最终回复末尾单独写 [NO_CHANGE]；有重要变化则写 [CHANGED]。'
         dispatching = true
         await this.rpc(
           'session.prompt',
           {
             sessionId,
             mode: 'queue',
-            content: [{ type: 'text', text }],
+            content: [{ type: 'text', text: task.prompt }],
             clientTimeZone: task.schedule.timezone,
           },
           rpcId,
@@ -258,7 +256,7 @@ export class TaskRunner {
           ? undefined
           : reason?.error?.message ||
               `执行未完成：${reason?.kind || '未知原因'}`,
-        output.trim().endsWith('[NO_CHANGE]'),
+        scheduledResultUnchanged(output),
       )
     } else if (this.now() - run.startedAt > 24 * 60 * 60 * 1000) {
       await this.finish(

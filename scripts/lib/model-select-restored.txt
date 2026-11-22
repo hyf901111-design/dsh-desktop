@@ -351,6 +351,17 @@ function ModelSelect({ locked, available, directory, load, select, t }) {
 									className: ModelSelect_module_css_default.empty,
 									children: t("empty.models")
 								}),
+								!hostedAccount && groups.length === 0 && state.status !== "loading" && (0, react_jsx_runtime.jsx)("button", {
+									ref: itemRef(),
+									type: "button",
+									role: "menuitem",
+									className: ModelSelect_module_css_default.cell,
+									onClick: () => {
+										close();
+										window.dispatchEvent(new CustomEvent("sherlock:account-open"));
+									},
+									children: t("action.signInHosted")
+								}),
 								(0, react_jsx_runtime.jsx)("div", {
 									className: "odyssey-model-menu-footer",
 									children: (0, react_jsx_runtime.jsxs)("button", {
