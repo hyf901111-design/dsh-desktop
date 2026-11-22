@@ -225,6 +225,8 @@ contextBridge.exposeInMainWorld('dshDesktopDirectoryPicker', {
   pick: (): Promise<string | null> => ipcRenderer.invoke('directory-picker:open')
 })
 
+const requestBrowser = browserRequest((method, input) => ipcRenderer.invoke('browser-app:request', method, input))
+
 function initializeUi(): void {
   // Native window controls do not scale with the web content zoom level.
   const syncAuthNativeScale = (): void => {
@@ -402,7 +404,6 @@ function initializeUi(): void {
     ipcRenderer.removeListener('knowledge:changed', knowledgeChanged)
     ipcRenderer.removeListener('knowledge:account-changed', knowledgeAccountChanged)
   }, { once: true })
-  const requestBrowser = browserRequest((method, input) => ipcRenderer.invoke('browser-app:request', method, input))
   const browserApp=new BrowserAppView(document,{
     question,subscribeQuestion,translationModel,
     request:requestBrowser,
