@@ -6,7 +6,7 @@ import { patchSubagentPanelDestination, patchSubagentPanelEntry } from './figma-
 import {patchSubagentAvatars} from './subagent-avatars.mjs'
 import { patchFigmaTaskTabIcon } from './figma-task-tab-icon.mjs'
 import { patchFigmaNativeFileMenu } from './figma-native-file-menu.mjs'
-import { readFile, writeFile, stat } from 'node:fs/promises'
+import { readFile, writeFile, stat, mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { patchSidebarPdfPreview } from './sidebar-pdf-preview.mjs'
 import { patchSidebarFileReference } from './sidebar-file-reference.mjs'
@@ -1626,6 +1626,30 @@ export async function sherlockVirtualBoardDirectory(sessionId, cwd, target, root
   catch (error) { return error?.code === 'ENOENT' }
 }
 
+// A terminal is the first filesystem user on many new personal boards.
+export async function prepareBoardTerminalDirectory(sessionId, cwd, root = process.env.DSH_HOME) {
+  if (await sherlockVirtualBoardDirectory(sessionId, cwd, cwd, root)) await mkdir(cwd, { recursive: true })
+  if (!(await stat(cwd)).isDirectory()) throw Error('终端工作目录不可用')
+}
+
+function patchBoardTerminalDirectory(source) {
+  const marker = '/* sherlock:board-terminal-directory:v1 */'
+  if (source.includes(marker) || !source.includes('async function attachTerminal(')) return source
+  const open = 'const handle = ptyManager.open(sessionId, tabId, cwd, 80, 24, overrides.shell, overrides.shellArgs);'
+  const prepare = `try {
+          await prepareBoardTerminalDirectory(sessionId, cwd);
+        } catch {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send("\\r\\n[终端工作目录不可用，请检查项目目录后重新打开终端。]\\r\\n");
+            ws.close(1000);
+          }
+          return;
+        }
+        if (ws.readyState !== WebSocket.OPEN) return;
+        `
+  return marker+'\n'+prepareBoardTerminalDirectory.toString()+'\n'+replaceExact(source,open,prepare+open,'board terminal directory')
+}
+
 function patchVirtualBoardListing(source) {
   const marker = '/* sherlock:virtual-board-listing:v1 */'
   if (source.includes(marker) || !source.includes('"fs.tree": async (payload) => {')) return source
@@ -1646,7 +1670,7 @@ export function patchBetterSidebarServer(source) {
     source = source.slice(0, start) + sherlockSessionHasChatFile.toString() + source.slice(end + 2)
     source = scopeMarker + '\n' + source
   }
-  source = patchVirtualBoardListing(source)
+  source = patchBoardTerminalDirectory(patchVirtualBoardListing(source))
   // Markdown and restored tabs may carry paths relative to the session root.
   // Resolve before the existing containment/attachment guard, never bypass it.
   const mediaPath = 'const path = requireAbsolute(raw);'
