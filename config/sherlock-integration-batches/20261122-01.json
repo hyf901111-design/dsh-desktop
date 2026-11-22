@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261122-01",
+  "branch": "codex/integration/20261122-01",
+  "baseMainCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+  "expectedMainCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+  "createdAt": "2026-11-22T00:43:17.102Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "保留打开图片模板后的原生画板会话",
+        "branch": "codex/feat/image-template-retention-20261122",
+        "baseCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+        "tipCommit": "de42fb643055ac38bc1f7a0901c99ed8469d3707",
+        "commits": [
+          {
+            "commit": "de42fb643055ac38bc1f7a0901c99ed8469d3707",
+            "parents": [
+              "fa549c214f9b7e45681487f10dd0cad3902ec7e8"
+            ],
+            "subject": "修复打开图片模板后切换会话导致画板从历史列表消失"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/image-session-title.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/image-factory-tasks.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/notes-session.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/image-factory-canvases.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-canvases.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-native.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/image-session-title.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-session-title.test.js",
+              "test/image-factory-native.test.js",
+              "test/image-factory-canvases.test.ts",
+              "test/notes-session.test.js",
+              "test/image-history-navigation.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/session-title-subject.test.js",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "七个直接相关测试文件共110项通过。",
+            "verifiedCommit": "de42fb643055ac38bc1f7a0901c99ed8469d3707",
+            "completedAt": "2026-11-22T00:43:11.249292+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/typescript/bin/tsc",
+              "--noEmit",
+              "--skipLibCheck",
+              "--strict",
+              "--target",
+              "ES2022",
+              "--module",
+              "ESNext",
+              "--moduleResolution",
+              "Bundler",
+              "--esModuleInterop",
+              "--noUncheckedIndexedAccess",
+              "src/main/state/image-factory-canvases.ts"
+            ],
+            "outcome": "passed",
+            "summary": "画布存储及其直接依赖通过 TypeScript 检查。",
+            "verifiedCommit": "de42fb643055ac38bc1f7a0901c99ed8469d3707",
+            "completedAt": "2026-11-22T00:43:11.249292+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在隔离 Chromium 中实际点击「奔流的线」，进入七图层画板，切换到普通会话并从列表返回同一个画板。空模板库离开后正常回收。使用产品编辑器、原生会话运行时和列表可见性函数，存储与网络由夹具提供。相同步骤在原基线切换后会话行消失。"
+        },
+        "acceptanceCriteria": [
+          "点击模板进入画板，不发消息也能在切换后从历史重新打开同一个画板",
+          "未使用的图像会话继续回收",
+          "旧版已保存的模板画板能在加载原生列表时恢复，保留手工标题"
+        ],
+        "risks": [
+          "本次在隔离 Chromium 核验，用户当前桌面客户端待验收。"
+        ],
+        "generatedAt": "2026-11-22T00:43:11.249292+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "HEAD^1",
+        "HEAD"
+      ],
+      "timeoutMs": 30000
+    }
+  ],
+  "mainSynchronizations": []
+}
