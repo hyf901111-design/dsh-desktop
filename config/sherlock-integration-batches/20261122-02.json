@@ -192,6 +192,57 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-22T12:59:12.128630+00:00"
+      },
+      "merged": {
+        "mergeCommit": "4a2b5bc7b34e61b9a9a0c54360f062af89989a69",
+        "verificationCommit": "4a2b5bc7b34e61b9a9a0c54360f062af89989a69",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/research-resident-conversation.test.ts",
+              "test/pending-conversation-panel.test.js",
+              "test/home-guide-explore-entry-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-guide-entry-native.test.ts test/home-guide-session.test.ts test/research-resident-conversation.test.ts test/pending-conversation-panel.test.js test/home-guide-explore-entry-browser.test.js",
+            "verifiedCommit": "4a2b5bc7b34e61b9a9a0c54360f062af89989a69",
+            "completedAt": "2026-11-22T12:59:32.934Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "4a2b5bc7b34e61b9a9a0c54360f062af89989a69",
+            "completedAt": "2026-11-22T12:59:32.934Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "opens the animated PPT sidebar"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/knowledge-workspace-rendered.test.js -t opens the animated PPT sidebar",
+            "verifiedCommit": "4a2b5bc7b34e61b9a9a0c54360f062af89989a69",
+            "completedAt": "2026-11-22T12:59:32.934Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-22T12:59:32.934Z"
       }
     }
   ],
