@@ -3,10 +3,11 @@ import {createRequire} from 'node:module'
 import {runInNewContext,Script} from 'node:vm'
 import {Window} from 'happy-dom'
 import {homeGuideFinancialBridgeFixture} from './fixtures/home-guide-financial-bridge.js'
-import {stripWorkbenchReplay} from './fixtures/strip-workbench-replay.mjs'
+import {stripConversationGridOverlays} from './fixtures/strip-conversation-transient-ui.mjs'
 import {afterEach,beforeAll,expect,it} from 'vitest'
 const require=createRequire(import.meta.url),React=require('react'),{createRoot}=require('react-dom/client')
-const source=stripWorkbenchReplay(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
+const {stripHomeGuidePresentationNative}=require('../scripts/lib/home-guide-presentation-native.mjs')
+const source=stripHomeGuidePresentationNative(stripConversationGridOverlays(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')))
 let patchHomeGuideNative
 beforeAll(async()=>{({patchHomeGuideNative}=await import('../scripts/lib/home-guide-native.mjs'))})
 const cleanup=[];afterEach(async()=>{for(const f of cleanup.splice(0))await f()})
@@ -46,7 +47,7 @@ async function fixture({sessionId='owner',subagentPanel=false,width=1100}={}){
  }
  // Layout-only hit testing for Happy DOM; native FinancialConnections still
  // owns the real pointer listeners, compatible targets and link sink.
- doc.elementFromPoint=(x,y)=>{const contains=element=>{const b=element.getBoundingClientRect();return x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom};const port=[...doc.querySelectorAll('[data-financial-port]')].find(contains);if(port)return port;const card=[...doc.querySelectorAll('[data-research-node-id]')].find(contains);return card?.querySelector('[data-financial-widget]')||doc.querySelector('[data-research-canvas]')}
+ doc.elementFromPoint=(x,y)=>{const contains=element=>{const b=element.getBoundingClientRect();return x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom};const port=[...doc.querySelectorAll('[data-financial-port]')].find(contains);if(port)return port;const card=[...doc.querySelectorAll('[data-research-node-id]')].find(contains);return card?.querySelector('.ew-watch-meta [aria-live],.ew-quote-price-line strong')||card?.querySelector('[data-financial-widget]')||doc.querySelector('[data-research-canvas]')}
  win.matchMedia=()=>({matches:false,addEventListener(){},removeEventListener(){}})
  let descriptor,liveCalls=0;win.dshDesktop={financialWidget:homeGuideFinancialBridgeFixture(()=>liveCalls++),calendarTool:{request:async()=>({events:[],notices:[]}),subscribe:()=>()=>{}},componentLibrary:{request:async()=>[]}};win.__ModuleLoader__={load:d=>descriptor=d}
  const patched=patchHomeGuideNative(source).replace('exports.NativeHomeGuidePortal = NativeHomeGuidePortal;','exports.NativeHomeGuidePortal = NativeHomeGuidePortal;exports.__guideResident=homeGuideNativeResidentSession;exports.__setGuidePage=page=>{sherlockBoardsAdapter=page};')
@@ -286,7 +287,8 @@ it.each(['dispose','disabled','pointer-owner','detached','rejected'])('rejects a
 it('shows and commits each port connection separately and cancels the second without a late apply',async()=>{
  const f=await fixture(),{watch,quote,news}=seedBoard(f);await f.command('mount-board');await f.command('board-arrange');const p=pointerFixture(f)
  let reply;await React.act(async()=>{void f.send('board-link').then(value=>{reply=value})});await pump(()=>p.cues.length>0||reply);expect(reply,JSON.stringify(reply)).toBeUndefined()
- expect(p.cues[0].action).toBe('click');p.reply(p.cues.shift());await pump(()=>p.cues.length>0)
+ expect(p.cues[0].action).toBe('click');expect(p.target(p.cues[0]).matches('.ew-watch-meta [aria-live]')).toBe(true)
+ p.reply(p.cues.shift());await pump(()=>p.cues.length>0)
  expect(p.cues[0]).toMatchObject({action:'drag',requestId:expect.any(String)})
  expect(Object.keys(p.cues[0]).sort()).toEqual(['runId','requestId','label','action','targetToken','fromTargetToken'].sort())
  expect(p.cues[0].fromTargetToken).toBe('run-a:'+p.cues[0].requestId+':from')
@@ -294,7 +296,9 @@ it('shows and commits each port connection separately and cancels the second wit
  const firstTargets=[p.target(p.cues[0],true),p.target(p.cues[0])]
  const spec=id=>f.workspace.getSnapshot().artifacts.find(node=>node.id===id).containerSpec
  expect(spec(quote.id).linkedWatchlistId).toBeUndefined();expect(spec(news.id).linkedSourceId).toBeUndefined()
- p.reply(p.cues[0]);await pump(()=>p.cues.length===2);expect(p.cues[1].action).toBe('click');p.reply(p.cues.pop());await pump(()=>p.cues.length===2)
+ p.reply(p.cues[0]);await pump(()=>p.cues.length===2);expect(p.cues[1].action).toBe('click')
+ expect(p.target(p.cues[1]).matches('.ew-quote-price-line strong')).toBe(true)
+ p.reply(p.cues.pop());await pump(()=>p.cues.length===2)
  expect(firstTargets.map(target=>target.getAttribute('data-home-guide-cue-target'))).toEqual([null,null])
  expect(spec(quote.id).linkedWatchlistId).toBe(watch.id);expect(spec(news.id).linkedSourceId).toBeUndefined()
  expect(p.target(p.cues[1],true).dataset.financialPortNode).toBe(quote.id);expect(p.target(p.cues[1]).dataset.financialPortNode).toBe(news.id)

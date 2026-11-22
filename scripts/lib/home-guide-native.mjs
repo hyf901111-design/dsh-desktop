@@ -743,16 +743,19 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
             if (ticket.selectionEpoch !== selectionLease.input) throw changed()
             const port = (nodeId, side) => ticket.host.querySelector('[data-financial-port-node="' + CSS.escape(nodeId) + '"][data-financial-port="' + side + '"]')
             if(!workspace.getSnapshot().selection.selectedNodeIds.includes(sourceId)){
-              // Click a visible, non-interactive part of the source through the
-              // real canvas handler before starting its native port gesture.
-              const card=ticket.host.querySelector('[data-research-node-id="'+CSS.escape(sourceId)+'"]');if(!card)throw changed();await scrollTarget(ticket,card);await settle(ticket,()=>!!card.querySelector('[data-financial-widget]'))
-              const excluded='[data-workbench-drag-handle],[data-research-node-move-handle],[data-workbench-resize],input,textarea,button,a,select,[contenteditable],iframe,canvas,svg,[data-stock-code],.ew-watch-name,[role=option]:not([data-research-node-id]),[role=menu],[role=dialog]'
-              const selectTarget=[...card.querySelectorAll('[data-financial-widget],p,small,span,div')].find(element=>{if(element.closest(excluded))return false;for(let parent=element;parent&&parent!==card.parentElement;parent=parent.parentElement){const style=window.getComputedStyle(parent);if(parent.hidden||parent.inert||style.display==='none'||['hidden','collapse'].includes(style.visibility)||style.opacity==='0')return false}const box=element.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2,hit=document.elementFromPoint(x,y);return box.width>8&&box.height>8&&hit&&hit.closest('[data-research-node-id]')===card&&!hit.closest(excluded)&&x>=0&&y>=0&&x<window.innerWidth&&y<window.innerHeight})
-              if(!selectTarget)throw Error('组件点选区域尚未显示，请重新打开示例。')
-              await click(ticket,selectTarget,'选择'+(sourceId===watchlist?'自选股':'行情')+'组件',undefined,()=>{
-                if(ticket.selectionEpoch!==selectionLease.input)throw changed()
-                const box=selectTarget.getBoundingClientRect(),x=box.left+box.width/2,y=box.top+box.height/2,hit=document.elementFromPoint(x,y)
-                if(!hit||hit.closest('[data-research-node-id]')!==card||hit.closest(excluded))throw changed()
+              const isWatchlist = sourceId === watchlist
+              const card = ticket.host.querySelector('[data-research-node-id="' + CSS.escape(sourceId) + '"]')
+              if (!card) throw changed()
+              await scrollTarget(ticket, card)
+              // Both captions stay mounted when live results replace the chart or stock rows.
+              const caption = isWatchlist ? '.ew-watch-meta [aria-live="polite"]' : '.ew-quote-price-line strong'
+              await settle(ticket, () => !!card.querySelector(caption))
+              const selectTarget = card.querySelector(caption)
+              await click(ticket, selectTarget, '选择' + (isWatchlist ? '自选股' : '行情') + '组件', undefined, () => {
+                if (ticket.selectionEpoch !== selectionLease.input) throw changed()
+                const box = selectTarget.getBoundingClientRect(), x = box.left + box.width / 2, y = box.top + box.height / 2
+                const hit = document.elementFromPoint(x, y)
+                if (!hit || !selectTarget.contains(hit) || hit.closest('[data-research-node-id]') !== card) throw changed()
                 for(const type of ['pointerdown','pointerup'])hit.dispatchEvent(new window.PointerEvent(type,{bubbles:true,cancelable:true,composed:true,pointerId:7102,pointerType:'mouse',isPrimary:true,button:0,buttons:type==='pointerdown'?1:0,clientX:x,clientY:y}))
               })
               if(!workspace.getSnapshot().selection.selectedNodeIds.includes(sourceId))throw changed()
