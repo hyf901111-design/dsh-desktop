@@ -520,6 +520,158 @@
         ],
         "recordedAt": "2026-11-22T01:22:03.156Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复模型登录入口、浏览器错误和定时任务记录",
+        "branch": "codex/feat/audit-interface-20261122",
+        "baseCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+        "tipCommit": "82ed61343ebba7a8aeb0ddb5bb39d5683666ea1b",
+        "commits": [
+          {
+            "commit": "d3044cdd6e62b5eab188a1ec2bc5ef30ae7b4113",
+            "parents": [
+              "fa549c214f9b7e45681487f10dd0cad3902ec7e8"
+            ],
+            "subject": "修复模型选择器空状态缺少内置模型登录入口"
+          },
+          {
+            "commit": "3ff50ca0c2a02bbbd12e74b88ca5c553d08e9cac",
+            "parents": [
+              "d3044cdd6e62b5eab188a1ec2bc5ef30ae7b4113"
+            ],
+            "subject": "修复内置浏览器地址错误提示暴露内部调用信息"
+          },
+          {
+            "commit": "51a68bf430e1094cded1165cb896edb1817a80cc",
+            "parents": [
+              "3ff50ca0c2a02bbbd12e74b88ca5c553d08e9cac"
+            ],
+            "subject": "修正浏览器导航与页面上下文复用请求桥接的作用域"
+          },
+          {
+            "commit": "82ed61343ebba7a8aeb0ddb5bb39d5683666ea1b",
+            "parents": [
+              "51a68bf430e1094cded1165cb896edb1817a80cc"
+            ],
+            "subject": "修复定时任务执行指令和内部通知标记出现在新旧会话记录中"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/canvas-task-routing.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/scheduled-run.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/scheduled-run.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/scheduled-task-tools.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-model-menu.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/model-select-restored.txt"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/scheduled-task-history.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/scheduled/task-runner.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/browser/request.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-view.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/conversation-history-page.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/figma-model-menu.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-tool.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-tasks.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-tool.test.js",
+              "test/conversation-history-page.test.js",
+              "test/figma-model-menu.test.ts",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "82ed61343ebba7a8aeb0ddb5bb39d5683666ea1b",
+            "completedAt": "2026-11-22T01:19:54.657684+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-view.test.ts",
+              "-t",
+              "shows the service reason",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "82ed61343ebba7a8aeb0ddb5bb39d5683666ea1b",
+            "completedAt": "2026-11-22T01:19:54.657684+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在原生会话运行时重放定时记录，在地址栏提交本机地址，点击双层模型菜单中的登录入口。"
+        },
+        "acceptanceCriteria": [
+          "未登录且无模型时可直接登录",
+          "地址栏错误仅显示服务原因",
+          "定时任务可执行且历史对话只展示任务与结果"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T01:19:54.657684+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -584,6 +736,32 @@
         "-t",
         "lists real session modes|acknowledges the rendered list|lists published files|paginates files and native sessions|keeps the knowledge pager on one row|preserves filters through return|opens the selected archived image",
         "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/scheduled-tasks.test.ts",
+        "test/scheduled-task-tool.test.js",
+        "test/conversation-history-page.test.js",
+        "test/figma-model-menu.test.ts",
+        "--maxWorkers=2",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/browser-app-view.test.ts",
+        "-t",
+        "shows the service reason",
+        "--reporter=dot"
       ],
       "timeoutMs": 180000
     }
