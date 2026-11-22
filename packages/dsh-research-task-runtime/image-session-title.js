@@ -34,14 +34,14 @@ export function registerImageSessionTitle(ctx, {isTrustedRequest,readJsonBody,re
       const hasOtherUse=session.events.some(event=>event.type==='user/message' && event.data?.source?.kind==='user' ||
         /^workspace-(?:research|spreadsheet|presentation|note|knowledge)\//u.test(event.type))
       const blank=current?.source?.kind==='fallback' && current.messageSeqs?.length===0 && placeholder.has(current.title)
-      if (hasOtherUse || current && !(blank && kind==='template')) {
-        // A retried request may follow an append whose first flush failed.
-        if (!hasOtherUse && current?.source?.kind==='fallback' && current.title===title && await ctx.sessions.flush(session)!==true) throw Error()
-        return send(200,{ok:true,automatic:false})
+      const automatic = !hasOtherUse && (!current || blank && kind === 'template')
+      if (kind === 'template' && !session.events.some(event => event.type === 'workspace-image/edited')) {
+        session.append('workspace-image/edited', {})
       }
-      session.append('session/title',{title,messageSeqs:[],source:{kind:'fallback'}})
+      if (automatic) session.append('session/title',{title,messageSeqs:[],source:{kind:'fallback'}})
+      // A retry may follow an append whose first flush failed, even after a manual rename.
       if (await ctx.sessions.flush(session)!==true) throw Error()
-      return send(200,{ok:true,automatic:true})
+      return send(200,{ok:true,automatic})
     } catch { return send(503,{error:'图像会话标题暂未更新。'}) }
   }})
 }

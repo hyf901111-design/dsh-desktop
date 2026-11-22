@@ -5,6 +5,12 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
   const checking = new Set(), replacements = new Set(), sending = new Map()
   const researchTransfers = new Set()
   const owned = id => [...tabs, ...closed].find(tab => tab.scope === id && tab.temporary)
+  const canvasScopes = new Set()
+  function retainCanvas(id) {
+    if (!id || isBoardOnly(id)) return
+    canvasScopes.add(id)
+    if (sessions.list.getSnapshot().byId?.[id]?.blank) sessions.retainNoteSession(id)
+  }
   function keep(id) {
     if (!owned(id)) return
     researchTransfers.delete(id)
@@ -62,6 +68,8 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     for (const tab of [...tabs, ...closed]) {
       const id = tab.scope
       const row = sessions.list.getSnapshot().byId?.[id]
+      // The native list can arrive after saved tabs, or refresh from an older blank summary.
+      if (row?.blank && canvasScopes.has(id)) retainCanvas(id)
       if (!tab.temporary && row?.title && row.title !== tab.title && sessionTitleForTab(id,row)) setTitle({scope:id,title:row.title},true)
       if (!tab.temporary || checking.has(id) || !archiveTask || !storage?.hasCanvas || epoch === undefined) continue
       const vacant = blank(id)
@@ -72,7 +80,8 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
       void storage.hasCanvas(id, epoch).then(async canvas => {
         if (account !== start || !owned(id)) return
         const transferred = researchTransfers.has(id)
-        if (canvas || !transferred && blank(id) === false) { keep(id); return }
+        if (canvas) { keep(id); retainCanvas(id); return }
+        if (!transferred && blank(id) === false) { keep(id); return }
         if (!eligible(id) || !transferred && blank(id) !== true) return
         // The board now owns the native session. Retire only its empty image tab.
         if (!transferred) await archiveTask(id)
@@ -130,7 +139,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     const start = account
     const stored = save()
     if (stored) void stored.then(() => {
-      if (start === account && tabs.some(tab => tab.scope === id)) return requestTitle?.(id, kind, title)
+      if (start === account && [...tabs, ...closed].some(tab => tab.scope === id)) return requestTitle?.(id, kind, title)
     }).catch(() => {})
   }
   const load = () => {
@@ -140,6 +149,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     void storage.read().then(value => {
       if (loading !== token) return
       epoch = value.epoch
+      for (const id of value.canvasScopes ?? []) canvasScopes.add(id)
       closed = Array.isArray(value.closed) ? value.closed.filter(tab => validScope(tab?.scope)) : []
       const closedScopes = new Set(closed.map(tab => tab.scope))
       const restored = Array.isArray(value.tabs) ? value.tabs.filter(tab => validScope(tab?.scope) && !closedScopes.has(tab.scope)) : []
@@ -295,6 +305,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     const theme = !original.temporary && original.title && original.title !== '新图像' && original.title !== 'New image' ? original.title : undefined
     tabs = tabs.map(tab => tab === original ? { scope, key: tabKey(tab), ...(theme ? { title: theme } : { temporary: true }),
       ...(tab.pinned && { pinned: true }) } : tab)
+    if (theme) retainCanvas(scope)
     saveTitle(scope, theme ? 'template' : 'blank', theme ?? blankTitle())
     active = scope
     if (previous === null) draftSession = undefined
@@ -307,15 +318,19 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     if (typeof title !== 'string' || !title.trim()) return
     const tab = tabs.find(item => item.scope === scope)
     if (!tab) return
-    if (!fromSession) keep(scope)
+    if (!fromSession) {
+      keep(scope)
+      retainCanvas(scope)
+    }
     const row = sessions.list.getSnapshot().byId?.[scope]
     const saved = fromSession || row?.title === title ? title : sessionTitleForTab(scope,row)
     const label = (saved || title).trim().slice(0, 255)
-    if (tab.title === label) return
-    tabs = tabs.map(item => item.scope === scope ? { ...item, title: label } : item)
+    const changed = tab.title !== label
+    if (changed) tabs = tabs.map(item => item.scope === scope ? { ...item, title: label } : item)
+    // Opening an older named canvas also records participation in the native log.
     if (!fromSession && scope?.startsWith('image-task-')) saveTitle(scope, 'template', title.trim().slice(0, 255))
-    else save()
-    publish()
+    else if (changed) save()
+    if (changed) publish()
   }
   function select(scope, sync = true) {
     const sessionId = scope === null ? draftSession : scope
@@ -443,6 +458,7 @@ export function createImageFactoryTasks({ sessions, win, isActive, signal, syncS
     tabs = []
     closed = []
     researchTransfers.clear()
+    canvasScopes.clear()
     active = draftSession = openToken = loading = pendingSync = epoch = lastCreated = entryProject = undefined
     publish()
   }
