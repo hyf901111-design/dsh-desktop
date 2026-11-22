@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { stripComposerWorkspaceBar } from '../scripts/lib/patch-figma-final-shell.mjs'
 import { patchBoardFileOwnership } from '../scripts/lib/board-directory-picker.mjs'
 import { expect, it, vi } from 'vitest'
 import { reconcileResearchConversation, patchResearchResidentConversation } from '../scripts/lib/research-resident-conversation.mjs'
+const { stripTurnModeConversation } = createRequire(import.meta.url)('../scripts/lib/turn-client-mode.mjs')
 function fixture(tabs:any[]=[],panelOpen=true) {
  const state={splits:{kind:'leaf',tabs,active:tabs[0]?.id},panelOpen}
- const service={getSnapshot:()=>({sessionId:'board',state}),openTab:vi.fn(),updateTab:vi.fn(),setPanelState:vi.fn(),activateTab:vi.fn()}
+ const service={getSnapshot:()=>({sessionId:'board',state}),openTab:vi.fn(),closeTab:vi.fn(),updateTab:vi.fn(),setPanelState:vi.fn(),activateTab:vi.fn()}
  return {service,previous:new Map([['board',{}]]),title:'对话'}
 }
 it('restores the conversation after sidebar hydration drops all tabs',()=>{
@@ -54,7 +57,7 @@ it('keeps a manually collapsed research sidebar closed during repeated tab recon
 
 it('hides the research workspace selector while leaving the browser and home workspace flow available', () => {
  const installed = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
- const patched = patchBoardFileOwnership(installed)
+ const patched = patchBoardFileOwnership(stripComposerWorkspaceBar(stripTurnModeConversation(installed)))
  const condition = patched.match(/const heroWorkspaceRow = (.*?) \? null :/)?.[1]
  expect(condition).toBeTruthy()
  const hidden = new Function('research', 'browserAppActive', 'directoryLocked', 'sherlockShared', 'sessionId', 'return ' + condition)
@@ -62,4 +65,14 @@ it('hides the research workspace selector while leaving the browser and home wor
  expect(hidden(false, false, false, () => false, 'chat')).toBe(false)
  expect(hidden(true, true, false, () => false, 'browser')).toBe(false)
  expect(patchBoardFileOwnership(patched)).toBe(patched)
+})
+
+it('removes a persisted resident conversation when a chat session owns the center', () => {
+ const id = 'sherlock-research-conversation'
+ const c = fixture([{id:'files'}, {id,meta:{sherlockPinned:true,sherlockClosable:false}}])
+ const stores = new Map([['board',{getSnapshot:()=>({binding:{active:false}})}]])
+ reconcileResearchConversation({...c,stores})
+ expect(c.service.updateTab).toHaveBeenCalledWith(id,{meta:{sherlockPinned:false,sherlockClosable:true}},{sessionId:'board'})
+ expect(c.service.closeTab).toHaveBeenCalledExactlyOnceWith(id,{sessionId:'board'})
+ expect(c.service.setPanelState).not.toHaveBeenCalled()
 })

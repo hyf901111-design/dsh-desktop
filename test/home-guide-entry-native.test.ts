@@ -10,6 +10,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives',()=>Object.fromEntries(['StateDo
 import {createResearchBoardsPage} from '../src/preload/research-boards-ui'
 import {createHomeGuideEntryClient,installHomeGuideEntryNative,type HomeGuideEntryKind,type HomeGuideEntryAction} from '../src/preload/home-guide-entry-native'
 import {parseHomeGuideEntryDiagnostic} from '../src/shared/home-guide-entry-diagnostics'
+import {WorkspaceSurfaceHost} from '../src/preload/workspace-surface-host'
 import {createSidebarNewNoteAction} from '../src/preload/sidebar-new-note'
 const cleanup:Array<()=>void>=[]
 afterEach(()=>{cleanup.splice(0).reverse().forEach(fn=>fn());vi.unstubAllGlobals()})
@@ -60,6 +61,28 @@ it.each(['board','workbench','note','ppt','report','spreadsheet','presentation-e
  expect(()=>client.commit(target)).toThrow();expect(f.sessionsById.get(entry.sessionId).events.some((row:any)=>row.type==='session/title')).toBe(true)
  if(kind==='note')expect(f.document.querySelector('[role="menu"]')).toBeNull()
  client.dispose()
+})
+it.each(['board','workbench','ppt','report'] as const)('releases Images before selecting the %s Explore session', async kind => {
+ const f = await fixture()
+ const host = new WorkspaceSurfaceHost(f.document)
+ host.open('image-factory')
+ const research = kind === 'board' || kind === 'workbench'
+ const button = f.target(kind)
+ if (!research) button.setAttribute('data-sidebar-home', '')
+ const client = await f.client(kind)
+ const entry = await client.prepare(button, research ? 'new-research' : 'sidebar-home')
+ expect(host.current()?.surface).toBe('image-factory')
+ const selections: Array<string | undefined> = []
+ const unsubscribe = f.list.subscribe(() => {
+  if (f.list.getSnapshot().current === entry.sessionId) selections.push(host.current()?.surface)
+ })
+ try {
+  await client.commit(button)
+  expect(selections.length).toBeGreaterThan(0)
+  expect(selections.every(surface => surface === undefined)).toBe(true)
+  expect(f.panelEvents.at(-1)).toEqual(['state', research, entry.sessionId, entry.sessionId])
+  expect(f.opened).toEqual([entry.sessionId])
+ } finally { unsubscribe(); client.dispose(); host.dispose() }
 })
 it('opens a prepared Notes demo through the pinned shortcut that ignores branded clicks',async()=>{
  const f=await fixture(),client=await f.client('note')
