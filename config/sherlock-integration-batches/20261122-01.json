@@ -254,6 +254,47 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-22T01:19:28.898437+00:00"
+      },
+      "merged": {
+        "mergeCommit": "f0b8e0895cda3bc2d87ad6384d3c929bb9d35090",
+        "verificationCommit": "f0b8e0895cda3bc2d87ad6384d3c929bb9d35090",
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "HEAD^1",
+              "HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check HEAD^1 HEAD",
+            "verifiedCommit": "f0b8e0895cda3bc2d87ad6384d3c929bb9d35090",
+            "completedAt": "2026-11-22T01:19:32.543Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-generation-tool.test.js",
+              "test/image-factory.test.js",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-resultative-request.test.js",
+              "test/fund-profile-names.test.js",
+              "test/tushare-financial-routing.test.js",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-generation-tool.test.js test/image-factory.test.js test/workbench-content-delivery.test.js test/workbench-resultative-request.test.js test/fund-profile-names.test.js test/tushare-financial-routing.test.js --maxWorkers=2 --reporter=dot",
+            "verifiedCommit": "f0b8e0895cda3bc2d87ad6384d3c929bb9d35090",
+            "completedAt": "2026-11-22T01:19:32.543Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-22T01:19:32.543Z"
       }
     }
   ],
