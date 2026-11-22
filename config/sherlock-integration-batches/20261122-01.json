@@ -1096,6 +1096,61 @@
         ],
         "recordedAt": "2026-11-22T01:29:25.816Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复客户端读取基金全称时的数据源 TLS 兼容性",
+        "branch": "codex/feat/audit-fund-source-tls-20261122",
+        "baseCommit": "980ff946897094e20d2a82ae3630e83b5ca49873",
+        "tipCommit": "da4207a9fc71ddfd75f6ed31e33a330a7c3444a8",
+        "commits": [
+          {
+            "commit": "da4207a9fc71ddfd75f6ed31e33a330a7c3444a8",
+            "parents": [
+              "980ff946897094e20d2a82ae3630e83b5ca49873"
+            ],
+            "subject": "修复内置 Node 无法核验基金档案证书导致全称缺失"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-fund-research-runtime/fund-profile-names.js"
+          },
+          {
+            "status": "M",
+            "path": "test/fund-profile-names.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/fund-profile-names.test.js",
+              "test/tushare-financial-routing.test.js",
+              "test/financial-routing.test.js",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "da4207a9fc71ddfd75f6ed31e33a330a7c3444a8",
+            "completedAt": "2026-11-22T01:42:20.652560+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "使用打包客户端的 Node 查询四只基金并核对全称、简称和代码。"
+        },
+        "acceptanceCriteria": [
+          "保留 TLS 验证并取得公开产品详情中的基金全称"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T01:42:20.652560+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -1203,6 +1258,18 @@
         "test/knowledge-session-copy-host.test.js",
         "--maxWorkers=2",
         "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/fund-profile-names.test.js",
+        "test/tushare-financial-routing.test.js",
+        "test/financial-routing.test.js",
+        "--maxWorkers=2"
       ],
       "timeoutMs": 180000
     }
