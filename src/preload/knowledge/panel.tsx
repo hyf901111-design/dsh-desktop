@@ -433,7 +433,7 @@ function FilePicker({ document, bridge, referenceFile }: Omit<PanelProps, 'id'>)
         </button>) : rows.map(row => {
         const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
         const title = session ? session.title : row.name
-        const published = row.publishedSession
+        const published = row.nativeSession
         return <div className="knowledge-panel-row" key={row.id} data-knowledge-file-id={row.id} data-knowledge-file-context-menu
           onContextMenu={event => {
             event.preventDefault()

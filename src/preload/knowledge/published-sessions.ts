@@ -3,7 +3,7 @@ import { listKnowledgeDocuments, type KnowledgeDocument, type KnowledgeFilter, t
 import { knowledgeSessionLabels, type KnowledgeSessionEntry, type KnowledgeSessionMode } from '../../shared/knowledge-sessions'
 
 export type KnowledgeListRow = KnowledgeDocument & {
-  publishedSession?: { entry: KnowledgeSessionEntry; mode: KnowledgeSessionMode }
+  nativeSession?: { entry: KnowledgeSessionEntry; mode: KnowledgeSessionMode }
 }
 
 export function usePublishedKnowledgeSessions(document: Document, snapshot: KnowledgeSnapshot, active: boolean) {
@@ -48,7 +48,7 @@ export function usePublishedKnowledgeSessions(document: Document, snapshot: Know
     const entry = { id, title, updatedAt }
     return [{
       id: share.id, name: title, source: 'generated', size: share.size ?? 0, updatedAt,
-      saved: false, starred: false, share, publishedSession: { entry, mode }
+      saved: false, starred: false, share, nativeSession: { entry, mode }
     }]
   })
 }
