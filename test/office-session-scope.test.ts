@@ -10,6 +10,7 @@ import {SpreadsheetStore} from '../src/main/spreadsheet/store'
 import {blankWorkbook} from '../src/shared/spreadsheet/workbook'
 import {blankDeck, PresentationStore} from '../src/main/presentation/store'
 import {patchOfficeSessionClient, patchOfficeSessionHost, patchOfficeProjectionCache} from '../scripts/lib/office-session-scope.mjs'
+import {patchOfficeCatalogJson,patchOfficeCatalogTable,patchOfficeCatalogTransport} from '../scripts/lib/office-catalog-checkpoints.mjs'
 import {sidebarSearchResults} from '../src/preload/sidebar-session-search'
 
 const client = patchOfficeSessionClient(readFileSync('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8'))
@@ -115,4 +116,86 @@ it('rebuilds a legacy cold checkpoint using its listed artifact once, including 
   expect(readListEvents).toHaveBeenCalledOnce()
   expect(readFrom).not.toHaveBeenCalled()
   expect(method.putSoft).toHaveBeenCalledOnce()
+})
+
+it('finds historical deck titles before opening while preserving an explicit sidebar rename, including the same placeholder', () => {
+  const events = [{type:'session/title',seq:1,data:{title:'新演示'}}, {type:'workspace-presentation/created',seq:2,data:{titleSeq:1}},
+    {type:'workspace-presentation/edited',seq:3,data:{}}]
+  const rows = [
+    {sessionId:'legacy',title:'新演示',projectionValues:{sessionListMetadata:metadata(events)}},
+    {sessionId:'custom',title:'新演示',projectionValues:{sessionListMetadata:metadata([...events,{type:'session/title',seq:4,data:{title:'新演示'}}])}},
+    {sessionId:'named',title:'项目留档',projectionValues:{sessionListMetadata:metadata([...events,{type:'session/title',seq:4,data:{title:'项目留档'}}])}},
+    {sessionId:'empty',title:'',projectionValues:{sessionListMetadata:metadata([events[2]])}}
+  ]
+  const dir = mkdtempSync(join(tmpdir(),'office-deck-')); dirs.push(dir)
+  const store = new PresentationStore(dir)
+  try {
+    for (const {sessionId} of rows) store.save({owner:'local',sessionId},0,blankDeck('QA季度回顾'),true)
+    const access = new OfficeSessionAccess(()=>'local',(owner,sessionId,mode)=>mode==='presentation' && store.hasRecord({owner,sessionId}),
+      ()=>[],(owner,sessionId)=>store.activeTitle({owner,sessionId}))
+    let shown: any
+    const methods = runInNewContext('new (class { '+clientMethods+' })()',{
+      window:{dshDesktop:{officeSessions:{check:(rows:unknown)=>access.check(rows)}}},displayTitleOf:(title:string)=>title
+    })
+    Object.assign(methods,{manager:{getListSnapshot:()=>({items:rows,subagentsByParent:{}})},selection:{getSnapshot:()=>({})},
+      panelLeases:new Map(),officeCache:new Map(),officeHidden:new Map(),list:{set:(value:any)=>{shown=value}},pruneScopes(){}})
+    methods.projectList()
+    expect(shown.byId.custom.title).toBe('新演示')
+    expect(shown.byId.named.title).toBe('项目留档')
+    expect(sidebarSearchResults({boards:[],favorites:[]} as any,shown.byId,[],'QA季度回顾').map(i=>i.sessionId)).toEqual(['empty','legacy'])
+  } finally {store.close()}
+})
+
+it('replays legacy list metadata once per journal and saves the entire catalog in one atomic publication, retaining concurrent edits', async () => {
+  const native = (pkg: string) => readFileSync('node_modules/@deepseek-ai/'+pkg+'/lib/index.js','utf8')
+  const identityOf = ({createdAt,cwd}:any) => ({createdAt,cwd})
+  const identityMatches = (a:any,b:any) => a.createdAt===b.createdAt && a.cwd===b.cwd
+  const unit = runInNewContext('new (class {'+definitions(patchOfficeCatalogJson(native('dsh-storage-json')),['putRecords'])+'})()')
+  const disk = new Map<string,any>()
+  const publish = vi.fn(async()=>{})
+  Object.assign(unit,{assertOpen(){},records:()=>unit.state.tables.get('sessions'),state:{tables:new Map([['sessions',disk]])},publish})
+  const table = runInNewContext('new (class {'+definitions(patchOfficeCatalogTable(native('dsh-storage-domain')),['putUnchanged'])+'})()')
+  Object.assign(table,{get:(id:string)=>table.records.get(id),records:new Map(),tableName:'sessions',host:{enqueue:(op:any)=>op(),unit},emitPut:vi.fn()})
+  const log = [{seq:0,type:'session/title',data:{title:'新演示'}},{seq:1,type:'workspace-presentation/created',data:{titleSeq:0}},
+    {seq:2,type:'workspace-presentation/edited',data:{}}]
+  const readListEvents = vi.fn(async (meta:any)=>({meta,events:log}))
+  const runtime = runInNewContext('new (class {'+definitions(patchOfficeProjectionCache(native('dsh-session-projection-cache')),['listSnapshot','saveListCheckpoints'])+'})()', {identityOf, identityMatches})
+  Object.assign(runtime,{ctx:{sessionPersistence:{readListEvents}},requireTable:()=>table,cachedSnapshot:()=>({asOfSeq:1,values:{other:'keep'}})})
+  const pending:any[]=[]
+  for (let i=0;i<128;i++) {
+    const meta = {id:'old-'+i,createdAt:1,cwd:'/qa'}
+    const previous = {identity:identityOf(meta),rows:{other:{ver:7,seq:1,val:'keep'}}}
+    table.records.set(meta.id,previous);disk.set(meta.id,previous)
+    const result = await runtime.listSnapshot(meta,undefined,metadata,pending)
+    expect(result.values).toMatchObject({title:'新演示',other:'keep',sessionListMetadata:{office:{presentation:'legacy'},presentationTitleManaged:true}})
+  }
+  expect(readListEvents).toHaveBeenCalledTimes(128)
+  expect(publish).not.toHaveBeenCalled()
+  const live = {rows:{title:{val:'刚刚在侧栏更名'}}}
+  table.records.set('old-0',live);disk.set('old-0',live)
+  await runtime.saveListCheckpoints(pending)
+  expect(publish).toHaveBeenCalledOnce()
+  expect(unit.records('sessions').get('old-0')).toBe(live)
+  expect(unit.records('sessions').get('old-1').rows).toMatchObject({other:{ver:7,seq:1,val:'keep'},sessionListMetadata:{ver:3,seq:2},title:{ver:1,seq:2,val:'新演示'}})
+  const before=unit.records('sessions')
+  publish.mockRejectedValueOnce(Error('Disk not writable'))
+  await expect(table.putUnchanged([{id:'next',original:undefined,record:{}}])).rejects.toThrow('Disk not writable')
+  expect(unit.records('sessions')).toBe(before)
+  expect(table.records.has('next')).toBe(false)
+})
+
+it('bounds full catalog upgrades separately while preserving external cancellation and fast identity probes', () => {
+  const method = 'list: (payload, signal) => this.callUnary("session.list", payload, signal),'
+  const capture = vi.fn()
+  const timeout = vi.fn(() => new AbortController().signal)
+  const source = patchOfficeCatalogTransport('class Client { timeoutMs=30000; callUnary=capture; sessions={'+method+'} }; new Client()')
+  const api = runInNewContext(source,{capture,AbortSignal:{timeout,any:AbortSignal.any}})
+  const controller = new AbortController()
+  api.sessions.list({},controller.signal)
+  expect(timeout).toHaveBeenCalledWith(120000)
+  const signal = capture.mock.calls[0]![2]
+  controller.abort()
+  expect(signal.aborted).toBe(true)
+  api.sessions.list({identitySessionId:'s'},controller.signal)
+  expect(capture.mock.calls[1]).toEqual(['session.list',{identitySessionId:'s'},controller.signal])
 })

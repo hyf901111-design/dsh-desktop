@@ -1,3 +1,4 @@
+import {patchOfficeCatalogTable, patchOfficeCatalogJson, patchOfficeCatalogTransport} from './lib/office-catalog-checkpoints.mjs'
 import {patchOfficeSessionHost, patchOfficeSessionClient, patchOfficeProjectionCache} from './lib/office-session-scope.mjs'
 import { patchKnowledgeSharedResearch, stripKnowledgeSharedResearch } from './lib/knowledge-shared-research.mjs'
 import {patchKnowledgeConversation, stripKnowledgeConversation} from './lib/knowledge-client.mjs'
@@ -354,7 +355,13 @@ writeFileSync(modeRuntimePath, patchStandardModeRuntime(readFileSync(modeRuntime
 
 const noteHostPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js')
 const hostSource = patchOfficeSessionHost(patchSessionIdentityList(patchNoteForkHost(patchNoteSessionHost(readFileSync(noteHostPath, 'utf8')))))
-writeFileSync(noteHostPath, patchModelCatalogSchema(patchHostModelCatalog(hostSource)))
+writeFileSync(noteHostPath, patchModelCatalogSchema(patchHostModelCatalog(patchOfficeCatalogTransport(hostSource))))
+for (const [name, patch] of [['dsh-storage-domain', patchOfficeCatalogTable], ['dsh-storage-json', patchOfficeCatalogJson]]) {
+  const path = join(process.cwd(), 'node_modules/@deepseek-ai', name, 'lib/index.js')
+  writeFileSync(path, patch(readFileSync(path, 'utf8')))
+}
+const officeTransportPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-client-connection/lib/client.js')
+writeFileSync(officeTransportPath, patchOfficeCatalogTransport(readFileSync(officeTransportPath, 'utf8')))
 const projectionCachePath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-session-projection-cache/lib/index.js')
 writeFileSync(projectionCachePath, patchOfficeProjectionCache(readFileSync(projectionCachePath, 'utf8')))
 const hostApiPath = join(process.cwd(), 'node_modules/@deepseek-ai/dsh-host-apiproxy/lib/types')

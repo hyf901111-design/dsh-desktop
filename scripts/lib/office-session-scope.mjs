@@ -1,3 +1,4 @@
+import {patchOfficeCatalogHost, patchOfficeCatalogCache} from './office-catalog-checkpoints.mjs'
 // New documents bind their provisional session to the local profile or account.
 // Older clients recorded only participation. The desktop checks their existing
 // owner-keyed files, including recovery drafts, without moving document bytes.
@@ -22,7 +23,7 @@ function replaceOnce(source, before, after) {
   return source.replace(before, () => after)
 }
 
-export function patchOfficeSessionHost(source) {
+function installOfficeSessionHost(source) {
   const marker = '/* ework:office-session-scope:host */'
   if (source.includes(marker)) return source
   source = replaceOnce(source, 'function applySessionListMetadata(state, event) {', marker + '\n' + foldOfficeScope.toString() + '\nfunction applySessionListMetadata(state, event) {')
@@ -41,13 +42,28 @@ export function patchOfficeSessionHost(source) {
   return source
 }
 
+export function patchOfficeSessionHost(source) {
+  source = installOfficeSessionHost(source)
+  const marker = '/* ework:office-presentation-title */'
+  if (source.includes(marker)) return patchOfficeCatalogHost(source)
+  const fold = 'const office = foldOfficeScope(state.office, event);'
+  source = replaceOnce(source, fold, marker + '\n' + fold + `
+    let presentationTitleManaged = state.presentationTitleManaged;
+    if (event.type === 'workspace-presentation/created' || (event.type === 'workspace-presentation/edited' && Number.isSafeInteger(event.data?.titleSeq))) presentationTitleManaged = true;
+    else if (event.type === 'session/title' && presentationTitleManaged) presentationTitleManaged = false;`)
+  source = replaceOnce(source, 'return office === state.office &&', 'return presentationTitleManaged === state.presentationTitleManaged && office === state.office &&')
+  source = replaceOnce(source, '...(office ? {office} : {}),', '...(office ? {office} : {}), ...(presentationTitleManaged === undefined ? {} : {presentationTitleManaged}),')
+  source = replaceOnce(source, 'office:z$1.record(z$1.string(),z$1.string()).optional(),','presentationTitleManaged:z$1.boolean().optional(), office:z$1.record(z$1.string(),z$1.string()).optional(),')
+  return patchOfficeCatalogHost(replaceOnce(source, 'apply: applySessionListMetadata,\n\t\t\tview: (state) => state,\n\t\t\tstateVersion: 2', 'apply: applySessionListMetadata,\n\t\t\tview: (state) => state,\n\t\t\tstateVersion: 3'))
+}
+
 // During the one-time v1 replay the inventory already supplied a validated
 // artifact path. Reuse its reader for the native checkpoint, avoiding a fresh
 // search through every project directory for each old session.
 export function patchOfficeProjectionCache(source) {
   const start = 'async coldSnapshot(id, signal) {'
   const marker = '/* ework:office-projection-cache */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchOfficeCatalogCache(source)
   const at = source.indexOf(start), end = source.indexOf('\n\tinstallWritePath() {', at)
   if (at < 0 || end < at) throw Error('Office projection cache anchor drifted')
   let method = source.slice(at, end)
@@ -62,7 +78,7 @@ export function patchOfficeProjectionCache(source) {
       const prefix = await artifact;
       return seq === 0 ? prefix : {...prefix, events:prefix.events.filter(event => event.seq >= seq)};
     };`)
-  return source.slice(0, at) + method + source.slice(end)
+  return patchOfficeCatalogCache(source.slice(0, at) + method + source.slice(end))
 }
 
 export function projectOfficeSessionScope(items, bridge, cache) {
@@ -70,9 +86,11 @@ export function projectOfficeSessionScope(items, bridge, cache) {
   for (const item of items) {
     const scope = item.projectionValues?.sessionListMetadata?.office
     if (!scope) continue
-    const signature = JSON.stringify([scope, item.title])
+    const managed = item.projectionValues.sessionListMetadata.presentationTitleManaged
+    const needsDeckTitle = !item.title?.trim() || managed && ['新演示', 'New Presentation'].includes(item.title)
+    const signature = JSON.stringify([scope, item.title, managed])
     scopes.set(item.sessionId, signature)
-    if (cache.get(item.sessionId)?.signature !== signature) missing.push([item.sessionId, scope])
+    if (cache.get(item.sessionId)?.signature !== signature) missing.push([item.sessionId, scope, !!needsDeckTitle])
   }
   if (missing.length) {
     const results = bridge.check(missing)
@@ -99,7 +117,12 @@ export function projectOfficeSessionScope(items, bridge, cache) {
 
 export function patchOfficeSessionClient(source) {
   const marker = '/* ework:office-session-scope:client */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) {
+    const start = source.indexOf('this.officeHidden = (function projectOfficeSessionScope(')
+    const end = source.indexOf(')(items, window.dshDesktop.officeSessions, this.officeCache);', start)
+    if (start < 0 || end < 0) throw Error('Office session projection anchor drifted')
+    return source.slice(0, start) + 'this.officeHidden = (' + projectOfficeSessionScope.toString() + source.slice(end)
+  }
   const method = 'projectList() {\n\t\t\t\tconst { items, current,'
   source = replaceOnce(source, method, `${marker}
    officeCache = new Map();

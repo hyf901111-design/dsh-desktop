@@ -153,6 +153,10 @@ export class PresentationStore {
   hasRecord(key: Key): boolean {
     return !!this.db.prepare('SELECT 1 FROM decks WHERE owner=? AND session=? LIMIT 1').get(key.owner, key.sessionId)
   }
+  activeTitle(key: Key): string {
+    const row = this.db.prepare('SELECT decks.title FROM active JOIN decks USING(owner,session,id) WHERE active.owner=? AND active.session=?').get(key.owner, key.sessionId)
+    return typeof row?.title === 'string' ? row.title : ''
+  }
   recent(key: Key) {
     return this.db
       .prepare(
