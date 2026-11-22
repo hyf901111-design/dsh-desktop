@@ -797,6 +797,159 @@
         ],
         "recordedAt": "2026-11-22T01:23:36.065Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复办公文档账号隔离与演示会话标题同步",
+        "branch": "codex/feat/audit-office-20261122",
+        "baseCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+        "tipCommit": "1f24eb354f596e6b81809f072d4152dd9de8b0bd",
+        "commits": [
+          {
+            "commit": "b847005e889f66cd0816b3f2112a346077d6c5c2",
+            "parents": [
+              "fa549c214f9b7e45681487f10dd0cad3902ec7e8"
+            ],
+            "subject": "修复演示文稿更名后侧栏标题与搜索不同步"
+          },
+          {
+            "commit": "1f24eb354f596e6b81809f072d4152dd9de8b0bd",
+            "parents": [
+              "b847005e889f66cd0816b3f2112a346077d6c5c2"
+            ],
+            "subject": "修复办公文档侧栏与编辑器的账号归属及旧稿恢复"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/knowledge-sessions.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/notes-session.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/office-session-owner.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/spreadsheet-sessions.js"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/office-session-scope.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/office-session-scope.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/sidebar-new-note.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/knowledge/session-copy.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/notes/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/ipc.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/spreadsheet/store.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/main/state/office-session-access.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-boards-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/office-access-notice.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/notes-session.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/office-session-scope.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/office-session-scope.test.ts",
+              "test/notes-session.test.js",
+              "test/spreadsheet-store.test.ts",
+              "test/spreadsheet-service.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/knowledge-session-copy.test.ts",
+              "test/knowledge-session-copy-host.test.js",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "1f24eb354f596e6b81809f072d4152dd9de8b0bd",
+            "completedAt": "2026-11-22T01:29:20.931660+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "已用真实原生会话投影和三种文档存储验证访客和账号切换、内容与标题读取，以及文稿改名搜索。"
+        },
+        "acceptanceCriteria": [
+          "隐藏其他身份的文档与标题",
+          "恢复原身份后一并恢复既有内容、公式和备注",
+          "演示改名同步到侧栏及搜索"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T01:29:20.931660+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -886,6 +1039,23 @@
         "test/browser-app-view.test.ts",
         "-t",
         "shows the service reason",
+        "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/office-session-scope.test.ts",
+        "test/notes-session.test.js",
+        "test/spreadsheet-store.test.ts",
+        "test/spreadsheet-service.test.ts",
+        "test/presentation-workspace.test.ts",
+        "test/knowledge-session-copy.test.ts",
+        "test/knowledge-session-copy-host.test.js",
+        "--maxWorkers=2",
         "--reporter=dot"
       ],
       "timeoutMs": 180000
