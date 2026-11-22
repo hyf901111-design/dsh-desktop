@@ -110,6 +110,27 @@
           "本次在隔离 Chromium 核验，用户当前桌面客户端待验收。"
         ],
         "generatedAt": "2026-11-22T00:43:11.249292+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c82563091daaf950f365416b055759c8c639a08f",
+        "verificationCommit": "c82563091daaf950f365416b055759c8c639a08f",
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "HEAD^1",
+              "HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check HEAD^1 HEAD",
+            "verifiedCommit": "c82563091daaf950f365416b055759c8c639a08f",
+            "completedAt": "2026-11-22T00:43:25.680Z",
+            "timeoutMs": 30000
+          }
+        ],
+        "recordedAt": "2026-11-22T00:43:25.680Z"
       }
     }
   ],
