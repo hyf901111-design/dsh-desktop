@@ -296,6 +296,139 @@
         ],
         "recordedAt": "2026-11-22T01:19:32.543Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复看板日历、知识库总览与个人终端",
+        "branch": "codex/feat/audit-workbench-20261122",
+        "baseCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+        "tipCommit": "d4380eb17f9c9058555d86346e2f4f2f01bc8a07",
+        "commits": [
+          {
+            "commit": "e1cfa05f9416b3be19182ef71c4ad511301a045c",
+            "parents": [
+              "fa549c214f9b7e45681487f10dd0cad3902ec7e8"
+            ],
+            "subject": "修复：首次打开看板终端时创建已预留的工作目录"
+          },
+          {
+            "commit": "c3ecd8270a14f263ee5d488b2831be42c0db7437",
+            "parents": [
+              "e1cfa05f9416b3be19182ef71c4ad511301a045c"
+            ],
+            "subject": "修复：看板日历回车和加号直接保存快速事项"
+          },
+          {
+            "commit": "d4380eb17f9c9058555d86346e2f4f2f01bc8a07",
+            "parents": [
+              "c3ecd8270a14f263ee5d488b2831be42c0db7437"
+            ],
+            "subject": "修复：知识库所有文件列出计入总数的图像和原生会话"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/calendar-tool-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-sherlock-better-sidebar.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/panel.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/published-sessions.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-preview-mode-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/virtual-board-file-list.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/virtual-board-file-list.test.ts",
+              "test/research-board-directories.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "d4380eb17f9c9058555d86346e2f4f2f01bc8a07",
+            "completedAt": "2026-11-22T01:20:19.767355+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "quick-adds calendar events|locks calendar content writes|keeps a note calendar editable",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "d4380eb17f9c9058555d86346e2f4f2f01bc8a07",
+            "completedAt": "2026-11-22T01:20:19.767355+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "lists real session modes|acknowledges the rendered list|lists published files|paginates files and native sessions|keeps the knowledge pager on one row|preserves filters through return|opens the selected archived image",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "d4380eb17f9c9058555d86346e2f4f2f01bc8a07",
+            "completedAt": "2026-11-22T01:20:19.767355+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在 Chromium 中实际提交日历、打开混合资料并筛选翻页；在实际 PTY 内核对看板与普通项目的工作目录。"
+        },
+        "acceptanceCriteria": [
+          "日历可通过回车和加号各保存一次",
+          "所有文件计数与列表及筛选对应",
+          "终端打开所在看板目录"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T01:20:19.767355+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -322,6 +455,44 @@
         "test/tushare-financial-routing.test.js",
         "--maxWorkers=2",
         "--reporter=dot"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/virtual-board-file-list.test.ts",
+        "test/research-board-directories.test.js",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/research-preview-mode-browser.test.js",
+        "-t",
+        "quick-adds calendar events|locks calendar content writes|keeps a note calendar editable",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "env",
+        "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+        "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/knowledge-workspace-rendered.test.js",
+        "-t",
+        "lists real session modes|acknowledges the rendered list|lists published files|paginates files and native sessions|keeps the knowledge pager on one row|preserves filters through return|opens the selected archived image",
+        "--maxWorkers=1"
       ],
       "timeoutMs": 180000
     }
