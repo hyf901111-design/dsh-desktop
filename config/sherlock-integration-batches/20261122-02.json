@@ -323,6 +323,76 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-22T13:43:08.451034+00:00"
+      },
+      "merged": {
+        "mergeCommit": "cfd1d25dd526defbaae9fe8ef31b217160e65de6",
+        "verificationCommit": "cfd1d25dd526defbaae9fe8ef31b217160e65de6",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/research-resident-conversation.test.ts",
+              "test/pending-conversation-panel.test.js",
+              "test/home-guide-explore-entry-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-guide-entry-native.test.ts test/home-guide-session.test.ts test/research-resident-conversation.test.ts test/pending-conversation-panel.test.js test/home-guide-explore-entry-browser.test.js",
+            "verifiedCommit": "cfd1d25dd526defbaae9fe8ef31b217160e65de6",
+            "completedAt": "2026-11-22T13:43:25.060Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "cfd1d25dd526defbaae9fe8ef31b217160e65de6",
+            "completedAt": "2026-11-22T13:43:25.060Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "opens the animated PPT sidebar"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/knowledge-workspace-rendered.test.js -t opens the animated PPT sidebar",
+            "verifiedCommit": "cfd1d25dd526defbaae9fe8ef31b217160e65de6",
+            "completedAt": "2026-11-22T13:43:25.060Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-network.test.ts",
+              "test/financial-widget-public.test.ts",
+              "test/financial-widget-backup.test.ts",
+              "test/financial-widget-announcements-public.test.ts",
+              "test/financial-widget-kraken.test.ts",
+              "test/financial-widget-bitfinex.test.ts",
+              "test/financial-widget-futures.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/financial-widget-network.test.ts test/financial-widget-public.test.ts test/financial-widget-backup.test.ts test/financial-widget-announcements-public.test.ts test/financial-widget-kraken.test.ts test/financial-widget-bitfinex.test.ts test/financial-widget-futures.test.ts",
+            "verifiedCommit": "cfd1d25dd526defbaae9fe8ef31b217160e65de6",
+            "completedAt": "2026-11-22T13:43:25.060Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-22T13:43:25.060Z"
       }
     }
   ],
