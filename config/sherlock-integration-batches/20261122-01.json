@@ -1313,6 +1313,92 @@
         ],
         "recordedAt": "2026-11-22T01:42:23.205Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复新建和切换对话时工作区目录缺少新对话",
+        "branch": "codex/feat/audit-chat-session-20261122",
+        "baseCommit": "fa549c214f9b7e45681487f10dd0cad3902ec7e8",
+        "tipCommit": "9a5a136d9ecbff73d3082d4d76e7959e94caa9a6",
+        "commits": [
+          {
+            "commit": "9a5a136d9ecbff73d3082d4d76e7959e94caa9a6",
+            "parents": [
+              "fa549c214f9b7e45681487f10dd0cad3902ec7e8"
+            ],
+            "subject": "修复新建对话和切换对话页签时工作区缺少选中会话"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/figma-workspace-menus.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/workspace-view-shortcuts.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/browser-app-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/new-chat-view-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/new-chat-view-browser.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "9a5a136d9ecbff73d3082d4d76e7959e94caa9a6",
+            "completedAt": "2026-11-22T01:44:30.343241+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-rendered.test.js",
+              "-t",
+              "sizes top-bar labels|sessionless homepage",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "9a5a136d9ecbff73d3082d4d76e7959e94caa9a6",
+            "completedAt": "2026-11-22T01:44:30.343241+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "使用 Chromium 检查侧栏、目录、工作区选择器、无会话主页与浏览器页签，并展开超过五条的工作区核查选中项。"
+        },
+        "acceptanceCriteria": [
+          "空白会话在所属目录显示「新对话」，首条消息仍可命名",
+          "无会话页签创建或复用对话，已有会话保留上下文",
+          "折叠的长列表保留选中项"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T01:44:30.343241+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -1432,6 +1518,31 @@
         "test/tushare-financial-routing.test.js",
         "test/financial-routing.test.js",
         "--maxWorkers=2"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/new-chat-view-browser.test.js",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "env",
+        "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+        "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/browser-app-rendered.test.js",
+        "-t",
+        "sizes top-bar labels|sessionless homepage",
+        "--maxWorkers=1"
       ],
       "timeoutMs": 180000
     }
