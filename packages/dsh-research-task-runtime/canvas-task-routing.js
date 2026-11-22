@@ -1,3 +1,5 @@
+import {scheduledRunMode} from './scheduled-run.js'
+
 // Only direct human input can establish an ongoing goal. Observations, tool
 // results and injected document context never provide this authority.
 export function canvasHumanRequest(session) {
@@ -42,6 +44,7 @@ export function ongoingCanvasRequest(session) {
 }
 
 export function scheduledTaskRequest(session) {
+  if (scheduledRunMode(session)) return null
   const human=canvasHumanRequest(session);if(!human)return null
   const request=human.text.replace(/```[\s\S]*?```/g,'').replace(/^>.*$/gm,'').replace(/[“「][^”」]*[”」]/g,'')
   if(/(?:不要|不用|不需要|取消|停止|删除).{0,8}(?:定时|后台|提醒|通知)/u.test(request))return null

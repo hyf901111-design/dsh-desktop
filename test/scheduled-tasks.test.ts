@@ -148,7 +148,8 @@ describe('execution', () => {
       if (method === 'session.models')
         return { current: { model: 'test' } } as T
       if (method === 'session.prompt') {
-        expect((_payload as any).mode).toBe('queue')
+        expect(_payload).toMatchObject({mode: 'queue', content: [{type: 'text', text: input.prompt}]})
+        expect(rpcId).toMatch(/^scheduled-run:execute:/)
         requestId = rpcId!
         return {} as T
       }
@@ -227,10 +228,14 @@ describe('execution', () => {
 
 it('bundles nonempty original Figma vectors', async () => {
   const { icons } = await import('../src/preload/scheduled/icons')
-  for (const value of Object.values(icons))
-    expect(Buffer.from(value.split(',')[1]!, 'base64').toString()).toContain(
-      '<svg',
-    )
+  for (const value of Object.values(icons)) {
+    const svg = value.startsWith('data:image/svg+xml;base64,')
+      ? Buffer.from(value.slice(value.indexOf(',') + 1), 'base64').toString()
+      : value.startsWith('data:image/svg+xml')
+        ? decodeURIComponent(value.slice(value.indexOf(',') + 1))
+        : await readFile(join('build/brand', value), 'utf8')
+    expect(svg).toContain('<svg')
+  }
 })
 
 it('persists a summarized title separately from the full instruction and retains it on schedule-only edits', async () => {
