@@ -248,6 +248,7 @@ beforeAll(async () => {
       mountKnowledgeWorkspace(document, host, {
         memory,
         async openFileInEditor(source, mode) { window.openFileRequest = { source, mode } },
+        async openImageProject(id) { window.openImageRequest = { id, action: 'project' } },
         async openImageFactoryCopy(id) { window.openImageRequest = { id, action: 'copy' } },
         async openImageFactorySource(id) { window.openImageRequest = { id, action: 'source' } },
         async request(method, args) {
@@ -483,10 +484,48 @@ it('lists real session modes under all files and opens each one in its native vi
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
     const group = library.getByRole('group', { name: '所有文件子分类' })
-    expect(await group.getByRole('button').locator(':scope > span').allTextContents()).toEqual(['文件资料', '我的研究', '我的笔记', '我的表格'])
-    await expect.poll(() => group.locator('small').allTextContents()).toEqual(['3', '2', '1', '1'])
+    await page.evaluate(() => {
+      window.data.documents.push({ id: 'canvas-image', name: '插图.png', imageProject: { canvasId: 'canvas' },
+        source: 'generated', updatedAt: 1, size: 10, saved: false, starred: false })
+      document.dispatchEvent(new Event('sherlock:knowledge-changed'))
+    })
+    expect(await group.getByRole('button').locator(':scope > span').allTextContents()).toEqual(['文件资料', '我的图像', '我的研究', '我的笔记', '我的表格'])
+    await expect.poll(() => group.locator('small').allTextContents()).toEqual(['3', '1', '2', '1', '1'])
     const total = library.getByRole('button', { name: /^所有文件 / }).locator('small')
-    await expect.poll(() => total.textContent()).toBe('7')
+    await expect.poll(() => total.textContent()).toBe('8')
+    const items = library.locator('tbody .knowledge-file-name')
+    await expect.poll(() => items.count()).toBe(8)
+    await items.filter({ hasText: '插图.png' }).click()
+    expect(await page.evaluate(() => window.openImageRequest)).toEqual({ id: 'canvas-image', action: 'project' })
+    for (const [title, id, view] of [['消费行业研究看板', 'board', 'research'], ['季度会议笔记', 'note', 'notes'], ['渠道库存表格', 'sheet', 'spreadsheet']]) {
+      await items.filter({ hasText: title }).click()
+      await library.waitFor({ state: 'hidden' })
+      expect(await page.evaluate(() => window.openedSession)).toEqual({ id, view })
+      await page.evaluate(() => window.dispatchEvent(new Event('sherlock:knowledge-open')))
+    }
+    await group.getByRole('button', { name: /^文件资料/ }).click()
+    await expect.poll(() => items.count()).toBe(3)
+    expect(await library.getByRole('heading', { name: '文件资料' }).isVisible()).toBe(true)
+    await group.getByRole('button', { name: /^我的图像/ }).click()
+    expect(await items.allTextContents()).toHaveLength(1)
+    await library.getByRole('button', { name: /^所有文件 / }).click()
+    const query = library.getByRole('textbox', { name: '搜索文件' })
+    await query.fill('季度会议')
+    await expect.poll(() => items.count()).toBe(1)
+    expect(await items.first().innerText()).toContain('季度会议笔记')
+    await query.fill('')
+    await library.getByRole('button', { name: '筛选', exact: true }).click()
+    const filters = library.getByRole('group', { name: '筛选文件' })
+    await filters.getByLabel('手动上传').check()
+    await filters.getByRole('button', { name: '完成' }).click()
+    await expect.poll(() => items.count()).toBe(2)
+    await library.getByRole('button', { name: '清除筛选' }).click()
+    await library.getByRole('button', { name: '筛选', exact: true }).click()
+    await filters.getByLabel('Markdown').check()
+    await filters.getByRole('button', { name: '完成' }).click()
+    await expect.poll(() => items.count()).toBe(2)
+    await library.getByRole('button', { name: '清除筛选' }).click()
+    await expect.poll(() => items.count()).toBe(8)
     const badge = element => getComputedStyle(element).backgroundColor
     const fill = await total.locator('span').evaluate(badge)
     expect(fill).not.toBe('rgba(0, 0, 0, 0)')
@@ -560,7 +599,7 @@ it('lists real session modes under all files and opens each one in its native vi
     await group.getByRole('button', { name: '文件资料' }).click()
     await library.getByRole('button', { name: '添加文件', exact: true }).waitFor()
   } finally { await page.close() }
-})
+}, 20000)
 
 it('publishes and manages read-only sharing from each mode with inset dialog controls', async () => {
   const page = await browser.newPage({ viewport: { width: 1280, height: 820 } })
@@ -2116,7 +2155,7 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
     expect(new Set(counts.map(count => count.digits)).size).toBeGreaterThan(1)
     expect(Math.max(...counts.map(count => count.right)) - Math.min(...counts.map(count => count.right))).toBeLessThan(1)
 
-    for (const label of ['所有文件', '手动收藏', '重点文件', '我的共享', '研究资料', '他人共享', '行业研究',
+    for (const label of ['文件资料', '手动收藏', '重点文件', '我的共享', '研究资料', '他人共享', '行业研究',
       '我的研究', '我的笔记', '我的表格']) {
       const category = label === '行业研究' ? library.getByRole('button', { name: label, exact: true })
         : nav.getByRole('button', { name: new RegExp('^' + label + '( |$)') })
@@ -2126,7 +2165,7 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
       const rows = scroller.locator(session ? 'li' : 'tbody tr')
       await expect.poll(() => rows.count(), label).toBe(20)
       expect(await pager.getByRole('button', { name: '第 1 页', exact: true }).getAttribute('aria-current')).toBe('page')
-      if (label === '所有文件') {
+      if (label === '文件资料') {
         const [current, other, last] = await numberTiles()
         expect(current).toMatchObject({ width: 30, height: 30 })
         expect(other).toMatchObject({ width: 30, height: 30 })
@@ -2179,7 +2218,7 @@ it('paginates files and native sessions in groups of 20 with a fixed footer', as
       document.dispatchEvent(new Event('sherlock:knowledge-changed'))
     })
     await nav.getByRole('button', { name: /^所有文件/ }).click()
-    await pager.getByRole('button', { name: '第 11 页', exact: true }).waitFor()
+    await pager.getByRole('button', { name: '第 17 页', exact: true }).waitFor()
     expect(await pager.locator('.knowledge-pagination-number').count()).toBe(7)
     const jump = pager.getByRole('spinbutton', { name: '跳至页码' })
     await jump.fill('8')
@@ -2246,7 +2285,7 @@ it('keeps the knowledge pager on one row as its own column shrinks', async () =>
       document.dispatchEvent(new Event('sherlock:knowledge-changed'))
     })
     for (const category of ['所有文件', '我的笔记']) {
-      const totalPages = category === '所有文件' ? 11 : 3
+      const totalPages = category === '所有文件' ? 17 : 3
       await library.getByRole('navigation', { name: '知识库分类' })
         .getByRole('button', { name: new RegExp('^' + category + ' ') }).click()
       const pager = library.getByRole('navigation', { name: /分页/ })

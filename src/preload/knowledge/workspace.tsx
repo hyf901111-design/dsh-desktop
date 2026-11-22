@@ -71,7 +71,8 @@ type FileImport = KnowledgeImportProgress & {
 }
 const fileName = (path: string) => path.split(/[\\/]/u).at(-1) || path
 const empty: KnowledgeSnapshot = { documents: [], folders: [] }
-const defaultFilter: KnowledgeFilter = {}
+type WorkspaceFileFilter = KnowledgeFilter & { filesOnly?: boolean }
+const defaultFilter: WorkspaceFileFilter = {}
 const sessionSections = [ ['research', 'research'], ['notes', 'note'], ['spreadsheet', 'table'] ] as const
 type FileMoveGesture = Pick<KnowledgeDocument, 'id' | 'folderId'> & {
   pointer: number; x: number; y: number; active: boolean; source: HTMLButtonElement
@@ -140,17 +141,23 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const allFiles = listKnowledgeDocuments(snapshot, { category: 'all' })
   const imageCount = listKnowledgeDocuments(snapshot, { category: 'images' }).length
   const fileCount = allFiles.length - imageCount
-  const [filter, setFilter] = useState<KnowledgeFilter>(defaultFilter)
+  const [filter, setFilter] = useState<WorkspaceFileFilter>(defaultFilter)
   const filterState = useRef({ revision: crypto.randomUUID(), filter: defaultFilter, assistantFilter: false })
   const previousFilter = useRef<typeof filterState.current>()
   const [undoAvailable, setUndoAvailable] = useState(false)
   const [assistantFilter, setAssistantFilter] = useState(false)
   const [draftFilter, setDraftFilter] = useState<KnowledgeFilter>()
   const [ready, setReady] = useState(false)
-  const sessionCounts = sessionSections.map(([mode]) => sessionDirectories[mode]?.entries?.length)
-  const totalFileCount = ready && sessionCounts.every(count => count !== undefined)
-    ? sessionCounts.reduce<number>((total, count) => total + (count ?? 0), allFiles.length)
-    : '—'
+  const directoryRows = sessionSections.flatMap(([mode]) => (sessionDirectories[mode]?.entries ?? []).map((entry): KnowledgeListRow => {
+    const key = knowledgeSessionShareKey(mode, entry.id)
+    return {
+      id: 'session:' + key, name: entry.title, updatedAt: entry.updatedAt, size: 0,
+      source: 'generated', sessionTitle: entry.workspace, saved: false, starred: false,
+      share: local.sessionShares?.[key], nativeSession: { entry, mode }
+    }
+  }))
+  const totalFileCount = ready && sessionSections.every(([mode]) => sessionDirectories[mode]?.entries !== undefined)
+    ? allFiles.length + directoryRows.length : '—'
   const [loadError, setLoadError] = useState<string>()
   const [notice, setNotice] = useState<{ text: string; error?: boolean }>()
   const [busy, setBusy] = useState(false)
@@ -176,7 +183,6 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const currentEpoch = useRef(0)
   const refreshSequence = useRef(0)
   const receivedSequence = useRef(0)
-  const viewRead = useRef({ snapshot, section: tab, ready, receivedStatus })
   const pendingViewRequests = useRef(new Set<string>())
   const appliedSharedCatalog = useRef(false)
   const dragDepth = useRef(0)
@@ -188,19 +194,23 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }, [canDropFiles, filter.folderId, selection, sessionMode, surfaceVisible, tab])
   const visibleImports = selection === 'all' ? imports.filter(item => !filter.folderId || item.folderId === filter.folderId) : []
   const selectedFolder = snapshot.folders.find(folder => folder.id === filter.folderId)
-  const title = selectedFolder?.name ?? knowledgeCategories[selection]
+  const title = selectedFolder?.name ?? (filter.filesOnly ? '文件资料' : knowledgeCategories[selection])
   const publishedSessions = usePublishedKnowledgeSessions(document, local, surfaceVisible && selection === 'shared' && !sessionMode)
-  const rows = listKnowledgeRows(snapshot, filter, publishedSessions).filter(row =>
-    selection !== 'all' || filter.folderId || !row.imageProject)
+  const overview = selection === 'all' && !filter.folderId && !filter.filesOnly
+  const documents = overview && !filter.formats?.length ? [...snapshot.documents, ...directoryRows]
+    : filter.filesOnly ? snapshot.documents.filter(row => !row.imageProject) : snapshot.documents
+  const rows = listKnowledgeRows({ ...snapshot, documents }, filter, publishedSessions)
+  const viewRead = useRef({ snapshot, rows, section: tab, ready, receivedStatus })
   const { page, pages, setPage, scrollRef, start, end } = useKnowledgePagination<HTMLDivElement>(rows.length)
   const receivedCategories = [...new Set(snapshot.documents.flatMap(row => row.received ? [row.received.category] : []))]
     .sort((a, b) => a.localeCompare(b))
   const filterCount = countFileFacets(filter)
   const narrowed = Boolean(filter.query || filterCount)
   const panelRow = panelMenu?.row.id === menu?.id ? panelMenu?.row : undefined
-  const target = menu && !panelRow?.publishedSession ? panelRow ?? snapshot.documents.find(row => row.id === menu.id) : undefined
+  const target = menu && !panelRow?.nativeSession ? panelRow ?? snapshot.documents.find(row => row.id === menu.id) : undefined
   const editorMode = target && bridge.openFileInEditor ? fileEditorMode(target.name) : undefined
-  const targetSession = menu && (panelRow?.publishedSession ?? publishedSessions.find(row => row.id === menu.id)?.publishedSession)
+  const targetSessionRow = panelRow ?? (menu && rows.find(row => row.id === menu.id))
+  const targetSession = targetSessionRow?.nativeSession
   const targetFolder = menu?.folder && snapshot.folders.find(row => row.id === menu.id)
   const filterButton = useRef<HTMLButtonElement>(null)
   const actionMenu = useRef<HTMLDivElement>(null)
@@ -208,7 +218,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   const previewRequest = useRef(0)
   const refresh = useRef<() => void>(() => {})
   const resultScope = JSON.stringify([
-    selection, filter.folderId, filter.sharedCategory, filter.sources, filter.formats,
+    selection, filter.filesOnly, filter.folderId, filter.sharedCategory, filter.sources, filter.formats,
     filter.savedOnly, filter.sort, filter.ascending, assistantFilter ? filter.query : undefined
   ])
   const previousResultScope = useRef(resultScope)
@@ -237,7 +247,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
   }
 
   useLayoutEffect(() => {
-    viewRead.current = { snapshot, section: tab, ready, receivedStatus }
+    viewRead.current = { snapshot, rows, section: tab, ready, receivedStatus }
   })
 
   useLayoutEffect(() => {
@@ -467,7 +477,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     }
   }, [document, draftFilter, menu])
 
-  function applyFilter(next: KnowledgeFilter, fromAssistant = false) {
+  function applyFilter(next: WorkspaceFileFilter, fromAssistant = false) {
     setSessionMode(undefined)
     const state = { revision: crypto.randomUUID(), filter: next }
     filterState.current = { ...state, assistantFilter: fromAssistant }
@@ -477,7 +487,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     return state
   }
 
-  function updateFilter(change: Partial<KnowledgeFilter>) {
+  function updateFilter(change: Partial<WorkspaceFileFilter>) {
     previousFilter.current = undefined
     setUndoAvailable(false)
     applyFilter({ ...filterState.current.filter, ...change })
@@ -558,8 +568,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
             }
           })
           const committed = filterState.current
-          const { snapshot, section: committedSection } = viewRead.current
-          const matches = listKnowledgeDocuments(snapshot, committed.filter)
+          const { snapshot, rows: matches, section: committedSection } = viewRead.current
           bridge.reply?.({ id, result: { revision: committed.revision, filter: committed.filter, section: committedSection,
             count: matches.length, documents: matches.slice(0, 40), folders: snapshot.folders } })
         } catch (error) {
@@ -822,9 +831,9 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     setMenu(current => !pointer && current?.id === id ? undefined : { id, top, left, folder, pointer })
   }
 
-  function selectCategory(category: KnowledgeCategory, folderId?: string) {
+  function selectCategory(category: KnowledgeCategory, folderId?: string, filesOnly = false) {
     if (category === 'received' && selection === 'received') void refreshReceived(true)
-    updateFilter({ category, folderId, sharedCategory: undefined })
+    updateFilter({ category, folderId, sharedCategory: undefined, filesOnly: filesOnly || undefined })
     setMenu(undefined)
     setDraftFilter(undefined)
     closePreview()
@@ -836,7 +845,7 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     return ok
   }
 
-  async function openPublishedSession(session: NonNullable<KnowledgeListRow['publishedSession']>) {
+  async function openNativeSession(session: NonNullable<KnowledgeListRow['nativeSession']>) {
     setMenu(undefined)
     if (!await openSession(session.entry.id, session.mode)) setNotice({ text: '来源会话已不可用。', error: true })
   }
@@ -930,15 +939,15 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
     {tab === 'memory' ? bridge.memory && <KnowledgeMemory document={document} bridge={bridge.memory} /> : <div className="knowledge-body">
       <nav className="knowledge-navigation" aria-label="知识库分类">
         {(Object.keys(knowledgeCategories) as KnowledgeCategory[]).filter(category => category !== 'images').map(category => <React.Fragment key={category}>
-          <button type="button" aria-current={!sessionMode && !filter.folderId && selection === category && category !== 'all' ? 'page' : undefined}
+          <button type="button" aria-current={!sessionMode && !filter.folderId && selection === category && !filter.filesOnly ? 'page' : undefined}
             onClick={() => selectCategory(category)}>
             {buttonIcon(categoryIcons[category], knowledgeCategories[category])}
             <small><span>{category === 'all' ? totalFileCount : listKnowledgeDocuments(snapshot, { category }).length +
               (category === 'shared' ? Object.keys(local.sessionShares ?? {}).length : 0)}</span></small>
           </button>
           {category === 'all' && <div className="knowledge-session-sections" role="group" aria-label="所有文件子分类">
-            <button type="button" aria-current={!sessionMode && !filter.folderId && selection === 'all' ? 'page' : undefined}
-              onClick={() => selectCategory('all')}>{buttonIcon('document', '文件资料')}<small><span>{fileCount}</span></small></button>
+            <button type="button" aria-current={!sessionMode && !filter.folderId && filter.filesOnly ? 'page' : undefined}
+              onClick={() => selectCategory('all', undefined, true)}>{buttonIcon('document', '文件资料')}<small><span>{fileCount}</span></small></button>
             <button type="button" aria-current={!sessionMode && selection === 'images' ? 'page' : undefined}
               onClick={() => selectCategory('images')}>{buttonIcon('images', knowledgeCategories.images)}<small><span>{imageCount}</span></small></button>
             {sessionSections.map(([mode, icon]) => <button key={mode} type="button" aria-current={sessionMode === mode ? 'page' : undefined}
@@ -1091,13 +1100,13 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                   ))}
                   {rows.slice(start, end).map(row => {
                     const session = row.received && sharedKnowledgeSessionFile(row.name, row.source)
-                    const published = row.publishedSession
+                    const native = row.nativeSession
                     const title = session ? session.title : row.name
                     const more = <button type="button" className="knowledge-square" data-knowledge-popup-trigger disabled={busy}
                       aria-label={`${row.name}的更多操作`} aria-expanded={menu?.id === row.id}
                       onClick={event => showMenu(event, row.id)}><KnowledgeIcon name="more" /></button>
                     const completed = completedImports[row.id] !== undefined
-                    const bytes = published && !row.size ? '—' : formatBytes(row.size)
+                    const bytes = native && !row.size ? '—' : formatBytes(row.size)
                     const updatedAt = new Date(row.updatedAt)
                     const date = completed ? '刚刚' : updatedAt.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })
                     return <tr key={row.id} data-selected={preview?.document.id === row.id} data-import-complete={completed || undefined}
@@ -1108,16 +1117,16 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                       onContextMenu={event => showMenu(event, row.id)}>
                       <td><button className="knowledge-file-name" type="button" title={title}
                         onClick={event => {
-                          if (published) { void openPublishedSession(published); return }
+                          if (native) { void openNativeSession(native); return }
                           if (event.detail && movedClick.current === row.id) { movedClick.current = undefined; return }
                           void openPreview(row)
                         }} onPointerDown={event => {
-                          if (event.button !== 0 || event.pointerType === 'touch' || row.received || published || busy) return
+                          if (event.button !== 0 || event.pointerType === 'touch' || row.received || native || busy) return
                           movedClick.current = undefined
                           fileBeingMoved.current = { id: row.id, folderId: row.folderId, pointer: event.pointerId,
                             x: event.clientX, y: event.clientY, active: false, source: event.currentTarget }
                         }}>
-                        <KnowledgeItemIcon format={published?.mode ?? (session ? session.mode : knowledgeFormat(row.name))} tile />
+                        <KnowledgeItemIcon format={native?.mode ?? (session ? session.mode : knowledgeFormat(row.name))} tile />
                         <span className="knowledge-file-content">
                           <span className="knowledge-file-title"><span>{title}</span>
                             {row.saved && <span className="knowledge-bookmarked" aria-label="手动收藏"><KnowledgeIcon name="bookmark" /></span>}
@@ -1129,8 +1138,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
                             <span className="knowledge-shared-inline-size"> · {bytes}</span>
                             <time dateTime={updatedAt.toISOString()}> · {date}</time>
                             <span className="knowledge-shared-inline-owner" title={row.received.owner}> · {row.received.owner}</span>
-                          </small> : <small>{(published
-                            ? [sharedModeLabels[published.mode], row.share?.category]
+                          </small> : <small>{(native
+                            ? [sharedModeLabels[native.mode], selection === 'shared' ? row.share?.category : native.entry.workspace]
                             : [knowledgeSources[row.source], row.sessionTitle, selection === 'shared' && row.share?.category,
                               snapshot.folders.find(folder => folder.id === row.folderId)?.name ?? '未分组']).filter(Boolean).join(' · ')}
                             {completed && <span role="status"> · 上传完成</span>}</small>}
@@ -1221,8 +1230,8 @@ function KnowledgeWorkspace({ bridge, host, document }: { bridge: Bridge; host: 
         <button className="knowledge-danger" type="button" onClick={() => openDialog({ type: 'remove', row: target })}>从知识库删除</button>
       </>}
       {targetSession && <>
-        <button type="button" onClick={() => void openPublishedSession(targetSession)}>打开原会话</button>
-        <button type="button" onClick={() => openDialog({ type: 'share-session', row: targetSession.entry, mode: targetSession.mode })}>管理共享</button>
+        <button type="button" onClick={() => void openNativeSession(targetSession)}>打开原会话</button>
+        <button type="button" onClick={() => openDialog({ type: 'share-session', row: targetSession.entry, mode: targetSession.mode })}>{targetSessionRow?.share ? '管理共享' : '共享会话'}</button>
       </>}
       {targetFolder && <>
         <button type="button" onClick={() => openDialog({ type: 'rename-folder', ...targetFolder })}>重命名文件夹</button>

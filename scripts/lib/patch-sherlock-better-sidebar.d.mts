@@ -7,3 +7,5 @@ export declare function sherlockVirtualBoardDirectory(sessionId: string, cwd: st
 export declare function sherlockResearchGenerationOwnsFocus(state: unknown, document?: { querySelector(selectors: string): unknown }): boolean
 
 export declare function odysseyClampPanelWidth(width: number, viewport?: number, document?: unknown): number
+
+export declare function prepareBoardTerminalDirectory(sessionId: string, cwd: string, root?: string): Promise<void>
