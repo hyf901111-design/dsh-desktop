@@ -244,6 +244,86 @@
         ],
         "recordedAt": "2026-11-22T12:59:32.934Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复系统代理环境下研究看板公开行情不可用",
+        "branch": "codex/feat/market-data-proxy-20261122",
+        "baseCommit": "cf659a1d3f10a4be3778ff78226d6dedef9d117f",
+        "tipCommit": "5799d98373923dc3e322a731017cf3ffd23852a1",
+        "commits": [
+          {
+            "commit": "5799d98373923dc3e322a731017cf3ffd23852a1",
+            "parents": [
+              "cf659a1d3f10a4be3778ff78226d6dedef9d117f"
+            ],
+            "subject": "修复使用系统代理时研究看板无法搜索证券和加载公开行情"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/context-abort.d.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/financial/public-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/financial-widget-network.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-network.test.ts",
+              "test/financial-widget-public.test.ts",
+              "test/financial-widget-backup.test.ts",
+              "test/financial-widget-announcements-public.test.ts",
+              "test/financial-widget-kraken.test.ts",
+              "test/financial-widget-bitfinex.test.ts",
+              "test/financial-widget-futures.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "金融组件和行情网络专项共 69 项通过。",
+            "verifiedCommit": "5799d98373923dc3e322a731017cf3ffd23852a1",
+            "completedAt": "2026-11-22T13:43:08.451034+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "5799d98373923dc3e322a731017cf3ffd23852a1",
+            "completedAt": "2026-11-22T13:43:08.451034+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Electron 在本机按系统代理读取同一组真实演示数据：五只证券全部匹配和报价，五粮液日线、新闻和公告均取得记录。"
+        },
+        "acceptanceCriteria": [
+          "系统代理环境下能搜索并添加全部五只演示股票",
+          "图像应用探索中的自选行情看板可以完成并保留真实数据来源",
+          "无代理时保留原有受限直连行为"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T13:43:08.451034+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -276,6 +356,21 @@
         "test/knowledge-workspace-rendered.test.js",
         "-t",
         "opens the animated PPT sidebar"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/financial-widget-network.test.ts",
+        "test/financial-widget-public.test.ts",
+        "test/financial-widget-backup.test.ts",
+        "test/financial-widget-announcements-public.test.ts",
+        "test/financial-widget-kraken.test.ts",
+        "test/financial-widget-bitfinex.test.ts",
+        "test/financial-widget-futures.test.ts"
       ],
       "timeoutMs": 180000
     }
