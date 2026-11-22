@@ -165,6 +165,7 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
   const otherDeliverable = /(?:代码(?:片段|示例)?|脚本|图片|图像|插画|照片|海报|摘要|名称)(?:给我)?(?:吧|即可)?$/u
   const creationQuestion = /(?:生成|创建|绘制|制作)[^，。；;\n]{0,50}(?:需要多久|要多久|多长时间|要几分钟|要多少时间|为什么.{0,6}慢|的成功率(?:是|有)?多少)/u
   const targets=shortBoardCard ? [boardPlacement && namedBoard && scope === 'creation' ? 'workbench' : 'component'] : []
+  let addsToCurrentBoard = false
   const text = deliveryClauses(request).filter(clause => {
     // Past creation describes an existing object; it is not a new action.
     const action = normalizeComponentClause(clause).replace(/已(?:经)?(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|添加|做(?:[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|[个套张份组版]))/gu, '')
@@ -188,13 +189,23 @@ export function classifyResearchCreationRequest(raw, scope = 'creation') {
     const acceptsObject = scope !== 'research' || (namesBoardOutput && !clause.includes('\t') &&
       !otherDeliverable.test(action) && !creationQuestion.test(action))
     const accepted=create&&acceptsObject&&!denied&&!inspection&&!readOnlyComponentDelivery(action)
-    if(accepted){const object=action.match(componentObject);targets.push(explicit?.target??(object&&boardObject.test(object[0])?'workbench':'component'))}
+    if (accepted) {
+      const object = action.match(componentObject)
+      targets.push(explicit?.target ?? (object && boardObject.test(object[0]) ? 'workbench' : 'component'))
+      // “在当前看板创建一张图” adds a component. The existing board is the
+      // destination of the affirmative verb, rather than an object to replace.
+      if (scope === 'research' && explicit?.target === 'component') {
+        const before = action.slice(0, explicit.index)
+        if (/(?:在|向|往)(?:当前|这个|已有|现有|此)(?:的)?(?:研究)?(?:工作台|看板|画布|仪表盘)(?:上|里|中|内)?(?:直接|再|另外)?\s*$/u.test(before) &&
+            !/(?:不|别|禁止|取消|停止|如果|假如|假设|曾经|刚才|之前|已经|说过|提到|[“「『"'])/u.test(before)) addsToCurrentBoard = true
+      }
+    }
     return accepted
   }).join('；')
   if ((!text && !shortBoardCard) || /(?:为什么|为何|如何|怎样|怎么|是否|能否|有没有|有无).{0,24}(?:创建|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|构建|规划|实现出来|还原出来|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
   if (/^(?:请|帮我|麻烦)?(?:继续|再)?(?:修复|修改|更新|编辑|调整|优化|完善|核对)(?:当前|现有|已有|原有|原来|这个|此)/u.test(request) && !/(?:另外|另行|同时|并).{0,8}(?:创建|新建|新增|生成|建立|搭建|搭(?:一个|一套|一张|个|套|张)|制作|做[一二两三四五六七八九十百零\d]+\s*[个套张份组版]|建)/u.test(text)) return null
   if (/(?:优化|调整|修复|解释|设计).{0,20}(?:组件生成|工作台生成|生成逻辑|生成规则|生成功能)/u.test(text)) return null
-  if (!shortBoardCard && /(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘))/u.test(text)) return null
+  if (!shortBoardCard && !addsToCurrentBoard && /(?:在|修改|更新|编辑|调整)(?:当前|现有|已有|这个|此)(?:的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘)/u.test(text) && !/(?:另(?:建|创建)|新(?:建|的)?(?:工作台|研究台|分析台|速查台|监测台|观察台|监控台|监控面板|行情面板|数据面板|研究面板|运营面板|分析面板|画布|看板|仪表盘))/u.test(text)) return null
   const board = targets.includes('workbench')
   const component = targets.includes('component') || /组件|卡片|表格|图表|蜡烛图|K\s*线|热力图|甘特图|研报列表|新闻列表|柱状图|折线图|散点图|明细表|数据表|可视化图|思维导图|组织架构图|关系图|流程图|\b(?:component|card|table|chart)\b/iu.test(text)
   // New canvas cards use the same host planning tool. Coding requests and

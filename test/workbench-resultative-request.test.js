@@ -24,6 +24,14 @@ it('plans a disclosure placed on the research board and reserves blank drafts fo
  await expect(tool.execute({op:'create',args:JSON.stringify({kind:'component'})},{agent:{session:s}}))
    .rejects.toThrow('research_workbench_create')
 })
+it('distinguishes a new chart on the current board from an existing chart edit or a hypothetical request',()=>{
+ const classify=text=>classifyResearchCreationRequest(text,'research')?.kind
+ expect(classify('根据上面的三笔记录，在当前研究画布上直接新增一个折线图：一月 1、二月 2、三月 3。')).toBe('component')
+ for(const text of ['更新当前看板上的柱状图','请不要在当前看板创建一个柱状图：甲 1、乙 2。',
+   '如果在当前看板创建一个柱状图会怎样？','说明如何在当前看板创建一个柱状图。','他说「在当前看板创建一个柱状图」']){
+  expect(classify(text),text).toBeUndefined()
+ }
+})
 it.each(['弄个美元兑人民币的看板。','帮我弄个一周待办看板。','请帮我搞个项目进度工作台','来个天气看板'])('routes a short spoken request through both canvas entry points: %s',text=>{
  expect(classifyResearchCreationRequest(text)).toMatchObject({kind:'workbench',request:text})
  expect(workbenchCreationRequest(session(text))?.target).toBe('workbench')
