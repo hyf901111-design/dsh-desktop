@@ -1179,6 +1179,18 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     const entry = await flight; valid()
     return { ...entry, fresh: !previous }
   }
+  const openHomeGuideSession = (kind: GuideKind, sessionId: string, check: () => void) => {
+    const view = homeGuideMode(kind)
+    check()
+    deps.chatStore?.create(sessionId).actions.setView(view)
+    check()
+    // Images reconciles its task tabs synchronously on session selection.
+    // Release the source surface before its listener sees the guide's session.
+    doc.dispatchEvent(new win.CustomEvent('sherlock:sidebar-document-will-open', { detail: { view } }))
+    check()
+    navigation++
+    deps.sessions.open(sessionId)
+  }
   const configureHomeGuideConversation = (kind: GuideKind, sessionId: string) => {
     const service = deps.researchSidebar?.service
     const scope = { sessionId }
@@ -1232,10 +1244,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         }
         return {ok:true,sessionId:entry.sessionId,cwd:entry.cwd,title:entry.title}
       }
-      navigation++
-      valid()
-      deps.chatStore?.create(entry.sessionId).actions.setView(homeGuideMode(kind))
-      deps.sessions.open(entry.sessionId)
+      openHomeGuideSession(kind, entry.sessionId, valid)
       configureHomeGuideConversation(kind, entry.sessionId)
       if (kind === 'board' || kind === 'workbench') selectBoardSession(entry.sessionId)
       return { ok: true, sessionId: entry.sessionId, cwd: entry.cwd, title: entry.title, fresh: false }
@@ -1256,8 +1265,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     open:(entry,kind,check)=>{
       check();const registered=getHomeGuideSession(entry.sessionId)
       if(!registered||registered.kind!==kind||registered.cwd!==entry.cwd||!deps.chatStore)throw Error('原生示例入口已变化。')
-      deps.chatStore.create(entry.sessionId).actions.setView(homeGuideMode(kind));check()
-      navigation++;deps.sessions.open(entry.sessionId)
+      openHomeGuideSession(kind, entry.sessionId, check)
       check();configureHomeGuideConversation(kind, entry.sessionId)
       if(kind==='board'||kind==='workbench')selectBoardSession(entry.sessionId)
     }

@@ -197,9 +197,9 @@ export class WorkspaceSurfaceHost {
     // not unmount it and must not hide its content behind a selected tab.
     private onSessionOpened = () => { if (this.current()?.surface !== 'notes') this.closeAll(); };
     private onSidebarDocumentWillOpen = (event: Event) => {
-        const view = (event as CustomEvent<{ view: 'notes' | 'spreadsheet' | 'presentation' }>).detail?.view;
+        const view = (event as CustomEvent<{ view: 'chat' | 'research' | 'notes' | 'spreadsheet' | 'presentation' }>).detail?.view;
         const surface = this.current()?.surface;
-        if (surface && (view === 'presentation' || view === 'spreadsheet' || (view === 'notes' && surface !== 'notes')))
+        if (surface && (view === 'chat' || view === 'research' || view === 'presentation' || view === 'spreadsheet' || (view === 'notes' && surface !== 'notes')))
             this.closeAll();
     };
     private onNavigate = (event: Event) => {
