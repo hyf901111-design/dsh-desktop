@@ -109,6 +109,58 @@
           "实时行情依赖各公开来源当时的可用性。"
         ],
         "generatedAt": "2026-11-22T22:41:07.542464+00:00"
+      },
+      "merged": {
+        "mergeCommit": "b4383215bf2e017a6bd079d4d3c1222152916df2",
+        "verificationCommit": "b4383215bf2e017a6bd079d4d3c1222152916df2",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-board-direct-market.test.js",
+              "test/financial-widget-backup.test.ts",
+              "test/financial-widget-network.test.ts",
+              "test/financial-widget-public.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-board-direct-market.test.js test/financial-widget-backup.test.ts test/financial-widget-network.test.ts test/financial-widget-public.test.ts",
+            "verifiedCommit": "b4383215bf2e017a6bd079d4d3c1222152916df2",
+            "completedAt": "2026-11-22T22:41:18.072Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-link.test.js",
+              "-t",
+              "底部节点连接后选中自选行原子切换行情",
+              "--testTimeout",
+              "30000"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/financial-widget-link.test.js -t 底部节点连接后选中自选行原子切换行情 --testTimeout 30000",
+            "verifiedCommit": "b4383215bf2e017a6bd079d4d3c1222152916df2",
+            "completedAt": "2026-11-22T22:41:18.072Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "b4383215bf2e017a6bd079d4d3c1222152916df2",
+            "completedAt": "2026-11-22T22:41:18.072Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-22T22:41:18.072Z"
       }
     }
   ],
