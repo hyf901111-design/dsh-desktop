@@ -674,6 +674,67 @@
         ],
         "recordedAt": "2026-11-22T13:58:32.640Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复知识库四项界面回归检查",
+        "branch": "codex/feat/knowledge-rendered-regressions-20261122",
+        "baseCommit": "cf659a1d3f10a4be3778ff78226d6dedef9d117f",
+        "tipCommit": "1e3d468181a6954bfb0584e84a33be4711dfb231",
+        "commits": [
+          {
+            "commit": "1e3d468181a6954bfb0584e84a33be4711dfb231",
+            "parents": [
+              "cf659a1d3f10a4be3778ff78226d6dedef9d117f"
+            ],
+            "subject": "修正知识库界面测试的折叠边界、顶栏候选项和共享文件定位"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "实际 Chromium 环境下知识库界面全部 48 项通过，包含四项原有失败。",
+            "verifiedCommit": "1e3d468181a6954bfb0584e84a33be4711dfb231",
+            "completedAt": "2026-11-22T14:22:52.406297+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "项目类型检查通过。",
+            "verifiedCommit": "1e3d468181a6954bfb0584e84a33be4711dfb231",
+            "completedAt": "2026-11-22T14:22:52.406297+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在 Chromium 验证图像标题在 481/480 像素下的显示、深浅主题中顶栏的候选项和拖排、共享预览在撤回和恢复后的行为。"
+        },
+        "acceptanceCriteria": [
+          "知识库渲染测试全部通过",
+          "在原登录账户和保留对话历史的工作区启动本地构建"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T14:22:52.406297+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -732,6 +793,15 @@
         "test/home-guide-native.test.js",
         "-t",
         "uses actual native components|patches installed native code|shows and commits each port"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/knowledge-workspace-rendered.test.js"
       ],
       "timeoutMs": 180000
     }
