@@ -36,6 +36,7 @@ function fixture(taskStorage, removeProvisionalReference, workspace = () => 'tes
   const sessionCatalog = {
     list: { getSnapshot: () => sessionsState, subscribe: fn => { listListeners.add(fn); return () => listListeners.delete(fn) } },
     binding: id => sessionsState.byId[id] ? { session } : undefined,
+    retainNoteSession(id) { sessionsState.byId[id].blank = false; notifyList() },
     create: vi.fn(async ({ sessionId, workspaceId, cwd }) => {
       sessionsState.byId[sessionId] = { blank: true, workspaceId, cwd }
       shells.set(sessionId, makeShell())
@@ -1103,6 +1104,36 @@ it('adopts the clicked template in the same empty task and follows its native co
     f.leave()
     await Promise.resolve()
     expect(f.archiveTask).not.toHaveBeenCalled()
+  } finally { await f.dispose() }
+})
+
+it('retains the native template session when switching before the first canvas write or host reply', async () => {
+  const f = imageSessionLifecycle()
+  try {
+    f.open()
+    const id = await f.created(1)
+    expect(f.sessionsState.byId[id].blank).toBe(true)
+    f.events('task-action', { kind: 'new', template: '奔流的线' })
+    f.leave()
+    f.sessionCatalog.open('native-session')
+    expect(f.sessionsState.byId[id].blank).toBe(false)
+    expect(f.archiveTask).not.toHaveBeenCalledWith(id)
+    expect(f.session.prompt).not.toHaveBeenCalled()
+  } finally { await f.dispose() }
+})
+
+it('recovers a saved canvas when its old blank native row arrives after the image tabs', async () => {
+  const saved = 'image-task-' + crypto.randomUUID(), gallery = 'image-task-' + crypto.randomUUID()
+  const f = imageSessionLifecycle({ storage: { read: async () => ({
+    epoch: 7, tabs: [{ scope: gallery }], closed: [{ scope: saved, title: '旧画板' }], canvasScopes: [saved]
+  }) } })
+  try {
+    await vi.waitFor(() => expect(f.storage.write).toHaveBeenCalled())
+    for (const id of [saved, gallery]) f.sessionsState.byId[id] = { blank: true }
+    f.sessionCatalog.open('native-session')
+    expect(f.sessionsState.byId[saved].blank).toBe(false)
+    expect(f.sessionsState.byId[gallery].blank).toBe(true)
+    expect(f.sessionsState.current).toBe('native-session')
   } finally { await f.dispose() }
 })
 

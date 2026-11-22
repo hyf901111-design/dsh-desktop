@@ -155,24 +155,29 @@ export class ImageFactoryCanvases {
     })
   }
 
+  private async readTabFile(draftDirectory: string) {
+    const file = join(dirname(draftDirectory), 'task-tabs.json')
+    try {
+      const stored = JSON.parse((await readBounded(file, 128 * 1024)).toString('utf8'))
+      if (Array.isArray(stored)) return { tabs: readTaskTabs(stored), closed: [] }
+      return { tabs: readTaskTabs(stored?.tabs), closed: readTaskTabs(stored?.closed) }
+    } catch (error) {
+      if (!missing(error)) throw error
+      return { tabs: [], closed: [] }
+    }
+  }
+
   readTabs() {
     return this.run(async (owner, epoch, current) => {
-      let tabs: ImageFactoryTaskTab[] = []
-      let closed: ImageFactoryTaskTab[] = []
       const draftDirectory = this.directory(owner, null)
-      try {
-        const file = join(dirname(draftDirectory), 'task-tabs.json')
-        const stored = JSON.parse((await readBounded(file, 128 * 1024)).toString('utf8'))
-        tabs = readTaskTabs(Array.isArray(stored) ? stored : stored?.tabs)
-        if (!Array.isArray(stored)) closed = readTaskTabs(stored?.closed)
-      } catch (error) { if (!missing(error)) throw error }
+      let { tabs, closed } = await this.readTabFile(draftDirectory)
       if (![...tabs, ...closed].some(tab => tab.scope === null)) {
         // Older builds saved the drawing without tracking whether its tab was still open.
         const draft = await this.readCanvas(draftDirectory).catch(() => undefined)
         if (draft) closed = [{ scope: null, title: draft.title }, ...closed.slice(0, 31)]
       }
-      const canvasScopes = (await Promise.all([...tabs, ...closed.filter(tab => tab.temporary)].filter(tab => !tab.title || tab.temporary).map(async ({ scope }) => {
-        // Preserve historical canvases even if their tab title was never synced.
+      const canvasScopes = (await Promise.all([...tabs, ...closed].filter(tab => tab.scope !== null).map(async ({ scope }) => {
+        // Older sessions can own a canvas while their native history row is still blank.
         const exists = await lstat(join(this.directory(owner, scope), metadataName)).then(() => true, error => !missing(error))
         return exists ? [scope] : []
       }))).flat()
@@ -184,14 +189,15 @@ export class ImageFactoryCanvases {
   }
 
   async titleEvidence(sessionId: string) {
-    const {tabs, closed, epoch} = await this.readTabs()
-    const tab = [...tabs, ...(closed ?? [])].find(item => item.scope === sessionId)
-    if (!tab) return {owned:false}
     return this.run(async (owner, _epoch, current) => {
+      const {tabs, closed} = await this.readTabFile(this.directory(owner, null))
+      const tab = [...tabs, ...closed].find(item => item.scope === sessionId)
+      current()
+      if (!tab) return {owned:false}
       const canvas = await this.readCanvas(this.directory(owner, sessionId))
       current()
       return {owned:true, tabTitle:tab.title, canvasTitle:canvas?.title}
-    }, epoch)
+    })
   }
 
   async writeTabs(value: unknown) {
