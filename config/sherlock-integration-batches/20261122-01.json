@@ -1594,6 +1594,96 @@
         ],
         "recordedAt": "2026-11-22T01:44:41.679Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "修复旧会话目录加载超时和旧演示名称搜索",
+        "branch": "codex/feat/audit-office-followup-20261122",
+        "baseCommit": "3e917f866dd0426ad200a3a167287faabd03f15b",
+        "tipCommit": "f0897fa9da9459268a01b64a633ce05844379963",
+        "commits": [
+          {
+            "commit": "866d73bfd1a7585d68c39da9e8e46876fb5251ec",
+            "parents": [
+              "3e917f866dd0426ad200a3a167287faabd03f15b"
+            ],
+            "subject": "让旧演示在重新打开前即可按文稿名搜索"
+          },
+          {
+            "commit": "f0897fa9da9459268a01b64a633ce05844379963",
+            "parents": [
+              "866d73bfd1a7585d68c39da9e8e46876fb5251ec"
+            ],
+            "subject": "按批重建旧办公会话目录并避免启动超时"
+          }
+        ],
+        "files": [
+          {
+            "status": "A",
+            "path": "scripts/lib/office-catalog-checkpoints.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/office-catalog-checkpoints.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/office-session-scope.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/presentation/store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/office-session-access.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/office-session-scope.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/office-session-scope.test.ts",
+              "test/session-identity-list.test.ts",
+              "test/session-list-stream-performance.test.js",
+              "test/notes-session.test.js",
+              "test/presentation-workspace.test.ts",
+              "--maxWorkers=2"
+            ],
+            "outcome": "passed",
+            "summary": "在当前功能提交执行并通过聚焦检查。",
+            "verifiedCommit": "f0897fa9da9459268a01b64a633ce05844379963",
+            "completedAt": "2026-11-22T02:00:54.853271+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "使用旧格式会话、14 MB 缓存与访客原稿回归目录重建、账号归属和搜索标签。"
+        },
+        "acceptanceCriteria": [
+          "批量重建历史目录并保留并发变更",
+          "未重开旧演示即可按已保存名称检索",
+          "手工设置的会话标题优先"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T02:00:54.853271+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -1738,6 +1828,20 @@
         "-t",
         "sizes top-bar labels|sessionless homepage",
         "--maxWorkers=1"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/office-session-scope.test.ts",
+        "test/session-identity-list.test.ts",
+        "test/session-list-stream-performance.test.js",
+        "test/notes-session.test.js",
+        "test/presentation-workspace.test.ts",
+        "--maxWorkers=2"
       ],
       "timeoutMs": 180000
     }
