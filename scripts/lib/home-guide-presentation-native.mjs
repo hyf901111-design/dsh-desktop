@@ -75,7 +75,8 @@ export async function openHomePresentationReference(document,fileId,{waitFor,cue
   control.click()
  }
  const right=()=>document.querySelector('[data-odyssey-panel-entry="right"]')
- if(right()?.getAttribute('aria-expanded')!=='true')await click(right,'展开右侧栏')
+ const openedForReference=right()?.getAttribute('aria-expanded')!=='true'
+ if(openedForReference)await click(right,'展开右侧栏')
  const panel=()=>document.querySelector(sidebar+':not([aria-hidden=true])')
  const library=()=>[...(panel()?.querySelectorAll('[data-knowledge-panel-host]:not([data-knowledge-panel-file])')??[])]
   .find(host=>host.checkVisibility({checkVisibilityCSS:true})&&!host.closest('[hidden],[inert],[aria-hidden=true]'))
@@ -86,7 +87,13 @@ export async function openHomePresentationReference(document,fileId,{waitFor,cue
   await click(item,'打开知识库')
  }
  const row=()=>library()?.querySelector('.knowledge-panel-rows[data-ready=true] > [draggable=true]:first-child[data-knowledge-file-id="'+fileId+'"]')
- return {file: await target(row,'知识库中的示例文件尚未就绪，请重试。'),row}
+ const restorePanel=async()=>{
+  if(!openedForReference||right()?.getAttribute('aria-expanded')!=='true')return
+  await click(right,'收起右侧栏')
+  await waitFor(()=>right()?.getAttribute('aria-expanded')==='false','右侧栏未能收起，请重试。')
+  await target(right,'右侧栏布局尚未就绪，请重试。')
+ }
+ return {file: await target(row,'知识库中的示例文件尚未就绪，请重试。'),row,restorePanel}
 }
 
 /** Disable only this demo's composer action tips; keep the real buttons intact. */
@@ -224,16 +231,18 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      await waitFor(ticket,()=>(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id===ticket.skillId))
      if(!(ticket.shell.snapshot.occurrences??[]).some(ref=>ref.source==='ework-managed-skill'&&JSON.parse(ref.ref).id===ticket.skillId))throw Error('制作技能未能加入原生输入框。')
      if(ticket.shell.snapshot.imageIds?.length||ticket.shell.snapshot.occurrences?.length!==1||ticket.shell.snapshot.draft.replaceAll('\uFFFC','').trim())throw Error('输入内容已更改，已停止自动填写。')
+     let restoreReferencePanel
      if(ticket.kind==='ppt'){
      const skillDraft=ticket.shell.snapshot.draft,skillRevision=ticket.shell.snapshot.draftRev,skillOccurrences=JSON.stringify(ticket.shell.snapshot.occurrences??[])
      const source=ticket.detail.librarySource
      if(typeof source?.fileId!=='string'||!/^[a-f0-9-]{36}$/.test(source.fileId))throw Error('演示参考资料尚未放入知识库。')
      ticket.host.dataset.homePresentationReferenceSession=sessionId
      ticket.host.dataset.homePresentationReferenceFile=source.fileId
-     const {file,row}=await openHomePresentationReference(document,source.fileId,{
+     const {file,row,restorePanel}=await openHomePresentationReference(document,source.fileId,{
       waitFor:(predicate,message)=>waitFor(ticket,predicate,true,message),
       cue:(node,label)=>cue(ticket,node,label,'click',undefined,false)
      })
+     restoreReferencePanel=restorePanel
      const transfer=new window.DataTransfer(),format='application/x-ework-knowledge-file'
      const expectedName=ticket.prepared.sourcePath.split(/[\\/]/).pop()
      const unchanged=()=>ticket.shell.snapshot.draft===skillDraft&&ticket.shell.snapshot.draftRev===skillRevision&&!ticket.shell.snapshot.imageIds?.length&&JSON.stringify(ticket.shell.snapshot.occurrences??[])===skillOccurrences
@@ -262,6 +271,7 @@ function NativeHomePresentationPortal({sessionId,subagentPanel=false}){
      if(ticket.kind==='ppt'){
      await waitFor(ticket,()=>!!input.closest('.uV2eYG_root')?.querySelector('[data-reference-source="chat-file"]'))
      await cue(ticket,input.closest('.uV2eYG_root').querySelector('[data-reference-source="chat-file"]'),'原始研报 PDF','move')
+     await restoreReferencePanel()
      }
      const caretBounds=()=>{
       check(ticket);if(inputFor(ticket)!==input||input.disabled||input.readOnly||input.getAttribute('aria-disabled')==='true')throw changed()
