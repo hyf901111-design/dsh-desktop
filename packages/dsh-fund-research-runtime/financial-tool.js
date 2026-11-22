@@ -2,12 +2,13 @@ import { defineTool } from '@deepseek-ai/dsh-tools'
 import { ASSETS, INTENTS, validateFinancialQuery, validateFinancialResult } from './financial-contract.js'
 import { serviceError, toPublicFundResearchError } from './contract.js'
 import { queryFinancialHistory } from './financial-history.js'
+import { readFundProfileNames } from './fund-profile-names.js'
 
-export function createFinancialTool(provider) {
+export function createFinancialTool(provider, { profileFetch } = {}) {
   const string = { type: 'string' }
   return defineTool({
     name: 'financial_query',
-    description: '查询股票、指数、ETF 行情及公募基金资料、净值和研究数据，自动选择合适的数据。名称不明确时先 resolve，使用返回的市场和代码；交易代码必须带 .SH/.SZ/.BJ。ETF 交易价格用 quote，基金净值用 nav，二者不可混用。history 是行情日/周/月线，目前不提供分钟线。单基金、同日对比、持仓风格、近期变化用 research；更多基金研究先 catalog（可指定 capability 获取参数），再 analysis。混合问题按意图分别查询。无需用户指定数据服务或配置密钥。回答必须注明各项数据日期、单位、口径和限制；接收时间不是数据时间；未知时效、缺失、过期或未核验结果不能称为实时、无变化或完整覆盖。不得用单位净值代替货币基金收益指标，不得将复权净值称为累计净值。',
+    description: '查询股票、指数、ETF 行情及公募基金资料、净值和研究数据，自动选择合适的数据。名称不明确时先 resolve，使用返回的市场和代码；交易代码必须带 .SH/.SZ/.BJ。ETF 交易价格用 quote，基金净值用 nav，二者不可混用。profile 会按六位代码核对公开基金档案中单独列出的基金全称与简称。查全称按 profile_names.full_name 和 source_url 回答；基金简称、未标明全称的基金名称或代码匹配名称不能当作全称。history 是行情日/周/月线，目前不提供分钟线。单基金、同日对比、持仓风格、近期变化用 research；更多基金研究先 catalog（可指定 capability 获取参数），再 analysis。混合问题按意图分别查询。无需用户指定数据服务或配置密钥。回答必须注明各项数据日期、单位、口径和限制；接收时间不是数据时间；未知时效、缺失、过期或未核验结果不能称为实时、无变化或完整覆盖。不得用单位净值代替货币基金收益指标，不得将复权净值称为累计净值。',
     parameters: {
       intent: { ...string, enum: INTENTS, required: true },
       asset: { ...string, enum: ASSETS, description: 'resolve/quote/history/nav/profile 必填。fund 表示场外基金，etf 表示场内 ETF。research 为基金研究，不需要传 asset，也兼容 fund。' },
@@ -48,7 +49,18 @@ export function createFinancialTool(provider) {
         if (input.intent === 'research' && input.asset === 'fund') delete input.asset
         const query = validateFinancialQuery(input)
         if (query.intent === 'history') return await queryFinancialHistory(provider, query, { signal: exec.signal })
-        return validateFinancialResult(await provider.financial(query, { signal: exec.signal }), query)
+        const result = validateFinancialResult(await provider.financial(query, { signal: exec.signal }), query)
+        if (query.intent !== 'profile' || !['fund','etf'].includes(query.asset) || !result.records.length) return result
+        const code = query.symbols[0].slice(0, 6)
+        let names
+        try {
+          names = await readFundProfileNames(code, { signal: exec.signal, fetch: profileFetch })
+        } catch {
+          exec.signal?.throwIfAborted()
+        }
+        // Older hosted versions use the ambiguous metric “基金名称”. Preserve
+        // the original records and publish separately verified legal names.
+        return { ...result, profile_names: names ?? { code, full_name: null, note: '未取得明确的基金全称字段。请勿以简称或普通名称推断全称。' } }
       } catch (error) {
         const failure = toPublicFundResearchError(error, exec.signal)
         throw ['FUND_DATA_UNAVAILABLE','FUND_DATA_INVALID'].includes(failure.code) ? serviceError('FINANCIAL_UNAVAILABLE') : failure
