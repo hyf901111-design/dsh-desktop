@@ -81,6 +81,11 @@ export function patchFigmaModelMenu(source) {
       .replace('"option.vision": "视觉",', '"option.vision": "视觉",\n\t\t\t"group.custom": "自定义模型",\n\t\t\t"action.addCustomModel": "添加自定义模型",')
       .replace('"option.vision": "Vision",', '"option.vision": "Vision",\n\t\t\t"group.custom": "Custom models",\n\t\t\t"action.addCustomModel": "Add custom model",')
   }
+  if (!source.includes('"action.signInHosted":')) {
+    source = source
+      .replace('"action.addCustomModel": "添加自定义模型",', '"action.addCustomModel": "添加自定义模型",\n\t\t\t"action.signInHosted": "登录使用内置模型",')
+      .replace('"action.addCustomModel": "Add custom model",', '"action.addCustomModel": "Add custom model",\n\t\t\t"action.signInHosted": "Sign in to use built-in models",')
+  }
   if (!source.includes('"hosted.unavailable":')) {
     source = source
       .replace('"option.vision": "视觉",', '"option.vision": "视觉",\n\t\t\t"hosted.unavailable": "套餐模型目录暂时无法加载。",\n\t\t\t"hosted.stale": "套餐模型目录暂时无法刷新，正在显示最近可用列表。",')
