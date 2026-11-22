@@ -13,7 +13,7 @@ import {queryAccountFinancialWidget,type AccountFinancialSources} from './accoun
 
 type Row=Record<string,any>
 type SymbolRef={code:string;market:string;name:string}
-const origins=['https://www.shfe.com.cn','https://api.kraken.com','https://api-pub.bitfinex.com','https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com','https://query1.finance.yahoo.com','https://query2.finance.yahoo.com','https://quotes.sina.cn','https://push2.eastmoney.com','https://www.cninfo.com.cn']
+const origins=['https://www.shfe.com.cn','https://api.kraken.com','https://api-pub.bitfinex.com','https://qt.gtimg.cn','https://hq.sinajs.cn','https://smartbox.gtimg.cn','https://web.ifzq.gtimg.cn','https://feed.mix.sina.com.cn','https://search-api-web.eastmoney.com','https://np-anotice-stock.eastmoney.com','https://query1.finance.yahoo.com','https://query2.finance.yahoo.com','https://quotes.sina.cn','https://push2.eastmoney.com','https://push2his.eastmoney.com','https://cdn-api.cboe.com','https://www.cninfo.com.cn']
 const number=(value:unknown):number|null=>typeof value==='number'&&Number.isFinite(value)?value:typeof value==='string'&&value.trim()&&Number.isFinite(Number(value))?Number(value):null
 const unavailable=()=>Error('公开数据源暂不可用，请稍后重试')
 const tradingDate=(value:string)=>{
@@ -90,7 +90,7 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
    const get=async(url:URL|string,gbk=false,body?:URLSearchParams)=>{
     check();signal.throwIfAborted()
     let response:Response
-    try{response=await fetcher(url,{method:body?'POST':'GET',...(body?{body,headers:{accept:'application/json, text/plain, */*','content-type':'application/x-www-form-urlencoded','user-agent':'EWork Odyssey','referer':'https://www.cninfo.com.cn/'}}:{headers:{accept:'application/json, text/plain, */*','user-agent':'EWork Odyssey','referer':new URL(url).hostname==='www.shfe.com.cn'?'https://www.shfe.com.cn/':new URL(url).hostname.includes('gtimg')?'https://gu.qq.com/':new URL(url).hostname.includes('eastmoney.com')?'https://data.eastmoney.com/':'https://finance.sina.com.cn/'}}),redirect:'error',signal})}catch{check();throw unavailable()}
+    try{response=await fetcher(url,{method:body?'POST':'GET',...(body?{body,headers:{accept:'application/json, text/plain, */*','content-type':'application/x-www-form-urlencoded','user-agent':'EWork Odyssey','referer':'https://www.cninfo.com.cn/'}}:{headers:{accept:'application/json, text/plain, */*','user-agent':'EWork Odyssey','referer':new URL(url).hostname==='cdn-api.cboe.com'?'https://www.cboe.com/':new URL(url).hostname==='www.shfe.com.cn'?'https://www.shfe.com.cn/':new URL(url).hostname.includes('gtimg')?'https://gu.qq.com/':new URL(url).hostname.includes('eastmoney.com')?'https://data.eastmoney.com/':'https://finance.sina.com.cn/'}}),redirect:'error',signal})}catch{check();throw unavailable()}
     check();if(!response.ok){await response.body?.cancel();throw unavailable()}
     const reader=response.body?.getReader();if(!reader)throw unavailable()
     const chunks:Uint8Array[]=[];let size=0
