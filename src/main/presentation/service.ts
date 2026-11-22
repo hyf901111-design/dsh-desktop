@@ -1,3 +1,4 @@
+import { officeOwnerSlot } from '../state/office-session-access'
 import { createHash } from 'node:crypto'
 import { dialog, type BrowserWindow, type IpcMain } from 'electron'
 import { open, realpath, writeFile, rename, rm } from 'node:fs/promises'
@@ -25,6 +26,7 @@ type Admission = { documentId: string | null; slideId?: string; useSlide: boolea
 const who = (key: Key) => JSON.stringify([key.owner, key.sessionId])
 const hash = (s: string) => createHash('sha256').update(s.trim()).digest('hex')
 export function installPresentation(options: {
+  assertAccess?(id: string): void
   ipcMain: IpcMain
   getWindow(): BrowserWindow | undefined
   store: PresentationStore
@@ -47,25 +49,34 @@ export function installPresentation(options: {
     finish(deck?: Deck, error?: string): void
   }
   const imports = new Map<string, PendingImport>()
-  const retained = new Set<string>(),
-    retaining = new Set<string>()
-  function retain(key: Key) {
-    const base = options.runtimeUrl?.(),
-      token = JSON.stringify([base, key.owner, key.sessionId])
-    if (!base || retained.has(token) || retaining.has(token)) return
-    retaining.add(token)
+  const retained = new Map<string, string>()
+  const retaining = new Map<string, { title: string }>()
+  function retain(key: Key, title: string | undefined) {
+    const base = options.runtimeUrl?.()
+    if (!base || !title) return
+    const token = JSON.stringify([base, key.owner, key.sessionId])
+    const pending = retaining.get(token)
+    if (pending) { pending.title = title; return }
+    if (retained.get(token) === title) return
+    const latest = { title }
+    retaining.set(token, latest)
     const url = new URL('/sherlock/presentation/session', base)
-    void fetch(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', origin: url.origin },
-      body: JSON.stringify({ sessionId: key.sessionId, action: 'retain' }),
-      signal: AbortSignal.timeout(10000)
-    })
-      .then(async (r) => {
-        if (r.ok && (await r.json()).ok === true) retained.add(token)
-      })
-      .catch((err) => console.warn('[presentation-session]', err))
-      .finally(() => retaining.delete(token))
+    void (async () => {
+      try {
+        while (retained.get(token) !== latest.title) {
+          const target = latest.title
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', origin: url.origin },
+            body: JSON.stringify({ sessionId: key.sessionId, action: 'retain', title: target, officeOwner: officeOwnerSlot(key.owner) }),
+            signal: AbortSignal.timeout(10000)
+          })
+          if (!response.ok || (await response.json()).ok !== true) break
+          retained.set(token, target)
+        }
+      } catch (error) { console.warn('[presentation-session]', error) }
+      finally { retaining.delete(token) }
+    })()
   }
   const notify = (key: Key) =>
     getWindow()?.webContents.send('presentation:changed', { ...key, record: store.read(key) })
@@ -78,6 +89,7 @@ export function installPresentation(options: {
       (generation !== undefined && c.generation !== generation)
     )
       throw Error('请回到此会话的演示页签。')
+    options.assertAccess?.(id)
     const key = { owner: c.ownerAccountId, sessionId: id }
     if (write && (!options.canWrite(id) || store.isLocked(key))) throw Error('文稿已锁定，只能查看。')
     return { key, generation: c.generation }
@@ -147,17 +159,19 @@ export function installPresentation(options: {
         store.setLocked(key, input.locked)
         return input.locked
       }
-      if (action === 'load' && store.recent(key).length) retain(key)
-      if (action === 'load')
+      if (action === 'load') {
+        const record = store.read(key)
+        retain(key, record.deck?.title)
         return {
           generation,
           owner: key.owner,
           editable: options.canWrite(key.sessionId),
           locked: store.isLocked(key),
-          record: store.read(key),
+          record,
           recent: store.recent(key),
           slideId: store.position(key)
         }
+      }
       if (action === 'save') {
         const pending = input.importId ? imports.get(input.importId) : undefined
         if (input.importId) {
@@ -174,7 +188,7 @@ export function installPresentation(options: {
         try {
           const revision = store.save(key, input.revision, input.deck, input.create === true)
           store.setPosition(key, input.deck.id, input.slideId)
-          retain(key)
+          retain(key, input.deck.title)
           pending?.finish(input.deck)
           return revision
         } catch (error) {
@@ -192,9 +206,14 @@ export function installPresentation(options: {
         store.setPosition(key, input.documentId, input.slideId)
         return
       }
-      if (action === 'open') return store.open(key, input.revision, input.id)
+      if (action === 'open') {
+        const record = store.open(key, input.revision, input.id)
+        retain(key, record.deck.title)
+        return record
+      }
       if (action === 'undo') {
         store.undo(key, input.revision)
+        retain(key, store.recent(key)[0]?.title)
         notify(key)
         return
       }
@@ -362,7 +381,7 @@ export function installPresentation(options: {
         if (!options.canWrite(key.sessionId) || store.isLocked(key)) throw Error('文稿已锁定，只能查看。')
         const data = store.apply(key, args, admitted?.references)
         createdId = data.documentId
-        retain(key)
+        retain(key, store.recent(key)[0]?.title)
         notify(key)
         return { status: 'succeeded', message: '演示修改已保存。', data }
       }

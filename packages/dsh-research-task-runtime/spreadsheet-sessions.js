@@ -1,3 +1,4 @@
+import {officeSessionOwner} from './office-session-owner.js'
 export const SPREADSHEET_CREATED = 'workspace-spreadsheet/created'
 export const SPREADSHEET_EDITED = 'workspace-spreadsheet/edited'
 
@@ -19,7 +20,23 @@ export function registerDocumentSessions(ctx,{isTrustedRequest,readJsonBody},kin
       const session=ctx.sessions.get(input.sessionId)
       if(!session||session.header?.origin==='subagent')throw Error(noun+'会话不可用。')
       if(input.action==='retain'){
-        if(!session.events.some(event=>event.type===editedType))session.append(editedType,{})
+        const previous = session.events.findLast(event => event.type === editedType)
+        const title = input.title
+        if (presentation && title !== undefined && (typeof title !== 'string' || title.length > 256))
+          throw Error('演示名称无效。')
+        if (!previous) session.append(editedType, officeSessionOwner(input.officeOwner))
+        if (presentation && title?.trim()) {
+          const current = session.events.findLast(event => event.type === 'session/title')
+          const created = session.events.find(event => event.type === createdType)
+          const lastAutoSeq = previous?.data.titleSeq ?? created?.data.titleSeq
+          // A manual sidebar rename takes ownership, even if it used the same text.
+          const wanted = Array.from(title.trim().replace(/\s+/g, ' ')).slice(0, 120).join('')
+          if ((!current || current.seq === lastAutoSeq) && wanted !== current?.data.title &&
+              (wanted !== '未命名演示文稿' || previous?.data.titleSeq !== undefined)) {
+            const accepted = ctx.sessionTitle.rename(session, wanted)
+            session.append(editedType, {titleSeq: accepted.eventSeq})
+          }
+        }
         if(await ctx.sessions.flush(session)!==true)throw Error(noun+'会话尚未保存，请重试。')
         return send(200,{ok:true})
       }
@@ -28,7 +45,7 @@ export function registerDocumentSessions(ctx,{isTrustedRequest,readJsonBody},kin
         if(session.events.some(event=>['session/title','turn/start','user/message','workspace-note/edited'].includes(event.type)))
           throw Error('仅可初始化刚创建的'+noun+'会话。')
         const title=ctx.sessionTitle.rename(session,input.locale==='en'?(presentation?'New Presentation':'New Spreadsheet'):'新'+noun)
-        created=session.append(createdType,{titleSeq:title.eventSeq,provisional:true})
+        created=session.append(createdType,{titleSeq:title.eventSeq,provisional:true, ...officeSessionOwner(input.officeOwner)})
       }
       if(await ctx.sessions.flush(session)!==true)throw Error('新'+noun+'尚未保存，请重试。')
       return send(200,{ok:true,titleSeq:created.data.titleSeq})

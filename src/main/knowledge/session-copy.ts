@@ -1,3 +1,4 @@
+import { officeOwnerSlot, type OfficeMode } from '../state/office-session-access'
 import { randomUUID } from 'node:crypto'
 import { mkdir } from 'node:fs/promises'
 import type { SessionSummary } from '@deepseek-ai/dsh-host-apiproxy/api'
@@ -21,14 +22,15 @@ export type KnowledgeSessionSeed = SharedKnowledgeSession | {
 } & ({ canvas: StoredCanvas; image?: Uint8Array } | { image: Uint8Array; width: number; height: number })
 const copySuffix = '（副本）'
 
-export function knowledgeCopyRetention(runtimeUrl: () => string | undefined): RetainCopy {
+export function knowledgeCopyRetention(runtimeUrl: () => string | undefined, office?: (id: string) => {mode: OfficeMode; owner: string} | undefined): RetainCopy {
   return async (sessionId, title, existing, imported) => {
     const base = runtimeUrl()
     if (!base) throw Error('会话服务尚未就绪，请稍后重试。')
     const url = new URL('/sherlock/knowledge/session-copy', base)
+    const scope = office?.(sessionId)
     const result = await fetch(url, {
       method: 'POST', headers: { 'content-type': 'application/json', origin: url.origin },
-      body: JSON.stringify({ sessionId, title, existing, imported }), signal: AbortSignal.timeout(10_000)
+      body: JSON.stringify({ sessionId, title, existing, imported, ...scope ? {officeMode:scope.mode, officeOwner:officeOwnerSlot(scope.owner)} : {} }), signal: AbortSignal.timeout(10_000)
     })
     const response = await result.json() as { ok?: boolean; error?: string }
     if (!result.ok || response.ok !== true) throw Error(response.error || '副本会话尚未保存，请重试。')

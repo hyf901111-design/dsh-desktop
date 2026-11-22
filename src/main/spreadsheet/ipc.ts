@@ -1,3 +1,4 @@
+import { officeOwnerSlot } from '../state/office-session-access'
 import {randomUUID} from 'node:crypto'
 import {rename,unlink,writeFile} from 'node:fs/promises'
 import {basename} from 'node:path'
@@ -21,7 +22,7 @@ function exportStem(value:unknown){
   :''
 }
 
-export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined;owner?():string;canPlayCashFlowGuide?(key:WorkbookKey):boolean}){
+export function installSpreadsheet(options:{ipcMain:IpcMain;assertAccess?(id:string):void;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined;owner?():string;canPlayCashFlowGuide?(key:WorkbookKey):boolean}){
  const {ipcMain,getWindow}=options
  const retaining=new Set<string>(),retained=new Set<string>()
  const retainSavedSession=(key:WorkbookKey)=>{
@@ -37,7 +38,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
   void (async()=>{
    try{
     const url=new URL('/sherlock/spreadsheet/session',base)
-    const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:key.sessionId,action:'retain'})})
+    const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:key.sessionId,action:'retain',officeOwner:officeOwnerSlot(key.owner)})})
     if(!response.ok||(await response.json()).ok!==true)throw Error('表格会话尚未保存。')
     retained.add(scope)
    }catch(error){console.warn('[spreadsheet-session]',error)}
@@ -48,6 +49,7 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;getWindow():BrowserW
  const visible=(sessionId:unknown,write=false)=>{
   const v=options.visible()
   if(!v||v.mode!=='spreadsheet'||typeof sessionId!=='string'||v.sessionId!==sessionId)throw Error('当前表格视图尚未就绪或已切换。')
+  options.assertAccess?.(v.sessionId)
   if(write&&!options.canWrite(v.sessionId))throw Error('当前工作簿为只读。')
   return {owner:v.ownerAccountId,sessionId:v.sessionId,generation:v.generation}
  }

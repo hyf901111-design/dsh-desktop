@@ -8,7 +8,8 @@ import { Session, KNOWN_SESSION_EVENT_TYPES } from '@deepseek-ai/dsh-session'
 import { PersistenceCoordinator } from '@deepseek-ai/dsh-session-persistence'
 import { runInNewContext } from 'node:vm'
 import {engageNoteSession, registerNoteSessions} from '../packages/dsh-research-task-runtime/notes-session.js'
-import {registerSpreadsheetSessions} from '../packages/dsh-research-task-runtime/spreadsheet-sessions.js'
+import {sidebarSearchResults} from '../src/preload/sidebar-session-search'
+import {registerDocumentSessions, registerSpreadsheetSessions} from '../packages/dsh-research-task-runtime/spreadsheet-sessions.js'
 import {patchFigmaNavigationTitles} from '../scripts/lib/figma-refinements-client.mjs'
 import {createSourceFile,ScriptTarget,ScriptKind,forEachChild,isFunctionDeclaration} from 'typescript'
 
@@ -32,11 +33,12 @@ it('initializes a blank note title without recording activity and follows its su
   registerNoteSessions(f.ctx, { isTrustedRequest: () => true, readJsonBody: async req => req.payload })
   let status
   const response = { writeHead: value => { status = value }, end() {} }
-  const initialize = () => handle({ method: 'POST', payload: { action: 'initialize', sessionId: 's', locale: 'zh' } }, response)
+  const initialize = () => handle({ method: 'POST', payload: { action: 'initialize', sessionId: 's', locale: 'zh', officeOwner:'a'.repeat(64) } }, response)
   await initialize()
   await initialize()
   expect(status).toBe(200)
   expect(f.rename).toHaveBeenCalledExactlyOnceWith(f.session, '新笔记')
+  expect(f.session.events.find(event => event.type === 'workspace-note/created').data.officeOwner).toBe('a'.repeat(64))
   expect(f.session.events.some(event => event.type === 'workspace-note/edited')).toBe(false)
 
   const reopened = fixture(structuredClone(f.session.events))
@@ -75,7 +77,7 @@ it('optimistically retains only known current-account sessions before the durabl
 it('hides provisional spreadsheets after leaving and keeps saved, legacy and conversation sessions',async()=>{
   const source=patchNoteSessionHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
   const sidebar=patchFigmaNavigationTitles(await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js','utf8'))
-  const names=['sessionBlank','applySessionListMetadata','sessionListMetadata','sessionVisible','hasSavedSpreadsheetDraft']
+  const names=['foldOfficeScope','sessionBlank','applySessionListMetadata','sessionListMetadata','sessionVisible','hasSavedSpreadsheetDraft']
   const functions=new Map()
   for(const code of [source,sidebar]){
     const syntax=createSourceFile('native.js',code,ScriptTarget.Latest,false,ScriptKind.JS)
@@ -118,10 +120,40 @@ it('hides provisional spreadsheets after leaving and keeps saved, legacy and con
   expect(api.sessionBlank(replay)).toBe(false)
   expect(api.sessionVisible({id:session.id,blank:api.sessionListMetadata(replay.events).blank},'other',new Set())).toBe(true)
 })
+it('indexes the saved deck title, repairs legacy placeholders on replay, and preserves explicit sidebar renames', async () => {
+  let session = Session.create('presentation-title-test')
+  let handler
+  registerDocumentSessions({
+    webServer: {register: route => { handler = route.handler }},
+    sessions: {get: () => session, flush: async () => true},
+    sessionTitle: {rename: (target, title) => ({eventSeq: target.append('session/title', {title, source: {kind:'user'}}).seq})}
+  }, {isTrustedRequest: () => true, readJsonBody: async request => request.payload}, 'presentation')
+  const request = async fields => {
+    let status
+    await handler({method:'POST', payload:{sessionId:session.id, ...fields}}, {
+      writeHead:code => {status=code}, end() {}
+    })
+    expect(status).toBe(200)
+  }
+  const title = () => session.events.findLast(event => event.type === 'session/title').data.title
+  await request({locale:'zh'})
+  await request({action:'retain', title:'未命名演示文稿'})
+  expect(title()).toBe('新演示')
+  session = Session.fromRestore(session.id,structuredClone(session.events),structuredClone(session.header))
+  await request({action:'retain', title:'投资委员会周报'})
+  await request({action:'retain', title:'投资委员会月报'})
+  expect(sidebarSearchResults({boards:[],favorites:[]},{[session.id]:{title:title()}},[],'月报')).toMatchObject([{sessionId:session.id}])
+  const count = session.events.length
+  await request({action:'retain', title:'投资委员会月报'})
+  expect(session.events.length).toBe(count)
+  session.append('session/title',{title:'投资委员会月报',source:{kind:'user'}})
+  await request({action:'retain', title:'三季度回顾'})
+  expect(title()).toBe('投资委员会月报')
+})
 it('the real native host classifies replayed note and knowledge-copy events as non-blank',async()=>{
   const source=patchNoteSessionHost(await readFile('node_modules/@deepseek-ai/dsh-host-apiproxy/lib/index.js','utf8'))
   const syntax=createSourceFile('host.js',source,ScriptTarget.Latest,false,ScriptKind.JS),functions=new Map();const visit=node=>{if(isFunctionDeclaration(node)&&node.name)functions.set(node.name.text,node.getText(syntax));forEachChild(node,visit)};visit(syntax)
-  const api=runInNewContext(['sessionBlank','applySessionListMetadata','sessionListMetadata'].map(name=>functions.get(name)).join('\n')+';({sessionBlank,sessionListMetadata})')
+  const api=runInNewContext(['foldOfficeScope','sessionBlank','applySessionListMetadata','sessionListMetadata'].map(name=>functions.get(name)).join('\n')+';({sessionBlank,sessionListMetadata})')
   const f=fixture();engageNoteSession(f.ctx,{sessionId:'s',title:'笔记'});const replay=JSON.parse(JSON.stringify(f.session.events))
   expect(api.sessionBlank({events:replay})).toBe(false);expect(api.sessionListMetadata(replay).blank).toBe(false);expect(replay.some(e=>e.type==='turn/start')).toBe(false)
   const copy = [{ type: 'workspace-knowledge/copied', data: {} }]

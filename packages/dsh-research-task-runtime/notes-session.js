@@ -1,3 +1,4 @@
+import {officeSessionOwner} from './office-session-owner.js'
 import {releaseNoteGenerationRoute} from './notes-generation-route.js'
 import {capabilityReceiptText} from './client-capabilities.js'
 export const NOTE_SESSION_EVENT = 'workspace-note/edited'
@@ -63,7 +64,7 @@ async function initializeNoteSession(ctx, input) {
     ].includes(event.type))) throw Error('仅可初始化刚创建的笔记会话。')
     ctx.sessionTitle.rename(session, locale === 'en' ? 'New Note' : '新笔记')
     const titleEvent = session.events.findLast(event => event.type === 'session/title')
-    session.append(NOTE_CREATED_EVENT, { titleSeq: titleEvent.seq })
+    session.append(NOTE_CREATED_EVENT, { titleSeq: titleEvent.seq, ...officeSessionOwner(input.officeOwner) })
   }
   if (await ctx.sessions.flush(session) !== true) throw Error('新笔记尚未保存，请重试。')
   return { ok: true }
@@ -92,7 +93,7 @@ export function engageNoteSession(ctx, input) {
   if (automatic && titleEvent && !lastAutoTitle) lastAutoTitle = titleEvent.data.title
   // Publish participation before a title change; this is genuine note activity,
   // without manufacturing a conversation turn or an assistant message.
-  if (!previous) session.append(NOTE_SESSION_EVENT, { automatic, lastAutoSeq, lastAutoTitle })
+  if (!previous) session.append(NOTE_SESSION_EVENT, { automatic, lastAutoSeq, lastAutoTitle, ...officeSessionOwner(input.officeOwner) })
   const wanted = input.title.replace(/\s+/g, ' ').trim().slice(0, 120) || lastAutoTitle || (input.locale==='en'?'New Note':'新笔记')
   if (automatic && titleEvent?.data.title !== wanted) {
     const accepted = ctx.sessionTitle.rename(session, wanted)

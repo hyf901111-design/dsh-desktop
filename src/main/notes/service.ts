@@ -1,3 +1,4 @@
+import { officeOwnerSlot } from '../state/office-session-access'
 import { randomUUID, createHash } from 'node:crypto'
 import {nativeBlankTableIntent} from '../../shared/notes-native-intent'
 import {createClientCapabilityHost} from '../../../packages/dsh-research-task-runtime/client-capability-host.js'
@@ -35,6 +36,7 @@ import type {ResearchCanvasExportDependencies} from '../state/research-canvas-ex
 
 export function installNotesService(options: {
   ipcMain: any; getWindow(): TrustedWindow | undefined; root: string; owner(): string; onDocumentAdapter?(adapter:NoteDocumentAdapter):void;
+  assertAccess?(id: string): void;
   runtimeUrl(): string | undefined; clipboard(): ResearchCanvasClipboard | undefined; canRead(sessionId: string): boolean; canWrite?(sessionId:string):boolean; canvasAvailable?(sessionId:string):boolean; inspectCanvas?(sessionId:string,signal:AbortSignal,args?:{ids?:string[]}):Promise<unknown>; resetZoom?():Promise<void>;windowAction?(action:string,args:any):Promise<unknown>; nativeMenu?: NotesNativeMenu; files?:NoteFiles; library?():ComponentLibraryStore|undefined;captureSources?(sessionId:string,sources:ResearchContextSource[]):{captureId:string;totalSources:number};componentData?:{request(sessionId:string,args:any,control?:{signal?:AbortSignal;guardId?:string}):Promise<any>;visible(sessionId:string,active:boolean):void;reply(value:any):void}
   exportFiles?:Pick<ResearchCanvasExportDependencies,'showSaveDialog'|'writeFile'>;
   documentContent?: KnowledgeContent;
@@ -50,6 +52,7 @@ export function installNotesService(options: {
   const challenges=new Map<string,{owner:string;sessionId:string;controller:AbortController}>()
   registerTrustedMainWindowHandler(options.ipcMain, 'notes:request', options.getWindow, async (_event, method: string, input: any) => {
     if (!input || typeof input.sessionId !== 'string' || input.sessionId.length > 256 || !options.canRead(input.sessionId)) throw Error('笔记会话不可用。')
+    options.assertAccess?.(input.sessionId)
     const owner = options.owner(), session = input.sessionId
     if (method !== 'load' && method !== 'conversation-load' && method !== 'stop' && input.owner !== owner) throw Error('账号已变化，请重新打开笔记。')
     switch (method) {
@@ -135,7 +138,7 @@ export function installNotesService(options: {
       case 'engage': {
         const base = options.runtimeUrl(); if (!base) throw Error('会话服务尚未就绪，请稍后重试。')
         const url = new URL('/sherlock/notes/session', base)
-        const response = await fetch(url, {method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,title:input.title,locale:input.locale})})
+        const response = await fetch(url, {method:'POST',headers:{'content-type':'application/json',origin:url.origin},signal:AbortSignal.timeout(10000),body:JSON.stringify({sessionId:session,title:input.title,locale:input.locale,officeOwner:officeOwnerSlot(owner)})})
         const result = await response.json()
         if (!response.ok) throw Error(result.error || '笔记会话暂未保存，请重试。')
         if (options.owner() !== owner) throw Error('账号已变化，请重新打开笔记。')
