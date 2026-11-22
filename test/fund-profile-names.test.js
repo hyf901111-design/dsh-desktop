@@ -11,16 +11,16 @@ const provider = { financial: async query => ({
   records: [{ evidence_id:'1'.repeat(32),instrument:'110011',metric:'基金名称',value:'易方达优质精选混合（QDII）',
     as_of:null,quality_state:'unknown',unit:'text',price_basis:'基金资料' }]
 }) }
-const profile = (code, fullName, shortName) => '<table><tr><th>基金全称</th><td>' + fullName +
-  '</td><th>基金简称</th><td>' + shortName + '</td></tr><tr><th>基金代码</th><td>' + code +
-  '（前端）<th>基金类型</th><td>混合</td></tr></table>'
+const profile = (code, fullName, shortName) => '<table><tr><td class="th">基金全称</td><td>' + fullName +
+  '</td><td class="th">基金简称</td><td>' + shortName + '</td></tr><tr><td class="th">基金代码</td><td>' + code +
+  '（前端）</td><td class="th">基金类型</td><td>混合</td></tr></table>'
 const page = html => new Response(html, {headers:{'content-type':'text/html; charset=utf-8'}})
 
 it('returns traceable full-name evidence alongside a legacy hosted fund display name', async () => {
   const profileFetch = vi.fn(async()=>page(profile('110011','易方达优质精选混合型证券投资基金','易方达优质精选混合(QDII)')))
   const tool = createFinancialTool(provider,{profileFetch}), result = await tool.execute(args,{})
   expect(result.profile_names).toEqual({code:'110011',full_name:'易方达优质精选混合型证券投资基金',short_name:'易方达优质精选混合(QDII)',
-    source:'天天基金 · 基金基本概况',source_url:'https://fundf10.eastmoney.com/jbgk_110011.html'})
+    source:'天天基金 · 基金基本资料',source_url:'https://fund.eastmoney.com/data/xininfo_110011.html'})
   expect(profileFetch.mock.calls[0]).toEqual([result.profile_names.source_url,expect.objectContaining({redirect:'error',credentials:'omit',headers:{accept:'text/html'}})])
   expect(result.records[0].value).toBe('易方达优质精选混合（QDII）')
 })
@@ -40,7 +40,7 @@ it.each([
 
 it('recognizes a different product by its own code and labeled fields',async()=>{
   const result=await readFundProfileNames('000198',{fetch:async()=>page(profile('000198','天弘余额宝货币市场基金','天弘余额宝货币'))})
-  expect(result).toMatchObject({code:'000198',full_name:'天弘余额宝货币市场基金',source_url:'https://fundf10.eastmoney.com/jbgk_000198.html'})
+  expect(result).toMatchObject({code:'000198',full_name:'天弘余额宝货币市场基金',source_url:'https://fund.eastmoney.com/data/xininfo_000198.html'})
 })
 
 it('retains the hosted profile when the public source is offline and honors cancellation',async()=>{
