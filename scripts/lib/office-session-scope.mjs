@@ -1,3 +1,4 @@
+import {patchOfficeCatalogHost, patchOfficeCatalogCache} from './office-catalog-checkpoints.mjs'
 // New documents bind their provisional session to the local profile or account.
 // Older clients recorded only participation. The desktop checks their existing
 // owner-keyed files, including recovery drafts, without moving document bytes.
@@ -44,7 +45,7 @@ function installOfficeSessionHost(source) {
 export function patchOfficeSessionHost(source) {
   source = installOfficeSessionHost(source)
   const marker = '/* ework:office-presentation-title */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchOfficeCatalogHost(source)
   const fold = 'const office = foldOfficeScope(state.office, event);'
   source = replaceOnce(source, fold, marker + '\n' + fold + `
     let presentationTitleManaged = state.presentationTitleManaged;
@@ -53,7 +54,7 @@ export function patchOfficeSessionHost(source) {
   source = replaceOnce(source, 'return office === state.office &&', 'return presentationTitleManaged === state.presentationTitleManaged && office === state.office &&')
   source = replaceOnce(source, '...(office ? {office} : {}),', '...(office ? {office} : {}), ...(presentationTitleManaged === undefined ? {} : {presentationTitleManaged}),')
   source = replaceOnce(source, 'office:z$1.record(z$1.string(),z$1.string()).optional(),','presentationTitleManaged:z$1.boolean().optional(), office:z$1.record(z$1.string(),z$1.string()).optional(),')
-  return replaceOnce(source, 'apply: applySessionListMetadata,\n\t\t\tview: (state) => state,\n\t\t\tstateVersion: 2', 'apply: applySessionListMetadata,\n\t\t\tview: (state) => state,\n\t\t\tstateVersion: 3')
+  return patchOfficeCatalogHost(replaceOnce(source, 'apply: applySessionListMetadata,\n\t\t\tview: (state) => state,\n\t\t\tstateVersion: 2', 'apply: applySessionListMetadata,\n\t\t\tview: (state) => state,\n\t\t\tstateVersion: 3'))
 }
 
 // During the one-time v1 replay the inventory already supplied a validated
@@ -62,7 +63,7 @@ export function patchOfficeSessionHost(source) {
 export function patchOfficeProjectionCache(source) {
   const start = 'async coldSnapshot(id, signal) {'
   const marker = '/* ework:office-projection-cache */'
-  if (source.includes(marker)) return source
+  if (source.includes(marker)) return patchOfficeCatalogCache(source)
   const at = source.indexOf(start), end = source.indexOf('\n\tinstallWritePath() {', at)
   if (at < 0 || end < at) throw Error('Office projection cache anchor drifted')
   let method = source.slice(at, end)
@@ -77,7 +78,7 @@ export function patchOfficeProjectionCache(source) {
       const prefix = await artifact;
       return seq === 0 ? prefix : {...prefix, events:prefix.events.filter(event => event.seq >= seq)};
     };`)
-  return source.slice(0, at) + method + source.slice(end)
+  return patchOfficeCatalogCache(source.slice(0, at) + method + source.slice(end))
 }
 
 export function projectOfficeSessionScope(items, bridge, cache) {

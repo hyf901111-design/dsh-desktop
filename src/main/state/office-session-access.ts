@@ -63,7 +63,7 @@ export class OfficeSessionAccess {
       if (title && title !== '未命名演示文稿') return {reason, title}
     }
     if (mode && accounts.some(other => other !== owner && modes.some(kind => this.hasRecord(other, id, kind))))
-      return {reason, title:this.documentTitle(owner, id, mode)}
+      return {reason, title:this.documentTitle(owner, id, mode) || ({note:'新笔记',spreadsheet:'新表格',presentation:'新演示'})[mode]}
     return {reason}
   }
 
