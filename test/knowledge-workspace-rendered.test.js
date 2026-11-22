@@ -341,7 +341,7 @@ beforeAll(async () => {
 
 afterAll(async () => { await browser?.close() })
 
-it('opens the animated PPT sidebar and drags the first knowledge reference into the composer', async () => {
+it('opens the animated PPT sidebar and keeps its knowledge reference visible after dragging it into the composer', async () => {
   const page = await browser.newPage({ viewport: { width: 980, height: 820 }, reducedMotion: 'reduce' })
   try {
     await page.setContent(`
@@ -400,7 +400,7 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
         waitUntilPlaying: async () => {}
       })
       const labels = []
-      const { file, restorePanel } = await openHomePresentationReference(document, id, {
+      const { file } = await openHomePresentationReference(document, id, {
         waitFor,
         cue: (target, label) => {
           labels.push(label)
@@ -447,10 +447,9 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
         }
       } })
       target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }))
-      await restorePanel()
       pointer.dispose()
       return {
-        collapsed: toggle.getAttribute('aria-expanded') === 'false', labels, dropped, portalAtBody, beforeDrag, previewStyle, originalWidth, release,
+        knowledgeOpen: toggle.getAttribute('aria-expanded') === 'true' && file.checkVisibility({checkVisibilityCSS:true}), labels, dropped, portalAtBody, beforeDrag, previewStyle, originalWidth, release,
         phasesWithPreview: [...phasesWithPreview], previewAfterDrop: !!findPreview(),
         firstId: file.parentElement.firstElementChild.dataset.knowledgeFileId,
         otherFirstId: document.querySelector('#other .knowledge-panel-row').dataset.knowledgeFileId,
@@ -458,8 +457,8 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
       }
     })
     expect(result.portalAtBody).toBe(true)
-    expect(result.collapsed).toBe(true)
-    expect(result.labels).toEqual(['展开右侧栏', '打开右侧栏页签菜单', '打开知识库', '收起右侧栏'])
+    expect(result.knowledgeOpen).toBe(true)
+    expect(result.labels).toEqual(['展开右侧栏', '打开右侧栏页签菜单', '打开知识库'])
     expect(result.firstId).toBe('bbbbbbbb-1234-1234-1234-123456789abc')
     expect(result.otherFirstId).toBe('c')
     expect(result.dropped).toEqual({ id: result.firstId, label: 'Vanguard-2026经济与市场展望.pdf' })
