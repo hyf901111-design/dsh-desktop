@@ -588,6 +588,91 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-22T13:58:18.756315+00:00"
+      },
+      "merged": {
+        "mergeCommit": "c644ce1645b39e2a0fd028d09229e7b4646a6697",
+        "verificationCommit": "c644ce1645b39e2a0fd028d09229e7b4646a6697",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-entry-native.test.ts",
+              "test/home-guide-session.test.ts",
+              "test/research-resident-conversation.test.ts",
+              "test/pending-conversation-panel.test.js",
+              "test/home-guide-explore-entry-browser.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-guide-entry-native.test.ts test/home-guide-session.test.ts test/research-resident-conversation.test.ts test/pending-conversation-panel.test.js test/home-guide-explore-entry-browser.test.js",
+            "verifiedCommit": "c644ce1645b39e2a0fd028d09229e7b4646a6697",
+            "completedAt": "2026-11-22T13:58:32.640Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "c644ce1645b39e2a0fd028d09229e7b4646a6697",
+            "completedAt": "2026-11-22T13:58:32.640Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "opens the animated PPT sidebar"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/knowledge-workspace-rendered.test.js -t opens the animated PPT sidebar",
+            "verifiedCommit": "c644ce1645b39e2a0fd028d09229e7b4646a6697",
+            "completedAt": "2026-11-22T13:58:32.640Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/financial-widget-network.test.ts",
+              "test/financial-widget-public.test.ts",
+              "test/financial-widget-backup.test.ts",
+              "test/financial-widget-announcements-public.test.ts",
+              "test/financial-widget-kraken.test.ts",
+              "test/financial-widget-bitfinex.test.ts",
+              "test/financial-widget-futures.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/financial-widget-network.test.ts test/financial-widget-public.test.ts test/financial-widget-backup.test.ts test/financial-widget-announcements-public.test.ts test/financial-widget-kraken.test.ts test/financial-widget-bitfinex.test.ts test/financial-widget-futures.test.ts",
+            "verifiedCommit": "c644ce1645b39e2a0fd028d09229e7b4646a6697",
+            "completedAt": "2026-11-22T13:58:32.640Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-native.test.js",
+              "-t",
+              "uses actual native components|patches installed native code|shows and commits each port"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/home-guide-native.test.js -t uses actual native components|patches installed native code|shows and commits each port",
+            "verifiedCommit": "c644ce1645b39e2a0fd028d09229e7b4646a6697",
+            "completedAt": "2026-11-22T13:58:32.640Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-22T13:58:32.640Z"
       }
     }
   ],
