@@ -123,6 +123,76 @@
         ],
         "recordedAt": "2026-11-22T12:39:55.169Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "制作 PPT 演示拖入知识库附件后恢复首页侧栏",
+        "branch": "codex/feat/ppt-demo-reference-panel-20261122",
+        "baseCommit": "cf659a1d3f10a4be3778ff78226d6dedef9d117f",
+        "tipCommit": "930ec72aa9f4bf533bc3e8cd396ed15844aaef2c",
+        "commits": [
+          {
+            "commit": "930ec72aa9f4bf533bc3e8cd396ed15844aaef2c",
+            "parents": [
+              "cf659a1d3f10a4be3778ff78226d6dedef9d117f"
+            ],
+            "subject": "修复制作 PPT 演示取用知识库附件后右侧栏未收起"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.d.mts"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-presentation-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "opens the animated PPT sidebar"
+            ],
+            "outcome": "passed",
+            "summary": "知识库和 PPT 演示右侧栏展开、拖放、收起专项通过。",
+            "verifiedCommit": "930ec72aa9f4bf533bc3e8cd396ed15844aaef2c",
+            "completedAt": "2026-11-22T12:59:12.128630+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "TypeScript 类型检查通过。",
+            "verifiedCommit": "930ec72aa9f4bf533bc3e8cd396ed15844aaef2c",
+            "completedAt": "2026-11-22T12:59:12.128630+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 验证从收起状态展开知识库、拖入真实文件引用并重新收起侧栏。"
+        },
+        "acceptanceCriteria": [
+          "演示导入 PDF 后收起刚才展开的右侧栏，随后在对话首页填写制作要求"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T12:59:12.128630+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -144,6 +214,17 @@
         "npm",
         "run",
         "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/knowledge-workspace-rendered.test.js",
+        "-t",
+        "opens the animated PPT sidebar"
       ],
       "timeoutMs": 180000
     }
