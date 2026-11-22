@@ -370,11 +370,12 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
       const panel = document.querySelector('#odyssey-right-workspace-panel')
       let openAt, plusAt, portalAtBody
       toggle.onclick = () => {
-        openAt = performance.now()
-        toggle.setAttribute('aria-expanded', 'true')
-        panel.setAttribute('aria-hidden', 'false')
-        panel.style.visibility = 'visible'
-        panel.style.transform = 'translateX(0)'
+        const opening = toggle.getAttribute('aria-expanded') === 'false'
+        if (opening) openAt = performance.now()
+        toggle.setAttribute('aria-expanded', String(opening))
+        panel.setAttribute('aria-hidden', String(!opening))
+        panel.style.visibility = opening ? 'visible' : 'hidden'
+        panel.style.transform = opening ? 'translateX(0)' : 'translateX(100%)'
       }
       window.renderPresentationTabMenu(panel.querySelector('#tabs'), () => { plusAt = performance.now() }, type => {
         if (type !== 'sherlock-knowledge-library') throw Error('打开了错误页签')
@@ -399,7 +400,7 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
         waitUntilPlaying: async () => {}
       })
       const labels = []
-      const { file } = await openHomePresentationReference(document, id, {
+      const { file, restorePanel } = await openHomePresentationReference(document, id, {
         waitFor,
         cue: (target, label) => {
           labels.push(label)
@@ -446,9 +447,10 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
         }
       } })
       target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer }))
+      await restorePanel()
       pointer.dispose()
       return {
-        labels, dropped, portalAtBody, beforeDrag, previewStyle, originalWidth, release,
+        collapsed: toggle.getAttribute('aria-expanded') === 'false', labels, dropped, portalAtBody, beforeDrag, previewStyle, originalWidth, release,
         phasesWithPreview: [...phasesWithPreview], previewAfterDrop: !!findPreview(),
         firstId: file.parentElement.firstElementChild.dataset.knowledgeFileId,
         otherFirstId: document.querySelector('#other .knowledge-panel-row').dataset.knowledgeFileId,
@@ -456,7 +458,8 @@ it('opens the animated PPT sidebar and drags the first knowledge reference into 
       }
     })
     expect(result.portalAtBody).toBe(true)
-    expect(result.labels).toEqual(['展开右侧栏', '打开右侧栏页签菜单', '打开知识库'])
+    expect(result.collapsed).toBe(true)
+    expect(result.labels).toEqual(['展开右侧栏', '打开右侧栏页签菜单', '打开知识库', '收起右侧栏'])
     expect(result.firstId).toBe('bbbbbbbb-1234-1234-1234-123456789abc')
     expect(result.otherFirstId).toBe('c')
     expect(result.dropped).toEqual({ id: result.firstId, label: 'Vanguard-2026经济与市场展望.pdf' })
