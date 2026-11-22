@@ -11,8 +11,7 @@ let browser,script
 beforeAll(async()=>{
  const require=createRequire(import.meta.url)
  let source=await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
- if(source.includes('/* sherlock:composer-voice:v1 */'))source=require('../scripts/lib/composer-voice.mjs').stripComposerVoice(source)
- source=require('./fixtures/strip-conversation-transient-ui.mjs').stripConversationGridOverlays(source)
+ source=(await import('./fixtures/strip-conversation-transient-ui.mjs')).stripConversationGridOverlays(source)
  for(const[file,strip]of [['home-guide-presentation-native','stripHomeGuidePresentationNative'],['home-guide-native','stripHomeGuideNative']])source=require('../scripts/lib/'+file+'.mjs')[strip](source)
  const grid=require('../scripts/lib/research-grid-workbench.mjs'),tabs=require('../scripts/lib/board-tabs-client.mjs')
  source=tabs.patchBoardTabsClient(grid.patchResearchGridWorkbench(require('../scripts/lib/calendar-tool-client.mjs').patchCalendarToolClient(require('../scripts/lib/financial-widget-client.mjs').patchFinancialWidgetClient(require('../scripts/lib/component-data-refresh.mjs').patchComponentDataRefresh(grid.restoreResearchGridWorkbench(source))))))
@@ -277,6 +276,31 @@ it('cancels a real pointer drag on mode change and ignores the later pointer rel
   await page.mouse.up();await page.mouse.move(900,650)
   expect(await page.evaluate(()=>window.fixture.workspace().getWorkbenchCells())).toEqual(initial)
   expect(await page.locator('[data-workbench-resize]:visible').count()).toBe(0)
+ }finally{await close()}
+},20000)
+
+it('quick-adds calendar events by Enter and the add button on the research canvas',async()=>{
+ const {page,close,errors}=await fixture()
+ try{
+  const id=await page.evaluate(()=>{
+   const events=[]
+   window.dshDesktop.calendarTool={subscribe:()=>()=>{},request:async request=>{
+    if(request.action==='save')events.push({...request.input,id:String(events.length+1),completedDates:[]})
+    return {events,notices:[]}
+   }}
+   return window.fixture.workspace().createCalendarTool().id
+  })
+  const calendar=page.locator('[data-research-node-id="'+id+'"] [data-calendar-tool]')
+  const quick=calendar.getByRole('textbox',{name:'快速添加事项',exact:true})
+  await quick.fill('周会')
+  await quick.press('Enter')
+  await calendar.getByRole('button',{name:'周会',exact:true}).waitFor()
+  expect(await quick.inputValue()).toBe('')
+  await quick.fill('复盘')
+  await calendar.getByRole('button',{name:'保存快速事项',exact:true}).click()
+  await calendar.getByRole('button',{name:'复盘',exact:true}).waitFor()
+  expect(await calendar.locator('.ew-calendar-event-title').count()).toBe(2)
+  expect(errors).toEqual([])
  }finally{await close()}
 },20000)
 
