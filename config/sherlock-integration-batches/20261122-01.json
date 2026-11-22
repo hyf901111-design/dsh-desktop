@@ -949,6 +949,152 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-22T01:29:20.931660+00:00"
+      },
+      "merged": {
+        "mergeCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+        "verificationCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+        "checks": [
+          {
+            "argv": [
+              "git",
+              "diff",
+              "--check",
+              "HEAD^1",
+              "HEAD"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：git diff --check HEAD^1 HEAD",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 30000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/image-generation-tool.test.js",
+              "test/image-factory.test.js",
+              "test/workbench-content-delivery.test.js",
+              "test/workbench-resultative-request.test.js",
+              "test/fund-profile-names.test.js",
+              "test/tushare-financial-routing.test.js",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/image-generation-tool.test.js test/image-factory.test.js test/workbench-content-delivery.test.js test/workbench-resultative-request.test.js test/fund-profile-names.test.js test/tushare-financial-routing.test.js --maxWorkers=2 --reporter=dot",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/virtual-board-file-list.test.ts",
+              "test/research-board-directories.test.js",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/virtual-board-file-list.test.ts test/research-board-directories.test.js --maxWorkers=1",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/research-preview-mode-browser.test.js",
+              "-t",
+              "quick-adds calendar events|locks calendar content writes|keeps a note calendar editable",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/research-preview-mode-browser.test.js -t quick-adds calendar events|locks calendar content writes|keeps a note calendar editable --maxWorkers=1",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "env",
+              "PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+              "PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell",
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "lists real session modes|acknowledges the rendered list|lists published files|paginates files and native sessions|keeps the knowledge pager on one row|preserves filters through return|opens the selected archived image",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：env PLAYWRIGHT_MODULE_PATH=/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js PLAYWRIGHT_EXECUTABLE_PATH=/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell node node_modules/vitest/vitest.mjs run test/knowledge-workspace-rendered.test.js -t lists real session modes|acknowledges the rendered list|lists published files|paginates files and native sessions|keeps the knowledge pager on one row|preserves filters through return|opens the selected archived image --maxWorkers=1",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/scheduled-tasks.test.ts",
+              "test/scheduled-task-tool.test.js",
+              "test/conversation-history-page.test.js",
+              "test/figma-model-menu.test.ts",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/scheduled-tasks.test.ts test/scheduled-task-tool.test.js test/conversation-history-page.test.js test/figma-model-menu.test.ts --maxWorkers=2 --reporter=dot",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/browser-app-view.test.ts",
+              "-t",
+              "shows the service reason",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/browser-app-view.test.ts -t shows the service reason --reporter=dot",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/office-session-scope.test.ts",
+              "test/notes-session.test.js",
+              "test/spreadsheet-store.test.ts",
+              "test/spreadsheet-service.test.ts",
+              "test/presentation-workspace.test.ts",
+              "test/knowledge-session-copy.test.ts",
+              "test/knowledge-session-copy-host.test.js",
+              "--maxWorkers=2",
+              "--reporter=dot"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/office-session-scope.test.ts test/notes-session.test.js test/spreadsheet-store.test.ts test/spreadsheet-service.test.ts test/presentation-workspace.test.ts test/knowledge-session-copy.test.ts test/knowledge-session-copy-host.test.js --maxWorkers=2 --reporter=dot",
+            "verifiedCommit": "6eb44fd81e7ec761b1df418d1027357d8bed9ec0",
+            "completedAt": "2026-11-22T01:29:25.816Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-22T01:29:25.816Z"
       }
     }
   ],
