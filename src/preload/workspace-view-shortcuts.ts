@@ -70,11 +70,13 @@ export function canNavigateGlobalWorkspace(document: Document) {
 }
 
 export function navigateGlobalWorkspace(document: Document, view: string, reveal: () => void) {
-  if (view === 'chat') {
+  const navigate = globalWorkspaceNavigation.get(document)
+  if (navigate) navigate(view)
+  else if (view === 'chat') {
     document.documentElement.setAttribute(workspaceModeNavigationAttribute, '')
     keepWorkspaceViewsExpanded(document, null, view)
     reveal()
-  } else globalWorkspaceNavigation.get(document)?.(view)
+  }
 }
 
 export function navigateWorkspaceView(document: Document, sessionId: string, view: string, reveal: () => void) {
@@ -145,7 +147,7 @@ export function setWorkspaceViewsExpanded(toggle: HTMLButtonElement, nav: HTMLEl
 }
 
 export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: () => void,
-  openHome?: (app: TopNavigationApp, signal: AbortSignal) => Promise<void> | void) {
+  openHome?: (app: TopNavigationApp | 'new-chat', signal: AbortSignal) => Promise<void> | void) {
   const win = document.defaultView!
   const homeTopbar = document.createElement('div')
   homeTopbar.className = 'workspace-app-topbar workspace-home-topbar'
@@ -176,14 +178,14 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
   let owner: HTMLElement | undefined, ownerId: string | undefined, expanded = false, frame = 0
   let ownerOnHome = false, openingHome: AbortController | undefined
   if (openHome) globalWorkspaceNavigation.set(document, view => {
-    const app = topNavigationApps.find(candidate => viewForApp[candidate] === view)
+    const app = view === 'chat' ? 'new-chat' : topNavigationApps.find(candidate => viewForApp[candidate] === view)
     if (!app) return
     openingHome?.abort()
     const request = new win.AbortController()
     openingHome = request
     document.documentElement.setAttribute(workspaceModeNavigationAttribute, '')
     keepWorkspaceViewsExpanded(document, null, view)
-    void Promise.resolve().then(() => openHome(app, request.signal)).catch(() => {
+    void Promise.resolve().then(() => { if (!request.signal.aborted) return openHome(app, request.signal) }).catch(() => {
       if (openingHome === request) clearWorkspaceViewsExpansion(document)
     })
   })
@@ -193,9 +195,10 @@ export function mountSessionWorkspaceViewShortcuts(document: Document, reveal: (
     button.type = 'button'
     button.dataset.workspaceNativeView = view
     button.addEventListener('click', () => {
-      if (!owner || activeHeader() !== owner || button.getAttribute('aria-current') === 'true') return
+      if (!owner || activeHeader() !== owner) return
       const session = ownerOnHome ? owner.querySelector<HTMLElement>(sessionHeading) : owner
       const id = session?.dataset.eworkNotesSession
+      if (button.getAttribute('aria-current') === 'true' && !(ownerOnHome && !id && view === 'chat')) return
       if (id) navigateWorkspaceView(document, id, view, reveal)
       else if (ownerOnHome) navigateGlobalWorkspace(document, view, reveal)
     })
