@@ -27,6 +27,35 @@ async function yahoo(s:SymbolRef,io:BackupIO,period='1d',range='3mo'){
  const quote=parsePublicIndexChart({...s,code},response),chart=response.chart.result[0]
  return {quote:{...quote,...s} as Row,chart}
 }
+// These four guide benchmarks have identifiable daily bars outside Yahoo.
+// Preserve the exchange's trading date when a live catalogue quote is unavailable.
+async function usIndexDailyQuote(s:SymbolRef,io:BackupIO):Promise<Row>{
+ let rows:Row[],source:string
+ if(s.code==='^RUT'){
+  const value=await io.json('https://cdn-api.cboe.com/api/global/delayed_quotes/charts/historical/_RUT.json')
+  if(value.symbol!=='_RUT'||!Array.isArray(value.data))throw Error('罗素2000日线标识无效')
+  rows=value.data.filter((row:unknown)=>row&&typeof row==='object')
+  source='Cboe'
+ }else{
+  const code=globalCodes[s.code]![0]
+  const url=new URL('https://push2his.eastmoney.com/api/qt/stock/kline/get')
+  url.search=new URLSearchParams({secid:'100.'+code,fields1:'f1,f2,f3',fields2:'f51,f52,f53,f54,f55,f56',klt:'101',fqt:'0',end:'20500101',lmt:'60'}).toString()
+  const {rc,data}=await io.json(url)
+  if(rc!==0||data?.market!==100||data.code!==code||!Array.isArray(data.klines))throw Error('国际指数日线标识无效')
+  rows=data.klines.flatMap((line:unknown)=>{
+   if(typeof line!=='string')return []
+   const [date,open,close,high,low,volume]=line.split(',')
+   return [{date,open,close,high,low,volume}]
+  })
+  source='东方财富'
+ }
+ const bars=normalizeFinancialBars(rows).slice(-60),last=bars.at(-1),previous=bars.at(-2)
+ if(!last||!previous)throw Error('国际指数有效日线不足')
+ const priceChange=last.close-previous.close
+ return {...s,price:last.close,priceChange,changePercent:priceChange/previous.close*100,
+  asOf:last.date,timeZone:'America/New_York',quality:'收盘日线',source,seriesSource:source,series:bars.map(bar=>bar.close)}
+}
+
 async function history(s:SymbolRef,q:Row,io:BackupIO):Promise<Row>{
  if(q.adjustment!=='none')throw Error('备用行情暂不支持所选复权方式，请选择不复权或默认数据源')
  if(mainland(s)){
@@ -94,15 +123,22 @@ export async function queryBackupFinancialWidget(q:Row,io:BackupIO):Promise<Row>
   if(mainland(s)){
    row=io.parseSinaQuote(s,sina.get(key(s)))
    if(q.asset==='index')try{row.series=(await history(s,{period:'1d',adjustment:'none'},io)).bars.slice(-60).map((b:Row)=>b.close);if(row.series.length<2)throw Error('暂无有效走势')}catch(error){io.check();row.series=[];row.seriesError='走势更新失败：'+(error as Error).message}
+  }else if(s.market==='INDEX'&&s.code==='^RUT'){
+   try{row=(await yahoo(s,io)).quote}catch{io.check();row=await usIndexDailyQuote(s,io)}
   }else if(s.market==='INDEX'&&globalCodes[s.code]){
    const [code,zone]=globalCodes[s.code]!,r=globals.find(r=>r.f12===code&&r.f13===100),price=num(r?.f2),stamp=num(r?.f124)
+   let daily:Row|undefined
+   if(['^GSPC','^IXIC','^NDX'].includes(s.code)){
+    try{daily=await usIndexDailyQuote(s,io)}catch{io.check()}
+   }
    if(!r||price===null||price<=0||stamp===null||stamp<946656000||stamp>=4102416000){
     // The public catalogue can omit a market. Reuse the validated chart quote
     // and keep its actual provider and exchange timestamp instead of a blank.
-    row=(await yahoo(s,io)).quote
+    row=daily??(await yahoo(s,io)).quote
    }else{
     row={...s,price,priceChange:num(r.f4),changePercent:num(r.f3),quotedAt:new Date(stamp*1000).toISOString(),asOf:dateAt(stamp,zone),timeZone:zone,source:'东方财富',quality:'公开报价 · 时效未确认',series:[]}
-    try{row.series=(await yahoo(s,io)).quote.series;if(row.series.length<2)throw Error('暂无有效走势');row.seriesSource='Yahoo Finance'}catch(error){io.check();row.series=[];row.seriesError='走势更新失败：'+(error as Error).message}
+    if(daily){row.series=daily.series;row.seriesSource=daily.source}
+    else try{row.series=(await yahoo(s,io)).quote.series;if(row.series.length<2)throw Error('暂无有效走势');row.seriesSource='Yahoo Finance'}catch(error){io.check();row.series=[];row.seriesError='走势更新失败：'+(error as Error).message}
    }
   }else row=(await yahoo(s,io)).quote
   if(q.asset==='index'&&!(row.series?.length>1)&&!row.seriesError)row.seriesError='走势更新失败：暂无有效走势'

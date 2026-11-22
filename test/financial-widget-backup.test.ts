@@ -113,3 +113,36 @@ it.each(['empty','invalid','unavailable'])('falls back to identified Yahoo index
  const invalid=await f.service.query({action:'quotes',asset:'index',source:'backup',symbols,refresh:true})
  expect(invalid.quotes).toEqual([]);expect(invalid.errors).toHaveLength(2)
 })
+it('loads the four US guide indices with Yahoo unavailable and verifies the returned index identity', async () => {
+ const {service,fetch}=fixture()
+ const codes=['^GSPC','^IXIC','^NDX','^RUT']
+ const symbols=codes.map(code=>({market:'INDEX',code,name:code}))
+ const ids=['SPX','NDX','NDX100']
+ let mismatch=false
+ fetch.mockImplementation(async input=>{
+  const url=new URL(input)
+  switch(url.hostname){
+   case 'push2.eastmoney.com':
+    return Response.json({data:{diff:ids.map((code,i)=>({f12:code,f13:100,f2:110+i,f4:1,f3:1,f124:1795208400}))}})
+   case 'push2his.eastmoney.com': {
+    const code=url.searchParams.get('secid')?.slice(4)??'',i=ids.indexOf(code)
+    if(i<0)throw Error('unexpected index')
+    return Response.json({rc:0,data:{code:mismatch?'OTHER':code,market:100,klines:[`2026-11-19,100,${109+i},120,90,0`,`2026-11-20,100,${110+i},120,90,0`]}})
+   }
+   case 'cdn-api.cboe.com':
+    return Response.json({symbol:mismatch?'_SPX':'_RUT',data:[{date:'2026-11-19',open:99,high:102,low:98,close:100},{date:'2026-11-20',open:100,high:112,low:99,close:110}]})
+   default: throw Error('provider unavailable')
+  }
+ })
+ const query={action:'quotes',asset:'index',source:'backup',symbols}
+ const good=await service.query(query)
+ expect(good.errors).toEqual([])
+ expect(good.quotes.map((q:any)=>[q.code,q.series,q.seriesSource])).toEqual([
+  ['^GSPC',[109,110],'东方财富'],['^IXIC',[110,111],'东方财富'],['^NDX',[111,112],'东方财富'],['^RUT',[100,110],'Cboe']
+ ])
+ expect(good.quotes[3]).toMatchObject({asOf:'2026-11-20',price:110,changePercent:10,source:'Cboe'})
+ mismatch=true
+ const invalid=await service.query({...query,refresh:true})
+ expect(invalid.quotes.map((q:any)=>[q.code,q.series])).toEqual([['^GSPC',[]],['^IXIC',[]],['^NDX',[]]])
+ expect(invalid.errors).toHaveLength(4)
+})

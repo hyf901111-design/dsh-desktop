@@ -28,6 +28,16 @@ function homeGuideNativeBoardSymbols() {
   ]
 }
 
+export function homeGuideNativeBoardWidgetSeed(spec, symbols) {
+  if (spec.widget === 'quote') return { ...spec, dataSource: 'default' }
+  if (spec.widget === 'watchlist') return { ...spec, symbols: symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true }
+  if (spec.widget === 'indices') {
+    const benchmarks = [['^GSPC','标普500'],['^IXIC','纳斯达克综合指数'],['^NDX','纳斯达克100'],['^RUT','罗素2000']]
+    return { ...spec, symbols: [...spec.symbols, ...benchmarks.map(([code,name]) => ({ market: 'INDEX', code, name }))] }
+  }
+  return null
+}
+
 // Keep the existing bridge, provenance and errors; no tutorial market values.
 function homeGuideNativeSampleProvider() {
   return { symbols: homeGuideNativeBoardSymbols(), async request(input) {
@@ -644,15 +654,10 @@ function NativeHomeGuidePortal({ sessionId, subagentPanel = false, researchWorks
           // Layout cells form a native history transaction. Finish this owned
           // insertion before the following native inspect/apply seed operation.
           await save(ticket)
-          if (widget === 'indices') {
+          const seed = homeGuideNativeBoardWidgetSeed(node.containerSpec, provider.symbols)
+          if (seed) {
             const state = await workspace.canvasAction('inspect', { ids: [node.id] }); await playing(ticket)
-            const symbols = [...node.containerSpec.symbols, ...[['^GSPC','标普500'],['^IXIC','纳斯达克综合指数'],['^NDX','纳斯达克100'],['^RUT','罗素2000']].map(([code,name])=>({market:'INDEX',code,name}))]
-            await workspace.canvasAction('apply', { requestId: detail.requestId + ':indices', revision: state.revision, changes: [{op:'update',id:node.id,fields:{containerSpec:{...node.containerSpec,symbols}}}] }, { silent:true, isCancelled:()=>ticket.controller.signal.aborted })
-          }
-          if (widget === 'watchlist') {
-            const state = await workspace.canvasAction('inspect', { ids: [node.id] }); check(ticket)
-            await playing(ticket)
-            await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: { ...node.containerSpec, symbols: provider.symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true } } }] }, { silent:true, isCancelled: () => ticket.controller.signal.aborted })
+            await workspace.canvasAction('apply', { requestId: detail.requestId + ':seed', revision: state.revision, changes: [{ op: 'update', id: node.id, fields: { containerSpec: seed } }] }, { silent:true, isCancelled: () => ticket.controller.signal.aborted })
           }
         }
         // Prefer native sizes, fitting a usable neighbour slot before wrapping.
@@ -968,7 +973,7 @@ export function stripHomeGuideNative(source) {
 /** Add an isolated native React portal without replacing any conversation child. */
 export function patchHomeGuideNative(source) {
   if (source.includes(START)) source = stripHomeGuideNative(source)
-  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\nconst homeGuideNativePreviewOwnerListeners = new WeakMap();\n' + [homeGuideNativePreviewOwner,subscribeHomeGuideNativePreviewOwner,createHomeGuideNativeOwnedResource,homeGuideNativeBoardSymbols, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, useHomeGuideNativeCompleteDraft, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, revealHomeNotesGuideSummary, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
+  const definitions = START + '\nconst homeGuideNativeSmartPath='+JSON.stringify(homeGuideNativeSmartPath)+';\nconst homeGuideNativeSmartPrompt='+JSON.stringify(homeGuideNativeSmartPrompt)+';\nconst HomeGuideNativeFinancialContext = react.createContext(null);\nlet homeGuideNativeSharedResource = null;\nconst homeGuideNativePreviewOwnerListeners = new WeakMap();\n' + [homeGuideNativePreviewOwner,subscribeHomeGuideNativePreviewOwner,createHomeGuideNativeOwnedResource,homeGuideNativeBoardSymbols, homeGuideNativeBoardWidgetSeed, homeGuideNativeSampleProvider, homeGuideNativeResource, useHomeGuideNativeFinancialProvider, ResearchCanvas, useHomeGuideNativeCompleteDraft, FinancialWidget, FinancialLibrary, homeGuideNativeResidentSession, homeGuideNativeSidebarSession, useHomeGuideNativeResident, useHomeGuideNativeResearchActivation, NativeHomeGuidePortal, revealHomeNotesGuideSummary, NativeHomeNotesGuidePortal, ConversationRoot].map(fn => fn.toString()).join('\n') + '\n' + END
   if (source.includes(START)) {
     const first = source.indexOf(START), end = source.indexOf(END, first)
     if (end < 0 || source.indexOf(START, first + START.length) >= 0 || !source.includes('function HomeGuideNativeOriginalConversationRoot(')) throw Error('Home guide native refresh anchor drifted')

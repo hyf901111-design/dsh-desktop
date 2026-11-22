@@ -7,7 +7,7 @@ export function financialWidgetSources(spec){
  if(spec.widget==='quote'&&spec.symbols?.[0]?.market==='CRYPTO')
   return [{id:'kraken',name:'Kraken'},{id:'bitfinex',name:'Bitfinex'}]
  if(['watchlist','quote','indices'].includes(spec.widget)){
-  const sources=[{id:'default',name:spec.widget==='indices'?'腾讯财经 / Yahoo Finance':'腾讯财经'},{id:'backup',name:spec.widget==='indices'?'新浪财经 / 东方财富 / Yahoo Finance':'新浪财经 / Yahoo Finance'}]
+  const sources=[{id:'default',name:spec.widget==='indices'?'腾讯财经 / Yahoo Finance':'腾讯财经'},{id:'backup',name:spec.widget==='indices'?'新浪财经 / 东方财富 / Cboe / Yahoo Finance':'新浪财经 / Yahoo Finance'}]
   if(spec.widget==='quote'&&['SH','SZ','BJ'].includes(spec.symbols?.[0]?.market))
    sources.push({id:'tushare',name:'Tushare · 收盘日线'},{id:'datapro',name:'火山方舟专业数据集 · 收盘日线'})
   return sources
