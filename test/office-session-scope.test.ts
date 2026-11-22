@@ -116,3 +116,31 @@ it('rebuilds a legacy cold checkpoint using its listed artifact once, including 
   expect(readFrom).not.toHaveBeenCalled()
   expect(method.putSoft).toHaveBeenCalledOnce()
 })
+
+it('finds historical deck titles before opening while preserving an explicit sidebar rename, including the same placeholder', () => {
+  const events = [{type:'session/title',seq:1,data:{title:'新演示'}}, {type:'workspace-presentation/created',seq:2,data:{titleSeq:1}},
+    {type:'workspace-presentation/edited',seq:3,data:{}}]
+  const rows = [
+    {sessionId:'legacy',title:'新演示',projectionValues:{sessionListMetadata:metadata(events)}},
+    {sessionId:'custom',title:'新演示',projectionValues:{sessionListMetadata:metadata([...events,{type:'session/title',seq:4,data:{title:'新演示'}}])}},
+    {sessionId:'named',title:'项目留档',projectionValues:{sessionListMetadata:metadata([...events,{type:'session/title',seq:4,data:{title:'项目留档'}}])}},
+    {sessionId:'empty',title:'',projectionValues:{sessionListMetadata:metadata([events[2]])}}
+  ]
+  const dir = mkdtempSync(join(tmpdir(),'office-deck-')); dirs.push(dir)
+  const store = new PresentationStore(dir)
+  try {
+    for (const {sessionId} of rows) store.save({owner:'local',sessionId},0,blankDeck('QA季度回顾'),true)
+    const access = new OfficeSessionAccess(()=>'local',(owner,sessionId,mode)=>mode==='presentation' && store.hasRecord({owner,sessionId}),
+      ()=>[],(owner,sessionId)=>store.activeTitle({owner,sessionId}))
+    let shown: any
+    const methods = runInNewContext('new (class { '+clientMethods+' })()',{
+      window:{dshDesktop:{officeSessions:{check:(rows:unknown)=>access.check(rows)}}},displayTitleOf:(title:string)=>title
+    })
+    Object.assign(methods,{manager:{getListSnapshot:()=>({items:rows,subagentsByParent:{}})},selection:{getSnapshot:()=>({})},
+      panelLeases:new Map(),officeCache:new Map(),officeHidden:new Map(),list:{set:(value:any)=>{shown=value}},pruneScopes(){}})
+    methods.projectList()
+    expect(shown.byId.custom.title).toBe('新演示')
+    expect(shown.byId.named.title).toBe('项目留档')
+    expect(sidebarSearchResults({boards:[],favorites:[]} as any,shown.byId,[],'QA季度回顾').map(i=>i.sessionId)).toEqual(['empty','legacy'])
+  } finally {store.close()}
+})

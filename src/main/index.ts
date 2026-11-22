@@ -1508,7 +1508,7 @@ async function bootstrap(): Promise<void> {
       return noteSessionTitle(note.title, note.blocks) || '新笔记'
     }
     if (mode === 'spreadsheet') return knowledgeWorkbooks.load({owner, sessionId}).workbook?.name || '新表格'
-    return presentationStore.recent({owner, sessionId})[0]?.title || '新演示'
+    return presentationStore.activeTitle({owner, sessionId})
   }, id => researchCanvasStorage.getItem('ework.session.view.v1:' + id))
   registerTrustedMainWindowListener(ipcMain, 'office-sessions:identity', () => mainWindow, () => officeSessions.identity(), null)
   registerTrustedMainWindowListener(ipcMain, 'office-sessions:check', () => mainWindow, (_event, rows) => officeSessions.check(rows), null)

@@ -26,12 +26,12 @@ export class OfficeSessionAccess {
     const result: Record<string, Access> = Object.create(null)
     for (const row of rows) {
       if (!Array.isArray(row)) continue
-      const [id, scope] = row
+      const [id, scope, needsDeckTitle] = row
       if (typeof id !== 'string' || !id || id.length > 256 || !scope || typeof scope !== 'object' ||
           !Object.entries(scope).every(([mode, value]) => (modes.some(m => m === mode) || mode === 'unavailable' || mode === 'copy') &&
             (value === 'legacy' || typeof value === 'string' && /^[a-f0-9]{64}$/.test(value)))) continue
       try {
-        result[id] = this.project(id, scope, owner, accounts)
+        result[id] = this.project(id, scope, owner, accounts, needsDeckTitle === true)
       } catch {
         this.scopes.set(id, {unavailable:'legacy'})
         result[id] = {reason:'unavailable'}
@@ -40,7 +40,7 @@ export class OfficeSessionAccess {
     return result
   }
 
-  private project(id: string, scope: Scope, owner: string | undefined, accounts: string[]): Access {
+  private project(id: string, scope: Scope, owner: string | undefined, accounts: string[], needsDeckTitle: boolean): Access {
     const {copy, ...documents} = scope
     if (copy) {
       const view = this.savedView?.(id)
@@ -58,6 +58,10 @@ export class OfficeSessionAccess {
     // session id. That session has just one global title. For those rows,
     // derive the label exclusively from this identity's document.
     const mode = modes.find(kind => documents[kind] && this.hasRecord(owner, id, kind))
+    if (needsDeckTitle && documents.presentation && this.hasRecord(owner, id, 'presentation')) {
+      const title = this.documentTitle(owner, id, 'presentation')
+      if (title && title !== '未命名演示文稿') return {reason, title}
+    }
     if (mode && accounts.some(other => other !== owner && modes.some(kind => this.hasRecord(other, id, kind))))
       return {reason, title:this.documentTitle(owner, id, mode)}
     return {reason}
