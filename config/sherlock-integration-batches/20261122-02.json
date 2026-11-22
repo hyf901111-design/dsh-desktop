@@ -394,6 +394,61 @@
         ],
         "recordedAt": "2026-11-22T13:43:25.060Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "图表实时更新时让演示继续连接行情组件",
+        "branch": "codex/feat/board-live-quote-selection-20261122",
+        "baseCommit": "cf659a1d3f10a4be3778ff78226d6dedef9d117f",
+        "tipCommit": "e28a198cb64101f5c53a64d88475c01e778a1714",
+        "commits": [
+          {
+            "commit": "e28a198cb64101f5c53a64d88475c01e778a1714",
+            "parents": [
+              "cf659a1d3f10a4be3778ff78226d6dedef9d117f"
+            ],
+            "subject": "修复实时行情图表加载时打断研究看板演示连线"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-native.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/home-guide-native.test.js",
+              "-t",
+              "uses actual native components|patches installed native code|shows and commits each port"
+            ],
+            "outcome": "passed",
+            "summary": "组件联动、原生点选和升级补丁的三项聚焦验证通过。",
+            "verifiedCommit": "e28a198cb64101f5c53a64d88475c01e778a1714",
+            "completedAt": "2026-11-22T13:54:08.902120+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原生组件交互测试中，演示点击自选计数和报价栏，依次完成看板连接。已在桌面客户端复现旧图表覆盖点选区域。"
+        },
+        "acceptanceCriteria": [
+          "真实行情返回后可从图像进入探索并完成自选行情看板",
+          "实时图表加载不能阻止用户看到自选到行情、行情到资讯与公告的连线"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-22T13:54:08.902120+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -441,6 +496,17 @@
         "test/financial-widget-kraken.test.ts",
         "test/financial-widget-bitfinex.test.ts",
         "test/financial-widget-futures.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/home-guide-native.test.js",
+        "-t",
+        "uses actual native components|patches installed native code|shows and commits each port"
       ],
       "timeoutMs": 180000
     }
