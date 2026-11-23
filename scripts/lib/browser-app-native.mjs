@@ -374,6 +374,12 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
    this.notify('error','正在创建图片任务，输入已保留。');return;
  }
                 `+sharedSubmit)
+ // A send may spend time resolving references and encoding attachments before
+ // the native prompt RPC can put the message into the conversation timeline.
+ const admissionStart='flights.set(admissionKey, admissionToken);'
+ replace(admissionStart,admissionStart+'\n    const finishImageSubmission = eworkImageFactory?.beginSubmission(session.sessionId);')
+ const admissionEnd='if (flights.get(admissionKey) === admissionToken) flights.delete(admissionKey);'
+ replace(admissionEnd,admissionEnd+' finishImageSubmission?.();')
  const committing='shell?.commitSend(attempt.imageIds, attempt.draftState.draft);'
  replace(committing,`window[Symbol.for('sherlock:browser-question')]?.admitting(shell,attempt.draftState,attempt.imageIds);\n\t\t\t\t`+committing)
  const admitted='const admittedSend = await this.conversation().sendSession(attempt.session, prompt, attempt.imageIds, attempt.mode);'
@@ -396,6 +402,11 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  const composerApp=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:workspace-surface-change',callback);return()=>document.removeEventListener('sherlock:workspace-surface-change',callback)},()=>subagentPanel?undefined:document.body.dataset.workspaceSurface,()=>undefined);
  const browserTabId=react.useSyncExternalStore(callback=>{document.addEventListener('sherlock:browser-active-tab-change',callback);return()=>document.removeEventListener('sherlock:browser-active-tab-change',callback)},()=>composerApp==='browser'?document.body.dataset.browserActiveTab:undefined,()=>undefined);
  const imageFactoryActive=composerApp==='image-factory';
+ const imageSubmitting=react.useSyncExternalStore(
+  imageFactoryActive&&eworkImageFactory?.subscribe || (()=>()=>{}),
+  ()=>imageFactoryActive && eworkImageFactory?.isSubmitting(sessionId)===true,
+  ()=>false
+ );
  const imageTaskCreating=react.useSyncExternalStore(
   imageFactoryActive&&eworkImageFactory?.subscribe || (()=>()=>{}),
   ()=>imageFactoryActive && eworkImageFactory?.getSnapshot().creating===true,
@@ -439,6 +450,9 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  const rightProjectDraft=rightProjectContext&&rightDraft?.sessionId===sessionId&&rightDraft?.mode===rightProjectMode&&rightDraft?.tabId===browserTabId?rightDraft:undefined;
  const rightPending=rightProjectDraft?.pending;
  const rightPendingState=react.useSyncExternalStore(rightPending?.subscribe||(()=>()=>{}),rightPending?.getSnapshot||(()=>undefined));
+ const imagePreparing=imageFactoryActive && (imageSubmitting ||
+  pendingChatState?.busy && (pendingConversation || pendingChatState.rightSession===sessionId) ||
+  rightPendingState?.busy || inputState?.phase==='adjudicating' || inputState?.phase==='submitting' || inputState?.researchContextPreparing);
  const switchingRightWorkspace=imageWorkspaceSwitching||rightPendingState?.activating||pendingConversation&&pendingChatState?.activating;
  react.useLayoutEffect(()=>{
   if(subagentPanel)return;
@@ -476,6 +490,8 @@ ctx.inject(['inputTriggers'],scope=>scope.effect(()=>scope.get('inputTriggers').
  replace(composerProps,composerProps.replace('zone,','zone:rightProjectDraft?undefined:zone,'));
  replace('\n\t\t\t\theroWorkspaceRow,\n\t\t\t\trenderSlot,','\n\t\t\t\theroWorkspaceRow:sidebarMode?rightWorkspaceRow:heroWorkspaceRow,\n\t\t\t\trenderSlot,');
  replace(inputRow,inputRow+`
+ accessory:imagePreparing ? react_jsx_runtime.jsx('span',{role:'status','data-image-submission-status':'',
+  children:document.documentElement.dataset.odysseyLocale==='en'?'Sending your message…':'正在发送你的指令…'}) : undefined,
  pendingConversation:pendingConversation||!!rightProjectDraft,rightProjectDraft,eworkImageFactory:imageFactoryActive,`)
  replace('const zone = session === void 0 || inputState === void 0 ? void 0 : {','const zone = !pendingConversation && session === void 0 || inputState === void 0 ? void 0 : {')
  replace('session,\n\t\t\t\tinput: activeView', 'session,\n ...(pendingConversation?{inputActions:eworkPendingConversation.shell.actions,useInput:select=>select(pendingDraft)}:{}),\n\t\t\t\tinput: activeView')

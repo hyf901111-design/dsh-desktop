@@ -11,7 +11,7 @@ export function installImageFactoryContext({
   sessions, getInput, getPending, send, doc = document, win = window, encodePrompt = imageFactoryPrompt,
   getTaskWorkspace, getDefaultWorkspace, standaloneDirectory, setTaskView, getTaskView, taskStorage, archiveTask, removeProvisionalReference, isBoardOnly = () => false,
 }) {
-  const jobs = new Map(), listeners = new Set()
+  const jobs = new Map(), listeners = new Set(), submissions = new Map()
   let canvasState = { current: false, busy: false }, state = { ...canvasState, creating: false, switchingWorkspace: false }
   let galleryDrafts = new WeakMap(), draftOwner, workspaceChange
   const isActive = () => doc.body.dataset.workspaceSurface === 'image-factory'
@@ -19,6 +19,15 @@ export function installImageFactoryContext({
   const canvasScope = () => {
     const id = currentId()
     return id && id !== draftOwner && !isBoardOnly(id) ? id : null
+  }
+  function beginSubmission(sessionId) {
+    if (!isActive() || currentId() !== sessionId) return
+    const token = {}
+    submissions.set(token, sessionId)
+    for (const listener of listeners) listener()
+    return () => {
+      if (submissions.delete(token)) for (const listener of listeners) listener()
+    }
   }
   const pendingCreated = ({ detail }) => {
     // Only the first-message handoff may carry the standalone canvas into a session.
@@ -287,21 +296,22 @@ export function installImageFactoryContext({
   }
   async function prompt(session, content, mode, action) {
     const finishAdmission = tasks.admission(session.sessionId)
+    const finishFeedback = beginSubmission(session.sessionId)
     let next
-    try { next = await prepare(session.sessionId, content, action) }
-    catch (error) {
-      finishAdmission(false)
-      if (content.some(part => part.type === 'text' && imageLayerReferenceParts(part.text).length))
-        getInput(session.sessionId)?.notify('error', error.message)
-      throw error
-    }
     try {
+      try { next = await prepare(session.sessionId, content, action) }
+      catch (error) {
+        if (content.some(part => part.type === 'text' && imageLayerReferenceParts(part.text).length))
+          getInput(session.sessionId)?.notify('error', error.message)
+        throw error
+      }
       if (next.id) watch(session, jobs.get(next.id))
       const result = await session.prompt(next.content, mode)
       finishAdmission(result.ok)
       if (!result.ok && next.id) finish(next.id)
       return result
-    } catch (error) { finishAdmission(false); if (next.id) finish(next.id); throw error }
+    } catch (error) { finishAdmission(false); if (next?.id) finish(next.id); throw error }
+    finally { finishFeedback?.() }
   }
   async function submitCanvasAction(event, operation) {
     const { id, prompt: text } = event.detail ?? {}
@@ -436,6 +446,8 @@ export function installImageFactoryContext({
   const offSession = sessions.list.subscribe?.(() => { tasks.observe(); syncSession(); syncLayerPreview() })
   const reset = () => {
     for (const id of jobs.keys()) finish(id, false)
+    submissions.clear()
+    for (const listener of listeners) listener()
     galleryDrafts = new WeakMap()
     clearLayerPreview()
     publishedScope = intendedCanvas = draftOwner = workspaceChange = undefined
@@ -472,6 +484,7 @@ export function installImageFactoryContext({
   if (archiveTask && taskStorage?.hasCanvas) tasks.load()
   syncSession()
   return {
+    beginSubmission, isSubmitting: sessionId => [...submissions.values()].includes(sessionId),
     prompt, fill, focus, switchWorkspace, confirmLayerPreview, clearLayerPreview, action: kind => { if (!tasks.isCreating()) signal('action', { kind }) },
     getSnapshot: () => state, subscribe: listener => { listeners.add(listener); return () => listeners.delete(listener) },
     dispose() {

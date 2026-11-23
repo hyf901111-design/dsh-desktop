@@ -370,6 +370,88 @@ it('opens the native command menu for a selected browser project without sending
  } finally { await page.close() }
 },15000);
 
+it('acknowledges Enter immediately while the first image chat is still creating its session', async () => {
+ const page=await browser.newPage({viewport:{width:1180,height:800}})
+ try {
+  await page.route('http://127.0.0.1/image-first', route=>route.fulfill({contentType:'text/html',body:
+   '<style>'+css+'#app{height:100vh;width:66%}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>'}))
+  await page.goto('http://127.0.0.1/image-first')
+  await page.evaluate(value=>{window.pendingInput={...value,recentWorkspaceId:'A',
+   beforeCreate:()=>new Promise(resolve=>{window.releaseFirstImageSession=resolve})}},input)
+  await page.addScriptTag({content:script})
+  await page.evaluate(()=>window.pendingFixture.openSurface('image-factory'))
+  const composer=page.locator('#right textarea')
+  await composer.fill('第一张自定义海报')
+  await composer.press('Enter')
+  const receipt=page.locator('#right [data-image-submission-status]')
+  await receipt.waitFor()
+  expect(await page.evaluate(()=>window.pendingFixture.current.current)).toBeUndefined()
+  await page.evaluate(()=>window.releaseFirstImageSession())
+  await expect.poll(()=>page.evaluate(()=>window.pendingFixture.events.filter(event=>event.type==='send'))).toEqual([
+   {type:'send',text:'第一张自定义海报',images:[]}
+  ])
+  await receipt.waitFor({state:'hidden'})
+ } finally {await page.close()}
+},12000)
+
+it('shows image chat admission, restores a custom canvas ratio and outlines only the base pixels', async () => {
+ const page = await browser.newPage({viewport:{width:1680,height:920}})
+ const errors = []
+ page.on('pageerror', error => errors.push(error.message))
+ page.setDefaultTimeout(5000)
+ try {
+  await page.route('http://127.0.0.1/image-feedback', route => route.fulfill({contentType:'text/html', body:
+   '<style>'+css+'body{margin:0}#app{height:100vh;width:1200px}#right{position:fixed;right:10px;top:10px;bottom:10px;width:340px}</style><div id="app" class="pI_x6G_centerCol"></div><aside id="right" class="t8lSSG_panel"><div id="right-body" class="t8lSSG_panelBody"></div></aside>'}))
+  await page.goto('http://127.0.0.1/image-feedback')
+  await page.evaluate(value => {window.pendingInput={...value,recentWorkspaceId:'A',verifyRightProject:true,realImageTabs:true}},input)
+  await page.addScriptTag({content:script})
+  await page.evaluate(() => window.pendingFixture.openSurface('image-factory'))
+  const surface = page.locator('.image-factory')
+  await surface.getByRole('tab').first().waitFor()
+  // Keep native admission pending while the mounted right composer paints.
+  await page.evaluate(() => {
+   const {current, imageFactory}=window.pendingFixture
+   const session={sessionId:current.current, prompt:()=>new Promise(resolve=>{window.admitImageMessage=()=>resolve({ok:true})})}
+   window.imageMessage=imageFactory.prompt(session,[{type:'text',text:'只讨论构图，不要出图。'}],'queue')
+  })
+  const receipt=page.locator('#right [data-image-submission-status]')
+  await receipt.waitFor()
+  expect(await receipt.innerText()).toContain('正在发送')
+  await page.evaluate(() => {window.admitImageMessage();return window.imageMessage})
+  await receipt.waitFor({state:'hidden'})
+  const png=await page.evaluate(() => {
+   const canvas=document.createElement('canvas');canvas.width=257;canvas.height=389
+   canvas.getContext('2d').fillRect(0,0,257,389)
+   return canvas.toDataURL().split(',')[1]
+  })
+  await surface.locator('input[type=file]').setInputFiles({name:'自定义海报.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')})
+  const readout=surface.locator('.if-canvas-readout')
+  await expect.poll(()=>readout.textContent()).toContain('257 × 389')
+  const ratio=surface.getByRole('button',{name:'画布比例',exact:true})
+  await ratio.click()
+  await page.getByRole('menu',{name:'画布比例'}).getByText('16:9',{exact:true}).click()
+  await expect.poll(()=>readout.textContent()).toContain('1600 × 900')
+  const image=surface.locator('.if-image-layer')
+  await image.click()
+  const outline=surface.locator('[data-selected-layer-outline]')
+  expect(await outline.boundingBox()).toEqual(await image.boundingBox())
+  expect((await outline.boundingBox()).width).toBeLessThan((await surface.locator('.if-raster').boundingBox()).width)
+  await surface.locator('.if-stage-scroll').click({position:{x:4,y:4}})
+  await outline.waitFor({state:'hidden'})
+  await surface.locator('[data-drawer-tab=layers]').click()
+  await surface.locator('.if-layer-name').filter({hasText:'图片'}).click()
+  expect(await outline.boundingBox()).toEqual(await image.boundingBox())
+  await ratio.click()
+  await page.getByRole('menu',{name:'画布比例'}).getByText('恢复原比例',{exact:true}).click()
+  await expect.poll(()=>readout.textContent()).toContain('257 × 389')
+  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:image-factory-task-error',{detail:{message:'示例提示'}})))
+  const notice=await surface.locator('.if-toast').boundingBox(),header=await surface.locator('.if-top').boundingBox()
+  expect(Math.abs(notice.x+notice.width/2-header.x-header.width/2)).toBeLessThan(1)
+  expect(notice.y-header.y-header.height).toBeCloseTo(8,0)
+  expect(errors).toEqual([])
+ } finally {await page.close()}
+},16000)
+
 it('switches workspaces in place and restores the matching workspace when selecting each image tab', async () => {
  const page=await browser.newPage({viewport:{width:1180,height:800}}), errors=[];
  page.setDefaultTimeout(5000);

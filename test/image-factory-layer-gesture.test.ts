@@ -857,6 +857,10 @@ it('marquee-selects enclosed canvas elements and adds another element with Shift
     expect(ratios.every(button => button.querySelector('.if-ratio-icon'))).toBe(true)
     await act(() => ratios.find(button => button.textContent?.trim() === '16:9')!.click())
     expect(document.querySelector('.if-canvas-readout')?.textContent).toContain('1600 × 900 px')
+    expect(write.mock.calls.at(-1)?.[0].canvas.originalSize).toEqual({ width: 1000, height: 1000 })
+    await act(() => document.querySelector<HTMLButtonElement>('[aria-label="画布比例"]')!.click())
+    await act(() => [...document.querySelectorAll<HTMLButtonElement>('[role="menu"] button')].find(button => button.textContent?.trim() === '恢复原比例')!.click())
+    expect(document.querySelector('.if-canvas-readout')?.textContent).toContain('1000 × 1000 px')
   } finally {
     await act(() => factory.dispose())
     host.dispose()

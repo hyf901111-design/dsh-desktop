@@ -37,6 +37,7 @@ function readMetadata(value: unknown): StoredCanvas {
   if (!canvas || canvas.version !== 1 || !validId(canvas.id) || typeof canvas.title !== 'string' ||
       !canvas.title.trim() || canvas.title.length > 255 || !validCanvasSize(canvas.width, canvas.height) ||
       !Array.isArray(canvas.layers) || canvas.layers.length > maximumCanvasLayers ||
+      (canvas.originalSize !== undefined && !validCanvasSize(canvas.originalSize?.width, canvas.originalSize?.height)) ||
       (canvas.aiWatermark !== undefined && canvas.aiWatermark !== true) ||
       (canvas.editedInSession !== undefined && canvas.editedInSession !== true)) throw Error('画布数据无效。')
   const ids = new Set<string>()
@@ -69,6 +70,7 @@ function readMetadata(value: unknown): StoredCanvas {
   })
   if (layers.some(layer => 'groupId' in layer && layer.groupId && ids.has(layer.groupId))) throw Error('画布图层编组无效。')
   return { version: 1, id: canvas.id, title: canvas.title, width: canvas.width, height: canvas.height, layers,
+    ...(canvas.originalSize && { originalSize: { width: canvas.originalSize.width, height: canvas.originalSize.height } }),
     ...(canvas.aiWatermark && { aiWatermark: canvas.aiWatermark }),
     ...(canvas.editedInSession && { editedInSession: canvas.editedInSession }),
   }

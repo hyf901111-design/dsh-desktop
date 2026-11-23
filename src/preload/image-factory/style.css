@@ -114,7 +114,8 @@
   background:var(--if-main);color:var(--if-muted);font-size:12px;pointer-events:none}
 .if-canvas-status .if-zoom {display:flex;align-items:center;gap:3px;pointer-events:auto}
 .if-zoom .if-button {height:27px;min-width:24px;padding:0 5px}
-.if-toast {position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);width:max-content;
+body[data-workspace-surface="image-factory"] [data-image-submission-status] {display:block;font-size:12px;color:var(--sherlock-text-secondary,currentColor)}
+.if-toast {position:absolute;z-index:6;left:50%;top:calc(var(--odyssey-workspace-header-height,44px) + 8px);transform:translateX(-50%);width:max-content;
   max-width:calc(100% - 32px);padding:7px 12px;text-align:center;pointer-events:none;background:var(--if-field);
   border:1px solid var(--if-line);border-radius:8px;box-shadow:0 5px 20px #0003;overflow-wrap:anywhere}
 @media(max-width:850px){.if-toolbar{padding-inline:8px;gap:4px}.if-top-title{border:0;padding-left:0}.if-stage-scroll{padding:12px}}

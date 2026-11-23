@@ -8,7 +8,14 @@ export { imageFonts, type TextLayer }
 
 export type ImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType; data: Uint8Array; raster: Raster }
 export type CanvasLayer = ImageLayer | TextLayer | BrandOverlay
-export type ImageScene = Size & { id: string; title: string; layers: CanvasLayer[]; aiWatermark?: true }
+export type ImageScene = Size & { id: string; title: string; layers: CanvasLayer[]; aiWatermark?: true; originalSize?: Size }
+
+export function originalCanvasSize(scene: ImageScene): Size {
+  if (scene.originalSize) return scene.originalSize
+  const image = scene.layers.find(layer => layer.kind === 'image')
+  const { width, height } = image?.raster ?? scene
+  return { width, height }
+}
 export const textResizeHandles = ['nw', 'ne', 'w', 'e', 'sw', 'se'] as const
 export type TextResizeHandle = typeof textResizeHandles[number]
 
