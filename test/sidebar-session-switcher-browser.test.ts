@@ -66,11 +66,22 @@ async function fixture() {
 it('switches in live board and workspace groups while the native sidebar stays folded', async () => {
   const { page, home, panel } = await fixture()
   try {
+    await page.setViewportSize({ width: 780, height: 340 })
     await home.hover()
     await panel.waitFor()
     const box = await home.boundingBox(), list = await panel.boundingBox()
+    expect(list.y).toBe(0)
+    expect(await panel.evaluate((el: HTMLElement) => ({
+      scrollbar: getComputedStyle(el).scrollbarWidth,
+      blur: getComputedStyle(el).backdropFilter
+    }))).toEqual({ scrollbar: 'none', blur: 'blur(24px)' })
+    await panel.hover()
+    await page.mouse.wheel(0, 250)
+    await expect.poll(() => panel.evaluate((el: HTMLElement) => el.scrollTop)).toBeGreaterThan(0)
+    await page.mouse.wheel(0, -600)
+    await expect.poll(() => panel.evaluate((el: HTMLElement) => el.scrollTop)).toBe(0)
     expect(list.x).toBeGreaterThan(box.x + box.width)
-    expect(list.y + list.height).toBeLessThanOrEqual(473)
+    expect(list.y + list.height).toBe(332)
     await page.mouse.move((box.x + box.width + list.x) / 2, box.y + 10)
     await page.waitForTimeout(280)
     await panel.getByRole('heading', { name: '产品研究' }).hover()
@@ -124,7 +135,7 @@ it('keeps the empty panel usable in English and dark appearance', async () => {
     })
     const empty = page.getByRole('navigation', { name: 'Switch conversation' })
     await empty.getByText('No conversations yet').waitFor()
-    expect(await empty.evaluate((el: HTMLElement) => getComputedStyle(el).backgroundColor)).toBe('rgb(39, 40, 43)')
+    expect(await empty.evaluate((el: HTMLElement) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0.66)')
     await home.focus(); await page.keyboard.press('ArrowDown')
     expect(await empty.evaluate((el: HTMLElement) => el === document.activeElement)).toBe(true)
     await page.keyboard.press('Escape')
