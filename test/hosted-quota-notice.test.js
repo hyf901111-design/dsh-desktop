@@ -67,7 +67,10 @@ it('shows turn interruptions in normal reply prose without leaking runtime excep
   const root = createRoot(host)
   try {
     for (const [code, expected] of [
-      ['UNKNOWN', /这轮任务没有顺利完成/],
+      ['UNKNOWN', /任务在执行中中断了/],
+      ['SERVER', /模型服务暂时出错/],
+      ['HOSTED_AI_DUPLICATE', /已经受理/],
+      ['TIMEOUT', /响应超时/],
       ['TRANSPORT', /模型连接中断了/],
       ['AI_QUOTA_FIVE_HOUR', /输入框上方查看/],
     ]) {
@@ -128,3 +131,53 @@ it('aligns the quota notice with both edges of the input card', async () => {
     await browser.close()
   }
 }, 15000)
+
+it('continues only the latest interrupted conversation through its composer and preserves other pending input', async () => {
+  const installed = readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js', 'utf8')
+  const patched = patchConversationFailureCopy(patchHostedQuotaNotice(installed))
+  expect(patched).toContain('}, ConversationTaskDock));')
+  const start = patched.indexOf('function interruptedTurnKey(')
+  const end = patched.indexOf('function ConversationTaskDock(', start)
+  const Action = new Function('react', 'react_jsx_runtime', 'sherlockShared', 'sherlockBoardsAdapter',
+    patched.slice(start, end) + '\nreturn InterruptedTurnAction;')(react, jsx, id => id === 'shared', { getView: () => ({ permissions: { edit: false } }) })
+  const dom = new JSDOM('<div id="app"></div>')
+  vi.stubGlobal('window', dom.window)
+  vi.stubGlobal('document', dom.window.document)
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  const host = document.getElementById('app'), root = createRoot(host)
+  const failure = { key: 'error-1', kind: 'turn-error', data: { code: 'TRANSPORT' } }
+  const session = { sessionId: 'test', chat: { order: ['error-1'], nodes: new Map([['error-1', failure]]) } }
+  const input = { phase: 'plain', draft: '', draftRev: 2 }
+  const actions = { setDraft: vi.fn(), submit: vi.fn() }
+  const render = (change = {}, edit = {}) => react.act(() => root.render(jsx.jsx(Action, {
+    useSession: select => select({ ...session, ...change }),
+    useInput: select => select({ ...input, ...edit }), inputActions: actions
+  })))
+  try {
+    await render()
+    expect(host.textContent).toBe('继续任务')
+    for (const edit of [{ draft: '保留草稿' }, { occurrences: ['file'] }, { imageIds: ['image'] }, { phase: 'submitting' }]) {
+      await render({}, edit)
+      expect(host.querySelector('button').disabled).toBe(true)
+      host.querySelector('button').click()
+    }
+    expect(actions.setDraft).not.toHaveBeenCalled()
+    await render()
+    host.querySelector('button').click()
+    host.querySelector('button').click()
+    expect(actions.setDraft).toHaveBeenCalledExactlyOnceWith('请从上次中断的地方继续。先核对已有结果和已执行的操作，再完成剩余工作。')
+    expect(actions.submit).toHaveBeenCalledTimes(1)
+    for (const change of [{ running: true }, { queue: ['waiting'] }, { sessionId: 'shared' }, { sessionId: 'knowledge-view:demo' },
+      { chat: { ...session.chat, order: ['error-1', 'new'], nodes: new Map([...session.chat.nodes, ['new', { kind: 'user' }]]) } }]) {
+      await render(change)
+      expect(host.querySelector('button')).toBeNull()
+    }
+    failure.data.code = 'AI_QUOTA_MONTH'
+    await render()
+    expect(host.querySelector('button')).toBeNull()
+  } finally {
+    await react.act(() => root.unmount())
+    vi.unstubAllGlobals()
+    dom.window.close()
+  }
+})

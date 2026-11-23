@@ -83,6 +83,12 @@ body .odyssey-hosted-quota-notice button {
   border:0; border-radius:6px; padding:4px 6px; background:none; color:inherit; font:inherit; cursor:pointer;
 }
 body .odyssey-hosted-quota-notice button:hover { background:var(--odyssey-menu-row); }
+body .odyssey-interrupted-turn-action {
+  align-self:center; margin:0 0 4px; padding:5px 12px; border:0; border-radius:7px;
+  background:var(--dsw-alias-interactive-bg-hover); color:var(--dsw-alias-label-primary);
+  font:inherit; font-size:13px; cursor:pointer;
+}
+body .odyssey-interrupted-turn-action:disabled { opacity:.5; cursor:default; }
 body .odyssey-conversation-failure { margin:0; color:var(--odyssey-text); font:400 15px/26px var(--odyssey-font-ui); }
 body .lXshSW_body { padding:0; gap:0; }
 body [data-odyssey-task-header-row] { position:relative; min-width:0; }
