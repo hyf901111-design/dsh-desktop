@@ -9,86 +9,57 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "窗口拖动异常、模型中断恢复及主页会话浮层",
+        "featureName": "主页悬停磨砂面板与浏览器完整表格",
         "branch": "codex/feat/workspace-improvements-20261123",
-        "baseCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-        "tipCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
+        "baseCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
+        "tipCommit": "ec22893ad6d6711b40b8ffa3c194173af2919a5c",
         "commits": [
           {
-            "commit": "be4a924678733ed7201bd6655aa59850ee03a5eb",
+            "commit": "9eeeebd2c8a5c058504388ff5fff5b8e205abf8a",
             "parents": [
-              "f52283b9dea36d6ceaf2ff8e11f49141f362db57"
+              "9a3362c9126deb2f906a4d793d7a42682832fa6e"
             ],
-            "subject": "修复 macOS 窗口跨屏幕原点拖动时的坐标转换异常"
+            "subject": "调整主页会话浮层磨砂底色并支持分组独立折叠"
           },
           {
-            "commit": "cff152c92993aacaa5238817ccd82190a02dfefa",
+            "commit": "bfe4176f5597399b9cda937b8ab246d8c5efac04",
             "parents": [
-              "be4a924678733ed7201bd6655aa59850ee03a5eb"
+              "9eeeebd2c8a5c058504388ff5fff5b8e205abf8a"
             ],
-            "subject": "让主页会话浮层贴合侧栏与主内容上沿"
+            "subject": "在实时网页上方显示可滚动的完整表格弹窗"
           },
           {
-            "commit": "474cd54d8818238357dfa947dbb045e4826cb06c",
+            "commit": "ec22893ad6d6711b40b8ffa3c194173af2919a5c",
             "parents": [
-              "cff152c92993aacaa5238817ccd82190a02dfefa"
+              "bfe4176f5597399b9cda937b8ab246d8c5efac04"
             ],
-            "subject": "固定会话浮层测试的窗口尺寸元组类型"
-          },
-          {
-            "commit": "f3422f291c2a61bb733aa7ac22a702c7a4d391f3",
-            "parents": [
-              "474cd54d8818238357dfa947dbb045e4826cb06c"
-            ],
-            "subject": "在托管模型接收首包前按原请求标识恢复临时断线"
-          },
-          {
-            "commit": "d049d6fd3f4081007e7e27f4fa2312e6fd936d24",
-            "parents": [
-              "f3422f291c2a61bb733aa7ac22a702c7a4d391f3"
-            ],
-            "subject": "保留重试后的最终失败原因并支持在原会话继续任务"
-          },
-          {
-            "commit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
-            "parents": [
-              "d049d6fd3f4081007e7e27f4fa2312e6fd936d24"
-            ],
-            "subject": "保留模型已确认完成的输出并在尾帧断线后继续工具步骤"
+            "subject": "修复网页上主页悬停面板闪退并使用原生磨砂材质"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "packages/dsh-research-task-runtime/hosted-ai.js"
+            "path": "scripts/verify-browser-live-menus.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/conversation-failure-copy.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/hosted-chat-stream-tail.mjs"
+            "path": "src/main/browser/menu-overlay.ts"
           },
           {
             "status": "M",
-            "path": "scripts/lib/profile-runtime-patches.mjs"
+            "path": "src/preload/browser/menu-preload.cjs"
           },
           {
             "status": "M",
-            "path": "scripts/patch-web-frontend-loading.mjs"
+            "path": "src/preload/browser/native-menus.ts"
           },
           {
             "status": "M",
-            "path": "src/main/account-service.ts"
+            "path": "src/preload/browser/overlay-preflight.ts"
           },
           {
             "status": "M",
-            "path": "src/main/window-resize.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/figma-reading.css"
+            "path": "src/preload/browser/view.ts"
           },
           {
             "status": "M",
@@ -100,35 +71,11 @@
           },
           {
             "status": "M",
-            "path": "test/account-service.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/home-workbench-progress.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/hosted-ark-runtime.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/hosted-chat-stream-tail.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/hosted-quota-notice.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/profile-runtime-patches.test.js"
+            "path": "test/browser-app-rendered.test.js"
           },
           {
             "status": "M",
             "path": "test/sidebar-session-switcher-browser.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/window-move-ipc.test.ts"
           }
         ],
         "checks": [
@@ -140,8 +87,8 @@
             ],
             "outcome": "passed",
             "summary": "桌面端类型检查",
-            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
-            "completedAt": "2026-11-23T08:29:19.658435+00:00",
+            "verifiedCommit": "ec22893ad6d6711b40b8ffa3c194173af2919a5c",
+            "completedAt": "2026-11-23T08:53:12.782505+00:00",
             "timeoutMs": 300000
           },
           {
@@ -151,14 +98,14 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/window-move-ipc.test.ts",
-              "test/window-resize.test.ts",
-              "test/panel-toggle-drag-region.test.js"
+              "test/sidebar-session-switcher-browser.test.ts",
+              "test/browser-menu-overlay-focus.test.ts",
+              "test/browser-menu-preload-key.test.js"
             ],
             "outcome": "passed",
-            "summary": "窗口跨过坐标原点的 Electron IPC 与拖动生命周期",
-            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
-            "completedAt": "2026-11-23T08:29:08.803595+00:00",
+            "summary": "会话面板折叠、位置和焦点，原生磨砂材质与指针控制",
+            "verifiedCommit": "ec22893ad6d6711b40b8ffa3c194173af2919a5c",
+            "completedAt": "2026-11-23T08:53:07.968868+00:00",
             "timeoutMs": 300000
           },
           {
@@ -168,219 +115,29 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/sidebar-session-switcher-browser.test.ts"
+              "test/browser-app-rendered.test.js",
+              "-t",
+              "full table|完整表格|pre-mounted full table|image previews in the attachment renderer"
             ],
             "outcome": "passed",
-            "summary": "浮层与折叠侧栏及圆角内容区的实际几何位置、悬停连续性和键盘交互",
-            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
-            "completedAt": "2026-11-23T08:29:13.984673+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "--testTimeout=30000",
-              "test/account-service.test.ts",
-              "test/hosted-ark-runtime.test.js",
-              "test/hosted-chat-stream-tail.test.js",
-              "test/profile-runtime-patches.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "模型连接恢复、取消、限额与重复受理保护",
-            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
-            "completedAt": "2026-11-23T08:29:18.319576+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "--testTimeout=30000",
-              "test/hosted-quota-notice.test.js",
-              "test/home-workbench-progress.test.js",
-              "test/task-continuation-browser.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "失败原因、重试后历史投影、继续任务按钮与原会话草稿保护",
-            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
-            "completedAt": "2026-11-23T08:29:22.860374+00:00",
+            "summary": "完整表格原生与兼容路径、关闭恢复、附件预览",
+            "verifiedCommit": "ec22893ad6d6711b40b8ffa3c194173af2919a5c",
+            "completedAt": "2026-11-23T08:53:10.031176+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "Chromium 以实际主框架与侧栏核验无缝浮层，Electron 本地窗口跨过零坐标，验证终止事件、续办交互与同会话输入保护。"
+          "summary": "隔离 Electron 的真实网页验证悬停移入、折叠点击和 NSVisualEffectView 背景模糊，完整表格在原生网页前滚动并关闭。"
         },
         "acceptanceCriteria": [
-          "拖动窗口跨过坐标原点不再弹主进程错误",
-          "短暂接入故障有限重连，中断后可查看原因并主动继续",
-          "面板紧贴侧栏并与内容区上沿对齐且无描边"
+          "主页面板持续可见、背景柔和模糊，每个工作区可收起",
+          "完整表格与底下的网页同时显示，操作弹窗时不会误点网页"
         ],
         "risks": [
-          "真实模型服务持续不可用时，任务仍会中断。"
+          "网页合成与系统磨砂材质依赖桌面平台，原生显示验证在当前 macOS 上执行。"
         ],
-        "generatedAt": "2026-11-23T08:29:22.903584+00:00"
-      },
-      "merged": {
-        "mergeCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-        "verificationCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/problem-feedback-worker.test.js",
-              "test/research-board-notifications-center.test.ts",
-              "test/collaboration-client.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/home-operations-navigation.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/sidebar-session-switcher-browser.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/problem-feedback-worker.test.js test/research-board-notifications-center.test.ts test/collaboration-client.test.ts test/home-operations-actions.test.ts test/home-operations-navigation.test.ts test/image-factory-canvases.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvas-workspace.test.ts test/sidebar-session-switcher-browser.test.ts",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-service.test.ts",
-              "test/notes-inline-ai-browser.test.ts",
-              "-t",
-              "sidebar image prompt|image questions|image.*after reopening|Space-prompt image"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/notes-service.test.ts test/notes-inline-ai-browser.test.ts -t sidebar image prompt|image questions|image.*after reopening|Space-prompt image",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pending-conversation-rendered.test.js",
-              "-t",
-              "acknowledges Enter immediately|shows image chat admission"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/pending-conversation-rendered.test.js -t acknowledges Enter immediately|shows image chat admission",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens a new .+ session without reusing the previous app session"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sidebar-new-session-actions.test.ts -t opens a new .+ session without reusing the previous app session",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-output-limit.test.js",
-              "test/workbench-resume-request.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/workbench-mixed-document-adapter.test.js",
-              "test/workbench-execution-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-output-limit.test.js test/workbench-resume-request.test.js test/conversation-components-policy.test.js test/workbench-mixed-document-adapter.test.js test/workbench-execution-policy.test.js",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-prototype-evidence.test.js",
-              "-t",
-              "workbench document follow-ups"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-prototype-evidence.test.js -t workbench document follow-ups",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-delivery-scope.test.js",
-              "test/workbench-grouped-quantity.test.js",
-              "test/workbench-explicit-scope.test.js",
-              "test/research-generation-watch.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/generation-progress-persistence.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-delivery-scope.test.js test/workbench-grouped-quantity.test.js test/workbench-explicit-scope.test.js test/research-generation-watch.test.js test/research-planning-feedback.test.js test/research-workbench-feedback.test.js test/workbench-feedback-upgrade-preservation.test.js test/generation-progress-persistence.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-scrollbar-theme-browser.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-scrollbar-theme-browser.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "1b50f93489cdf5e3785c729a0173a62f564fd8fd",
-            "completedAt": "2026-11-23T08:30:22.546Z",
-            "timeoutMs": 240000
-          }
-        ],
-        "recordedAt": "2026-11-23T08:30:22.546Z"
+        "generatedAt": "2026-11-23T08:53:12.824386+00:00"
       }
     },
     {
