@@ -127,7 +127,7 @@ export function registerPresentationFiles(ctx,{env=process.env}={}){
     for(const expected of identities){const latest=await lstat(expected.path);if(!latest.isFile()||latest.isSymbolicLink()||latest.dev!==expected.dev||latest.ino!==expected.ino||latest.size!==expected.size||latest.mtimeMs!==expected.mtimeMs||await realpath(expected.path)!==expected.path)throw failure()}
     check()
     if(args.complete===true)exec.concludeTurn()
-    return JSON.stringify({kind:'ework-presentation-files',version:1,tool:PRESENTATION_FILES_TOOL,ok:true,status:'available',sessionId:owner.agent.id,turnId:owner.turn,callId:exec.callId,qualityVerification:'not-evaluated',files})
+    return JSON.stringify({kind:'ework-presentation-files',version:1,tool:PRESENTATION_FILES_TOOL,ok:true,status:'available',...(args.complete===true && {complete:true}),sessionId:owner.agent.id,turnId:owner.turn,callId:exec.callId,qualityVerification:'not-evaluated',files})
    }finally{clearTimeout(timer);exec.signal?.removeEventListener('abort',abort);active.delete(controller)}
   }
  }))

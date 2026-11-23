@@ -161,9 +161,11 @@ function patchHomeGuideDeliveryAccumulator(source){
  const after=marker+'\n\t\t\t\t\tcalls.set(String(match.event.data.callId), {name:match.event.data.name,view:match.view?.for === "call" ? match.view.view : null});'
  const oldAdditions='const additions = [...producedPaths(context.state.calls.get(callId) ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)].map((path) => ({'
  const previousAdditions='const completedCall = context.state.calls.get(callId);\n\t\t\t\tconst demoPublisher = completedCall?.name === "home_presentation_publish" || completedCall?.name === "home_report_publish";\n\t\t\t\tconst additions = (demoPublisher ? homeGuideDeliveryPaths(match.event.data.message,completedCall.name) : [...producedPaths(completedCall?.view ?? null),...verifiedResearchDeliveryPaths(match.event.data.message)]).map((path) => ({'
- const newAdditions=previousAdditions.replace('...verifiedResearchDeliveryPaths(match.event.data.message)]','...verifiedResearchDeliveryPaths(match.event.data.message),...(presentationDelivery(match.event.data.message,completedCall?.name,context.state.turn)?.paths??[])]')
+ const legacyAdditions=previousAdditions.replace('...verifiedResearchDeliveryPaths(match.event.data.message)]','...verifiedResearchDeliveryPaths(match.event.data.message),...(presentationDelivery(match.event.data.message,completedCall?.name,context.state.turn)?.paths??[])]')
+ const newAdditions=legacyAdditions.replace('const demoPublisher', 'const publication = presentationDelivery(match.event.data.message,completedCall?.name,context.state.turn);\n\t\t\t\tconst demoPublisher').replace('...(presentationDelivery(match.event.data.message,completedCall?.name,context.state.turn)?.paths??[])','...(publication?.paths??[])')+'...(publication?.complete && publication.paths.includes(path) && {terminalPresentation:true}),'
  if(source.includes(marker)){
   if(source.includes(previousAdditions))source=exact(source,previousAdditions,newAdditions)
+  if(source.includes(legacyAdditions))source=exact(source,legacyAdditions,newAdditions)
   if(source.split(marker).length!==2||source.split(after).length!==2||source.split(newAdditions).length!==2)throw Error('Home guide delivery accumulator anchor drifted')
   return source
  }
@@ -176,8 +178,18 @@ function patchPresentationCodeDelivery(source){
  const match='if (event.type === "tool/result" && (0, _deepseek_ai_dsh_client_runtime_client.isAppendSurfaceEvent)(event)) return {'
  const update='if (match.event.type !== "tool/result") return context.state;'
  const matchCode=marker+'\n                if(event.type==="tool/code-dispatch"){const publication=presentationCodeDelivery(event);if(publication)return{id:publication.turnId,role:"update"};}\n                '+match
- const updateCode='if(match.event.type==="tool/code-dispatch"){const publication=presentationCodeDelivery(match.event),root=context.state.calls.get(match.event.data.rootCallId);if(!publication||publication.turnId!==String(context.state.turn)||root?.name!=="run_code")return context.state;return{...context.state,produced:[...context.state.produced,...publication.paths.map(path=>({seq:match.event.seq,path}))]};}\n                '+update
- if(source.includes(marker)){if(source.split(marker).length!==2||source.split(matchCode).length!==2||source.split(updateCode).length!==2)throw Error('Presentation delivery code accumulator anchor drifted');return source}
+ const legacyUpdate='if(match.event.type==="tool/code-dispatch"){const publication=presentationCodeDelivery(match.event),root=context.state.calls.get(match.event.data.rootCallId);if(!publication||publication.turnId!==String(context.state.turn)||root?.name!=="run_code")return context.state;return{...context.state,produced:[...context.state.produced,...publication.paths.map(path=>({seq:match.event.seq,path}))]};}\n                '+update
+ const updateCode=legacyUpdate.replace('{seq:match.event.seq,path}', '{seq:match.event.seq,path,...(publication.complete && {terminalPresentation:true})}')
+ // A terminal file result follows the final assistant message. It still belongs
+ // to this closed turn. Ordinary mutations retain the assistant sequence cutoff.
+ const cutoff='produced.seq > seq || seen.has(produced.path)'
+ const terminalCutoff='(produced.seq > seq && !produced.terminalPresentation) || seen.has(produced.path)'
+ if(!source.includes(terminalCutoff))source=exact(source,cutoff,terminalCutoff)
+ if(source.includes(marker)){
+  if(source.includes(legacyUpdate))source=exact(source,legacyUpdate,updateCode)
+  if(source.split(marker).length!==2||source.split(matchCode).length!==2||source.split(updateCode).length!==2)throw Error('Presentation delivery code accumulator anchor drifted')
+  return source
+ }
  return exact(exact(source,match,matchCode),update,updateCode)
 }
 
