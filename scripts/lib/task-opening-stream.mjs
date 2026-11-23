@@ -1,7 +1,7 @@
 // A no-tool opening should contain a public introduction. Some compatible
 // providers serialize their internal call envelope as ordinary text instead.
-export function taskOpeningText(componentOpening = false, onSource) {
-  const callHeader = '<｜｜DSML｜｜ calls>'
+export function taskOpeningText(componentOpening = false, onSource, dsmlOnly = false) {
+  const callHeader = '<||DSML||calls>'
   const asciiStart = '<|tool_call_start|>'
   const asciiName = /^<\|tool_call_start\|>[a-zA-Z_][a-zA-Z0-9_.:-]{0,127}<\|tool_call_end\|>(?:\r?\n)?$/u
   const argumentsStart = '<|tool_call_argument_start|>'
@@ -21,7 +21,7 @@ export function taskOpeningText(componentOpening = false, onSource) {
           const head = line.replace(/^ {0,3}/u, '')
           // The paired ASCII control lines can straddle arbitrary deltas.
           // Keep a lone literal header when the following text is ordinary prose.
-          if (!fence && (asciiStart.startsWith(head) || head.startsWith(asciiStart)) && head.length <= 172) {
+          if (!dsmlOnly && !fence && (asciiStart.startsWith(head) || head.startsWith(asciiStart)) && head.length <= 172) {
             if (!complete && !final) {
               prefix = line
               break
@@ -56,9 +56,11 @@ export function taskOpeningText(componentOpening = false, onSource) {
               break
             }
           }
+          // Compatible endpoints emit both full-width and ASCII delimiters, sometimes spaced.
+          const header = head.startsWith('<') ? head.slice(0, 64).replace(/[ \t]/gu, '').replace(/｜/gu, '|') : head
           const unfinishedDelimiter = /^[`~]+$/u.test(head)
           if (!complete && !final && (!head || unfinishedDelimiter ||
-              !fence && head !== callHeader && callHeader.startsWith(head))) {
+              !fence && head.length < 64 && header !== callHeader && callHeader.startsWith(header))) {
             prefix = line
             break
           }
@@ -66,7 +68,7 @@ export function taskOpeningText(componentOpening = false, onSource) {
             if (delimiter?.startsWith(fence) && head.slice(delimiter.length).trim() === '') fence = ''
           } else if (delimiter) {
             fence = delimiter
-          } else if (head.startsWith(callHeader) || final && head.startsWith('<｜｜DSML｜｜') && callHeader.startsWith(head)) {
+          } else if (header.startsWith(callHeader) || final && header.startsWith('<||DSML||') && callHeader.startsWith(header)) {
             hidden = true
             break
           }
@@ -79,19 +81,19 @@ export function taskOpeningText(componentOpening = false, onSource) {
   }
 }
 
-export async function* publicTaskOpeningStream(stream, componentOpening = false, onSource) {
+export async function* publicTaskOpeningStream(stream, componentOpening = false, onSource, onExecutionProtocol) {
   const blocks = new Map()
   let edited = false, protocolIndex
   for await (const chunk of stream) {
-    if (chunk.type === 'reasoning-delta' || chunk.type === 'tool-call-delta' ||
+    if (!onExecutionProtocol && (chunk.type === 'reasoning-delta' || chunk.type === 'tool-call-delta' ||
         chunk.type === 'block-start' && ['reasoning','tool-call'].includes(chunk.blockType) ||
-        chunk.type === 'block-end' && ['reasoning','tool-call'].includes(chunk.block.type)) {
+        chunk.type === 'block-end' && ['reasoning','tool-call'].includes(chunk.block.type))) {
       edited = true
       continue
     }
     if (chunk.type === 'text-delta') {
       if (protocolIndex !== undefined) continue
-      if (!blocks.has(chunk.index)) blocks.set(chunk.index, taskOpeningText(componentOpening,onSource))
+      if (!blocks.has(chunk.index)) blocks.set(chunk.index, taskOpeningText(componentOpening,onSource,Boolean(onExecutionProtocol)))
       const state = blocks.get(chunk.index)
       const text = state.read(chunk.text)
       if (state.hidden) { edited = true; protocolIndex = chunk.index }
@@ -105,7 +107,7 @@ export async function* publicTaskOpeningStream(stream, componentOpening = false,
       if (suffix) yield {type:'text-delta', index:chunk.index, text:suffix}
       blocks.delete(chunk.index)
       // The SDK treats block-end as authoritative, including snapshot-only streams.
-      const final = taskOpeningText(componentOpening,onSource)
+      const final = taskOpeningText(componentOpening,onSource,Boolean(onExecutionProtocol))
       const text = final.read(chunk.block.text, true)
       if (final.hidden) { edited = true; protocolIndex = chunk.index }
       yield {...chunk, block:{...chunk.block, text}}
@@ -118,6 +120,7 @@ export async function* publicTaskOpeningStream(stream, componentOpening = false,
         if (suffix && (protocolIndex === undefined || protocolIndex === index)) yield {type:'text-delta', index, text:suffix}
       }
       blocks.clear()
+      if (edited) onExecutionProtocol?.()
       if (edited && chunk.replayState !== undefined) {
         const {replayState, ...finish} = chunk
         yield finish
@@ -126,6 +129,30 @@ export async function* publicTaskOpeningStream(stream, componentOpening = false,
     }
     yield chunk
   }
+}
+
+// A text envelope is never an authorization to dispatch its arguments. Give the
+// selected adapter one new generation with its original tools and permissions.
+export function toolExecutionStream(llm, prepared, request, retry, onProtocol, mark, freeze) {
+  let next = request
+  if (retry) {
+    const instruction = request.tools?.length
+      ? 'Continue the task using structured tool calls from the available tools.'
+      : 'No tools are available. Answer from the available information and explain what is missing if needed.'
+    const hint = 'The previous reply printed a tool envelope without a tool receipt. '+instruction+' Do not repeat the introduction or print the call as text.'
+    // Some routes treat a trailing assistant message as a completion prefix.
+    // Replay the task boundary, without the discarded model attempt.
+    const messages = request.messages.at(-1)?.role === 'assistant' ? request.messages.slice(0,-1) : request.messages
+    next = mark(freeze({...request, messages, system:[request.system,hint].filter(Boolean).join('\n\n')}))
+  }
+  const stream = prepared?.stream(next) ?? llm.stream(next)
+  const user = request.messages.findLast(message => message.role === 'user' && message.source?.kind === 'user')
+  // Quoted, inline and fenced protocol syntax already passes the text filter.
+  // Also preserve literal, unquoted examples when the user asked about the format.
+  if (user?.content.some(block => block.type === 'text' &&
+      /(?:DSML|工具(?:调用)?协议|tool[- ]call(?:ing)? (?:format|protocol|syntax))/iu.test(block.text) &&
+      /(?:解释|示例|举例|格式|原样|explain|example|literal|verbatim|format)/iu.test(block.text))) return stream
+  return publicTaskOpeningStream(stream, false, undefined, onProtocol)
 }
 
 // prepareCall binds both the adapter and the exact call configuration. The

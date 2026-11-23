@@ -1,15 +1,29 @@
 import {createHash} from 'node:crypto'
-import {boundedTaskOpeningStream,publicTaskOpeningStream,taskOpeningText} from './task-opening-stream.mjs'
+import {boundedTaskOpeningStream,publicTaskOpeningStream,taskOpeningText,toolExecutionStream} from './task-opening-stream.mjs'
 
-const openingFilter = '\n/* ework:public-task-opening:v7 */\n'+taskOpeningText.toString()+'\n'+publicTaskOpeningStream.toString()+'\n'+boundedTaskOpeningStream.toString()+'\n'
+const openingFilter = '\n/* ework:public-task-opening:v8 */\n'+toolExecutionStream.toString()+'\n'+taskOpeningText.toString()+'\n'+publicTaskOpeningStream.toString()+'\n'+boundedTaskOpeningStream.toString()+'\n'
 const openAttempt = 'const system = renderPrompt(assembly);\n\t\twhile (true) {'
-const openingScope = [
+const oldOpeningScope = [
   [openAttempt,openAttempt+'\n\t\t\tlet opening = false;'],
   ['const opening = step === 1 && request[Symbol.for("ework.model-task-opening")]', 'opening = step === 1 && request[Symbol.for("ework.model-task-opening")]'],
   ['const stream = preparedCall?.stream(request) ?? this.loopCtx.llm.stream(request);','const stream = opening ? boundedTaskOpeningStream(this.loopCtx.llm, preparedCall, request, signal, markAgentLoopRequest, deepFreeze) : preparedCall?.stream(request) ?? this.loopCtx.llm.stream(request);'],
 ]
-function transformOpeningScope(source, inverse) {
-  for (const [from,to] of openingScope) {
+const openingScope = [
+  [openAttempt,'const system = renderPrompt(assembly);\n\t\tlet retriedTextProtocol = false;\n\t\twhile (true) {\n\t\t\tlet opening = false, textProtocol = false;'],
+  oldOpeningScope[1],
+  [oldOpeningScope[2][0], 'const stream = opening ? boundedTaskOpeningStream(this.loopCtx.llm, preparedCall, request, signal, markAgentLoopRequest, deepFreeze) : toolExecutionStream(this.loopCtx.llm, preparedCall, request, retriedTextProtocol, () => { textProtocol = true; }, markAgentLoopRequest, deepFreeze);'],
+  ['if (opening) return null;\n\t\t\tif (finish.kind === "max-tokens")', [
+    'if (opening) return null;',
+    'if (textProtocol && !message.content.some(block => block.type === "tool-call")) {',
+    '  if (retriedTextProtocol) throw new Error("模型未能正确调用工具，请重试。");',
+    '  retriedTextProtocol = true;',
+    '  continue;',
+    '}',
+    'if (finish.kind === "max-tokens")'
+  ].join('\n\t\t\t')]
+]
+function transformOpeningScope(source, inverse, scope = openingScope) {
+  for (const [from,to] of scope) {
     const expected=inverse?to:from
     if (source.split(expected).length!==2) throw Error('Task opening scope or stream anchor drifted')
     source=source.replace(expected,inverse?from:to)
@@ -26,6 +40,7 @@ export function patchFirstResponseEffort(source) {
     [4,4239,'ec2227cc59a8a2a3fd2240f31104e6245720ee479790c620e232f421401fa88b'],
     [5,5471,'192ef97f4a5894e29882e97c7996d19ffc26d3782b1fd7307047ccbee0454bf5'],
     [6,6707,'ef8ab2d2cb95ae2b974df633b7b8806bf0beb2eeb30940776349f38b02355b98'],
+    [7,7559,'ee1142ca03489769dcafb2ed10c9605194802fbb3908446401247441f01546de'],
   ]) {
     const marker = '\n/* ework:public-task-opening:v'+version+' */\n'
     const start = source.indexOf(marker)
@@ -34,9 +49,9 @@ export function patchFirstResponseEffort(source) {
     if (source.lastIndexOf(marker) !== start || createHash('sha256').update(legacy).digest('hex') !== digest) {
       throw Error('Legacy task opening public stream definition drifted')
     }
-    source=transformOpeningScope(source.replace(legacy,''),true)
+    source=transformOpeningScope(source.replace(legacy,''),true,oldOpeningScope)
   }
-  if (source.includes('/* ework:public-task-opening:v7 */')) {
+  if (source.includes('/* ework:public-task-opening:v8 */')) {
     if (source.split(openingFilter).length!==2) throw Error('Task opening public stream definition drifted')
     source=transformOpeningScope(source.replace(openingFilter,''),true)
   }
