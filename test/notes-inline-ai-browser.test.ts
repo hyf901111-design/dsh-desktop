@@ -337,31 +337,26 @@ it('allows an inline request to update its explicitly referenced component under
  }finally{await f.context.close()}
 })
 
-it('imports a picked image at the Space anchor, previews a sidebar image and restores both after reopening',async()=>{
+it('opens Space with a prompt and send control, previews a sidebar image and restores it after reopening',async()=>{
  const f=await open()
  try{
-  await f.page.evaluate(()=>{
-   const w=window as any
-   w.imageBridge={
-    'file-pick':()=>({files:[{name:'本地.png',path:'/fixture/local.png'}]}),
-    'file-admit':({nodeId}:any)=>({id:nodeId,name:'本地.png',source:'computer',authorizationId:'picked-auth',mediaKind:'image'}),
-   }
-  })
   await cursor(f.page);await f.page.keyboard.press('Space')
-  await f.page.getByRole('button',{name:'插入图片'}).click()
+  const inline=f.page.locator('.en-space-ai-input')
+  await inline.locator('textarea').waitFor()
+  expect(await inline.getByRole('button').count()).toBe(1)
+  expect(await inline.getByRole('button').getAttribute('aria-label')).toBe('发送行内 AI 需求')
+  await f.page.keyboard.press('Escape')
   const images=()=>f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='attachment').map((b:any)=>JSON.parse(b.props.payload)))
-  await expect.poll(images).toMatchObject([{name:'本地.png',noteDisplay:'inline',authorizationId:'picked-auth'}])
-  expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.type==='attachment'?'picked':b.id).slice(0,4))).toEqual(['before','picked','anchor','after'])
   await f.page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'inline-note',prompt:'请生成一张海边的水彩配图并插入笔记',images:[],submissionId:1}})))
   await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).map((j:any)=>j.input.entryPoint))).toEqual(['composer'])
   await finish(f.page,{kind:'image',files:[{id:'note-file-generated',name:'配图.png',source:'computer',authorizationId:'generated-auth',mediaKind:'image',noteDisplay:'inline'}]})
   await f.page.getByRole('button',{name:'添加至正文'}).waitFor()
-  expect(await images()).toHaveLength(1)
+  expect(await images()).toHaveLength(0)
   await f.page.getByRole('button',{name:'添加至正文'}).click()
-  await expect.poll(images).toMatchObject([{authorizationId:'picked-auth'},{authorizationId:'generated-auth',noteDisplay:'inline'}])
+  await expect.poll(images).toMatchObject([{authorizationId:'generated-auth',noteDisplay:'inline'}])
   await f.page.evaluate(async()=>{const w=window as any;await w.fixture.flush();w.fixture.reopen()})
   await f.page.locator('.en-title').waitFor()
-  await expect.poll(images).toMatchObject([{name:'本地.png',authorizationId:'picked-auth'},{name:'配图.png',authorizationId:'generated-auth'}])
+  await expect.poll(images).toMatchObject([{name:'配图.png',authorizationId:'generated-auth'}])
   expect(await f.page.evaluate(()=>(window as any).saved.yjs.length)).toBeGreaterThan(0)
   expect(f.errors).toEqual([])
  }finally{await f.context.close()}

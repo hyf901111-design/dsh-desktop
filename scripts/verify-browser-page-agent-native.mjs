@@ -10,6 +10,7 @@ await mkdir(output,{recursive:true})
 const html=await readFile(new URL('../test/fixtures/browser-page-agent.html',import.meta.url),'utf8')
 await build({stdin:{resolveDir:process.cwd(),contents:`
 import {app,BrowserWindow,WebContentsView,session} from 'electron';import assert from 'node:assert/strict';import {writeFile} from 'node:fs/promises';import {join} from 'node:path';import {createBrowserPageAgent} from './src/main/browser/page-agent';
+import {browserTurnContext,browserPromptReference} from './scripts/lib/pending-conversation.mjs';
 app.setPath('userData',${JSON.stringify(join(scratch,'profile'))});const output=${JSON.stringify(output)},html=${JSON.stringify(html)};let win,agent;
 const scope=ob=>({tabId:ob.tabId,url:ob.url,revision:ob.revision,documentRevision:ob.documentRevision});
 const ready=async wc=>{for(let i=0;i<100&&wc.isLoadingMainFrame();i++)await new Promise(resolve=>setTimeout(resolve,20));assert.equal(wc.isLoadingMainFrame(),false)};
@@ -38,6 +39,18 @@ const edit=(ob,translations)=>({op:'edit',...scope(ob),patches:translations.map(
  const beforeSwitch=await agent.context();const b=await make('tab-B');a.view.setVisible(false);active=b;agent.invalidate();await assert.rejects(agent.run(edit(beforeSwitch,[['Research in context','Wrong tab']])));assert.equal(await b.wc.executeJavaScript('document.querySelector("h1").textContent'),'Research in context');b.view.setVisible(false);a.view.setVisible(true);active=a;agent.invalidate();await assert.rejects(agent.run(edit(beforeSwitch,[['Research in context','Old activation']])));
  const live=await agent.context(),local=await agent.run(edit(live,[['Research in context','研究']]));await a.wc.executeJavaScript('document.querySelector("h1").firstChild.data="Website live update"');const updated=await agent.context();await assert.rejects(agent.run({op:'undo',...scope(updated)}));assert.equal(await a.wc.executeJavaScript('document.querySelector("h1").textContent'),'Website live update');
  await a.wc.loadURL('https://page-agent.example.test/long');await ready(a.wc);const longStart=await agent.context();assert.equal(longStart.hasMoreText,true);const longEnd=(await agent.run({op:'observe',textOffset:longStart.nextTextOffset})).observation;assert.equal(longEnd.hasMoreText,false);assert.equal(longEnd.revision,longStart.revision);const endPatch=await agent.run(edit(longEnd,[['Long paragraph 1099','长文最后一段']]));assert.ok(await a.wc.executeJavaScript('document.body.textContent.includes("长文最后一段")'));await agent.run({op:'undo',...scope(endPatch.observation)});assert.ok(await a.wc.executeJavaScript('document.body.textContent.includes("Long paragraph 1099")'));
+ function animateNewsTickers(){
+  const first=document.createElement('p'),second=document.createElement('p');
+  document.body.prepend(first);document.querySelectorAll('p')[300].after(second);
+  let tick=0;const update=()=>{tick++;first.textContent='Lead ticker '+tick;second.textContent='Second ticker '+tick};
+  update();window.newsTimer=setInterval(update,1);
+ }
+ await a.wc.executeJavaScript('('+animateNewsTickers.toString()+')()');
+ const news=await browserTurnContext(()=>agent.context(),'概括一下当前网页的内容。'),newsReference=browserPromptReference(news);
+ assert.ok(newsReference.includes('Research in context'));
+ const firstTick=news.text.match(/Lead ticker ([0-9]+)/)?.[1],secondTick=news.text.match(/Second ticker ([0-9]+)/)?.[1];
+ assert.ok(firstTick);assert.equal(firstTick,secondTick,'both tickers in the submitted context come from one snapshot');
+ await a.wc.executeJavaScript('clearInterval(window.newsTimer)');
  await a.wc.loadURL('http://page-agent.example.test/article');await ready(a.wc);assert.ok((await agent.context()).text.includes('Research in context'),'HTTP page needs no secure-context crypto API');
  let owner='A';const authorize=()=>{if(owner!=='A')throw Error('Request owner changed')},owned=await agent.context(authorize),ownedButton=owned.elements.find(e=>e.label==='Inspect interaction'),originalExecute=a.wc.executeJavaScriptInIsolatedWorld.bind(a.wc);let release,entered,blockFirst=true;
  const blocked=new Promise(resolve=>{release=resolve}),started=new Promise(resolve=>{entered=resolve});a.wc.executeJavaScriptInIsolatedWorld=async(...args)=>{if(blockFirst){blockFirst=false;entered();await blocked}return originalExecute(...args)};
@@ -45,7 +58,7 @@ const edit=(ob,translations)=>({op:'edit',...scope(ob),patches:translations.map(
  const queuedDenied=[assert.rejects(agent.run({op:'observe'},undefined,authorize),/owner changed/),assert.rejects(agent.context(authorize),/owner changed/),assert.rejects(agent.run({op:'click',...scope(owned),ref:ownedButton.ref},undefined,authorize),/owner changed/)];owner='B';release();await Promise.all([firstDenied,...queuedDenied]);a.wc.executeJavaScriptInIsolatedWorld=originalExecute;
  assert.equal(await a.wc.executeJavaScript('document.querySelector("#counter").textContent'),'Inspect interaction','queued old-owner click cannot mutate the reassigned tab');
  active=undefined;agent.invalidate();assert.equal(await agent.context(),undefined);await assert.rejects(agent.run({op:'observe'}));
- const report={electron:process.versions.electron,chromium:process.versions.chrome,realWebContentsView:true,observedOriginalText:true,translatedDOM:true,preservedLinksAndStructure:true,atomicCAS:true,accumulatedDocumentUndo:true,formAndSecretContextExcluded:true,restrictedPatchSchema:true,realInputClickSelectScrollAndBack:true,abortDenied:true,sameURLNavigationInvalidates:true,tabScopeDenied:true,activationInvalidates:true,ownerUnavailableDenied:true,queuedRequestOwnerDenied:true,queuedClickCannotMutateReassignedTab:true,websiteUpdateProtected:true,longPageContinuation:true,httpContext:true,paintedScreenshot:true,localOnly:true};await writeFile(join(output,'report.json'),JSON.stringify(report,null,2));agent.dispose();win.destroy();app.exit(0);
+ const report={electron:process.versions.electron,chromium:process.versions.chrome,realWebContentsView:true,observedOriginalText:true,translatedDOM:true,preservedLinksAndStructure:true,atomicCAS:true,accumulatedDocumentUndo:true,formAndSecretContextExcluded:true,restrictedPatchSchema:true,realInputClickSelectScrollAndBack:true,abortDenied:true,sameURLNavigationInvalidates:true,tabScopeDenied:true,activationInvalidates:true,ownerUnavailableDenied:true,queuedRequestOwnerDenied:true,queuedClickCannotMutateReassignedTab:true,websiteUpdateProtected:true,longPageContinuation:true,animatedPageChatContext:true,httpContext:true,paintedScreenshot:true,localOnly:true};await writeFile(join(output,'report.json'),JSON.stringify(report,null,2));agent.dispose();win.destroy();app.exit(0);
 })().catch(error=>{console.error(error);agent?.dispose();win?.destroy();app.exit(1)});
 `},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron'],logLevel:'silent'})
 const code=await new Promise((done,error)=>{const child=spawn(require('electron'),[entry],{env:{...process.env,ELECTRON_RUN_AS_NODE:''},stdio:'inherit'});const timer=setTimeout(()=>child.kill('SIGKILL'),45000);child.on('error',error);child.on('exit',code=>{clearTimeout(timer);done(code)})})

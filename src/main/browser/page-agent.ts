@@ -37,8 +37,8 @@ function createPageSurface(createSurface:any,token:string,cancelled:Set<string>)
   viewport:true,checkpoint:()=>check(),candidates:()=>candidates,text:()=>pageHash,
   label:(el:Element)=>(el.getAttribute('aria-label')||el.getAttribute('placeholder')||labels.get(el)||el.tagName.toLowerCase()).slice(0,240)
  })
- const observe=async(textOffset=0)=>{
-  const expected=request,textNodes:BrowserPageText[]=[],scanDeadline=Math.min(expected.deadline,Date.now()+3000)
+ const scan=async(expected:any,textOffset:number,scanDeadline:number,yieldToPage:boolean)=>{
+  const textNodes:BrowserPageText[]=[]
   let dirty=false
   const mutations=new MutationObserver(()=>{dirty=true})
   mutations.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true})
@@ -49,7 +49,10 @@ function createPageSurface(createSurface:any,token:string,cancelled:Set<string>)
   for(let node=walker.nextNode();node;node=walker.nextNode()){
    check(expected)
    if(++visited>12000||Date.now()>scanDeadline)throw Error('网页过于复杂，已超过安全观察预算；请缩小页面范围或使用原生刷新。')
-   if(visited%128===0)await pause(expected)
+   if(yieldToPage&&visited%128===0){
+    await pause(expected)
+    if(dirty||mutations.takeRecords().length)return
+   }
    if(node.nodeType===Node.ELEMENT_NODE){
     const el=node as Element
     if(candidates.length<200&&el.matches(selector)){
@@ -75,7 +78,7 @@ function createPageSurface(createSurface:any,token:string,cancelled:Set<string>)
   check(expected);pageHash=String(fullHash)
   const base=await surface({op:'observe',images:false});check(expected)
   if(Date.now()>scanDeadline)throw Error('网页观察已超过安全时间预算，请使用原生刷新后重试。')
-  if(dirty)throw Error('网页在观察期间发生变化，请重新观察。')
+  if(dirty||mutations.takeRecords().length)return
   // Form values and editable drafts are deliberately excluded from page context.
   const elements=base.elements.map((element:any)=>{const {value,checked,...safe}=element;safe.label=safe.label.trim();return safe})
   const revision=token+':'+(hashInto(fullHash,JSON.stringify({scopeKey,url:location.href,elements,interactionRevision:base.revision}))>>>0).toString(36)
@@ -83,6 +86,18 @@ function createPageSurface(createSurface:any,token:string,cancelled:Set<string>)
   latest={revision,interactionRevision:base.revision,textOffset}
   return {revision,documentRevision:revision,text:textNodes.map(n=>n.text).join('\n'),textNodes,elements,canUndo:!!undo,localOnly:true,truncated:hasMoreText||textOffset>0||unsupportedTextNodes>0,textOffset,hasMoreText,...(hasMoreText?{nextTextOffset:textOffset+textNodes.length}:{}),totalTextNodes,unsupportedTextNodes,size:base.size,url:location.href}
   }finally{mutations.disconnect()}
+ }
+ const observe=async(textOffset=0)=>{
+  const expected=request,scanDeadline=Math.min(expected.deadline,Date.now()+3000)
+  let snapshot=await scan(expected,textOffset,scanDeadline,true)
+  if(!snapshot&&expected.op==='observe'){
+   // A carousel or ticker may change on every yield. Discard the partial scan
+   // and read once in one renderer task, within the original time/node budgets.
+   await pause(expected)
+   snapshot=await scan(expected,textOffset,scanDeadline,false)
+  }
+  if(!snapshot)throw Error('网页在观察期间发生变化，请重新观察。')
+  return snapshot
  }
  // A batch stays small and synchronous so website observers cannot interleave
  // between its writes. Task boundaries before/after let revocations run.

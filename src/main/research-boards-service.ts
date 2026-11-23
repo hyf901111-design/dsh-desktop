@@ -1,3 +1,4 @@
+import { validFeedbackImages } from '../../packages/dsh-research-collaboration/feedback-images.js'
 import { withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 import { cleanActivity } from 'dsh-research-collaboration/activity'
 import { componentVersion, validateComponentMessage } from 'dsh-research-collaboration/component-state'
@@ -2656,10 +2657,18 @@ export class ResearchBoardsService {
         return result
       }
       case 'notifications.feedback': {
-        const p = exact(input, ['operationId', 'message'])
+        const p = exact(input, ['operationId', 'message'], ['images'])
+        const images = p.images ?? []
+        if (typeof p.message !== 'string' || !validFeedbackImages(images)) throw new ResearchBoardsError('INVALID_REQUEST')
         return this.client.request({
-          kind: 'notifications.feedback', operationId: safeId(p.operationId), message: text(p.message, 2000).trim()
+          kind: 'notifications.feedback', operationId: safeId(p.operationId), message: p.message.trim(),
+          ...(images.length ? { images } : {})
         }, this.generationAbort.signal)
+      }
+      case 'notifications.feedbackImage': {
+        const p = exact(input, ['notificationId', 'position'])
+        if (typeof p.position !== 'number') throw new ResearchBoardsError('INVALID_REQUEST')
+        return this.client.request({ kind: 'notifications.feedbackImage', notificationId: safeId(p.notificationId), position: p.position }, this.generationAbort.signal)
       }
       case 'notifications.read': {
         const p = exact(input, [], ['notificationIds'])
@@ -3071,6 +3080,13 @@ export class ResearchBoardsService {
     const binding = this.getBinding(sessionId)
     if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
     return projectDocument(this.requireBoard(binding.boardId).doc)
+  }
+  fileImportScope(sessionId: string): string | null {
+    if (!this.isSharedSession(sessionId)) return null
+    const binding = this.getBinding(sessionId)
+    if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
+    const board = this.requireBoard(binding.boardId, sessionId, true)
+    return JSON.stringify([binding.accountId, binding.boardId, board.snapshot.board.sharingEpoch])
   }
   authorizeCanvasUse(sessionId: string, write: boolean): void {
     if (!this.isSharedSession(sessionId)) return

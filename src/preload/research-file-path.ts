@@ -1,3 +1,5 @@
+import { takeResearchKnowledgeFile } from './research-knowledge-drop'
+
 export type ElectronFilePathResolver = (file: File) => unknown
 
 export type ResearchPreviewIdentity = {
@@ -54,6 +56,11 @@ export function createResearchPreviewBridge(
       const request = researchFinderAdmissionRequest(file, identity, resolve)
       if (request === null) return null
       return invoke('research:preview:admit-finder', request) as Promise<ResearchPreviewDescriptor | null>
+    },
+    async admitKnowledgeFile(ticket: string, identity: ResearchPreviewIdentity) {
+      if (!validIdentity(identity)) throw Error('画布文件标识无效。')
+      const fileId = takeResearchKnowledgeFile(ticket, identity.sessionId)
+      return invoke('research:preview:admit-knowledge', { ...identity, fileId }) as Promise<ResearchPreviewDescriptor>
     },
     admitSidebarFile(value: ResearchPreviewIdentity & { relativePath: string }) {
       return invoke('research:preview:admit-sidebar', value) as Promise<ResearchPreviewDescriptor | null>

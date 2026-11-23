@@ -1,6 +1,25 @@
 const tag = '/* EWORK_KNOWLEDGE_SHARED_RESEARCH */'
 const end = '\t\texports.apply = apply;'
 const anchors = [
+  ['if (internal !== null) {\n\t\t\t\tconst previous = existing.find',
+    `if (internal !== null) {
+                const ticket=JSON.parse(transfer.getData(SHERLOCK_FILE_DRAG_TYPE)).knowledgeTicket;
+                if(ticket!==undefined){
+                  if(typeof ticket!=="string"||!preview?.admitKnowledgeFile)throw Error("当前画布无法接收知识库文件。");
+                  if(maxNewNodes<=0)throw Error("画布文件数量已达上限。");
+                  const nodeId=createId();
+                  if(!journalAdmission(nodeId))throw Error("画布文件记录暂时无法保存。");
+                  const descriptor=await preview.admitKnowledgeFile(ticket,{sessionId,nodeId});
+                  await preview.release({sessionId,nodeId,authorizationId:descriptor.authorizationId,capabilityToken:descriptor.capabilityToken});
+                  return [{id:nodeId,name:descriptor.name,path:descriptor.path,source:"sherlock",authorizationId:descriptor.authorizationId,
+                    contentType:descriptor.contentType,...(descriptor.previewEligible===false?{previewEligible:false}:{})}];
+                }
+\t\t\t\tconst previous = existing.find`],
+  ['dropQueueRef.current = dropQueueRef.current.catch(() => void 0).then(runDrop);',
+    `dropQueueRef.current = dropQueueRef.current.catch(() => void 0).then(runDrop).catch(async error=>{
+                  if(dropLifecycle.active)setClipboardFeedback({state:"error",message:error?.message||"未能添加画布文件。"});
+                  await Promise.all(workspace.pendingOrphanRevocations().map(revokeOrphanNode));
+                });`],
   ['function createResearchWorkspaceSession(storage, sessionId) {',
     'function createResearchWorkspaceSession(storage, sessionId, knowledgeReadOnly = false) {'],
   ['const collaborationCanWrite = () => !sherlockShared(sessionId) || collaborationWritable;',

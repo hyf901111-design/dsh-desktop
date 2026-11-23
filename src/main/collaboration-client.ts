@@ -1,3 +1,4 @@
+import { MAX_FEEDBACK_IMAGES, validFeedbackImages } from '../../packages/dsh-research-collaboration/feedback-images.js'
 import { ResearchBoardsError } from '../shared/research-boards'
 export const COLLABORATION_ORIGIN = 'https://updates.evanarts.com'
 export type CollaborationEndpoint =
@@ -12,7 +13,8 @@ export type CollaborationEndpoint =
   | { kind: 'board.command'; boardId: string; body: Record<string, unknown> }
   | { kind: 'receipt'; boardId: string; operationId: string }
   | { kind: 'notifications.list'; after: number; limit?: number }
-  | { kind: 'notifications.feedback'; operationId: string; message: string }
+  | { kind: 'notifications.feedback'; operationId: string; message: string; images?: string[] }
+  | { kind: 'notifications.feedbackImage'; notificationId: string; position: number }
   | { kind: 'notifications.read'; notificationIds?: string[] }
   | {
       kind: 'invitation.respond'
@@ -147,11 +149,17 @@ export function collaborationRequestSpec(
       }
       break
     case 'notifications.feedback':
-      exact(e, ['kind', 'operationId', 'message'])
+      exact(e, ['kind', 'operationId', 'message', 'images'])
       safeId(e.operationId)
-      if (typeof e.message !== 'string' || !e.message.trim() || e.message.length > 2000)
+      if (!validFeedbackImages(e.images ?? []) || typeof e.message !== 'string' || (!e.message.trim() && !e.images?.length) || e.message.length > 2000)
         throw new ResearchBoardsError('INVALID_REQUEST')
-      spec = json('/notifications/feedback', { operationId: e.operationId, message: e.message })
+      spec = json('/notifications/feedback', { operationId: e.operationId, message: e.message, images: e.images })
+      break
+    case 'notifications.feedbackImage':
+      exact(e, ['kind', 'notificationId', 'position'])
+      if (!Number.isInteger(e.position) || e.position < 0 || e.position >= MAX_FEEDBACK_IMAGES)
+        throw new ResearchBoardsError('INVALID_REQUEST')
+      spec = { path: `/notifications/feedback/${safeId(e.notificationId)}/images/${e.position}`, method: 'GET' }
       break
     case 'notifications.read':
       exact(e, ['kind', 'notificationIds'])

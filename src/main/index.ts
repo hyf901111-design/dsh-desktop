@@ -70,6 +70,7 @@ import {NOTES_GUIDE_DIAGNOSTIC_PREFIX} from '../shared/notes-guide-diagnostics'
 import {createHomeGuideEntryDiagnosticLog,recordHomeGuideEntryConsoleMessage} from './state/home-guide-entry-diagnostics'
 import {HOME_GUIDE_ENTRY_DIAGNOSTIC_PREFIX} from '../shared/home-guide-entry-diagnostics'
 import { copyResearchFile } from './state/research-owned-files'
+import { admitKnowledgeResearchFile } from './state/research-knowledge-files'
 import {createHash, randomUUID} from 'node:crypto'
 import { ResearchBoardIntegration } from './research-board-integration'
 import { finishQuitCleanup } from './quit-cleanup'
@@ -1514,11 +1515,13 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowListener(ipcMain, 'office-sessions:check', () => mainWindow, (_event, rows) => officeSessions.check(rows), null)
   const presentation:ReturnType<typeof installPresentation>=installPresentation({ipcMain,assertAccess:id=>officeSessions.assert(id,'presentation'),narrate:(owner,text,signal)=>accountService!.narratePresentation(owner,text,signal),getWindow:()=>mainWindow,store:presentationStore,library:knowledge,workspaceRoot:id=>new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),runtimeUrl:()=>runtime?.snapshot().url,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet})
   app.once('before-quit',()=>presentationStore.close())
-  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,assertAccess:id=>officeSessions.assert(id,'spreadsheet'),getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',canPlayCashFlowGuide:({owner,sessionId})=>{
-    const scope=owner==='local'?'local':'account:'+owner
-    const raw=researchCanvasStorage.peekItem('sherlock.home-guide.sessions.v1:'+encodeURIComponent(scope))
-    return !!raw&&JSON.parse(raw).entries.some((entry:{sessionId:string;kind:string})=>entry.sessionId===sessionId&&entry.kind==='spreadsheet')
-  }})
+  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,assertAccess:id=>officeSessions.assert(id,'spreadsheet'),getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',
+    knowledgeFile:id=>id.length===32?knowledgeShared.read(id,AbortSignal.timeout(20_000)):knowledge.file(id),
+    canPlayCashFlowGuide:({owner,sessionId})=>{
+      const scope=owner==='local'?'local':'account:'+owner
+      const raw=researchCanvasStorage.peekItem('sherlock.home-guide.sessions.v1:'+encodeURIComponent(scope))
+      return !!raw&&JSON.parse(raw).entries.some((entry:{sessionId:string;kind:string})=>entry.sessionId===sessionId&&entry.kind==='spreadsheet')
+    }})
   const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({presentation,spreadsheet,sharedKnowledge:(current,id)=>!accountService?.authenticated||researchBoardsService?.isSharedSession(id)?{}:sharedKnowledgeCapabilityHandlers(knowledgeShared,knowledgeContent,current),knowledge:(current,id)=>researchBoardsService?.isSharedSession(id)?{}:knowledgeCapabilityHandlers(knowledge,knowledgeShared,knowledgeContent,knowledgeView,current),get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
@@ -1654,6 +1657,30 @@ async function bootstrap(): Promise<void> {
   let scheduledStoreForIntegrations: TaskStore | undefined
   const taskRpc = harnessRpc(() => runtime?.snapshot().url)
   const knowledgeWorkspaceFiles = new HarnessWorkspaceFileResolver(dshHome)
+  registerTrustedMainWindowHandler(ipcMain, 'research:preview:admit-knowledge', () => mainWindow, (_event, input) =>
+    admitKnowledgeResearchFile(input, {
+      registry: researchFilePreviewRegistry!,
+      read: id => id.length === 32 ? knowledgeShared.read(id, AbortSignal.timeout(20_000)) : knowledge.file(id),
+      directory: async sessionId => {
+        const existing = researchBoardsService?.getSnapshot().favorites.find(f => f.sessionId === sessionId)?.cwd ??
+          await knowledgeWorkspaceFiles.resolveRoot(sessionId)
+        if (existing) return existing
+        const result = await researchBoardsService?.invoke('local.directory', { mode: 'ensure', sessionId })
+        const path = result?.ok && (result.value as { path?: string })?.path
+        if (!path || !isAbsolute(path)) throw Error('画板目录尚未就绪，请稍后重试。')
+        return path
+      },
+      guard: sessionId => {
+        const initial = clientCapabilities.currentVisibleContext(), { owner, generation } = knowledgeIdentity()
+        const boardScope = researchBoardsService?.fileImportScope(sessionId)
+        return () => {
+          const visible = clientCapabilities.currentVisibleContext(), account = knowledgeIdentity()
+          if (!initial || !visible || initial.generation !== visible.generation || visible.sessionId !== sessionId ||
+              visible.mode !== 'research' || visible.ownerAccountId !== owner || account.owner !== owner || account.generation !== generation ||
+              researchBoardsService?.fileImportScope(sessionId) !== boardScope) throw Error('画布或账号已切换，请重新拖入。')
+        }
+      }
+    }))
   const retainKnowledgeCopy = knowledgeCopyRetention(() => runtime?.snapshot().url, id => {
     const mode = researchCanvasStorage.getItem('ework.session.view.v1:' + id), owner = integrationOwner()
     if (owner && (mode === 'notes' || mode === 'spreadsheet' || mode === 'presentation'))
@@ -1771,7 +1798,13 @@ async function bootstrap(): Promise<void> {
   })
   let noteComponentLibrary:Awaited<ReturnType<typeof installComponentLibrary>>
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
-  const noteFiles = new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
+  const noteFiles = new NoteFiles({
+    root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,
+    owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,
+    workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),
+    reveal:path=>shell.showItemInFolder(path),
+    knowledge:{store:knowledge,sharing:knowledgeShared,generation:()=>knowledgeIdentity().generation}
+  })
   registerPptxAnnotationHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxAnnotationService({
     root: join(app.getPath('userData'), 'pptx-annotations'), owner: () => integrationOwner() || 'local',
     presentationSkill: async id => integrationService?.getPresentationSkill(id) ?? null,

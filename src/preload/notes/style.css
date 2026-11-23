@@ -267,4 +267,3 @@ body .en-root .bn-mantine .bn-menu-dropdown.bn-drag-handle-menu::before{content:
 /* The demo reveals an empty-line hint only after its visible caret click. */
 [data-notes-guide-caret-hidden=true] .bn-block-content[data-content-type=paragraph]:is([data-is-empty-and-focused],[data-is-only-empty-block])::after{visibility:hidden!important}
 
-.en-space-ai-image{width:28px;height:28px;flex:none;align-self:flex-end;display:grid;place-items:center;border:0;border-radius:6px;background:transparent;color:var(--en-muted);cursor:pointer}.en-space-ai-image:hover:not(:disabled){background:var(--en-control);color:var(--en-ink)}

@@ -6,10 +6,47 @@ import {NoteFiles,noteFileOwnerPrefix} from '../src/main/notes/files'
 import {ResearchFilePreviewRegistry} from '../src/main/state/research-file-preview'
 import {noteFileCandidates,NOTE_FILE_DRAG_TYPE} from '../src/shared/note-files'
 const roots:string[]=[];afterEach(async()=>{await Promise.all(roots.splice(0).map(root=>rm(root,{recursive:true,force:true})))})
-async function fixture(){const root=await mkdtemp(join(tmpdir(),'ework-note-files-'));roots.push(root);const workspace=join(root,'workspace');await mkdir(workspace);const state={owner:'alice',allowed:true},records:any[]=[]
+async function fixture(knowledge?:ConstructorParameters<typeof NoteFiles>[0]['knowledge']){const root=await mkdtemp(join(tmpdir(),'ework-note-files-'));roots.push(root);const workspace=join(root,'workspace');await mkdir(workspace);const state={owner:'alice',allowed:true},records:any[]=[]
  const registry=new ResearchFilePreviewRegistry({canReadAuthorization:record=>record.sessionId.startsWith(noteFileOwnerPrefix(state.owner)),storage:{load:()=>records,save:next=>{records.splice(0,records.length,...next);return true}}}),reveal=vi.fn()
- return {root,workspace,state,registry,records,reveal,files:new NoteFiles({root:join(root,'owned'),registry,workspaceRoot:async()=>workspace,owner:()=>state.owner,canRead:()=>state.allowed,reveal})}
+ return {root,workspace,state,registry,records,reveal,files:new NoteFiles({root:join(root,'owned'),registry,workspaceRoot:async()=>workspace,owner:()=>state.owner,canRead:()=>state.allowed,reveal,knowledge})}
 }
+const localId='a40df035-b42b-47c4-8683-332e9a45fcab',receivedId='b3'.repeat(16)
+const knowledgeRow=(id:string,name:string,size:number)=>({id,name,size,updatedAt:1,saved:false,starred:false,source:'upload' as const})
+it('copies renamed knowledge documents using the catalog name and gives only the note ownership of its copy',async()=>{
+ const bytes=Buffer.from('文档正文'),document=knowledgeRow(localId,'研究记录.md',bytes.length)
+ const store={file:vi.fn()},sharing={read:vi.fn()},f=await fixture({store,sharing,generation:()=>1})
+ const path=join(f.root,'revision-4.md');await writeFile(path,bytes);store.file.mockResolvedValue({document,path})
+ const node=await f.files.admit('alice','s',{nodeId:'note-file-library',knowledgeFileId:localId,name:'拖拽标签.md',path:'/ignored'})
+ expect(store.file).toHaveBeenCalledWith(localId);expect(sharing.read).not.toHaveBeenCalled()
+ expect(node.name).toBe(document.name);expect(node.path).not.toBe(path)
+ await writeFile(node.path!,'已修改笔记副本');expect(await readFile(path)).toEqual(bytes);await rm(path)
+ expect(await f.files.bind('alice','s',{nodeId:node.id,authorizationId:node.authorizationId})).toEqual({previewSessionId:node.previewSessionId})
+})
+it('imports a received image as persistent note media and rejects unavailable shares and read-only notes',async()=>{
+ const bytes=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlZsAAAAASUVORK5CYII=','base64')
+ const document=knowledgeRow(receivedId,'共享图.png',bytes.length),store={file:vi.fn()},sharing={read:vi.fn().mockResolvedValue({document,data:bytes})}
+ const f=await fixture({store,sharing,generation:()=>1}),input={knowledgeFileId:receivedId,nodeId:'note-file-image'}
+ await expect(f.files.admit('alice','s',input,()=>false)).rejects.toThrow('取消')
+ expect(sharing.read).not.toHaveBeenCalled()
+ const node=await f.files.admit('alice','s',input)
+ expect(node).toMatchObject({name:document.name,mediaKind:'image',contentType:'image/png'})
+ expect(await readFile(node.path!)).toEqual(bytes);expect(node).not.toHaveProperty('url')
+ expect(await f.files.media('alice','s',{nodeId:node.id,authorizationId:node.authorizationId})).toMatchObject({kind:'image'})
+ expect(store.file).not.toHaveBeenCalled()
+ sharing.read.mockRejectedValue(Error('已取消共享'))
+ await expect(f.files.admit('alice','s',{...input,nodeId:'note-file-revoked'})).rejects.toThrow('取消共享')
+})
+it('removes an in-flight knowledge copy and its grant when the account generation changes',async()=>{
+ let generation=1,copy=''
+ const bytes=Buffer.from('共享正文'),document=knowledgeRow(receivedId,'资料.txt',bytes.length)
+ const f=await fixture({store:{file:vi.fn()},sharing:{read:vi.fn().mockResolvedValue({document,data:bytes})},generation:()=>generation})
+ const admit=f.registry.admitFinder.bind(f.registry)
+ vi.spyOn(f.registry,'admitFinder').mockImplementation(async(input,fallback)=>{
+  copy=(input as {path:string}).path;const result=await admit(input,fallback);generation++;return result
+ })
+ await expect(f.files.admit('alice','s',{nodeId:'note-file-switched',knowledgeFileId:receivedId})).rejects.toThrow('取消')
+ await expect(readFile(copy)).rejects.toMatchObject({code:'ENOENT'});expect(f.records).toEqual([])
+})
 it('copies an imported file, persists only authorization metadata and restores it after the source is removed',async()=>{
  const f=await fixture(),source=join(f.root,'原始笔记.md');await writeFile(source,'# 文件内容\n\n保持完整。')
  const node=await f.files.admit('alice','s',{nodeId:'note-file-one',path:source});await rm(source)

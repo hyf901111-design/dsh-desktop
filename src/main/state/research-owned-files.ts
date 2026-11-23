@@ -8,6 +8,7 @@ import { basename, dirname, extname, join } from 'node:path'
 
 // Local imports have no sharing-upload size limit. Publish only complete copies.
 export async function copyResearchFile(source: string, directory: string, options?: {
+  name?: string
   signal?: AbortSignal
   progress?: (progress: KnowledgeImportProgress) => void
 }): Promise<string> {
@@ -15,9 +16,11 @@ export async function copyResearchFile(source: string, directory: string, option
   const original = await realpath(source)
   const before = await stat(original)
   if (!before.isFile()) throw Error('只能拖入文件')
+  const name = options?.name ?? basename(original)
+  if (options?.name !== undefined && (!name || name==='.' || name==='..' || /[\\/\p{Cc}]/u.test(name))) throw Error('文件名无效')
   await mkdir(directory, { recursive: true })
   const root = await realpath(directory)
-  if (dirname(original) === root) return original
+  if (dirname(original) === root && options?.name === undefined) return original
   const temporary = join(root, '.research-import-' + randomUUID())
   try {
     if (options?.progress || options?.signal) {
@@ -41,7 +44,7 @@ export async function copyResearchFile(source: string, directory: string, option
     if (before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ino !== after.ino)
       throw Error('文件在复制期间发生变化，请重新拖入')
     options?.signal?.throwIfAborted()
-    const name = basename(original), extension = extname(name), stem = name.slice(0, name.length - extension.length)
+    const extension = extname(name), stem = name.slice(0, name.length - extension.length)
     for (let n = 0; n < 10000; n++) {
       options?.signal?.throwIfAborted()
       const destination = join(root, n ? `${stem} (${n})${extension}` : name)

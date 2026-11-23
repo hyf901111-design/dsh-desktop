@@ -1,3 +1,4 @@
+import { fileEditorMode } from '../../shared/file-editor.mjs'
 import { execFile } from 'node:child_process'
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -41,9 +42,9 @@ export async function presentationFileBytes(name: string, size: number, source: 
 
 export async function readDroppedPresentation(document: { name: string; size: number }, label: unknown, source: Uint8Array | string) {
   const { name, size } = document
-  if (name !== label || !/\.pptx$/iu.test(name))
-    throw Error('文件已变化，或不是 .pptx 格式。请从知识库重新拖入。')
+  if (name !== label || fileEditorMode(name) !== 'presentation')
+    throw Error('文件已变化，或不支持该演示格式。请从知识库重新拖入。')
   const bytes = await presentationFileBytes(name, size, source)
   if (!validOfficePackage(bytes, 'pptx')) throw Error('无法读取此 PowerPoint 文件，请检查是否损坏或已加密。')
-  return { bytes, name }
+  return { bytes, name: name.replace(/\.[^.]+$/u, '.pptx') }
 }

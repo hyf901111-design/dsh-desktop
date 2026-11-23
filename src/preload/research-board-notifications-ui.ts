@@ -1,3 +1,5 @@
+import { feedbackImagePicker } from './problem-feedback-images'
+import { MAX_FEEDBACK_IMAGES, isFeedbackImage } from '../../packages/dsh-research-collaboration/feedback-images.js'
 import centerStyles from './notification-center.css?inline'
 import closeIcon from './notification-assets/close.svg?inline'
 import emptyIcon from './notification-assets/empty.svg?inline'
@@ -14,6 +16,7 @@ import type {
 } from '../shared/research-boards'
 import {
   boardButton,
+  boardDialog,
   boardRoleLabel,
   installBoardUiStyles,
   requestBoardPageAction,
@@ -52,6 +55,7 @@ export function mountResearchBoardNotifications(
   let reconnecting = false
   let marking: { ids: string[]; version?: string; all: boolean } | undefined
   let feedback: { text: string; retry?: () => Promise<void> } | undefined
+  let imageDialog: ReturnType<typeof boardDialog> | undefined
   let problemForm: HTMLFormElement | undefined
   let feedbackToast: HTMLElement | undefined
   let feedbackTimer: number | undefined
@@ -320,6 +324,31 @@ export function mountResearchBoardNotifications(
       title.textContent = `${actor?.username ?? '用户'} 的问题反馈`
       subtitle.textContent = typeof n.message === 'string' ? n.message : ''
       const meta = appendLines(row, title, subtitle, n.createdAt)
+      if (Array.isArray(n.imageHashes) && n.imageHashes.length) {
+        const links = doc.createElement('div')
+        links.className = 'srb-feedback-images'
+        n.imageHashes.slice(0, MAX_FEEDBACK_IMAGES).forEach((_, position) => {
+          const label = '查看图片 ' + (position + 1)
+          links.append(boardButton(doc, label, async () => {
+            closePanel()
+            const preview = boardDialog(doc, label)
+            imageDialog = preview
+            preview.dialog.dataset.imagePreviewDialog = ''
+            preview.dialog.classList.add('srb-feedback-image-dialog')
+            preview.dialog.addEventListener('close', () => { if (imageDialog === preview) imageDialog = undefined }, { once: true })
+            await preview.run(async () => {
+              const result = await call<{ image: string }>('notifications.feedbackImage', { notificationId: n.notificationId, position })
+              if (!preview.dialog.isConnected) return
+              if (!isFeedbackImage(result.image)) throw new Error('无法读取这张图片。')
+              const image = doc.createElement('img')
+              image.alt = label
+              image.src = result.image
+              preview.body.append(image)
+            }, '正在加载图片…')
+          }))
+        })
+        meta.parentElement?.append(links)
+      }
       if (!n.readAt) appendMarkRead(meta, () => markRead([n.notificationId]), marking?.ids.includes(n.notificationId))
       return row
     }
@@ -500,12 +529,10 @@ export function mountResearchBoardNotifications(
     label.textContent = '问题反馈'
     const input = doc.createElement('textarea')
     input.maxLength = 2000
-    input.required = true
     input.placeholder = '请描述遇到的问题'
     label.append(input)
     const status = doc.createElement('p')
     status.role = 'status'
-    status.textContent = '反馈将发送到 hyf90 的消息中心。'
     const actions = doc.createElement('div')
     const leave = () => {
       problemForm = undefined
@@ -520,30 +547,36 @@ export function mountResearchBoardNotifications(
     send.textContent = '发送反馈'
     send.disabled = true
     let operationId = win.crypto.randomUUID()
-    input.oninput = () => {
-      operationId = win.crypto.randomUUID()
-      send.disabled = !input.value.trim()
+    const picker = feedbackImagePicker(doc, form, status, update)
+    function update(contentChanged: boolean) {
+      if (contentChanged) operationId = win.crypto.randomUUID()
+      send.disabled = picker.busy || (!input.value.trim() && !picker.images.length)
     }
+    input.oninput = () => update(true)
     form.onsubmit = async event => {
       event.preventDefault()
-      if (send.disabled || !input.value.trim()) return
-      send.disabled = back.disabled = input.readOnly = true
+      if (send.disabled || form.inert) return
+      form.inert = true
+      send.disabled = true
       status.textContent = '正在发送…'
       try {
-        await call('notifications.feedback', { operationId, message: input.value.trim() })
+        await call('notifications.feedback', { operationId, message: input.value.trim(),
+          ...(picker.images.length ? { images: [...picker.images] } : {}) })
         if (problemForm !== form) return
         leave()
-        if (panel) showSuccess('反馈已发送给 hyf90')
+        if (panel) showSuccess('反馈已发送')
       } catch (error) {
         if (problemForm !== form) return
         const code = (error as { code?: string }).code
         status.textContent = code === 'RATE_LIMITED' ? '发送过于频繁，请稍后重试。' : '反馈发送失败，请稍后重试。'
-        send.disabled = back.disabled = input.readOnly = false
+        form.inert = false
+        send.disabled = false
         input.focus()
       }
     }
-    actions.append(back, send)
-    form.append(label, status, actions)
+    actions.className = 'srb-problem-actions'
+    actions.append(picker.add, back, send)
+    form.append(label, picker.files, picker.previews, status, actions)
     panel.replaceChildren(form)
     anchor(panel)
     input.focus()
@@ -580,9 +613,10 @@ export function mountResearchBoardNotifications(
     const notifications = state?.account.user ? state.notifications.notifications : []
     const unread = notifications.filter(n => !n.readAt).length + Number(updateUnread())
     const read = boardButton(doc, marking?.all ? '标记中…' : '全部已读', markAllRead, '全部已读')
-    read.className = 'srb-notifications-read'
+    read.className = 'srb-notifications-text-action'
     read.disabled = unread === 0 || !!marking
     const report = boardButton(doc, '问题反馈', openProblemForm)
+    report.className = 'srb-notifications-text-action'
     report.dataset.problemFeedbackEntry = ''
     report.disabled = !account
     if (!account) report.title = '请先登录账号再发送反馈'
@@ -827,6 +861,8 @@ export function mountResearchBoardNotifications(
     const id = next.account.user?.userId ?? ''
     if (id !== account) {
       closeBubble(false)
+      imageDialog?.close()
+      imageDialog = undefined
       problemForm = undefined
       if (panel && account) closePanel()
       queue = []
@@ -969,6 +1005,7 @@ export function mountResearchBoardNotifications(
     off()
     observer.disconnect()
     doc.removeEventListener('visibilitychange', visibility)
+    imageDialog?.close()
     closeBubble(false)
     clearFeedbackToast()
     panel?.remove()

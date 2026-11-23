@@ -222,7 +222,8 @@ export class AccountService {
           signal: AbortSignal.any([
             this.sessionAbort.signal,
             AbortSignal.timeout(
-              ['asset.stage', 'asset.add', 'asset.get', 'knowledge.publish', 'knowledge.file'].includes(endpoint.kind)
+              ['asset.stage', 'asset.add', 'asset.get', 'knowledge.publish', 'knowledge.file'].includes(endpoint.kind) ||
+              (endpoint.kind === 'notifications.feedback' && endpoint.images?.length)
                 ? 120_000
                 : 25_000
             ),

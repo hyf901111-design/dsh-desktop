@@ -51,9 +51,6 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     const gap = Math.max(3, rail.right - anchor.right + 3)
     panel.style.paddingLeft = gap + 'px'
     panel.style.setProperty('--switcher-left', (anchor.right + gap) + 'px')
-    const top = Math.max(8, Math.min(anchor.top, win.innerHeight - 180)) + 'px'
-    panel.style.top = top
-    panel.style.setProperty('--switcher-top', top)
   }
   function cancelTimers() { win.clearTimeout(openTimer); win.clearTimeout(closeTimer) }
   function close() {

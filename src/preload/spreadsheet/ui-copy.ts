@@ -293,6 +293,8 @@ export const spreadsheetUiCopy: Record<string, string> = {
   '最近在此会话中使用': 'Recently used in this conversation',
   '空白工作簿已创建': 'Blank workbook created',
   '工作簿已导入': 'Workbook imported',
+  '请从右侧知识库拖入 Excel 或 CSV 文件。': 'Drag an Excel or CSV file from the knowledge panel.',
+  '知识库文件已变化，请重新拖入。': 'The file has changed. Drag it from the knowledge panel again.',
   '工作簿已更新': 'Workbook updated',
   '载入最新版本': 'Load latest version',
   '当前还未保存的编辑会丢失。': 'Your unsaved edits will be lost.',

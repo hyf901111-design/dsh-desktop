@@ -1,17 +1,15 @@
+import { fileEditorMode } from '../../shared/file-editor.mjs'
+import { KNOWLEDGE_FILE_DRAG_TYPE as format, readKnowledgeDrag, isKnowledgeDragSource, type KnowledgeDragFile as KnowledgeFile } from '../../shared/knowledge-drag'
 import type { IpcRenderer } from 'electron'
 import { openHomePresentationReference } from '../../../scripts/lib/home-guide-presentation-native.mjs'
 
-const format = 'application/x-ework-knowledge-file'
 const completed = new WeakMap<DragEvent, { done: Promise<void>; cancel(): void }>()
-type KnowledgeFile = { id: string; label: string }
 type Controls = { waitFor(read: () => boolean, message: string): Promise<void>; cue(node: HTMLElement, label: string): Promise<void> }
-const invalid = '请从右侧知识库拖入 .pptx 文件。'
+const invalid = '请从右侧知识库拖入支持的演示文件。'
 
 function readFile(transfer: DataTransfer | null): KnowledgeFile {
-  let file: KnowledgeFile | undefined
-  try { file = JSON.parse(transfer?.getData(format) ?? '') } catch { /* Not a knowledge file. */ }
-  if (!file || typeof file.id !== 'string' || !/^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/iu.test(file.id) ||
-      typeof file.label !== 'string' || !/\.pptx$/iu.test(file.label)) throw Error(invalid)
+  const file = readKnowledgeDrag(transfer)
+  if (!file || fileEditorMode(file.label) !== 'presentation') throw Error(invalid)
   return file
 }
 
@@ -42,11 +40,11 @@ export function mountPresentationKnowledgeDrop(host: HTMLElement, options: {
     end()
     const row = (event.target as Element | null)?.closest<HTMLElement>('#odyssey-right-workspace-panel [data-knowledge-panel-host] [draggable=true][data-knowledge-file-id]')
     if (importing || !options.empty() || !row?.dataset.knowledgeFileId || !event.dataTransfer?.types.includes(format)) return
+    const file = readKnowledgeDrag(event.dataTransfer)
+    if (!file || fileEditorMode(file.label) !== 'presentation' || !isKnowledgeDragSource(row, file, host.dataset.eworkPresentationView)) return
     drag = { row, id: row.dataset.knowledgeFileId }
     row.dataset.presentationDragging = 'true'
-    let hint = '松开以导入 PowerPoint 副本'
-    try { readFile(event.dataTransfer) } catch { hint = invalid }
-    zone.textContent = options.writable() ? hint : '当前演示文稿只读。'
+    zone.textContent = options.writable() ? '松开以导入演示文稿副本' : '当前演示文稿只读。'
     zone.hidden = false
   }
   zone.ondragover = event => {
@@ -66,7 +64,7 @@ export function mountPresentationKnowledgeDrop(host: HTMLElement, options: {
     end()
     const done = (async () => {
       const file = readFile(event.dataTransfer)
-      if (file.id !== source.id || !source.row.isConnected || !host.isConnected || !options.empty())
+      if (file.id !== source.id || !isKnowledgeDragSource(source.row, file, host.dataset.eworkPresentationView) || !host.isConnected || !options.empty())
         throw Error('知识库文件或演示页签已切换，请重新拖入。')
       if (!options.writable()) throw Error('当前演示文稿只读。')
       zone.textContent = '正在导入 ' + file.label

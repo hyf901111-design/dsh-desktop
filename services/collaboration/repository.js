@@ -302,24 +302,30 @@ export function notificationStatements(
     )
   ]
 }
-export async function submitProblemFeedback(env, user, operationId, message) {
+export async function submitProblemFeedback(env, user, operationId, message, images = []) {
   const recipient = await sql(env, 'SELECT id FROM users WHERE username=? AND disabled=0', 'hyf90').first()
   if (!recipient) fail('FEEDBACK_UNAVAILABLE', 503)
   const id = hash(JSON.stringify(['feedback', user.id, operationId]))
+  const imageHashes = images.map(image => hash(image))
   const record = () => sql(env, 'SELECT payload FROM research_notifications WHERE id=?', id).first()
   let row = await record()
   if (!row) {
     await limit(env, `feedback:${user.id}`, 6, 60000)
-    const payload = JSON.stringify({ boardTitle: '问题反馈', actor: { userId: user.id, username: user.username }, message })
+    const payload = JSON.stringify({ boardTitle: '问题反馈', actor: { userId: user.id, username: user.username }, message,
+      ...(images.length ? { imageHashes } : {}) })
     await env.ACCOUNTS_DB.batch([
       sql(env, `INSERT INTO research_notifications(id,recipient_id,board_id,event_version,type,payload,created_at)
         VALUES(?,?,'',1,'feedback',?,?) ON CONFLICT(id) DO NOTHING`, id, recipient.id, payload, Date.now()),
+      ...images.map((image, position) => sql(env, `INSERT INTO research_feedback_images(notification_id, position, image)
+        SELECT id, ?, ? FROM research_notifications WHERE id=? AND payload=?
+        ON CONFLICT(notification_id, position) DO NOTHING`, position, image, id, payload)),
       sql(env, 'INSERT INTO research_notification_outbox(id,notification_id,recipient_id) VALUES(?,?,?) ON CONFLICT(id) DO NOTHING',
         id, id, recipient.id)
     ])
     row = await record()
   }
-  if (!row || JSON.parse(row.payload).message !== message) fail('FEEDBACK_CONFLICT', 409)
+  const stored = row && JSON.parse(row.payload)
+  if (!stored || stored.message !== message || JSON.stringify(stored.imageHashes ?? []) !== JSON.stringify(imageHashes)) fail('FEEDBACK_CONFLICT', 409)
   return id
 }
 export async function flushOutbox(env) {
