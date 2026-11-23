@@ -441,6 +441,229 @@
         ],
         "recordedAt": "2026-11-23T06:13:28.666Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "工作台输出上限续作、同会话文档恢复与覆盖校验",
+        "branch": "codex/feat/board-continuation-20261123",
+        "baseCommit": "545ed9527cf1524dae00736ebacae80a4e3b31ad",
+        "tipCommit": "ec05ee287273ee26f6032563de807a6cf677959f",
+        "commits": [
+          {
+            "commit": "c5a6e287239ac53dfcf8dacbf55d5125390723cd",
+            "parents": [
+              "545ed9527cf1524dae00736ebacae80a4e3b31ad"
+            ],
+            "subject": "在工作台输出达到上限时保留原任务并按执行进展有限续作"
+          },
+          {
+            "commit": "e223e529005b1e01752d0d472e056100eb9da7ca",
+            "parents": [
+              "c5a6e287239ac53dfcf8dacbf55d5125390723cd"
+            ],
+            "subject": "修复工作台续作沿用同会话附件并读取 Markdown 正文"
+          },
+          {
+            "commit": "a25322a542bcebe37baf05cc285bfe186c3e719a",
+            "parents": [
+              "e223e529005b1e01752d0d472e056100eb9da7ca"
+            ],
+            "subject": "修复历史看板规划截断后发送继续时丢失原任务和附件"
+          },
+          {
+            "commit": "ec05ee287273ee26f6032563de807a6cf677959f",
+            "parents": [
+              "a25322a542bcebe37baf05cc285bfe186c3e719a"
+            ],
+            "subject": "修复看板将分组统计当成缺失明细并复核历史卡片"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/component-delivery-scope.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/conversation-components-policy.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-document-evidence.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-execution-policy.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-grouped-quantity.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-output-limit.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-panel-delivery.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-plan.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-prototype-evidence.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-resume-request.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/workbench-text-document.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/profile-runtime-patches.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-generation-watch.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-partial-delivery.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-workbench-feedback.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/workbench-output-limit.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/generation-progress-persistence.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-generation-watch.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-planning-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-workbench-feedback.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-feedback-upgrade-preservation.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-grouped-quantity.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-mixed-document-adapter.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-output-limit.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-prototype-evidence.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/workbench-resume-request.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-output-limit.test.js",
+              "test/workbench-resume-request.test.js",
+              "test/conversation-components-policy.test.js",
+              "test/workbench-mixed-document-adapter.test.js",
+              "test/workbench-execution-policy.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "验证真实代理循环在上限时续作、历史手动恢复和文档子任务。",
+            "verifiedCommit": "ec05ee287273ee26f6032563de807a6cf677959f",
+            "completedAt": "2026-11-23T06:33:56.910070+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-prototype-evidence.test.js",
+              "-t",
+              "workbench document follow-ups"
+            ],
+            "outcome": "passed",
+            "summary": "验证同会话附件恢复、覆盖优先级与文件读取限制。",
+            "verifiedCommit": "ec05ee287273ee26f6032563de807a6cf677959f",
+            "completedAt": "2026-11-23T06:33:49.881702+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/component-delivery-scope.test.js",
+              "test/workbench-grouped-quantity.test.js",
+              "test/workbench-explicit-scope.test.js",
+              "test/research-generation-watch.test.js",
+              "test/research-planning-feedback.test.js",
+              "test/research-workbench-feedback.test.js",
+              "test/workbench-feedback-upgrade-preservation.test.js",
+              "test/generation-progress-persistence.test.js",
+              "--testTimeout=30000",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "验证结构图表、分组索引、旧卡片恢复和真实覆盖缺口。",
+            "verifiedCommit": "ec05ee287273ee26f6032563de807a6cf677959f",
+            "completedAt": "2026-11-23T06:35:05.896479+00:00",
+            "timeoutMs": 300000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "用截图会话和在用计划的只读重放核对上限与旧卡回执，测试检查客户端实际回执行为。"
+        },
+        "acceptanceCriteria": [
+          "首次读完报告后达到输出上限会有限续作，已创建的面板不会重复创建",
+          "同会话复指文档可读取原上传的 Markdown，历史纯读取回合可手动继续",
+          "准确核验分组计数、趋势、排名与索引，恢复有依据的旧卡误报并保留真实缺项"
+        ],
+        "risks": [
+          "自动续作有上限且受用户停止与权限状态约束。",
+          "模型验证使用本地模拟服务，原始会话仅离线重放。"
+        ],
+        "generatedAt": "2026-11-23T06:35:06.525023+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -503,6 +726,48 @@
         "typecheck"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-output-limit.test.js",
+        "test/workbench-resume-request.test.js",
+        "test/conversation-components-policy.test.js",
+        "test/workbench-mixed-document-adapter.test.js",
+        "test/workbench-execution-policy.test.js"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-prototype-evidence.test.js",
+        "-t",
+        "workbench document follow-ups"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/component-delivery-scope.test.js",
+        "test/workbench-grouped-quantity.test.js",
+        "test/workbench-explicit-scope.test.js",
+        "test/research-generation-watch.test.js",
+        "test/research-planning-feedback.test.js",
+        "test/research-workbench-feedback.test.js",
+        "test/workbench-feedback-upgrade-preservation.test.js",
+        "test/generation-progress-persistence.test.js",
+        "--testTimeout=30000",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 300000
     }
   ],
   "mainSynchronizations": []
