@@ -805,6 +805,67 @@
         ],
         "recordedAt": "2026-11-23T06:35:25.728Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "表格触控板横滚与组件滑块双向同步",
+        "branch": "codex/feat/table-scroll-sync-20261123",
+        "baseCommit": "545ed9527cf1524dae00736ebacae80a4e3b31ad",
+        "tipCommit": "0dd382bac8187e29dbf3b2978c2cebf374fa39bb",
+        "commits": [
+          {
+            "commit": "0dd382bac8187e29dbf3b2978c2cebf374fa39bb",
+            "parents": [
+              "545ed9527cf1524dae00736ebacae80a4e3b31ad"
+            ],
+            "subject": "修复表格重排和触控板滚动后滑块不同步"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/workbench-scrollbars.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/research-grid-ui.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/workbench-scrollbar-theme-browser.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/workbench-scrollbar-theme-browser.test.js",
+              "--testTimeout=30000",
+              "--maxWorkers=1"
+            ],
+            "outcome": "passed",
+            "summary": "验证原生与沙箱多表、触控板横滚、卡片重排及拖动反馈。",
+            "verifiedCommit": "0dd382bac8187e29dbf3b2978c2cebf374fa39bb",
+            "completedAt": "2026-11-23T06:55:41.648985+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "隔离桌面客户端复现表格移至96而宿主滑块停在0，Chromium 重放原表并核验滚动、反向和拖动后的修复。"
+        },
+        "acceptanceCriteria": [
+          "卡片尺寸变化后横向触控板滚动与滑块保持一致",
+          "拖动滑块控制同一张表，多张表独立工作"
+        ],
+        "risks": [
+          "已用原始表格重放，未修改用户原会话数据。"
+        ],
+        "generatedAt": "2026-11-23T06:55:41.649233+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -909,6 +970,17 @@
         "--maxWorkers=1"
       ],
       "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/workbench-scrollbar-theme-browser.test.js",
+        "--testTimeout=30000",
+        "--maxWorkers=1"
+      ],
+      "timeoutMs": 240000
     }
   ],
   "mainSynchronizations": []
