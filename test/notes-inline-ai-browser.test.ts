@@ -26,7 +26,7 @@ beforeAll(async()=>{
  const fixture:Plugin={name:'notes-inline-ai-fixture',resolveId:id=>id===entry?entry:undefined,load:id=>id===entry?`
  import {mountNotes} from ${JSON.stringify(resolve('src/preload/notes/mount.tsx'))};import {WorkspaceSurfaceHost} from ${JSON.stringify(resolve('src/preload/workspace-surface-host.ts'))};
  window.calls=[];window.jobs={};window.replies=[];
- const bridge={request:async(method,input)=>{window.calls.push({method,input});if(method==='load')return{owner:'fixture-owner',saved:window.saved};if(method==='save'){if(window.holdSaves)await new Promise(resolve=>(window.saveWaiters??=[]).push(resolve));window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='generate')return new Promise((resolve,reject)=>{window.jobs[input.requestId]={input,resolve,reject}});if(method==='library-list')return[];if(method==='capability-reply')window.replies.push(input);return{}},draft:async input=>window.draft=input};
+ const bridge={request:async(method,input)=>{window.calls.push({method,input});if(window.imageBridge&&method in window.imageBridge)return window.imageBridge[method](input);if(method==='load')return{owner:'fixture-owner',saved:window.saved};if(method==='save'){if(window.holdSaves)await new Promise(resolve=>(window.saveWaiters??=[]).push(resolve));window.saved={...input.content,revision:input.revision+1};return{status:'saved',saved:window.saved}}if(method==='generate')return new Promise((resolve,reject)=>{window.jobs[input.requestId]={input,resolve,reject}});if(method==='library-list')return[];if(method==='capability-reply')window.replies.push(input);return{}},draft:async input=>window.draft=input};
  const host=new WorkspaceSurfaceHost(document);let mounted=mountNotes(document,bridge,host);window.fixture={flush:()=>mounted.flushCurrent(),reopen:()=>{mounted.dispose();mounted=mountNotes(document,bridge,host)}};
  `:undefined,transform(code,id){if(id.endsWith('/preload/notes/editor.tsx'))return code.replace('  const slashMenu = useMemo','  window.editor=editor; const slashMenu = useMemo');if(id.endsWith('/preload/notes/inline-ai.ts'))return code.replace(/from (['"])y-prosemirror\1/gu,'from '+JSON.stringify(peer)).replace(/return\s*\{\s*documentId,\s*blockId,\s*position:/u,'return window.lastInlineAnchor={documentId,blockId,position:')+`\nwindow.inlineAnchorDiagnostics=()=>{const e=window.editor,state=e._tiptapEditor.state,b=ySyncPluginKey.getState(state)?.binding,a=window.lastInlineAnchor;if(!b)return{missing:true};const relative=a?.position||Y.relativePositionToJSON(absolutePositionToRelativePosition(state.selection.from,b.type,b.mapping)),position=relativePositionToAbsolutePosition(b.type.doc,b.type,Y.createRelativePositionFromJSON(relative),b.mapping),ancestors=[];if(position!==null){const p=state.doc.resolve(position);for(let d=p.depth;d>=0;d--)ancestors.push({type:p.node(d).type.name,id:p.node(d).attrs.id})}return{block:e.getTextCursorPosition().block,selection:state.selection.toJSON(),fragmentLength:b.type.length,fragment:b.type.toString(),relative,position,ancestors,anchor:a}};window.inlineBindingDiagnostics=()=>{const state=window.editor._tiptapEditor.state;return{importedKey:ySyncPluginKey.key,importedState:!!ySyncPluginKey.getState(state)?.binding,installed:state.plugins.filter(p=>/^y-sync\\$/u.test(p.key.replace(/\\d+$/u,''))).map(p=>({key:p.key,binding:!!p.getState(state)?.binding}))}};`},generateBundle(_options,bundle){syncOwners=[...new Set(Object.values(bundle).flatMap(chunk=>chunk.type==='chunk'?Object.keys(chunk.modules).filter(id=>/\/y-prosemirror\/src\/plugins\/keys\.js$/u.test(id)):[]))]}}
  const output=await build({...config,configFile:false,plugins:[...(config.plugins||[]),fixture],build:{...config.build,write:false,rollupOptions:{...config.build?.rollupOptions,input:entry}}})
@@ -334,5 +334,46 @@ it('allows an inline request to update its explicitly referenced component under
   await expect.poll(()=>f.page.evaluate(()=>JSON.parse((window as any).editor.getBlock('selected-component').props.payload).containerSpec.rows)).toEqual([[2]])
   const saved=await f.page.evaluate(()=>JSON.parse((window as any).editor.getBlock('selected-component').props.payload));expect(saved.id).toBe(node.id);expect(saved.noteSize).toEqual(node.noteSize)
   expect(await f.page.evaluate(()=>(window as any).editor.getBlock('anchor').content)).toEqual([]);expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+
+it('imports a picked image at the Space anchor, previews a sidebar image and restores both after reopening',async()=>{
+ const f=await open()
+ try{
+  await f.page.evaluate(()=>{
+   const w=window as any
+   w.imageBridge={
+    'file-pick':()=>({files:[{name:'本地.png',path:'/fixture/local.png'}]}),
+    'file-admit':({nodeId}:any)=>({id:nodeId,name:'本地.png',source:'computer',authorizationId:'picked-auth',mediaKind:'image'}),
+   }
+  })
+  await cursor(f.page);await f.page.keyboard.press('Space')
+  await f.page.getByRole('button',{name:'插入图片'}).click()
+  const images=()=>f.page.evaluate(()=>(window as any).editor.document.filter((b:any)=>b.type==='attachment').map((b:any)=>JSON.parse(b.props.payload)))
+  await expect.poll(images).toMatchObject([{name:'本地.png',noteDisplay:'inline',authorizationId:'picked-auth'}])
+  expect(await f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.type==='attachment'?'picked':b.id).slice(0,4))).toEqual(['before','picked','anchor','after'])
+  await f.page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:notes-submit',{detail:{sessionId:'inline-note',prompt:'请生成一张海边的水彩配图并插入笔记',images:[],submissionId:1}})))
+  await expect.poll(()=>f.page.evaluate(()=>Object.values((window as any).jobs).map((j:any)=>j.input.entryPoint))).toEqual(['composer'])
+  await finish(f.page,{kind:'image',files:[{id:'note-file-generated',name:'配图.png',source:'computer',authorizationId:'generated-auth',mediaKind:'image',noteDisplay:'inline'}]})
+  await f.page.getByRole('button',{name:'添加至正文'}).waitFor()
+  expect(await images()).toHaveLength(1)
+  await f.page.getByRole('button',{name:'添加至正文'}).click()
+  await expect.poll(images).toMatchObject([{authorizationId:'picked-auth'},{authorizationId:'generated-auth',noteDisplay:'inline'}])
+  await f.page.evaluate(async()=>{const w=window as any;await w.fixture.flush();w.fixture.reopen()})
+  await f.page.locator('.en-title').waitFor()
+  await expect.poll(images).toMatchObject([{name:'本地.png',authorizationId:'picked-auth'},{name:'配图.png',authorizationId:'generated-auth'}])
+  expect(await f.page.evaluate(()=>(window as any).saved.yjs.length)).toBeGreaterThan(0)
+  expect(f.errors).toEqual([])
+ }finally{await f.context.close()}
+})
+it('puts a Space-prompt image at its original paragraph and supports undo',async()=>{
+ const f=await open()
+ try{
+  await launch(f.page,'画一张山间日出的插图')
+  await finish(f.page,{kind:'image',files:[{id:'note-file-dawn',source:'computer',name:'日出.png',authorizationId:'dawn',mediaKind:'image'}]})
+  await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.map((b:any)=>b.id).slice(0,3))).toEqual(['before','note-file-dawn','after'])
+  await f.page.getByRole('button',{name:'撤销本次 AI 生成'}).click()
+  await expect.poll(()=>f.page.evaluate(()=>(window as any).editor.document.slice(0,3).map((b:any)=>b.id))).toEqual(['before','anchor','after'])
+  expect(f.errors).toEqual([])
  }finally{await f.context.close()}
 })

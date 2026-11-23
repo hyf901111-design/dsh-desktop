@@ -141,16 +141,20 @@ export function installHomeOperationsNavigation(deps: Dependencies): () => void 
     const observer = new win.MutationObserver(check)
     const timer = win.setTimeout(() => done(Error('原生对话尚未就绪，请稍后重试。')), 4000)
     ticket.controller.signal.addEventListener('abort', abort, { once: true })
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'data-ework-notes-session', 'disabled', 'readonly', 'inert', 'hidden'] })
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['aria-selected', 'data-ework-notes-session', 'disabled', 'readonly', 'inert', 'hidden', 'data-odyssey-page', 'data-ework-presentation-view'] })
     check()
   })
-  const activate = async (ticket: Ticket, action: Action) => {
-    const id = await resolveSession(ticket, action)
+  const activate = async (ticket: Ticket, action: Action, presentationId?: string) => {
+    if (presentationId && ticket.sessionId !== presentationId) throw Error(changed)
+    const id = presentationId ?? await resolveSession(ticket, action)
     current(ticket)
     let draftRev: number | undefined
     if (action === 'composer') {
       draftRev = await waitFor(ticket, () => {
         if (!sessionAvailable(id)) return
+        if (presentationId && !Array.from(document.querySelectorAll<HTMLElement>(
+          '.pI_x6G_centerCol [data-odyssey-page="presentation"] [data-ework-presentation-view]'
+        )).some(view => view.dataset.eworkPresentationView === id)) return
         const shell = deps.inputHub.shell(id), snapshot = shell.snapshot
         if (shell.disposed || snapshot.phase !== 'plain' || snapshot.researchContextPreparing || deps.composerBlocks.storeFor(id).getSnapshot() !== undefined) throw Error('对话输入暂不可编辑，请完成当前操作后重试。')
         const inputs = [...document.querySelectorAll<HTMLTextAreaElement>('textarea[data-odyssey-file-reference-session]')].filter(input => input.dataset.odysseyFileReferenceSession === id && !input.closest('[data-odyssey-subagent-panel]'))
@@ -186,8 +190,10 @@ export function installHomeOperationsNavigation(deps: Dependencies): () => void 
     for (const ticket of pending.values()) cancel(ticket)
     const ticket: Ticket = { requestId, controller: new AbortController(), generation, revision, sessionId: deps.sessions.list.getSnapshot().current }
     pending.set(requestId, ticket)
-    if (typeof request.action !== 'string' || !['research', 'notes', 'composer'].includes(request.action) || Object.keys(request).length !== 2) { cancel(ticket, '卡片操作无效，请重试。'); return }
-    void activate(ticket, request.action as Action).catch(error => finish(ticket, false, { message: error instanceof Error ? error.message : '暂时无法打开，请稍后重试。' }))
+    const presentationId = request.presentationId
+    const targeted = request.action === 'composer' && typeof presentationId === 'string' && presentationId.length > 0
+    if (typeof request.action !== 'string' || !['research', 'notes', 'composer'].includes(request.action) || Object.keys(request).length !== (targeted ? 3 : 2)) { cancel(ticket, '卡片操作无效，请重试。'); return }
+    void activate(ticket, request.action as Action, targeted ? presentationId : undefined).catch(error => finish(ticket, false, { message: error instanceof Error ? error.message : '暂时无法打开，请稍后重试。' }))
   }
   const dispose = () => {
     if (stopped) return

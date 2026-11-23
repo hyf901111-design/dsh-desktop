@@ -309,3 +309,27 @@ it('does not navigate after the user cancels while a note save is pending', asyn
   await rejected
   expect(f.trace).not.toContain('home:research')
 })
+
+it.each(['knowledge', 'spreadsheet'])('keeps a newly selected %s view during a late presentation skill lookup', async next => {
+  const f = fixture({ waitDetail: true })
+  const root = f.document.querySelector<HTMLElement>('.wSkVaW_root')!
+  root.dataset.odysseyPage = 'presentation'
+  const view = f.document.createElement('div')
+  view.dataset.eworkPresentationView = 'current'
+  root.append(view)
+  f.reveal.resolve()
+  const operation = f.actions.run('ppt', f.context, 'current')
+  const rejected = expect(operation).rejects.toThrow()
+  await vi.waitFor(() => expect(f.trace).toContain('ipc:skill-detail'))
+  if (next === 'knowledge') {
+    f.document.body.dataset.workspaceSurface = next
+    f.document.dispatchEvent(new f.window.CustomEvent('sherlock:workspace-surface-change', { detail: { active: true, surface: next } }) as unknown as Event)
+  } else {
+    root.dataset.odysseyPage = next
+    await new Promise(resolve => setTimeout(resolve, 0))
+  }
+  f.detailResult.resolve(details[ids.ppt]!)
+  await rejected
+  expect(f.trace).not.toContain('skill:reveal')
+  expect(f.trace).not.toContain('compose:insert')
+})

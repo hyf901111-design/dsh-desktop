@@ -1,6 +1,6 @@
 import type { CanvasImageType, CanvasScope, CanvasStorage, StoredCanvas, StoredImageLayer } from '../../shared/image-factory-canvas'
 import { loadRaster, type Raster } from './raster'
-import type { ImageLayer, ImageScene } from './layers'
+import { originalCanvasSize, type ImageLayer, type ImageScene } from './layers'
 import { markWorkspaceProjectEdited } from '../workspace-project-lock'
 
 type RestoreStatus = 'idle' | 'loading' | 'ready' | 'error'
@@ -125,7 +125,11 @@ export class CanvasWorkspace {
       return false
     }
     if (!editKey || editKey !== entry.coalescing) entry.beforeEdit ??= previous
-    entry.scene = next
+    // Older canvases may already have been resized. Their source image still
+    // carries the original dimensions, even if this edit replaces or deletes it.
+    const keepOriginal = previous && previous.id === next.id && !next.originalSize &&
+      (previous.originalSize || previous.width !== next.width || previous.height !== next.height || imageLayer(previous) !== imageLayer(next))
+    entry.scene = keepOriginal ? { ...next, originalSize: originalCanvasSize(previous) } : next
     entry.editedInSession = true
     markWorkspaceProjectEdited(this.doc, scope)
     if (persist) {
@@ -318,6 +322,7 @@ export class CanvasWorkspace {
     const revision = ++entry.revision
     const canvas: StoredCanvas = {
       version: 1, id: scene.id, title: scene.title, width: scene.width, height: scene.height,
+      ...(scene.originalSize && { originalSize: scene.originalSize }),
       ...(scene.aiWatermark && { aiWatermark: scene.aiWatermark }),
       ...(entry.editedInSession && { editedInSession: entry.editedInSession }),
       layers: scene.layers.filter(layer => layer.kind !== 'text' || layer.text.trim()).map(layer => layer.kind === 'image' ? { kind: 'image', id: layer.id, assetId: layer.assetId, mediaType: layer.mediaType } : layer),

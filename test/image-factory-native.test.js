@@ -68,6 +68,31 @@ function fixture(taskStorage, removeProvisionalReference, workspace = () => 'tes
   return { win, doc, shell, shells, binding, session, events, respond, state, listeners, sessionsState, updateBlank, sessionCatalog, setView, handoff }
 }
 
+it('shows preparation synchronously for image edits, ordinary questions and overlapping sends, and clears failures', async () => {
+  const f = fixture()
+  const { binding, doc, session, events } = f
+  const status = () => binding.isSubmitting(session.sessionId)
+  try {
+    doc.body.dataset.workspaceSurface = 'image-factory'
+    let request
+    doc.addEventListener('sherlock:image-factory-prepare', event => { request = event.detail })
+    const editing = binding.prompt(session, [{ type: 'text', text: '生成一张海报' }], 'queue')
+    expect(status()).toBe(true)
+    expect(binding.isSubmitting('another-task')).toBe(false)
+    expect(session.prompt).not.toHaveBeenCalled()
+    let admit
+    session.prompt.mockImplementationOnce(() => new Promise(resolve => { admit = resolve }))
+    const asking = binding.prompt(session, [{ type: 'text', text: '只讨论构图，不要出图。' }], 'queue')
+    await vi.waitFor(() => expect(admit).toBeTypeOf('function'))
+    events('prepared', { id: request.id, error: '测试准备失败' })
+    await expect(editing).rejects.toThrow('测试准备失败')
+    expect(status()).toBe(true)
+    admit({ ok: true })
+    await asking
+    expect(status()).toBe(false)
+  } finally { binding.dispose(); await f.win.happyDOM.abort() }
+})
+
 it('keeps an image request out of the board while its application conversation opens', async () => {
   const f = fixture(undefined, undefined, undefined, { isBoardOnly: id => id === 'native-session' })
   try {

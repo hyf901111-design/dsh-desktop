@@ -3746,7 +3746,6 @@ export async function apply(ctx) {
     const disposeScheduledTitle = registerScheduledTitle(ctx, {isTrustedRequest, readJsonBody})
     const disposeBrowserTranslation = registerBrowserTranslation(ctx, {isTrustedRequest})
     const disposeScheduledTaskTool = registerScheduledTaskTool(ctx)
-    const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText})
     const disposeNotesChallenge = registerNotesChallenge(ctx, {isTrustedRequest})
     const disposeNoteSessions = registerNoteSessions(ctx, {isTrustedRequest, readJsonBody})
     const disposePresentationSessions = registerDocumentSessions(ctx,{isTrustedRequest, readJsonBody},'presentation')
@@ -3767,6 +3766,7 @@ export async function apply(ctx) {
     const disposeResearchReportTool = registerResearchReportTool(ctx)
     const disposePresentationFiles = registerPresentationFiles(ctx)
     const hostedAi = registerHostedAi(ctx)
+    const disposeNotesAi = registerNotesAi(ctx, {isTrustedRequest, readJsonBody,loadFileText:loadResearchFileText,hostedImage:hostedAi?.image})
     const disposeImageGenerationTool = registerImageGenerationTool(ctx, {hosted: hostedAi?.image})
     let context
     try {

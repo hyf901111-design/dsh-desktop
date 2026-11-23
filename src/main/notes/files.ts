@@ -1,6 +1,7 @@
-import { createHash } from 'node:crypto'
-import { join, isAbsolute, relative, resolve } from 'node:path'
-import { realpath,stat } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { basename, join, isAbsolute, relative, resolve } from 'node:path'
+import { realpath,stat,mkdtemp,rm,writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { copyResearchFile } from '../state/research-owned-files'
 import type { ResearchFilePreviewRegistry } from '../state/research-file-preview'
 import type { NoteFileNode } from '../../shared/note-files'
@@ -40,6 +41,23 @@ export class NoteFiles {
       if(!valid()){this.options.registry.revokeNode(identity.sessionId,identity.nodeId);throw Error('文件导入已取消。')}
       return {id:identity.nodeId,name:descriptor.name,path,source:'computer',authorizationId:descriptor.authorizationId,previewSessionId:identity.sessionId,contentType:media?.contentType??descriptor.contentType,...media?{mediaKind:media.kind}:{},...descriptor.previewEligible===false?{previewEligible:false}: {}}
     }finally{this.importing.delete(key)}
+  }
+  async admitImage(owner:string,sessionId:string,stored:{attachment:{mediaType:string;bytes:number;name?:string};data:string},current:()=>boolean){
+    const formats:Record<string,string>={'image/png':'png','image/jpeg':'jpg','image/webp':'webp','image/gif':'gif'}
+    const ref=stored.attachment,ext=Object.hasOwn(formats,ref?.mediaType)?formats[ref.mediaType]:undefined
+    if(!current()||!ext||!Number.isSafeInteger(ref.bytes)||ref.bytes<=0||ref.bytes>20*1024*1024||typeof stored.data!=='string'||stored.data.length!==4*Math.ceil(ref.bytes/3))throw Error('笔记图片暂时无法读取。')
+    const data=Buffer.from(stored.data,'base64')
+    if(data.length!==ref.bytes)throw Error('笔记图片不完整。')
+    const directory=await mkdtemp(join(tmpdir(),'ework-note-image-'))
+    const stem=basename(ref.name||'笔记配图').replace(/\.[^.]*$/u,'').replace(/[^\p{L}\p{N}_ -]/gu,'').trim().slice(0,80)||'笔记配图'
+    const path=join(directory,stem+'.'+ext),nodeId='note-file-'+randomUUID()
+    try{
+      await writeFile(path,data,{flag:'wx',mode:0o600})
+      if(!current())throw Error('笔记图片请求已结束。')
+      const node=await this.admit(owner,sessionId,{nodeId,path})
+      if(!current()||node.mediaKind!=='image'){this.revoke(owner,sessionId,nodeId);throw Error('笔记图片暂时无法显示。')}
+      return {...node,noteDisplay:'inline' as const}
+    }finally{await rm(directory,{recursive:true,force:true})}
   }
   revoke(owner:string,sessionId:string,nodeId:string){const identity=this.identity(owner,sessionId,nodeId),pending=this.importing.get(identity.sessionId+':'+nodeId);if(pending)pending.cancelled=true;return this.options.registry.revokeNode(identity.sessionId,nodeId)}
   async bind(owner:string,sessionId:string,input:any){const identity=this.identity(owner,sessionId,input.nodeId),file=await this.options.registry.resolveExportSource({sessionId:identity.sessionId,nodeId:identity.nodeId,authorizationId:input.authorizationId});if(!file||owner!==this.options.owner()||!this.options.canRead(sessionId))throw Error('此附件不属于当前笔记，请重新拖入文件。');return {previewSessionId:identity.sessionId}}

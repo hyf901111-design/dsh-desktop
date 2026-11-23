@@ -97,6 +97,10 @@ export function EWorkNoteConversationRow({row,sessionId,t,loadImage,openFile,for
       resultStatus?h('div',{'data-note-client-receipts':'',role:'status'},h(Markdown,{blocks:[{kind:'text',text:resultStatus}],streaming:false,t})):null,
       row.result?.kind==='conversation'&&conversation ? h(Markdown,{blocks:[{kind:'text',text:conversation}],streaming:false,reveal,t}) : null,
       row.result?.kind==='text' ? h('div',{className:'en-task-result'},feedback?h('div',{role:'status'},feedback):null,h(Markdown,{blocks:[{kind:'text',text:row.result.markdown}],streaming:false,reveal,t})) : null,
+      row.result?.kind==='image'?h('div',{className:'en-task-result'},
+        h('div',{role:'status'},row.phase==='accepted'?noteUiText('已插入图片'):row.phase==='discarded'?feedback:noteUiText('图片已准备。')),
+        row.result.images?.length&&loadImage?h(_deepseek_ai_dsh_client_ui_attachment.ImageGallery,{images:row.result.images.map(attachment=>({attachment})),load:loadImage,align:'start',labels:messageImageLabels(t)}):null
+      ):null,
       row.result?.kind==='component' ? h('div',{role:'status'},(row.phase==='accepted'?noteUiText("已创建并写入笔记组件："):noteUiText("已生成组件："))+(row.result.node.title||noteUiText("研究组件"))+'。') : null,
       settled&&Actions?h(Actions,{text,time:row.finishedAt,clock:'end',onBranch:forkAt?()=>forkAt(row.completedSeq):undefined,branchUnavailable:branchUnavailable||!Number.isSafeInteger(row.completedSeq),extraActions:renderSlot?.('conversation.chat.assistant-actions',{messageId:'ework-note:'+row.requestId,text}),className:'osXY9a_actions',t}):null)
 }

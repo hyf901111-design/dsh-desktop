@@ -272,3 +272,84 @@ body > [data-navigation-menu][role=menu] > [role=menuitem] > svg { width: 14px; 
   font: 13px/20px var(--odyssey-font-ui, system-ui);
 }
 [data-navigation-status]:empty { display: none }
+
+#ework-sidebar-session-switcher {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: max-content;
+  max-width: none;
+  height: fit-content;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, #26272b);
+  font: 14px/20px var(--odyssey-font-ui, system-ui);
+  -webkit-app-region: no-drag;
+}
+#ework-sidebar-session-switcher > nav {
+  box-sizing: border-box;
+  width: min(308px, calc(100vw - var(--switcher-left) - 8px));
+  max-height: calc(100vh - var(--switcher-top, 80px) - 8px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  border: 1px solid #dedfe4;
+  border-radius: 12px;
+  background: #fbfbfc;
+  box-shadow: 0 8px 28px #0002;
+}
+body[data-ds-dark-theme] #ework-sidebar-session-switcher {
+  color: var(--dsw-alias-label-primary, #e5e6ec);
+}
+body[data-ds-dark-theme] #ework-sidebar-session-switcher > nav {
+  border-color: #414249;
+  background: #27282b;
+  box-shadow: 0 8px 28px #0005;
+}
+#ework-sidebar-session-switcher h3, #ework-sidebar-session-switcher p {
+  margin: 0;
+  padding: 6px 10px;
+  font: 500 13px/20px var(--odyssey-font-ui, system-ui);
+  color: var(--dsw-alias-label-secondary, inherit);
+}
+#ework-sidebar-session-switcher h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+#ework-sidebar-session-switcher h3::before {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  mask: url('/odyssey-b-folder-open-18.svg') center/contain no-repeat;
+}
+#ework-sidebar-session-switcher section + section { margin-top: 8px }
+#ework-sidebar-session-switcher button {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 12px 5px 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#ework-sidebar-session-switcher button:is(:hover,:focus-visible,[aria-current=true]) {
+  background: var(--dsw-alias-interactive-bg-hover, color-mix(in srgb, currentColor 10%, transparent));
+}
+#ework-sidebar-session-switcher button:focus-visible { text-decoration: underline }
+#ework-sidebar-session-switcher .ework-switcher-more { color: var(--dsw-alias-label-tertiary, #82838a) }
+body:has(#ework-sidebar-session-switcher:popover-open) [data-navigation-tooltip] { display: none }

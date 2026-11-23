@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import Ajv from 'ajv'
 import { BlockAssembler, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { acceptArtifactOutput } from './artifact-output.js'
@@ -11,6 +11,7 @@ import {noteFailureError,noteFinishFailure,noteThrownFailure} from './notes-stre
 import {rememberNoteGenerationRoute,noteGenerationRoute} from './notes-generation-route.js'
 import {consumeNoteLead,notePublicLead} from './notes-public-lead.js'
 import {sidebarNoteConversationOnly,standaloneNoteBasisPoints} from './notes-sidebar-intent.js'
+import {noteImageIntent,prepareNoteImages} from './note-images.js'
 import {noteSurfaceInstructions} from './notes-surface-contract.js'
 
 const plain=value=>!!value&&typeof value==='object'&&!Array.isArray(value)
@@ -138,7 +139,8 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
  let started=false,awaitingCapabilities=false,diagnostic,latest={reasoning:'',outputChars:0}
  const emit=value=>{latest={...latest,...value,reasoning:''};progress(latest)}
  try {
-  const signal = AbortSignal.any([AbortSignal.timeout(input?.mode==='component'?240000:120000), ...(requestedSignal ? [requestedSignal] : [])])
+  const imageIntent=input&&noteImageIntent(input)
+  const signal = AbortSignal.any([AbortSignal.timeout(imageIntent?590000:input?.mode==='component'?240000:120000), ...(requestedSignal ? [requestedSignal] : [])])
   signal.throwIfAborted()
   if (!input || typeof input.sessionId !== 'string' || input.sessionId.length > 256 || typeof input.prompt !== 'string' || (!input.prompt.trim() && !input.images?.length) || input.prompt.length > 8000 || typeof input.markdown !== 'string' || input.markdown.length > 100000 || typeof input.selection !== 'string' || input.selection.length > 30000) throw Error('笔记生成参数无效。')
   const inline=input.entryPoint==='inline',conversationOnly=sidebarNoteConversationOnly(input)
@@ -154,13 +156,18 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
   const document=references.scope==='note'&&!documentSnapshot?input.markdown:'',selection=references.scope==='none'?'':input.selection,title=references.scope==='note'?input.title:''
   const standalone=conversationOnly&&standaloneNoteBasisPoints(input,references)
   const conversation=cardLocal||standalone?[]:sharedNoteConversationContext(session)
-  if(session&&!cardLocal){engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title||''});setNoteConversationRunning(session,input.requestId,true);const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,references:noteMessageReferences(references,selection)});latest={...latest,...metadata};started=true}
+  let imageFingerprint
+  if(imageIntent){
+    if(!session||session.header?.origin==='subagent'||!input.requestId||typeof input.requestId!=='string')throw Error('笔记图片请求无效。')
+    imageFingerprint=createHash('sha256').update(JSON.stringify([input.prompt,input.images,input.markdown,input.selection])).digest('hex')
+    const previous=noteConversationRows(session).find(row=>row.requestId===input.requestId)
+    if(previous){
+      if(previous.imageFingerprint===imageFingerprint&&previous.result?.kind==='image'&&['ready','accepted'].includes(previous.phase))return previous.result
+      throw Error('此图片请求已处理，请重新发起。')
+    }
+  }
+  if(session&&!cardLocal){engageNoteSession(ctx,{sessionId:input.sessionId,title:input.title||''});setNoteConversationRunning(session,input.requestId,true);const metadata=recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',prompt:input.prompt,...imageFingerprint?{imageFingerprint}:{},references:noteMessageReferences(references,selection)});latest={...latest,...metadata};started=true}
   emit({stage:'model',reasoning:'',outputChars:0})
-  const selectedReferences=await loadNoteReferenceContent(input.sessionId,references,input.prompt,signal,sourceOptions)
-  const response = retainedRoute?undefined:await ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } })
-  if (!retainedRoute&&(!response.result.ok || !response.result.value.current || !response.result.value.routable)) throw Error('当前会话模型不可用，请选择模型后重试。')
-  const route = retainedRoute||response.result.value.current
-  if(inline&&!textOnly)rememberNoteGenerationRoute(session,input,route)
   const images = input.images ?? []
   if (!Array.isArray(images)) throw Error('笔记图片格式无效。')
   let imageContent = []
@@ -178,6 +185,18 @@ export async function generateNoteSuggestion(ctx, input, requestedSignal, progre
     if(started)recordNoteConversation(session,{requestId:input.requestId,phase:'preparing',content:[...imageContent,{type:'text',text:input.prompt}]})
     signal.throwIfAborted()
   }
+  if(imageIntent){
+    emit({stage:'writing',documentIntent:true,outputChars:0})
+    const images=await prepareNoteImages(ctx,input,imageContent,imageIntent,signal,sourceOptions)
+    const result={kind:'image',images}
+    recordNoteConversation(session,{requestId:input.requestId,phase:'ready',result,message:{content:images.map(attachment=>({type:'image',attachment}))},finishedAt:Date.now()})
+    return result
+  }
+  const selectedReferences=await loadNoteReferenceContent(input.sessionId,references,input.prompt,signal,sourceOptions)
+  const response = retainedRoute?undefined:await ctx.apiProxy.sessions.models({ rpcId: randomUUID(), payload: { sessionId: input.sessionId } })
+  if (!retainedRoute&&(!response.result.ok || !response.result.value.current || !response.result.value.routable)) throw Error('当前会话模型不可用，请选择模型后重试。')
+  const route = retainedRoute||response.result.value.current
+  if(inline&&!textOnly)rememberNoteGenerationRoute(session,input,route)
   if(input.mode==='component'){
     const {generateNoteComponent}=await import('./notes-component-generation.js')
     const result=await generateNoteComponent(ctx,{...input,title,document,selection,references:selectedReferences,imageContent},signal,emit)
@@ -393,7 +412,7 @@ async function readNotesBody(req, ctx) {
   try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{throw Error('笔记请求格式无效。')}
 }
 
-export function registerNotesAi(ctx, { isTrustedRequest,loadFileText }) {
+export function registerNotesAi(ctx, { isTrustedRequest,loadFileText,hostedImage }) {
   let active = 0,cardJobs=0,ordinaryJobs=0
   return ctx.webServer.register({ kind: 'exact', path: '/sherlock/notes/generate', handler: async (req, res) => {
     const send = (status, value) => { if (!res.destroyed) { res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value)) } }
@@ -409,7 +428,7 @@ export function registerNotesAi(ctx, { isTrustedRequest,loadFileText }) {
       slot=cardLocal?'component':'ordinary';if(cardLocal)cardJobs++;else ordinaryJobs++
       streaming=input.stream===true
       if(streaming)res.writeHead(200,{'content-type':'application/x-ndjson','cache-control':'no-store'})
-      const result=await generateNoteSuggestion(ctx,input,controller.signal,streaming?value=>write({type:'progress',...value}):undefined,{loadFileText})
+      const result=await generateNoteSuggestion(ctx,input,controller.signal,streaming?value=>write({type:'progress',...value}):undefined,{loadFileText,hostedImage})
       if(streaming){write({type:'result',result});res.end()}else send(200,result)
     }
     catch (error) {const message=error instanceof Error ? error.message : '笔记生成失败，请重试。';if(streaming){write({type:'error',error:message});res.end()}else send(503,{error:message})}

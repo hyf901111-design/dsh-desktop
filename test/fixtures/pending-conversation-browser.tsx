@@ -32,6 +32,7 @@ const historyState = {openState:'open',composerPhase:'active',pending:[],chat:{
  order:['prior'],nodes:new Map([['prior',{kind:'context',data:{text:'已有消息'}}]])
 }}
 const options={makeShell:(deps:any)=>new native.__testSessionInputShell({...deps,actx:{},inputTriggers:()=>undefined}),sessions:{list:{getSnapshot:()=>current,subscribe:active.subscribe},create:async(value:any)=>{events.push({type:'create',...value});if(failCreate){failCreate=false;throw Error('测试创建失败，输入保留')}
+ if(data.beforeCreate)await data.beforeCreate(value)
  const id=value.sessionId??'new-session';
  const project=projects.items.find(item=>item.workspaceId===value.workspaceId);project?.sessionIds.push(id);emptySessions.byId[id]={cwd:value.cwd??project?.path,blank:true};
  if(value.sessionId)imageInputs.set(id,options.makeShell({defaultSink:(text:string,images:string[])=>events.push({type:'send',text,images})}));
@@ -114,6 +115,7 @@ createRoot(document.getElementById('app')!).render(<Home/>);
 createRoot(document.getElementById('right-body')!).render(<Right/>);
 const surfaces=new WorkspaceSurfaceHost(document)
 let images: ReturnType<typeof mountImageFactory> | undefined
+let imageFactory: ReturnType<typeof installImageFactoryContext> | undefined
 if (data.realImageTabs) {
  const canvases=new Map<CanvasScope,StoredCanvas>()
  const factory=installImageFactoryContext({
@@ -128,6 +130,7 @@ if (data.realImageTabs) {
   setTaskView:(id:string)=>options.setView(id,'chat'),
   send:async()=>({ok:true})
  })
+ imageFactory=factory
  native.__testSetImageFactory(factory)
  images=mountImageFactory(document,surfaces,{
   storage:{read:async scope=>({epoch:1,canvas:canvases.get(scope)}),
@@ -143,7 +146,7 @@ for (const name of ['browser','image-factory','knowledge'] as const) {
  surfaces.register(name,surface)
 }
 const openSurface=(name:'browser'|'image-factory'|'knowledge')=>name==='image-factory'&&images?images.open():surfaces.open(name)
-window.pendingFixture={sidebarWorkspace,openViaRail(name:'browser'|'image-factory'|'knowledge'){
+window.pendingFixture={sidebarWorkspace,imageFactory,openViaRail(name:'browser'|'image-factory'|'knowledge'){
  document.dispatchEvent(new CustomEvent('sherlock:sidebar-launch-workspace-app',{detail:name}))
  openSurface(name)
 },openSurface,events,initialized,record,right,real,controller,openExisting(id:string){current.current=id;active.set(id)},

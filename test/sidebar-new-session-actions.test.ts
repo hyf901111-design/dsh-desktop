@@ -216,23 +216,23 @@ describe('normal new Note workspace flow',()=>{
    expect(scopes).toEqual(['old'])
   } finally {action.dispose();images.dispose();host.dispose();f.stop()}
  })
- it.each(['note','spreadsheet'] as const)('opens a new %s session without reusing the research board session',async kind=>{
+ it.each(['note','spreadsheet','presentation'] as const)('opens a new %s session without reusing the previous app session',async kind=>{
   const f=await newNoteFixture()
   const doc=f.w.document as unknown as Document
   const action=createSidebarNewNoteAction(doc,async()=>{},kind)
   const fetch=vi.fn(async()=>Response.json({ok:true}))
   vi.stubGlobal('fetch',fetch)
   try {
-   f.chatStore.create('old').actions.setView('research')
+   f.chatStore.create('old').actions.setView('spreadsheet')
    const before=JSON.stringify(f.shell.snapshot)
-   await action.create()
+   const created = await action.create()
    const id=f.sessions.list.getSnapshot().current
-   expect(id).toBeTruthy()
+   expect(id).toBe(created)
    expect(id).not.toBe('old')
-   expect(f.chatStore.create(id).getSnapshot().view).toBe(kind==='note'?'notes':'spreadsheet')
-   expect(f.chatStore.create('old').getSnapshot().view).toBe('research')
+   expect(f.chatStore.create(id).getSnapshot().view).toBe(kind==='note'?'notes':kind)
+   expect(f.chatStore.create('old').getSnapshot().view).toBe('spreadsheet')
    expect(JSON.stringify(f.shell.snapshot)).toBe(before)
-   if(kind==='spreadsheet')expect(fetch).toHaveBeenCalledWith('/sherlock/spreadsheet/session',expect.objectContaining({
+   if(kind!=='note')expect(fetch).toHaveBeenCalledWith('/sherlock/'+kind+'/session',expect.objectContaining({
     body:expect.stringContaining(id)
    }))
   } finally { action.dispose(); f.stop() }

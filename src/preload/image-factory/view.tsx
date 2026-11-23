@@ -20,9 +20,9 @@ import { ImageTaskTabs, type TaskAction, type TaskTabs } from './task-tabs'
 import { iconSource } from './icons'
 import { useImageViewport } from './viewport'
 import { aiWatermarkColor, aiWatermarkFamily, aiWatermarkLayout, aiWatermarkText, drawAiWatermark } from './watermark'
-import { applyRegion, between, canvasFor, canvasPoint, canvasRatioPresets, drawContainedRaster, drawFit, encode, loadRaster, preservesRegionTransparency, providerDimensions, providerSize, ratios,
+import { applyRegion, between, canvasFor, canvasPoint, canvasRatioPresets, containedRasterBounds, drawContainedRaster, drawFit, encode, loadRaster, preservesRegionTransparency, providerDimensions, providerSize, ratios,
   regionEditBounds, regionEditFrame, requestedImageSize, type Point, type Raster, type Region, type Size } from './raster'
-import { drawLayers, imageFonts, moveLayer, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
+import { drawLayers, imageFonts, moveLayer, originalCanvasSize, resizeTextLayer, textLayerStyle, textResizeHandles, textTopInsideCanvas,
   type CanvasLayer, type ImageScene, type TextLayer, type TextResizeHandle } from './layers'
 import styles from './style.css?raw'
 
@@ -295,6 +295,13 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
   const layerMenuAllowed = !!current && !tool && !area && !busy && !editing
   useLayoutEffect(() => { setLayerMenu(undefined) }, [scope, current?.id, layerMenuAllowed])
   const raster = current?.layers.find((layer): layer is Extract<CanvasLayer, { kind: 'image' }> => layer.kind === 'image')
+  const originalSize = current && originalCanvasSize(current)
+  const atOriginalSize = current && originalSize && current.width === originalSize.width && current.height === originalSize.height
+  const imageBounds = raster && current && containedRasterBounds(raster.raster, current)
+  const imageStyle = imageBounds && current ? {
+    left: imageBounds.x / current.width * 100 + '%', top: imageBounds.y / current.height * 100 + '%',
+    width: imageBounds.width / current.width * 100 + '%', height: imageBounds.height / current.height * 100 + '%',
+  } : undefined
   const selectedText = current?.layers.find((layer): layer is TextLayer => layer.kind === 'text' && layer.id === selectedId)
   const fit = current ? Math.max(.01, Math.min(Math.max(1, bounds.width) / current.width, Math.max(1, bounds.height) / current.height, 1)) : 1
   const displayScale = fit * zoom
@@ -671,7 +678,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     }
   }
   function changeRatio(size: Size) {
-    if (!current || busy || current.width * size.height === current.height * size.width) return
+    if (!current || busy || current.width === size.width && current.height === size.height) return
     releaseText()
     clearSelection()
     setScene(old => old && resizeCanvas(old, size))
@@ -1426,10 +1433,14 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
     { id: 'text', commands: [{ id: 'text', icon: 'type', label: t('添加文本', 'Add text'),
       checked: placingText, disabled: busy, run: () => activateTool('text') }] },
     { id: 'ratio', commands: [{ id: 'ratio', label: t('画布比例', 'Canvas ratio'), disabled: busy,
-      choices: Object.entries(canvasRatioPresets).map(([label, size]) => ({
-        id: label, label, ratio: size, checked: !!current && current.width * size.height === current.height * size.width,
-        run: () => changeRatio(size),
-      })) }] },
+      choices: [
+        ...(originalSize ? [{ id: 'original', label: t('恢复原比例', 'Restore original ratio'), ratio: originalSize,
+          checked: !!atOriginalSize, run: () => changeRatio(originalSize) }] : []),
+        ...Object.entries(canvasRatioPresets).map(([label, size]) => ({
+          id: label, label, ratio: size, checked: !!current && !atOriginalSize && current.width * size.height === current.height * size.width,
+          run: () => { if (current && current.width * size.height !== current.height * size.width) changeRatio(size) },
+        })),
+      ] }] },
     { id: 'export', commands: [{ id: 'export', label: t('导出', 'Export'),
       disabled: busy || !current?.layers.length, exporting: exportImage }] },
     { id: 'save-project', commands: [{ id: 'save-project', icon: 'bookmark', label: t('保存至知识库', 'Save to Knowledge'),
@@ -1576,7 +1587,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
             }}>
             <div className="if-raster-artwork">
               {current.layers.map(layer => {
-                if (layer.kind === 'image') return <img key={layer.id} className="if-image-layer" draggable={false} src={layer.raster.url} alt={current.title}
+                if (layer.kind === 'image') return <img key={layer.id} className="if-image-layer" style={imageStyle} draggable={false} src={layer.raster.url} alt={current.title}
                   onClick={event => { if (!tool && !area && !busy && !event.shiftKey) selectLayer(layer) }}/>
                 if (layer.kind !== 'text') return <div key={layer.id} className="if-brand-layer" data-brand-layer-id={layer.id} data-just-placed={placedLayerIds.includes(layer.id)}
                   data-selected={selectedIds.includes(layer.id) || selectedIds.includes(layerUnitId(layer))} tabIndex={tool || area || busy ? -1 : 0} role="button"
@@ -1638,6 +1649,8 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
                 width: rectangle.width / current.width * 100 + '%', height: rectangle.height / current.height * 100 + '%',
               }}>{!commentPending && <><i/><i/><i/><i/></>}</div>}
             </div>
+            {raster && selectedId === raster.id && layerMenuAllowed &&
+              <div className="if-selected-layer-bounds" aria-hidden="true" data-selected-layer-outline={raster.id} style={imageStyle}/>}
             {selectionBox && <>
               <div className="if-group-bounds" role={groupBox ? 'group' : undefined}
                 aria-label={groupBox ? t('调整编组大小', 'Resize group') : undefined}

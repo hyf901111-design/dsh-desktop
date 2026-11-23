@@ -2655,6 +2655,12 @@ export class ResearchBoardsService {
         await this.refresh()
         return result
       }
+      case 'notifications.feedback': {
+        const p = exact(input, ['operationId', 'message'])
+        return this.client.request({
+          kind: 'notifications.feedback', operationId: safeId(p.operationId), message: text(p.message, 2000).trim()
+        }, this.generationAbort.signal)
+      }
       case 'notifications.read': {
         const p = exact(input, [], ['notificationIds'])
         if (

@@ -40,6 +40,7 @@ export type BrandOverlay = BrandArtworkLayer | ShapeLayer
 export type StoredImageLayer = { id: string; kind: 'image'; assetId: string; mediaType: CanvasImageType }
 export type StoredCanvas = {
   version: 1; id: string; title: string; width: number; height: number; layers: (StoredImageLayer | TextLayer | BrandOverlay)[]
+  originalSize?: { width: number; height: number }
   aiWatermark?: true
   editedInSession?: true
 }

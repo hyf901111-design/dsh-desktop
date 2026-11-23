@@ -101,7 +101,7 @@ export class ScheduledTaskView {
     private bridge: ScheduledTaskBridge,
     private surfaceHost?: WorkspaceSurfaceHost,
     private integrationsBridge?: IntegrationBridge,
-    private sidebarActions?: {newNote:()=>Promise<void>;newSpreadsheet?:()=>Promise<void>;newPresentation?:()=>Promise<void>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];visibleApps?:()=>readonly NavigationShortcut[];sidebarFull?:()=>boolean;pinApp?:(app:NavigationShortcut)=>void},
+    private sidebarActions?: {newNote:()=>Promise<unknown>;newSpreadsheet?:()=>Promise<unknown>;newPresentation?:()=>Promise<unknown>;pinnedApps?:()=>readonly (NavigationShortcut|null)[];visibleApps?:()=>readonly NavigationShortcut[];sidebarFull?:()=>boolean;pinApp?:(app:NavigationShortcut)=>void},
   ) {}
   mount() {
     mountWorkspaceTopbarStyles(this.document)

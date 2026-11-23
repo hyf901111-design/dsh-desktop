@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { installNotesService } from '../src/main/notes/service'
@@ -184,4 +185,62 @@ it('settles a recovered preparing native admission as a real failed history row 
  await s.call('capability-ready',{documentId:'document',active:true});const input={requestId:'native-retry',documentId:'document',anchorId:'anchor',prompt:'创建一个3乘3的表格',title:'原生笔记'}
  expect(await s.call('native-table',input)).toMatchObject({phase:'failed',receipt:{status:'failed'}});expect(requests.map(row=>row.action)).toEqual(['conversation-native-begin','conversation-native-end']);expect(requests[1].phase).toBe('failed');expect(s.progress).toEqual([])
  expect(await s.call('native-table',input)).toMatchObject({phase:'failed'});expect(requests).toHaveLength(2);s.dispose()
+})
+
+it('turns a sidebar image prompt into a note-owned image and reads the same PNG after saving and loading',async()=>{
+  const {generateNoteSuggestion}=createRequire(import.meta.url)('../packages/dsh-research-task-runtime/notes-ai.js')
+  const {NoteFiles}=await import('../src/main/notes/files')
+  const {ResearchFilePreviewRegistry}=await import('../src/main/state/research-file-preview')
+  const {noteImageBlocks}=await import('../src/shared/note-files')
+  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAIAAAA2iEnWAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAEUlEQVQImWP4z8DwnwGMERQARNAF+661WskAAAAASUVORK5CYII=','base64')
+  const ref={attachmentId:'image-reference',mediaType:'image/png',bytes:png.length,width:2,height:3,name:'海边.png'}
+  const session={events:[] as any[],append(type:string,data:any){const event={seq:this.events.length,time:Date.now(),type,data};this.events.push(event);return event}}
+  const provider={models:[{id:'test-image'}],generate:vi.fn(async()=>({data:png}))}
+  const store={imageLimits:{maxImageBytes:1024,maxMessageImageBytes:4096,maxImagesPerMessage:4,mediaTypes:['image/png']},saveImage:vi.fn(async()=>ref),saveImages:vi.fn(async()=>[ref])}
+  const ctx={attachments:store,sessions:{get:()=>session},sessionTitle:{rename:(_:any,title:string)=>{session.append('session/title',{title});return {title}}}}
+  const root=mkdtempSync(join(tmpdir(),'note-image-flow-'));roots.push(root)
+  const registry=new ResearchFilePreviewRegistry({storage:{load:()=>[],save:()=>true},canReadAuthorization:()=>true})
+  const files=new NoteFiles({root,registry,owner:()=>'alice',canRead:()=>true,workspaceRoot:async()=>null,reveal:()=>{}})
+  const s=service('http://127.0.0.1:9999',{files})
+  const attachmentReads:string[]=[]
+  vi.stubGlobal('fetch',async(url:URL,init:RequestInit)=>{
+    const body=JSON.parse(String(init.body))
+    if(url.pathname==='/sherlock/notes/generate'){
+      const result=await generateNoteSuggestion(ctx,body,undefined,undefined,{localImage:provider})
+      return new Response(JSON.stringify({type:'result',result})+'\n')
+    }
+    if(url.pathname==='/api/session.attachment'){
+      const reference=session.events.flatMap(e=>e.data.message?.content||[]).find(b=>b.attachment?.attachmentId===body.payload.attachmentId)
+      expect(body.payload.sessionId).toBe('session')
+      attachmentReads.push(body.payload.attachmentId)
+      return Response.json({rpcId:body.rpcId,result:{ok:true,value:{attachment:reference.attachment,data:png.toString('base64')}}})
+    }
+    return Response.json({})
+  })
+  try{
+    await s.call('capability-ready',{documentId:'document',active:true})
+    const input={requestId:'draw',entryPoint:'composer',mode:'write',prompt:'在笔记里插入一张海边日落的水彩插画',title:'笔记',selection:'',markdown:'海边',images:[],capabilityContext:{documentId:'document',selectedBlockIds:[]}}
+    const result=await s.call('generate',input)
+    expect(result).toMatchObject({kind:'image',files:[{mediaKind:'image',noteDisplay:'inline',authorizationId:expect.any(String)}]})
+    expect(await s.call('generate',input)).toEqual(result)
+    const uploaded=await s.call('generate',{...input,requestId:'upload',prompt:'把上传的图片插入笔记',images:[{type:'image',mediaType:'image/png',data:png.toString('base64')}]})
+    expect(uploaded.files).toHaveLength(1)
+    expect(attachmentReads).toEqual(['image-reference','image-reference'])
+    expect(provider.generate).toHaveBeenCalledTimes(1)
+    const blocks=noteImageBlocks(result.files)
+    const saved=await s.call('save',{revision:0,content:{title:'笔记',blocks,yjs:''},clientId:'client'})
+    expect(saved.status).toBe('saved')
+    const loaded=await s.call('load'),node=JSON.parse(loaded.saved.blocks[0].props.payload)
+    const identity={nodeId:node.id,authorizationId:node.authorizationId}
+    const lease=await s.call('file-media',identity)
+    expect(JSON.stringify(loaded.saved)).not.toContain(lease.releaseId)
+    expect(Buffer.from(await(await registry.handle(new Request(lease.url))).arrayBuffer())).toEqual(png)
+  }finally{s.dispose()}
+})
+
+it('keeps image questions, quoted examples and requests for captions on the normal writing route',async()=>{
+  const {noteImageIntent}=createRequire(import.meta.url)('../packages/dsh-research-task-runtime/note-images.js')
+  const intent=(prompt:string)=>noteImageIntent({mode:'write',entryPoint:'composer',clientContext:{editable:true},prompt})
+  for(const prompt of ['如何在笔记插入图片？','写一个生成图片的提示词','把图片说明插入笔记','不要生成图片','解释“生成一张水彩插画”','如何生成一张图？','generate an image caption','帮我写一个海报生图提示词','这里可以插入图片吗？','帮我写一段关于生成图片的说明','插入一张数据表格','请给这张图片配个标题','可以教我插入一张图片吗？'])expect(intent(prompt)).toBeUndefined()
+  for(const prompt of ['请给本文配一张图','画一只猫','Generate an illustration of the sea','可以帮我在笔记里插入一张海报吗？','用这个提示词生成图片：一片树林','生成一张小猫在草坪上玩耍'])expect(intent(prompt)).toBe('generate')
 })

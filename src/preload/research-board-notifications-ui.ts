@@ -52,6 +52,7 @@ export function mountResearchBoardNotifications(
   let reconnecting = false
   let marking: { ids: string[]; version?: string; all: boolean } | undefined
   let feedback: { text: string; retry?: () => Promise<void> } | undefined
+  let problemForm: HTMLFormElement | undefined
   let feedbackToast: HTMLElement | undefined
   let feedbackTimer: number | undefined
   let latestUpdateSeenAt: number | undefined
@@ -206,12 +207,12 @@ export function mountResearchBoardNotifications(
     feedbackToast?.remove()
     feedbackToast = undefined
   }
-  function showReadSuccess() {
+  function showSuccess(message: string) {
     clearFeedbackToast()
     const toast = doc.createElement('div')
     toast.className = 'srb-notifications-toast'
     toast.role = 'status'
-    toast.textContent = '已全部标为已读'
+    toast.textContent = message
     feedbackToast = toast
     doc.body.append(toast)
     feedbackTimer = win.setTimeout(clearFeedbackToast, 2400)
@@ -314,6 +315,14 @@ export function mountResearchBoardNotifications(
     const actor = n.actor as { username?: string; userId?: string } | undefined
     const subtitle = doc.createElement('p')
     subtitle.className = 'srb-notification-subtitle'
+    if (n.type === 'feedback') {
+      row.dataset.problemFeedback = ''
+      title.textContent = `${actor?.username ?? '用户'} 的问题反馈`
+      subtitle.textContent = typeof n.message === 'string' ? n.message : ''
+      const meta = appendLines(row, title, subtitle, n.createdAt)
+      if (!n.readAt) appendMarkRead(meta, () => markRead([n.notificationId]), marking?.ids.includes(n.notificationId))
+      return row
+    }
     const ownResult = actor?.userId === state?.account.user?.userId
     const result =
       n.invitation?.status === 'accepted'
@@ -458,7 +467,7 @@ export function mountResearchBoardNotifications(
       }
       if (ids.length) await refresh()
       reconcile()
-      if (all && panel === openedPanel && current()) showReadSuccess()
+      if (all && panel === openedPanel && current()) showSuccess('已全部标为已读')
     } catch {
       if (panel === openedPanel && current()) {
         feedback = { text: '标记已读失败，请重试。', retry: all ? markAllRead : () => markRead(ids, version) }
@@ -482,8 +491,70 @@ export function mountResearchBoardNotifications(
       renderPanel()
     }
   }
+  function openProblemForm() {
+    if (!panel || !account || problemForm) return
+    const form = doc.createElement('form')
+    problemForm = form
+    form.className = 'srb-problem-form'
+    const label = doc.createElement('label')
+    label.textContent = '问题反馈'
+    const input = doc.createElement('textarea')
+    input.maxLength = 2000
+    input.required = true
+    input.placeholder = '请描述遇到的问题'
+    label.append(input)
+    const status = doc.createElement('p')
+    status.role = 'status'
+    status.textContent = '反馈将发送到 hyf90 的消息中心。'
+    const actions = doc.createElement('div')
+    const leave = () => {
+      problemForm = undefined
+      panelSignature = ''
+      renderPanel()
+      panel?.querySelector<HTMLButtonElement>('[data-problem-feedback-entry]')?.focus()
+    }
+    const back = boardButton(doc, '返回', leave)
+    const send = doc.createElement('button')
+    send.type = 'submit'
+    send.className = 'srb-primary'
+    send.textContent = '发送反馈'
+    send.disabled = true
+    let operationId = win.crypto.randomUUID()
+    input.oninput = () => {
+      operationId = win.crypto.randomUUID()
+      send.disabled = !input.value.trim()
+    }
+    form.onsubmit = async event => {
+      event.preventDefault()
+      if (send.disabled || !input.value.trim()) return
+      send.disabled = back.disabled = input.readOnly = true
+      status.textContent = '正在发送…'
+      try {
+        await call('notifications.feedback', { operationId, message: input.value.trim() })
+        if (problemForm !== form) return
+        leave()
+        if (panel) showSuccess('反馈已发送给 hyf90')
+      } catch (error) {
+        if (problemForm !== form) return
+        const code = (error as { code?: string }).code
+        status.textContent = code === 'RATE_LIMITED' ? '发送过于频繁，请稍后重试。' : '反馈发送失败，请稍后重试。'
+        send.disabled = back.disabled = input.readOnly = false
+        input.focus()
+      }
+    }
+    actions.append(back, send)
+    form.append(label, status, actions)
+    panel.replaceChildren(form)
+    anchor(panel)
+    input.focus()
+  }
   function renderPanel() {
     if (!panel) return
+    if (problemForm) {
+      if (!panel.contains(problemForm)) panel.replaceChildren(problemForm)
+      anchor(panel)
+      return
+    }
     // Transfer ticks must not replace controls between pointerdown and click.
     const signature = JSON.stringify([filter, state?.account.status, state?.account.user?.userId,
       state?.account.user ? state.notifications.notifications : [], updateReadVersion,
@@ -511,7 +582,11 @@ export function mountResearchBoardNotifications(
     const read = boardButton(doc, marking?.all ? '标记中…' : '全部已读', markAllRead, '全部已读')
     read.className = 'srb-notifications-read'
     read.disabled = unread === 0 || !!marking
-    header.append(read)
+    const report = boardButton(doc, '问题反馈', openProblemForm)
+    report.dataset.problemFeedbackEntry = ''
+    report.disabled = !account
+    if (!account) report.title = '请先登录账号再发送反馈'
+    header.append(report, read)
     const close = boardButton(doc, '', closePanel, '关闭消息中心')
     close.className = 'srb-notifications-close'
     close.append(icon(closeIcon, 12))
@@ -724,7 +799,8 @@ export function mountResearchBoardNotifications(
     doc.body.append(panel)
     bell?.setAttribute('aria-expanded', 'true')
     renderPanel()
-    panel.querySelector<HTMLButtonElement>('[aria-selected=true]')?.focus()
+    if (problemForm) problemForm.querySelector('textarea')?.focus()
+    else panel.querySelector<HTMLButtonElement>('[aria-selected=true]')?.focus()
   }
   function reconcile() {
     if (disposed) return
@@ -751,6 +827,7 @@ export function mountResearchBoardNotifications(
     const id = next.account.user?.userId ?? ''
     if (id !== account) {
       closeBubble(false)
+      problemForm = undefined
       if (panel && account) closePanel()
       queue = []
       aggregate = []
@@ -858,7 +935,7 @@ export function mountResearchBoardNotifications(
       closePanel()
       return
     }
-    if (!panel.contains(event.target as Node)) return
+    if (!panel.contains(event.target as Node) || problemForm) return
     const target = event.target as HTMLElement
     if (target.role === 'tab' && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
       event.preventDefault()

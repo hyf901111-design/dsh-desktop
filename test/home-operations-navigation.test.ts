@@ -261,3 +261,25 @@ it('cancels quick creation if the user selects another page while creation is pe
   await vi.waitFor(()=>expect(f.replies.find(reply=>reply.requestId==='new-from-existing')).toMatchObject({ok:false}))
   expect(f.sessions.open).not.toHaveBeenCalled()
 })
+
+it('waits for the newly created presentation before prefilling its composer over a retiring sheet', async () => {
+  const f = fixture('new-deck')
+  const send = (requestId: string, presentationId: string) => f.win.dispatchEvent(new f.win.CustomEvent(
+    'sherlock:home-action-request', { detail: { requestId, action: 'composer', presentationId } }))
+  f.root.dataset.odysseyPage = 'spreadsheet'
+  send('prefill', 'new-deck')
+  await Promise.resolve()
+  expect(f.replies).toHaveLength(0)
+  const canvas = f.document.createElement('div')
+  canvas.dataset.eworkPresentationView = 'other-deck'
+  f.root.append(canvas)
+  f.root.dataset.odysseyPage = 'presentation'
+  await new Promise(resolve => setTimeout(resolve, 0))
+  expect(f.replies).toHaveLength(0)
+  canvas.dataset.eworkPresentationView = 'new-deck'
+  await vi.waitFor(() => expect(f.replies[0]).toMatchObject({ ok: true, sessionId: 'new-deck', draftRev: 7 }))
+  send('stale', 'prior-deck')
+  await vi.waitFor(() => expect(f.replies[1]).toMatchObject({ ok: false }))
+  expect(f.sessions.create).not.toHaveBeenCalled()
+  expect(f.submit).not.toHaveBeenCalled()
+})
