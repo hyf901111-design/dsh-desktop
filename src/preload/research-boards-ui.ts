@@ -19,7 +19,8 @@ import { StateDot, Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, I
 import { admitSharedDraft } from './shared-send-draft'
 import { promoteSidebarOrder } from './sidebar-manual-order'
 import {sidebarUsageSnapshot,sidebarUsageTimes,subscribeSidebarUsage} from '../../scripts/lib/sidebar-session-recency.mjs'
-import { sidebarSearchResults, showSidebarSessionSearch } from './sidebar-session-search'
+import { sidebarSearchResults, showSidebarSessionSearch, type SidebarSearchResult } from './sidebar-session-search'
+import { mountSidebarSessionSwitcher } from './sidebar-session-switcher'
 import { installExploreSearch } from './explore-search'
 import type {
   BoardView,
@@ -1853,6 +1854,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.sessions.list.getSnapshot().byId[id]?.updatedAt as
         number | undefined,
     current,
+    sidebarWorkspaces: () => deps.workspaces.list.getSnapshot().items,
     searchSessions(query: string) { return sidebarSearchResults(visibleBoardState(), deps.sessions.list.getSnapshot().byId, deps.workspaces.list.getSnapshot().archivedSessionIds ?? [], query) },
     subscribeSearch(listener: () => void) {
       listeners.add(listener)
@@ -2432,10 +2434,21 @@ export function addBoardCollaborator(page: ResearchBoardsPage, boardId: string, 
 }
 
 export function SidebarSessionSearch({ page, buttonClass }: { page: ResearchBoardsPage; buttonClass: string }) {
-  const label = '搜索会话'
-  return h('button', { type: 'button', className: buttonClass, 'data-sidebar-session-search': '', 'aria-label': label, title: label, onClick: () => showSidebarSessionSearch(document, {
-    results: page.searchSessions, subscribe: page.subscribeSearch,
-    open: async result => { if (result.boardId) await page.openBoard(result.boardId); else if (result.area === 'boards') await page.openPersonal(result.sessionId!); else page.openSearchSession(result.sessionId!) }
+  const label = '搜索会话', search = React.useRef<HTMLButtonElement>(null)
+  const open = React.useCallback(async (result: SidebarSearchResult) => {
+    if (result.boardId) await page.openBoard(result.boardId)
+    else if (result.area === 'boards') await page.openPersonal(result.sessionId!)
+    else page.openSearchSession(result.sessionId!)
+  }, [page])
+  React.useEffect(() => {
+    const root = search.current?.closest<HTMLElement>('[data-dsh-sidebar-root]')
+    if (root) return mountSidebarSessionSwitcher(root, {
+      results: page.searchSessions, subscribe: page.subscribeSearch, workspaces: page.sidebarWorkspaces,
+      current: page.current, showError: page.showError, open
+    })
+  }, [page, open])
+  return h('button', { ref: search, type: 'button', className: buttonClass, 'data-sidebar-session-search': '', 'aria-label': label, title: label, onClick: () => showSidebarSessionSearch(document, {
+    results: page.searchSessions, subscribe: page.subscribeSearch, open
   }) }, h(IconSearchOutline16))
 }
 export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoardsPage; wide?: boolean; expandSidebar?: () => void }) {
