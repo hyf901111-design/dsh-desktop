@@ -64,6 +64,6 @@ python3 scripts/run_signal.py --engine vcp --source westock --code sz300308 --li
 1. 用 `run_signal.py --engine vcp --source westock --code <code>` 得到结构评分
 2. 若 `status=mature_watchlist/形成中`，再结合主升前置阶段、基本面催化、关键位确认做最终判定
 
-**Setup**：`pip install pandas numpy requests`（无特殊依赖）。
+macOS 客户端已提供 pandas、NumPy 和 requests，可直接运行脚本。
 
 调用约定见 `price-action-tools.md` 末尾的"可执行工具"section。

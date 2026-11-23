@@ -56,4 +56,4 @@ python3 scripts/ib/validate_dcf.py <path/to/dcf_model.xlsx>
 
 它会自动检查：公式错误（#REF! / 循环引用）、WACC 合理性、永续增长率边界（建议 < GDP 增速）、terminal value 占比（>70% 警示）、敏感性分析完整性等。**比手工检查 Excel 快且不漏项**。
 
-**Setup**：`pip install openpyxl`（未装报 `ModuleNotFoundError: No module named 'openpyxl'`）。
+macOS 客户端已提供 openpyxl，可直接校验模型。

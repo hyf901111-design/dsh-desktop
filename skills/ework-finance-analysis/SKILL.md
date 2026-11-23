@@ -19,6 +19,8 @@ version: 1.7.3
 
 ## EWork 运行环境
 
+macOS 客户端的任务脚本可以直接使用 `python3`、pandas、NumPy、requests 和 openpyxl。运行脚本时先使用内置环境。专门分析需要额外 Python 包时，在当前可写工作区创建虚拟环境，后续命令使用该环境的解释器。
+
 优先按 [EWork 取数与展示规则](references/ework-runtime.md) 使用当前可见、已启用的工具。本节及该参考覆盖下文源包中的 WorkBuddy 工具名称：`agentic_search`、`WebSearch`、`Read`、`Write`、`Bash` 仅在当前环境实际提供时使用，不能猜测或声称内置；不要求安装通达信。用户指定来源、格式和研究范围优先。组件需求复用 EWork 原生行情、图表、表格模板，不能被报告输出建议改写为 HTML 图表。仅在技能已开启且需求属于金融分析研究时优先加载；普通写作、通识解释或单纯 UI 修改不触发本技能。
 
 ## 触发顺序硬约束

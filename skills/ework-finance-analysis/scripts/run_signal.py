@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import subprocess
 import sys
 import warnings
@@ -119,12 +120,19 @@ def _run_engine(engine: str, code: str, df: pd.DataFrame) -> dict:
     try:
         mod = __import__(module_name)
     except ModuleNotFoundError as exc:
+        package = shlex.quote(exc.name or module_name)
+        install = f"pip install {package}"
+        if sys.prefix == sys.base_prefix and Path(sys.prefix).name == "task-python":
+            install = (
+                "python3 -m venv --system-site-packages .ework-finance-venv && "
+                f".ework-finance-venv/bin/python -m pip install {package}"
+            )
         return {
             "engine": engine,
             "code": code,
             "status": "missing_dependency",
             "missing_dependency": exc.name,
-            "suggested_install": f"pip install {exc.name}",
+            "suggested_install": install,
         }
     engine_obj = mod.SignalEngine()
     signals = engine_obj.generate({code: df})

@@ -87,11 +87,7 @@
 | `factor_fundamental.py` | 基本面因子筛选（PE / PB / ROE 多因子打分） | 127 | OHLCV + 基本面数据 |
 | `minute_data.py` | 分钟级数据处理（VWAP / TWAP / 取分钟 K 线，函数式 API：`compute_vwap(df)`/`compute_twap(df)`/`fetch_minute_candles(...)`/`hourly_volume`/`volume_profile`） | 146 | **DataFrame 需含 `high / low / close / volume` 4 列**（compute_vwap 用 typical price (H+L+C)/3 加权） |
 
-**Setup**：
-```bash
-pip install pandas numpy requests
-```
-未装报 `ModuleNotFoundError`，6 个 script 都依赖这三个基础包，无其它特殊依赖。
+这六个脚本使用 pandas、NumPy 和 requests，macOS 客户端已提供这三个包。
 
 **调用示例（配对交易）**：
 ```python
