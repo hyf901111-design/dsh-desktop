@@ -22,6 +22,7 @@ body[data-ds-dark-theme] :is(.ew-sheet,.ew-sheet-welcome,.presentation-header-me
 .ew-sheet,.ew-sheet-welcome{font-family:inherit;color:var(--ss-text);font-size:12px;font-weight:400;line-height:1.5;box-sizing:border-box}
 .ew-sheet{position:relative;display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;height:100%;width:100%;overflow:clip;background:var(--ss-bg)}
 .ew-sheet :is(.ew-sheet-chrome,.ew-sheet-empty,.ew-sheet-grid,.ew-sheet-foot,.ew-sheet-menu,.ew-sheet-dialog,.ew-sheet-charts,.ew-sheet-components)[hidden]{display:none!important}
+.ew-sheet[data-knowledge-drop-over]::after{content:"";position:absolute;inset:0;border:2px solid var(--ss-blue);pointer-events:none;z-index:30}
 .ew-sheet-chrome,.ew-sheet-foot{flex:none;min-width:0}
 .ew-sheet-grid{flex:1;min-width:0;min-height:0;position:relative;isolation:isolate;overflow:hidden;background:var(--ss-bg)}
 .ew-sheet-grid>div{height:100%;width:100%;min-height:0}

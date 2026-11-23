@@ -1,5 +1,7 @@
 import { officeOwnerSlot } from '../state/office-session-access'
 import {randomUUID} from 'node:crypto'
+import {isKnowledgeFileId} from '../../shared/knowledge-drag'
+import {fileEditorMode} from '../../shared/file-editor.mjs'
 import {rename,unlink,writeFile} from 'node:fs/promises'
 import {basename} from 'node:path'
 import {clipboard,dialog,type BrowserWindow,type IpcMain} from 'electron'
@@ -22,7 +24,9 @@ function exportStem(value:unknown){
   :''
 }
 
-export function installSpreadsheet(options:{ipcMain:IpcMain;assertAccess?(id:string):void;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined;owner?():string;canPlayCashFlowGuide?(key:WorkbookKey):boolean}){
+type KnowledgeWorkbookFile = {document:{id:string;name:string}} & ({path:string}|{data:Buffer})
+
+export function installSpreadsheet(options:{ipcMain:IpcMain;assertAccess?(id:string):void;getWindow():BrowserWindow|undefined;visible():ConversationComponentVisibleContext|undefined;canWrite(id:string):boolean;dataPath:string;knowledgeFile?(id:string):Promise<KnowledgeWorkbookFile>;locale?(): 'zh'|'en';library?():ComponentLibraryStore|undefined;runtimeUrl?():string|undefined;owner?():string;canPlayCashFlowGuide?(key:WorkbookKey):boolean}){
  const {ipcMain,getWindow}=options
  const retaining=new Set<string>(),retained=new Set<string>()
  const retainSavedSession=(key:WorkbookKey)=>{
@@ -253,6 +257,18 @@ export function installSpreadsheet(options:{ipcMain:IpcMain;assertAccess?(id:str
    case 'activate':if(safeId(input.id))return store.activate(key,input.revision,input.id);break
    case 'redo':return store.redo(key,input.revision)
    case 'undo':return store.undo(key,randomUUID(),{revision:input.revision,actionId:input.actionId})
+   case 'import-knowledge':{
+    const {id,label}=input
+    if(!isKnowledgeFileId(id)||typeof label!=='string'||fileEditorMode(label)!=='spreadsheet'||!options.knowledgeFile)
+     throw Error('请从右侧知识库拖入 Excel 或 CSV 文件。')
+    const file=await options.knowledgeFile(id)
+    guard(true)
+    if(file.document.id!==id||file.document.name!==label)throw Error('知识库文件已变化，请重新拖入。')
+    const bookId=randomUUID(),name=file.document.name
+    const workbook='data' in file?await readWorkbookFile(file.data,name,bookId):await readWorkbookPath(file.path,name,bookId)
+    guard(true)
+    return store.create(key,input.revision,workbook)
+   }
    case 'import':{
     if(input.guideSample===true){
      const current=store.load(key)

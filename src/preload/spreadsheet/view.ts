@@ -15,6 +15,7 @@ import {HOME_SPREADSHEET_GUIDE_FILE} from '../../../packages/dsh-research-task-r
 import type {HomeGuidePointerAction} from '../home-guide-pointer'
 import { markWorkspaceProjectEdited } from '../workspace-project-lock'
 import { setWorkspaceSidebars, type WorkspaceSidebars } from '../workspace-sidebars'
+import {mountSpreadsheetKnowledgeDrop} from './knowledge-drop'
 import css from './view.css?raw'
 import workspaceEmptyCss from '../../shared/workspace-empty.css?raw'
 
@@ -100,6 +101,7 @@ class SpreadsheetView{
  private componentRequest?:string
  private libraryItems:LibraryItem[]=[]
  private componentPicking=false
+ private readonly releaseKnowledgeDrop?:()=>void
  private readonly releaseComponentProgress:()=>void
  private headerActions?:HTMLElement
  private focusLayout?:WorkspaceSidebars
@@ -113,6 +115,13 @@ class SpreadsheetView{
   this.root=this.doc.createElement('div');this.root.className='ew-sheet';host.append(this.root)
   for(const [key,value] of enterpriseChartColors)this.root.style.setProperty('--sheet-efund-'+key,value)
   this.root.innerHTML='<div class="ew-sheet-chrome"></div><div class="ew-sheet-empty ew-workspace-empty"></div><div class="ew-sheet-grid"></div><div class="ew-sheet-foot"></div><div class="ew-sheet-object-viewport" hidden><div class="ew-sheet-chart-objects"></div><div class="ew-sheet-component-layer"></div></div><div class="ew-sheet-components" id="'+crypto.randomUUID()+'" hidden><div class="ew-sheet-component-tabbar" hidden><div class="ew-sheet-component-tabs" role="tablist" aria-label="侧栏组件"></div>'+button('menu','',{glyph:'more',label:'更多组件页签',value:'component-tabs'})+'</div><div class="ew-sheet-component-panels"></div></div><div class="ew-sheet-component-divider" role="separator" aria-orientation="vertical" aria-label="调整组件边栏宽度" tabindex="0" hidden></div><div class="ew-sheet-menu" hidden></div><div class="ew-sheet-dialog" hidden></div><div class="ew-sheet-chart-preview" hidden></div>'
+  if(!sharedReadOnly)this.releaseKnowledgeDrop=mountSpreadsheetKnowledgeDrop(this.root,sessionId,file=>{
+   if(!this.ready||this.disposed||!this.host.isConnected||this.host.dataset.eworkSpreadsheetView!==this.sessionId||
+      this.doc.body.dataset.eworkSpreadsheetSession!==this.sessionId)return
+   if(!this.editable){this.say('当前工作簿为只读。',true);return}
+   if(this.busy||this.switchingMode){this.say('正在处理…');return}
+   void this.run('import-knowledge',file,'工作簿已导入').catch(error=>this.say(errorMessage(error),true))
+  })
   this.componentDivider.setAttribute('aria-controls',this.components.id)
   this.modal.id=crypto.randomUUID()
   try{
@@ -727,6 +736,10 @@ class SpreadsheetView{
  private async run(action:string,fields:Record<string,unknown>={},message?:string,stillOpen?:()=>boolean){
   if(this.busy||(!this.editable&&action!=='export')||this.sharedReadOnly)return
   this.busy=true;this.say('')
+  // A shared-file download can outlast the debounce on a new cell edit.
+  // Hold the editor while flushing and switching the active workbook.
+  const importingKnowledge=action==='import-knowledge'
+  if(importingKnowledge)this.root.inert=true
   try{
    await this.flush(true,action==='component-generate'||action==='component-cash-flow-guide')
    if(this.disposed||stillOpen&&!stillOpen())return
@@ -756,7 +769,10 @@ class SpreadsheetView{
    }else await this.install(row)
    if(message)this.say(message)
    return true
-  }finally{this.busy=false;this.refreshFields();if(!this.record.workbook)this.paint()}
+  }finally{
+   if(importingKnowledge)this.root.inert=false
+   this.busy=false;this.refreshFields();if(!this.record.workbook)this.paint()
+  }
  }
  private jump(value:string,reference=false,smooth=false){
   const sheet=this.current();if(!sheet)return
@@ -791,9 +807,11 @@ class SpreadsheetView{
     {label:'Excel 工作簿 (.xlsx)',action:'export-format',value:'xlsx',browserIcon:'file'},
     {label:'CSV 文件 (.csv)',action:'export-format',value:'csv',browserIcon:'file'}
    ]
+   case 'recent-books':return this.recent.map(book=>({label:book.name,action:'activate',value:book.id,checked:book.id===this.record.workbook?.id,disabled:book.id===this.record.workbook?.id}))
    case 'book':return [
     {label:'导入 Excel / CSV…',action:'import',browserIcon:'external',disabled:!this.editable||this.busy},
     {label:'导出工作簿',action:'menu',value:'export',browserIcon:'download',disabled:!this.record.workbook||this.busy||this.sharedReadOnly},
+    ...(this.recent.length>1?[{label:'最近在此会话中使用',action:'menu',value:'recent-books',icon:'grid',disabled:!this.editable||this.busy}]:[]),
     ...(this.incoming?[{label:'载入最新版本',action:'load-incoming',browserIcon:'refresh' as const,divider:true}]:[]),
     ...(this.record.canRedoAI?[{label:'重新应用 AI 修改',action:'redo-ai',browserIcon:'forward' as const,divider:true,disabled:!this.editable}]:[]),
     ...(this.record.lastAction?[{label:'撤销最近的 AI 修改',action:'undo-ai',browserIcon:'back' as const,divider:!this.record.canRedoAI,disabled:!this.editable}]:[])
@@ -933,7 +951,7 @@ class SpreadsheetView{
    const child=cascade?parents[i]?.value:undefined
    const markup=(back?'<div class="ew-sheet-menu-title"><button type="button" role="menuitem" data-action="menu-back" aria-label="返回上一级" title="返回上一级">'+icon('left',16)+'</button><span>'+text(label)+'</span></div>':'')+this.items(key).map((item,index)=>{
     const glyph=item.browserIcon?'<i class="ew-sheet-browser-icon" aria-hidden="true" style="--menu-icon:url(&quot;'+text(browserIcons[item.browserIcon].replaceAll('"','%22'))+'&quot;)"></i>':item.icon?icon(item.icon):''
-    const entry='<button type="button" '+(item.checked!==undefined?'role="menuitemradio" aria-checked="'+item.checked+'"':'role="menuitem"')+' data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu" aria-expanded="'+(!!child&&item.value===child)+'"':'')+'>'+glyph+'<span'+(['sheets','charts','components','component-tabs'].includes(key)?' data-ui-preserve':'')+'>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):item.checked?'<i class="ew-sheet-menu-check">'+icon('check',14)+'</i>':item.shortcut?'<kbd>'+text(item.shortcut)+'</kbd>':'')+'</button>'
+    const entry='<button type="button" '+(item.checked!==undefined?'role="menuitemradio" aria-checked="'+item.checked+'"':'role="menuitem"')+' data-action="'+item.action+'"'+(item.value!==undefined?' data-value="'+text(item.value)+'"':'')+(item.disabled?' disabled':'')+(item.action==='menu'?' aria-haspopup="menu" aria-expanded="'+(!!child&&item.value===child)+'"':'')+'>'+glyph+'<span'+(['sheets','charts','components','component-tabs','recent-books'].includes(key)?' data-ui-preserve':'')+'>'+text(item.label)+(item.detail?'<small>'+text(item.detail)+'</small>':'')+'</span>'+(item.action==='menu'?icon('right',12):item.checked?'<i class="ew-sheet-menu-check">'+icon('check',14)+'</i>':item.shortcut?'<kbd>'+text(item.shortcut)+'</kbd>':'')+'</button>'
     const remove=item.remove
     const row=remove?'<div class="ew-sheet-object-menu-row" role="none">'+entry+
      '<button type="button" role="menuitem" class="ew-sheet-menu-remove" data-action="'+remove.action+'" data-value="'+text(item.value)+'" aria-label="'+text(remove.label)+'" title="'+text(remove.label)+'">'+icon('trash')+'</button></div>':entry
@@ -2370,6 +2388,7 @@ class SpreadsheetView{
  }
  dispose(){
   if(this.disposed)return
+  this.releaseKnowledgeDrop?.()
   this.cancelComponentRequest();this.clearComponentJob();this.releaseComponentProgress()
   for(const card of this.componentCards.values())this.releaseComponentCard(card)
   this.componentCards.clear()
@@ -2394,14 +2413,15 @@ class SpreadsheetView{
 }
 
 export function mountSpreadsheet(doc:Document,bridge:Bridge){
- let view:SpreadsheetView|undefined,anchor:HTMLElement|undefined,queued=false,disposed=false
+ let view:SpreadsheetView|undefined,anchor:HTMLElement|undefined,sessionId:string|undefined,queued=false,disposed=false
  const style=doc.createElement('style');style.id='ework-spreadsheet-style';style.textContent=css+workspaceEmptyCss;doc.head.append(style)
  const scan=()=>{
   queued=false;if(disposed)return
   const next=!doc.body.dataset.workspaceSurface?doc.querySelector<HTMLElement>('[data-odyssey-page=spreadsheet] [data-ework-spreadsheet-view]')??undefined:undefined
-  if(next===anchor){view?.syncHeader();return}
-  view?.dispose();anchor=next
-  view=next?.dataset.eworkSpreadsheetView?new SpreadsheetView(next,next.dataset.eworkSpreadsheetView,bridge):undefined
+  const nextSession=next?.dataset.eworkSpreadsheetView
+  if(next===anchor&&sessionId===nextSession){view?.syncHeader();return}
+  view?.dispose();anchor=next;sessionId=nextSession
+  view=next&&sessionId?new SpreadsheetView(next,sessionId,bridge):undefined
   if(view)doc.body.dataset.eworkSpreadsheetMode='true';else delete doc.body.dataset.eworkSpreadsheetMode
  }
  const schedule=()=>{if(!queued){queued=true;queueMicrotask(scan)}}

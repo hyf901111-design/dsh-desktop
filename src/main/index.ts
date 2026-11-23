@@ -1514,11 +1514,13 @@ async function bootstrap(): Promise<void> {
   registerTrustedMainWindowListener(ipcMain, 'office-sessions:check', () => mainWindow, (_event, rows) => officeSessions.check(rows), null)
   const presentation:ReturnType<typeof installPresentation>=installPresentation({ipcMain,assertAccess:id=>officeSessions.assert(id,'presentation'),narrate:(owner,text,signal)=>accountService!.narratePresentation(owner,text,signal),getWindow:()=>mainWindow,store:presentationStore,library:knowledge,workspaceRoot:id=>new HarnessWorkspaceFileResolver(dshHome).resolveRoot(id),runtimeUrl:()=>runtime?.snapshot().url,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet})
   app.once('before-quit',()=>presentationStore.close())
-  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,assertAccess:id=>officeSessions.assert(id,'spreadsheet'),getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',canPlayCashFlowGuide:({owner,sessionId})=>{
-    const scope=owner==='local'?'local':'account:'+owner
-    const raw=researchCanvasStorage.peekItem('sherlock.home-guide.sessions.v1:'+encodeURIComponent(scope))
-    return !!raw&&JSON.parse(raw).entries.some((entry:{sessionId:string;kind:string})=>entry.sessionId===sessionId&&entry.kind==='spreadsheet')
-  }})
+  const spreadsheet:ReturnType<typeof installSpreadsheet>=installSpreadsheet({ipcMain,assertAccess:id=>officeSessions.assert(id,'spreadsheet'),getWindow:()=>mainWindow,visible:()=>clientCapabilities.currentVisibleContext(),canWrite:canWriteSpreadsheet,dataPath:app.getPath('userData'),locale:harnessLocale,library:()=>noteComponentLibrary,runtimeUrl:()=>runtime?.snapshot().url,owner:()=>integrationOwner()||'local',
+    knowledgeFile:id=>id.length===32?knowledgeShared.read(id,AbortSignal.timeout(20_000)):knowledge.file(id),
+    canPlayCashFlowGuide:({owner,sessionId})=>{
+      const scope=owner==='local'?'local':'account:'+owner
+      const raw=researchCanvasStorage.peekItem('sherlock.home-guide.sessions.v1:'+encodeURIComponent(scope))
+      return !!raw&&JSON.parse(raw).entries.some((entry:{sessionId:string;kind:string})=>entry.sessionId===sessionId&&entry.kind==='spreadsheet')
+    }})
   const clientCapabilities:ClientCapabilityService=new ClientCapabilityService({presentation,spreadsheet,sharedKnowledge:(current,id)=>!accountService?.authenticated||researchBoardsService?.isSharedSession(id)?{}:sharedKnowledgeCapabilityHandlers(knowledgeShared,knowledgeContent,current),knowledge:(current,id)=>researchBoardsService?.isSharedSession(id)?{}:knowledgeCapabilityHandlers(knowledge,knowledgeShared,knowledgeContent,knowledgeView,current),get conversationComponents(){return conversationComponentsReady?conversationComponentsService:undefined},notes:()=>notesDocumentAdapter,owner:()=>integrationOwner()||'local',windowIdentity:()=>mainWindow,canWrite:canWriteSpreadsheet,canRead:sessionId=>{try{if(researchBoardsService?.isSharedSession(sessionId))researchBoardsService.readSharedCanvas(sessionId);return true}catch{return false}},scheduled:id=>isScheduledSession(id),send:value=>{if(!mainWindow||mainWindow.isDestroyed())throw Error('客户端窗口不可用。');mainWindow.webContents.send('client-capabilities:navigate',value)},canvasAvailable:id=>canvasActions.isAvailable(id),canvas:(sessionId,method,args,signal)=>canvasActions.execute({sessionId,method,args},signal),window:clientWindowAction})
   app.once('before-quit',installClientCapabilityBinding({ipcMain,getWindow:()=>mainWindow,service:clientCapabilities}))
 
