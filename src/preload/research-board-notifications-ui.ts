@@ -994,7 +994,7 @@ export function mountResearchBoardNotifications(
     }
   }
   doc.addEventListener('keydown', keyboard)
-  doc.addEventListener('pointerdown', outside)
+  doc.addEventListener('pointerdown', outside, true)
   const resize = () => {
     if (panel) anchor(panel)
     if (bubble) anchor(bubble)
@@ -1011,7 +1011,7 @@ export function mountResearchBoardNotifications(
     panel?.remove()
     bell?.remove()
     doc.removeEventListener('keydown', keyboard)
-    doc.removeEventListener('pointerdown', outside)
+    doc.removeEventListener('pointerdown', outside, true)
     doc.removeEventListener('ework-update-status', receiveUpdate)
     win.removeEventListener('resize', resize)
   }

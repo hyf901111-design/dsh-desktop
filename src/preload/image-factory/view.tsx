@@ -1434,7 +1434,7 @@ function Editor({ doc, bridge, workspace, close, revealConversation, t }: {
       checked: placingText, disabled: busy, run: () => activateTool('text') }] },
     { id: 'ratio', commands: [{ id: 'ratio', label: t('画布比例', 'Canvas ratio'), disabled: busy,
       choices: [
-        ...(originalSize ? [{ id: 'original', label: t('恢复原比例', 'Restore original ratio'), ratio: originalSize,
+        ...(originalSize ? [{ id: 'original', label: t('原比例', 'Original ratio'), ratio: originalSize,
           checked: !!atOriginalSize, run: () => changeRatio(originalSize) }] : []),
         ...Object.entries(canvasRatioPresets).map(([label, size]) => ({
           id: label, label, ratio: size, checked: !!current && !atOriginalSize && current.width * size.height === current.height * size.width,

@@ -1,3 +1,6 @@
+/* Keep the first outside press in the shell even over a cross-origin editor. */
+body:has(> .srb-notifications) iframe { pointer-events: none; }
+
 /* Figma 74 · B 完整交互 */
 .srb-notifications {
   --center-theme: light;

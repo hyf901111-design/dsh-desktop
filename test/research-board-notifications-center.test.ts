@@ -91,7 +91,9 @@ it('supports keyboard navigation, Escape, and outside dismissal with focus retur
   expect(f.w.document.querySelector('.srb-notifications')).toBeNull()
   expect(f.w.document.activeElement).toBe(f.bell())
   f.bell().click()
-  f.w.document.querySelector('#outside')!.dispatchEvent(new f.w.PointerEvent('pointerdown', { bubbles: true }))
+  const outside = f.w.document.querySelector('#outside')!
+  outside.addEventListener('pointerdown', event => event.stopPropagation())
+  outside.dispatchEvent(new f.w.PointerEvent('pointerdown', { bubbles: true }))
   expect(f.w.document.querySelector('.srb-notifications')).toBeNull()
   expect(f.w.document.activeElement).toBe(f.bell())
   expect(f.bell().getAttribute('aria-expanded')).toBe('false')
