@@ -25,7 +25,7 @@ import {stripPptxAnnotationMessages,patchPptxAnnotationMessages} from './lib/ppt
 import {patchMemorySourceAnchors} from './lib/memory-source-anchors.mjs'
 import {patchCalendarToolClient} from './lib/calendar-tool-client.mjs'
 import { patchNotesClient } from './lib/notes-client.mjs'
-import { patchSessionViewPreferences, patchNewChatSessionRuntime, patchNewChatSidebar } from './lib/session-view-preferences.mjs'
+import { patchSessionViewPreferences, patchNewChatSessionRuntime, patchNewChatSidebar, patchDesktopStartupHome } from './lib/session-view-preferences.mjs'
 import { patchNotesComposer } from './lib/notes-composer.mjs'
 import {patchNoteFeedbackHost,patchNoteForkHost} from './lib/notes-reply-actions.mjs'
 import { patchNoteSessionClient, patchNoteSessionRuntime, patchNoteSessionHost, patchNoteSessionCatalog } from './lib/notes-session.mjs'
@@ -261,7 +261,7 @@ for (const [name, patch] of [
 }
 
 for (const [relative, patch] of [
-  ['dsh-client-runtime/lib/client.js', source=>patchSessionCatalogStatus(patchSessionRunningActivity(patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source)))))],
+  ['dsh-client-runtime/lib/client.js', source=>patchDesktopStartupHome(patchSessionCatalogStatus(patchSessionRunningActivity(patchNewChatSessionRuntime(patchSessionListStreamPerformance(patchSubagentPanelRuntime(source))))))],
   ['dsh-client-web-react/lib/index.js', patchSubagentPanelRenderer],
   ['dsh-client-ui-conversation/lib/client.js', source => patchResearchResidentConversation(patchSubagentPanelConversation(source))],
   ['dsh-client-ui-subagent/lib/client.js', patchSubagentPanelEntry]

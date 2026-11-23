@@ -14,7 +14,7 @@ type BundleDescriptor = {
 }
 
 const requireModule = createRequire(import.meta.url)
-const { installInitialChatViewIntent, patchNewChatSessionRuntime } = requireModule('../scripts/lib/session-view-preferences.mjs')
+const { installInitialChatViewIntent, patchNewChatSessionRuntime, patchDesktopStartupHome } = requireModule('../scripts/lib/session-view-preferences.mjs')
 const { installImageFactoryContext } = requireModule('../scripts/lib/image-factory-native.mjs')
 const react = requireModule('react') as Record<string, unknown>
 const jsxRuntime = requireModule('react/jsx-runtime') as Record<string, unknown>
@@ -47,6 +47,40 @@ afterEach(() => {
   Object.assign(globalThis, previousGlobals)
   ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean })
     .IS_REACT_ACT_ENVIRONMENT = false
+})
+
+it('opens a fresh desktop window on Home while preserving a deliberate spreadsheet selection on window reload', async () => {
+  const w = new Window()
+  Object.assign(w, { dshDesktop: {} })
+  const key = 'dsh.sessions.current'
+  w.localStorage.setItem(key, JSON.stringify({ sessionId: 'previous-sheet' }))
+  try {
+    const client = await loadClientBundle('dsh-client-runtime', w, [], patchDesktopStartupHome)
+    const create = client.createSnapshotStore as (initial: object, options: object) => {getSnapshot(): object; set(value: object): void}
+    const selection = () => create({}, { persist: { name: key } })
+    expect(selection().getSnapshot()).toEqual({})
+    selection().set({ sessionId: 'opened-sheet' })
+    expect(selection().getSnapshot()).toEqual({ sessionId: 'opened-sheet' })
+    w.sessionStorage.clear()
+    expect(selection().getSnapshot()).toEqual({})
+    const preferences = create({}, { persist: { name: 'dsh.conversation.chat.opened-sheet' } })
+    preferences.set({ view: 'spreadsheet' })
+    expect(JSON.parse(w.localStorage.getItem('dsh.conversation.chat.opened-sheet')!)).toEqual({ view: 'spreadsheet' })
+
+    const runtime = client.WorkspaceRuntime as { prototype: { startInitialSelection(): () => void } }
+    const connectWorkspace = vi.fn(async () => 'previous-sheet'), open = vi.fn()
+    const workspace = { initialSelectionStarted: false, list: { subscribe: () => () => {}, getSnapshot: () => ({ baselinesReady: true, recentWorkspaceId: 'work' }) },
+      sessions: { list: { getSnapshot: () => ({}) }, open }, connectWorkspace }
+    runtime.prototype.startInitialSelection.call(workspace)()
+    expect(connectWorkspace).not.toHaveBeenCalled()
+    expect(open).not.toHaveBeenCalled()
+    Reflect.deleteProperty(w, 'dshDesktop')
+    expect(selection().getSnapshot()).toEqual({ sessionId: 'previous-sheet' })
+    const off = runtime.prototype.startInitialSelection.call({ ...workspace, initialSelectionStarted: false })
+    await Promise.resolve()
+    expect(open).toHaveBeenCalledWith('previous-sheet')
+    off()
+  } finally { w.happyDOM.close() }
 })
 
 function fakeModule(): unknown {
