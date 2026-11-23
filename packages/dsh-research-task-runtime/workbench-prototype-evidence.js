@@ -1,3 +1,4 @@
+import {interruptedBoardRequest} from './workbench-resume-request.js'
 import {posix} from 'node:path'
 import {isWorkbenchDocumentPath} from './workbench-text-document.js'
 import {fileURLToPath} from 'node:url'
@@ -161,7 +162,12 @@ function referredAttachments(session,message,text){
 }
 
 export function planningPrototypeEvidence(session,human,request){
- const message=currentMessage(session,human.messageId,request)
+ let message=currentMessage(session,human.messageId,request)
+ if(message && human.resumedFromMessageId) {
+  // Verify the claimed current human before recovering their interrupted input.
+  const original=interruptedBoardRequest(session,{...human,text:messageText(message),researchComposer:message.source.clientMode==='research'})
+  if(original?.message.id===human.resumedFromMessageId)message=original.message
+ }
  if(!message)return{files:[],urls:[],required:[]}
  const text=messageText(message),direct=authoredPrototypeEvidence(text)
  if(direct.required.length||direct.networkAllowed===undefined||message.content?.some(block=>block.type!=='text')||text.includes('<knowledge-reference>'))return direct
