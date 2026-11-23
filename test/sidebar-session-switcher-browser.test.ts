@@ -1,5 +1,6 @@
 import { beforeAll, afterAll, expect, it } from 'vitest'
 import { build } from 'esbuild'
+import { patchResearchBoardWorkspace } from '../scripts/lib/patch-research-board-client.mjs'
 import { readFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { createRequire } from 'node:module'
@@ -8,7 +9,7 @@ const { PNG } = createRequire(import.meta.url)('pngjs') as {
   PNG: { sync: { read(buffer: Buffer): { width: number; data: Buffer } } }
 }
 
-let browser: any, script: string, sidebarSource: string, layoutSource: string, style: string
+let browser: any, script: string, sidebarSource: string, layoutSource: string, workspaceSource: string, runtimeSource: string, style: string
 beforeAll(async () => {
   const runtime = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT ||
     '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -17,6 +18,8 @@ beforeAll(async () => {
   sidebarSource = (await readFile('node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js', 'utf8'))
     .replace('exports.apply = apply;', 'exports.Root = SidebarRoot; exports.zh = zh; exports.apply = apply;')
   layoutSource = await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8')
+  workspaceSource = patchResearchBoardWorkspace(await readFile('node_modules/@deepseek-ai/dsh-client-ui-workspace/lib/client.js', 'utf8'))
+  runtimeSource = await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js', 'utf8')
   style = (await Promise.all(['figma-final-shell.css', 'figma-panels.css', 'figma-b-icons.css', 'navigation-shortcuts.css']
     .map(file => readFile('src/preload/' + file, 'utf8')))).join('\n')
   const bundle = await build({
@@ -26,22 +29,31 @@ beforeAll(async () => {
       import {createRoot} from 'react-dom/client'
       import * as reactDOM from 'react-dom'
       import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
-      import {SidebarSessionSearch} from './src/preload/research-boards-ui'
+      import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus'
+      import {SidebarSessionSearch,sidebarSwitcherGroups} from './src/preload/research-boards-ui'
       import {sidebarSearchResults} from './src/preload/sidebar-session-search'
       const plugins={}
       const modules={'react':React,'react/jsx-runtime':jsx,'react-dom':reactDOM,'@deepseek-ai/dsh-client-ui-primitives':primitives}
       window.__ModuleLoader__={load:({id,factory})=>{plugins[id]=factory(name=>modules[name]??{})}}
+      modules['@deepseek-ai/cordis']={Service:class {}}
+      new Function(window.runtimeSource)()
+      modules['@deepseek-ai/dsh-client-runtime/client']=plugins['@deepseek-ai/dsh-client-runtime']
+      new Function(window.workspaceSource)()
       new Function(window.layoutSource)()
       new Function(window.sidebarSource)()
       const sidebar=plugins['@deepseek-ai/dsh-client-ui-sidebar'], layout=plugins['@deepseek-ai/dsh-client-ui-layout']
       const records=Object.fromEntries(Array.from({length:8},(_,i)=>['s'+i,{title:'会话 '+i,updatedAt:20-i}]))
       records.orphan={title:'独立会话'}; records.other={title:'回顾会话'}; records.archived={title:'已归档'}; records.sub={title:'子代理',origin:'subagent'}
-      const boards={favorites:[{favoriteId:'f',sessionId:'personal',title:'个人看板',createdAt:90}],boards:[{boardId:'team',localSessionId:'shared',title:'共享看板',pinned:true,createdAt:100}]}
+      const boards={favorites:[{favoriteId:'f',sessionId:'personal',title:'个人研究项目',createdAt:90}],boards:[{boardId:'team',localSessionId:'shared',title:'共享看板',sharingState:'shared',pinned:true,createdAt:100}]}
+      for (const [id, row] of Object.entries(records)) Object.assign(row,{id,displayTitle:row.title})
+      const artifacts = new Set()
       let current='s1',collapsed=true,empty=false
       const events=[],listeners=new Set()
       const workspace={workspaceId:'a',title:'产品研究',path:'/product',sessionIds:Object.keys(records).filter(id=>id!=='orphan'&&id!=='other')}
       const page={current:()=>current,searchSessions:q=>empty?[]:sidebarSearchResults(boards,records,['archived'],q),
-        sidebarWorkspaces:()=>[workspace,{workspaceId:'b',title:'阶段回顾',path:'/review',sessionIds:['other']}],subscribeSearch:f=>{listeners.add(f);return()=>listeners.delete(f)},
+        switcherGroups:en=>empty?[]:sidebarSwitcherGroups(boards,{byId:records,ids:Object.keys(records),current},{items:[workspace,{workspaceId:'b',title:'阶段回顾',path:'/review',sessionIds:['other']}],archivedSessionIds:['archived']},en),
+        isRunning:id=>artifacts.has(id),subscribeActivity:(id,f)=>{listeners.add(f);return()=>listeners.delete(f)},
+        subscribeSearch:f=>{listeners.add(f);return()=>listeners.delete(f)},
         openSearchSession:id=>{current=id;events.push(['session',id])},openBoard:id=>events.push(['board',id]),openPersonal:id=>events.push(['favorite',id]),
         showError:e=>{throw e}}
       document.addEventListener('sherlock:search-session-opened',e=>events.push(['opened',e.detail.sessionId??null]))
@@ -57,7 +69,12 @@ beforeAll(async () => {
       const render=()=>root.render(React.createElement(layout.AppFrame,{actions,renderSlot,
         useStore:select=>select({sidebar:collapsed?0:240,narrowExpanded:!collapsed}),useSessions:select=>select({})}))
       render()
-      window.fixture={events,listeners,clear:()=>{empty=true;listeners.forEach(f=>f())},rename:()=>{records.s1.title='更新后的标题';listeners.forEach(f=>f())},expand:()=>{collapsed=false;render()}}
+      window.fixture={events,listeners,boards,project:()=>{
+        const host=document.createElement('div');host.className='eb-root';host.dataset.nativePage='true';host.dataset.nativeMenus='true';
+        const viewport=document.createElement('div');viewport.setAttribute('data-browser-viewport','');viewport.style.cssText='position:fixed;inset:60px 20px 10px 110px;pointer-events:none'
+        host.append(viewport);document.body.append(host)
+        return new NativeBrowserMenuProjection(document,{subscribeAction:()=>()=>{},request:async(method,data)=>{if(method==='menu')window.fixture.projection=data;return true}})
+      },select:id=>{current=id;listeners.forEach(f=>f())},records,artifacts,notify:()=>listeners.forEach(f=>f()),clear:()=>{empty=true;listeners.forEach(f=>f())},rename:()=>{records.s1.title='更新后的标题';listeners.forEach(f=>f())},expand:()=>{collapsed=false;render()}}
     ` },
     bundle: true, platform: 'browser', format: 'iife', write: false, logLevel: 'silent', loader: { '.css': 'empty' },
     define: { 'process.env.NODE_ENV': '"production"' }
@@ -74,7 +91,7 @@ async function fixture() {
     contentType: 'text/html', body: '<!doctype html><meta charset=utf-8><title>Sidebar</title><style>html,body,#root{height:100%;margin:0;font:14px system-ui}</style><div id="root"></div>'
   }))
   await page.goto('https://sidebar.test')
-  await page.evaluate((sources: Record<string, string>) => { Object.assign(window, sources) }, { sidebarSource, layoutSource })
+  await page.evaluate((sources: Record<string, string>) => { Object.assign(window, sources) }, { sidebarSource, layoutSource, workspaceSource, runtimeSource })
   await page.addScriptTag({ content: script })
   await page.addStyleTag({ content: style })
   const home = page.locator('[data-sidebar-home]'), panel = page.getByRole('navigation', { name: '切换会话' })
@@ -113,7 +130,7 @@ it('switches in live board and workspace groups while the native sidebar stays f
     await page.mouse.wheel(0, -600)
     await expect.poll(() => panel.evaluate((el: HTMLElement) => el.scrollTop)).toBe(0)
     expect(list.y + list.height).toBe(332)
-    expect(await panel.getByRole('heading').allTextContents()).toEqual(['看板区', '产品研究', '阶段回顾', '未分组'])
+    expect(await panel.getByRole('heading').allTextContents()).toEqual(['个人看板', '协作看板', '产品研究', '阶段回顾', '未分组'])
     expect(await panel.getByRole('button', { name: '会话 7' }).count()).toBe(0)
     expect(await panel.getByRole('button', { name: /已归档|子代理/ }).count()).toBe(0)
     expect(await panel.locator('[aria-current=true]').textContent()).toBe('会话 1')
@@ -125,7 +142,7 @@ it('switches in live board and workspace groups while the native sidebar stays f
     expect(await page.locator('[data-dsh-sidebar-root]').getAttribute('data-dsh-sidebar-wide')).toBe('false')
     expect(await page.evaluate(() => (window as any).fixture.events)).toEqual([['session','s7'], ['opened','s7']])
     await home.hover(); await panel.getByRole('button', { name: '共享看板' }).click()
-    await home.hover(); await panel.getByRole('button', { name: '个人看板' }).click()
+    await home.hover(); await panel.getByRole('button', { name: '个人研究项目' }).click()
     expect(await page.evaluate(() => (window as any).fixture.events.slice(-4))).toEqual([['board','team'],['opened',null],['favorite','personal'],['opened',null]])
   } finally { await page.close() }
 })
@@ -133,7 +150,7 @@ it('collapses each group independently and keeps the active group reachable from
   const { page, home, panel } = await fixture()
   try {
     await home.hover()
-    const boards = panel.getByRole('button', { name: '看板区' })
+    const boards = panel.getByRole('button', { name: '协作看板' })
     const product = panel.getByRole('button', { name: '产品研究' })
     const review = panel.getByRole('button', { name: '阶段回顾' })
     const ungrouped = panel.getByRole('button', { name: '未分组' })
@@ -169,6 +186,78 @@ it('collapses each group independently and keeps the active group reachable from
     await page.keyboard.press('Enter')
     expect(await page.evaluate(() => (window as any).fixture.events)).toEqual([['session','s1'], ['opened','s1']])
   } finally { await page.close() }
+})
+
+it('keeps the selected session in the preview and follows the expanded sidebar ordering and visibility', async () => {
+  const { page, home, panel } = await fixture()
+  try {
+    await page.evaluate(() => {
+      const f = (window as any).fixture
+      const ids = Object.keys(f.records)
+      localStorage.setItem('dsh.workspace.view.v5', JSON.stringify({
+        sessionOrderByAccount: { a: ['s3', 's1', 's2', 's0', 's4', 's5', 's6', 's7'] },
+        sessionUpdatedAtByAccount: { a: Object.fromEntries(ids.map(id => [id, f.records[id].updatedAt || 0])) }
+      }))
+      Object.assign(f.records.s7, { title: undefined, displayTitle: 'New Session', blank: true })
+      Object.assign(f.records.s1, { title: '新演示', blank: true })
+      f.select('s7')
+    })
+    await home.hover()
+    await panel.waitFor()
+    const group = panel.locator('section').filter({ has: page.getByRole('heading', { name: '产品研究' }) })
+    expect(await group.locator('button[data-key^="session:"]').allTextContents()).toEqual(['会话 3', '会话 2', '会话 0', '会话 4', '新对话'])
+    expect(await group.locator('[aria-current=true]').getAttribute('data-key')).toBe('session:s7')
+    await page.evaluate(() => {
+      const f = (window as any).fixture
+      Object.assign(f.records.s7,{title:'信创汇报材料',blank:false,running:true,updatedAt:100})
+      f.notify()
+    })
+    const selected = group.locator('[aria-current=true]')
+    await selected.getByRole('img', { name: '任务运行中' }).waitFor()
+    expect(await group.locator('button[data-key^="session:"]').first().getAttribute('data-key')).toBe('session:s7')
+    expect(await selected.locator('svg').evaluate((ring: SVGElement) => getComputedStyle(ring).animationName)).toBe('dsh-state-ring-spin')
+    await page.evaluate(() => {
+      const f = (window as any).fixture
+      f.records.s7.running=false
+      Object.assign(f.records.sub,{parentId:'s7',running:true})
+      f.notify()
+    })
+    await selected.locator('svg').waitFor()
+    await page.evaluate(() => { const f = (window as any).fixture; f.records.sub.running=false; f.notify() })
+    await selected.locator('svg').waitFor({ state:'detached' })
+  } finally { await page.close() }
+})
+
+it('uses separate board folders with live task icons above a browser page', async () => {
+  const { page, home, panel } = await fixture()
+  const overlay = await browser.newPage()
+  try {
+    await page.evaluate(() => {
+      const f = (window as any).fixture
+      f.boards.boards.push({boardId:'p',localSessionId:'private-cloud',title:'云端个人项目',sharingState:'private',pinned:true,createdAt:30})
+      localStorage.setItem('sherlock.boards.view.v3', JSON.stringify({order:['shared:p','private:f','shared:team']}))
+      f.artifacts.add('shared')
+      f.project()
+    })
+    await home.hover()
+    const personal = panel.getByRole('button', { name:'个人看板', exact:true })
+    const shared = panel.getByRole('button', { name:'协作看板', exact:true })
+    await personal.waitFor({state:'attached'})
+    expect(await personal.evaluate((el: HTMLElement) => getComputedStyle(el,'::before').maskImage)).toContain('odyssey-board-folder-open-18.svg')
+    expect(await personal.locator('xpath=../..').getByRole('button').allTextContents()).toEqual(['个人看板','云端个人项目','个人研究项目'])
+    await personal.evaluate((el: HTMLElement) => el.click())
+    expect(await personal.evaluate((el: HTMLElement) => getComputedStyle(el,'::before').maskImage)).toContain('odyssey-board-folder-closed-18.svg')
+    expect(await shared.getAttribute('aria-expanded')).toBe('true')
+    await expect.poll(() => page.evaluate(() => (window as any).fixture.projection?.html.includes('dsh-state-ring'))).toBe(true)
+    const projected = await page.evaluate(() => (window as any).fixture.projection)
+    await overlay.setContent('<style>'+projected.css+'</style>'+projected.html)
+    const ring = overlay.locator('button[data-key="board:team"] svg.dsh-state-ring')
+    expect(await ring.evaluate((el: SVGElement) => getComputedStyle(el).animationName)).toBe('dsh-state-ring-spin')
+    await overlay.emulateMedia({reducedMotion:'reduce'})
+    expect(await ring.evaluate((el: SVGElement) => getComputedStyle(el).animationName)).toBe('none')
+    await page.evaluate(() => { const f = (window as any).fixture; f.artifacts.clear(); f.notify() })
+    await expect.poll(() => page.evaluate(() => (window as any).fixture.projection?.html.includes('dsh-state-ring'))).toBe(false)
+  } finally { await overlay.close(); await page.close() }
 })
 
 it('softens fine background detail while transmitting a muted background color through the native popover', async () => {

@@ -77,14 +77,14 @@ it('个人与协作看板各默认显示五条，复用工作区按钮，分别�
   await f.click(overflow('private')); expect(f.titles('private')).toHaveLength(5)
   await f.click(overflow('shared')); expect(f.titles('shared')).toHaveLength(7)
 })
-it('最近打开的后排看板提升到前排，手动收起分组仍保留当前选择', async () => {
+it('打开后排看板时保留手动顺序，并在前五条里显示当前选择', async () => {
   const f = await fixture(), before = f.w.localStorage.getItem('sherlock.boards.view.v3')
   await f.click(f.group('private').querySelector('[data-srb-board-overflow]'))
   await f.click([...f.group('private').querySelectorAll('.srb-board-title')].find(el => el.textContent === '个人7')!)
   await f.click(f.group('private').querySelector('[data-srb-board-overflow]'))
-  expect(f.titles('private')).toEqual(['个人7','个人0', '个人1', '个人2', '个人3'])
+  expect(f.titles('private')).toEqual(['个人0', '个人1', '个人2', '个人3', '个人7'])
   expect(f.group('private').querySelector('[aria-current=true]')?.textContent).toContain('个人7')
-  expect(f.w.localStorage.getItem('sherlock.boards.view.v3')).not.toBe(before)
+  expect(f.w.localStorage.getItem('sherlock.boards.view.v3')).toBe(before)
   await f.click(f.group('private').querySelector('[data-srb-board-overflow]'))
   await f.click(f.group('private').querySelector('[role=treeitem]'))
   expect(f.titles('private')).toHaveLength(0)

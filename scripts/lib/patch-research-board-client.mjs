@@ -60,7 +60,7 @@ async function pageModule() {
     platform: 'browser',
     format: 'cjs',
     write: false,
-    external: ['react', '@deepseek-ai/dsh-client-ui-primitives'],
+    external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
     target: 'chrome120',
     logLevel: 'silent'
   })
@@ -952,6 +952,34 @@ function patchWorkspaceBoardVisibility(source) {
   return patchWorkspaceSidebarSkin(source + '\n/* SHERLOCK_WORKSPACE_BOARD_VISIBILITY_V1 */')
 }
 
+// Installed inside the workspace plugin so both sidebars use its visibility,
+// persisted order, localized titles and primary activity status.
+function switcherWorkspaceGroups(snapshot, workspace, english) {
+  let preferences = {}
+  try { preferences = JSON.parse(localStorage.getItem('dsh.workspace.view.v5')) ?? {} } catch {}
+  const hidden = new Set(JSON.parse(document.documentElement.dataset.srbHiddenSessions || '[]'))
+  const usage = sidebarUsageTimes()
+  const byId = Object.fromEntries(Object.entries(snapshot.byId).filter(([id]) => !hidden.has(id)).map(([id, row]) => [
+    id, { ...row, updatedAt: Math.max(row.updatedAt || row.createdAt || 0, usage[id] || 0) }
+  ]))
+  const list = { ...snapshot, ids: snapshot.ids.filter(id => byId[id]), byId }
+  const order = (key, ids) => {
+    const saved = preferences.sessionOrderByAccount?.[key]
+    return nextSessionOrderAccount({ sessionIds: ids.filter(id => byId[id]), previousOrder: saved,
+      previousUpdatedAt: preferences.sessionUpdatedAtByAccount?.[key] ?? {}, list, orderBy: 'manual', sortByRecency: !saved }).order
+  }
+  const items = workspace.items.map(item => ({ ...item, sessionIds: order(item.workspaceId, item.sessionIds) }))
+  const members = new Set(items.flatMap(item => item.sessionIds))
+  const view = { expandedGroups: [...items.map(item => item.workspaceId), ''], ungroupedOrder: order('', list.ids.filter(id => !members.has(id))) }
+  const t = key => (english ? en : zh)[key] || key
+  return deriveGroups(list, items, workspace.archivedSessionIds ?? [], view).map(group => ({
+    key: group.workspaceId ? 'workspace:' + group.workspaceId : 'ungrouped',
+    title: group.workspaceId ? group.label || workspaceLabel(group.cwd) : (english ? 'Ungrouped' : '未分组'),
+    rows: group.sessions.map(node => ({ key: 'session:' + node.id, sessionId: node.id, area: 'workspaces',
+      title: projectSkillText(displayTitle(node, t)), time: node.updatedAt, running: sessionStatuses(node, t)[0].state === 'ongoing' }))
+  }))
+}
+
 function patchWorkspaceSidebarSkin(source) {
   source = patchWorkspaceRailSearch(source)
   if (!source.includes('/* SHERLOCK_WORKSPACE_MENU_SKIN_V1 */')) {
@@ -967,18 +995,23 @@ function patchWorkspaceSidebarSkin(source) {
   if (!source.includes('"data-srb-section-header"')) source = replace(source,
     'className: WorkspaceBrowser_module_css_default.sectionHeader,',
     'className: WorkspaceBrowser_module_css_default.sectionHeader, "data-srb-section-header":"",')
-  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */')) return source
-  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')) return source
+  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */')) return addSwitcherGroups(source)
+  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */')) return addSwitcherGroups(source
     .replace('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V2 */', '/* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */')
-    .replace('rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};', 'rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};')
-  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */')) return source
+    .replace('rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon};', 'rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};'))
+  if (source.includes('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */')) return addSwitcherGroups(source
     .replace('/* SHERLOCK_SHARED_SIDEBAR_SKIN_V1 */', '/* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */')
-    .replace('header: WorkspaceBrowser_module_css_default};', 'header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};')
-  return replace(source, '\t\texports.apply = apply;', `
+    .replace('header: WorkspaceBrowser_module_css_default};', 'header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};'))
+  return addSwitcherGroups(replace(source, '\t\texports.apply = apply;', `
         /* SHERLOCK_SHARED_SIDEBAR_SKIN_V3 */
         window.__sherlockWorkspaceSidebarSkin = {rows: Rows_module_css_default, header: WorkspaceBrowser_module_css_default, rowHalf, useNativeDragAcceptance, WorkspaceFolderIcon, collapsedSessionLimit: COLLAPSED_SESSION_LIMIT};
         window.dispatchEvent(new window.Event("sherlock-sidebar-skin"));
-        \t\texports.apply = apply;`)
+        \t\texports.apply = apply;`))
+}
+
+function addSwitcherGroups(source) {
+  if (source.includes('function switcherWorkspaceGroups(')) return source
+  return replace(source, 'window.__sherlockWorkspaceSidebarSkin = {', switcherWorkspaceGroups.toString() + '\nwindow.__sherlockWorkspaceSidebarSkin = {switcherWorkspaceGroups, ')
 }
 
 function patchWorkspaceRailSearch(source) {

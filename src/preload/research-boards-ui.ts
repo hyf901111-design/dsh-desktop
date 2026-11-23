@@ -15,12 +15,14 @@ import { ResearchBoardTaskProgress, componentTask, taskForMessage } from './rese
 import { TemporaryBoards } from './temporary-board'
 import { installBoardSessionFork } from './board-session-fork'
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { StateDot, Modal, Button, IconTrashOutline16, Menu, IconPlusOutline16, IconEllipsisOutline16, IconSearchOutline16, IconFolderOpenOutline16, IconEditOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { admitSharedDraft } from './shared-send-draft'
+import { projectSkillText } from '../shared/skill-display.mjs'
 import { promoteSidebarOrder } from './sidebar-manual-order'
 import {sidebarUsageSnapshot,sidebarUsageTimes,subscribeSidebarUsage} from '../../scripts/lib/sidebar-session-recency.mjs'
 import { sidebarSearchResults, showSidebarSessionSearch, type SidebarSearchResult } from './sidebar-session-search'
-import { mountSidebarSessionSwitcher } from './sidebar-session-switcher'
+import { mountSidebarSessionSwitcher, type SwitcherActivitySlot, type SwitcherGroup } from './sidebar-session-switcher'
 import { installExploreSearch } from './explore-search'
 import type {
   BoardView,
@@ -1854,7 +1856,9 @@ export function createResearchBoardsPage(deps: PageDependencies) {
       deps.sessions.list.getSnapshot().byId[id]?.updatedAt as
         number | undefined,
     current,
-    sidebarWorkspaces: () => deps.workspaces.list.getSnapshot().items,
+    switcherGroups(english: boolean): SwitcherGroup[] {
+      return sidebarSwitcherGroups(visibleBoardState(), deps.sessions.list.getSnapshot(), deps.workspaces.list.getSnapshot(), english)
+    },
     searchSessions(query: string) { return sidebarSearchResults(visibleBoardState(), deps.sessions.list.getSnapshot().byId, deps.workspaces.list.getSnapshot().archivedSessionIds ?? [], query) },
     subscribeSearch(listener: () => void) {
       listeners.add(listener)
@@ -2433,8 +2437,44 @@ export function addBoardCollaborator(page: ResearchBoardsPage, boardId: string, 
   })
 }
 
+function readBoardViewPreferences() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('sherlock.boards.view.v3') ?? localStorage.getItem('sherlock.boards.view.v2') ?? 'null')
+    return { groupBy: 'type', collapsedGroups: Array.isArray(saved?.collapsedGroups) ? saved.collapsedGroups.filter((g: unknown) => g === 'private' || g === 'shared') : [], sort: 'manual', updatedAt: saved?.updatedAt ?? {}, order: Array.isArray(saved?.order) ? saved.order.filter((v: unknown) => typeof v === 'string') : [] }
+  }
+  catch { return { groupBy: 'type', collapsedGroups: [], sort: 'manual', order: [], updatedAt: {} } }
+}
+
+function orderedBoardEntries(state: ResearchBoardsState, editedAt: (id: string) => number | undefined, preferences: ReturnType<typeof readBoardViewPreferences>) {
+  const usage = sidebarUsageTimes()
+  const entries = [
+    ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, editedAt(f.sessionId) ?? 0, usage[f.sessionId] ?? 0) })),
+    ...state.boards.filter(b => b.pinned).map(b => ({ key: 'shared:' + b.boardId, group: b.sharingState === 'shared' ? 'shared' : 'private', value: b, time: Math.max(b.updatedAt ?? b.createdAt, usage[b.localSessionId ?? ''] ?? 0) }))
+  ]
+  const nextOrder = promoteSidebarOrder(entries, preferences.order, preferences.updatedAt)
+  const positions = new Map(nextOrder.order.map((key, index) => [key, index]))
+  entries.sort((a, b) => preferences.sort === 'updated' ? b.time - a.time : positions.get(a.key)! - positions.get(b.key)!)
+  return { entries, nextOrder }
+}
+
+export function sidebarSwitcherGroups(state: ResearchBoardsState, sessions: SessionList, workspace: any, english: boolean): SwitcherGroup[] {
+  const { entries } = orderedBoardEntries(state, id => sessions.byId[id]?.updatedAt, readBoardViewPreferences())
+  const groups: SwitcherGroup[] = [
+    { key: 'private', title: english ? 'Personal boards' : '个人看板', rows: [] },
+    { key: 'shared', title: english ? 'Shared boards' : '协作看板', rows: [] }
+  ]
+  for (const { value, group, time } of entries) {
+    const ids = 'boardId' in value
+      ? { key: 'board:' + value.boardId, boardId: value.boardId, sessionId: value.localSessionId }
+      : { key: 'favorite:' + value.favoriteId, sessionId: value.sessionId }
+    groups[group === 'private' ? 0 : 1]!.rows.push({ ...ids, title: projectSkillText(value.title), area: 'boards', time })
+  }
+  const skin = (window as any).__sherlockWorkspaceSidebarSkin
+  return groups.concat(skin?.switcherWorkspaceGroups?.(sessions, workspace, english) ?? []).filter(group => group.rows.length)
+}
 export function SidebarSessionSearch({ page, buttonClass }: { page: ResearchBoardsPage; buttonClass: string }) {
   const label = '搜索会话', search = React.useRef<HTMLButtonElement>(null)
+  const [slots, setActivitySlots] = React.useState<SwitcherActivitySlot[]>([])
   const open = React.useCallback(async (result: SidebarSearchResult) => {
     if (result.boardId) await page.openBoard(result.boardId)
     else if (result.area === 'boards') await page.openPersonal(result.sessionId!)
@@ -2443,13 +2483,29 @@ export function SidebarSessionSearch({ page, buttonClass }: { page: ResearchBoar
   React.useEffect(() => {
     const root = search.current?.closest<HTMLElement>('[data-dsh-sidebar-root]')
     if (root) return mountSidebarSessionSwitcher(root, {
-      results: page.searchSessions, subscribe: page.subscribeSearch, workspaces: page.sidebarWorkspaces,
-      current: page.current, showError: page.showError, open
+      groups: page.switcherGroups, subscribe: refresh => {
+        const off = page.subscribeSearch(refresh), offUsage = subscribeSidebarUsage(refresh)
+        window.addEventListener('sherlock-sidebar-skin', refresh)
+        document.addEventListener('sherlock:research-session-engaged', refresh)
+        return () => { off(); offUsage(); window.removeEventListener('sherlock-sidebar-skin', refresh); document.removeEventListener('sherlock:research-session-engaged', refresh) }
+      },
+      current: page.current, setActivitySlots, showError: page.showError, open
     })
   }, [page, open])
-  return h('button', { ref: search, type: 'button', className: buttonClass, 'data-sidebar-session-search': '', 'aria-label': label, title: label, onClick: () => showSidebarSessionSearch(document, {
+  return h(React.Fragment, null, h('button', { ref: search, type: 'button', className: buttonClass, 'data-sidebar-session-search': '', 'aria-label': label, title: label, onClick: () => showSidebarSessionSearch(document, {
     results: page.searchSessions, subscribe: page.subscribeSearch, open
-  }) }, h(IconSearchOutline16))
+  }) }, h(IconSearchOutline16)), slots.map(slot => {
+    const dot = h('span', { role: 'img', 'aria-label': document.documentElement.dataset.odysseyLocale === 'en' ? 'Running' : '任务运行中' }, h(StateDot, { state: 'ongoing' }))
+    return createPortal(slot.boardSessionId ? h(BoardActivity, { page, sessionId: slot.boardSessionId }, dot) : dot, slot.host, slot.key)
+  }))
+}
+function BoardActivity({ page, sessionId, children }: React.PropsWithChildren<{ page: ResearchBoardsPage; sessionId: string }>) {
+  return useBoardRunning(page, sessionId) ? children : null
+}
+function useBoardRunning(page: ResearchBoardsPage, sessionId: string) {
+  const subscribe = React.useCallback((listener: () => void) => page.subscribeActivity(sessionId, listener), [page, sessionId])
+  const snapshot = React.useCallback(() => page.isRunning(sessionId), [page, sessionId])
+  return React.useSyncExternalStore(subscribe, snapshot, snapshot)
 }
 export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoardsPage; wide?: boolean; expandSidebar?: () => void }) {
   const state = useBoard(page)
@@ -2457,16 +2513,10 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('sherlock.boards.collapsed') === 'true')
   const search = false, query = ''
   const [creating, setCreating] = React.useState(false)
-  const [preferences, setPreferences] = React.useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('sherlock.boards.view.v3') ?? localStorage.getItem('sherlock.boards.view.v2') ?? 'null')
-      return { groupBy: 'type', collapsedGroups: Array.isArray(saved?.collapsedGroups) ? saved.collapsedGroups.filter((g: unknown) => g === 'private' || g === 'shared') : [], sort: 'manual', updatedAt: saved?.updatedAt ?? {}, order: Array.isArray(saved?.order) ? saved.order.filter((v: unknown) => typeof v === 'string') : [] }
-    }
-    catch { return { groupBy: 'type', collapsedGroups: [], sort: 'manual', order: [], updatedAt: {} } }
-  })
+  const [preferences, setPreferences] = React.useState(readBoardViewPreferences)
   const selectedSession = React.useSyncExternalStore(subscribeBoardSelection, selectedBoardSession)
   React.useSyncExternalStore(subscribeSidebarUsage,sidebarUsageSnapshot)
-  const currentSession=page.current(),usage=sidebarUsageTimes(),revealedBoardSession=React.useRef<string|null>(null)
+  const currentSession=page.current(),revealedBoardSession=React.useRef<string|null>(null)
   React.useEffect(()=>{
     document.documentElement.dataset.eworkMemorySession=currentSession??''
     document.dispatchEvent(new CustomEvent('sherlock:memory-session',{detail:{sessionId:currentSession??undefined}}))
@@ -2496,10 +2546,7 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
     return()=>document.removeEventListener('sherlock:memory-source-open',open)
   },[page])
   const save = (next: any) => { setPreferences((previous:any)=>{const value=typeof next==='function'?next(previous):next;localStorage.setItem('sherlock.boards.view.v3',JSON.stringify(value));return value}) }
-  const entries = [
-    ...state.favorites.filter(f => f.pinned !== false).map(f => ({ key: 'private:' + f.favoriteId, group: 'private', value: f, time: Math.max(f.updatedAt ?? f.createdAt, page.editedAt(f.sessionId) ?? 0,usage[f.sessionId]??0) })),
-    ...state.boards.filter(b => b.pinned).map(b => ({ key: 'shared:' + b.boardId, group: b.sharingState === 'shared' ? 'shared' : 'private', value: b, time: Math.max(b.updatedAt ?? b.createdAt,usage[b.localSessionId??'']??0) }))
-  ]
+  const { entries, nextOrder } = orderedBoardEntries(state, page.editedAt, preferences)
   const activeGroup=entries.find(e=>('boardId' in e.value?e.value.localSessionId:e.value.sessionId)===currentSession)?.group
   React.useEffect(()=>{
     const key=(currentSession??'')+':'+(activeGroup??'workspace')
@@ -2509,13 +2556,9 @@ export function ResearchBoardSidebar({ page, wide = true }: { page: ResearchBoar
     setCollapsed(false);localStorage.setItem('sherlock.boards.collapsed','false')
     if(preferences.collapsedGroups.includes(activeGroup))save((previous:any)=>({...previous,collapsedGroups:previous.collapsedGroups.filter((g:string)=>g!==activeGroup)}))
   },[currentSession,activeGroup])
-  const nextOrder = promoteSidebarOrder(entries, preferences.order, preferences.updatedAt)
-  const order = nextOrder.order
   React.useEffect(() => {
     if (entries.length && nextOrder.changed) save((previous:any)=>({ ...previous, order: nextOrder.order, updatedAt: nextOrder.updatedAt }))
   }, [JSON.stringify(nextOrder)])
-  entries.sort((a, b) => preferences.sort === 'updated' ? b.time - a.time :
-    (order.includes(a.key) ? order.indexOf(a.key) : 100000) - (order.includes(b.key) ? order.indexOf(b.key) : 100000))
   const visible = entries.filter(e => e.value.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
   if (!wide || !skin) return null
   const B = skin.header
@@ -2627,9 +2670,7 @@ function ResearchBoardRow({ page, entry, time, selectedSession, skin, marker, ne
   const selected = page.current() === ('boardId' in entry ? entry.localSessionId : entry.sessionId)
   const shared = 'boardId' in entry
   const sessionId = shared ? entry.localSessionId : entry.sessionId
-  const subscribeActivity = React.useCallback((listener: () => void) => page.subscribeActivity(sessionId, listener), [page, sessionId])
-  const activitySnapshot = React.useCallback(() => page.isRunning(sessionId), [page, sessionId])
-  const running = React.useSyncExternalStore(subscribeActivity, activitySnapshot, activitySnapshot)
+  const running = useBoardRunning(page, sessionId)
   const collaboration = shared && entry.sharingState === 'shared'
   const items = boardEntryActions(entry).map(item => ({ ...item, icon: item.id === 'collaboration' ? boardIcon('people') : h(item.id === 'delete' ? IconTrashOutline16 : item.id === 'rename' ? IconEditOutline16 : IconFolderOpenOutline16) }))
   return h('div', { className: ['srb-row', R.sessionRow, !nested && R.flatSessionRowWithoutStatus, selected && R.selected, open && R.menuOpen, marker === 'before' && R.dropBefore, marker === 'after' && R.dropAfter].filter(Boolean).join(' '), 'data-menu-open': open, 'aria-current': selected,

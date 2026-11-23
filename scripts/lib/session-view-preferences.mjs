@@ -62,8 +62,30 @@ export function installInitialChatViewIntent(chatStore, sessions, researchWorksp
   }
 }
 
-// Only explicit new session callbacks attach a reuse predicate. Workspace selection
-// and automatic startup retain their native reuse and restoration paths.
+// A desktop window opens on Home. Reloading that same window may restore its
+// selection, while the sessions, workspaces and their drafts stay persistent.
+export function patchDesktopStartupHome(source) {
+  const marker = '/* ework:desktop-startup-home:v1 */'
+  if (source.includes(marker)) return source
+  const changes = [
+    ['function attachPersistence(api, name) {\n\t\t\tif (typeof localStorage === "undefined") return;',
+      `function attachPersistence(api, name) { ${marker}
+        let storage;
+        try { storage = name === "dsh.sessions.current" && globalThis.window?.dshDesktop
+          ? window.sessionStorage : globalThis.localStorage; } catch { return; }
+        if (!storage) return;`],
+    ['localStorage.getItem(name)', 'storage.getItem(name)'],
+    ['localStorage.setItem(name, JSON.stringify(state))', 'storage.setItem(name, JSON.stringify(state))'],
+    ['this.initialSelectionStarted = true;', 'this.initialSelectionStarted = true;\nif (globalThis.window?.dshDesktop) return () => {};']
+  ]
+  for (const [before, after] of changes) {
+    if (source.split(before).length !== 2) throw Error('客户端启动入口已变更：' + before)
+    source = source.replace(before, after)
+  }
+  return source
+}
+
+// Only explicit new session callbacks attach a reuse predicate.
 export function patchNewChatSessionRuntime(source) {
   // Session creation may resolve before the workspace membership notification arrives.
   const opened = 'beforeOpen?.(sessionId);\n\t\t\t\t\tthis.sessions.open(sessionId);'
