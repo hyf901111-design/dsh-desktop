@@ -563,6 +563,265 @@
         ],
         "recordedAt": "2026-11-23T22:53:59.262Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "首次安装预置自选研究看板、侧栏最近会话与知识库加号对齐",
+        "branch": "codex/feat/starter-board-sidebar-20261124",
+        "baseCommit": "3449a79e3410e31df11492f859855b75d670c626",
+        "tipCommit": "dd4635c07c218f4d44bb960c37d5b62d6ecb0f0f",
+        "commits": [
+          {
+            "commit": "5c66dbffad685329912b72d177053f17908608fc",
+            "parents": [
+              "3449a79e3410e31df11492f859855b75d670c626"
+            ],
+            "subject": "对齐知识库新建文件夹加号与计数徽标"
+          },
+          {
+            "commit": "01d416dc0a4a23b7d9d103cc31d02d6c330f172e",
+            "parents": [
+              "5c66dbffad685329912b72d177053f17908608fc"
+            ],
+            "subject": "首次安装预置可编辑的自选研究看板并保留删除状态"
+          },
+          {
+            "commit": "309c4faf7b6222f71c55d036d2ea9fe4d3d51098",
+            "parents": [
+              "01d416dc0a4a23b7d9d103cc31d02d6c330f172e"
+            ],
+            "subject": "侧栏支持在目录与最近使用的会话之间切换"
+          },
+          {
+            "commit": "46e5e45ae4a4bde094f303956ed28a8a813e74b6",
+            "parents": [
+              "309c4faf7b6222f71c55d036d2ea9fe4d3d51098"
+            ],
+            "subject": "在自选列表预置宽基指数并正确显示指数联动行情与公告"
+          },
+          {
+            "commit": "83a07dfd591ae0d31d95775214a176767ffc0775",
+            "parents": [
+              "46e5e45ae4a4bde094f303956ed28a8a813e74b6"
+            ],
+            "subject": "统一：收起侧栏后按当前视图展示主页会话列表"
+          },
+          {
+            "commit": "bf6a56c6e99ba5c4226f98025dfdeeb2c04963d7",
+            "parents": [
+              "83a07dfd591ae0d31d95775214a176767ffc0775"
+            ],
+            "subject": "修复公告组件手动切换公司时无法解除行情联动"
+          },
+          {
+            "commit": "dd4635c07c218f4d44bb960c37d5b62d6ecb0f0f",
+            "parents": [
+              "bf6a56c6e99ba5c4226f98025dfdeeb2c04963d7"
+            ],
+            "subject": "修复客户端更换端口后侧栏视图和最近会话顺序丢失"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/board-directories.js"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/watchlist-board.d.ts"
+          },
+          {
+            "status": "A",
+            "path": "packages/dsh-research-task-runtime/watchlist-board.js"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/financial-widget-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/home-guide-native.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/main/financial/public-widget-data.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/home-theme-preferences.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/index.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/research-boards-service.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/launch-root.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-boards-store.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/main/state/research-canvas-storage.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/figma-b-icons.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/knowledge/workspace.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/scheduled/view.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/preload/sidebar-recent-sessions.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-session-switcher.ts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/sidebar-session-storage.d.mts"
+          },
+          {
+            "status": "A",
+            "path": "src/shared/sidebar-session-storage.mjs"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-announcements-public.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/financial-widget-announcements.test.js"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/sidebar-recent-sessions-browser.tsx"
+          },
+          {
+            "status": "M",
+            "path": "test/home-guide-session.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/knowledge-workspace-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/scheduled-task-view.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/sidebar-recent-sessions-browser.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-session-switcher-browser.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/starter-watchlist-board.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "桌面端类型检查",
+            "verifiedCommit": "dd4635c07c218f4d44bb960c37d5b62d6ecb0f0f",
+            "completedAt": "2026-11-23T23:45:36.121064+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/starter-watchlist-board.test.js",
+              "test/home-guide-session.test.ts",
+              "test/financial-widget-announcements.test.js",
+              "test/financial-widget-announcements-public.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "首次安装、删除与重启、首页演示和行情公告联动",
+            "verifiedCommit": "dd4635c07c218f4d44bb960c37d5b62d6ecb0f0f",
+            "completedAt": "2026-11-23T23:45:34.702418+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/sidebar-recent-sessions-browser.test.js",
+              "test/sidebar-session-recency.test.ts",
+              "test/sidebar-session-switcher-browser.test.ts",
+              "test/sidebar-session-search.test.ts",
+              "test/image-history-navigation.test.js",
+              "test/research-canvas-storage.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "侧栏切换、最近会话排序、主页悬停与会话打开",
+            "verifiedCommit": "dd4635c07c218f4d44bb960c37d5b62d6ecb0f0f",
+            "completedAt": "2026-11-23T23:45:49.067819+00:00",
+            "timeoutMs": 240000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/knowledge-workspace-rendered.test.js",
+              "-t",
+              "lists real session modes|aligns folder counts|moves existing files into a new folder"
+            ],
+            "outcome": "passed",
+            "summary": "知识库目录实际布局和交互",
+            "verifiedCommit": "dd4635c07c218f4d44bb960c37d5b62d6ecb0f0f",
+            "completedAt": "2026-11-23T23:45:43.029595+00:00",
+            "timeoutMs": 240000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 对照深浅主题计数标签、侧栏顺序及最近会话入口。原生组件检查选择指数和股票时详情、新闻、公告联动。"
+        },
+        "acceptanceCriteria": [
+          "首次安装可在个人看板打开带有五个原生组件的自选研究看板，允许修改和删除",
+          "搜索左侧按钮切换目录和最近使用会话，悬停面板跟随切换",
+          "文件夹加号和统计标签对齐"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-23T23:45:49.113012+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -653,6 +912,54 @@
         "restores a custom canvas ratio"
       ],
       "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/starter-watchlist-board.test.js",
+        "test/home-guide-session.test.ts",
+        "test/financial-widget-announcements.test.js",
+        "test/financial-widget-announcements-public.test.ts"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/sidebar-recent-sessions-browser.test.js",
+        "test/sidebar-session-recency.test.ts",
+        "test/sidebar-session-switcher-browser.test.ts",
+        "test/sidebar-session-search.test.ts",
+        "test/image-history-navigation.test.js",
+        "test/research-canvas-storage.test.ts"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/knowledge-workspace-rendered.test.js",
+        "-t",
+        "lists real session modes|aligns folder counts|moves existing files into a new folder"
+      ],
+      "timeoutMs": 240000
     }
   ],
   "mainSynchronizations": []
