@@ -12,14 +12,13 @@ const openingScope = [
   [openAttempt,'const system = renderPrompt(assembly);\n\t\tlet retriedTextProtocol = false;\n\t\twhile (true) {\n\t\t\tlet opening = false, textProtocol = false;'],
   oldOpeningScope[1],
   [oldOpeningScope[2][0], 'const stream = opening ? boundedTaskOpeningStream(this.loopCtx.llm, preparedCall, request, signal, markAgentLoopRequest, deepFreeze) : toolExecutionStream(this.loopCtx.llm, preparedCall, request, retriedTextProtocol, () => { textProtocol = true; }, markAgentLoopRequest, deepFreeze);'],
-  ['if (opening) return null;\n\t\t\tif (finish.kind === "max-tokens")', [
-    'if (opening) return null;',
-    'if (textProtocol && !message.content.some(block => block.type === "tool-call")) {',
+  ['if (toolCalls.length === 0) return { kind: "completed" };', [
+    'if (textProtocol && toolCalls.length === 0) {',
     '  if (retriedTextProtocol) throw new Error("模型未能正确调用工具，请重试。");',
     '  retriedTextProtocol = true;',
     '  continue;',
     '}',
-    'if (finish.kind === "max-tokens")'
+    'if (toolCalls.length === 0) return { kind: "completed" };'
   ].join('\n\t\t\t')]
 ]
 function transformOpeningScope(source, inverse, scope = openingScope) {
