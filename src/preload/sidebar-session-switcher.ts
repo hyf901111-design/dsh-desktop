@@ -43,15 +43,6 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     el.type = 'button'; el.textContent = text; el.dataset.key = key
     return el
   }
-  function position() {
-    if (!home) return
-    const anchor = home.getBoundingClientRect(), rail = sidebar.getBoundingClientRect()
-    // The transparent leading padding keeps the entire path from Home to the list interactive.
-    panel.style.left = anchor.right + 'px'
-    const gap = Math.max(3, rail.right - anchor.right + 3)
-    panel.style.paddingLeft = gap + 'px'
-    panel.style.setProperty('--switcher-left', (anchor.right + gap) + 'px')
-  }
   function cancelTimers() { win.clearTimeout(openTimer); win.clearTimeout(closeTimer) }
   function close() {
     cancelTimers()
@@ -117,7 +108,7 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     if (!home?.isConnected || sidebar.dataset.dshSidebarWide !== 'false' || opening ||
         doc.body.hasAttribute('data-navigation-editing') || doc.querySelector('dialog:modal')) return
     if (!panel.isConnected) {
-      position(); render()
+      render()
       doc.body.append(panel)
       panel.showPopover()
       home.setAttribute('aria-expanded', 'true')
@@ -187,7 +178,6 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
   doc.addEventListener('focusin', event => { if (!inside(event.target)) close() }, options)
   doc.addEventListener('keydown', keydown, options)
   win.addEventListener('blur', close, { signal: lifetime.signal })
-  win.addEventListener('resize', () => { if (panel.isConnected) position() }, options)
   const observer = new win.MutationObserver(records => {
     bind()
     if (panel.isConnected && records.some(record => record.attributeName === 'data-odyssey-locale')) render()
