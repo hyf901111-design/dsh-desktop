@@ -435,6 +435,133 @@
         ],
         "risks": [],
         "generatedAt": "2026-11-23T22:48:48.372003+00:00"
+      },
+      "merged": {
+        "mergeCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+        "verificationCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/bundled-ppt-skill.test.ts",
+              "test/integration-bundled-skill.test.js",
+              "-t",
+              "discoverable through|actual shipped PPT"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/bundled-ppt-skill.test.ts test/integration-bundled-skill.test.js -t discoverable through|actual shipped PPT",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "test/efund_layout_edit_test.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 -B test/efund_layout_edit_test.py",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "test/sidebar-session-switcher-browser.test.ts",
+              "test/sidebar-session-search.test.ts",
+              "test/browser-menu-overlay-focus.test.ts",
+              "test/sidebar-session-recency.test.ts",
+              "test/research-board-activity.test.ts",
+              "test/research-board-sidebar-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run --maxWorkers=1 --testTimeout=30000 test/sidebar-session-switcher-browser.test.ts test/sidebar-session-search.test.ts test/browser-menu-overlay-focus.test.ts test/sidebar-session-recency.test.ts test/research-board-activity.test.ts test/research-board-sidebar-overflow.test.ts",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "test/sidebar-new-session-actions.test.ts",
+              "-t",
+              "fresh desktop window|opens Home directly|opens a new .+ session without reusing the previous app session"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run --maxWorkers=1 --testTimeout=30000 test/sidebar-new-session-actions.test.ts -t fresh desktop window|opens Home directly|opens a new .+ session without reusing the previous app session",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/research-board-notifications-center.test.ts",
+              "test/image-factory-layer-gesture.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/research-board-notifications-center.test.ts test/image-factory-layer-gesture.test.ts",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/pending-conversation-rendered.test.js",
+              "-t",
+              "restores a custom canvas ratio"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run --maxWorkers=1 test/pending-conversation-rendered.test.js -t restores a custom canvas ratio",
+            "verifiedCommit": "85e85a651e0937308209328938573ff3f24d5b35",
+            "completedAt": "2026-11-23T22:53:59.262Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-23T22:53:59.262Z"
       }
     }
   ],
