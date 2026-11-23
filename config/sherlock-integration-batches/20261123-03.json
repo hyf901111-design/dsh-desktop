@@ -245,6 +245,90 @@
           "本次验证覆盖隔离窗口和运行时，未替换用户正在使用的客户端。"
         ],
         "generatedAt": "2026-11-23T16:54:33.819268+00:00"
+      },
+      "merged": {
+        "mergeCommit": "83840766f115e7f655ede41480c4ba6b66e69d4b",
+        "verificationCommit": "83840766f115e7f655ede41480c4ba6b66e69d4b",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/bundled-ppt-skill.test.ts",
+              "test/integration-bundled-skill.test.js",
+              "-t",
+              "discoverable through|actual shipped PPT"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/bundled-ppt-skill.test.ts test/integration-bundled-skill.test.js -t discoverable through|actual shipped PPT",
+            "verifiedCommit": "83840766f115e7f655ede41480c4ba6b66e69d4b",
+            "completedAt": "2026-11-23T22:09:17.199Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "test/efund_layout_edit_test.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 -B test/efund_layout_edit_test.py",
+            "verifiedCommit": "83840766f115e7f655ede41480c4ba6b66e69d4b",
+            "completedAt": "2026-11-23T22:09:17.199Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "83840766f115e7f655ede41480c4ba6b66e69d4b",
+            "completedAt": "2026-11-23T22:09:17.199Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "test/sidebar-session-switcher-browser.test.ts",
+              "test/sidebar-session-search.test.ts",
+              "test/browser-menu-overlay-focus.test.ts",
+              "test/sidebar-session-recency.test.ts",
+              "test/research-board-activity.test.ts",
+              "test/research-board-sidebar-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run --maxWorkers=1 --testTimeout=30000 test/sidebar-session-switcher-browser.test.ts test/sidebar-session-search.test.ts test/browser-menu-overlay-focus.test.ts test/sidebar-session-recency.test.ts test/research-board-activity.test.ts test/research-board-sidebar-overflow.test.ts",
+            "verifiedCommit": "83840766f115e7f655ede41480c4ba6b66e69d4b",
+            "completedAt": "2026-11-23T22:09:17.199Z",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "test/sidebar-new-session-actions.test.ts",
+              "-t",
+              "fresh desktop window|opens Home directly|opens a new .+ session without reusing the previous app session"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run --maxWorkers=1 --testTimeout=30000 test/sidebar-new-session-actions.test.ts -t fresh desktop window|opens Home directly|opens a new .+ session without reusing the previous app session",
+            "verifiedCommit": "83840766f115e7f655ede41480c4ba6b66e69d4b",
+            "completedAt": "2026-11-23T22:09:17.199Z",
+            "timeoutMs": 300000
+          }
+        ],
+        "recordedAt": "2026-11-23T22:09:17.199Z"
       }
     }
   ],
