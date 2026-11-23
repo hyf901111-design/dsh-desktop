@@ -103,6 +103,41 @@
           "仍需完整模型会话评估端到端耗时；PowerPoint 自动化取决于本机权限"
         ],
         "generatedAt": "2026-11-23T14:57:26.410+00:00"
+      },
+      "merged": {
+        "mergeCommit": "57000c686d8d146c028e223ec413172088e8c4be",
+        "verificationCommit": "57000c686d8d146c028e223ec413172088e8c4be",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/bundled-ppt-skill.test.ts",
+              "test/integration-bundled-skill.test.js",
+              "-t",
+              "discoverable through|actual shipped PPT"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/bundled-ppt-skill.test.ts test/integration-bundled-skill.test.js -t discoverable through|actual shipped PPT",
+            "verifiedCommit": "57000c686d8d146c028e223ec413172088e8c4be",
+            "completedAt": "2026-11-23T14:58:12.953Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "test/efund_layout_edit_test.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 -B test/efund_layout_edit_test.py",
+            "verifiedCommit": "57000c686d8d146c028e223ec413172088e8c4be",
+            "completedAt": "2026-11-23T14:58:12.953Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-23T14:58:12.953Z"
       }
     }
   ],
