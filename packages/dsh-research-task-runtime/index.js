@@ -47,6 +47,7 @@ import { requestedMarketVariant } from './workbench-design-contract.js'
 import { preferredComponentSourceTools, componentSourceInstruction, registerComponentSourceGuidance, chinaMarketWindow, componentPluginSourceRequired, componentPluginSourceProhibited } from './component-source-tools.js'
 import { registerWorkbenchExecutionPolicy, workbenchOfflineRequest } from './workbench-execution-policy.js'
 import { workbenchDocumentScope, workbenchDocumentInputs, workbenchDocumentPrompt, workbenchDocumentCitationIssue, restoreDocumentLists, documentUncertaintyIssue, documentTableEntityCoverageIssue, DOCUMENT_TABLE_GUIDANCE, documentTableOutput, documentTableOutputIssue } from './workbench-document-evidence.js'
+import {extractWorkbenchTextDocument,isWorkbenchTextPath} from './workbench-text-document.js'
 import { extractDocxEvidence } from './docx-evidence.js'
 import { completeWordReadingPanel } from './workbench-word-grid.js'
 import { loadPdfLibrary } from './pdf-library.js'
@@ -776,7 +777,7 @@ async function extractPdfText(path, signal, pageEvidenceBytes) {
   }
 }
 
-function createWorkbenchDocumentReader() {
+export function createWorkbenchDocumentReader() {
   const sessions = new WeakMap()
   return async (session, paths, signal) => {
     let entries = sessions.get(session)
@@ -792,7 +793,9 @@ function createWorkbenchDocumentReader() {
           ? boundedSourceBytes(path, extractionSignal).then(data => ({name:basename(path),...extractDocxEvidence(data,budget)}))
           : ['.csv','.tsv'].includes(extname(path).toLowerCase())
             ? boundedSourceBytes(path,extractionSignal).then(data=>extractDelimitedEvidence(new TextDecoder('utf-8',{fatal:true}).decode(data),basename(path),budget))
-            : extractPdfText(path, extractionSignal, budget)
+            : isWorkbenchTextPath(path)
+              ? boundedSourceBytes(path,extractionSignal).then(data=>extractWorkbenchTextDocument(data,basename(path),budget))
+              : extractPdfText(path, extractionSignal, budget)
         entries.set(key, pending)
         if (entries.size > 4) entries.delete(entries.keys().next().value)
         void pending.catch(() => { if (entries.get(key) === pending) entries.delete(key) })

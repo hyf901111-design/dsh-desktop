@@ -1,4 +1,5 @@
 import {posix} from 'node:path'
+import {isWorkbenchDocumentPath} from './workbench-text-document.js'
 import {fileURLToPath} from 'node:url'
 
 const PREFIX='␞SHERLOCK_RESEARCH_FILES_V1 '
@@ -71,7 +72,7 @@ export function prototypeEvidenceRequestCurrent(session,human,request){
  return !!human&&!!currentMessage(session,human.messageId,request)
 }
 
-function authoredReferences(text){
+function authoredReferences(text,attachmentsOnly){
  const blank=value=>' '.repeat(value.length)
  // Preserve character offsets, but never mine pasted document markup, comments,
  // code, blockquotes, or quoted instructions as new file authority.
@@ -118,18 +119,59 @@ function authoredReferences(text){
   const following=context.slice(locator.end,locator.end+96)
   const suffix=/^\s*(?:(?:作为|用作)(?:本轮|这个|这份|该|此)?(?:原型|参考|附件|设计稿)|[，,]?\s*(?:(?:请|麻烦|你|去|帮我)\s*){0,4}(?:根据|参考|按照)(?:这个|这份|该|此)(?:原型|文件|附件|设计稿))/u.test(following)
   locator.accepted=!deniedInput.test(clause)&&(locator.attachment||!outputIntent.test(clause)&&(inputIntro.test(clause)||inputLabel.test(clause)||list||suffix))
-  if(locator.accepted)accepted.push(locator.value)
+  if(locator.accepted&&(!attachmentsOnly||locator.attachment))accepted.push(locator.value)
   previous=locator
  }
  return accepted
 }
 
-/** Only the current human's own message/attachment descriptors grant targets.
- * Tool results, reference excerpts, HTML links and earlier humans never do. */
+const messageText=message=>(message.content??[]).filter(part=>part.type==='text'&&typeof part.text==='string').map(part=>part.text).join('\n')
+
+function referredAttachments(session,message,text){
+ // Use only previously committed human attachment chips in this session. Queued
+ // drafts, tool output, pasted paths, generated files and prior URLs grant no rights.
+ const body=text.startsWith(PREFIX)?text.slice(text.indexOf('␟')+1):text
+ const instruction=body.replace(/```[\s\S]*?```|~~~[\s\S]*?~~~|^\s*>[^\n]*|[“「][^”」\n]*[”」]|"[^"\n]*"|<([a-z][\w:-]*)\b[^>]*>[\s\S]*?<\/\1\s*>/gimu,' ').replace(/\uFFFC/gu,' ').trim()
+ const referring=/(?:这[份个些篇两几]|那[份个些篇]|该|上述|前述|上次|先前|刚才|之前|此前|前面|上面|同一份|原来|原始|所附)(?:.{0,8}?(?:上传|附上|提供))?(?:的|份|个)?(?:文档|文件|附件|报告|资料)|(?:根据|基于|参考|按照|用|沿用|结合)(?:刚才|之前)?(?:上传的?|提供的?|附上的?)?(?:附件|原文档|原报告)|\b(?:this|that|those|these|same|previous|attached|uploaded)\s+(?:documents?|files?|reports?|attachments?)\b/iu
+ const requestedNames=new Set()
+ for(const match of instruction.matchAll(/[^\s/“”《》「」`，。；;!?？]+\.(?:md|markdown|txt|pdf|docx|tsv|csv)\b/giu)){
+  requestedNames.add(match[0])
+  requestedNames.add(match[0].replace(/^(?:(?:请|继续|再|帮我|根据|基于|参考|使用|沿用|按照|依据|用|把|将))+/u,''))
+ }
+ if((!referring.test(instruction)&&!requestedNames.size)||/(?:不要|禁止|不必|无需|不用|忽略|排除)[^，。；;!?？\n]{0,26}(?:附件|文档|文件|报告|资料|\.(?:md|markdown|txt|pdf|docx|csv|tsv)\b)|\b(?:ignore|exclude|do not use|don't use)\b/iu.test(instruction))return []
+ const events=session.events??[]
+ const boundary=events.findLastIndex(event=>event.type==='user/message'&&event.data.id===message.id||event.type==='agent/inbox/spliced'&&event.data?.inserted?.some(item=>item.id===message.id))
+ for(let i=boundary-1;i>=0;i--){
+  const event=events[i]
+  if(event.type!=='user/message'||event.data?.source?.kind!=='user'||event.data.id===message.id)continue
+  const previousText=messageText(event.data)
+  if(!previousText.startsWith(PREFIX)&&!previousText.includes('📎 文件：`'))continue
+  const prior=authoredPrototypeEvidence(previousText,true)
+  const documents=prior.files.filter(isWorkbenchDocumentPath)
+  if(!documents.length)continue
+  if(requestedNames.size){
+   const matches=documents.filter(path=>requestedNames.has(posix.basename(path)))
+   if(matches.length)return matches.length<=4?matches:[]
+   continue
+  }
+  if(documents.length===1||/(?:这些|上述各|所有|全部|这[两几多]|\b(?:these|those|all)\b)/iu.test(instruction))return documents.length<=4?documents:[]
+  return []
+ }
+ return []
+}
+
 export function planningPrototypeEvidence(session,human,request){
  const message=currentMessage(session,human.messageId,request)
  if(!message)return{files:[],urls:[],required:[]}
- return authoredPrototypeEvidence((message.content??[]).filter(part=>part.type==='text'&&typeof part.text==='string').map(part=>part.text).join('\n'))
+ const text=messageText(message),direct=authoredPrototypeEvidence(text)
+ if(direct.required.length||direct.networkAllowed===undefined||message.content?.some(block=>block.type!=='text')||text.includes('<knowledge-reference>'))return direct
+ // An explicit current selection (including a non-file card) takes priority.
+ if(text.startsWith(PREFIX)){
+  const {artifacts}=JSON.parse(text.slice(PREFIX.length,text.indexOf('␟')))
+  if(artifacts!==undefined&&(!Array.isArray(artifacts)||artifacts.length))return direct
+ }
+ const files=referredAttachments(session,message,text)
+ return files.length?{...direct,files,required:files.map(path=>'file:'+path)}:direct
 }
 
 // The intent classifier receives the human body without its structured file
@@ -139,11 +181,12 @@ export function workbenchSourceText(session,human){
  const {files}=planningPrototypeEvidence(session,human)
  if(!files.length)return human.text
  const existing=new Set(authoredPrototypeEvidence(human.text).files)
- return [human.text,...files.filter(path=>!existing.has(path)).map(path=>'📎 文件：`'+path.replaceAll('`','\\`')+'`')].join('\n')
+ const body=human.text.includes('\uFFFC')?human.text.replace(/\uFFFC/gu,' ').trim():human.text
+ return [body,...files.filter(path=>!existing.has(path)).map(path=>'📎 文件：`'+path.replaceAll('`','\\`')+'`')].join('\n')
 }
 // Call only with host-owned authored input (or the immutable workbench request),
 // never planner prose, a file body, tool result or a parent chat excerpt.
-export function authoredPrototypeEvidence(authoredText){
+export function authoredPrototypeEvidence(authoredText,attachmentsOnly=false){
  const files=new Set(),urls=new Set()
  let text=typeof authoredText==='string'?authoredText:''
  if(text.startsWith(PREFIX)){
@@ -161,7 +204,7 @@ export function authoredPrototypeEvidence(authoredText){
    text=text.slice(end+1)
   }catch{return{files:[],urls:[],required:[]}}
  }
- for(const value of authoredReferences(text)){
+ for(const value of authoredReferences(text,attachmentsOnly)){
   const path=filePath(value),url=!path&&webUrl(value)
   if(path)files.add(path)
   else if(url)urls.add(url)
