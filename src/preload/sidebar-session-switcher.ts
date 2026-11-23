@@ -56,7 +56,9 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
   }
   function render() {
     const en = english(), current = source.current()
-    const groups = groupSessions(source.results(''), source.workspaces(), en)
+    const recent = source.recentRows?.(en)
+    const groups = recent === undefined ? groupSessions(source.results(''), source.workspaces(), en)
+      : recent.length ? [{ key: 'recent', title: '', rows: recent }] : []
     const next = JSON.stringify([en, current, groups.map(group => [
       group.key, group.title, group.rows.map(row => [row.key, row.title, row.sessionId, row.boardId])
     ]), [...collapsedGroups], [...showAllRows]])
@@ -66,24 +68,28 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     const top = list.scrollTop, fragment = doc.createDocumentFragment()
     list.setAttribute('aria-label', en ? 'Switch conversation' : '切换会话')
     for (const group of groups) {
-      const section = doc.createElement('section'), heading = doc.createElement('h3')
-      const disclosure = button(group.title, 'group:' + group.key), rows = doc.createElement('div')
-      rows.id = panel.id + '-rows-' + encodeURIComponent(group.key)
-      rows.hidden = collapsedGroups.has(group.key)
-      disclosure.dataset.uiPreserve = ''
-      disclosure.setAttribute('aria-controls', rows.id)
-      disclosure.setAttribute('aria-expanded', String(!rows.hidden))
-      if (current && group.rows.some(row => row.sessionId === current)) disclosure.dataset.currentGroup = ''
-      disclosure.onclick = () => {
-        if (rows.hidden) collapsedGroups.delete(group.key)
-        else collapsedGroups.add(group.key)
-        render()
+      const section = doc.createElement('section'), rows = doc.createElement('div')
+      if (!recent) {
+        const heading = doc.createElement('h3')
+        const disclosure = button(group.title, 'group:' + group.key)
+        rows.id = panel.id + '-rows-' + encodeURIComponent(group.key)
+        rows.hidden = collapsedGroups.has(group.key)
+        disclosure.dataset.uiPreserve = ''
+        disclosure.setAttribute('aria-controls', rows.id)
+        disclosure.setAttribute('aria-expanded', String(!rows.hidden))
+        if (current && group.rows.some(row => row.sessionId === current)) disclosure.dataset.currentGroup = ''
+        disclosure.onclick = () => {
+          if (rows.hidden) collapsedGroups.delete(group.key)
+          else collapsedGroups.add(group.key)
+          render()
+        }
+        heading.append(disclosure)
+        section.append(heading)
       }
-      heading.append(disclosure)
-      section.append(heading, rows)
+      section.append(rows)
       fragment.append(section)
       if (rows.hidden) continue
-      for (const row of showAllRows.has(group.key) ? group.rows : group.rows.slice(0, 5)) {
+      for (const row of recent || showAllRows.has(group.key) ? group.rows : group.rows.slice(0, 5)) {
         const item = button(row.title, row.key)
         item.dataset.uiPreserve = ''; item.title = row.title
         if (row.sessionId && row.sessionId === current) item.setAttribute('aria-current', 'true')
@@ -100,7 +106,7 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
         }
         rows.append(item)
       }
-      if (group.rows.length > 5) {
+      if (!recent && group.rows.length > 5) {
         const more = showAllRows.has(group.key)
         const toggle = button(more ? (en ? 'Show less' : '收起') : (en ? 'Show more' : '展开显示'), 'expand:' + group.key)
         toggle.className = 'ework-switcher-more'
