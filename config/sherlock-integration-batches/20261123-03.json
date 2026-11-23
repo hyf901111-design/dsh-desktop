@@ -9,115 +9,65 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "办公演示核对最新文件、保留状态配色与事项时点",
+        "featureName": "演示最终交付卡片",
         "branch": "codex/feat/ppt-layout-edit-20261123",
-        "baseCommit": "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb",
-        "tipCommit": "6c722daea0dd7a5242833c559e2374cbfca2cbe9",
+        "baseCommit": "6c722daea0dd7a5242833c559e2374cbfca2cbe9",
+        "tipCommit": "cb7a5997f1abdd07ed30066463d31420257c4de1",
         "commits": [
           {
-            "commit": "6c722daea0dd7a5242833c559e2374cbfca2cbe9",
+            "commit": "cb7a5997f1abdd07ed30066463d31420257c4de1",
             "parents": [
-              "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb"
+              "6c722daea0dd7a5242833c559e2374cbfca2cbe9"
             ],
-            "subject": "修正同名演示预览残留，保留状态配色及事项时间口径"
+            "subject": "让完成轮次的演示交付回执显示为可打开的文件卡片"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/SKILL.md"
+            "path": "docs/presentation-files-delivery.md"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/_meta.json"
+            "path": "packages/dsh-research-task-runtime/presentation-files.js"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/references/meeting-content.md"
+            "path": "scripts/lib/deliverable-cards.mjs"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/meeting_attachments.py"
+            "path": "scripts/lib/delivery-file-model.d.mts"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/meeting_deck.py"
+            "path": "scripts/lib/delivery-file-model.mjs"
           },
           {
             "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/review_layout.applescript"
-          },
-          {
-            "status": "M",
-            "path": "skills/efund-ppt-maker/scripts/review_meeting.py"
-          },
-          {
-            "status": "M",
-            "path": "test/bundled-ppt-skill.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/integration-bundled-skill.test.js"
+            "path": "test/deliverable-cards.test.js"
           }
         ],
         "checks": [
           {
             "argv": [
-              "python3",
-              "-B",
-              "test/meeting_deck_test.py"
-            ],
-            "outcome": "passed",
-            "summary": "新建、重排、原生对象与防覆盖",
-            "verifiedCommit": "6c722daea0dd7a5242833c559e2374cbfca2cbe9",
-            "completedAt": "2026-11-23T16:22:39.876807+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "python3",
-              "-B",
-              "test/efund_layout_edit_test.py"
-            ],
-            "outcome": "passed",
-            "summary": "原始文稿按页和对象保真",
-            "verifiedCommit": "6c722daea0dd7a5242833c559e2374cbfca2cbe9",
-            "completedAt": "2026-11-23T16:22:40.749801+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
               "node",
               "node_modules/vitest/vitest.mjs",
               "run",
+              "test/deliverable-cards.test.js",
+              "test/delivery-file-model.test.js",
               "test/presentation-files.test.js"
             ],
             "outcome": "passed",
-            "summary": "交付成功终止及失败恢复",
-            "verifiedCommit": "6c722daea0dd7a5242833c559e2374cbfca2cbe9",
-            "completedAt": "2026-11-23T16:22:42.172355+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/bundled-ppt-skill.test.ts",
-              "test/integration-bundled-skill.test.js",
-              "-t",
-              "discoverable through|actual shipped PPT"
-            ],
-            "outcome": "passed",
-            "summary": "技能发现与实际资源",
-            "verifiedCommit": "6c722daea0dd7a5242833c559e2374cbfca2cbe9",
-            "completedAt": "2026-11-23T16:22:42.936407+00:00",
+            "summary": "158 项聚焦验证，包括终止回执在闭轮后呈现的原生与 Code Mode 文件卡片",
+            "verifiedCommit": "cb7a5997f1abdd07ed30066463d31420257c4de1",
+            "completedAt": "2026-11-23T16:26:13.630535+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "PowerPoint 连续渲染同一路径改写前后的不同文字，分别得到 Alpha 与 Beta；真实原稿 9 项影响状态配色逐项保持，最终快照 8 页。"
+          "summary": "投影组件与卡片挂载测试通过，待共享客户端原生会话验证可打开的最终文件。"
         },
         "acceptanceCriteria": [
           "已有演示实际按内容重排",
@@ -127,42 +77,7 @@
         "risks": [
           "特殊素材型和动画页需个别设计；模型会话质量需现场复核。"
         ],
-        "generatedAt": "2026-11-23T16:22:42.936455+00:00"
-      },
-      "merged": {
-        "mergeCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
-        "verificationCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/bundled-ppt-skill.test.ts",
-              "test/integration-bundled-skill.test.js",
-              "-t",
-              "discoverable through|actual shipped PPT"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/bundled-ppt-skill.test.ts test/integration-bundled-skill.test.js -t discoverable through|actual shipped PPT",
-            "verifiedCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
-            "completedAt": "2026-11-23T16:22:55.202Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "python3",
-              "-B",
-              "test/efund_layout_edit_test.py"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：python3 -B test/efund_layout_edit_test.py",
-            "verifiedCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
-            "completedAt": "2026-11-23T16:22:55.202Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-23T16:22:55.202Z"
+        "generatedAt": "2026-11-23T16:26:13.630535+00:00"
       }
     }
   ],
