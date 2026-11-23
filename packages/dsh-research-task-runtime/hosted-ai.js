@@ -54,6 +54,9 @@ export function isInterruptedModelStream(message) {
 class HostedPiAiAdapter extends PiAiAdapter {
   async *stream(options) {
     for await (const event of super.stream(options)) {
+      // Pi initializes usage to zero before any usage frame arrives. A missing
+      // accounting tail leaves token counts unknown; the gateway owns settlement.
+      if (event.type === 'usage' && Object.values(event.usage).every(count => count === 0)) continue
       if (event.type !== 'finish' || event.reason.kind !== 'error') {
         yield event
         continue
@@ -64,6 +67,8 @@ class HostedPiAiAdapter extends PiAiAdapter {
       if (quotaWindow) {
         const label = { FIVE_HOUR: '5 小时', WEEK: '本周', MONTH: '本月' }[quotaWindow]
         visibleFailure = { ...failure, code: 'AI_QUOTA_' + quotaWindow, message: `${label}剩余额度不足以开始本次模型调用。` }
+      } else if (/\bHOSTED_AI_DUPLICATE\b/.test(failure.message)) {
+        visibleFailure = { ...failure, code: 'HOSTED_AI_DUPLICATE', message: '云端已受理本次请求，连接中断后未能取回结果。' }
       } else if (failure.message.includes('HOSTED_AI_PAYLOAD_TOO_LARGE') || failure.message.includes('本次消息和图片过大') ||
                  failure.message.includes('本次发送的图片太多')) {
         visibleFailure = { ...failure, code: 'HOSTED_AI_PAYLOAD_TOO_LARGE', message: '本次消息和图片过大，请压缩图片或缩短消息后重试。' }

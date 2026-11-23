@@ -5,7 +5,8 @@ import { join } from 'node:path'
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'node:http'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
+import { setTimeout as delay } from 'node:timers/promises'
 import type { AddressInfo } from 'node:net'
 import {
   collaborationOrigin,
@@ -290,16 +291,41 @@ export class AccountService {
   }
   private async hostedRequest(path: string, signal: AbortSignal, body?: Buffer, requestId?: string): Promise<Response> {
     if (!this.authenticated) return Response.json({ error: { code: 'LOGIN_REQUIRED' } }, { status: 401 })
-    const timeout = body === undefined ? 8000 : path === 'chat/completions' ? hostedChatBridgeTimeoutMs : 310000
-    const response = await (this.collaborationOptions.fetch ?? fetch)(this.origin + '/v1/hosted-ai/' + path, {
+    const chat = path === 'chat/completions'
+    const timeout = body === undefined ? 8000 : chat ? hostedChatBridgeTimeoutMs : 310000
+    const lifetime = AbortSignal.any([signal, this.sessionAbort.signal, AbortSignal.timeout(timeout)])
+    const send = this.collaborationOptions.fetch ?? fetch
+    const url = this.origin + '/v1/hosted-ai/' + path
+    const admissionId = requestId ?? (chat ? randomUUID() : undefined)
+    const options: RequestInit = {
       method: body === undefined ? 'GET' : 'POST', redirect: 'error', body: body as Uint8Array<ArrayBuffer> | undefined,
       headers: {
         authorization: 'Bearer ' + this.token, 'content-type': 'application/json',
-        ...(requestId ? { 'x-ework-request-id': requestId } : {})
+        ...(admissionId ? { 'x-ework-request-id': admissionId } : {})
       },
-      signal: AbortSignal.any([signal, this.sessionAbort.signal, AbortSignal.timeout(timeout)])
-    })
-    return response
+      signal: lifetime
+    }
+    if (!chat) return send(url, options)
+    let backoffMs = 500
+    try {
+      const response = await send(url, options)
+      // The gateway echoes the ID on upstream errors. Forward acknowledged failures
+      // and all streaming responses verbatim; only reconnect before receiving them.
+      if (![502, 503, 504].includes(response.status) || response.headers.get('x-ework-request-id') === admissionId) return response
+      const retryAfter = response.headers.get('retry-after')
+      if (retryAfter !== null) {
+        const wait = /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now()
+        if (wait > 10_000) return response
+        if (Number.isFinite(wait)) backoffMs = Math.max(backoffMs, wait)
+      }
+      await response.body?.cancel()
+    } catch (error) {
+      if (!(error instanceof TypeError) || lifetime.aborted) throw error
+    }
+    // One pre-stream reconnect, with the exact same credentials, deadline, body and
+    // ID. Even if the first request reached the ledger, it cannot admit another run.
+    await delay(backoffMs, undefined, { signal: lifetime })
+    return send(url, options)
   }
   async narratePresentation(owner: string, text: string, signal: AbortSignal): Promise<Uint8Array> {
     if (!this.authenticated || !this.accountId || this.accountId !== owner) throw Error('请登录 EWork 后使用演讲者朗读。')

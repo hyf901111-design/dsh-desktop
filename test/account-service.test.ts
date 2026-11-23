@@ -474,6 +474,82 @@ it('rejects old hosted-AI bridge generations before contacting Cloudflare',async
   expect(onHostedQuotaChanged).toHaveBeenCalledTimes(2)
 })
 
+it('recovers a failed chat connection at the same step and keeps its admission ID, body and account', async () => {
+  const cloud = vi.fn<typeof fetch>()
+  const { service, endpoint } = await setup({ fetch: cloud })
+  cloud.mockResolvedValueOnce(Response.json({ user: { id: 'owner' }, token: 'a'.repeat(64) }))
+  await service.invoke('login', {})
+  const authorization = 'Bearer ' + endpoint.token + '.' + service.generation
+  const body = JSON.stringify({ messages: [
+    { role: 'assistant', tool_calls: [{ id: 'already-ran' }] },
+    { role: 'tool', tool_call_id: 'already-ran', content: 'saved' }
+  ] })
+  const chat = (id?: string) => fetch(new URL('/hosted-ai/chat/completions', endpoint.url), {
+    method: 'POST', headers: { authorization, ...(id ? { 'x-ework-request-id': id } : {}) }, body
+  })
+  const id = '01234567-89ab-4cde-8fed-9876543210ab'
+  const success = () => new Response('data: completed\n\n', { headers: { 'content-type': 'text/event-stream' } })
+  for (const failure of [new Response('edge unavailable', { status: 503, headers: { 'retry-after': '0' } }), new TypeError('fetch failed')]) {
+    cloud.mockClear()
+    if (failure instanceof Error) cloud.mockRejectedValueOnce(failure)
+    else cloud.mockResolvedValueOnce(failure)
+    cloud.mockResolvedValueOnce(success())
+    const supplied = failure instanceof Error ? undefined : id
+    expect(await (await chat(supplied)).text()).toBe('data: completed\n\n')
+    expect(cloud).toHaveBeenCalledTimes(2)
+    const first = cloud.mock.calls[0]![1]!
+    const retriedId = new Headers(first.headers).get('x-ework-request-id')
+    expect(retriedId).toMatch(/^[a-f0-9-]{36}$/)
+    if (supplied) expect(retriedId).toBe(supplied)
+    expect(first.body?.toString()).toBe(body)
+    expect(cloud.mock.calls[1]).toEqual(cloud.mock.calls[0])
+  }
+  // A lost acknowledgement may mean the gateway already admitted the request.
+  cloud.mockClear()
+  cloud.mockRejectedValueOnce(new TypeError('fetch failed')).mockResolvedValueOnce(
+    Response.json({ error: { code: 'HOSTED_AI_DUPLICATE' } }, { status: 409 })
+  )
+  expect((await chat(id)).status).toBe(409)
+  expect(cloud).toHaveBeenCalledTimes(2)
+  expect(cloud.mock.calls[1]).toEqual(cloud.mock.calls[0])
+  // An upstream rejection identified by the gateway, quota exhaustion and an already
+  // streaming reply must each finish with their original status and body.
+  for (const response of [
+    new Response('upstream failed', { status: 502, headers: { 'x-ework-request-id': id } }),
+    new Response('quota', { status: 429 }),
+    new Response('back off', { status: 503, headers: { 'retry-after': '60' } }),
+    new Response('data: partial\n\ndata: interrupted\n\n', { headers: { 'content-type': 'text/event-stream' } })
+  ]) {
+    cloud.mockClear()
+    const expected = await response.clone().text()
+    cloud.mockResolvedValueOnce(response)
+    const result = await chat(id)
+    expect(result.status).toBe(response.status)
+    expect(await result.text()).toBe(expected)
+    expect(cloud).toHaveBeenCalledTimes(1)
+  }
+})
+
+it('cancels chat recovery when the captured account changes before reconnect', async () => {
+  const cloud = vi.fn<typeof fetch>()
+  const { service, endpoint } = await setup({ fetch: cloud })
+  const login = (id: string) => Response.json({ user: { id }, token: id.repeat(64) })
+  cloud.mockResolvedValueOnce(login('a'))
+  await service.invoke('login', {})
+  const discarded = deferred<void>()
+  cloud.mockResolvedValueOnce(new Response(new ReadableStream({ cancel: () => discarded.resolve() }), { status: 503 }))
+  const request = fetch(new URL('/hosted-ai/chat/completions', endpoint.url), {
+    method: 'POST', headers: { authorization: 'Bearer ' + endpoint.token + '.' + service.generation }, body: '{}'
+  })
+  await discarded.promise
+  cloud.mockResolvedValueOnce(login('b'))
+  await service.invoke('login', {})
+  expect((await request).ok).toBe(false)
+  expect(cloud.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
+    '/v1/account/login', '/v1/hosted-ai/chat/completions', '/v1/account/login'
+  ])
+})
+
 it('distinguishes a temporary catalog failure from an empty catalog and isolates stale results by login', async () => {
   const { service, endpoint } = await setup()
   const local = globalThis.fetch

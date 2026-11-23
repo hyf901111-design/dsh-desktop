@@ -13,7 +13,10 @@ export function installWindowResize(window: BrowserWindow) {
       const {dx, dy} = gesture
       if (moveOrigin && !window.isFullScreen() &&
           typeof dx === 'number' && typeof dy === 'number' && Math.abs(dx) < 100_000 && Math.abs(dy) < 100_000) {
-        window.setPosition(Math.round(moveOrigin.x + dx), Math.round(moveOrigin.y + dy), false)
+        // Electron rejects -0 as a native integer. Adding zero normalizes a rounded negative fraction.
+        const x = Math.round(moveOrigin.x + dx) + 0
+        const y = Math.round(moveOrigin.y + dy) + 0
+        window.setPosition(x, y, false)
       }
       return
     }

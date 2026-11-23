@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs'
 import {createRequire} from 'node:module'
 import {runInNewContext} from 'node:vm'
 import {Window} from 'happy-dom'
+import {patchConversationFailureCopy} from '../scripts/lib/conversation-failure-copy.mjs'
 import {homeWorkbenchReceiptEvent,homeWorkbenchReceiptAnchors,homeWorkbenchProgressState,patchHomeWorkbenchProgress,stripHomeWorkbenchProgress} from '../scripts/lib/home-workbench-progress.mjs'
 import {homeWorkbenchPlanReceipt} from '../packages/dsh-research-task-runtime/home-workbench-contract.js'
 import {workbenchProgressState,researchWorkbenchReceiptAnchors} from '../scripts/lib/research-workbench-feedback.mjs'
@@ -50,7 +51,7 @@ it('projects and restores the typed plan through the real SessionRuntime event r
  const rt=window.descriptor.factory(id=>id==='@deepseek-ai/cordis'?cordis:fake)
  const original=readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'),patched=patchHomeWorkbenchProgress(original)
  expect(stripHomeWorkbenchProgress(patched)).toBe(stripHomeWorkbenchProgress(original));expect(patchHomeWorkbenchProgress(patched)).toBe(patched)
- runInNewContext(patched.replace('exports.apply = apply;','exports.apply = apply; exports.__register=registerConversationNodes; exports.__anchors=researchWorkbenchReceiptAnchors; exports.__retry=requestResearchWorkbenchRetry;exports.__flow=compactConversationFlow;exports.__turn=conversationNodeTurn;exports.__Progress=ResearchWorkbenchProgress;'),vm)
+ runInNewContext(patchConversationFailureCopy(patched).replace('exports.apply = apply;','exports.apply = apply; exports.__register=registerConversationNodes; exports.__anchors=researchWorkbenchReceiptAnchors; exports.__retry=requestResearchWorkbenchRetry;exports.__flow=compactConversationFlow;exports.__turn=conversationNodeTurn;exports.__Progress=ResearchWorkbenchProgress;'),vm)
  const native=window.descriptor.factory(id=>id==='react'?require('react'):id==='react/jsx-runtime'?require('react/jsx-runtime'):id==='@deepseek-ai/dsh-client-runtime/client'?rt:fake)
  expect(native.__anchors([{kind:'node',key:'plain'}],new Map([['plain',{kind:'assistant-step',data:{turn:1}}]]),()=>({plans:[]})).size).toBe(0)
  const events=new rt.ConversationEventRegistry(ctx),views=new rt.ConversationViewRegistry(ctx);native.__register({...ctx,conversationEvents:events,conversationViews:views})
@@ -74,6 +75,19 @@ it('projects and restores the typed plan through the real SessionRuntime event r
   const nodes=session.getSnapshot().chat.nodes.values()
   expect(nodes.find(node=>node.kind==='home-workbench-plan')?.data.phase).toBe(receiptTurn===1?kind:'running')
   expect(nodes.some(node=>node.kind==='turn-error')).toBe(!hidden)
+ }
+ // A retry attempt alone must neither complete a turn nor hide its final failure on replay.
+ for (const reason of [{kind:'error',error:{code:'TRANSPORT',message:'stream ended'}},{kind:'completed'}]) {
+  const retry={turn:1,step:1,retry:1,retryId:'model-attempt'}
+  const history=[
+   {type:'turn/start',data:{turn:1}},
+   {type:'llm/retry',data:retry},
+   {type:'llm/retry-started',data:retry},
+   {type:'turn/end',data:{turn:1,reason}}
+  ].map((event,i)=>({event:{...event,seq:i+1,time:i+1},surface:'append'}))
+  session.installWindow(history,false)
+  const errors=session.getSnapshot().chat.nodes.values().filter(node=>node.kind==='turn-error'&&node.visibility!=='hidden')
+  expect(errors).toHaveLength(reason.kind==='error'?1:0)
  }
  window.__sherlockWorkbenchGenerationV1=new Map([['demo',snapshot(5,'cancelled')]]);vm.document.documentElement.dataset.odysseyLocale='zh'
  const stoppedPlans=plans().map(p=>({...p,replay:{...p.replay,phase:'stopped'}})),html=require('react-dom/server').renderToString(require('react').createElement(native.__Progress,{sessionId:'demo',plans:stoppedPlans,footer:true}));expect(html).toContain('data-research-workbench-progress="partial"');expect(html).not.toContain('<button');expect(html).not.toContain('animateTransform');expect(html).toContain('未开始 10');

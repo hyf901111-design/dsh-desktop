@@ -57,7 +57,7 @@ test('hosted chat keeps waiting after two minutes without model output and compl
           provider: HOSTED_ARK_PROVIDER, model: model.id, signal: abort.signal,
           messages: [{ role: 'user', content: [{ type: 'text', text: '等待较慢的模型' }] }]
         })) events.push(event)
-        return events.at(-1)
+        return events
       } catch (error) { return error }
     })()
     await requested
@@ -66,7 +66,9 @@ test('hosted chat keeps waiting after two minutes without model output and compl
     await vi.advanceTimersByTimeAsync(190_000)
     expect(requestSignal.aborted).toBe(false)
     finish()
-    expect(await result).toMatchObject({ type: 'finish', reason: { kind: 'stop' } })
+    const events = await result
+    expect(events.at(-1)).toMatchObject({ type: 'finish', reason: { kind: 'stop' } })
+    expect(events.some(event => event.type === 'usage')).toBe(false)
     expect(calls).toHaveBeenCalledTimes(1)
   } finally {
     abort.abort()
@@ -92,6 +94,10 @@ test('the real model adapter only registers entitled chat models and uses its ca
     requests.push({path:req.url,auth:req.headers.authorization,requestId:req.headers['x-ework-request-id'],data:JSON.parse(Buffer.concat(chunks))})
     if (requests.at(-1).data.messages[0].content === 'quota-denied') {
       res.writeHead(429,{'content-type':'application/json'}).end(JSON.stringify({error:{code:'AI_QUOTA_FIVE_HOUR',message:'本 5 小时可用额度不足'}}))
+      return
+    }
+    if (requests.at(-1).data.messages[0].content === 'already-admitted') {
+      res.writeHead(409,{'content-type':'application/json'}).end(JSON.stringify({error:{code:'HOSTED_AI_DUPLICATE',message:'请求已受理，请勿重复提交。'}}))
       return
     }
     res.writeHead(200,{'content-type':'text/event-stream'})
@@ -124,6 +130,7 @@ test('the real model adapter only registers entitled chat models and uses its ca
     for await(const chunk of adapter.stream({provider:HOSTED_ARK_PROVIDER,model:model.id,maxTokens:512,
       messages:[{role:'user',content:[{type:'text',text:'说你好'}]}]}))chunks.push(chunk)
     expect(JSON.stringify(chunks)).toContain('你好')
+    expect(chunks).toContainEqual({ type: 'usage', usage: { inputTokens: 20, outputTokens: 5 } })
     expect(requests[0]).toMatchObject({path:'/hosted-ai/chat/completions',auth:'Bearer '+token+'.7',data:{model:model.id,stream:true}})
     expect(requests[0].requestId).toMatch(/^[0-9a-f-]{36}$/)
     expect(service.image.available()).toBe(true)
@@ -150,6 +157,9 @@ test('the real model adapter only registers entitled chat models and uses its ca
     expect(await run([{role:'user',content:[{type:'text',text:'partial-tool'}]}])).toMatchObject({
       type:'finish',reason:{kind:'error',failure:{code:'TRANSPORT'}}
     })
+    expect(await run([{role:'user',content:[{type:'text',text:'already-admitted'}]}])).toMatchObject({
+      type:'finish',reason:{kind:'error',failure:{code:'HOSTED_AI_DUPLICATE'}}
+    })
     const oldGenerate=service.image.capture()
     const lastCatalog=catalog
     catalogStatus=502
@@ -174,8 +184,8 @@ test('the real model adapter only registers entitled chat models and uses its ca
     expect(service.image.available()).toBe(false)
     expect(service.image.unavailable()).toBe(false)
     await expect(oldGenerate({},{signal:new AbortController().signal,maxBytes:100})).rejects.toThrow('账号已切换')
-    expect(requests).toHaveLength(4)
-    expect(new Set(requests.map(request=>request.requestId)).size).toBe(4)
+    expect(requests).toHaveLength(5)
+    expect(new Set(requests.map(request=>request.requestId)).size).toBe(5)
   }finally{service.dispose();server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
 })
 

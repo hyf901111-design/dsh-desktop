@@ -3,7 +3,7 @@ import { build } from 'esbuild'
 import { readFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 
-let browser: any, script: string, sidebarSource: string, style: string
+let browser: any, script: string, sidebarSource: string, layoutSource: string, style: string
 beforeAll(async () => {
   const runtime = await import(/* @vite-ignore */ pathToFileURL(process.env.SHERLOCK_TEST_PLAYWRIGHT ||
     '/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href)
@@ -11,18 +11,24 @@ beforeAll(async () => {
     '/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell' })
   sidebarSource = (await readFile('node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js', 'utf8'))
     .replace('exports.apply = apply;', 'exports.Root = SidebarRoot; exports.zh = zh; exports.apply = apply;')
-  style = await readFile('src/preload/navigation-shortcuts.css', 'utf8')
+  layoutSource = await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8')
+  style = (await Promise.all(['figma-panels.css', 'figma-b-icons.css', 'navigation-shortcuts.css']
+    .map(file => readFile('src/preload/' + file, 'utf8')))).join('\n')
   const bundle = await build({
     stdin: { resolveDir: process.cwd(), contents: `
       import React from 'react'
       import * as jsx from 'react/jsx-runtime'
       import {createRoot} from 'react-dom/client'
+      import * as reactDOM from 'react-dom'
       import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
       import {SidebarSessionSearch} from './src/preload/research-boards-ui'
       import {sidebarSearchResults} from './src/preload/sidebar-session-search'
-      let sidebar
-      window.__ModuleLoader__={load:({factory})=>{sidebar=factory(name=>name==='react'?React:name==='react/jsx-runtime'?jsx:name==='@deepseek-ai/dsh-client-ui-primitives'?primitives:{})}}
+      const plugins={}
+      const modules={'react':React,'react/jsx-runtime':jsx,'react-dom':reactDOM,'@deepseek-ai/dsh-client-ui-primitives':primitives}
+      window.__ModuleLoader__={load:({id,factory})=>{plugins[id]=factory(name=>modules[name]??{})}}
+      new Function(window.layoutSource)()
       new Function(window.sidebarSource)()
+      const sidebar=plugins['@deepseek-ai/dsh-client-ui-sidebar'], layout=plugins['@deepseek-ai/dsh-client-ui-layout']
       const records=Object.fromEntries(Array.from({length:8},(_,i)=>['s'+i,{title:'会话 '+i,updatedAt:20-i}]))
       records.orphan={title:'独立会话'}; records.archived={title:'已归档'}; records.sub={title:'子代理',origin:'subagent'}
       const boards={favorites:[{favoriteId:'f',sessionId:'personal',title:'个人看板',createdAt:90}],boards:[{boardId:'team',localSessionId:'shared',title:'共享看板',pinned:true,createdAt:100}]}
@@ -35,9 +41,16 @@ beforeAll(async () => {
         showError:e=>{throw e}}
       document.addEventListener('sherlock:search-session-opened',e=>events.push(['opened',e.detail.sessionId??null]))
       const root=createRoot(document.querySelector('#root'))
-      const render=()=>root.render(React.createElement(sidebar.Root,{collapsed,width:240,openHome:()=>events.push(['home']),
-        startSession:()=>{},startResearchSession:()=>{},toggleSidebar:()=>{collapsed=!collapsed;render()},t:k=>sidebar.zh[k]??k,
-        renderSlot:(name,owner)=>name==='sidebar.sessionSearch'?React.createElement(SidebarSessionSearch,{page,...owner}):null}))
+      const actions={setNarrow:()=>{},toggleSidebar:()=>{collapsed=!collapsed;render()}}
+      const renderSlot=(slot,props)=>{
+        if(slot==='conversation') return React.createElement('button',{style:{alignSelf:'flex-end'}},'其他')
+        if(slot==='sidebar') return React.createElement(sidebar.Root,{...props,openHome:()=>events.push(['home']),
+          startSession:()=>{},startResearchSession:()=>{},toggleSidebar:actions.toggleSidebar,t:k=>sidebar.zh[k]??k,
+          renderSlot:(name,owner)=>name==='sidebar.sessionSearch'?React.createElement(SidebarSessionSearch,{page,...owner}):null})
+        return null
+      }
+      const render=()=>root.render(React.createElement(layout.AppFrame,{actions,renderSlot,
+        useStore:select=>select({sidebar:collapsed?0:240,narrowExpanded:!collapsed}),useSessions:select=>select({})}))
       render()
       window.fixture={events,listeners,clear:()=>{empty=true;listeners.forEach(f=>f())},rename:()=>{records.s1.title='更新后的标题';listeners.forEach(f=>f())},expand:()=>{collapsed=false;render()}}
     ` },
@@ -53,12 +66,12 @@ async function fixture() {
   page.on('pageerror', (error: Error) => errors.push(error.message))
   page.setDefaultTimeout(2000)
   await page.route('https://sidebar.test/**', (route: any) => route.fulfill({
-    contentType: 'text/html', body: '<!doctype html><meta charset=utf-8><style>body{margin:0;font:14px system-ui}[data-dsh-sidebar-root]{box-sizing:border-box;width:64px;height:100vh;padding:12px}button{height:32px}[data-sidebar-home]{width:36px}main{position:fixed;right:10px;top:10px}</style><div id="root"></div><main><button>其他</button></main>'
+    contentType: 'text/html', body: '<!doctype html><meta charset=utf-8><title>Sidebar</title><style>html,body,#root{height:100%;margin:0;font:14px system-ui}</style><div id="root"></div>'
   }))
   await page.goto('https://sidebar.test')
-  await page.addStyleTag({ content: style })
-  await page.evaluate((text: string) => { (window as any).sidebarSource = text }, sidebarSource)
+  await page.evaluate((sources: Record<string, string>) => { Object.assign(window, sources) }, { sidebarSource, layoutSource })
   await page.addScriptTag({ content: script })
+  await page.addStyleTag({ content: style })
   const home = page.locator('[data-sidebar-home]'), panel = page.getByRole('navigation', { name: '切换会话' })
   await expect.poll(async () => (errors.length ? errors.join(' | ') : await home.count() ? home.getAttribute('aria-controls') : 'initializing'), { timeout: 2000 }).toBe('ework-sidebar-session-switcher')
   return { page, home, panel }
@@ -70,21 +83,30 @@ it('switches in live board and workspace groups while the native sidebar stays f
     await home.hover()
     await panel.waitFor()
     const box = await home.boundingBox(), list = await panel.boundingBox()
-    expect(list.y).toBe(0)
+    const pane = await page.locator('[data-dsh-frame] > [data-pane="conversation"]').boundingBox()
+    const rail = await page.locator('.pI_x6G_sidebarCol').boundingBox()
+    expect(pane.y).toBeGreaterThan(0)
+    expect(list.y).toBe(pane.y)
+    expect(list.x).toBe(rail.x + rail.width)
+    expect(list.x).toBe(pane.x)
     expect(await panel.evaluate((el: HTMLElement) => ({
+      border: getComputedStyle(el).borderWidth,
       scrollbar: getComputedStyle(el).scrollbarWidth,
       blur: getComputedStyle(el).backdropFilter
-    }))).toEqual({ scrollbar: 'none', blur: 'blur(24px)' })
+    }))).toEqual({ border: '0px', scrollbar: 'none', blur: 'blur(24px)' })
+    const homeRight = box.x + box.width, crossingY = box.y + box.height / 2
+    expect(homeRight).toBeLessThan(list.x)
+    await page.mouse.move(homeRight + 1, crossingY, { steps: 8 })
+    await page.mouse.move((homeRight + list.x) / 2, crossingY + box.height, { steps: 8 })
+    await page.waitForTimeout(240)
+    expect(await panel.isVisible()).toBe(true)
+    await page.mouse.move(list.x + 4, crossingY + box.height, { steps: 4 })
     await panel.hover()
     await page.mouse.wheel(0, 250)
     await expect.poll(() => panel.evaluate((el: HTMLElement) => el.scrollTop)).toBeGreaterThan(0)
     await page.mouse.wheel(0, -600)
     await expect.poll(() => panel.evaluate((el: HTMLElement) => el.scrollTop)).toBe(0)
-    expect(list.x).toBeGreaterThan(box.x + box.width)
     expect(list.y + list.height).toBe(332)
-    await page.mouse.move((box.x + box.width + list.x) / 2, box.y + 10)
-    await page.waitForTimeout(280)
-    await panel.getByRole('heading', { name: '产品研究' }).hover()
     expect(await panel.getByRole('heading').allTextContents()).toEqual(['看板区', '产品研究', '未分组'])
     expect(await panel.getByRole('button', { name: '会话 7' }).count()).toBe(0)
     expect(await panel.getByRole('button', { name: /已归档|子代理/ }).count()).toBe(0)
@@ -99,6 +121,31 @@ it('switches in live board and workspace groups while the native sidebar stays f
     await home.hover(); await panel.getByRole('button', { name: '共享看板' }).click()
     await home.hover(); await panel.getByRole('button', { name: '个人看板' }).click()
     expect(await page.evaluate(() => (window as any).fixture.events.slice(-4))).toEqual([['board','team'],['opened',null],['favorite','personal'],['opened',null]])
+  } finally { await page.close() }
+})
+it('follows the rounded workspace while the panel is open across window sizes and frame insets', async () => {
+  const { page, home, panel } = await fixture()
+  try {
+    await home.focus()
+    await page.keyboard.press('ArrowDown')
+    const pane = page.locator('[data-dsh-frame] > [data-pane="conversation"]')
+    const viewports = [[1440, 900], [780, 480], [360, 400]] as const
+    for (const [width, height] of viewports) {
+      await page.setViewportSize({ width, height })
+      const bounds = await pane.boundingBox(), list = await panel.boundingBox()
+      expect([list.x, list.y, list.width, list.y + list.height]).toEqual([
+        bounds.x, bounds.y, Math.min(308, width - bounds.x - 8), height - 8
+      ])
+      expect(await panel.locator('[aria-current=true]').evaluate((el: HTMLElement) => el === document.activeElement)).toBe(true)
+    }
+    await page.locator('[data-dsh-frame]').evaluate((frame: HTMLElement) => {
+      frame.style.gridTemplateColumns = '96px minmax(0, 1fr) 0px'
+      frame.querySelector<HTMLElement>('[data-pane="conversation"]')!.style.marginTop = '22px'
+    })
+    const moved = await panel.boundingBox()
+    expect([moved.x, moved.y]).toEqual([96, 22])
+    await page.keyboard.press('Escape')
+    expect(await home.evaluate((el: HTMLElement) => el === document.activeElement)).toBe(true)
   } finally { await page.close() }
 })
 it('preserves Home activation and releases the floating panel on leave, Escape, outside click and expansion', async () => {

@@ -52,6 +52,7 @@ it('ships patched runtime into the independent plugin profile and verifies parit
   const digest=await syncProfileRuntimePatches(process.cwd(),root)
   const expectedProvider=patchOpenAIResponsesToolOptionals(await readFile(`node_modules/${piName}/${piEntry}`,'utf8'))
   for(const target of piTargets)expect(await readFile(path.join(target,piEntry),'utf8')).toBe(expectedProvider)
+  for(const target of piTargets)expect(await readFile(path.join(target,'dist/api/openai-completions.js'),'utf8')).toContain('sherlock:hosted-chat-completion-tail:v1')
   for(const target of adapterTargets)expect(await readFile(path.join(target,adapterEntry),'utf8')).toContain('SHERLOCK_GLM_53_REASONING_V2')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-subagent/lib/index.js'),'utf8')).toContain('CANVAS_TASK_OWNED_SETTLEMENT')
   expect(await readFile(path.join(root,'node_modules/@deepseek-ai/dsh-message-feedback/lib/index.js'),'utf8')).toContain('ework:note-feedback-target:v1')
