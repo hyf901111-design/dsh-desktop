@@ -114,6 +114,138 @@
         ],
         "recordedAt": "2026-11-23T16:26:30.135Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "主页悬停会话列表、看板文件夹与桌面启动页修复",
+        "branch": "codex/feat/home-hover-status-20261123",
+        "baseCommit": "3449a79e3410e31df11492f859855b75d670c626",
+        "tipCommit": "2133970ab5499a5bfadc56a6dc54c6d64911b7cc",
+        "commits": [
+          {
+            "commit": "58660bf04bcbe6da50b3aed7577ef8d25bb906ac",
+            "parents": [
+              "3449a79e3410e31df11492f859855b75d670c626"
+            ],
+            "subject": "修复：桌面客户端新开窗口进入主页，同窗口刷新保留会话"
+          },
+          {
+            "commit": "2133970ab5499a5bfadc56a6dc54c6d64911b7cc",
+            "parents": [
+              "58660bf04bcbe6da50b3aed7577ef8d25bb906ac"
+            ],
+            "subject": "修复：主页悬停面板同步侧栏会话、运行指示和看板文件夹"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "scripts/lib/patch-research-board-client.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/session-view-preferences.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/patch-web-frontend-loading.mjs"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/browser/native-menus.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/navigation-shortcuts.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-boards-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/sidebar-session-switcher.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-sidebar-overflow.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-new-session-actions.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/sidebar-session-switcher-browser.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "桌面端类型检查",
+            "verifiedCommit": "2133970ab5499a5bfadc56a6dc54c6d64911b7cc",
+            "completedAt": "2026-11-23T16:54:30.784314+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "test/sidebar-session-switcher-browser.test.ts",
+              "test/sidebar-session-search.test.ts",
+              "test/browser-menu-overlay-focus.test.ts",
+              "test/sidebar-session-recency.test.ts",
+              "test/research-board-activity.test.ts",
+              "test/research-board-sidebar-overflow.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "会话筛选和排序、运行状态、看板分组与浏览器原生浮层",
+            "verifiedCommit": "2133970ab5499a5bfadc56a6dc54c6d64911b7cc",
+            "completedAt": "2026-11-23T16:54:33.779471+00:00",
+            "timeoutMs": 300000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "--testTimeout=30000",
+              "test/sidebar-new-session-actions.test.ts",
+              "-t",
+              "fresh desktop window|opens Home directly|opens a new .+ session without reusing the previous app session"
+            ],
+            "outcome": "passed",
+            "summary": "打开和刷新客户端、主页与手动打开表格等应用",
+            "verifiedCommit": "2133970ab5499a5bfadc56a6dc54c6d64911b7cc",
+            "completedAt": "2026-11-23T16:54:31.729236+00:00",
+            "timeoutMs": 300000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "在 Chromium 中验证真实侧栏与浮层、当前会话在前五条、实时载入动画和分组交互。已对桌面运行时验证旧表格选择、新窗口、同窗口刷新和手动打开应用。"
+        },
+        "acceptanceCriteria": [
+          "当前会话在悬停面板中可见，排序、草稿筛选与展开侧栏一致",
+          "会话运行时显示原生旋转指示，结束后消失，浏览器网页浮层也同步",
+          "看板直接分为个人和协作两个看板文件夹，沿用手动顺序",
+          "桌面新开窗口进入主页，刷新当前窗口保留所打开的会话"
+        ],
+        "risks": [
+          "本次验证覆盖隔离窗口和运行时，未替换用户正在使用的客户端。"
+        ],
+        "generatedAt": "2026-11-23T16:54:33.819268+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -136,6 +268,43 @@
         "test/efund_layout_edit_test.py"
       ],
       "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--testTimeout=30000",
+        "test/sidebar-session-switcher-browser.test.ts",
+        "test/sidebar-session-search.test.ts",
+        "test/browser-menu-overlay-focus.test.ts",
+        "test/sidebar-session-recency.test.ts",
+        "test/research-board-activity.test.ts",
+        "test/research-board-sidebar-overflow.test.ts"
+      ],
+      "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--testTimeout=30000",
+        "test/sidebar-new-session-actions.test.ts",
+        "-t",
+        "fresh desktop window|opens Home directly|opens a new .+ session without reusing the previous app session"
+      ],
+      "timeoutMs": 300000
     }
   ],
   "mainSynchronizations": []
