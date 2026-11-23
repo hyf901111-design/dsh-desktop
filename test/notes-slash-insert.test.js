@@ -44,6 +44,35 @@ for(const [title,kind] of [['图片','image'],['视频','video'],['音频','audi
   expect(blocks.filter(b=>b.type==='attachment').map(b=>JSON.parse(b.props.payload).name)).toEqual(['one.pdf','two.pdf']);expect(errors).toEqual([])
  }finally{await context.close()}
 },15000)
+it('drops a knowledge panel row at the chosen paragraph and consumes it before the composer',async()=>{
+ const {context,page}=await fixture()
+ try{
+  await page.evaluate(()=>{
+   document.querySelector('#notes').style.right='220px'
+   const panel=document.createElement('aside');panel.id='odyssey-right-workspace-panel';panel.style.cssText='position:fixed;right:10px;bottom:20px';document.body.append(panel)
+   const toggle=document.createElement('div');toggle.dataset.enViewModeHost='slash-insert';panel.append(toggle)
+   const host=document.createElement('div');host.dataset.knowledgePanelHost='';host.dataset.knowledgePanelSession='slash-insert';panel.prepend(host)
+   const row=document.createElement('div');row.draggable=true;row.dataset.knowledgeFileId='30dfbe26-b39f-4573-9b24-24a46d2f82d6';row.textContent='研究记录.md';host.append(row)
+   row.addEventListener('dragstart',event=>{event.dataTransfer.effectAllowed='copy';event.dataTransfer.setData('application/x-ework-knowledge-file',JSON.stringify({id:row.dataset.knowledgeFileId,label:row.textContent}))})
+   window.composerDrops=0;document.addEventListener('drop',()=>window.composerDrops++)
+  })
+  const row=page.locator('[data-knowledge-file-id]')
+  await row.dragTo(page.locator('[data-id="after"] .bn-inline-content'),{targetPosition:{x:12,y:1}})
+  const requests=await page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-admit'))
+  expect(requests).toHaveLength(1)
+  expect(requests[0].input).toMatchObject({knowledgeFileId:'30dfbe26-b39f-4573-9b24-24a46d2f82d6',name:'研究记录.md',sessionId:'slash-insert'})
+  expect(requests[0].input).not.toHaveProperty('path')
+  expect(await page.evaluate(()=>window.noteEditor.document.map(block=>block.id))).toEqual(['before','anchor',requests[0].input.nodeId,'after'])
+  expect(await page.evaluate(()=>window.composerDrops)).toBe(0)
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(window.noteEditor.document[2].props.payload).authorizationId)).toBe('grant')
+  await expect.poll(()=>page.evaluate(()=>window.savedNote?.blocks[2]?.type)).toBe('attachment')
+  await page.locator('.en-header-view-mode').click()
+  await expect.poll(()=>page.evaluate(()=>window.noteEditor.isEditable)).toBe(false)
+  await row.dragTo(page.locator('[data-id="before"] .bn-inline-content'))
+  expect(await page.evaluate(()=>window.noteRequests.filter(row=>row.method==='file-admit').length)).toBe(1)
+ }finally{await context.close()}
+},15000)
+
 it('canceling the picker leaves the slash paragraph and surrounding text editable',async()=>{
  const {context,page}=await fixture();try{await slash(page,'文件');await expect.poll(()=>page.evaluate(()=>typeof window.finishPick)).toBe('function');await page.evaluate(()=>{window.pickedFiles=[];window.finishPick()});expect(await page.locator('.en-note-file').count()).toBe(0);expect(await page.evaluate(()=>window.noteEditor.getBlock('before').content[0].text)).toBe('保留前文');expect(await page.locator('.en-root [role=alert]').count()).toBe(0)}finally{await context.close()}
 },15000)

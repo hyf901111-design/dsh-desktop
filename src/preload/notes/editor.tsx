@@ -29,6 +29,7 @@ import {useNoteComponentInteraction} from './component-interaction'
 import {createNativeNoteOperations,nativeBlankTableIntent,selectedNativeNoteBlocks,type NativeNotePreviewPlan} from './native-operations'
 import { NativeSlashMenu } from './native-slash-menu'
 import { noteImageBlocks, noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
+import type { KnowledgeDragFile } from '../../shared/knowledge-drag'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
 import {useNoteDragAndDrop} from './drag-and-drop'
 import {useNoteReplyInsertion} from './reply-insertion'
@@ -587,17 +588,23 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   }
   const [fileDrag,setFileDrag]=useState(false)
   const ownsFiles=(event:React.DragEvent|DragEvent)=>editorActive()&&editor.isEditable&&Array.from(event.dataTransfer!.types).some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
-  const dropFiles=async(event:DragEvent)=>{
-    setFileDrag(false);if(!ownsFiles(event))return
+  const dropFiles=async(event:DragEvent,knowledgeFile?:KnowledgeDragFile)=>{
+    setFileDrag(false);if(!editorActive()||!editor.isEditable)return
     event.preventDefault();event.stopPropagation()
-    const files=noteFileCandidates(event.dataTransfer!,props.sessionId,file=>props.bridge.filePath?.(file)||'')
+    const files=knowledgeFile?[{name:knowledgeFile.label,knowledgeFileId:knowledgeFile.id}]:
+      noteFileCandidates(event.dataTransfer!,props.sessionId,file=>props.bridge.filePath?.(file)||'')
     if(!files.length){setError(t("请从访达或当前会话的文件区拖入文件。"));return}
-    const target=(event.target as HTMLElement).closest('.bn-block-outer[data-id]') as HTMLElement|null
-    const reference=target&&editor.getBlock(target.dataset.id)?editor.getBlock(target.dataset.id):editor.document.at(-1)
-    const placement=target&&event.clientY<target.getBoundingClientRect().top+target.getBoundingClientRect().height/2?'before':'after'
+    let target=(event.target as HTMLElement).closest<HTMLElement>('.bn-block-outer[data-id]')
+    if(knowledgeFile&&!target){
+      const blocks=scroll.current?.querySelectorAll<HTMLElement>('.bn-editor > .bn-block-group > .bn-block-outer[data-id]')
+      target=Array.from(blocks??[]).find(block=>block.getBoundingClientRect().bottom>=event.clientY)??null
+    }
+    const reference=(target&&editor.getBlock(target.dataset.id))||editor.document.at(-1)
+    const bounds=target?.getBoundingClientRect()
+    const placement=bounds&&event.clientY<bounds.top+bounds.height/2?'before':'after'
     await importFiles(files,reference,placement)
   }
-  const importFiles=async(files:Array<{name:string;path?:string;relativePath?:string}>,reference:any,placement:'before'|'after',noteDisplay?:'inline')=>{
+  const importFiles=async(files:Array<{name:string;path?:string;relativePath?:string;knowledgeFileId?:string}>,reference:any,placement:'before'|'after',noteDisplay?:'inline')=>{
     const reservations=files.map(file=>({id:'note-file-'+crypto.randomUUID(),type:'attachment',props:{payload:JSON.stringify({name:file.name,importStatus:'importing',source:'computer',...(noteDisplay?{noteDisplay}:{})})}}))
     for(const block of reservations)block.props.payload=JSON.stringify({...JSON.parse(block.props.payload),id:block.id})
     for(const block of reservations)importing.current.add(block.id)
@@ -614,7 +621,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       finally{importing.current.delete(block.id)}
     }
   }
-  useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly,dropFiles,finish:()=>setFileDrag(false)})
+  useNoteDragAndDrop({editor,root:scroll,sessionId:props.sessionId,clientId:client.current,readOnly,active:editorActive,dropFiles,setFileDrag})
   useNoteReplyInsertion({editor,sessionId:props.sessionId,root:scroll,readOnly})
   const nativeCurrent=()=>!props.guide||!!props.guide.native&&document.documentElement.dataset.homeGuidePointerRun===props.guide.native.runId
   const publishComposer = (value: {running?: boolean;ready?: boolean}) => {if(nativeCurrent()&&editorActive())document.dispatchEvent(new CustomEvent('sherlock:notes-composer-state',{detail:{sessionId:props.sessionId,ready:editor.isEditable,running:!!request.current||!!externalCapabilities.current?.pending(),...value}}))}

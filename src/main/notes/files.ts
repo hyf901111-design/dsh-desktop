@@ -1,36 +1,70 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { basename, join, isAbsolute, relative, resolve } from 'node:path'
-import { realpath,stat,mkdtemp,rm,writeFile } from 'node:fs/promises'
+import { basename, dirname, join, isAbsolute, relative, resolve } from 'node:path'
+import { mkdir, realpath, rename, stat, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { copyResearchFile } from '../state/research-owned-files'
 import type { ResearchFilePreviewRegistry } from '../state/research-file-preview'
 import type { NoteFileNode } from '../../shared/note-files'
+import { isKnowledgeFileId } from '../../shared/knowledge-drag'
+import { sharedKnowledgeSessionFile } from '../../shared/knowledge-sessions'
+import type { KnowledgeStore } from '../knowledge/store'
+import type { KnowledgeSharing } from '../knowledge/sharing'
 export const noteFileOwnerPrefix=(owner:string)=>'note-files:'+createHash('sha256').update(owner).digest('hex')+':'
+type KnowledgeSources={store:Pick<KnowledgeStore,'file'>;sharing:Pick<KnowledgeSharing,'read'>;generation():number}
 
 export class NoteFiles {
   private importing = new Map<string,{cancelled:boolean}>()
-  constructor(private options:{root:string;registry:ResearchFilePreviewRegistry;workspaceRoot(sessionId:string):Promise<string|null>;owner():string;canRead(sessionId:string):boolean;reveal(path:string):void}){}
+  constructor(private options:{root:string;registry:ResearchFilePreviewRegistry;workspaceRoot(sessionId:string):Promise<string|null>;owner():string;canRead(sessionId:string):boolean;reveal(path:string):void;knowledge?:KnowledgeSources}){}
   private identity(owner:string,sessionId:string,nodeId:string){
     if(!/^note-file-[\w-]{1,80}$/.test(nodeId))throw Error('笔记文件标识无效。')
     const key=createHash('sha256').update(JSON.stringify([owner,sessionId])).digest('hex')
     return {sessionId:noteFileOwnerPrefix(owner)+key,nodeId,key}
   }
-  async admit(owner:string,sessionId:string,input:any):Promise<NoteFileNode>{
+  private async copyKnowledgeFile(id:unknown,directory:string,current:()=>boolean){
+    const knowledge=this.options.knowledge
+    if(!knowledge||!isKnowledgeFileId(id))throw Error('知识库项目标识无效。')
+    const file=id.length===32?await knowledge.sharing.read(id,AbortSignal.timeout(20000)):await knowledge.store.file(id)
+    if(!current())throw Error('文件导入已取消。')
+    const name=file.document.name
+    if(!name||name==='.'||name==='..'||/[\\/\p{Cc}]/u.test(name))throw Error('知识库文件名无效。')
+    if('data' in file&&sharedKnowledgeSessionFile(name,file.document.source))throw Error('请在知识库中打开对应的只读会话。')
+    await mkdir(directory,{recursive:true})
+    const owned=await mkdtemp(join(directory,'knowledge-')),path=join(owned,name)
+    try{
+      if('data' in file)await writeFile(path,file.data,{flag:'wx',mode:0o600})
+      else{
+        const copy=await copyResearchFile(file.path,owned)
+        if(copy!==path)await rename(copy,path)
+      }
+      return path
+    }catch(error){await rm(owned,{recursive:true,force:true});throw error}
+  }
+  private async copyInput(sessionId:string,input:any,directory:string,current:()=>boolean){
+    let source:string
+    if(typeof input.relativePath==='string'){
+      if(input.relativePath.length>8192||isAbsolute(input.relativePath)||input.relativePath.split(/[\\/]/).some((part:string)=>part==='..'))throw Error('文件路径不可用。')
+      const workspace=await this.options.workspaceRoot(sessionId);if(!workspace)throw Error('会话文件目录尚未就绪。')
+      const root=await realpath(workspace);source=await realpath(resolve(root,input.relativePath))
+      const inside=relative(root,source);if(!inside||inside.startsWith('..')||isAbsolute(inside))throw Error('文件不在当前会话目录中。')
+    }else if(typeof input.path==='string'&&input.path.length<=8192&&isAbsolute(input.path))source=input.path
+    else throw Error('请从访达或当前会话的文件区拖入文件。')
+    if(!current())throw Error('文件导入已取消。')
+    return copyResearchFile(source,directory)
+  }
+  async admit(owner:string,sessionId:string,input:any,writable:()=>boolean=()=>true):Promise<NoteFileNode>{
     const identity=this.identity(owner,sessionId,input.nodeId),pending={cancelled:false},key=identity.sessionId+':'+identity.nodeId
     if(this.importing.has(key)||this.importing.size>=NOTE_IMPORT_LIMIT)throw Error('请等待当前文件导入完成。')
     this.importing.set(key,pending)
-    const valid=()=>!pending.cancelled&&this.options.owner()===owner&&this.options.canRead(sessionId)
+    const knowledge=input.knowledgeFileId===undefined?undefined:this.options.knowledge
+    const generation=knowledge?.generation()
+    const valid=()=>!pending.cancelled&&this.options.owner()===owner&&this.options.canRead(sessionId)&&writable()&&knowledge?.generation()===generation
+    let knowledgeCopy:string|undefined
     try{
-      let source:string
-      if(typeof input.relativePath==='string'){
-        if(input.relativePath.length>8192||isAbsolute(input.relativePath)||input.relativePath.split(/[\\/]/).some((part:string)=>part==='..'))throw Error('文件路径不可用。')
-        const directory=await this.options.workspaceRoot(sessionId);if(!directory)throw Error('会话文件目录尚未就绪。')
-        const root=await realpath(directory);source=await realpath(resolve(root,input.relativePath))
-        const inside=relative(root,source);if(!inside||inside.startsWith('..')||isAbsolute(inside))throw Error('文件不在当前会话目录中。')
-      }else if(typeof input.path==='string'&&input.path.length<=8192&&isAbsolute(input.path))source=input.path
-      else throw Error('请从访达或当前会话的文件区拖入文件。')
       if(!valid())throw Error('文件导入已取消。')
-      const path=await copyResearchFile(source,join(this.options.root,identity.key))
+      const directory=join(this.options.root,identity.key)
+      const path=input.knowledgeFileId!==undefined
+        ? (knowledgeCopy=await this.copyKnowledgeFile(input.knowledgeFileId,directory,valid))
+        : await this.copyInput(sessionId,input,directory,valid)
       if(!valid())throw Error('文件导入已取消。')
       const descriptor=await this.options.registry.admitFinder({path,sessionId:identity.sessionId,nodeId:identity.nodeId},true)
       if(!descriptor)throw Error('文件暂时无法导入，请重试。')
@@ -40,6 +74,9 @@ export class NoteFiles {
       if(media)this.options.registry.releaseCapability({...media,sessionId:identity.sessionId,nodeId:identity.nodeId})
       if(!valid()){this.options.registry.revokeNode(identity.sessionId,identity.nodeId);throw Error('文件导入已取消。')}
       return {id:identity.nodeId,name:descriptor.name,path,source:'computer',authorizationId:descriptor.authorizationId,previewSessionId:identity.sessionId,contentType:media?.contentType??descriptor.contentType,...media?{mediaKind:media.kind}:{},...descriptor.previewEligible===false?{previewEligible:false}: {}}
+    }catch(error){
+      if(knowledgeCopy)await rm(dirname(knowledgeCopy),{recursive:true,force:true})
+      throw error
     }finally{this.importing.delete(key)}
   }
   async admitImage(owner:string,sessionId:string,stored:{attachment:{mediaType:string;bytes:number;name?:string};data:string},current:()=>boolean){

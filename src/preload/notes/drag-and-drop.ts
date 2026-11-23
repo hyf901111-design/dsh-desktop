@@ -1,8 +1,9 @@
 import {useEffect, useRef, type RefObject} from 'react'
 import {NOTE_FILE_DRAG_TYPE} from '../../shared/note-files'
+import {isKnowledgeDragSource, KNOWLEDGE_FILE_DRAG_TYPE, readKnowledgeDrag, type KnowledgeDragFile} from '../../shared/knowledge-drag'
 
 const COMPONENT_DRAG_TYPE='application/x-ework-note-component'
-type Options={editor:any;root:RefObject<HTMLElement|null>;sessionId:string;clientId:string;readOnly:boolean;dropFiles(event:DragEvent):Promise<void>;finish():void}
+type Options={editor:any;root:RefObject<HTMLElement|null>;sessionId:string;clientId:string;readOnly:boolean;active():boolean;dropFiles(event:DragEvent,file?:KnowledgeDragFile):Promise<void>;setFileDrag(active:boolean):void}
 
 /** Own native drops before BlockNote's document capture redirects blank-space drops. */
 export function useNoteDragAndDrop(options:Options){
@@ -12,6 +13,20 @@ export function useNoteDragAndDrop(options:Options){
   if(!root||!view)return
   const contains=(event:Event)=>root.contains(event.target as Node)
   const componentDrag=(event:DragEvent)=>event.dataTransfer?.types.includes(COMPONENT_DRAG_TYPE)
+  let knowledgeSource:{row:Element;file:KnowledgeDragFile}|undefined
+  const rememberKnowledge=(event:DragEvent)=>{
+   knowledgeSource=undefined
+   if(current.current.readOnly||!current.current.active())return
+   const row=(event.target as Element)?.closest?.('[data-knowledge-file-id]')
+   const file=readKnowledgeDrag(event.dataTransfer)
+   knowledgeSource=row&&file&&isKnowledgeDragSource(row,file,current.current.sessionId)?{row,file}:undefined
+  }
+  const endKnowledge=()=>{
+   if(knowledgeSource)current.current.setFileDrag(false)
+   knowledgeSource=undefined
+  }
+  const acceptsKnowledge=()=>knowledgeSource&&!current.current.readOnly&&current.current.active()&&current.current.editor.isEditable&&
+   isKnowledgeDragSource(knowledgeSource.row,knowledgeSource.file,current.current.sessionId)
   let headerControl=false
   const down=(event:PointerEvent)=>{const target=event.target as Element;headerControl=contains(event)&&!!target.closest?.('.en-research-header,.en-file-header')&&!!target.closest('button,input,textarea,select,a,[role=separator]')}
   const start=(event:DragEvent)=>{
@@ -26,13 +41,25 @@ export function useNoteDragAndDrop(options:Options){
    event.stopPropagation();event.dataTransfer.clearData();event.dataTransfer.effectAllowed='move'
    event.dataTransfer.setData(COMPONENT_DRAG_TYPE,JSON.stringify({sessionId,clientId,blockId:block.id}))
   }
-  const over=(event:DragEvent)=>{if(contains(event)&&componentDrag(event)){event.preventDefault();event.stopPropagation();event.dataTransfer!.dropEffect=current.current.readOnly?'none':'move'}}
+  const over=(event:DragEvent)=>{
+   if(!contains(event)||!event.dataTransfer)return
+   if(event.dataTransfer.types.includes(KNOWLEDGE_FILE_DRAG_TYPE)&&acceptsKnowledge()){
+    event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect='copy';current.current.setFileDrag(true)
+   }else if(componentDrag(event)){event.preventDefault();event.stopPropagation();event.dataTransfer.dropEffect=current.current.readOnly?'none':'move'}
+  }
   const drop=(event:DragEvent)=>{
    if(!contains(event)||!event.dataTransfer)return
-   const {editor,readOnly,sessionId,clientId,dropFiles,finish}=current.current
+   const {editor,readOnly,sessionId,clientId,dropFiles,setFileDrag}=current.current
+   if(event.dataTransfer.types.includes(KNOWLEDGE_FILE_DRAG_TYPE)){
+    const file=readKnowledgeDrag(event.dataTransfer)
+    const accepted=file&&knowledgeSource&&file.id===knowledgeSource.file.id&&file.label===knowledgeSource.file.label&&acceptsKnowledge()
+    endKnowledge()
+    if(accepted){event.preventDefault();event.stopPropagation();void dropFiles(event,file)}
+    return
+   }
    const files=event.dataTransfer.types.some(type=>type==='Files'||type===NOTE_FILE_DRAG_TYPE)
    if(!componentDrag(event)&&!files)return
-   event.preventDefault();event.stopPropagation();finish()
+   event.preventDefault();event.stopPropagation();setFileDrag(false)
    if(readOnly)return
    if(files){void dropFiles(event);return}
    try{
@@ -48,6 +75,7 @@ export function useNoteDragAndDrop(options:Options){
    }catch{return}
   }
   view.addEventListener('pointerdown',down,true);view.addEventListener('dragstart',start,true);view.addEventListener('dragover',over,true);view.addEventListener('drop',drop,true)
-  return()=>{view.removeEventListener('pointerdown',down,true);view.removeEventListener('dragstart',start,true);view.removeEventListener('dragover',over,true);view.removeEventListener('drop',drop,true)}
+  root.ownerDocument.addEventListener('dragstart',rememberKnowledge);view.addEventListener('dragend',endKnowledge,true)
+  return()=>{view.removeEventListener('pointerdown',down,true);view.removeEventListener('dragstart',start,true);view.removeEventListener('dragover',over,true);view.removeEventListener('drop',drop,true);root.ownerDocument.removeEventListener('dragstart',rememberKnowledge);view.removeEventListener('dragend',endKnowledge,true)}
  },[options.editor,options.root])
 }

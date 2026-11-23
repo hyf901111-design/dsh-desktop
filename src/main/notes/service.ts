@@ -84,7 +84,7 @@ export function installNotesService(options: {
           return current() ? document : null
         } finally { active.delete(key) }
       }
-      case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input)
+      case 'file-admit': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.admit(owner,session,input,()=>options.canWrite?.(session)!==false)
       case 'file-bind': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.bind(owner,session,input)
       case 'file-media': if(!options.files)throw Error('文件服务尚未就绪。');return options.files.media(owner,session,input)
       case 'file-revoke': return {ok:options.files?.revoke(owner,session,input.nodeId)??false}

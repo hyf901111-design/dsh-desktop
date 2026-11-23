@@ -1773,7 +1773,13 @@ async function bootstrap(): Promise<void> {
   })
   let noteComponentLibrary:Awaited<ReturnType<typeof installComponentLibrary>>
   const canReadNoteSession = (sessionId:string) => { try { if (researchBoardsService?.isSharedSession(sessionId)) researchBoardsService.readSharedCanvas(sessionId); return true } catch { return false } }
-  const noteFiles = new NoteFiles({root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),reveal:path=>shell.showItemInFolder(path)})
+  const noteFiles = new NoteFiles({
+    root:join(app.getPath('userData'),'workspace-notes','files'),registry:researchFilePreviewRegistry!,
+    owner:()=>integrationOwner()||'local',canRead:canReadNoteSession,
+    workspaceRoot:sessionId=>new HarnessWorkspaceFileResolver(join(app.getPath('userData'),'harness')).resolveRoot(sessionId),
+    reveal:path=>shell.showItemInFolder(path),
+    knowledge:{store:knowledge,sharing:knowledgeShared,generation:()=>knowledgeIdentity().generation}
+  })
   registerPptxAnnotationHandlers({ ipcMain, getMainWindow: () => mainWindow, service: new PptxAnnotationService({
     root: join(app.getPath('userData'), 'pptx-annotations'), owner: () => integrationOwner() || 'local',
     presentationSkill: async id => integrationService?.getPresentationSkill(id) ?? null,
