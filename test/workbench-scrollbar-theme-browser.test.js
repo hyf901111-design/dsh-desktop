@@ -3,6 +3,7 @@ import {readFile} from 'node:fs/promises'
 import {pathToFileURL} from 'node:url'
 import {prepareFinancialClientSource} from './helpers/financial-widget-client-fixture.js'
 import {installWorkbenchScrollbars,isWorkbenchScrollbarMessage} from '../packages/dsh-research-task-runtime/workbench-scrollbars.js'
+import {buildResearchHtmlPreview} from '../packages/dsh-research-task-runtime/html-artifact.js'
 import {generationCss} from '../scripts/lib/figma-generation-client.mjs'
 
 let browser,css
@@ -14,6 +15,87 @@ beforeAll(async()=>{
  css=JSON.parse(block.match(/style\.textContent=("(?:\\.|[^"\\])*")/)[1])+'\n'+await readFile('src/preload/figma-refinements.css','utf8')
 },30000)
 afterAll(async()=>browser?.close())
+
+it.each(['x','y'])('keeps delegated %s metrics in sync after the other axis stops overflowing',async axis=>{
+ const page=await browser.newPage({viewport:{width:1024,height:800}})
+ page.setDefaultTimeout(4000)
+ try{
+  const table='<body><div class="table-port" style="overflow:auto;width:calc(100vw - 40px);height:calc(100vh - 80px)"><table style="min-width:720px!important;min-height:420px!important"><tr><td>年度明细</td></tr></table></div><footer>选中行详情</footer></body>'
+  const preview=buildResearchHtmlPreview(table,'年度明细','light',{workbench:true,notoFont:'runtime'})
+  await page.setContent('<article style="width:340px;height:240px;position:relative"><iframe style="width:100%;height:100%;border:0" sandbox="allow-scripts"></iframe></article>')
+  await page.locator('article iframe').evaluate((el,srcdoc)=>el.srcdoc=srcdoc,preview)
+  const wrapper=page.frameLocator('article iframe'),content=wrapper.frameLocator('iframe'),port=content.locator('.table-port')
+  await port.waitFor()
+  await page.addScriptTag({content:'const isWorkbenchScrollbarMessage='+isWorkbenchScrollbarMessage.toString()+';const installWorkbenchScrollbars='+installWorkbenchScrollbars.toString()+';const card=document.querySelector("article"),f=card.querySelector("iframe");installWorkbenchScrollbars(card,()=>f,()=>true,()=>[],()=>f);f.contentWindow.postMessage({type:"sherlock-workbench-selection",selected:true},"*")'})
+  const track=page.locator('[data-workbench-scrollbar="'+axis+'"]'),removed=axis==='x'?'y':'x',other=page.locator('[data-workbench-scrollbar="'+removed+'"]')
+  await track.waitFor();await other.waitFor()
+  await page.locator('article').evaluate((el,axis)=>{if(axis==='x')el.style.height='640px';else el.style.width='900px'},axis)
+  await expect.poll(()=>port.evaluate((el,axis)=>axis==='x'?el.scrollHeight-el.clientHeight:el.scrollWidth-el.clientWidth,axis)).toBeLessThanOrEqual(1)
+  await expect.poll(()=>other.isVisible()).toBe(false)
+  // Observe the inner document's reports before the outer sandbox validates and forwards them.
+  await wrapper.locator('html').evaluate(()=>{window.seen=[];addEventListener('message',e=>{if(e.data?.type==='sherlock-workbench-scrollbar-metrics')window.seen.push(e.data)})})
+  const box=await port.boundingBox()
+  await page.mouse.move(box.x+40,box.y+35)
+  for(const amount of [60,80,-40]){
+   const position=()=>port.evaluate((el,axis)=>axis==='x'?el.scrollLeft:el.scrollTop,axis)
+   const before=await position()
+   await page.mouse.wheel(axis==='x'?amount:0,axis==='y'?amount:0)
+   await expect.poll(position).not.toBe(before)
+   await expect.poll(async()=>Math.abs(Number(await track.getAttribute('aria-valuenow'))-await position())).toBeLessThanOrEqual(1)
+   const reports=await wrapper.locator('html').evaluate(()=>window.seen)
+   expect(reports.length).toBeGreaterThan(0)
+   expect(reports.every(report=>isWorkbenchScrollbarMessage(report,'metrics')&&report.axes[removed]===null)).toBe(true)
+  }
+ }finally{await page.close()}
+},20000)
+
+it.each(['native','sandbox'])('follows the table that actually scrolls after a wheel, drag or rerender in a %s card',async mode=>{
+ const page=await browser.newPage({viewport:{width:1000,height:800}})
+ page.setDefaultTimeout(4000)
+ const tables='<div class="first" style="width:520px;height:85px;overflow:auto"><table style="min-width:1200px!important"><tr><td>主表</td></tr></table></div>'+
+  '<div class="second" style="width:360px;height:58px;overflow:auto"><table style="min-width:1000px!important"><tr><td>对照表</td></tr></table></div><div>选中行详情</div>'
+ try{
+  await page.setContent('<article style="position:relative;width:560px;height:330px"><div id="port" style="width:100%;height:100%"></div></article>')
+  let content=page
+  if(mode==='sandbox'){
+   const preview=buildResearchHtmlPreview('<body>'+tables+'</body>','分项明细','light',{workbench:true,notoFont:'runtime'})
+   await page.locator('#port').evaluate((el,srcdoc)=>{const f=document.createElement('iframe');f.style.cssText='height:100%;width:100%;border:0';f.sandbox='allow-scripts';f.srcdoc=srcdoc;el.append(f)},preview)
+   content=page.frameLocator('article iframe').frameLocator('iframe')
+  }else await page.locator('#port').evaluate((el,html)=>el.innerHTML=html,tables)
+  const first=content.locator('.first'),second=content.locator('.second'),track=page.locator('article [data-workbench-scrollbar="x"]'),thumb=track.locator('span')
+  await second.waitFor()
+  await page.addScriptTag({content:'const isWorkbenchScrollbarMessage='+isWorkbenchScrollbarMessage.toString()+';const installWorkbenchScrollbars='+installWorkbenchScrollbars.toString()+';const port=document.querySelector("#port"), f=port.querySelector("iframe");window.bars=installWorkbenchScrollbars(document.querySelector("article"),()=>port,()=>true,()=>[port,...port.querySelectorAll(".first,.second")],()=>f);f?.contentWindow.postMessage({type:"sherlock-workbench-selection",selected:true},"*")'})
+  const position=el=>el.evaluate(node=>node.scrollLeft)
+  const wheel=async(el,amount)=>{const r=await el.boundingBox();await page.mouse.move(r.x+r.width/2,r.y+12);await page.mouse.wheel(amount,0)}
+  const matches=async el=>{
+   await expect.poll(async()=>Math.abs(Number(await track.getAttribute('aria-valuenow'))-await position(el))).toBeLessThanOrEqual(1)
+   const [rail,handle,viewport]=await Promise.all([track.boundingBox(),thumb.boundingBox(),el.boundingBox()])
+   expect(Math.abs(rail.width-viewport.width+12)).toBeLessThan(2)
+   const ratio=await el.evaluate(node=>node.scrollLeft/(node.scrollWidth-node.clientWidth))
+   expect(Math.abs(handle.x-rail.x-ratio*(rail.width-handle.width))).toBeLessThan(1.5)
+  }
+  await track.waitFor()
+  await wheel(second,180)
+  await expect.poll(()=>position(second)).toBeGreaterThan(0)
+  await matches(second)
+  const before=await position(second),box=await thumb.boundingBox()
+  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down()
+  await page.mouse.move(box.x+box.width/2-38,box.y+box.height/2,{steps:4});await page.mouse.up()
+  await expect.poll(()=>position(second)).toBeLessThan(before)
+  expect(await position(first)).toBe(0)
+  const secondAt=await position(second)
+  await wheel(first,140);await expect.poll(()=>position(first)).toBeGreaterThan(0);await matches(first)
+  expect(await position(second)).toBe(secondAt)
+  const firstAt=await position(first)
+  await second.evaluate(el=>el.replaceWith(el.cloneNode(true)))
+  await wheel(second,220);await expect.poll(()=>position(second)).toBeGreaterThan(0);await matches(second)
+  await page.evaluate(()=>window.bars.refresh());await matches(second)
+  await track.focus();await page.keyboard.press('End')
+  await expect.poll(()=>second.evaluate(el=>el.scrollWidth-el.clientWidth-el.scrollLeft)).toBeLessThanOrEqual(1)
+  await matches(second)
+  expect(await position(first)).toBe(firstAt)
+ }finally{await page.close()}
+},20000)
 
 it('uses the same square refresh glyph and ring loading in note headers',async()=>{
  const page=await browser.newPage({viewport:{width:600,height:240}})
