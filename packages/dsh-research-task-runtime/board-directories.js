@@ -27,9 +27,8 @@ export class BoardDirectories {
     }
     return this.ctx.sessionPersistence.inspect(id)
   }
-  reserve(basePath, title) {
+  reserve(basePath, title, directoryId = randomUUID()) {
     if (typeof basePath !== 'string' || !isAbsolute(basePath) || typeof title !== 'string' || !title.trim()) throw Error('INVALID_REQUEST')
-    const directoryId = randomUUID()
     const name = title.trim().replace(/[\\/:*?"<>|\x00-\x1f]/g, '_').slice(0, 60) || '新研究看板'
     const row = { directoryId, path: join(basePath, '研究看板', name + '-' + directoryId.slice(0, 8)), title }
     this.records[directoryId] = row
@@ -39,6 +38,23 @@ export class BoardDirectories {
   async run(input) {
     if (input.mode === 'reserve') return this.reserve(input.basePath, input.title)
     if (typeof input.sessionId !== 'string' || input.sessionId.length > 256) throw Error('INVALID_REQUEST')
+    if (input.mode === 'starter') {
+      // The desktop creates this UUID once per fresh profile. A lost response or
+      // a process restart reopens the same native session and directory.
+      if (!/^session-[0-9a-f-]{36}$/.test(input.sessionId)) throw Error('INVALID_REQUEST')
+      const directoryId = input.sessionId.slice('session-'.length)
+      const row = this.records[directoryId] ?? this.reserve(input.basePath, input.title, directoryId)
+      if (row.title !== input.title || row.sessionId && row.sessionId !== input.sessionId) throw Error('DIRECTORY_BINDING_CONFLICT')
+      const { result } = await this.ctx.apiProxy.sessions.create({
+        rpcId: randomUUID(), payload: { sessionId: input.sessionId, cwd: row.path }
+      })
+      if (!result.ok || result.value.sessionId !== input.sessionId) throw Error('STARTER_SESSION_UNAVAILABLE')
+      const session = this.ctx.sessions.get(input.sessionId)
+      if (!session || session.header.cwd !== row.path) throw Error('DIRECTORY_BINDING_CONFLICT')
+      const title = this.ctx.sessionTitle.get(session)?.title ?? this.ctx.sessionTitle.rename(session, input.title).title
+      await this.run({ mode: 'bind', sessionId: input.sessionId, directoryId })
+      return { sessionId: input.sessionId, cwd: row.path, title }
+    }
     if (input.mode === 'ensure') {
       const row=Object.values(this.records).find(r=>r.sessionId===input.sessionId);
       const source=await this.inspect(input.sessionId);
@@ -54,7 +70,7 @@ export class BoardDirectories {
       this.save()
       // The Host creates cwd while initializing the session. Keep generated files;
       // remove only a still-empty directory, never recursively or after tool use.
-      if (!source.events.some(e => e.type === 'tool/call') && !(await this.ctx.workspaceRegistry.resolveByPath(row.path))) {
+      if (existsSync(row.path) && !source.events.some(e => e.type === 'tool/call') && !(await this.ctx.workspaceRegistry.resolveByPath(row.path))) {
         try { rmdirSync(row.path) } catch (error) { if (!['ENOENT', 'ENOTEMPTY', 'EEXIST'].includes(error.code)) throw error }
       }
       return row

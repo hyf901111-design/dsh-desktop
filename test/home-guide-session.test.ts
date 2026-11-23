@@ -44,10 +44,10 @@ async function fixture({ disk = new Map<string, string>(), byId = {} as Record<s
   cleanup.push(() => { page.dispose(); globalThis.Event = oldEvent; globalThis.document = oldDocument; void win.happyDOM.abort() })
   return { win, page, sessions, workspaces, state, requests, opened, archived, panelEvents, disk, replies, send, reply,nativeSessions, setOwner(userId: string, advanceGeneration = true) { state.account = { status: 'ready', generation: state.account.generation + (advanceGeneration ? 1 : 0), user: { userId } }; state.eventSeq++; emit({ type: 'state', state: { ...state }, eventSeq: state.eventSeq, accountGeneration: state.account.generation }) } }
 }
-it('opens a personal board after the startup catalog arrives and respects intervening navigation', async () => {
+it.each(['pending','ready'])('opens a dedicated board after its session arrives in the %s catalog and respects intervening navigation', async phase => {
   const f = await fixture()
   const list = f.sessions.list as ReturnType<typeof store<{current?: string; byId: Record<string, any>; phase?: string}>>
-  const initial = {...list.getSnapshot(), current: undefined, phase: 'pending'}
+  const initial = {...list.getSnapshot(), current: undefined, phase}
   list.set(initial)
   let finish!: () => void
   let requested = 'original'
@@ -56,6 +56,7 @@ it('opens a personal board after the startup catalog arrives and respects interv
     selectionIntent: () => requested
   })
   const board = {id: 'board-during-startup', cwd: '/board'}
+  f.state.favorites.push({sessionId: board.id, title: '自选研究看板', favoriteId: 'starter', dedicated: true, pinned: true})
   const opening = f.page.openPersonal(board.id)
   expect(f.opened).toEqual([])
   list.set({...initial, current: requested, phase: 'ready', byId: {...initial.byId, [board.id]: board}})

@@ -50,7 +50,7 @@ beforeAll(async () => {
       let current='s1',collapsed=true,empty=false
       const events=[],listeners=new Set()
       const workspace={workspaceId:'a',title:'产品研究',path:'/product',sessionIds:Object.keys(records).filter(id=>id!=='orphan'&&id!=='other')}
-      const page={current:()=>current,searchSessions:q=>empty?[]:sidebarSearchResults(boards,records,['archived'],q),
+      const page={recentSessions:()=>sidebarSearchResults(boards,records,['archived'],'').reverse().map(row=>row.sessionId==='s7'?{...row,status:{state:'ongoing'}}:row),current:()=>current,searchSessions:q=>empty?[]:sidebarSearchResults(boards,records,['archived'],q),
         switcherGroups:en=>empty?[]:sidebarSwitcherGroups(boards,{byId:records,ids:Object.keys(records),current},{items:[workspace,{workspaceId:'b',title:'阶段回顾',path:'/review',sessionIds:['other']}],archivedSessionIds:['archived']},en),
         isRunning:id=>artifacts.has(id),subscribeActivity:(id,f)=>{listeners.add(f);return()=>listeners.delete(f)},
         subscribeSearch:f=>{listeners.add(f);return()=>listeners.delete(f)},
@@ -384,5 +384,23 @@ it('keeps the empty panel usable in English and dark appearance', async () => {
     expect(await empty.evaluate((el: HTMLElement) => el === document.activeElement)).toBe(true)
     await page.keyboard.press('Escape')
     expect(await home.getAttribute('aria-expanded')).toBe('false')
+  } finally { await page.close() }
+})
+
+it('shows the shared recent order as a flat list on Home hover, including sessions beyond the directory preview', async () => {
+  const { page, home, panel } = await fixture()
+  try {
+    await page.locator('[data-dsh-sidebar-root]').evaluate((root: HTMLElement) => { root.dataset.sidebarSessionOrder = 'recent' })
+    await home.hover()
+    await panel.waitFor()
+    expect(await panel.getByRole('heading').count()).toBe(0)
+    const rows = await panel.locator('button').allTextContents()
+    expect(rows.length).toBeGreaterThan(5)
+    expect(rows.indexOf('会话 7')).toBeLessThan(rows.indexOf('会话 0'))
+    expect(rows).not.toContain('展开显示')
+    const seventh = panel.locator('[data-key="session:s7"]')
+    await seventh.getByRole('img', { name: '任务运行中' }).waitFor()
+    await seventh.click()
+    expect(await page.evaluate(() => (window as any).fixture.events)).toEqual([['session','s7'], ['opened','s7']])
   } finally { await page.close() }
 })

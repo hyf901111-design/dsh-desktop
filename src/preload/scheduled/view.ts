@@ -159,7 +159,7 @@ export class ScheduledTaskView {
       target.closest('.hHd-Xa_newSession') ||
       (target.closest('[data-dsh-sidebar-root]') &&
         !target.closest('.st-more-zone') &&
-        !target.closest('[data-sidebar-session-search]') &&
+        !target.closest('[data-sidebar-session-search],[data-sidebar-session-view]') &&
         !target.closest('.hHd-Xa_toggle') &&
         target.closest('button,a,[role=button],[role=row][aria-selected],[class*="_sessionRow"]'))
     )

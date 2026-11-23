@@ -1,8 +1,10 @@
+import type { RecentSession } from './sidebar-recent-sessions'
 import type { SidebarSearchResult } from './sidebar-session-search'
 
 export type SwitcherGroup = { key: string; title: string; rows: (SidebarSearchResult & { running?: boolean })[] }
 export type SwitcherActivitySlot = { host: HTMLElement; key: string; boardSessionId?: string }
 type SwitcherSource = {
+  recentRows?(english: boolean): RecentSession[] | undefined
   groups(english: boolean): SwitcherGroup[]
   current(): string | null | undefined
   setActivitySlots(slots: SwitcherActivitySlot[]): void
@@ -43,7 +45,10 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
   }
   function render() {
     const en = english(), current = source.current()
-    const groups = source.groups(en)
+    const recent = source.recentRows?.(en)
+    const groups: SwitcherGroup[] = recent === undefined ? source.groups(en) : recent.length ? [{
+      key: 'recent', title: '', rows: recent.map(row => ({ ...row, running: row.status?.state === 'ongoing' }))
+    }] : []
     const selectedGroup = current && groups.find(group => group.rows.some(row => row.sessionId === current))
     const selection = selectedGroup ? JSON.stringify([current, selectedGroup.key]) : ''
     if (selection !== revealedSelection && selectedGroup) collapsedGroups.delete(selectedGroup.key)
@@ -58,27 +63,31 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     const activitySlots: SwitcherActivitySlot[] = []
     list.setAttribute('aria-label', en ? 'Switch conversation' : '切换会话')
     for (const group of groups) {
-      const section = doc.createElement('section'), heading = doc.createElement('h3')
-      const disclosure = button(group.title, 'group:' + group.key), rows = doc.createElement('div')
-      rows.id = panel.id + '-rows-' + encodeURIComponent(group.key)
-      rows.hidden = collapsedGroups.has(group.key)
-      disclosure.dataset.uiPreserve = ''
+      const section = doc.createElement('section'), rows = doc.createElement('div')
       const boardGroup = group.key === 'private' || group.key === 'shared'
-      if (boardGroup) disclosure.dataset.boardGroup = group.key
-      disclosure.setAttribute('aria-controls', rows.id)
-      disclosure.setAttribute('aria-expanded', String(!rows.hidden))
-      if (current && group.rows.some(row => row.sessionId === current)) disclosure.dataset.currentGroup = ''
-      disclosure.onclick = () => {
-        if (rows.hidden) collapsedGroups.delete(group.key)
-        else collapsedGroups.add(group.key)
-        render()
+      if (!recent) {
+        const heading = doc.createElement('h3')
+        const disclosure = button(group.title, 'group:' + group.key)
+        rows.id = panel.id + '-rows-' + encodeURIComponent(group.key)
+        rows.hidden = collapsedGroups.has(group.key)
+        disclosure.dataset.uiPreserve = ''
+        if (boardGroup) disclosure.dataset.boardGroup = group.key
+        disclosure.setAttribute('aria-controls', rows.id)
+        disclosure.setAttribute('aria-expanded', String(!rows.hidden))
+        if (current && group.rows.some(row => row.sessionId === current)) disclosure.dataset.currentGroup = ''
+        disclosure.onclick = () => {
+          if (rows.hidden) collapsedGroups.delete(group.key)
+          else collapsedGroups.add(group.key)
+          render()
+        }
+        heading.append(disclosure)
+        section.append(heading)
       }
-      heading.append(disclosure)
-      section.append(heading, rows)
+      section.append(rows)
       fragment.append(section)
       if (rows.hidden) continue
       let shown = group.rows
-      if (!showAllRows.has(group.key) && shown.length > 5) {
+      if (!recent && !showAllRows.has(group.key) && shown.length > 5) {
         const selected = current && shown.find(row => row.sessionId === current)
         shown = shown.slice(0, 5)
         if (selected && !shown.includes(selected)) shown[shown.length - 1] = selected
@@ -86,11 +95,11 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
       for (const row of shown) {
         const item = button(row.title, row.key)
         item.dataset.uiPreserve = ''; item.title = row.title
-        if (row.sessionId && (boardGroup || row.running)) {
+        if (row.sessionId && (row.area === 'boards' || row.running)) {
           const host = doc.createElement('span')
           host.className = 'ework-switcher-activity'
           item.prepend(host)
-          activitySlots.push({ host, key: row.key, boardSessionId: boardGroup ? row.sessionId : undefined })
+          activitySlots.push({ host, key: row.key, boardSessionId: row.area === 'boards' ? row.sessionId : undefined })
         }
         if (row.sessionId && row.sessionId === current) item.setAttribute('aria-current', 'true')
         item.onclick = async event => {
@@ -106,7 +115,7 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
         }
         rows.append(item)
       }
-      if (group.rows.length > 5) {
+      if (!recent && group.rows.length > 5) {
         const more = showAllRows.has(group.key)
         const remaining = group.rows.length - 5
         const expandLabel = boardGroup
