@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "batchId": "20261123-03",
+  "branch": "codex/integration/20261123-03",
+  "baseMainCommit": "3449a79e3410e31df11492f859855b75d670c626",
+  "expectedMainCommit": "3449a79e3410e31df11492f859855b75d670c626",
+  "createdAt": "2026-11-23T14:57:28.313Z",
+  "features": [
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "为已有演示文稿提供轻量改版和原生复核",
+        "branch": "codex/feat/ppt-layout-edit-20261123",
+        "baseCommit": "3449a79e3410e31df11492f859855b75d670c626",
+        "tipCommit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
+        "commits": [
+          {
+            "commit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
+            "parents": [
+              "3449a79e3410e31df11492f859855b75d670c626"
+            ],
+            "subject": "优化客户端已有 PPT 改版流程，复用原生对象排版与逐页复核"
+          }
+        ],
+        "files": [
+          {
+            "status": "C097",
+            "path": "skills/efund-ppt-maker/AUTHORING.md",
+            "previousPath": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/SKILL.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/efund-ppt-maker/_meta.json"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/references/layout-edit.md"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/layout_edit.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/review_layout.applescript"
+          },
+          {
+            "status": "M",
+            "path": "test/bundled-ppt-skill.test.ts"
+          },
+          {
+            "status": "A",
+            "path": "test/efund_layout_edit_test.py"
+          },
+          {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/bundled-ppt-skill.test.ts",
+              "test/integration-bundled-skill.test.js",
+              "-t",
+              "discoverable through|actual shipped PPT"
+            ],
+            "outcome": "passed",
+            "summary": "技能详情与运行时发现",
+            "verifiedCommit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
+            "completedAt": "2026-11-23T14:57:05.744+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "test/efund_layout_edit_test.py"
+            ],
+            "outcome": "passed",
+            "summary": "任务 Python 验证逻辑页序、合并表格、链接、输入版本和原子交付",
+            "verifiedCommit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
+            "completedAt": "2026-11-23T14:57:05.744+00:00",
+            "timeoutMs": 120000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "原材料在随包 Python 中按计划重排；macOS PowerPoint 实际访问 1–8 页并导出可读 PDF。v3 仅改指定表格且两份原生附件不变。"
+        },
+        "acceptanceCriteria": [
+          "技能区分已有稿排版与完整新建流程，普通改版不要求重选目录",
+          "原生可编辑对象和附件保留，PowerPoint 可逐页访问"
+        ],
+        "risks": [
+          "仍需完整模型会话评估端到端耗时；PowerPoint 自动化取决于本机权限"
+        ],
+        "generatedAt": "2026-11-23T14:57:26.410+00:00"
+      }
+    }
+  ],
+  "integrationChecks": [
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "test/bundled-ppt-skill.test.ts",
+        "test/integration-bundled-skill.test.js",
+        "-t",
+        "discoverable through|actual shipped PPT"
+      ],
+      "timeoutMs": 120000
+    },
+    {
+      "argv": [
+        "python3",
+        "-B",
+        "test/efund_layout_edit_test.py"
+      ],
+      "timeoutMs": 120000
+    }
+  ],
+  "mainSynchronizations": []
+}
