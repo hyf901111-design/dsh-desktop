@@ -547,7 +547,10 @@ it('lists real session modes under all files and opens each one in its native vi
         const text = document.createRange()
         text.selectNodeContents(element)
         const bounds = element.getBoundingClientRect(), glyphs = text.getBoundingClientRect()
-        return { width: bounds.width, edge: bounds.right, left: glyphs.left - bounds.left, right: bounds.right - glyphs.right }
+        text.setStart(element.firstChild, value.length - 1)
+        const lastDigit = text.getBoundingClientRect()
+        return { width: bounds.width, edge: bounds.right, left: glyphs.left - bounds.left, right: bounds.right - glyphs.right,
+          unitsCenter: lastDigit.left + lastDigit.width / 2 }
       }
       try { return ['1', '20', '885'].map(measure) }
       finally { element.textContent = previous }
@@ -555,7 +558,12 @@ it('lists real session modes under all files and opens each one in its native vi
     expect(sizes.map(({ left, right }) => [left, right])).toEqual([[4, 4], [4, 4], [4, 4]])
     expect(sizes[0].width).toBeLessThan(sizes[1].width)
     expect(sizes[1].width).toBeLessThan(sizes[2].width)
-    expect(sizes.map(({ edge }) => edge)).toEqual(Array(3).fill(sizes[0].edge))
+    const hit = await add.boundingBox()
+    const plus = await add.locator('path').boundingBox()
+    for (const size of sizes) {
+      expect(size.edge).toBe(hit.x + hit.width)
+      expect(Math.abs(size.unitsCenter - (plus.x + plus.width / 2))).toBeLessThan(0.1)
+    }
     const countColumn = await library.getByRole('button', { name: /^手动收藏 / }).locator('small').boundingBox()
     for (const count of await group.locator('small').all()) {
       const box = await count.boundingBox()
@@ -2477,13 +2485,13 @@ it('switches the right knowledge pane to the shared memory settings and keeps th
   } finally { await page.close() }
 })
 
-it('aligns folder counts and more actions while keeping long headings clear of the file controls', async () => {
+it.each(['light', 'dark'])('aligns folder counts and more actions while keeping long headings clear of the file controls in %s mode', async (theme) => {
   const name = '季度渠道库存与重点公司经营数据跟踪方案及历次研究会议材料'.repeat(4)
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' })
   try {
     await page.route('https://knowledge.test/', route => route.fulfill({ contentType: 'text/html', body: '<!doctype html>' }))
     await page.goto('https://knowledge.test/')
-    await page.setContent(`<body data-test-folder-name="${name}"><div class="pI_x6G_centerCol"
+    await page.setContent(`<body data-test-session-directory data-test-folder-name="${name}" ${theme === 'dark' ? 'data-ds-dark-theme' : ''}><div class="pI_x6G_centerCol"
       style="position:fixed;inset:10px 340px 10px 120px"></div></body>`)
     await page.addScriptTag({ content: bundle })
     const library = page.getByRole('region', { name: '知识库', exact: true })
@@ -2501,6 +2509,10 @@ it('aligns folder counts and more actions while keeping long headings clear of t
       return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
     }
     await row.waitFor()
+    expect(await library.getAttribute('data-dark')).toBe(String(theme === 'dark'))
+    await add.click({ position: { x: 2, y: 2 } })
+    const create = library.getByRole('dialog', { name: '新建文件夹' })
+    await create.getByRole('button', { name: '取消' }).click()
     expect(await number.textContent()).toBe('2')
     expect(await menu.isVisible()).toBe(false)
     expect((await center(number)).x).toBe((await center(category)).x)
@@ -2521,7 +2533,8 @@ it('aligns folder counts and more actions while keeping long headings clear of t
     const search = library.getByRole('textbox', { name: '搜索文件' })
     const upload = library.getByRole('button', { name: '添加文件', exact: true })
     const separated = (left, right) => left.x + left.width <= right.x + 1 || left.y + left.height <= right.y + 1
-    for (const width of [1280, 1060, 910, 800]) {
+    await page.mouse.move(0, 0)
+    for (const width of [1460, 1280, 1060, 910, 800]) {
       await page.setViewportSize({ width, height: 900 })
       await expect.poll(() => library.evaluate(el => Math.round(el.getBoundingClientRect().width))).toBe(width - 460)
       const layout = await Promise.all([heading, filter, search, upload].map(target => target.boundingBox()))
@@ -2531,7 +2544,13 @@ it('aligns folder counts and more actions while keeping long headings clear of t
       expect(separated(titleBox, filterBox) && separated(filterBox, searchBox) && separated(searchBox, uploadBox)).toBe(true)
       expect(uploadBox.x + uploadBox.width).toBeLessThanOrEqual(width - 340)
       expect((await center(number)).x).toBe((await center(category)).x)
-      expect((await center(add.locator('svg'))).x).toBe((await center(category)).x)
+      const pill = await number.locator('span').boundingBox()
+      const hit = await add.boundingBox()
+      const plus = await center(add.locator('path'))
+      expect(hit.width).toBeGreaterThanOrEqual(24)
+      expect(hit.height).toBe(hit.width)
+      expect(hit.x + hit.width).toBe(pill.x + pill.width)
+      expect(Math.abs(plus.x - (pill.x + pill.width / 2))).toBeLessThan(0.1)
       expect(await nav.locator(':scope > button > span').evaluateAll(labels =>
         labels.every(el => el.scrollWidth <= el.clientWidth)), `category labels fit at ${width}px`).toBe(true)
     }

@@ -87,6 +87,7 @@
 .knowledge-navigation {
   --knowledge-nav-padding: 10px;
   --knowledge-nav-trailing: 26px;
+  --knowledge-count-padding: 4px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -120,6 +121,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.knowledge-navigation button > small, .knowledge-folder-heading > button {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
 .knowledge-navigation button > small {
   display: flex;
   justify-content: flex-end;
@@ -127,12 +132,10 @@
   margin-inline-start: auto;
   flex: none;
   color: var(--knowledge-muted);
-  font-size: 11px;
   line-height: 18px;
-  font-variant-numeric: tabular-nums;
 }
 .knowledge-navigation button > small > span {
-  padding-inline: 4px;
+  padding-inline: var(--knowledge-count-padding);
   border-radius: 4px;
   background: color-mix(in srgb, currentColor 9%, transparent);
 }
@@ -160,6 +163,9 @@
 .knowledge-folder-heading { display: flex; align-items: center; justify-content: space-between; margin: 17px 0 0; padding-inline: var(--knowledge-nav-padding); color: var(--knowledge-muted); font-size: 12px; }
 .knowledge-workspace .knowledge-folder-heading > .knowledge-square {
   flex: none; width: var(--knowledge-nav-trailing); height: var(--knowledge-nav-trailing);
+  /* Center the plus on the units digit while preserving the full click target. */
+  grid-template-columns: calc(1ch + 2 * var(--knowledge-count-padding));
+  justify-content: end;
   border-radius: 5px;
 }
 .knowledge-workspace .knowledge-folder-heading > .knowledge-square:not(:disabled):is(:hover, :focus-visible, :active) {
