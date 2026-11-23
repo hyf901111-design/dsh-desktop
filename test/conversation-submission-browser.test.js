@@ -15,7 +15,7 @@ const {patchPptxAnnotationInput}=require('../scripts/lib/pptx-annotation-native.
 const {patchPptxAnnotationMessages}=require('../scripts/lib/pptx-annotation-message.mjs')
 
 const evidence=process.env.SHERLOCK_SUBMISSION_EVIDENCE||'/tmp/conversation-user-before-status-20261027/browser-default'
-let browser,bundle,runtimeSource,nativeSource,annotationSource,triggersSource,connectionSource
+let browser,bundle,runtimeSource,nativeSource,queueSource,annotationSource,triggersSource,connectionSource
 beforeAll(async()=>{
  connectionSource=await readFile('node_modules/@deepseek-ai/dsh-client-connection/lib/client.js','utf8')
  runtimeSource=await readFile('node_modules/@deepseek-ai/dsh-client-runtime/lib/client.js','utf8')
@@ -23,8 +23,9 @@ beforeAll(async()=>{
  const patch=process.env.SHERLOCK_SUBMISSION_BASELINE==='1'?source=>patchHomeGuidePresentationNative(source):source=>patchConversationSubmission(patchConversationResponseProgress(patchHomeGuidePresentationNative(source)))
  let patchConversationSubmission,patchConversationResponseProgress;if(process.env.SHERLOCK_SUBMISSION_BASELINE!=='1'){({patchConversationSubmission}=require('../scripts/lib/conversation-submission.mjs'));({patchConversationResponseProgress}=require('../scripts/lib/conversation-response-progress.mjs'))}
  if(process.env.SHERLOCK_QUEUE_ADMISSION_BASELINE==='1')patchConversationSubmission=source=>execFileSync(process.execPath,['--input-type=module','-e',"import{readFileSync}from'node:fs';import{execFileSync}from'node:child_process';const previous=await import('data:text/javascript;base64,'+execFileSync('git',['show','55e46e2433df898bcf28a6b3a503b6d84901ca26:scripts/lib/conversation-submission.mjs']).toString('base64'));process.stdout.write(previous.patchConversationSubmission(readFileSync(0,'utf8')))"],{input:source,encoding:'utf8',maxBuffer:64*1024*1024})
- const expose=source=>source.replace('exports.apply = apply;','exports.apply = apply;exports.__QueueDock=NativeQueueDock;exports.__watchSubmitted=typeof NativeConversationSubmissions==="undefined"?undefined:deps=>NativeConversationSubmissions.watch(deps);exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__User=UserMessageNodeView;exports.__Steering=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__userRowClass=MessageItem_module_css_default.userRow;exports.__startAnnotation=deps=>(PptxAnnotationNativeRuntime=createPptxAnnotationNativeRuntime({...deps,window,document}));exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
+ const expose=source=>source.replace('exports.apply = apply;','exports.apply = apply;exports.__QueueDock=NativeQueueDock;exports.__SubmissionPolicy=ComposerSubmissionPolicy;exports.__watchSubmitted=typeof NativeConversationSubmissions==="undefined"?undefined:deps=>NativeConversationSubmissions.watch(deps);exports.__InputBar=InputBar;exports.__Chat=ChatView;exports.__User=UserMessageNodeView;exports.__Steering=UserMessageNodeView;exports.__Assistant=AssistantNodeView;exports.__Tail=TurnTailNodeView;exports.__register=registerConversationNodes;exports.__header=ConversationSessionHeader;exports.__userRowClass=MessageItem_module_css_default.userRow;exports.__startAnnotation=deps=>(PptxAnnotationNativeRuntime=createPptxAnnotationNativeRuntime({...deps,window,document}));exports.__bind=deps=>{HomePresentationNativeDeps=deps};')
  nativeSource=expose(patch(normalized))
+ queueSource=expose(await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))
  annotationSource=expose(patchConversationSubmission(patchConversationResponseProgress(patchPptxAnnotationMessages(patchPptxAnnotationInput(patchHomeGuidePresentationNative(normalized))))))
  triggersSource=await readFile('node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js','utf8')
  const result=await build({entryPoints:['test/fixtures/conversation-submission-browser.tsx'],bundle:true,platform:'browser',format:'iife',write:false,loader:{'.svg':'dataurl','.css':'empty'},define:{'process.env.NODE_ENV':'"development"'}})
@@ -35,7 +36,7 @@ beforeAll(async()=>{
 },30000)
 afterAll(()=>browser?.close())
 
-async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,annotationFile=false,history=false,historyLimit=100,prelude=false,queueLive=false}={}){
+async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,annotationFile=false,history=false,historyLimit=100,prelude=false,queueLive=false,delayQueueMirror=false}={}){
  const host=await presentationHostFixture(),page=await browser.newPage({viewport:{width:1380,height:900},reducedMotion:'reduce'}),errors=[],requests=[]
  const origin='http://127.0.0.1:'+host.ctx.get('webServer').port
  const sourcePath=join(host.cwd,'Vanguard-2026经济与市场展望.pdf'),brief='请基于当前资料梳理研究结论，保留来源与时点。中文与 emoji 📈 均应完整。',guidePath=kind==='report'?'/sherlock/home-guide/report':'/sherlock/home-guide/presentation'
@@ -53,7 +54,7 @@ async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,
  if(history){await host.prompt('之前已完成的真实请求');await host.agent.whenIdle()}
  const offStatus=host.ctx.on('agent/status',event=>{if(requests.length)void page.evaluate(status=>window.probe?.status(status),event.status).catch(()=>{})})
  let forwarding=Promise.resolve()
- const offEvents=queueLive?host.ctx.on('session/event',({session,event})=>{if(session.id===host.agent.id)forwarding=forwarding.then(()=>page.evaluate(envelope=>window.probe?.mux(envelope),{rpcId:'actual-session-'+event.seq,payload:{type:'session/event',sessionId:'demo',event}})).catch(()=>{})}):()=>{}
+ const offEvents=queueLive?host.ctx.on('session/event',(session,event)=>{if(session.id===host.agent.id)forwarding=forwarding.then(()=>page.evaluate(envelope=>window.probe?.mux(envelope),{rpcId:'actual-session-'+event.seq,payload:{type:'session/event',sessionId:'demo',event}})).catch(()=>{})}):()=>{}
  const off=host.ctx.on('agent/pre-step',async(event,next)=>{if(event.messages.some(message=>message.source?.rpcId==='user-first-1')){if(prelude)event.agent.session.append('user/message',createUserMessage({source:{kind:'plugin',plugin:'fixture-file-context'},content:[{type:'text',text:'附件PPT读取上下文已准备'}]}),{surfaceOp:'append'});entered=true;await held}return next()})
  page.on('pageerror',error=>errors.push(error.stack??error.message))
  await page.exposeFunction('userMessageBackend',async input=>{
@@ -80,12 +81,12 @@ async function fixture({kind='ppt',mount=false,rejected=false,annotations=false,
  })
  await page.goto('https://user-message.local/')
  await page.evaluate(value=>Object.assign(window,value),{actorKind:kind,cwd:host.cwd,sourcePath,brief,registered:mount,annotationEnabled:annotations,annotationFile})
- for(const [source,key] of [[runtimeSource,'runtimeDescriptor'],[annotations?annotationSource:nativeSource,'conversationDescriptor'],[triggersSource,'triggersDescriptor'],[connectionSource,'connectionDescriptor']]){await page.addScriptTag({content:source});await page.evaluate(key=>window[key]=window.descriptor,key)}
+ for(const [source,key] of [[runtimeSource,'runtimeDescriptor'],[delayQueueMirror?queueSource:annotations?annotationSource:nativeSource,'conversationDescriptor'],[triggersSource,'triggersDescriptor'],[connectionSource,'connectionDescriptor']]){await page.addScriptTag({content:source});await page.evaluate(key=>window[key]=window.descriptor,key)}
  const css=(await Promise.all(['figma-final-shell','figma-home','figma-panels','figma-inline-references','figma-reading','figma-refinements','home-guides'].map(name=>readFile('src/preload/'+name+'.css','utf8')))).join('\n')
  await page.addStyleTag({content:css+'\nhtml,body{margin:0;height:100%;font-family:system-ui}.pI_x6G_centerCol{position:relative;height:900px;width:1000px}#native-root{height:100%}[data-home-guide]{position:absolute;inset:0;pointer-events:none}.wSkVaW_root{height:100%}'})
  await page.addScriptTag({content:bundle})
  await page.waitForSelector('textarea')
- const muxController=new AbortController(),muxTask=(async()=>{for await(const envelope of host.api.events.mux({rpcId:'native-test-mux',payload:{}},muxController.signal)){if(envelope.payload.type==='session/queue')await page.evaluate(envelope=>window.probe.mux(envelope),envelope).catch(()=>{})}})().catch(error=>{if(!muxController.signal.aborted)throw error})
+ const muxController=new AbortController(),muxTask=(async()=>{for await(const envelope of host.api.events.mux({rpcId:'native-test-mux',payload:{}},muxController.signal)){if(!delayQueueMirror&&envelope.payload.type==='session/queue')await page.evaluate(envelope=>window.probe.mux(envelope),envelope).catch(()=>{})}})().catch(error=>{if(!muxController.signal.aborted)throw error})
  if(history){await page.evaluate(()=>window.probe.refresh());await expect.poll(()=>page.evaluate(()=>window.probe.snapshot().historyHumans)).toBe(1)}
  if(mount)await page.evaluate(()=>window.probe.mount())
  if(prepared)await page.evaluate(value=>{window.brief=value.brief;if(value.sourcePath)window.sourcePath=value.sourcePath},prepared)
@@ -294,6 +295,38 @@ it('shows an unclaimed queued request only in the real QueueDock, admits it once
   await page.evaluate(frame=>window.probe.mux(frame),queued.frame);await expect.poll(()=>page.locator('[data-queue-dock]').count()).toBe(0)
   expect((await page.evaluate(()=>window.probe.snapshot())).rows).toHaveLength(3);expect(f.errors).toEqual([])
  }finally{await f.close()}
+},30000)
+
+it.each(['center','sidebar'])('displays each queued send in the %s composer before the queue snapshot arrives', async seat => {
+ const f=await fixture({history:true,queueLive:true,delayQueueMirror:true}),{page}=f
+ try {
+  await page.evaluate(seat=>window.probe.configureQueueSeat(seat),seat)
+  const owner=page.locator(seat==='center'?'[data-center-composer-host]':'#queue-sidebar')
+  const input=owner.locator('textarea').first()
+  await input.fill('保持首轮运行')
+  await input.press('Enter')
+  await expect.poll(()=>f.entered).toBe(true)
+  await expect.poll(()=>page.evaluate(()=>window.probe.session.getSnapshot().running)).toBe(true)
+  await input.fill('第一条等待消息')
+  await input.press('Enter')
+  const dock=owner.locator('[data-queue-dock]')
+  await expect.poll(()=>dock.isVisible()).toBe(true)
+  await input.fill('第二条等待消息')
+  await owner.getByRole('button',{name:'发送消息',exact:true}).click()
+  await expect.poll(()=>dock.locator('li:visible').allTextContents()).toEqual(['第一条等待消息','第二条等待消息'])
+  const toggle=dock.getByRole('button',{expanded:true}).first()
+  await toggle.click()
+  expect(await dock.locator('li:visible').count()).toBe(0)
+  await dock.getByRole('button',{expanded:false}).first().click()
+  expect(f.requests.slice(1).map(request=>request.payload.mode)).toEqual(['queue','queue'])
+  expect(await page.evaluate(()=>window.probe.session.getSnapshot().queue.length)).toBe(0)
+  await dock.getByRole('button',{name:'删除排队消息'}).last().click()
+  await expect.poll(()=>dock.locator('li:visible').allTextContents()).toEqual(['第一条等待消息'])
+  f.release()
+  await f.host.agent.whenIdle()
+  await expect.poll(()=>dock.count()).toBe(0)
+  expect(f.errors).toEqual([])
+ } finally { await f.close() }
 },30000)
 
 it('edits, removes and promotes real queued messages through Native QueueDock without premature or stale chat bubbles',async()=>{

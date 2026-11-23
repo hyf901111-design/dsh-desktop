@@ -3,8 +3,10 @@ import {describe,it,expect,vi} from 'vitest'
 import {createRequire} from 'node:module'
 import {createSourceFile,ScriptTarget,ScriptKind,forEachChild,isVariableDeclaration} from 'typescript'
 import {patchComposerSubmitPolicy} from '../scripts/lib/composer-submit-policy.mjs'
-import {patchResearchCreationProgress} from '../scripts/lib/research-creation-progress.mjs'
-const{patchComposerVoice}=createRequire(import.meta.url)('../scripts/lib/composer-voice.mjs')
+import {stripConversationTransientUi} from './fixtures/strip-conversation-transient-ui.mjs'
+const require = createRequire(import.meta.url)
+const {patchResearchCreationProgress} = require('../scripts/lib/research-creation-progress.mjs')
+const {patchComposerVoice} = require('../scripts/lib/composer-voice.mjs')
 
 const installed = await readFile('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8')
 function primary(source, overrides={}) {
@@ -52,7 +54,7 @@ describe('发送按钮与回车的提交策略一致',()=>{
     expect(()=>patchComposerSubmitPolicy('unknown')).toThrow()
   })
   it('survives the creation-progress installer being applied again',()=>{
-    const patched=patchResearchCreationProgress(installed)
+    const patched=patchResearchCreationProgress(stripConversationTransientUi(installed))
     expect(primary(patchResearchCreationProgress(patched)).keyboard.submit).toHaveBeenCalledWith('steer')
   })
 })

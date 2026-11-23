@@ -42,7 +42,7 @@ it('releases old lifecycle listeners and cannot let an old disposer clear the ne
  expect(f.store.read('a').rpcId).toBe('rpc-2');expect(f.observers.size).toBe(1);stop();expect(f.store.read('a')).toBeNull();expect(f.observers.size).toBe(0);expect(f.owners.size).toBe(0);expect(f.states.size).toBe(0)
 })
 it('installs the actual native module twice with exact inverse and refuses drift/duplicates/orphan hooks',()=>{
- const script=`import{readFileSync}from'node:fs';import{stripConversationLiveUi}from'./test/fixtures/strip-conversation-live-ui.mjs';import{Script}from'node:vm';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const raw=strip(stripConversationLiveUi(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))),one=patch(raw);assert.equal(patch(one),one);assert.equal(strip(one),raw);new Script(one);assert.throws(()=>strip(one+'\\nNativeConversationSubmissions;'));assert.throws(()=>strip(one.replace('function useNativeConversationSubmission','function invalidNativeHook')));assert.throws(()=>patch(raw+'\\nNativeConversationSubmittedUser;'));assert.throws(()=>strip(one.replace('/* sherlock:conversation-submission:v6 */','/* sherlock:conversation-submission:v6 */ /* sherlock:conversation-submission:v6 */')));console.log('strict two-pass/inverse/parse passed')`
+ const script=`import{readFileSync}from'node:fs';import{stripConversationLiveUi}from'./test/fixtures/strip-conversation-live-ui.mjs';import{Script}from'node:vm';import assert from'node:assert/strict';import{patchConversationSubmission as patch,stripConversationSubmission as strip}from'./scripts/lib/conversation-submission.mjs';const raw=strip(stripConversationLiveUi(readFileSync('node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js','utf8'))),one=patch(raw);assert.equal(patch(one),one);assert.equal(strip(one),raw);new Script(one);assert.throws(()=>strip(one+'\\nNativeConversationSubmissions;'));assert.throws(()=>strip(one.replace('function useNativeConversationSubmission','function invalidNativeHook')));assert.throws(()=>patch(raw+'\\nNativeConversationSubmittedUser;'));assert.throws(()=>strip(one.replace('/* sherlock:conversation-submission:v7 */','/* sherlock:conversation-submission:v7 */ /* sherlock:conversation-submission:v7 */')));console.log('strict two-pass/inverse/parse passed')`
  expect(execFileSync(process.execPath,['--input-type=module','-e',script],{encoding:'utf8',maxBuffer:8*1024*1024})).toContain('strict two-pass/inverse/parse passed')
 })
 it('invalidates quietly when an actual session binding disappears during lifecycle teardown',()=>{
@@ -76,6 +76,31 @@ const message=(id,rpcId,text='相同的需求')=>({id,role:'user',source:{kind:'
 const frame=(type,data)=>({type:'server-request',payload:{sessionId:'a',type,...data}})
 const event=(seq,type,data)=>frame('session/event',{event:{seq,type,data}})
 const row=(message,anchorSeq,placement='queued')=>({id:message.id,messageId:message.id,source:message.source,content:message.content,placement,anchorSeq,message})
+it('shows a busy queue submission immediately and reconciles its host ID, rejection and owner',()=>{
+ const f=fixture()
+ active(f)
+ const send=id=>{const request=f.request(id);request.payload.mode='queue';f.emit(request)}
+ const read=()=>f.store.queue('a',[],new Map())
+ send('first')
+ expect(read()).toMatchObject([{source:{rpcId:'first'},editable:false}])
+ f.emit(frame('session/queue',{items:[]}))
+ expect(read()).toHaveLength(1)
+ const first=message('host-first','first')
+ f.emit(event(20,'agent/inbox/spliced',{target:'next-turn',start:0,inserted:[first]}))
+ expect(read()).toMatchObject([{id:first.id,preview:'相同的需求'}])
+ send('second')
+ f.emit(frame('session/queue',{items:[row(first,20)]}))
+ const nativeRows=f.store.queue('a',[row(first,20)],new Map())
+ expect(nativeRows.map(item=>item.source.rpcId)).toEqual(['first','second'])
+ expect(nativeRows[0].id).toBe(first.id)
+ f.emit({type:'server-response',rpcId:'second',result:{ok:false,error:{code:'rejected'}}})
+ expect(read()).toEqual([])
+ send('third')
+ f.setOwner('other')
+ expect(read()).toEqual([])
+ f.stop()
+})
+
 it('keeps distinct queued RPCs out of optimistic admission even for identical text, and only an exact real claim admits one',()=>{
  const f=fixture();active(f);f.emit(f.request('one'),f.request('two'));const one=message('m1','one'),two=message('m2','two')
  f.emit(event(10,'agent/inbox/spliced',{target:'next-turn',start:0,inserted:[one]}),event(11,'agent/inbox/spliced',{target:'next-turn',start:1,inserted:[two]}),frame('session/queue',{items:[row(one,10),row(two,11)]}))
