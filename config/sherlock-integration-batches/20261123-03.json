@@ -128,6 +128,41 @@
           "特殊素材型和动画页需个别设计；模型会话质量需现场复核。"
         ],
         "generatedAt": "2026-11-23T16:22:42.936455+00:00"
+      },
+      "merged": {
+        "mergeCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
+        "verificationCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/bundled-ppt-skill.test.ts",
+              "test/integration-bundled-skill.test.js",
+              "-t",
+              "discoverable through|actual shipped PPT"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/bundled-ppt-skill.test.ts test/integration-bundled-skill.test.js -t discoverable through|actual shipped PPT",
+            "verifiedCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
+            "completedAt": "2026-11-23T16:22:55.202Z",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "test/efund_layout_edit_test.py"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：python3 -B test/efund_layout_edit_test.py",
+            "verifiedCommit": "2bde4bcdc07e90a425fc83356375bf0d7fa716ce",
+            "completedAt": "2026-11-23T16:22:55.202Z",
+            "timeoutMs": 120000
+          }
+        ],
+        "recordedAt": "2026-11-23T16:22:55.202Z"
       }
     }
   ],
