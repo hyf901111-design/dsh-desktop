@@ -1,3 +1,4 @@
+import { verifyBundledTaskTools } from './lib/verify-bundled-task-tools.mjs'
 import { verifyHomePresentationAssets } from './lib/home-presentation-assets.mjs'
 import { verifyProfileRuntimePatches } from './lib/profile-runtime-patches.mjs'
 import { existsSync } from 'node:fs'
@@ -163,6 +164,7 @@ try {
     if (existsSync(path.join(resourcesPath, 'integration-catalog', 'test')) || existsSync(path.join(runtimeRoot, 'test', 'fixtures', 'integrations'))) throw new Error('Integration test fixtures must not be packaged')
     verifyHomePresentationAssets(runtimeRoot)
     verifyRuntime(runtimeNode, runtimeRoot)
+    verifyBundledTaskTools(resourcesPath)
     if (skipSignature) {
       console.log('signature: skipped (unsigned CI package)')
     } else {

@@ -1,7 +1,33 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import { registerHooks } from 'node:module'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const [dshEntryPath, ...dshArguments] = process.argv.slice(2)
+
+// A Finder launch can have only the system PATH. Shell tools run from the
+// user's workspace, so they also need the packaged CommonJS module search path.
+function usePackagedTaskTools() {
+  const resources = path.dirname(fileURLToPath(import.meta.url))
+  const modules = path.join(resources, 'app', 'node_modules')
+  if (!existsSync(modules)) return
+  const directories = [path.dirname(process.execPath)]
+  const python = path.join(resources, 'task-python', 'bin')
+  if (existsSync(path.join(python, 'python3'))) {
+    directories.push(python)
+    delete process.env.PYTHONHOME
+    delete process.env.PYTHONPATH
+    process.env.PYTHONNOUSERSITE = '1'
+    process.env.PYTHONDONTWRITEBYTECODE = '1'
+  }
+  const ripgrep = path.join(modules, '@vscode', 'ripgrep-' + process.platform + '-' + process.arch, 'bin')
+  if (existsSync(ripgrep)) directories.push(ripgrep)
+  for (const [key, prefix] of [['PATH', directories], ['NODE_PATH', [modules]]]) {
+    const existing = (process.env[key] || '').split(path.delimiter).filter(Boolean)
+    process.env[key] = [...new Set([...prefix, ...existing])].join(path.delimiter)
+  }
+}
+usePackagedTaskTools()
 
 function superviseDesktopParent() {
   const value = process.env.SHERLOCK_DESKTOP_PARENT_PID

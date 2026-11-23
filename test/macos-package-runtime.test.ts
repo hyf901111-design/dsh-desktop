@@ -31,7 +31,7 @@ describe('macOS package runtime verification', () => {
 
   it.runIf(process.platform === 'darwin')(
     'allows an explicitly unsigned CI package while keeping the other package checks',
-    () => {
+    async () => {
       const temporaryRoot = mkdtempSync(path.join(tmpdir(), 'sherlock-unsigned-package-'))
       const appPath = path.join(temporaryRoot, 'Sherlock.app')
       const resourcesPath = path.join(appPath, 'Contents', 'Resources')
@@ -65,6 +65,9 @@ describe('macOS package runtime verification', () => {
         )
         writeFileSync(path.join(runtimeRoot, 'package.json'), '{"type":"module"}\n')
         symlinkSync(nodeModulesPath, path.join(runtimeRoot, 'node_modules'))
+        copyFileSync(path.join(projectRoot, 'build/harness-node-entry.mjs'), path.join(resourcesPath, 'harness-node-entry.mjs'))
+        const {installBundledTaskPython} = await import(new URL('../scripts/lib/bundled-task-python.mjs', import.meta.url).href)
+        await installBundledTaskPython(projectRoot, resourcesPath, process.arch)
         cpSync(path.join(projectRoot, 'build', 'integration-catalog'), path.join(resourcesPath, 'integration-catalog'), { recursive: true })
         // The package verifier also checks the independent plugin runtime tree.
         for (const packageName of ['dsh-llm', 'dsh-skill']) {
@@ -129,7 +132,7 @@ describe('macOS package runtime verification', () => {
         rmSync(temporaryRoot, { recursive: true, force: true })
       }
     },
-    // This fixture prepares three native resources before checking the package.
-    60_000
+    // A cold build downloads the locked runtime before probing the unsigned package.
+    300_000
   )
 })
