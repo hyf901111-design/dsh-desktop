@@ -179,17 +179,22 @@ def edit(slides, plan, scale, height):
     return changed
 
 
-def save_copy(raw, changed, output):
+def save_copy(raw, changed, output, extra=None):
+    extra = extra or {}
     # Publish only a completed archive and refuse replacement even if two edits race.
     with NamedTemporaryFile(dir=output.parent, delete=False) as temp:
         path = Path(temp.name)
     try:
         with ZipFile(BytesIO(raw)) as src, ZipFile(path, 'w') as dst:
             for entry in src.infolist():
-                if entry.filename in changed:
+                if entry.filename in extra:
+                    dst.writestr(entry, extra[entry.filename])
+                elif entry.filename in changed:
                     dst.writestr(entry, changed[entry.filename].blob)
                 else:
                     dst.writestr(entry, src.read(entry))
+            for name in extra.keys() - set(src.namelist()):
+                dst.writestr(name, extra[name])
         os.link(path, output)
     finally:
         path.unlink()

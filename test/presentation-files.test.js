@@ -98,3 +98,16 @@ it('exposes the actual native schema and Code Mode SDK without bypassing ordinar
  expect(result).toMatchObject({nativeSchema:true,codeSdk:true,scoped:true,hidden:true,denied:true,globalUnchanged:true,restored:true,publication:'available'})
  expect(result.cohort).toMatchObject({tools:expect.stringContaining('/dsh-tools/'),scope:expect.stringContaining('/dsh-scope/'),cordis:expect.stringContaining('/cordis/'),systemPrompt:expect.stringContaining('/dsh-system-prompt/')})
 })
+
+it('concludes only a requested successful final publication and keeps failed publication retryable',async()=>{
+ const f=await fixture()
+ let conclusions=0
+ const exec={agent:f.agent,signal:new AbortController().signal,callId:'finish-one',concludeTurn(){conclusions++}}
+ const tool=f.tools.get('presentation_files')
+ const paths=['outputs/研究 (定稿).pptx']
+ await tool.execute({paths},exec)
+ await expect(tool.execute({paths:['missing.pptx'],complete:true},exec)).rejects.toThrow()
+ expect(conclusions).toBe(0)
+ await tool.execute({paths,complete:true},exec)
+ expect(conclusions).toBe(1)
+})
