@@ -34,7 +34,8 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
   let home: HTMLButtonElement | null = null
   let openTimer = 0, closeTimer = 0, off: (() => void) | undefined, signature = ''
   let opening = false
-  const expanded = new Set<string>()
+  const collapsedGroups = new Set<string>()
+  const showAllRows = new Set<string>()
   const english = () => doc.documentElement.dataset.odysseyLocale === 'en'
   const controls = () => [...list.querySelectorAll<HTMLButtonElement>('button')]
   const inside = (node: EventTarget | null) => node instanceof win.Node && (home?.contains(node) || panel.contains(node))
@@ -49,7 +50,7 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     off?.(); off = undefined
     panel.remove()
     if (home?.getAttribute('aria-expanded') === 'true') home.setAttribute('aria-expanded', 'false')
-    expanded.clear()
+    showAllRows.clear()
     signature = ''
   }
   function render() {
@@ -57,7 +58,7 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     const groups = groupSessions(source.results(''), source.workspaces(), en)
     const next = JSON.stringify([en, current, groups.map(group => [
       group.key, group.title, group.rows.map(row => [row.key, row.title, row.sessionId, row.boardId])
-    ]), [...expanded]])
+    ]), [...collapsedGroups], [...showAllRows]])
     if (signature === next) return
     signature = next
     const focused = list.contains(doc.activeElement) && doc.activeElement instanceof win.HTMLElement ? doc.activeElement.dataset.key : undefined
@@ -65,9 +66,23 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     list.setAttribute('aria-label', en ? 'Switch conversation' : '切换会话')
     for (const group of groups) {
       const section = doc.createElement('section'), heading = doc.createElement('h3')
-      heading.textContent = group.title; heading.dataset.uiPreserve = ''
-      section.append(heading)
-      for (const row of expanded.has(group.key) ? group.rows : group.rows.slice(0, 5)) {
+      const disclosure = button(group.title, 'group:' + group.key), rows = doc.createElement('div')
+      rows.id = panel.id + '-rows-' + encodeURIComponent(group.key)
+      rows.hidden = collapsedGroups.has(group.key)
+      disclosure.dataset.uiPreserve = ''
+      disclosure.setAttribute('aria-controls', rows.id)
+      disclosure.setAttribute('aria-expanded', String(!rows.hidden))
+      if (current && group.rows.some(row => row.sessionId === current)) disclosure.dataset.currentGroup = ''
+      disclosure.onclick = () => {
+        if (rows.hidden) collapsedGroups.delete(group.key)
+        else collapsedGroups.add(group.key)
+        render()
+      }
+      heading.append(disclosure)
+      section.append(heading, rows)
+      fragment.append(section)
+      if (rows.hidden) continue
+      for (const row of showAllRows.has(group.key) ? group.rows : group.rows.slice(0, 5)) {
         const item = button(row.title, row.key)
         item.dataset.uiPreserve = ''; item.title = row.title
         if (row.sessionId && row.sessionId === current) item.setAttribute('aria-current', 'true')
@@ -82,17 +97,16 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
           } catch (error) { source.showError(error) }
           finally { opening = false }
         }
-        section.append(item)
+        rows.append(item)
       }
       if (group.rows.length > 5) {
-        const more = expanded.has(group.key)
+        const more = showAllRows.has(group.key)
         const toggle = button(more ? (en ? 'Show less' : '收起') : (en ? 'Show more' : '展开显示'), 'expand:' + group.key)
         toggle.className = 'ework-switcher-more'
         toggle.setAttribute('aria-expanded', String(more))
-        toggle.onclick = () => { if (more) expanded.delete(group.key); else expanded.add(group.key); render() }
-        section.append(toggle)
+        toggle.onclick = () => { if (more) showAllRows.delete(group.key); else showAllRows.add(group.key); render() }
+        rows.append(toggle)
       }
-      fragment.append(section)
     }
     if (!groups.length) {
       const empty = doc.createElement('p')
@@ -114,15 +128,26 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
       home.setAttribute('aria-expanded', 'true')
       off = source.subscribe(render)
     }
-    if (focus) (list.querySelector<HTMLElement>('[aria-current]') ?? controls()[0] ?? list).focus()
+    if (focus) (list.querySelector<HTMLElement>('[aria-current]') ??
+      list.querySelector<HTMLElement>('[data-current-group]') ?? controls()[0] ?? list).focus()
   }
-  function leave(event: PointerEvent) {
-    if (inside(event.relatedTarget)) return
+  function scheduleClose() {
+    win.clearTimeout(closeTimer)
     win.clearTimeout(openTimer)
     closeTimer = win.setTimeout(() => {
       if (!panel.contains(doc.activeElement) || !doc.activeElement?.matches(':focus-visible')) close()
     }, 160)
   }
+  function leave(event: PointerEvent) {
+    if (inside(event.relatedTarget) || panel.dataset.browserProjected) return
+    scheduleClose()
+  }
+  // The native browser reports whether the physical pointer is over either
+  // window. A renderer pointerleave alone also fires on entry into its popup.
+  panel.addEventListener('sherlock:switcher-hover', event => {
+    if ((event as CustomEvent<boolean>).detail) cancelTimers()
+    else scheduleClose()
+  })
   function enter(event: PointerEvent) {
     if (event.pointerType === 'touch' || event.buttons) return
     cancelTimers()

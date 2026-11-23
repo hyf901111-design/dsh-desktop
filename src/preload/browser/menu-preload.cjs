@@ -63,6 +63,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   for(const element of template.content.querySelectorAll('*'))for(const attribute of [...element.attributes])if(/^on/i.test(attribute.name)||['srcdoc','formaction'].includes(attribute.name))element.removeAttribute(attribute.name)
   if(!same){content.replaceChildren(template.content);composing=undefined;queued=undefined}else{const next=document.createElement('main');next.id=content.id;next.append(template.content);patch(content,next)}
   style.textContent=typeof value.css==='string'?value.css:'';state=value
+  const table=content.querySelector('dialog.odyssey-table-dialog[data-native-menu-root]')
+  if(table&&!table.matches(':modal')){table.removeAttribute('open');table.showModal()}
   if(!same){hoverId=undefined;hoverCardId=undefined}hover(focusElement(hoverId))
   if(same){
    const byId=new Map([...content.querySelectorAll('[data-native-control]')].map(element=>[id(element),element]))
@@ -103,6 +105,8 @@ window.addEventListener('DOMContentLoaded',()=>{
  document.addEventListener('click',event=>{
   const element=event.target instanceof Element?event.target.closest('[data-native-clickable]')||control(event.target):null
   if(!element||element.matches(':disabled,[aria-disabled=true]'))return
+  // Let the table keep native text selection and clicks on its modal backdrop.
+  if(element.closest('dialog.odyssey-table-dialog')&&!event.target.closest('button,a,input,select,textarea'))return
   const card=element.closest(hoverCardSelector)
   if(card){
    const selected=window.getSelection()
@@ -115,7 +119,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const hovered=over?event.target:event.relatedTarget
   hover(hovered);trackHoverCard(hovered)
   const element=control(event.target),related=control(event.relatedTarget)
-  if(element&&element!==related&&!element.closest(hoverCardSelector))emit('pointer',element,{over})
+  if(element&&element!==related&&!element.closest(hoverCardSelector+',dialog.odyssey-table-dialog'))emit('pointer',element,{over})
  })
  document.addEventListener('pointermove',event=>{hover(event.target);trackHoverCard(event.target)})
  document.addEventListener('mouseleave',()=>{hover(null);trackHoverCard(null)})
@@ -126,6 +130,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   const element=control(event.target),editing=editable(element),local=editing&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)||element instanceof HTMLTextAreaElement&&['ArrowUp','ArrowDown','PageUp','PageDown'].includes(event.key)
   if(editing&&event.key===' ')return
   if((local||element instanceof HTMLSelectElement&&!['Escape','Tab'].includes(event.key))&&!event.metaKey&&!event.ctrlKey)return
+  // The real modal owns Tab navigation and scroll keys. Escape closes the source dialog.
+  if(element?.closest('dialog.odyssey-table-dialog')&&event.key!=='Escape')return
   if(!navigation.has(event.key)&&!((event.metaKey||event.ctrlKey)&&shortcuts.has(event.key.toLowerCase())))return
   event.preventDefault();emit('key',element,{key:event.key,metaKey:event.metaKey,ctrlKey:event.ctrlKey,shiftKey:event.shiftKey,altKey:event.altKey})
  },true)

@@ -2,6 +2,11 @@ import { beforeAll, afterAll, expect, it } from 'vitest'
 import { build } from 'esbuild'
 import { readFile } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
+import { createRequire } from 'node:module'
+
+const { PNG } = createRequire(import.meta.url)('pngjs') as {
+  PNG: { sync: { read(buffer: Buffer): { width: number; data: Buffer } } }
+}
 
 let browser: any, script: string, sidebarSource: string, layoutSource: string, style: string
 beforeAll(async () => {
@@ -30,13 +35,13 @@ beforeAll(async () => {
       new Function(window.sidebarSource)()
       const sidebar=plugins['@deepseek-ai/dsh-client-ui-sidebar'], layout=plugins['@deepseek-ai/dsh-client-ui-layout']
       const records=Object.fromEntries(Array.from({length:8},(_,i)=>['s'+i,{title:'会话 '+i,updatedAt:20-i}]))
-      records.orphan={title:'独立会话'}; records.archived={title:'已归档'}; records.sub={title:'子代理',origin:'subagent'}
+      records.orphan={title:'独立会话'}; records.other={title:'回顾会话'}; records.archived={title:'已归档'}; records.sub={title:'子代理',origin:'subagent'}
       const boards={favorites:[{favoriteId:'f',sessionId:'personal',title:'个人看板',createdAt:90}],boards:[{boardId:'team',localSessionId:'shared',title:'共享看板',pinned:true,createdAt:100}]}
       let current='s1',collapsed=true,empty=false
       const events=[],listeners=new Set()
-      const workspace={workspaceId:'a',title:'产品研究',path:'/product',sessionIds:Object.keys(records).filter(id=>id!=='orphan')}
+      const workspace={workspaceId:'a',title:'产品研究',path:'/product',sessionIds:Object.keys(records).filter(id=>id!=='orphan'&&id!=='other')}
       const page={current:()=>current,searchSessions:q=>empty?[]:sidebarSearchResults(boards,records,['archived'],q),
-        sidebarWorkspaces:()=>[workspace],subscribeSearch:f=>{listeners.add(f);return()=>listeners.delete(f)},
+        sidebarWorkspaces:()=>[workspace,{workspaceId:'b',title:'阶段回顾',path:'/review',sessionIds:['other']}],subscribeSearch:f=>{listeners.add(f);return()=>listeners.delete(f)},
         openSearchSession:id=>{current=id;events.push(['session',id])},openBoard:id=>events.push(['board',id]),openPersonal:id=>events.push(['favorite',id]),
         showError:e=>{throw e}}
       document.addEventListener('sherlock:search-session-opened',e=>events.push(['opened',e.detail.sessionId??null]))
@@ -93,7 +98,7 @@ it('switches in live board and workspace groups while the native sidebar stays f
       border: getComputedStyle(el).borderWidth,
       scrollbar: getComputedStyle(el).scrollbarWidth,
       blur: getComputedStyle(el).backdropFilter
-    }))).toEqual({ border: '0px', scrollbar: 'none', blur: 'blur(24px)' })
+    }))).toEqual({ border: '0px', scrollbar: 'none', blur: 'blur(32px)' })
     const homeRight = box.x + box.width, crossingY = box.y + box.height / 2
     expect(homeRight).toBeLessThan(list.x)
     await page.mouse.move(homeRight + 1, crossingY, { steps: 8 })
@@ -107,7 +112,7 @@ it('switches in live board and workspace groups while the native sidebar stays f
     await page.mouse.wheel(0, -600)
     await expect.poll(() => panel.evaluate((el: HTMLElement) => el.scrollTop)).toBe(0)
     expect(list.y + list.height).toBe(332)
-    expect(await panel.getByRole('heading').allTextContents()).toEqual(['看板区', '产品研究', '未分组'])
+    expect(await panel.getByRole('heading').allTextContents()).toEqual(['看板区', '产品研究', '阶段回顾', '未分组'])
     expect(await panel.getByRole('button', { name: '会话 7' }).count()).toBe(0)
     expect(await panel.getByRole('button', { name: /已归档|子代理/ }).count()).toBe(0)
     expect(await panel.locator('[aria-current=true]').textContent()).toBe('会话 1')
@@ -123,6 +128,73 @@ it('switches in live board and workspace groups while the native sidebar stays f
     expect(await page.evaluate(() => (window as any).fixture.events.slice(-4))).toEqual([['board','team'],['opened',null],['favorite','personal'],['opened',null]])
   } finally { await page.close() }
 })
+it('collapses each group independently and keeps the active group reachable from the keyboard', async () => {
+  const { page, home, panel } = await fixture()
+  try {
+    await home.hover()
+    const boards = panel.getByRole('button', { name: '看板区' })
+    const product = panel.getByRole('button', { name: '产品研究' })
+    const review = panel.getByRole('button', { name: '阶段回顾' })
+    const ungrouped = panel.getByRole('button', { name: '未分组' })
+    await panel.getByRole('button', { name: '展开显示' }).click()
+    await product.click()
+    await boards.click()
+    await ungrouped.click()
+    expect(await product.getAttribute('aria-expanded')).toBe('false')
+    expect(await review.getAttribute('aria-expanded')).toBe('true')
+    expect(await panel.getByRole('button', { name: '会话 7' }).count()).toBe(0)
+    expect(await panel.getByRole('button', { name: '共享看板' }).count()).toBe(0)
+    expect(await panel.getByRole('button', { name: '独立会话' }).count()).toBe(0)
+    await panel.getByRole('button', { name: '回顾会话' }).waitFor()
+
+    await product.focus()
+    await page.keyboard.press('Space')
+    expect(await page.locator(':focus').textContent()).toBe('产品研究')
+    await panel.getByRole('button', { name: '会话 7' }).waitFor()
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('ArrowDown')
+    expect(await page.locator(':focus').textContent()).toBe('阶段回顾')
+
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('ArrowDown')
+    expect(await page.locator(':focus').textContent()).toBe('产品研究')
+    expect(await product.getAttribute('aria-expanded')).toBe('false')
+    await page.evaluate(() => (window as any).fixture.rename())
+    expect(await product.getAttribute('aria-expanded')).toBe('false')
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    expect(await page.locator(':focus').textContent()).toBe('更新后的标题')
+    await page.keyboard.press('Enter')
+    expect(await page.evaluate(() => (window as any).fixture.events)).toEqual([['session','s1'], ['opened','s1']])
+  } finally { await page.close() }
+})
+
+it('softens fine background detail while transmitting a muted background color through the native popover', async () => {
+  const { page, home, panel } = await fixture()
+  try {
+    await page.locator('[data-pane="conversation"]').evaluate((pane: HTMLElement) => {
+      pane.style.position = 'relative'
+      pane.style.background = 'linear-gradient(90deg,rgb(32,78,130) 154px,rgb(228,180,42) 154px)'
+      const grid = document.createElement('div')
+      grid.style.cssText = 'position:absolute;inset:50% 0 0;background:repeating-conic-gradient(black 0 25%,white 0 50%) 0/8px 8px'
+      pane.append(grid)
+      ;(window as any).fixture.clear()
+    })
+    await home.hover()
+    await panel.getByText('暂无会话').waitFor()
+    const bounds = await panel.boundingBox()
+    const picture = PNG.sync.read(await page.screenshot({ clip: bounds, scale: 'css' }))
+    const red = (x: number, y: number) => picture.data[(y * picture.width + x) * 4]!
+    const transmitted = red(256, 110) - red(52, 110)
+    expect(transmitted).toBeGreaterThan(30)
+    expect(transmitted).toBeLessThan(65)
+    const fine = Array.from({ length: 20 }, (_, x) => red(80 + x, 320))
+    expect(Math.max(...fine) - Math.min(...fine)).toBeLessThan(3)
+    expect(await panel.evaluate((el: HTMLElement) => getComputedStyle(el.parentElement!, '::backdrop').backgroundColor)).toBe('rgba(0, 0, 0, 0)')
+  } finally { await page.close() }
+})
+
 it('follows the rounded workspace while the panel is open across window sizes and frame insets', async () => {
   const { page, home, panel } = await fixture()
   try {
@@ -182,7 +254,7 @@ it('keeps the empty panel usable in English and dark appearance', async () => {
     })
     const empty = page.getByRole('navigation', { name: 'Switch conversation' })
     await empty.getByText('No conversations yet').waitFor()
-    expect(await empty.evaluate((el: HTMLElement) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0.66)')
+    expect(await empty.evaluate((el: HTMLElement) => getComputedStyle(el).backgroundColor)).toBe('rgba(41, 42, 44, 0.72)')
     await home.focus(); await page.keyboard.press('ArrowDown')
     expect(await empty.evaluate((el: HTMLElement) => el === document.activeElement)).toBe(true)
     await page.keyboard.press('Escape')

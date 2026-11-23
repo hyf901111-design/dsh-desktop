@@ -3,7 +3,8 @@ export type BrowserOverlayPreparation = {
  waitUntil(ready:Promise<boolean>):void
 }
 
-export const rendererAttachmentSurfaceSelector = 'dialog[open],[data-image-preview-dialog],.srb-notifications .srb-problem-form,[data-knowledge-app-drop=browser]'
+export const fullTableDialogSelector = 'dialog.odyssey-table-dialog[open]'
+export const rendererAttachmentSurfaceSelector = 'dialog[open]:not(.odyssey-table-dialog),dialog[open].odyssey-table-local,[data-image-preview-dialog],.srb-notifications .srb-problem-form,[data-knowledge-app-drop=browser]'
 
 /** Popup owners can measure a hidden portal before handing it to a native surface. */
 export function prepareBrowserOverlay(document:Document,element:HTMLElement){

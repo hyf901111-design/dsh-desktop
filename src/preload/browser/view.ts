@@ -14,7 +14,7 @@ const icon=(name:keyof typeof browserIcons)=>`<i class="eb-icon" aria-hidden="tr
 const button=(action:string,label:string,name?:keyof typeof browserIcons,disabled=false)=>`<button type="button" class="eb-icon-button" data-action="${action}" aria-label="${esc(label)}" title="${esc(label)}" ${disabled?'disabled':''}>${name?icon(name):esc(label)}</button>`
 const menuItem=(action:string,label:string,name:keyof typeof browserIcons,key='',disabled=false)=>`<button type="button" role="menuitem" class="eb-menu-item" data-action="${action}" ${disabled?'disabled':''}>${icon(name)}<span>${label}</span><kbd>${key}</kbd></button>`
 const hostname=(url:string)=>{try{return new URL(url).hostname}catch{return url}}
-const browserPageBlockers='.VOzbGW_overlay,[data-ework-web-link-error],'+rendererAttachmentSurfaceSelector
+const browserPageBlockers=(nativeMenus?:boolean)=>'.VOzbGW_overlay,[data-ework-web-link-error],'+rendererAttachmentSurfaceSelector+(nativeMenus?'':',dialog[open]')
 // The shared Figma rules own the board menu's material, type and row geometry.
 // These structural rules also work before the research module mounts its CSS.
 const pageContextCss='[data-browser-page-context-menu]{position:fixed;z-index:3000;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}[data-browser-page-context-menu]>button{display:flex;align-items:center;gap:20px;box-sizing:border-box;width:100%;border:0;border-radius:6px;background:transparent;color:inherit;text-align:left;cursor:pointer}[data-browser-page-context-menu]>button:disabled{opacity:.45;cursor:default}[data-browser-page-context-menu]>[role=separator]{height:1px;margin:5px;background:var(--odyssey-menu-border)}'
@@ -163,7 +163,7 @@ export class BrowserAppView {
   // Keep the webpage behind the shell while Explore's owned pointer uses the
   // real sidebar controls. A WebContentsView would place the menu in an inset.
   const guideEntry=this.document.body.hasAttribute('data-home-guide-entry-run')
-  const value={cornerColor,active:this.host.current()?.surface==='browser'&&!this.root.hidden&&!this.managingBookmarks&&!this.settings&&!this.document.querySelector('.VOzbGW_overlay'),sessionId:this.sessionId||undefined,visible:!guideEntry&&this.host.current()?.surface==='browser'&&!this.root.hidden&&!this.managingBookmarks&&!this.settings&&!!tab?.url&&!tab.error&&!this.document.querySelector(browserPageBlockers),...(bounds?{bounds:{x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height}}:{})}
+  const value={cornerColor,active:this.host.current()?.surface==='browser'&&!this.root.hidden&&!this.managingBookmarks&&!this.settings&&!this.document.querySelector('.VOzbGW_overlay'),sessionId:this.sessionId||undefined,visible:!guideEntry&&this.host.current()?.surface==='browser'&&!this.root.hidden&&!this.managingBookmarks&&!this.settings&&!!tab?.url&&!tab.error&&!this.document.querySelector(browserPageBlockers(this.state?.nativeMenus)),...(bounds?{bounds:{x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height}}:{})}
   this.root.dataset.nativePage=String(value.visible)
   if(value.visible&&this.findOpen&&this.state?.nativeFind&&box){const width=Math.min(468,box.width-32);Object.assign(value,{find:{focusToken:this.findFocus,tabId:this.state.activeId,text:this.findText,dark:this.root.dataset.dark==='true',icons:{up:browserIcons.up,chevron:browserIcons.chevron,close:browserIcons.close},bounds:{x:box.right-16-width,y:(bounds?.y??box.top+92)+2,width,height:58}}})}
   const signature=JSON.stringify(value);if(signature!==this.lastLayout){this.lastLayout=signature;this.layoutAck=this.bridge.request('layout',value).then(()=>true,()=>{if(signature===this.lastLayout)this.lastLayout='';return false})}
@@ -276,7 +276,7 @@ export class BrowserAppView {
   if(this.draggingTab)return;
   if(!this.state||this.disposed||this.composing||this.closingTab)return
   const t=this.tab()!;if(!t)return
-  this.root.dataset.nativeMenus=String(this.state.nativeMenus===true);this.root.dataset.nativePage=String(!!t.url&&!t.page&&!t.error&&!this.settings&&!this.managingBookmarks&&!this.document.querySelector(browserPageBlockers));this.root.dataset.tabId=t.id;this.root.dataset.url=t.url;this.root.dataset.sessionId=this.sessionId
+  this.root.dataset.nativeMenus=String(this.state.nativeMenus===true);this.root.dataset.nativePage=String(!!t.url&&!t.page&&!t.error&&!this.settings&&!this.managingBookmarks&&!this.document.querySelector(browserPageBlockers(this.state?.nativeMenus)));this.root.dataset.tabId=t.id;this.root.dataset.url=t.url;this.root.dataset.sessionId=this.sessionId
   for(const [id,page]of this.activityPages){if(!this.state.tabs.some(tab=>tab.id===id&&tab.page===page.page)){page.dispose();this.activityPages.delete(id)}else page.preserve()}
   const activity=t.page?this.activityPage(t):undefined;activity?.update(this.state)
   // Native menus and webpages can own focus while this document retains an activeElement.
