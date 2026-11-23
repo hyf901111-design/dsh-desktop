@@ -13,6 +13,7 @@ import {
   room,
   callRoom,
   notificationsPage,
+  submitProblemFeedback,
   flushOutbox
 } from './repository.js'
 import {
@@ -150,6 +151,14 @@ export async function handleRequest(request, env, ctx) {
         fail('INVALID_CURSOR')
       ctx.waitUntil(flushOutbox(env).catch(() => {}))
       return json(await notificationsPage(env, user.id, after, pageSize))
+    }
+    if (path === '/notifications/feedback' && request.method === 'POST') {
+      const input = await jsonBody(request, 16384)
+      if (Object.keys(input).some(key => !['operationId', 'message'].includes(key))) fail('INVALID_INPUT')
+      const message = requiredString(input.message, 2000).trim()
+      const id = await submitProblemFeedback(env, user, operationId(input.operationId), message)
+      ctx.waitUntil(flushOutbox(env).catch(() => {}))
+      return json({ notificationId: id })
     }
     if (path === '/notifications/read' && request.method === 'POST') {
       const input = await jsonBody(request, 32768)

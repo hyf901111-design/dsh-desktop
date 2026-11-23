@@ -12,6 +12,7 @@ export type CollaborationEndpoint =
   | { kind: 'board.command'; boardId: string; body: Record<string, unknown> }
   | { kind: 'receipt'; boardId: string; operationId: string }
   | { kind: 'notifications.list'; after: number; limit?: number }
+  | { kind: 'notifications.feedback'; operationId: string; message: string }
   | { kind: 'notifications.read'; notificationIds?: string[] }
   | {
       kind: 'invitation.respond'
@@ -144,6 +145,13 @@ export function collaborationRequestSpec(
         path: `/notifications?after=${e.after}&limit=${e.limit ?? 50}`,
         method: 'GET'
       }
+      break
+    case 'notifications.feedback':
+      exact(e, ['kind', 'operationId', 'message'])
+      safeId(e.operationId)
+      if (typeof e.message !== 'string' || !e.message.trim() || e.message.length > 2000)
+        throw new ResearchBoardsError('INVALID_REQUEST')
+      spec = json('/notifications/feedback', { operationId: e.operationId, message: e.message })
       break
     case 'notifications.read':
       exact(e, ['kind', 'notificationIds'])

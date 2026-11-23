@@ -278,3 +278,40 @@ it('disables opening an invite that expires while it is being accepted', async (
   expect(f.w.document.querySelector('.srb-notification-error')).toBeNull()
   expect(f.button('标记已读')).not.toBeNull()
 })
+
+it('keeps a failed feedback draft, retries the same submission, and displays receipt after success', async () => {
+  const f = fixture()
+  await tick()
+  f.bell().click()
+  f.button('问题反馈').click()
+  const input = f.w.document.querySelector('textarea')!
+  const form = input.closest('form')!
+  expect(form.querySelector('button[type=submit]')?.hasAttribute('disabled')).toBe(true)
+  input.value = '打开笔记时图片消失'
+  input.dispatchEvent(new f.w.Event('input'))
+  f.invoke.mockRejectedValueOnce(Error('offline'))
+  form.dispatchEvent(new f.w.Event('submit', { cancelable: true }))
+  await tick()
+  expect(input.value).toBe('打开笔记时图片消失')
+  expect(form.textContent).toContain('发送失败')
+  form.dispatchEvent(new f.w.Event('submit', { cancelable: true }))
+  await tick()
+  expect(f.invoke.mock.calls[0]).toEqual(['notifications.feedback', { operationId: expect.any(String), message: input.value }])
+  expect(f.invoke.mock.calls[1]).toEqual(f.invoke.mock.calls[0])
+  expect(f.w.document.querySelector('.srb-notifications-toast')?.textContent).toBe('反馈已发送给 hyf90')
+})
+
+it('shows the original feedback as plain multiline text and supports marking it read', async () => {
+  const message = '图片没有显示\n<em>详情</em>'
+  const f = fixture([{ ...note('feedback', null, 'accepted'), type: 'feedback', invitation: undefined, message,
+    actor: { userId: 'sender', username: '提交人' }, boardId: '', boardTitle: '问题反馈' }])
+  await tick()
+  f.bell().click()
+  const row = f.w.document.querySelector('[data-problem-feedback]')!
+  expect(row.textContent).toContain('提交人 的问题反馈')
+  expect(row.textContent).toContain(message)
+  expect(row.querySelector('em')).toBeNull()
+  row.querySelector('button')!.click()
+  await tick()
+  expect(f.state.notifications.unreadCount).toBe(0)
+})
