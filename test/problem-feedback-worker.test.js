@@ -16,7 +16,7 @@ it('delivers feedback only to hyf90, preserves it across reconnects and deduplic
   let socket
   try {
     const db = await worker.getD1Database('ACCOUNTS_DB')
-    for (const name of ['0001_accounts', '0002_research_boards']) {
+    for (const name of ['0001_accounts', '0002_research_boards', '0007_feedback_images']) {
       const sql = await readFile('services/accounts/migrations/' + name + '.sql', 'utf8')
       await db.exec(sql.replaceAll('\n', ' '))
     }
@@ -57,6 +57,27 @@ it('delivers feedback only to hyf90, preserves it across reconnects and deduplic
     expect((await call(sender, { ...input, message: 'different' })).status).toBe(409)
     await call(recipient, { kind: 'notifications.read', notificationIds: [created.notificationId] })
     expect((await list(recipient)).unreadCount).toBe(0)
+
+    const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aQV8AAAAASUVORK5CYII='
+    const attached = { ...input, operationId: 'retry-image', message: '', images: [png, png] }
+    const uploads = await Promise.all([call(sender, attached), call(sender, attached)])
+    expect(uploads.map(response => response.status)).toEqual([200, 200])
+    const receipt = await uploads[0].json()
+    expect(await uploads[1].json()).toEqual(receipt)
+    const inbox = await list(recipient)
+    const record = inbox.notifications.find(item => item.notificationId === receipt.notificationId)
+    expect(record.imageHashes).toHaveLength(2)
+    expect(JSON.stringify(inbox)).not.toContain('base64')
+    const image = { kind: 'notifications.feedbackImage', notificationId: receipt.notificationId, position: 1 }
+    expect(await (await call(recipient, image)).json()).toEqual({ image: png })
+    expect((await call(sender, image)).status).toBe(404)
+    expect((await call(recipient, { ...image, position: 2 })).status).toBe(404)
+    expect((await call(sender, { ...attached, images: [png] })).status).toBe(409)
+    const invalid = await worker.dispatchFetch(origin + '/v1/collaboration/notifications/feedback', {
+      method: 'POST', headers: { authorization: 'Bearer ' + sender, 'content-type': 'application/json' },
+      body: JSON.stringify({ message: '', operationId: 'bad-image', images: ['data:image/png;base64,PGh0bWw+'] })
+    })
+    expect(invalid.status).toBe(400)
   } finally {
     socket?.close()
     await worker.dispose()

@@ -275,6 +275,26 @@ it('keeps only the newest browser popup and never revives a cancelled menu',asyn
  }finally{await page.close()}
 })
 
+it('keeps feedback file selection and pasted screenshots in the main renderer',async()=>{
+ const {page}=await fixture()
+ try {
+  await page.evaluate(()=>window.setBrowserState({nativeMenus:true}))
+  await liveWebsite(page)
+  await page.evaluate(()=>{
+   const panel=document.createElement('div')
+   panel.className='srb-notifications'
+   const form=document.createElement('form')
+   form.className='srb-problem-form'
+   panel.append(form)
+   document.body.append(panel)
+  })
+  const visible=()=>page.evaluate(()=>window.browserCalls.filter(([method])=>method==='layout').at(-1)?.[1].visible)
+  await expect.poll(visible).toBe(false)
+  await page.locator('.srb-problem-form').evaluate(form=>form.remove())
+  await expect.poll(visible).toBe(true)
+ } finally { await page.close() }
+})
+
 it('keeps conversation image previews in the attachment renderer and restores the same native webpage on close',async()=>{
  const {page,errors}=await fixture()
  try{

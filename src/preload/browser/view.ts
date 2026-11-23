@@ -7,14 +7,14 @@ import type {WorkspaceSurfaceHost} from '../workspace-surface-host'
 import {clipWorkspaceTabs,mountWorkspaceTopbarStyles,reserveWorkspaceRightControl,revealWorkspaceTab,workspaceBackButton} from '../workspace-topbar'
 import {canNavigateGlobalWorkspace, navigateGlobalWorkspace, sessionWorkspaceViews, navigateWorkspaceView, observeWorkspaceViews, setWorkspaceViewsExpanded, takeWorkspaceViewsExpansion} from '../workspace-view-shortcuts'
 import {browserIcons} from './icons'
-import {imagePreviewDialogSelector} from './overlay-preflight'
+import {rendererAttachmentSurfaceSelector} from './overlay-preflight'
 import css from './style.css?inline'
 const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!))
 const icon=(name:keyof typeof browserIcons)=>`<i class="eb-icon" aria-hidden="true" style="--eb-icon:url('${browserIcons[name].replaceAll("'",'%27').replaceAll('\"','%22')}')"></i>`
 const button=(action:string,label:string,name?:keyof typeof browserIcons,disabled=false)=>`<button type="button" class="eb-icon-button" data-action="${action}" aria-label="${esc(label)}" title="${esc(label)}" ${disabled?'disabled':''}>${name?icon(name):esc(label)}</button>`
 const menuItem=(action:string,label:string,name:keyof typeof browserIcons,key='',disabled=false)=>`<button type="button" role="menuitem" class="eb-menu-item" data-action="${action}" ${disabled?'disabled':''}>${icon(name)}<span>${label}</span><kbd>${key}</kbd></button>`
 const hostname=(url:string)=>{try{return new URL(url).hostname}catch{return url}}
-const browserPageBlockers='dialog[open],.VOzbGW_overlay,[data-ework-web-link-error],'+imagePreviewDialogSelector
+const browserPageBlockers='dialog[open],.VOzbGW_overlay,[data-ework-web-link-error],'+rendererAttachmentSurfaceSelector
 // The shared Figma rules own the board menu's material, type and row geometry.
 // These structural rules also work before the research module mounts its CSS.
 const pageContextCss='[data-browser-page-context-menu]{position:fixed;z-index:3000;max-width:calc(100vw - 24px);max-height:calc(100vh - 24px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}[data-browser-page-context-menu]>button{display:flex;align-items:center;gap:20px;box-sizing:border-box;width:100%;border:0;border-radius:6px;background:transparent;color:inherit;text-align:left;cursor:pointer}[data-browser-page-context-menu]>button:disabled{opacity:.45;cursor:default}[data-browser-page-context-menu]>[role=separator]{height:1px;margin:5px;background:var(--odyssey-menu-border)}'

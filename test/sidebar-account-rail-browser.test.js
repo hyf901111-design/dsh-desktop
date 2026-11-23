@@ -17,9 +17,9 @@ beforeAll(async()=>{
  // controls themselves come from the real preload helpers below; only I/O is fixed.
  const style=document.createElement('style');style.textContent=scheduledStyles;document.head.append(style)
  let collapsed=true;const root=createRoot(document.getElementById('root'));const render=()=>flushSync(()=>root.render(<div data-sidebar-collapsed={collapsed?'true':undefined} style={{width:collapsed?80:260,height:'100vh'}}><native.__Root collapsed={collapsed} width={260} t={key=>key} toggleSidebar={()=>{collapsed=!collapsed;render()}} startSession={()=>{}} startResearchSession={()=>{}} renderSlot={name=>name==='sidebar.settings'?<div data-slot='sidebar.settings'><button className='VOzbGW_trigger' aria-label='原生设置挂载点'>设置</button></div>:name==='sidebar.workspaces'?<div style={{height:80}}>QA workspace</div>:null}/></div>));render()
- const state={eventSeq:1,account:{user:{userId:'qa-account',publicId:'QA12345',username:'H'}},notifications:{unreadCount:0,notifications:[]}},bridge={getSnapshot:async()=>state,subscribe:()=>()=>{},invoke:async()=>({ok:true})};const offAccount=mountAccountUi(document,async()=>({user:{id:'qa-account',username:'H',createdAt:1}}),bridge),offBell=mountResearchBoardNotifications(document,bridge)
- window.railFixture={setCollapsed(value){collapsed=value;render()},dispose(){offBell();offAccount();root.unmount()}};
- `},bundle:true,jsx:'automatic',platform:'browser',format:'iife',write:false,logLevel:'silent',loader:{'.css':'empty','.svg':'dataurl'},plugins:[{name:'raw-assets',setup(b){b.onResolve({filter:/\?(raw|url&inline)$/},args=>({path:resolve(args.resolveDir,args.path.replace(/\?(raw|url&inline)$/,'')),namespace:'rail-assets'}));b.onLoad({filter:/.*/,namespace:'rail-assets'},async args=>{const bytes=await readFile(args.path);return{contents:JSON.stringify(args.path.endsWith('.png')?'data:image/png;base64,'+bytes.toString('base64'):bytes.toString('utf8')),loader:'json'}})}}]})).outputFiles[0].text
+ let receiveNotification;const state={eventSeq:1,account:{user:{userId:'qa-account',publicId:'QA12345',username:'H'}},notifications:{unreadCount:0,notifications:[]}},bridge={getSnapshot:async()=>state,subscribe:listener=>{receiveNotification=listener;return()=>{}},invoke:async(action,input)=>{if(action==='notifications.feedbackImage')return {ok:true,value:{image:window.lastNotificationAction.input.images[input.position]}};window.lastNotificationAction={action,input};return {ok:true}}};const offAccount=mountAccountUi(document,async()=>({user:{id:'qa-account',username:'H',createdAt:1}}),bridge),offBell=mountResearchBoardNotifications(document,bridge)
+ window.railFixture={receiveFeedback(){receiveNotification({type:'state',state:{...state,eventSeq:2,notifications:{notifications:[{notificationId:'received-image',eventVersion:1,type:'feedback',boardId:'',boardTitle:'问题反馈',message:'',imageHashes:['hash'],createdAt:1,readAt:2}]}}})},setCollapsed(value){collapsed=value;render()},dispose(){offBell();offAccount();root.unmount()}};
+ `},bundle:true,jsx:'automatic',platform:'browser',format:'iife',write:false,logLevel:'silent',loader:{'.css':'empty','.svg':'dataurl'},plugins:[{name:'raw-assets',setup(b){b.onResolve({filter:/\.css\?inline$/},args=>({path:resolve(args.resolveDir,args.path.split('?')[0]),namespace:'rail-css'}));b.onLoad({filter:/.*/,namespace:'rail-css'},async args=>({contents:await readFile(args.path,'utf8'),loader:'text'}));b.onResolve({filter:/\?(raw|url&inline)$/},args=>({path:resolve(args.resolveDir,args.path.replace(/\?(raw|url&inline)$/,'')),namespace:'rail-assets'}));b.onLoad({filter:/.*/,namespace:'rail-assets'},async args=>{const bytes=await readFile(args.path);return{contents:JSON.stringify(args.path.endsWith('.png')?'data:image/png;base64,'+bytes.toString('base64'):bytes.toString('utf8')),loader:'json'}})}}]})).outputFiles[0].text
  const pw=await import(pathToFileURL('/Users/heyafeng/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js').href);browser=await(pw.default??pw).chromium.launch({headless:true,executablePath:'/Users/heyafeng/Library/Caches/ms-playwright/chromium_headless_shell-1223/chrome-headless-shell-mac-arm64/chrome-headless-shell'})
 },30000)
 afterAll(()=>browser?.close())
@@ -45,3 +45,52 @@ it.each(['light','dark'])('keeps the expanded native footer unchanged, preserves
   await page.locator('.sherlock-account-button').click();await page.locator('.sherlock-account-menu').waitFor();expect(await page.locator('.sherlock-account-button').getAttribute('aria-expanded')).toBe('true');await page.locator('.sherlock-account-button').click();await page.locator('.srb-bell').click();await page.locator('.srb-notifications').waitFor();expect(await page.locator('.srb-bell').getAttribute('aria-expanded')).toBe('true');expect(errors).toEqual([])
  }finally{await page.evaluate(()=>window.railFixture.dispose());await page.close()}
 },10000)
+
+it('sizes notification actions to their labels and lets users pick, paste and send feedback screenshots', async () => {
+ const {page, errors} = await fixture('dark')
+ try {
+  await page.getByRole('button', {name:'消息中心'}).click()
+  const center = page.locator('.srb-notifications')
+  const report = center.getByRole('button', {name:'问题反馈'})
+  const header = await report.evaluate(el => {
+   const range = document.createRange()
+   range.selectNodeContents(el)
+   const text = range.getBoundingClientRect()
+   const button = el.getBoundingClientRect()
+   return { inside: text.left >= button.left && text.right <= button.right,
+    gap: el.nextElementSibling.getBoundingClientRect().left - button.right,
+    consistent: getComputedStyle(el).fontSize === getComputedStyle(el.nextElementSibling).fontSize }
+  })
+  expect(header.inside && header.consistent).toBe(true)
+  expect(header.gap).toBeGreaterThan(0)
+  await report.click()
+  expect(await center.textContent()).not.toContain('hyf90')
+  const png = await page.evaluate(() => {
+   const canvas = document.createElement('canvas')
+   return canvas.toDataURL('image/png').split(',')[1]
+  })
+  await center.locator('input[type=file]').setInputFiles({ name:'桌面.png', mimeType:'image/png', buffer:Buffer.from(png,'base64') })
+  await center.getByAltText('附图 1').waitFor()
+  await center.locator('textarea').evaluate((el, data) => {
+   const file = new File([Uint8Array.from(atob(data), c => c.charCodeAt(0))], '截图.png', {type:'image/png'})
+   const clipboardData = new DataTransfer()
+   clipboardData.items.add(file)
+   el.dispatchEvent(new ClipboardEvent('paste', {bubbles:true, cancelable:true, clipboardData}))
+  }, png)
+  await center.getByAltText('附图 2').waitFor()
+  await center.getByRole('button', {name:'移除图片 1'}).click()
+  expect(await center.locator('.srb-problem-previews img').count()).toBe(1)
+  await center.getByRole('button', {name:'发送反馈'}).click()
+  await report.waitFor()
+  expect(await page.evaluate(()=>window.lastNotificationAction)).toMatchObject({
+   action:'notifications.feedback', input:{message:'',images:['data:image/png;base64,'+png]}
+  })
+  await page.evaluate(()=>window.railFixture.receiveFeedback())
+  await center.getByRole('button', {name:'查看图片 1'}).click()
+  const image = page.getByRole('dialog', {name:'查看图片 1'}).locator('.srb-dialog-body img')
+  await expect.poll(()=>image.evaluate(el=>el.complete && el.naturalWidth)).toBeGreaterThan(0)
+  await page.keyboard.press('Escape')
+  await image.waitFor({state:'detached'})
+  expect(errors).toEqual([])
+ } finally { await page.close() }
+})

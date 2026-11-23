@@ -1,5 +1,5 @@
 import notificationCenterStyles from '../notification-center.css?inline'
-import {imagePreviewDialogSelector} from './overlay-preflight'
+import {rendererAttachmentSurfaceSelector} from './overlay-preflight'
 
 type MenuBridge={request(method:string,input?:Record<string,unknown>):Promise<any>;subscribeAction(listener:(value:any)=>void):()=>void}
 type Projected={element:HTMLElement;aria:string|null;inert:boolean}
@@ -96,9 +96,8 @@ export class NativeBrowserMenuProjection{
  }
  private async sync(){
   if(this.disposed)return
-  // The attachment and its object URL belong to the main renderer. Keep
-  // the full-window preview there while the webpage view is covered.
-  if(this.document.querySelector(imagePreviewDialogSelector)){this.reset();return}
+  // Keep file selection, pasted images and previews in the renderer that owns them.
+  if(this.document.querySelector(rendererAttachmentSurfaceSelector)){this.reset();return}
   const browser=this.document.querySelector<HTMLElement>('.eb-root:not([hidden])[data-native-menus=true][data-native-page=true]'),viewport=browser?.querySelector('[data-browser-viewport]')?.getBoundingClientRect()
   if(!browser||!viewport){this.context='';this.reset();return}
   const context=JSON.stringify([browser.dataset.tabId,browser.dataset.url,browser.dataset.sessionId]);if(context!==this.context){this.reset();this.context=context}

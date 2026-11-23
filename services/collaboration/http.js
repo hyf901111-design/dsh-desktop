@@ -1,3 +1,4 @@
+import { MAX_FEEDBACK_IMAGE_URL, MAX_FEEDBACK_IMAGES, validFeedbackImages } from '../../packages/dsh-research-collaboration/feedback-images.js'
 import { cleanupKnowledgeUploads, handleKnowledgeRequest } from './knowledge.js'
 import { authenticate, hash } from '../accounts/auth.js'
 import { LIMITS } from '../../packages/dsh-research-collaboration/protocol.js'
@@ -153,12 +154,23 @@ export async function handleRequest(request, env, ctx) {
       return json(await notificationsPage(env, user.id, after, pageSize))
     }
     if (path === '/notifications/feedback' && request.method === 'POST') {
-      const input = await jsonBody(request, 16384)
-      if (Object.keys(input).some(key => !['operationId', 'message'].includes(key))) fail('INVALID_INPUT')
-      const message = requiredString(input.message, 2000).trim()
-      const id = await submitProblemFeedback(env, user, operationId(input.operationId), message)
+      const input = await jsonBody(request, 16384 + MAX_FEEDBACK_IMAGES * MAX_FEEDBACK_IMAGE_URL)
+      const images = input.images ?? []
+      if (Object.keys(input).some(key => !['operationId', 'message', 'images'].includes(key)) ||
+          !validFeedbackImages(images) || typeof input.message !== 'string' || input.message.length > 2000) fail('INVALID_INPUT')
+      const message = input.message.trim()
+      if (!message && !images.length) fail('INVALID_INPUT')
+      const id = await submitProblemFeedback(env, user, operationId(input.operationId), message, images)
       ctx.waitUntil(flushOutbox(env).catch(() => {}))
       return json({ notificationId: id })
+    }
+    const feedbackImage = path.match(/^\/notifications\/feedback\/([a-f0-9]{64})\/images\/(\d)$/)
+    if (feedbackImage && request.method === 'GET') {
+      const row = await sql(env, `SELECT i.image FROM research_feedback_images i
+        JOIN research_notifications n ON n.id=i.notification_id
+        WHERE n.recipient_id=? AND n.id=? AND i.position=?`, user.id, feedbackImage[1], Number(feedbackImage[2])).first()
+      if (!row) fail('NOT_FOUND', 404)
+      return json({ image: row.image })
     }
     if (path === '/notifications/read' && request.method === 'POST') {
       const input = await jsonBody(request, 32768)

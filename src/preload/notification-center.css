@@ -81,7 +81,8 @@ html.dark .srb-notifications,
   padding: 0 20px;
 }
 .srb-notifications > header h2 { flex: 1; margin: 0; font-size: 16px; font-weight: 500; line-height: 24px; }
-.srb-notifications > header button.srb-notifications-read {
+.srb-notifications > header button.srb-notifications-text-action {
+  flex: none;
   width: auto; height: 28px; padding: 4px; font-size: 12px; line-height: 20px; color: var(--center-muted);
 }
 .srb-notifications > header button.srb-notifications-close {
@@ -240,4 +241,15 @@ body[data-workspace-surface=browser] .srb-notifications-toast { top: 64px; }
 .srb-problem-form textarea { box-sizing: border-box; width: 100%; flex: 1; min-height: 64px; resize: none; border: 1px solid var(--center-line); border-radius: 8px; padding: 10px; background: var(--center-bg); color: var(--center-text); font-family: inherit; font-size: 13px; line-height: 20px; }
 .srb-problem-form textarea:focus-visible { outline: 1px solid var(--center-focus); }
 .srb-problem-form p { margin: 0; color: var(--center-muted); }
-.srb-problem-form > div { display: flex; justify-content: flex-end; gap: 12px; }
+.srb-problem-actions { display: flex; justify-content: flex-end; gap: 12px; }
+
+.srb-problem-form p:empty, .srb-problem-previews:empty { display: none; }
+.srb-problem-actions > button:first-child { margin-right: auto; }
+.srb-problem-previews, .srb-feedback-images { display: flex; flex-wrap: wrap; gap: 8px; }
+.srb-problem-previews > span { position: relative; }
+.srb-problem-previews img { display: block; width: 52px; height: 44px; object-fit: cover; border-radius: 6px; }
+.srb-problem-previews button { position: absolute; top: 1px; right: 1px; width: 20px; height: 20px; padding: 0; background: #202020; color: white; }
+.srb-feedback-images { grid-column: 1 / -1; }
+.srb-feedback-images button { background: var(--center-hover); }
+.srb-dialog.srb-feedback-image-dialog { width: fit-content; max-width: calc(100vw - 32px); }
+.srb-feedback-image-dialog .srb-dialog-body img { display: block; max-width: 100%; max-height: calc(100dvh - 160px); object-fit: contain; }

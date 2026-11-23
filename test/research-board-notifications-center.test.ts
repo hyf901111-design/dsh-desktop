@@ -298,7 +298,7 @@ it('keeps a failed feedback draft, retries the same submission, and displays rec
   await tick()
   expect(f.invoke.mock.calls[0]).toEqual(['notifications.feedback', { operationId: expect.any(String), message: input.value }])
   expect(f.invoke.mock.calls[1]).toEqual(f.invoke.mock.calls[0])
-  expect(f.w.document.querySelector('.srb-notifications-toast')?.textContent).toBe('反馈已发送给 hyf90')
+  expect(f.w.document.querySelector('.srb-notifications-toast')?.textContent).toBe('反馈已发送')
 })
 
 it('shows the original feedback as plain multiline text and supports marking it read', async () => {
