@@ -180,7 +180,7 @@ def attachments(page, archive, extra, objects, y):
             page.text(
                 "meeting-document-reference",
                 x + 42,
-                y + 37,
+                y + 42,
                 slot - 49,
                 16,
                 reference,

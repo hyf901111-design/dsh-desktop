@@ -1,6 +1,8 @@
 -- Export the review PDF to a fresh PowerPoint-owned temporary directory.
 on run argv
-    if (count argv) is not 1 then error "需要成品 PPTX 的绝对路径"
+    if (count argv) < 1 or (count argv) > 2 then error "需要成品 PPTX 的绝对路径"
+    set closeSnapshot to false
+    if (count argv) is 2 then set closeSnapshot to (item 2 of argv is "--close-snapshot")
     set inputPath to POSIX path of ((POSIX file (item 1 of argv)) as alias)
     ignoring case
         if inputPath does not end with ".pptx" then error "请检查 PPTX 路径"
@@ -30,7 +32,11 @@ on run argv
                 set end of visited to observed
             end repeat
             save deck in (POSIX file pdfPath) as save as PDF
-            if full name of active presentation is inputPath then go to slide view of active window number 1
+            if closeSnapshot then
+                close deck saving no
+            else if full name of active presentation is inputPath then
+                go to slide view of active window number 1
+            end if
             return {pdfPath, visited}
         end tell
     end timeout
