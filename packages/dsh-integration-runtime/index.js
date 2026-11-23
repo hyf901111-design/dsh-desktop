@@ -6,7 +6,7 @@ import { createToolProxy, toolRegistrationName, validateToolBinding } from './to
 import { registerManagedSkillProvider } from './skill-provider.js'
 import { validateManagedSkills, enabledManagedSkill, managedSkillInvocationName, stableBuiltinSkillAlias, stableBuiltinSkillAliases } from './skill-policy.js'
 import { projectMcpInputSchema } from './schema-projection.js'
-import { financeSkillGuidance, equityResearchSkillGuidance } from './skill-priority.js'
+import { financeSkillGuidance, equityResearchSkillGuidance, presentationSkillGuidance } from './skill-priority.js'
 import { financialSourceGuidance } from './financial-source-policy.js'
 
 export const name = 'ework-integrations'
@@ -235,6 +235,7 @@ export function createIntegrationRuntime(ctx, { env = process.env, fetch: fetchR
     const guidance = [
       {name:'ework:financial-source-policy',text:financialSourceGuidance(managed)},
       {name:'sherlock:computer-use-selection',text:managed.some(tool => tool.name === COMPUTER_USE_TOOL) ? COMPUTER_USE_GUIDANCE : ''},
+      {name:'ework:presentation-skill',text:skillAvailable?presentationSkillGuidance(runtime.snapshot):''},
       {name:'ework:finance-skill',text:skillAvailable?financeSkillGuidance(runtime.snapshot):''},
       {name:'ework:equity-research-skill',text:skillAvailable?equityResearchSkillGuidance(runtime.snapshot):''}
     ]

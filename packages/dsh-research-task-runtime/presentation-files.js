@@ -42,7 +42,7 @@ async function policy(ctx,owner,root){
 }
 
 function pathsFor(args,root,cwd){
- if(!args||Object.getPrototypeOf(args)!==Object.prototype||Object.keys(args).length!==1||!Array.isArray(args.paths)||args.paths.length<1||args.paths.length>4)throw Error('请明确提供当前工作区的 PPTX/PDF 文件路径。')
+ if(!args||Object.getPrototypeOf(args)!==Object.prototype||Object.keys(args).some(key=>!['paths','complete'].includes(key))||('complete' in args && typeof args.complete!=='boolean')||!Array.isArray(args.paths)||args.paths.length<1||args.paths.length>4)throw Error('请明确提供当前工作区的 PPTX/PDF 文件路径。')
  const result=[]
  for(const path of args.paths){
   if(typeof path!=='string'||!path||path.length>2048||path!==path.trim()||/[\p{Cc}\p{Cf}\\]/u.test(path)||/^[A-Za-z][\w+.-]*:|^~|^\/\//.test(path)||path.split('/').some(part=>part==='..')||!/\.(?:pptx|pdf)$/i.test(path))throw Error('只接受工作区内无路径穿越的 PPTX/PDF 文件路径。')
@@ -87,7 +87,7 @@ export function registerPresentationFiles(ctx,{env=process.env}={}){
  const unregister=ctx.tools.register(defineTool({
   name:PRESENTATION_FILES_TOOL,
   description:'在当前用户主会话登记本轮指定的 PPTX/PDF，最终显示文件卡片。保存后调用一次，paths 指定当前工作区内一个 PPTX 和/或一个 PDF；不扫描旧稿、不写文件、不启动桌面操作。宿主核对普通文件与真实格式。登记只表示可读取，质量门禁及原生验收仍须如实说明。目标自动续轮改用最终 Markdown 文件链接，不反复调用。',
-  parameters:{paths:{type:'array',required:true,items:{type:'string'},description:'本轮交付文件的精确相对或绝对路径，最多一个 PPTX 和一个 PDF。'}},
+  parameters:{complete:{type:'boolean',description:'仅当本轮所有交付和用户要求的核验均已完成时置 true。登记成功后结束本轮，失败仍可修正；中间预览或还有其他工作时省略。'},paths:{type:'array',required:true,items:{type:'string'},description:'本轮交付文件的精确相对或绝对路径，最多一个 PPTX 和一个 PDF。'}},
   output:{schema:{type:'string'},render:(_args,value)=>[{type:'text',text:value}]},
   presentCall:()=>({card:'generic',kind:'read',title:'登记演示文稿交付文件'}),
   async execute(args,exec){
@@ -126,6 +126,7 @@ export function registerPresentationFiles(ctx,{env=process.env}={}){
     if(await realpath(owner.cwd)!==root)throw failure()
     for(const expected of identities){const latest=await lstat(expected.path);if(!latest.isFile()||latest.isSymbolicLink()||latest.dev!==expected.dev||latest.ino!==expected.ino||latest.size!==expected.size||latest.mtimeMs!==expected.mtimeMs||await realpath(expected.path)!==expected.path)throw failure()}
     check()
+    if(args.complete===true)exec.concludeTurn()
     return JSON.stringify({kind:'ework-presentation-files',version:1,tool:PRESENTATION_FILES_TOOL,ok:true,status:'available',sessionId:owner.agent.id,turnId:owner.turn,callId:exec.callId,qualityVerification:'not-evaluated',files})
    }finally{clearTimeout(timer);exec.signal?.removeEventListener('abort',abort);active.delete(controller)}
   }

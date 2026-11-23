@@ -97,7 +97,7 @@ describe('client-owned bundled PPT skill integration', () => {
     const service = await IntegrationService.open({ root, encryption, getOwnerId: () => 'account-one', bundledSkillDirectory })
     cleanups.push(async () => { await service.dispose(); await rm(root, { recursive: true, force: true }) })
     const row = (await service.request({ type: 'snapshot' })).snapshot.rows.find(item => item.id === builtinId)
-    expect(row).toMatchObject({ name: 'PPT制作助手', source: 'EWork 内置 · v1.1.4', enabled: true, toggleable: true })
+    expect(row).toMatchObject({ name: 'PPT制作助手', source: 'EWork 内置 · v1.2.0', enabled: true, toggleable: true })
     const reply = await service.request({ type: 'skill-detail', id: row.id, revision: row.revision })
     expect(reply.content).toBe(await readFile(join(bundledSkillDirectory, 'efund-ppt-maker/SKILL.md'), 'utf8'))
     expect(reply.content).toContain('scripts/layout_edit.py')
