@@ -8,6 +8,7 @@ function researchPartialDeliveryFields(receipt) {
 
 function researchRetainedDeliveryFields(spec, receipt, node) {
   const delivery = researchPartialDeliveryFields(receipt);
+  if (delivery.deliveryStatus && node?.workbenchId && workbenchReadingScopeRestored(spec, {...node, ...delivery})) return {};
   if (delivery.deliveryStatus || !node?.workbenchId || !spec) return delivery;
   const mode = researchWorkbenchRecoveryMode({workbenchId:node.workbenchId, containerPrompt:node.containerPrompt, containerSpec:spec});
   if (!mode) return delivery;
@@ -71,7 +72,7 @@ function ResearchDataFallbackContent({ node, children }) {
 }
 
 export function patchResearchPartialDelivery(source) {
-  const marker = '/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V3 */';
+  const marker = '/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V4 */';
   if (source.includes(marker)) return source;
   const replace = (before, after) => {
     if (source.split(before).length !== 2) throw Error('部分交付回执无法定位原生入口：' + before.slice(0, 90));
@@ -83,7 +84,7 @@ export function patchResearchPartialDelivery(source) {
   const preview = source.includes(basePreview)
     ? basePreview
     : basePreview.replace('visible,', 'visible, officePreview,');
-  if (!source.includes('/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V2 */')) {
+  if (!/\/\* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V[23] \*\//u.test(source)) {
     replace(preview, '(0, react_jsx_runtime.jsx)(ResearchDataFallbackContent, { node, children: ' + preview + ' })');
   }
   const upgradeReceipts = () => {
@@ -97,12 +98,13 @@ export function patchResearchPartialDelivery(source) {
     replace('researchContainerDeliveryFields(spec, inspection, completedAt)', 'researchContainerDeliveryFields(spec, inspection, completedAt, current)');
     return source;
   };
-  const old = source.search(/\/\* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V[12] \*\//u);
+  const old = source.search(/\/\* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V[123] \*\//u);
   if (old >= 0) {
+    const currentReceipts = source.includes('/* SHERLOCK_WORKBENCH_PARTIAL_DELIVERY_V3 */');
     const end = source.indexOf(canonical, old);
     if (end < 0) throw Error('部分交付回执升级入口缺失');
     source = source.slice(0, old) + marker + '\n' + definitions + '\n' + source.slice(end);
-    return upgradeReceipts();
+    return currentReceipts ? source : upgradeReceipts();
   }
   replace(canonical, marker + '\n' + definitions + '\n' + canonical);
   replace('...(containerSpec === null ? {} : { containerSpec }),',

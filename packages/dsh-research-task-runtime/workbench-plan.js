@@ -35,6 +35,7 @@ import {TABLE_INPUT_GUIDANCE} from './template-data-contract.js';
 import {authoredPrototypeEvidence} from './workbench-prototype-evidence.js';
 import {compileComponentContent} from './component-content.js';
 import {workbenchReadingScopeCount} from './workbench-panel-delivery.js';
+import {groupedQuantityData,workbenchGroupedQuantityIssue} from './workbench-grouped-quantity.js';
 import {normalizeKeyedTableProjection} from './table-projection.js';
 import {applyAuthoredFinanceLedger,authoredFinanceLedger, completeInlineFinancePlan,expandMappedWorkbenchChart,labelRequestedReportSeries,normalizeSharedChart,normalizeSharedKpi,normalizeSpecializedMarketData,preserveRequestedNativePresentation} from './workbench-native-presentation.js';
 import {marketPanelSchema} from './market-artifact.js';
@@ -162,8 +163,15 @@ export function workbenchScopeDeficits(plan) {
             (recordScope(scope)||productSourceScope(scope)||kpiCount!==null&&scope.unit==='只'&&/产品|基金|标的|证券|港股|港交所|ETF/iu.test(scope.entity))&&
             !/逐条|逐项|逐只|每条|每只|任务明细|原始明细|记录列表/u.test(panel.prompt);
         const inherited=aggregate?[]:original.filter(scope=>!(coveredFunds&&scope.unit==='只'&&/基金/u.test(scope.entity))&&(!scope.entity||/^(?:记录|条目|对象|数据)$/u.test(scope.entity)||target.includes(scope.entity)||labels.some(label=>label.length>=2&&!/编号|名称|日期|时间|来源/u.test(label)&&scope.entity.includes(label))));
-        const candidates=[...local.filter(scope=>!aggregate||!scope.sourceOnly&&!scope.reportedCount||productSourceScope(scope)||aggregateSourceScope(scope)).map(scope=>({...scope,visible:!scope.sourceOnly})),...inherited.map(scope=>({...scope,visible:scope.displayCount}))];
+        const groupedData=local.length?groupedQuantityData(panel.artifact):undefined;
+        const localScopes=local.map(scope=>({...scope,groupedIssue:workbenchGroupedQuantityIssue(groupedData,panel.prompt,scope),visible:!scope.sourceOnly}));
+        const candidates=[...localScopes.filter(scope=>scope.groupedIssue!==undefined||!aggregate||!scope.sourceOnly&&!scope.reportedCount||productSourceScope(scope)||aggregateSourceScope(scope)),...inherited.map(scope=>({...scope,visible:scope.displayCount}))];
         for(const scope of candidates){
+            const groupedIssue=scope.groupedIssue;
+            if(groupedIssue!==undefined){
+                if(groupedIssue)deficits.push({panel:panel.title,reason:'scope-validation',message:groupedIssue});
+                continue;
+            }
             const outlineCount=recordScope(scope)?outline?.records:countedOutlineGroup(outline,scope,panel.prompt);
             const kpiItems=scope.unit==='项'&&!scope.entity&&data?.type==='kpi'&&
                 [...panel.prompt.matchAll(/(?:指标(?:卡)?|kpi(?:\s*卡)?)\s*(?:共|含|展示|显示|列出)?\s*(\d+|[一二两三四五六七八九十]+)\s*项/giu)]

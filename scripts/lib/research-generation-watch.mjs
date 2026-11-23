@@ -93,12 +93,12 @@ export function installResearchGenerationWatch({ workspace, sessionId, inspect, 
 export function patchResearchGenerationWatch(source) {
   source = patchGenerationProgressPersistence(source);
   source = patchGenerationTaskReceipts(source);
-  const marker = '/* SHERLOCK_GENERATION_WATCH_RECOVERY_V9 */';
+  const marker = '/* SHERLOCK_GENERATION_WATCH_RECOVERY_V10 */';
   if (source.includes(marker)) return source;
   const ending = '}, [sessionId, workspace, selectionGeneration?.inspect]);';
   const publisher = `(() => { ${researchWorkbenchRecoveryDefinitions()} return ${publishResearchWorkbenchProgress.toString()} })()`;
   const hook = `(0, react.useEffect)(() => {\n${marker}\nif (typeof selectionGeneration?.inspect !== 'function') return;\nreturn (${installResearchGenerationWatch.toString()})({workspace,sessionId,eventTarget:window,documentTarget:document,publishProgress:${publisher},canRetry:()=>typeof selectionGeneration?.generate==='function'&&selectionGeneration.disabled!==true&&(!sherlockShared(sessionId)||sherlockBoardsAdapter?.getView(sessionId)?.permissions.edit===true),inspect:(request,signal)=>selectionGeneration.inspect(request,{signal}),apply:(id,result)=>!sherlockShared(sessionId)&&workspace.applyGenerationInspection(id,result),trace:value=>console.info('[ework-generation-delivery] '+JSON.stringify(value))});\n${ending}`;
-  const prior = Math.max(...['V1','V2','V3','V4','V5','V6','V7','V8'].map(version=>source.indexOf(`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)));
+  const prior = Math.max(...['V1','V2','V3','V4','V5','V6','V7','V8','V9'].map(version=>source.indexOf(`/* SHERLOCK_GENERATION_WATCH_RECOVERY_${version} */`)));
   if (prior >= 0) {
     const start = source.lastIndexOf('(0, react.useEffect)(() => {', prior), end = source.indexOf(ending, prior);
     if (start < 0 || end < 0) throw Error('任务检查恢复无法升级原生轮询生命周期。');

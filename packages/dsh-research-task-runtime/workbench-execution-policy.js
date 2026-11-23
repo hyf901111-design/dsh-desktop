@@ -1,3 +1,4 @@
+import { continuedWorkbench, workbenchOutputLimit } from './workbench-output-limit.js'
 import {disclosureLedgerInput} from './workbench-disclosure-ledger.js'
 import {holdingConcentrationInput} from './workbench-holding-concentration.js'
 import {firstTaskOpening} from './model-task-replies.js'
@@ -250,9 +251,12 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
   const disposeGuard = ctx.tools?.guard?.(exec => {
     const state = currentPlanning(exec.agent)
     if (!state) {
-      if (exec.name === 'research_canvas_use') {
+      if (exec.name === 'research_canvas_use' || exec.name === CREATE_TOOL) {
         const human = workbenchCreationRequest(exec.agent?.session)
-        if (human?.researchComposer && hasAcceptedPlan(exec.agent.session, human.messageId)) return DIRECT_BOARD_PLANNING
+        if (human && hasAcceptedPlan(exec.agent.session, human.messageId)) {
+          if (exec.name === CREATE_TOOL && continuedWorkbench(exec.agent.session, human.messageId)) return WORKBENCH_PLAN_SUBMITTED
+          if (exec.name === 'research_canvas_use' && human.researchComposer) return DIRECT_BOARD_PLANNING
+        }
       }
       return
     }
@@ -341,6 +345,11 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
   })
   const disposeError = ctx.on('agent/error', ({ agent }) => releasePlanning(agent))
   const disposeAgent = ctx.on('agent/disposed', ({ agent }) => releasePlanning(agent))
+  const disposeLimit = ctx.on('agent/output-limit', (payload, next) => {
+    const human = workbenchCreationRequest(payload.agent?.session)
+    const accepted = human && hasAcceptedPlan(payload.agent.session, human.messageId)
+    return workbenchOutputLimit(payload, human, accepted, accepted && !accepted.incomplete && workbenchNeedsInlineBinding(accepted.args, human.text)) ?? next()
+  })
   const disposeStopping = ctx.on('agent/turn-stopping', ({ agent, turn, signal }) => {
     const state = currentPlanning(agent)
     if (!state || signal?.aborted || state.turn !== turn || state.recovered) return
@@ -427,6 +436,12 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
       throw new Error('工作台需求已更新，上一条规划不再发送；请按当前消息继续。')
     }
     const accepted = human && hasAcceptedPlan(agent.session, human.messageId)
+    if (accepted && continuedWorkbench(agent.session, human.messageId)) {
+      releasePlanning(agent)
+      const tools = !accepted.incomplete && workbenchNeedsInlineBinding(accepted.args, human.text)
+        ? request.tools?.filter(tool => tool.name !== CREATE_TOOL && (!human.researchComposer || tool.name !== 'research_canvas_use')) : []
+      return { ...request, tools }
+    }
     if (!human || accepted || !request.tools?.some(tool => tool.name === CREATE_TOOL)) {
       releasePlanning(agent)
       // The host owns the accepted creation. Data binding may still inspect or
@@ -591,6 +606,6 @@ export function registerWorkbenchExecutionPolicy(ctx, { readDocumentEvidence } =
   })
   return () => {
     for (const state of activeScopes) releasePlanning(state.agent)
-    disposePrompt(); disposeRequest(); disposeContext(); disposeGuard?.(); disposeSourceProjection(); disposeEvents(); disposeError(); disposeAgent(); disposeStopping()
+    disposePrompt(); disposeRequest(); disposeContext(); disposeGuard?.(); disposeSourceProjection(); disposeEvents(); disposeError(); disposeAgent(); disposeLimit(); disposeStopping()
   }
 }

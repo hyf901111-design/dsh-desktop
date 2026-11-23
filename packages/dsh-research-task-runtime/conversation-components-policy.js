@@ -1,3 +1,4 @@
+import {interruptedBoardRequest} from './workbench-resume-request.js'
 import {classifyResearchCreationRequest} from './component-delivery-intent.js'
 import {isAdmittedResearchMessage} from './workbench-webpage-delivery.js'
 import {workbenchPlanningSession} from './workbench-prototype-evidence.js'
@@ -38,6 +39,8 @@ export function componentCreationRequest(session) {
   const scope = researchComposer ? 'research' : 'creation'
   const intent = classifyResearchCreationRequest(human?.text, scope)
   if(intent)return delivery(intent, human.text)
+  const interrupted = interruptedBoardRequest(session, human)
+  if (interrupted) return {...human, target:'workbench', text:interrupted.text, resumedFromMessageId:interrupted.message.id}
   // A short steering correction retains this active turn's deliverable. It
   // cannot revive completed rounds, override cancellation or authorize writes.
   const events=session?.events??[],start=events.findLastIndex(event=>event.type==='turn/start')

@@ -1,4 +1,5 @@
 import {load} from 'cheerio'
+import {groupedQuantityData,workbenchGroupedQuantityIssue} from './workbench-grouped-quantity.js'
 import {readTemplateModel} from './component-template-registry.js'
 import {normalizeKeyedTableProjection} from './table-projection.js'
 import {derivedOutline} from './derived-template-contract.js'
@@ -170,7 +171,11 @@ export function componentDeliveryScopeIssue(candidate,request='') {
   identities=dated?data.series?.filter(series=>series.values?.some(value=>typeof value==='number'&&Number.isFinite(value))).map(series=>series.name):data.labels.filter((_,i)=>data.series?.some(series=>typeof series.values?.[i]==='number'&&Number.isFinite(series.values[i])))
   datedIdentities=datedRecordIdentities(data)
  }
+ const groupedData=groupedQuantityData(data)
  for(const {minimum,dated,unit,entity} of minimums.sort((a,b)=>b.minimum-a.minimum)){
+  const groupedIssue=workbenchGroupedQuantityIssue(groupedData,quantitativeRequest,{expected:minimum,unit,entity:entity.split(/[的按]/u)[0]})
+  if(groupedIssue)return groupedIssue
+  if(groupedIssue===null)continue
   const observed=comparisonNamesForScope(data,unit,entity) ?? (isCalendarDateScope(unit,entity)?datedRecordIdentities(data,dateRows,true):dated?datedIdentities??identities:identities)
   if(!Array.isArray(observed))return `交付范围无法核验：本面板要求至少${minimum}个实际条目或对象。切换呈现方式不能取消范围要求；保留真实记录集合，原生模型直接提供 rows/items/series，自定义 HTML 用唯一的 script[type="application/json"][data-component-delivery-records] 保留同一 table/chart/timeline 数据模型并据此绘制，不能用摘要指标个数或自称完成代替对象数。`
   const actual=new Set(observed.filter(v=>v!==undefined&&v!==null&&String(v).trim())).size

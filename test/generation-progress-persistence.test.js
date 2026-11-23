@@ -36,6 +36,22 @@ describe('生成进度的瞬态更新与持久结果',()=>{
   expect(node.generationStatus).toBe('completed')
   expect(node.lastSuccessfulAt).toBeUndefined()
  })
+ it('rechecks a persisted grouped count on reopen and keeps independent unmet requirements',async()=>{
+  await setupPartial()
+  const title='7个项目的等级结构'
+  const spec={version:1,type:'table',title,columns:['等级','项目数'],rows:[['甲',4],['乙',3]]}
+  const issue='交付范围未满足：需要 7个项目，目前仅有 2 项。'
+  const node={...card,workbenchId:'groups',containerPrompt:title,containerSpec:spec,generationStatus:'completed',generationCompletedAt:200,
+   deliveryStatus:'partial',recoveryMode:'incomplete-scope',unmetRequirements:[issue]}
+  for(const [input,partial] of [[node,false],[{...node,unmetRequirements:[issue,'缺少附件来源。']},true],
+   [{...node,containerSpec:{...spec,rows:[['甲',4]]}},true],[{...node,containerPrompt:'逐项列出7个项目明细。'},true]]){
+   f.win.localStorage.setItem(canvasKey,JSON.stringify([input]))
+   const restored=new f.bundle.ResearchWorkspaceRegistry(f.win.localStorage).for('financial-test').getSnapshot().artifacts[0]
+   expect(restored.id).toBe(card.id)
+   expect(restored.deliveryStatus==='partial').toBe(partial)
+  }
+  expect(f.generation.generate).not.toHaveBeenCalled()
+ })
  it('restores and collapses a legacy missing market curve without reporting a successful generation',async()=>{
   await setupPartial()
   const spec={version:1,type:'markdown',title:'期限结构（2026-11-17）——数据缺失，暂无法绘制',content:'数据读取详情。'.repeat(400)}

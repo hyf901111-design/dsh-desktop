@@ -13,6 +13,7 @@ import {pathToFileURL} from 'node:url'
 import {registerWorkbenchExecutionPolicy,workbenchCreationRequest} from '../packages/dsh-research-task-runtime/workbench-execution-policy.js'
 import {planningPrototypeEvidence,prototypeEvidenceCall,workbenchSourceText,authoredPrototypeEvidence} from '../packages/dsh-research-task-runtime/workbench-prototype-evidence.js'
 import {workbenchDocumentScope,workbenchDocumentCitationIssue} from '../packages/dsh-research-task-runtime/workbench-document-evidence.js'
+import {extractWorkbenchTextDocument} from '../packages/dsh-research-task-runtime/workbench-text-document.js'
 import {extractDocxEvidence} from '../packages/dsh-research-task-runtime/docx-evidence.js'
 import {strToU8,zipSync} from 'fflate'
 
@@ -262,4 +263,69 @@ it('recognizes the real composer attachment adjacent to the request without read
  expect(authoredPrototypeEvidence('解释“示例中的'+marker+'”这段文字').files).toEqual([])
  const csv='/Users/qa/Downloads/交付清单.csv'
  expect(workbenchDocumentScope('把这份交付清单做成工作台。📎 文件：`'+csv+'`')).toEqual([csv])
+})
+
+describe('workbench document follow-ups',()=>{
+ it('bounds UTF-8 text by actual wire bytes and rejects binary attachments',()=>{
+  const bytes=Buffer.from('金融📈\t"'.repeat(200))
+  const evidence=extractWorkbenchTextDocument(bytes,'报告.txt',343)
+  expect(evidence).toMatchObject({format:'text',truncated:true,blocks:[{id:'P1'}]})
+  expect(evidence.blocks[0].text.length).toBeGreaterThan(0)
+  expect(bytes.toString('utf8').startsWith(evidence.blocks[0].text)).toBe(true)
+  expect(Buffer.byteLength(JSON.stringify(evidence))).toBeLessThanOrEqual(343)
+  for(const bytes of [Buffer.from([255,254]),Buffer.from('a\0b'),Buffer.from(' ')])
+   expect(()=>extractWorkbenchTextDocument(bytes,'report.txt',4096)).toThrow()
+ })
+ const attach=file=>'📎 文件：`'+file+'`'
+ const follow=(messages,text='\uFFFC 根据这个文档，做一个工作台看板')=>{
+  const latest=human(text,'next')
+  const s={header:{},events:[...messages.map(data=>({type:'user/message',data})),{type:'user/message',data:latest}]}
+  return {s,latest,human:workbenchCreationRequest(s)}
+ }
+ it('reads the actual Markdown report into both the first and the follow-up planning request and freezes the same path for panels',async()=>{
+  const directory=await mkdtemp(join(tmpdir(),'workbench-markdown-')),path=join(directory,'金融发展分析报告.md')
+  const read=(await import('../packages/dsh-research-task-runtime/index.js')).createWorkbenchDocumentReader()
+  try{
+   await writeFile(path,'# 年度报告\n\n首轮和续作都应取得的原始数据为 17 项。\n\n| 类别 | 数量 |\n| --- | --- |\n| 改造 | 17 |')
+   const first=human(attach(path)+' 根据这个文档，做一个工作台看板','first')
+   for(const {s,latest,human:author} of [follow([],first.content[0].text),follow([first]),follow([first],'继续根据刚才上传的报告做一个工作台看板')]){
+    const h=harness(s,{readDocumentEvidence:read})
+    h.wire.messages=[latest]
+    try{
+     const wire=await h.context()
+     expect(wire.system).toContain('原始数据为 17 项')
+     expect(wire.system).toContain('| 改造 | 17 |')
+     expect(wire.system).not.toContain('Word 的 P 编号')
+     expect(wire.tools.map(tool=>tool.name)).toEqual(['research_workbench_create'])
+     const snapshot=workbenchSourceText(s,author)
+     expect(snapshot).not.toContain('\uFFFC')
+     const documents=await read(s,workbenchDocumentScope(snapshot))
+     expect(documents[0]).toMatchObject({name:'金融发展分析报告.md',format:'markdown',truncated:false,blocks:[{id:'P1'},{id:'P2'},{id:'P3'}]})
+     expect(workbenchDocumentCitationIssue('金融发展分析报告.md [P2]',documents)).toBeUndefined()
+     expect(workbenchDocumentCitationIssue('金融发展分析报告.md [P33]',documents)).toBeTruthy()
+    }finally{h.dispose()}
+   }
+  }finally{await rm(directory,{recursive:true,force:true})}
+ })
+ it('uses the current selection or latest committed upload and does not broaden a reference to uploads from another source',()=>{
+  const one='/tmp/old.md',two='/tmp/new.txt'
+  const earlier=human(attach(one),'one'),recent=human('␞SHERLOCK_RESEARCH_FILES_V1 '+JSON.stringify({files:[{id:'f',name:'new.txt',path:two}]})+'␟读这份文件','two')
+  const selected=(messages,prompt)=>{const value=follow(messages,prompt);return planningPrototypeEvidence(value.s,value.human).files}
+  expect(selected([earlier,recent])).toEqual([two])
+  expect(selected([recent],attach(one)+' 根据这个文档做一个工作台看板')).toEqual([one])
+  expect(selected([earlier,recent],'继续根据 old.md 做一个工作台看板')).toEqual([one])
+  expect(selected([earlier],'根据这个行业做一个工作台看板')).toEqual([])
+  expect(selected([earlier],'根据 veryold.md 做一个工作台看板')).toEqual([])
+  expect(selected([earlier],'不要使用之前的文档，做一个工作台看板')).toEqual([])
+  expect(selected([earlier],'创建一个工作台，示例是“根据这个文档”')).toEqual([])
+  expect(selected([human(attach(one)+' '+attach(two),'both')])).toEqual([])
+  expect(selected([human(attach(one)+' '+attach(two),'both')],'根据这两份报告做一个工作台看板')).toEqual([one,two])
+  expect(selected([human('参考 /tmp/not-uploaded.md','other')])).toEqual([])
+  expect(selected([human('> '+attach(one),'quoted')])).toEqual([])
+  expect(selected([])).toEqual([])
+  const expired=follow([earlier])
+  expect(planningPrototypeEvidence(expired.s,expired.human,{messages:[human('根据这个文档做工作台','not-this-turn')]}).files).toEqual([])
+  const injected=follow([]);injected.s.events.unshift({type:'tool/result',data:{content:[{type:'text',text:attach(one)}]}},{type:'agent/inbox/spliced',data:{inserted:[earlier]}})
+  expect(planningPrototypeEvidence(injected.s,injected.human).files).toEqual([])
+ })
 })
