@@ -295,7 +295,7 @@ it('keeps feedback file selection and pasted screenshots in the main renderer',a
  } finally { await page.close() }
 })
 
-it('keeps a pre-mounted full table above the native webpage until the dialog closes', async () => {
+it.each([false,true])('opens and closes a pre-mounted full table with native menus %s', async nativeMenus => {
  const {page} = await fixture()
  try {
   await page.evaluate(() => {
@@ -313,20 +313,49 @@ it('keeps a pre-mounted full table above the native webpage until the dialog clo
    document.body.append(panel)
   })
   await liveWebsite(page)
+  if (nativeMenus) await page.evaluate(() => {
+   window.setBrowserState({nativeMenus:true})
+   if (!crypto.randomUUID) crypto.randomUUID=()=>String(Math.random())
+   window.mountNativeBrowserMenuProjection({
+    request: async (method,input) => {window.browserCalls.push([method,input]);return true},
+    subscribeAction: listener => {window.tableAction=listener;return ()=>{}}
+   })
+  })
   const opener = page.getByRole('button', {name:'打开完整表格 ↗'})
   const dialog = page.getByRole('dialog', {name:'完整表格'})
   const lastLayout = () => page.evaluate(() => window.browserCalls.filter(([name]) => name === 'layout').at(-1)[1])
   const tab = await page.locator('.eb-root').getAttribute('data-tab-id')
   for (const close of ['按钮', 'Escape']) {
    await opener.click()
-   await expect.poll(async () => (await lastLayout()).visible).toBe(false)
-   expect(await dialog.getAttribute('data-browser-projected')).toBeNull()
-   const port = dialog.locator('[tabindex]')
-   await port.hover()
-   await page.mouse.wheel(200, 180)
-   await expect.poll(() => port.evaluate(el => el.scrollLeft > 0 && el.scrollTop > 0)).toBe(true)
-   if (close === 'Escape') await page.keyboard.press('Escape')
-   else await dialog.getByRole('button', {name:'关闭'}).click()
+   if (nativeMenus) {
+    await expect.poll(()=>page.locator('.odyssey-table-dialog').getAttribute('data-browser-projected')).toBe('true')
+    await expectLivePage(page)
+    const projection = await page.evaluate(() => window.browserCalls.filter(([method])=>method==='menu').at(-1)[1])
+    expect(projection.bounds).toEqual(await page.evaluate(()=>({x:0,y:0,width:innerWidth,height:innerHeight})))
+    const controls = await page.evaluate(html => {
+     const template=document.createElement('template');template.innerHTML=html
+     const table=template.content.querySelector('dialog')
+     return {button:table.querySelector('button').dataset.nativeControl,port:table.querySelector('[tabindex]').dataset.nativeControl, rows:table.querySelectorAll('tr').length}
+    },projection.html)
+    expect(controls.rows).toBe(30)
+    await page.evaluate(({projection,controls,close})=>{
+     const meta={id:projection.id,revision:projection.revision}
+     window.tableAction({...meta,kind:'scroll',controlId:controls.port,scrollLeft:145,scrollTop:130})
+     window.tableScroll=[...document.querySelectorAll('.odyssey-table-dialog [tabindex]')].map(el=>[el.scrollLeft,el.scrollTop])[0]
+     window.tableAction({...meta,kind:close==='Escape'?'key':'click',key:'Escape',controlId:controls.button})
+    },{projection,controls,close})
+    expect(await page.evaluate(()=>window.tableScroll)).toEqual([145,130])
+   } else {
+    await expect.poll(async () => (await lastLayout()).visible).toBe(false)
+    expect(await dialog.getAttribute('data-browser-projected')).toBeNull()
+    const port = dialog.locator('[tabindex]')
+    await port.hover()
+    await page.mouse.wheel(200, 180)
+    await expect.poll(() => port.evaluate(el => el.scrollLeft > 0 && el.scrollTop > 0)).toBe(true)
+    if (close === 'Escape') await page.keyboard.press('Escape')
+    else await dialog.getByRole('button', {name:'关闭'}).click()
+   }
+   await expect.poll(()=>page.locator('.odyssey-table-dialog').evaluate(el=>el.open)).toBe(false)
    await expect.poll(async () => (await lastLayout()).visible).toBe(true)
    expect(await page.locator('.eb-root').getAttribute('data-tab-id')).toBe(tab)
    expect(await opener.evaluate(el => document.activeElement === el)).toBe(true)
