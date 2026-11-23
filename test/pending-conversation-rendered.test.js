@@ -442,7 +442,7 @@ it('shows image chat admission, restores a custom canvas ratio and outlines only
   await surface.locator('.if-layer-name').filter({hasText:'图片'}).click()
   expect(await outline.boundingBox()).toEqual(await image.boundingBox())
   await ratio.click()
-  await page.getByRole('menu',{name:'画布比例'}).getByText('恢复原比例',{exact:true}).click()
+  await page.getByRole('menu',{name:'画布比例'}).getByText('原比例',{exact:true}).click()
   await expect.poll(()=>readout.textContent()).toContain('257 × 389')
   await page.evaluate(()=>document.dispatchEvent(new CustomEvent('sherlock:image-factory-task-error',{detail:{message:'示例提示'}})))
   const notice=await surface.locator('.if-toast').boundingBox(),header=await surface.locator('.if-top').boundingBox()
