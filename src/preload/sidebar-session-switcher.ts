@@ -2,6 +2,7 @@ import type { SidebarSearchResult } from './sidebar-session-search'
 
 type WorkspaceGroup = { workspaceId: string; title?: string; path: string; sessionIds: string[] }
 type SwitcherSource = {
+  recentRows?(english: boolean): SidebarSearchResult[] | undefined
   results(query: string): SidebarSearchResult[]
   workspaces(): WorkspaceGroup[]
   current(): string | null | undefined

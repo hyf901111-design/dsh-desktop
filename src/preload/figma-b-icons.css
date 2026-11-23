@@ -49,3 +49,23 @@ body [data-dsh-sidebar-root] :is(.hHd-Xa_iconButton,.qDHVXG_iconButton,.st-more,
 body [data-dsh-sidebar-root] :is(.hHd-Xa_iconButton,.qDHVXG_iconButton,.st-more,[aria-label="新建研究看板"]):is(:hover,:focus-visible,[aria-expanded=true]){border-radius:8px!important;background:var(--dsw-alias-interactive-bg-hover,rgba(128,128,128,.12))!important}
 body [data-dsh-sidebar-root][data-dsh-sidebar-wide] [aria-label="新建研究看板"]>svg{width:18px!important;height:18px!important;flex:none;background:var(--odyssey-sidebar-glyph);mask:url(/odyssey-b-new-tab-18.svg) center/contain no-repeat!important}
 body [data-dsh-sidebar-root] [aria-label="新建研究看板"]>svg>*{visibility:hidden}
+
+body [data-sidebar-session-view]::before {
+  content: ''; width: 18px; height: 18px; background: var(--odyssey-sidebar-glyph, currentColor);
+  mask: url(/odyssey-b-scheduled-18.svg) center/contain no-repeat;
+}
+body [data-sidebar-session-view][aria-pressed=true]::before { mask-image: url(/odyssey-board-folder-closed-18.svg) }
+body [data-sidebar-session-view][aria-pressed=true] { background: var(--dsw-alias-interactive-bg-hover) }
+body [data-dsh-sidebar-root][data-dsh-sidebar-wide=true] [data-srb-navigation-scroll]:has([data-sidebar-recent-list]) > .hHd-Xa_regionArea { display: none !important }
+[data-sidebar-recent-list] { display: grid; gap: 2px; padding-block: 4px }
+[data-sidebar-recent-list] button {
+  display: flex; align-items: center; gap: 6px; height: 32px; min-width: 0; padding: 0 10px;
+  color: var(--dsw-alias-label-primary); cursor: pointer; border: 0; border-radius: 8px;
+  background: transparent; text-align: left; font: 14px/20px var(--odyssey-font-ui, system-ui);
+}
+[data-sidebar-recent-list] button:is(:hover,[aria-current=true]) { background: var(--dsw-alias-interactive-bg-hover) }
+[data-sidebar-recent-list] button:focus-visible, [data-sidebar-session-view]:focus-visible { outline: 2px solid currentColor; outline-offset: -2px }
+[data-sidebar-recent-list] [data-ui-preserve] { overflow: hidden; white-space: nowrap; text-overflow: ellipsis }
+[data-sidebar-recent-list] small { margin-inline-start: auto; max-width: 44%; color: var(--dsw-alias-label-tertiary); font-size: 12px }
+[data-sidebar-recent-list] [role=img] { display: inline-flex; flex: none }
+[data-sidebar-recent-list] p { padding-inline: 10px; color: var(--dsw-alias-label-tertiary); font-size: 13px }

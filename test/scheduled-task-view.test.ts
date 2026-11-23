@@ -205,13 +205,13 @@ it('follows native sidebar resizing and disconnects when management closes', asy
   expect(disconnect).toHaveBeenCalledOnce()
 })
 
-it('preserves management and its draft when opening search, closes only after result navigation', async () => {
+it('preserves management and its draft when switching the session list or opening search, closes only after result navigation', async () => {
   const w = new Window()
   windows.push(w)
   vi.stubGlobal('MutationObserver', w.MutationObserver)
   vi.stubGlobal('CustomEvent', w.CustomEvent)
   const doc = w.document as unknown as Document
-  doc.body.innerHTML = '<aside data-dsh-sidebar-root><button data-sidebar-session-search>搜索会话</button></aside><main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
+  doc.body.innerHTML = '<aside data-dsh-sidebar-root><button data-sidebar-session-view>最近使用</button><button data-sidebar-session-search>搜索会话</button></aside><main class="pI_x6G_centerCol"></main><div data-scheduled-panel-slot></div>'
   const view = new ScheduledTaskView(doc, {list:async()=>[],workspaces:async()=>[],save:vi.fn(),action:vi.fn()})
   view.mount()
   await view.open()
@@ -219,6 +219,8 @@ it('preserves management and its draft when opening search, closes only after re
   const field = doc.querySelector<HTMLTextAreaElement>('.st-prompt')!
   field.value = '未提交的任务'
   field.dispatchEvent(new w.Event('input', {bubbles:true}) as unknown as Event)
+  doc.querySelector<HTMLButtonElement>('[data-sidebar-session-view]')!.click()
+  expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')!.value).toBe('未提交的任务')
   doc.querySelector<HTMLButtonElement>('[data-sidebar-session-search]')!.click()
   expect(doc.querySelector('.st-root')).not.toBeNull()
   expect(doc.querySelector<HTMLTextAreaElement>('.st-prompt')!.value).toBe('未提交的任务')

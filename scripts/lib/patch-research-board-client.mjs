@@ -476,7 +476,7 @@ export function patchResearchBoardSidebar(source) {
   // Figma 44: the original sidebar icons retain a 16 px frame in either width.
   source = source.replace('size: wide ? 14 : 18', 'size: 16')
     .replace('size: wide ? 16 : 18', 'size: 16')
-  if (source.includes('"sidebar.researchBoards"')) return patchBoardRegion(source)
+  if (source.includes('"sidebar.researchBoards"')) return patchRecentSidebar(patchBoardRegion(source))
   source = replace(
     source,
     '"sidebar.workspaces": {',
@@ -492,7 +492,7 @@ export function patchResearchBoardSidebar(source) {
     '\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.regionArea,',
     '\t\t\t\t\trenderSlot("sidebar.researchBoards",{wide,expandSidebar:()=>{if(collapsed)toggleSidebar();}}),\n\t\t\t\t\t(0, react_jsx_runtime.jsx)("div", {\n\t\t\t\t\t\tclassName: SidebarRoot_module_css_default.regionArea,'
   )
-  return patchBoardRegion(source)
+  return patchRecentSidebar(patchBoardRegion(source))
 }
 function patchBoardRegion(source) {
   if (source.includes('data-srb-board-region')) return patchUnifiedSidebarScroll(source)
@@ -510,7 +510,49 @@ function patchUnifiedSidebarScroll(source) {
   const content = source.slice(first, end).trimEnd().replace(/,$/, '')
   return source.slice(0, first) + '(0,react_jsx_runtime.jsxs)("div",{"data-srb-navigation-scroll":"",children:[' + content + ']}),\n' + source.slice(end)
 }
+function patchRecentSidebar(source) {
+  if (source.includes('"data-sidebar-session-view"')) return source
+  const state = 'const [settled, setSettled] = (0, react.useState)(collapsed);'
+  source = replace(source, state, state + `
+      const modeKey = 'ework.sidebar.session-view.v1';
+      const [recent, setRecent] = react.useState(() => {
+        try { return localStorage.getItem(modeKey) === 'recent' } catch { return false }
+      });
+      react.useEffect(() => {
+        const sync = event => { if (event.key === modeKey || event.key === null) setRecent(event.newValue === 'recent') };
+        window.addEventListener('storage', sync);
+        return () => window.removeEventListener('storage', sync);
+      }, []);
+      const viewport = react.useRef(null), directoryScroll = react.useRef(0);
+      react.useLayoutEffect(() => {
+        if (viewport.current) viewport.current.scrollTop = recent ? 0 : directoryScroll.current;
+      }, [recent]);
+      const toggleView = () => {
+        if (!recent) directoryScroll.current = viewport.current?.scrollTop ?? 0;
+        setRecent(!recent);
+        try { localStorage.setItem(modeKey, recent ? 'directory' : 'recent') } catch {}
+      };`)
+  source = replace(source, '"data-dsh-sidebar-root": "",', '"data-dsh-sidebar-root": "", "data-sidebar-session-order": recent ? "recent" : "directory",')
+  const search = 'renderSlot("sidebar.sessionSearch",{buttonClass:SidebarRoot_module_css_default.iconButton})'
+  source = replace(source, search, `wide && react.createElement('button', {
+        type: 'button', className: SidebarRoot_module_css_default.iconButton,
+        "data-sidebar-session-view": "", 'aria-label': t('view.recent'), 'aria-pressed': recent,
+        'aria-controls': 'ework-sidebar-session-list', title: t(recent ? 'view.showDirectory' : 'view.showRecent'), onClick: toggleView
+      }), ` + search)
+  source = replace(source, '"sidebar.sessionSearch": {', '"sidebar.recentSessions": {kind:"list",scope:"root"},\n"sidebar.sessionSearch": {')
+  const scroll = '"data-srb-navigation-scroll":"",children:['
+  source = replace(source, scroll, '"data-srb-navigation-scroll":"",id:"ework-sidebar-session-list",ref:viewport,children:[wide && recent && renderSlot("sidebar.recentSessions",{english:document.documentElement.dataset.odysseyLocale==="en"}),')
+  for (const [label, recent, directory, show] of [
+    ['收起侧边栏', '最近使用的会话', '切换到目录视图', '按最近使用排序'],
+    ['Collapse sidebar', 'Recent conversations', 'Show folders', 'Show recently used conversations']
+  ]) {
+    const anchor = '"toggle.collapse": "' + label + '"'
+    source = replace(source, anchor, anchor + ', "view.recent": "' + recent + '", "view.showDirectory": "' + directory + '", "view.showRecent": "' + show + '"')
+  }
+  return source
+}
 export function patchResearchBoardSidebarTypes(source) {
+  if (!source.includes("'sidebar.recentSessions'")) source = replace(source, "'sidebar.workspaces': {", "'sidebar.recentSessions': {kind: 'list'; scope: 'root'; owner: {english:boolean}};\n        'sidebar.workspaces': {")
   if (!source.includes("'sidebar.sessionSearch'")) source = replace(source, "'sidebar.workspaces': {", "'sidebar.sessionSearch': {kind: 'list'; scope: 'root'; owner: {buttonClass:string}};\n        'sidebar.workspaces': {")
 
   if (source.includes("'sidebar.researchBoards'")) return source
@@ -851,7 +893,29 @@ function chromePatch(source) {
   source = replace(source, '"aria-hidden": hideChrome || void 0,', '"aria-hidden": hideChrome || void 0, "data-srb-session-header":"",')
   return source + '\n/* SHERLOCK_BOARD_CHROME_V1 */'
 }
+// Use the same visibility rules, localized titles and primary statuses as native workspace rows.
+function recentWorkspaceSessions(snapshot, workspace, english) {
+  const dictionary = english ? en : zh
+  const t = (key, values) => (dictionary[key] ?? key).replace('{n}', values?.n ?? '')
+  const folders = new Map()
+  for (const item of workspace.items) {
+    const label = item.title || workspaceLabel(item.path)
+    for (const id of item.sessionIds) folders.set(id, label)
+  }
+  return deriveFlat(snapshot, workspace.archivedSessionIds ?? []).map(node => {
+    const status = sessionStatuses(node, t)[0]
+    return { key: 'session:' + node.id, sessionId: node.id, area: 'workspaces',
+      title: displayTitle(node, t), location: folders.get(node.id) ?? (english ? 'Ungrouped' : '未分组'), time: node.updatedAt ?? snapshot.byId[node.id].createdAt ?? 0,
+      status: status.state !== 'done' || node.completed ? status : undefined }
+  })
+}
 export function patchResearchBoardWorkspace(source) {
+  source = patchDirectoryWorkspace(source)
+  if (source.includes('function recentWorkspaceSessions(')) return source
+  const anchor = 'window.dispatchEvent(new window.Event("sherlock-sidebar-skin"));'
+  return replace(source, anchor, recentWorkspaceSessions.toString() + '\nwindow.__sherlockWorkspaceSidebarSkin.recentWorkspaceSessions = recentWorkspaceSessions;\n' + anchor)
+}
+function patchDirectoryWorkspace(source) {
   source = source.replace('const groupBy = useStore((s) => s.groupBy);', 'const groupBy = "workspace";')
     .replace('const orderBy = useStore((s) => s.orderBy);', 'const orderBy = "manual";')
     .replace('children: [wide && (0, react_jsx_runtime.jsx)(ViewOptionsMenu, {', 'children: [false && (0, react_jsx_runtime.jsx)(ViewOptionsMenu, {')

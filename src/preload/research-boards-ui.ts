@@ -21,6 +21,7 @@ import { promoteSidebarOrder } from './sidebar-manual-order'
 import {sidebarUsageSnapshot,sidebarUsageTimes,subscribeSidebarUsage} from '../../scripts/lib/sidebar-session-recency.mjs'
 import { sidebarSearchResults, showSidebarSessionSearch, type SidebarSearchResult } from './sidebar-session-search'
 import { mountSidebarSessionSwitcher } from './sidebar-session-switcher'
+import { SidebarRecentSessions, recentSidebarRows, trackSidebarVisits } from './sidebar-recent-sessions'
 import { installExploreSearch } from './explore-search'
 import type {
   BoardView,
@@ -259,6 +260,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
     }
   }
   const current = () => deps.sessions.list.getSnapshot().current
+  const visits = trackSidebarVisits(doc, current, notify)
+  cleanups.push(visits.dispose)
   const view = (id?: string): BoardView | null =>
     id
       ? (editors.get(id)?.view ??
@@ -766,6 +769,7 @@ export function createResearchBoardsPage(deps: PageDependencies) {
   }
   cleanups.push(
     deps.sessions.list.subscribe(() => {
+      visits.selected()
       watchFavoriteDeletion()
       syncFavoriteTitles()
       notify()
@@ -1856,6 +1860,14 @@ export function createResearchBoardsPage(deps: PageDependencies) {
         number | undefined,
     current,
     sidebarWorkspaces: () => deps.workspaces.list.getSnapshot().items,
+    recentSessions(english: boolean) {
+      const sessions = deps.sessions.list.getSnapshot(), workspace = deps.workspaces.list.getSnapshot()
+      const workspaceRows = (win as any).__sherlockWorkspaceSidebarSkin?.recentWorkspaceSessions?.(sessions, workspace, english) ?? []
+      const excluded = new Set<string>(workspace.archivedSessionIds)
+      return recentSidebarRows(visibleBoardState(), workspaceRows,
+        id => excluded.has(id) || !!sessions.byId[id]?.removed || !!deps.sessions.officeSessionHidden?.(id),
+        id => sessions.byId[id]?.updatedAt, visits.time, english)
+    },
     searchSessions(query: string) { return sidebarSearchResults(visibleBoardState(), deps.sessions.list.getSnapshot().byId, deps.workspaces.list.getSnapshot().archivedSessionIds ?? [], query) },
     subscribeSearch(listener: () => void) {
       listeners.add(listener)
@@ -2444,6 +2456,7 @@ export function SidebarSessionSearch({ page, buttonClass }: { page: ResearchBoar
   React.useEffect(() => {
     const root = search.current?.closest<HTMLElement>('[data-dsh-sidebar-root]')
     if (root) return mountSidebarSessionSwitcher(root, {
+      recentRows: english => root.dataset.sidebarSessionOrder === 'recent' ? page.recentSessions(english) : undefined,
       results: page.searchSessions, subscribe: page.subscribeSearch, workspaces: page.sidebarWorkspaces,
       current: page.current, showError: page.showError, open
     })
@@ -3684,6 +3697,7 @@ function mountBoardSlots(
         component
       )
     )
+  register('sidebar.recentSessions', 'sherlock-recent-sessions', SidebarRecentSessions)
   register('sidebar.sessionSearch', 'sherlock-session-search', SidebarSessionSearch)
   register(
     'sidebar.researchBoards',
