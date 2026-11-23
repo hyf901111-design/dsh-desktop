@@ -16,12 +16,22 @@ export function createNativeConversationSubmissions(){
   annotation(sessionId,rpcId,text){return annotationReader(sessionId,rpcId,text)},
   queue(sessionId,inbox,nodeStore){
    const received=new Set([...nodeStore?.values()??[]].filter(node=>['user','steering'].includes(node?.kind)&&node.data?.source?.kind==='user'&&typeof node.data.source.rpcId==='string').map(node=>node.data.source.rpcId))
-   return inbox.flatMap(row=>{
+   const rows=[...inbox], represented=new Set(inbox.map(row=>row.source?.rpcId))
+   for(const entry of all(sessionId)){
+    if(entry.unmirroredRow&&!represented.has(entry.rpcId))rows.push(entry.unmirroredRow)
+   }
+   return rows.flatMap(row=>{
     if(row.placement!=='queued')return[row]
     const entry=entries.get(row.source?.rpcId),owned=entry?.sessionId===sessionId
     if(owned&&(entry.initialImmediate||entry.admitted||entry.mode==='steer')||received.has(row.source?.rpcId)||retired.has(identity(sessionId,'rpc:'+row.source?.rpcId))||retired.has(identity(sessionId,'id:'+(row.messageId??row.id))))return[]
-    // An older queue replay cannot undo an edit already observed durably.
-    if(owned&&Number.isSafeInteger(row.anchorSeq)&&row.anchorSeq<entry.queueAnchor){const text=entry.content.every(part=>part.type==='text')?entry.content.map(part=>part.text).join(''):null,preview=entry.content.map(part=>part.type==='text'?part.text:'['+part.type+']').join(' ').replace(/\s+/g,' ').trim(),chars=Array.from(preview);return[{...row,content:entry.content,text,preview:chars.length>200?chars.slice(0,200).join('')+'…':preview}]}
+    // The inbox splice and snapshot carry the same host message ID. Use the
+    // latest confirmed content for editing even when the snapshot is delayed.
+    if(owned&&(row===entry.unmirroredRow||Number.isSafeInteger(row.anchorSeq)&&row.anchorSeq<entry.queueAnchor)){
+     const text=entry.content.every(part=>part.type==='text')?entry.content.map(part=>part.text).join(''):null
+     const preview=entry.content.map(part=>part.type==='text'?part.text:'['+part.type+']').join(' ').replace(/\s+/g,' ').trim()
+     const chars=Array.from(preview)
+     return[{...row,content:entry.content,text,preview:chars.length>200?chars.slice(0,200).join('')+'…':preview}]
+    }
     return[row]
    })
   },
@@ -42,13 +52,20 @@ export function createNativeConversationSubmissions(){
     }catch{return null}
    }
    const contentOf=(entry,content)=>{if(JSON.stringify(entry.content)!==JSON.stringify(content))entry.annotation=null;entry.content=structuredClone(content)}
-   const observeQueue=(sessionId,items)=>{
+   const clearUnmirrored=(sessionId,keepInFlight=false)=>{
     let changed=false
+    for(const entry of all(sessionId))if(entry.unmirroredRow&&(!keepInFlight||entry.messageId)){delete entry.unmirroredRow;changed=true}
+    return changed
+   }
+   const observeQueue=(sessionId,items)=>{
+    let changed=clearUnmirrored(sessionId,true)
     for(const row of items??[]){const message=row.message??row,rpcId=message.source?.rpcId,entry=entries.get(rpcId);if(!entry||entry.sessionId!==sessionId||!entry.current())continue
      const anchor=row.anchorSeq??-1;if(anchor<entry.queueAnchor)continue
      entry.queueAnchor=anchor;entry.messageId=message.id??row.messageId??row.id
+     delete entry.unmirroredRow
      if(Array.isArray(message.content))contentOf(entry,message.content)
      if(row.placement==='steering')entry.mode='steer'
+     else if(row.placement==='queued')entry.mode='queue'
      changed=true
     }
     if(changed)notify()
@@ -59,9 +76,10 @@ export function createNativeConversationSubmissions(){
     if(state.seq!==null&&event.seq<=state.seq)return
     // A missing event invalidates sparse positions. Never infer admission from
     // a queue snapshot disappearing or from a different request's new turn.
-    if(state.seq!==null&&event.seq!==state.seq+1){state.lists['next-turn'].clear();state.lists['next-step'].clear()}
+    if(state.seq!==null&&event.seq!==state.seq+1){state.lists['next-turn'].clear();state.lists['next-step'].clear();state.open=false;if(clearUnmirrored(sessionId))notify()}
     state.seq=event.seq
-    if(event.type==='turn/start')state.turn=event.data.turn
+    if(event.type==='turn/start'){state.turn=event.data.turn;state.open=true}
+    if(event.type==='turn/end')state.open=false
     if(event.type!=='agent/inbox/spliced')return
     const splice=event.data,list=state.lists[splice.target];if(!list)return
     const start=splice.start,count=splice.removedCount??0,inserted=splice.inserted??[],end=start+count,next=new Map(),kept=new Set(inserted.map(message=>message.id));let changed=false
@@ -72,12 +90,31 @@ export function createNativeConversationSubmissions(){
       const entry=entries.get(message.source?.rpcId)
       if(entry?.sessionId===sessionId&&entry.current()){
        entry.messageId=message.id
-       if(splice.outcome==='canceled'){retire(entry);clear(entry)}
+       delete entry.unmirroredRow
+       if(splice.outcome==='canceled'){
+        // Promotion removes the queued item before inserting it into next-step.
+        if(entry.promoting&&splice.target==='next-turn')entry.removedForPromotion=true
+        else{retire(entry);clear(entry)}
+       }
        else{entry.admitted=true;entry.admittedTurn=state.turn;if(splice.target==='next-step')entry.mode='steer';retire(entry);changed=true}
       }
      }
     }
-    inserted.forEach((message,index)=>{next.set(start+index,message);const entry=entries.get(message.source?.rpcId);if(entry?.sessionId===sessionId&&entry.current()){entry.messageId=message.id;entry.queueAnchor=event.seq;contentOf(entry,message.content);if(splice.target==='next-step')entry.mode='steer';changed=true}})
+    inserted.forEach((message,index)=>{
+     next.set(start+index,message)
+     const entry=entries.get(message.source?.rpcId)
+     if(entry?.sessionId!==sessionId||!entry.current())return
+     entry.messageId=message.id
+     entry.queueAnchor=event.seq
+     contentOf(entry,message.content)
+     if(splice.target==='next-step'){entry.mode='steer';delete entry.promoting;delete entry.removedForPromotion;delete entry.unmirroredRow}
+     else{
+      entry.mode='queue'
+      if(state.open)entry.initialImmediate=false
+      if(!entry.initialImmediate)entry.unmirroredRow={id:message.id,messageId:message.id,source:message.source,placement:'queued',anchorSeq:event.seq}
+     }
+     changed=true
+    })
     state.lists[splice.target]=next;if(changed)notify()
    }
    off=api.subscribeEnvelopes(batch=>{
@@ -93,6 +130,10 @@ export function createNativeConversationSubmissions(){
       const entry={sessionId,rpcId,session,shell,content:structuredClone(content),mode:envelope.payload.mode,observedAt:Date.now(),sequence:++sequence,wasRunning:snapshot.running===true,initialImmediate:snapshot.running!==true&&!openTurn&&!previous.length&&!snapshot.queue?.some(row=>row.placement==='queued'),admitted:false,admittedTurn:null,messageId:null,queueAnchor:-1,barrierTurn,predecessors:previous.map(value=>value.rpcId),accepted:false,current:()=>current(entry),off:null,lastError:snapshot.promptError}
       entry.annotation=annotationReader(sessionId,rpcId,content.filter(part=>part?.type==='text'&&typeof part.text==='string').map(part=>part.text).join(''))
       if(!entry.current())continue
+      // Show a busy send during transport. Only the host assigns an editable queue ID.
+      if(entry.mode==='queue'&&!entry.initialImmediate){
+       entry.unmirroredRow={id:'submitted:'+rpcId,source:{kind:'user',rpcId},placement:'queued',editable:false}
+      }
       seen.add(rpcId);if(seen.size>256)seen.delete(seen.values().next().value)
       entries.set(rpcId,entry)
       entry.off=session.subscribe(()=>{
@@ -104,9 +145,16 @@ export function createNativeConversationSubmissions(){
       notify()
      }else if(envelope.type==='client-request'&&envelope.method==='session.updateQueue'){
       const {sessionId,itemId,action}=envelope.payload??{},entry=[...entries.values()].find(value=>value.sessionId===sessionId&&value.messageId===itemId)
-      if(entry&&['edit','remove','steer'].includes(action?.kind))updates.set(envelope.rpcId,{entry,action})
+      if(entry&&['edit','remove','steer'].includes(action?.kind)){
+       if(action.kind==='steer')entry.promoting=envelope.rpcId
+       updates.set(envelope.rpcId,{entry,action})
+      }
      }else if(envelope.type==='server-response'){
       const update=updates.get(envelope.rpcId);updates.delete(envelope.rpcId)
+      if(update?.action.kind==='steer'&&update.entry.promoting===envelope.rpcId&&!(envelope.result?.ok&&envelope.result.value?.accepted)){
+       delete update.entry.promoting
+       if(update.entry.removedForPromotion){retire(update.entry);clear(update.entry)}
+      }
       if(update&&entries.get(update.entry.rpcId)===update.entry&&envelope.result?.ok===true&&envelope.result.value?.accepted===true){const {entry,action}=update;if(action.kind==='remove'){retire(entry);clear(entry)}else{if(action.kind==='steer'){entry.mode='steer';retire(entry)}else{entry.content=structuredClone(action.content);entry.annotation=null}notify()}}
       const entry=entries.get(envelope.rpcId)
       if(envelope.result?.ok!==true||envelope.result.value?.accepted!==true){if(envelope.result?.error&&typeof envelope.result.error==='object')knownRejections.add(envelope.result.error);if(entry)clear(entry)}
@@ -117,6 +165,7 @@ export function createNativeConversationSubmissions(){
       const frame=envelope.payload
       if(frame?.type==='session/event')observeEvent(frame.sessionId,frame.event)
       else if(frame?.type==='session/queue')observeQueue(frame.sessionId,frame.items)
+      else if(frame?.type==='session/subscribed'){inboxes.delete(frame.sessionId);if(clearUnmirrored(frame.sessionId))notify()}
      }
     }
    })
@@ -202,7 +251,7 @@ function NativeConversationSubmittedUser({entry,loadImage,openFile,t}){
  const imageLoader=react.useCallback(attachment=>projected.urls.has(attachment)?Promise.resolve(projected.urls.get(attachment)):loadImage(attachment),[projected,loadImage])
  return react.createElement('div',{className:ChatView_module_css_default.flowItem,'data-chat-anchor-key':'submitted:'+entry.rpcId,'data-chat-flow-key':'submitted:'+entry.rpcId,'data-chat-flow-kind':'user','data-native-submitted-user':entry.rpcId},react.createElement(UserStyleBubble,{content:projected.content,imageLoader,openFile,t,nativeSubmittedAnnotation:entry.annotation}))
 }
-const START='/* sherlock:conversation-submission:v6 */',END='/* sherlock:conversation-submission:end */'
+const START='/* sherlock:conversation-submission:v7 */',END='/* sherlock:conversation-submission:end */'
 const definition=START+'\n'+[createNativeConversationSubmissions,useNativeConversationSubmission,useNativeSubmittedQueue,projectNativeConversationSubmissions,useNativeSubmittedAnnotation,NativeConversationSubmittedUser].map(fn=>fn.toString()).join('\n')+'\nconst NativeConversationSubmissions=createNativeConversationSubmissions();\n'+END+'\n'
 const queueTail='\n\t\t\tconst queue = (0, react.useMemo)(() => userQueuedMessages(inbox).map',queueBefore='const inbox = useSession((s) => s.queue);'+queueTail,queueAfter='const nativeSubmittedInbox = useSession((s) => s.queue);\nconst inbox = useNativeSubmittedQueue(arguments[0].sessionId,nativeSubmittedInbox,useSession);'+queueTail
 const bind='\nctx.effect(()=>NativeConversationSubmissions.watch({api:ctx.get("connection").api,sessions,inputHub}),"Native first submitted user");'
@@ -219,6 +268,11 @@ const annotationHooks=[
 ]
 const count=(source,value)=>source.split(value).length-1
 const one=(source,before,after)=>{if(count(source,before)!==1)throw Error('Native submitted user anchor drifted: '+before.slice(0,70));return source.replace(before,after)}
+// Start each new batch expanded. A manual collapse lasts until this queue drains.
+const dockExpansion=[
+ ['const [collapsed, setCollapsed] = (0, react.useState)(true);\n\t\t\tconst listId', 'const [collapsed, setCollapsed] = (0, react.useState)(false);\n\t\t\tconst listId'],
+ ['if (queue.length === 0 && !collapsed) setCollapsed(true);','if (queue.length === 0 && collapsed) setCollapsed(false);']
+]
 const annotationSwap=(source,before,after)=>{
  const anchor='\nfunction UserStyleBubble(',start=source.indexOf(anchor),end=source.indexOf('\n\t\t}',start)
  if(count(source,anchor)!==1||end<start)throw Error('Native submitted annotation bubble drifted')
@@ -230,9 +284,10 @@ export function stripConversationSubmission(source){
  const markers=[...source.matchAll(/\/\* sherlock:conversation-submission:v(\d+) \*\//g)]
  if(!markers.length){if(source.includes(END)||traces.some(value=>source.includes(value)))throw Error('Native submitted user orphan drifted');return source}
  if(markers.length!==1||count(source,END)!==1)throw Error('Native submitted user installation drifted')
- const version=Number(markers[0][1]),start=markers[0].index,end=source.indexOf(END,start),installed=source.slice(start,end+END.length+1),known={1:'2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04',2:'c823118b5dc585aae7171ea1d84cd5e234ccf7c32f768bd4f9703d69891887f2',3:'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045',4:'b0f4430a7ec60047379e1c16a0dfd872e58540afc1c1ffc465452514bbb287be',5:'e56b95764899cf1fec5ccb46ccf1c37ee159d7d77795fda9e59e9c15db6f7bf2'}
- if(version===6?installed!==definition:!known[version]||createHash('sha256').update(installed).digest('hex')!==known[version])throw Error('Native submitted user installation drifted')
+ const version=Number(markers[0][1]),start=markers[0].index,end=source.indexOf(END,start),installed=source.slice(start,end+END.length+1),known={1:'2f25f60df2b1aa7ed6f6e622f94c3d036a28e59ee8bd72c795d0402b63fe3a04',2:'c823118b5dc585aae7171ea1d84cd5e234ccf7c32f768bd4f9703d69891887f2',3:'099a5dc57968ca2bb19813ad7afb2125da6fdf4497ffab6899718ebac7efd045',4:'b0f4430a7ec60047379e1c16a0dfd872e58540afc1c1ffc465452514bbb287be',5:'e56b95764899cf1fec5ccb46ccf1c37ee159d7d77795fda9e59e9c15db6f7bf2',6:'249b69ab1bdebf5961ff2c530befad237b307692ecbfa25bd4dc3fa2d59f3ae2'}
+ if(version===7?installed!==definition:!known[version]||createHash('sha256').update(installed).digest('hex')!==known[version])throw Error('Native submitted user installation drifted')
  let restored=one(source,installed,'');restored=one(restored,bind,'');restored=one(restored,version>=3?hook:oldHook,'')
+ if(version>=7)for(const [before,after]of dockExpansion)restored=one(restored,after,before)
  if(version>=4)restored=one(restored,queueAfter,queueBefore)
  if(version>=3){
   const names=flowNames.filter(name=>restored.includes(flowLine(name)));if(names.length!==1)throw Error('Native submitted user flow inverse drifted')
@@ -248,6 +303,7 @@ export function patchConversationSubmission(source){
  source=one(source,'const inputHub = new InputHub(ctx, t, researchWorkspaces);','const inputHub = new InputHub(ctx, t, researchWorkspaces);'+bind)
  source=one(source,'const nodeStore = useSession((s) => s.chat.nodes);','const nodeStore = useSession((s) => s.chat.nodes);'+hook)
  source=one(source,queueBefore,queueAfter)
+ for(const [before,after]of dockExpansion)source=one(source,before,after)
  const names=flowNames.filter(name=>source.includes(name+'.flatMap((entry) => {'));if(names.length!==1)throw Error('Native submitted user flow drifted')
  const name=names[0],progress='const eworkResponseProgressByTurn=',anchor=source.includes(progress)?progress:'const seatProps = (0, react.useMemo)(() => ({'
  source=one(source,anchor,flowLine(name)+anchor);source=one(source,name+'.flatMap((entry) => {',render)

@@ -4,7 +4,7 @@ const mock=vi.hoisted(()=>({popups:[] as any[],views:[] as any[],listeners:new M
 vi.mock('electron',()=>{
  const makeContents=()=>{const wc=Object.assign(new EventEmitter(),{mainFrame:{},isDestroyed:()=>false,isFocused:()=>false,focus:vi.fn(),close:vi.fn(),setWindowOpenHandler:vi.fn(),setZoomFactor:vi.fn(),setBackgroundThrottling:vi.fn(),session:{webRequest:{onHeadersReceived:vi.fn()},setPermissionRequestHandler:vi.fn(),setPermissionCheckHandler:vi.fn()},send:vi.fn((channel:string,value:any)=>{queueMicrotask(()=>{if(channel==='browser-app:menu-state')mock.listeners.get('browser-app:menu-action')?.({sender:wc,senderFrame:wc.mainFrame},{kind:'painted',id:value.id,revision:value.revision,_request:value._request});if(channel==='browser-app:menu-clear')mock.listeners.get('browser-app:menu-action')?.({sender:wc,senderFrame:wc.mainFrame},{kind:'cleared',_clear:value._clear})})}),loadURL:vi.fn(async()=>{if(!mock.holdReady)queueMicrotask(()=>mock.listeners.get('browser-app:menu-action')?.({sender:wc,senderFrame:wc.mainFrame},{kind:'ready'}))})});return wc}
  return{screen:{getCursorScreenPoint:()=>mock.cursor},ipcMain:{on:(name:string,fn:Function)=>mock.listeners.set(name,fn),removeListener:(name:string)=>mock.listeners.delete(name)},BrowserWindow:class extends EventEmitter{
-  webContents=makeContents();visible=false;options:any;bounds:any;getContentBounds=()=>this.bounds;constructor(options:any){super();this.options=options;mock.popups.push(this)}isDestroyed=()=>false;isVisible=()=>this.visible;isFocused=()=>false;setIgnoreMouseEvents=vi.fn();setVibrancy=vi.fn();setBounds=vi.fn((bounds:any)=>{this.bounds=bounds});showInactive=()=>{this.visible=true};hide=()=>{this.visible=false};destroy=vi.fn();focus=vi.fn();moveTop=vi.fn()
+  contentView={setBorderRadius:vi.fn()};webContents=makeContents();visible=false;options:any;bounds:any;getContentBounds=()=>this.bounds;constructor(options:any){super();this.options=options;mock.popups.push(this)}isDestroyed=()=>false;isVisible=()=>this.visible;isFocused=()=>false;setIgnoreMouseEvents=vi.fn();setVibrancy=vi.fn();setBounds=vi.fn((bounds:any)=>{this.bounds=bounds});showInactive=()=>{this.visible=true};hide=()=>{this.visible=false};destroy=vi.fn();focus=vi.fn();moveTop=vi.fn()
  },WebContentsView:class{webContents=makeContents();visible=false;constructor(){mock.views.push(this)}setBackgroundColor=vi.fn();setVisible=(value:boolean)=>{this.visible=value};getVisible=()=>this.visible;setBounds=vi.fn()}}
 })
 import {createBrowserMenuOverlay} from '../src/main/browser/menu-overlay'
@@ -41,3 +41,13 @@ it('dismisses a material menu when the parent really loses key focus and never a
 })
 
 it('updates hover from the system cursor even when a non-key popup emits no mouse events and stops at hide',async()=>{mock.cursor={x:20,y:20};const f=fixture();await f.overlay.show(state({zoom:1.25}));const popup=mock.popups[0];popup.webContents.send.mockClear();mock.cursor={x:350,y:175};await vi.waitFor(()=>expect(popup.webContents.send).toHaveBeenCalledWith('browser-app:menu-pointer',expect.objectContaining({x:40,y:20})));mock.cursor={x:50,y:50};await vi.waitFor(()=>expect(popup.webContents.send).toHaveBeenCalledWith('browser-app:menu-pointer',expect.objectContaining({x:-1,y:-1})));f.overlay.hide();popup.webContents.send.mockClear();mock.cursor={x:400,y:200};await new Promise(resolve=>setTimeout(resolve,90));expect(popup.webContents.send.mock.calls.some(([channel]:any)=>channel==='browser-app:menu-pointer')).toBe(false);expect(popup.focus).not.toHaveBeenCalled()})
+
+it('scales the Home switcher mask and clears it when the material popup is reused for another menu',async()=>{
+ const {overlay}=fixture()
+ await overlay.show(state({switcherAnchor:{x:-44,y:20,width:32,height:32},zoom:1.5}))
+ const mask=mock.popups[0].contentView.setBorderRadius
+ expect(mask).toHaveBeenLastCalledWith(18)
+ await overlay.show(state({id:'ordinary-menu'}))
+ expect(mock.popups).toHaveLength(1)
+ expect(mask).toHaveBeenLastCalledWith(0)
+})

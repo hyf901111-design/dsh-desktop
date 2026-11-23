@@ -523,6 +523,7 @@ async function nativeFixture(config){
 
   if(config.homeSwitcherOnly)await check('Home switcher keeps its native glass, hover and workspace actions over a live page',async()=>{
    if(process.platform!=='darwin')return
+   win.setContentSize(800,620)
    await ui('qa.mountHomeSwitcher()')
    const home='[data-sidebar-home]',panel='#ework-sidebar-session-switcher'
    const center=selector=>ui(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`)
@@ -534,7 +535,10 @@ async function nativeFixture(config){
     win.webContents.sendInputEvent({type:'mouseMove',x:Math.round(point.x),y:Math.round(point.y)})
    }
    try{
-    await page.executeJavaScript("const pattern=document.createElement('div');pattern.id='test-pattern';pattern.style.cssText='position:fixed;inset:0;z-index:99999;pointer-events:none;background:repeating-linear-gradient(90deg,black 0px 6px,white 6px 12px)';document.body.append(pattern)")
+    // Under both native and web surfaces, expose colored corner markers and fine stripes in the middle.
+    const backdrop="const pattern=document.createElement('div');pattern.id='test-pattern';pattern.style.cssText='position:fixed;inset:0;z-index:99999;pointer-events:none;background:rgb(40 220 100)';document.body.append(pattern)"
+    await ui(backdrop)
+    await page.executeJavaScript(backdrop+";pattern.style.background='linear-gradient(rgb(40 220 100),rgb(40 220 100)) top/100% 20% no-repeat,linear-gradient(rgb(40 220 100),rgb(40 220 100)) bottom/100% 20% no-repeat,repeating-linear-gradient(90deg,black 0px 6px,white 6px 12px)'")
     const origin=win.getContentBounds(),z=win.webContents.getZoomFactor()
     const pixelStrip=async name=>{
      const path=join(config.evidence,name+'.png')
@@ -543,22 +547,43 @@ async function nativeFixture(config){
      require('node:child_process').execFileSync('/usr/sbin/screencapture',['-x','-R',box,path])
      const image=require('electron').nativeImage.createFromPath(path),pixels=image.toBitmap()
      const red=[];for(let i=2;i<pixels.length;i+=4)red.push(pixels[i])
-     return Math.max(...red)-Math.min(...red)
+     return {contrast:Math.max(...red)-Math.min(...red),mean:red.reduce((a,b)=>a+b,0)/red.length}
     }
     await pause(150)
-    const clear=await pixelStrip('switcher-page')
+    const {contrast:clear}=await pixelStrip('switcher-page')
     assert.ok(clear>100,'visible fine stripes before opening: '+clear)
     await mouse(button);await shown('Home switcher')
     assert.ok(menu.popup&&!menu.popup.isFocusable())
     assert.equal(wireState.material,'menu')
+    assert.deepEqual(await menuDOM("(()=>{const style=getComputedStyle(document.querySelector('nav'));return [style.borderRadius,style.backgroundColor]})()"),['12px','rgba(0, 0, 0, 0.82)'])
     await pause(420);assert.ok(await activeMenu(),'resting over Home keeps the panel open')
     // Crossing to the child makes Chromium report a leave in the shell.
     pointer=await center(panel)
     await ui("document.querySelector('[data-sidebar-home]').dispatchEvent(new PointerEvent('pointerleave'))")
     await pause(420)
     assert.ok(await activeMenu(),'crossing to the native window keeps the panel open')
-    const blurred=await pixelStrip('switcher-glass')
-    assert.ok(blurred<clear*.22,'native glass blurs detail: '+JSON.stringify({clear,blurred}))
+    const {contrast:blurred}=await pixelStrip('switcher-glass')
+    assert.ok(blurred<5,'native glass blurs detail: '+JSON.stringify({clear,blurred}))
+    const bounds=menu.popup.getBounds(),cornerPath=join(config.evidence,'switcher-corners.png')
+    const capture=require('node:child_process').execFileSync
+    capture('/usr/sbin/screencapture',['-x','-R',[bounds.x,bounds.y,bounds.width,bounds.height].join(','),cornerPath])
+    const image=require('electron').nativeImage.createFromPath(cornerPath)
+    const size=image.getSize(),pixels=image.toBitmap()
+    const green=(x,y)=>pixels[4*(Math.floor(y*size.height/bounds.height)*size.width+Math.floor(x*size.width/bounds.width))+1]
+    const corners=[]
+    for(const x of [1,bounds.width-2])for(const y of [1,bounds.height-2]){
+     const tip=green(x,y),inside=green(x===1?x+16:x-16,y)
+     corners.push({x,y,tip,inside})
+    }
+    assert.ok(corners.every(({tip,inside})=>tip>135&&inside<85&&tip-inside>80),'material and tint clip at every corner: '+JSON.stringify(corners))
+    // A solid dark replacement also removes stripes, but cannot respond to broad live color changes.
+    await page.executeJavaScript("document.querySelector('#test-pattern').style.background='white'")
+    await pause(180)
+    const {mean:overWhite}=await pixelStrip('switcher-white')
+    await page.executeJavaScript("document.querySelector('#test-pattern').style.background='black'")
+    await pause(180)
+    const {mean:overBlack}=await pixelStrip('switcher-black')
+    assert.ok(overWhite-overBlack>4&&overWhite<85,'live glass over white and black: '+JSON.stringify({overWhite,overBlack}))
     const group='h3 button',row='button[data-key=row]'
     await clickNative(group)
     await until(()=>menuDOM("document.querySelector('h3 button')?.getAttribute('aria-expanded')==='false'"),'workspace collapses')
@@ -571,8 +596,12 @@ async function nativeFixture(config){
     await clickNative(row)
     await until(()=>ui("document.body.dataset.openedSwitcherRow==='true'"),'selecting a session')
     await until(()=>!locateMenu(),'row selection closes the panel')
-    return {clear,blurred,pageRemainedLive:true,material:'menu'}
-   }finally{screen.getCursorScreenPoint=originalPointer;await page.executeJavaScript("document.querySelector('#test-pattern')?.remove()")}
+    return {clear,blurred,overWhite,overBlack,corners,pageRemainedLive:true,material:'menu'}
+   }finally{
+    screen.getCursorScreenPoint=originalPointer
+    await ui("document.querySelector('#test-pattern')?.remove()")
+    await page.executeJavaScript("document.querySelector('#test-pattern')?.remove()")
+   }
   })
 
   await check('expanded browser tabs survive the native draggable title and collapse outside the bar',async()=>{
