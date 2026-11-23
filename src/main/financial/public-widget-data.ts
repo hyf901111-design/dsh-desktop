@@ -169,6 +169,9 @@ export function createPublicFinancialWidgetData(options:{identity:()=>string|nul
     const provider=q.source==='bitfinex'?queryBitfinexFinancialWidget:queryKrakenFinancialWidget
     result=await provider(q,{json})
    }else if(['sina','eastmoney'].includes(q.source)&&q.action!=='news')throw Error('此数据源只支持新闻查询')
+   // Indices do not issue company filings. Exchange and code together distinguish
+   // the Shanghai Composite from Ping An Bank, which also uses 000001.
+   else if(q.action==='announcements'&&financialIndexCatalog().some(({symbol})=>symbol.market===q.symbols[0].market&&symbol.code===q.symbols[0].code))result={announcements:[]}
    else if(q.source==='backup'&&['quotes','history','announcements'].includes(q.action))result=await queryBackupFinancialWidget(q,{text:get,json,check,sinaQuotes,parseSinaQuote})
    else if(q.action==='quotes'){
     const values=new Map<string,Row>(),missing=new Map<string,Row>();let rows=new Map<string,string[]>(),primaryError:Error|undefined

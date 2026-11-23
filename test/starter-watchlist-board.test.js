@@ -7,7 +7,7 @@ import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage
 import { ResearchBoardsService } from '../src/main/research-boards-service'
 import { initializeFirstLaunchAppearance } from '../src/main/home-theme-preferences'
 import { BoardDirectories } from '../packages/dsh-research-task-runtime/board-directories.js'
-import { starterWatchlistTitle } from '../packages/dsh-research-task-runtime/watchlist-board.js'
+import { starterWatchlistDocument, starterWatchlistTitle } from '../packages/dsh-research-task-runtime/watchlist-board.js'
 import { presentationHostFixture } from './fixtures/home-presentation-host.js'
 import { financialClientFixture } from './helpers/financial-widget-client-fixture.js'
 
@@ -65,7 +65,9 @@ it('creates one editable native watchlist in a fresh profile and retains deletio
     expect(nodes.map(n => n.containerSpec.widget)).toEqual(['indices','watchlist','quote','news','announcements'])
     const [indices, watchlist, quote, news, announcements] = nodes
     expect(indices.containerSpec.symbols).toHaveLength(10)
-    expect(watchlist.containerSpec.symbols).toHaveLength(5)
+    expect(watchlist.containerSpec.symbols.map(s => s.market + ':' + s.code)).toEqual([
+      'US:AAPL', 'SH:600900', 'SH:601138', 'SZ:000858', 'SZ:000425', 'SH:000300', 'SH:000001'
+    ])
     expect(quote.containerSpec.linkedWatchlistId).toBe(watchlist.id)
     expect(news.containerSpec.linkedSourceId).toBe(quote.id)
     expect(announcements.containerSpec.linkedSourceId).toBe(quote.id)
@@ -110,4 +112,44 @@ it('keeps an existing profile or previously saved board store intact', async () 
       expect(store.snapshot().favorites.map(f => f.sessionId)).toEqual(marker === 'state' ? ['mine'] : [])
     }
   } finally { await rm(root,{recursive:true,force:true}) }
+})
+
+it('switches from a stock to both starter indices through the native watchlist rows', async () => {
+  const prices = {'600900':25,'000300':4500,'000001':3500}
+  const symbolData = s => ({...s, price: prices[s.code], source:'行情测试', asOf:'2026-11-20'})
+  const bar = price => ({date:'2026-11-20', open:price, high:price, low:price, close:price, volume:100})
+  const request = vi.fn(async q => {
+    const s = q.symbols?.[0]
+    if (q.action === 'history') return {bars:[bar(prices[s.code])], source:'行情测试'}
+    if (q.action === 'news') return {news:[{id:q.query, title:q.query+'新闻', url:'https://example.org/news'}]}
+    if (q.action === 'announcements') return {announcements:s.code === '600900' ? [
+      {id:'long-power', title:'长江电力公司公告', date:'2026-11-20', url:'https://example.org/filing'}
+    ] : []}
+    return {quotes:q.symbols.map(symbolData)}
+  })
+  const ui = await financialClientFixture({financialWidget:{request}})
+  try {
+    // Keep the entire desktop board in the visible region of this DOM fixture.
+    Object.defineProperty(ui.canvas, 'clientHeight', {configurable:true,value:2200})
+    ui.canvas.getBoundingClientRect = () => ({left:0,top:0,right:1000,bottom:2200,width:1000,height:2200})
+    await ui.act(async () => {
+      ui.workspace.setCanvasSize({width:1000,height:2200,availableWidth:1000})
+      ui.workspace.setArtifacts(starterWatchlistDocument('financial-test').artifacts)
+    })
+    const panel = widget => ui.host.querySelector('[data-financial-widget="'+widget+'"]')
+    await vi.waitFor(() => expect(panel('announcements').textContent).toContain('长江电力公司公告'))
+    for (const [code,name] of [['000300','沪深300'],['000001','上证指数']]) {
+      await ui.event('click',ui.host.querySelector('[data-stock-code="'+code+'"]'))
+      await vi.waitFor(() => {
+        expect(panel('quote').querySelector('.ew-quote-price-line strong').textContent).toBe(prices[code].toLocaleString('en-US',{minimumFractionDigits:2}))
+        expect(request).toHaveBeenCalledWith(expect.objectContaining({action:'history',symbols:[{market:'SH',code,name}]}))
+        expect(panel('quote').querySelector('[data-financial-chart] svg').textContent).toContain(prices[code].toFixed(2))
+        expect(panel('news').querySelector('a').textContent).toBe(name+'新闻')
+        expect(panel('announcements').querySelector('a')).toBeNull()
+        expect(panel('announcements').textContent).toContain('暂无相关公告')
+      })
+    }
+    await ui.event('click',ui.host.querySelector('[data-stock-code="600900"]'))
+    await vi.waitFor(() => expect(panel('announcements').textContent).toContain('长江电力公司公告'))
+  } finally { await ui.dispose() }
 })

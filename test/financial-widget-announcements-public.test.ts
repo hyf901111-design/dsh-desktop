@@ -51,3 +51,15 @@ it('账户切换后的旧公告响应不得显示',async()=>{
  resolve(Response.json({success:1,data:{list:[notice()]}}))
  await expect(pending).rejects.toThrow('账户')
 })
+
+it('指数使用公司公告空态，同时保留同代码上市公司的公告', async () => {
+ const f = fixture([notice({ codes: [{ stock_code: '000001', ann_type: 'A,SZA' }] })])
+ for (const code of ['000001','000300']) for (const source of ['default','backup']) {
+  const index = { market: 'SH', code, name: '指数' }
+  expect((await f.service.query({action:'announcements', symbols:[index], source})).announcements).toEqual([])
+ }
+ expect(f.fetch).not.toHaveBeenCalled()
+ const bank = {market:'SZ', code:'000001', name:'平安银行'}
+ expect((await f.service.query({action:'announcements', symbols:[bank]})).announcements).toHaveLength(1)
+ expect(f.fetch).toHaveBeenCalledTimes(1)
+})

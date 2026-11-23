@@ -25,7 +25,10 @@ export const starterWatchlistTitle = '自选研究看板'
 
 export function starterWatchlistDocument(sessionId) {
   const widgets = ['indices', 'watchlist', 'quote', 'news', 'announcements']
-  const symbols = homeGuideNativeBoardSymbols()
+  const benchmarks = financialWidgetDefaults('indices').symbols.filter(
+    symbol => symbol.market === 'SH' && ['000300', '000001'].includes(symbol.code)
+  )
+  const symbols = [...homeGuideNativeBoardSymbols(), ...benchmarks]
   const idFor = widget => sessionId + ':' + widget
   const nodes = widgets.map((widget, index) => {
     const defaults = financialWidgetDefaults(widget)
