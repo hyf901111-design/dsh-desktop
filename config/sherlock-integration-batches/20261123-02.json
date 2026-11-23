@@ -9,38 +9,38 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "主页悬停圆角黑色磨砂与消息排队列表",
+        "featureName": "主页悬浮面板深浅主题与误发工具协议恢复",
         "branch": "codex/feat/workspace-improvements-20261123",
-        "baseCommit": "ec22893ad6d6711b40b8ffa3c194173af2919a5c",
-        "tipCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
+        "baseCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
+        "tipCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
         "commits": [
           {
-            "commit": "36481e191e5ef9a90bb24be83dfbff95f09a9f36",
+            "commit": "8977d7ec958bbeed3c828ff1eaaf72136edb1a66",
             "parents": [
-              "ec22893ad6d6711b40b8ffa3c194173af2919a5c"
+              "710f1bff4400332a47aa7751b817b6afccd90924"
             ],
-            "subject": "统一主页悬停面板四角并加深黑色磨砂背景"
+            "subject": "让主页悬浮栏随左侧栏切换深浅磨砂配色"
           },
           {
-            "commit": "710f1bff4400332a47aa7751b817b6afccd90924",
+            "commit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
             "parents": [
-              "36481e191e5ef9a90bb24be83dfbff95f09a9f36"
+              "8977d7ec958bbeed3c828ff1eaaf72136edb1a66"
             ],
-            "subject": "运行中发送时即时展开排队列表并按宿主回执同步消息"
+            "subject": "拦截正文中误发的工具协议并在原任务内恢复结构化调用"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/conversation-submission.mjs"
+            "path": "scripts/lib/first-response-effort.mjs"
+          },
+          {
+            "status": "M",
+            "path": "scripts/lib/task-opening-stream.mjs"
           },
           {
             "status": "M",
             "path": "scripts/verify-browser-live-menus.mjs"
-          },
-          {
-            "status": "M",
-            "path": "src/main/browser/menu-overlay.ts"
           },
           {
             "status": "M",
@@ -52,27 +52,11 @@
           },
           {
             "status": "M",
-            "path": "test/browser-menu-overlay-focus.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/composer-submit-policy.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-submission-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/conversation-submission.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/fixtures/conversation-submission-browser.tsx"
-          },
-          {
-            "status": "M",
             "path": "test/sidebar-session-switcher-browser.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/task-opening-sdk-recovery.test.js"
           }
         ],
         "checks": [
@@ -84,8 +68,8 @@
             ],
             "outcome": "passed",
             "summary": "桌面端类型检查",
-            "verifiedCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
-            "completedAt": "2026-11-23T09:16:13.226359+00:00",
+            "verifiedCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
+            "completedAt": "2026-11-23T09:41:28.181979+00:00",
             "timeoutMs": 300000
           },
           {
@@ -99,9 +83,9 @@
               "test/browser-menu-overlay-focus.test.ts"
             ],
             "outcome": "passed",
-            "summary": "主页面板黑色四角磨砂、原生圆角遮罩与焦点",
-            "verifiedCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
-            "completedAt": "2026-11-23T09:16:07.321704+00:00",
+            "summary": "主页与浏览器悬浮栏主题切换、圆角、模糊与可读性",
+            "verifiedCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
+            "completedAt": "2026-11-23T09:41:21.789383+00:00",
             "timeoutMs": 300000
           },
           {
@@ -111,201 +95,28 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/conversation-submission.test.js",
-              "test/composer-submit-policy.test.js"
+              "test/task-opening-sdk-recovery.test.js",
+              "test/conversation-first-response-effort.test.js"
             ],
             "outcome": "passed",
-            "summary": "排队与插话提交、待确认状态与宿主回执去重",
-            "verifiedCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
-            "completedAt": "2026-11-23T09:16:29.228150+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "--testTimeout=30000",
-              "test/conversation-submission-browser.test.js",
-              "-t",
-              "before the queue snapshot|unclaimed queued|edits, removes"
-            ],
-            "outcome": "passed",
-            "summary": "主对话和右栏实际输入排队、展开收起、编辑删除与转立即插话",
-            "verifiedCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
-            "completedAt": "2026-11-23T09:16:28.404909+00:00",
+            "summary": "真实 SDK 工具循环回放改稿，验证结构化调用、重试上限及正文不泄漏协议",
+            "verifiedCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
+            "completedAt": "2026-11-23T09:41:25.020296+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Electron 窗口逐像素验证黑色圆角背景，真实会话宿主与 Chromium 同时验证回车和鼠标发送及队列延迟。"
+          "summary": "真实 macOS 原生窗口与 Chromium 验证浅色、深色切换，窗口保持模糊，四角已裁剪。"
         },
         "acceptanceCriteria": [
-          "主页面板四角圆弧、贴边，黑色半透明并模糊底下的网页",
-          "主对话与右栏在排队时及时显示消息，待处理批次展开，领取、移除和插话后正确同步"
+          "浅色模式显示浅底深字，深色模式颜色贴近左侧栏",
+          "普通改稿回合隔离文本形式的工具调用并自动恢复执行"
         ],
         "risks": [
-          "原生材质实屏验证平台为 macOS，排队时序验证使用本地受控模型。"
+          "工具异常在本地以受控模型流回放。"
         ],
-        "generatedAt": "2026-11-23T09:16:29.272169+00:00"
-      },
-      "merged": {
-        "mergeCommit": "3dad420de85f7e9f544bde227771387536097c97",
-        "verificationCommit": "3dad420de85f7e9f544bde227771387536097c97",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/problem-feedback-worker.test.js",
-              "test/research-board-notifications-center.test.ts",
-              "test/collaboration-client.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/home-operations-navigation.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/sidebar-session-switcher-browser.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/problem-feedback-worker.test.js test/research-board-notifications-center.test.ts test/collaboration-client.test.ts test/home-operations-actions.test.ts test/home-operations-navigation.test.ts test/image-factory-canvases.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvas-workspace.test.ts test/sidebar-session-switcher-browser.test.ts",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-service.test.ts",
-              "test/notes-inline-ai-browser.test.ts",
-              "-t",
-              "sidebar image prompt|image questions|image.*after reopening|Space-prompt image"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/notes-service.test.ts test/notes-inline-ai-browser.test.ts -t sidebar image prompt|image questions|image.*after reopening|Space-prompt image",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pending-conversation-rendered.test.js",
-              "-t",
-              "acknowledges Enter immediately|shows image chat admission"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/pending-conversation-rendered.test.js -t acknowledges Enter immediately|shows image chat admission",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens a new .+ session without reusing the previous app session"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sidebar-new-session-actions.test.ts -t opens a new .+ session without reusing the previous app session",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-output-limit.test.js",
-              "test/workbench-resume-request.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/workbench-mixed-document-adapter.test.js",
-              "test/workbench-execution-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-output-limit.test.js test/workbench-resume-request.test.js test/conversation-components-policy.test.js test/workbench-mixed-document-adapter.test.js test/workbench-execution-policy.test.js",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-prototype-evidence.test.js",
-              "-t",
-              "workbench document follow-ups"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-prototype-evidence.test.js -t workbench document follow-ups",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-delivery-scope.test.js",
-              "test/workbench-grouped-quantity.test.js",
-              "test/workbench-explicit-scope.test.js",
-              "test/research-generation-watch.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/generation-progress-persistence.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-delivery-scope.test.js test/workbench-grouped-quantity.test.js test/workbench-explicit-scope.test.js test/research-generation-watch.test.js test/research-planning-feedback.test.js test/research-workbench-feedback.test.js test/workbench-feedback-upgrade-preservation.test.js test/generation-progress-persistence.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-scrollbar-theme-browser.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-scrollbar-theme-browser.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "3dad420de85f7e9f544bde227771387536097c97",
-            "completedAt": "2026-11-23T09:16:46.178Z",
-            "timeoutMs": 240000
-          }
-        ],
-        "recordedAt": "2026-11-23T09:16:46.178Z"
+        "generatedAt": "2026-11-23T09:41:28.225156+00:00"
       }
     },
     {
