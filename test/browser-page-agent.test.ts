@@ -215,11 +215,42 @@ it('rejects oversized edit batches before any DOM mutation',async()=>{
  expect(w.document.querySelectorAll('p')[0]!.textContent).toBe('a')
 })
 
-it('rejects an observation changed by the website while a bounded scan yields',async()=>{
+it('reads the updated document when the website changes text during observation',async()=>{
  const {w,agent}=page('<p>Original</p>'.repeat(300))
  setTimeout(()=>{w.document.querySelector('p')!.textContent='Website update'},0)
- await expect(agent.run({op:'observe'})).rejects.toThrow(/观察.*变化|变化.*观察/)
- expect(w.document.querySelector('p')!.textContent).toBe('Website update')
+ const ob=(await agent.run({op:'observe'})).observation
+ expect(ob.textNodes[0]!.text).toBe('Website update')
+})
+
+it('prepares chat context on a continuously animating page and rechecks visibility after a change',async()=>{
+ const {w,agent}=page('<h1>Public news</h1><p id="headline">Early headline</p><p id="withdrawn">Withdrawn text</p>'+'<p>Article</p>'.repeat(300))
+ let ticks=0
+ const timer=setInterval(()=>{
+  if(!ticks){
+   w.document.querySelector('#headline')!.textContent='Latest headline'
+   w.document.querySelector('#withdrawn')!.setAttribute('hidden','')
+  }
+  w.document.body.dataset.animationFrame=String(++ticks)
+ },0)
+ try{
+  const ob=await agent.context()
+  expect(ticks).toBeGreaterThan(0)
+  expect(ob!.text).toContain('Latest headline')
+  expect(ob!.text).not.toMatch(/Early headline|Withdrawn text/)
+  expect(ob!.totalTextNodes).toBe(302)
+ }finally{clearInterval(timer)}
+})
+
+it('rejects a click when its pre-action scan changes, even after chat observation succeeds',async()=>{
+ const {w,agent}=page('<button>Open report</button>'+'<p>Article</p>'.repeat(300))
+ const clicked=vi.fn()
+ w.document.querySelector('button')!.addEventListener('click',clicked)
+ const timer=setInterval(()=>{w.document.body.dataset.frame=String(Date.now())},0)
+ try{
+  const ob=await agent.context()
+  await expect(agent.run({op:'click',...scope(ob),ref:ob!.elements[0]!.ref})).rejects.toThrow(/观察.*变化|变化.*观察/)
+  expect(clicked).not.toHaveBeenCalled()
+ }finally{clearInterval(timer)}
 })
 
 it('excludes non-public script and style text from the public text budget',async()=>{
