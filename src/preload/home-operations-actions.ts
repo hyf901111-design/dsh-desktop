@@ -67,6 +67,11 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
     const controller = new win.AbortController()
     const abort = () => controller.abort()
     context.signal.addEventListener('abort', abort, { once: true })
+    const surfaceChanged = (event: Event) => {
+      if ((event as CustomEvent).detail?.active) abort()
+    }
+    if (presentationId) document.addEventListener('sherlock:workspace-surface-change', surfaceChanged)
+    let viewObserver: MutationObserver | undefined
     pending.add(controller)
     const signal = controller.signal
     try {
@@ -77,6 +82,19 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
       await awaitActive(context.revealComposer(), signal)
       check(signal)
       const { sessionId, draftRev } = await navigate('composer', signal, presentationId)
+      if (presentationId) {
+        const canvas = Array.from(document.querySelectorAll<HTMLElement>('.pI_x6G_centerCol [data-ework-presentation-view]'))
+          .find(view => view.dataset.eworkPresentationView === presentationId)
+        const root = canvas?.closest<HTMLElement>('[data-odyssey-page="presentation"]')
+        const checkView = () => {
+          if (!root?.isConnected || root.dataset.odysseyPage !== 'presentation' ||
+              !canvas?.isConnected || canvas.dataset.eworkPresentationView !== presentationId || document.body.dataset.workspaceSurface) abort()
+        }
+        viewObserver = new win.MutationObserver(checkView)
+        viewObserver.observe(document.body, { subtree: true, childList: true, attributes: true,
+          attributeFilter: ['data-odyssey-page', 'data-ework-presentation-view'] })
+        checkView()
+      }
       check(signal)
       const result = await awaitActive(bridge.request({ type: 'snapshot' }), signal)
       check(signal)
@@ -88,6 +106,8 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
       check(signal)
     } finally {
       context.signal.removeEventListener('abort', abort)
+      viewObserver?.disconnect()
+      if (presentationId) document.removeEventListener('sherlock:workspace-surface-change', surfaceChanged)
       pending.delete(controller)
     }
   }
