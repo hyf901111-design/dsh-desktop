@@ -12,6 +12,7 @@ import { patchFigmaFinalCanvas } from './figma-canvas-client.mjs'
 import { patchFigmaFilePreview } from './figma-file-preview-client.mjs'
 import { patchIntegrationSkillComposer } from './patch-integration-skill-composer.mjs'
 import {patchSidebarSessionExperience} from './sidebar-session-recency.mjs'
+import { readSidebarViewMode, writeSidebarViewMode } from '../../src/shared/sidebar-session-storage.mjs'
 import {patchSkillConversationPresentation,patchSkillWorkspacePresentation,patchSkillToolPresentation} from './skill-presentation.mjs'
 import { build } from 'esbuild'
 import { readFile, writeFile, realpath } from 'node:fs/promises'
@@ -511,7 +512,7 @@ function patchUnifiedSidebarScroll(source) {
   return source.slice(0, first) + '(0,react_jsx_runtime.jsxs)("div",{"data-srb-navigation-scroll":"",children:[' + content + ']}),\n' + source.slice(end)
 }
 function patchRecentSidebar(source) {
-  if (source.includes('"data-sidebar-session-view"')) return source
+  if (source.includes('"data-sidebar-session-view"')) return persistRecentSidebarMode(source)
   const state = 'const [settled, setSettled] = (0, react.useState)(collapsed);'
   source = replace(source, state, state + `
       const modeKey = 'ework.sidebar.session-view.v1';
@@ -549,6 +550,18 @@ function patchRecentSidebar(source) {
     const anchor = '"toggle.collapse": "' + label + '"'
     source = replace(source, anchor, anchor + ', "view.recent": "' + recent + '", "view.showDirectory": "' + directory + '", "view.showRecent": "' + show + '"')
   }
+  return persistRecentSidebarMode(source)
+}
+
+// Upgrade a sidebar that already has the original browser-local view switch.
+function persistRecentSidebarMode(source) {
+  if (source.includes('function readSidebarViewMode(')) return source
+  const anchor = "const modeKey = 'ework.sidebar.session-view.v1';"
+  source = replace(source, anchor, readSidebarViewMode.toString() + '\n' + writeSidebarViewMode.toString() + '\n' + anchor)
+  source = replace(source, "try { return localStorage.getItem(modeKey) === 'recent' } catch { return false }",
+    "return readSidebarViewMode(window, modeKey) === 'recent'")
+  source = replace(source, "try { localStorage.setItem(modeKey, recent ? 'directory' : 'recent') } catch {}",
+    "writeSidebarViewMode(window, modeKey, recent ? 'directory' : 'recent')")
   return source
 }
 export function patchResearchBoardSidebarTypes(source) {

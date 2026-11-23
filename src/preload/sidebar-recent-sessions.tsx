@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { StateDot } from '@deepseek-ai/dsh-client-ui-primitives'
+import { sidebarVisitsKey, parseSidebarVisits } from '../shared/sidebar-session-storage.mjs'
 import { projectSkillText } from '../shared/skill-display.mjs'
 import type { ResearchBoardsState } from '../shared/research-boards'
 import { sidebarUsageTimes, subscribeSidebarUsage } from '../../scripts/lib/sidebar-session-recency.mjs'
@@ -11,23 +12,65 @@ export type RecentSession = SidebarSearchResult & { status?: Status; location?: 
 const visitPrefix = 'ework.sidebar.visit.v1:'
 
 // Visits belong to the recent view. The directory has its own manual ordering and edit clock.
-// A separate key for each session also lets independent windows update different conversations.
+// Desktop storage survives the local server changing port. Per-session browser keys
+// remain useful for migration, same-origin notifications and browser-only previews.
 export function trackSidebarVisits(doc: Document, current: () => string | undefined, refresh: () => void) {
   const win = doc.defaultView!
   const cache = new Map<string, number>()
-  let last = 0, previous = current()
-  function time(id: string) {
-    if (!cache.has(id)) {
-      let saved = 0
-      try { saved = Number(win.localStorage.getItem(visitPrefix + id)) } catch {}
-      cache.set(id, Number.isFinite(saved) ? saved : 0)
+  const desktop = (win as any).dshDesktop?.researchCanvasStorage
+  let loaded = false, last = 0, previous = current()
+  function writeUpdates(rows: [string, number][]) {
+    if (!rows.length) return
+    try { desktop?.setItem(sidebarVisitsKey, JSON.stringify(rows)) } catch {}
+  }
+  function collectEdits(updates: [string, number][]) {
+    for (const [id, at] of Object.entries(sidebarUsageTimes())) {
+      if (Number.isSafeInteger(at) && at > (cache.get(id) ?? 0)) {
+        cache.set(id, at)
+        last = Math.max(last, at)
+        updates.push([id, at])
+      }
     }
-    return cache.get(id)!
+  }
+  function load() {
+    if (loaded) return
+    loaded = true
+    try {
+      for (const [id, at] of parseSidebarVisits(desktop?.getItem(sidebarVisitsKey)) ?? []) cache.set(id, at)
+    } catch {}
+    const migration: [string, number][] = []
+    try {
+      const local = win.localStorage
+      for (let i = 0; i < local.length; i++) {
+        const key = local.key(i)
+        if (!key?.startsWith(visitPrefix)) continue
+        const id = key.slice(visitPrefix.length), at = Number(local.getItem(key))
+        if (id && id.length <= 1024 && Number.isSafeInteger(at) && at > (cache.get(id) ?? 0)) {
+          cache.set(id, at)
+          migration.push([id, at])
+        }
+      }
+    } catch {}
+    collectEdits(migration)
+    writeUpdates(migration)
+    for (const at of cache.values()) last = Math.max(last, at)
+  }
+  function time(id: string) {
+    load()
+    return cache.get(id) ?? 0
   }
   function record(id: string) {
-    last = Math.max(Date.now(), last + 1, time(id) + 1)
+    load()
+    last = Math.max(Date.now(), last + 1)
     cache.set(id, last)
+    writeUpdates([[id, last]])
     try { win.localStorage.setItem(visitPrefix + id, String(last)) } catch {}
+  }
+  function edited() {
+    load()
+    const updates: [string, number][] = []
+    collectEdits(updates)
+    writeUpdates(updates)
   }
   function selected() {
     const id = current()
@@ -39,16 +82,22 @@ export function trackSidebarVisits(doc: Document, current: () => string | undefi
     if (id && (!requested || requested === id)) { record(id); refresh() }
   }
   function storage(event: StorageEvent) {
-    if (event.key === null) cache.clear()
-    else if (event.key.startsWith(visitPrefix)) cache.delete(event.key.slice(visitPrefix.length))
-    else return
+    if (event.key === null) { cache.clear(); loaded = false }
+    else if (event.key.startsWith(visitPrefix)) {
+      const id = event.key.slice(visitPrefix.length), at = Number(event.newValue)
+      if (!Number.isSafeInteger(at) || at <= 0) return
+      cache.set(id, Math.max(cache.get(id) ?? 0, at))
+      last = Math.max(last, at)
+    } else return
     refresh()
   }
   const picks = ['sherlock:history-session-selected', 'sherlock:search-session-opened']
   for (const name of picks) doc.addEventListener(name, reopened)
+  doc.addEventListener('sherlock-sidebar-recency', edited)
   win.addEventListener('storage', storage)
   return { time, selected, dispose() {
     for (const name of picks) doc.removeEventListener(name, reopened)
+    doc.removeEventListener('sherlock-sidebar-recency', edited)
     win.removeEventListener('storage', storage)
   } }
 }

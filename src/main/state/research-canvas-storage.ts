@@ -9,11 +9,13 @@ import {
 } from 'node:fs'
 import path from 'node:path'
 
+import { sidebarVisitsKey, parseSidebarVisits } from '../../shared/sidebar-session-storage.mjs'
 import { managerWorkbenchInstallKey } from '../../shared/research-boards'
 
 const RESEARCH_CANVAS_STORAGE_DIRECTORY = 'research-canvas'
 const HOME_GUIDE_SESSION_PREFIX = 'sherlock.home-guide.sessions.v1:'
 const MANAGER_WORKBENCH_MARKER = /^[a-zA-Z0-9:_-]{1,256}$/
+const SIDEBAR_VIEW_KEY = 'ework.sidebar.session-view.v1'
 const WORKBENCH_TRIAL_KEY = 'ework.research.openterminal-trial.v1'
 const RESPONSIVE_ARRANGE_PREFIX = 'ework.research.responsive-arrange.v1:'
 const RESEARCH_CANVAS_STORAGE_PREFIXES = [
@@ -44,7 +46,7 @@ export const RESEARCH_CANVAS_STORAGE_MAX_VALUE_LENGTH = 8 * 1024 * 1024
 function validResearchCanvasStorageKey(value: unknown): value is string {
   return typeof value === 'string' &&
     value.length <= RESEARCH_CANVAS_STORAGE_MAX_KEY_LENGTH &&
-    (value === WORKBENCH_TRIAL_KEY || value === managerWorkbenchInstallKey || RESEARCH_CANVAS_STORAGE_PREFIXES.some(
+    (value === SIDEBAR_VIEW_KEY || value === sidebarVisitsKey || value === WORKBENCH_TRIAL_KEY || value === managerWorkbenchInstallKey || RESEARCH_CANVAS_STORAGE_PREFIXES.some(
       (prefix) => value.startsWith(prefix) && value.length > prefix.length
     ))
 }
@@ -132,6 +134,16 @@ export class ResearchCanvasStorage {
     if (!validResearchCanvasStorageKey(key) || !validResearchCanvasStorageValue(value)) {
       return false
     }
+    if (key === SIDEBAR_VIEW_KEY && value !== 'recent' && value !== 'directory') return false
+    if (key === sidebarVisitsKey) {
+      const updates = parseSidebarVisits(value)
+      if (!updates) return false
+      // An IPC write can come from a window with an older snapshot. Merge its
+      // changed sessions here, where writes are serialized, before replacing the file.
+      const stored = new Map(parseSidebarVisits(this.getItem(key)) ?? [])
+      for (const [id, time] of updates) stored.set(id, Math.max(stored.get(id) ?? 0, time))
+      return this.persist(key, JSON.stringify([...stored]))
+    }
     if (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, value)) return false
     if (key === managerWorkbenchInstallKey && !MANAGER_WORKBENCH_MARKER.test(value)) return false
     if (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(value)) return false
@@ -142,6 +154,11 @@ export class ResearchCanvasStorage {
     if (key.startsWith('ework.research.table-columns.v1:') && !validTableColumnPreference(value)) return false
     if (key.startsWith('ework.research.presentation.v1:') && !validWorkbenchPresentation(value)) return false
     if (key.startsWith('sherlock.workbench.auto-arrange.v1:') && !validWorkbenchArrange(value)) return false
+    return this.persist(key, value)
+  }
+
+  private persist(key: string, value: string): boolean {
+    if (!validResearchCanvasStorageValue(value)) return false
     if (this.getItem(key) === value) return true
 
     const filePath = researchCanvasStoragePath(this.userDataPath, key)
@@ -179,6 +196,8 @@ export class ResearchCanvasStorage {
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return null
       const record = parsed as { key?: unknown; value?: unknown }
       if (record.key !== key || !validResearchCanvasStorageValue(record.value) ||
+          (key === SIDEBAR_VIEW_KEY && record.value !== 'recent' && record.value !== 'directory') ||
+          (key === sidebarVisitsKey && !parseSidebarVisits(record.value)) ||
           (key.startsWith(HOME_GUIDE_SESSION_PREFIX) && !validHomeGuideRegistry(key, record.value)) ||
           (key === WORKBENCH_TRIAL_KEY && !['enabled', 'disabled'].includes(record.value)) ||
           (key === managerWorkbenchInstallKey && !MANAGER_WORKBENCH_MARKER.test(record.value)) ||

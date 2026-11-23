@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { build } from 'esbuild'
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { ResearchCanvasStorage } from '../src/main/state/research-canvas-storage'
 import { patchResearchBoardSidebar, patchResearchBoardWorkspace } from '../scripts/lib/patch-research-board-client.mjs'
 
 let browser, bundle, style, native
@@ -78,4 +81,85 @@ it('persists a flat recent list across folders, restores app history, and leaves
     expect(await recent.locator('button').first().getAttribute('data-recent-key')).toBe('session:review')
     expect(errors).toEqual([])
   } catch (error) { if (errors.length) throw new Error(errors.join(" | "), { cause: error }); throw error } finally { await page.close() }
+}, 15000)
+
+it('restores order and mode from desktop userData on a different loopback port and migrates legacy records', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'odyssey-sidebar-visits-'))
+  const modeKey = 'ework.sidebar.session-view.v1', visits = 'ework.sidebar.visits.v1'
+  const contexts = []
+  async function start(port, migrate = false) {
+    const disk = new ResearchCanvasStorage(directory)
+    const context = await browser.newContext()
+    contexts.push(context)
+    await context.route(/^http:\/\/127\.0\.0\.1:/, route => {
+      if (new URL(route.request().url()).pathname !== '/desktop-storage')
+        return route.fulfill({ contentType: 'text/html', body: '<!doctype html><meta charset=utf-8><div id="root"></div>' })
+      const [op, key, value] = route.request().postDataJSON()
+      const reply = op === 'read' ? disk.getItem(key) : disk.setItem(key, value)
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify(reply) })
+    })
+    const page = await context.newPage()
+    await page.goto('http://127.0.0.1:' + port)
+    await page.evaluate(({ sources, migrate }) => {
+      window.native = sources
+      // The production preload exposes synchronous IPC to these native methods.
+      const ipc = (op, key, value) => {
+        const request = new XMLHttpRequest()
+        request.open('POST', '/desktop-storage', false)
+        request.setRequestHeader('Content-Type', 'application/json')
+        request.send(JSON.stringify([op, key, value]))
+        return JSON.parse(request.responseText)
+      }
+      window.dshDesktop = { researchCanvasStorage: {
+        getItem: key => ipc('read', key), setItem: (key, value) => ipc('write', key, value)
+      } }
+      if (migrate) {
+        localStorage.setItem('ework.sidebar.session-view.v1', 'recent')
+        localStorage.setItem('ework.sidebar.visit.v1:review', '150')
+        localStorage.setItem('sherlock.sidebar.activity.v2', JSON.stringify({ product: 140 }))
+      }
+    }, { sources: native, migrate })
+    await page.addScriptTag({ content: bundle })
+    await page.addStyleTag({ content: style })
+    return { page, disk, context, rows: page.locator('[data-sidebar-recent-list] [data-recent-key]'),
+      toggle: page.locator('[data-sidebar-session-view]') }
+  }
+  try {
+    const first = await start(4317, true)
+    await first.rows.first().waitFor()
+    expect(await first.rows.first().getAttribute('data-recent-key')).toBe('session:review')
+    expect(first.disk.getItem(modeKey)).toBe('recent')
+    expect(new Map(JSON.parse(first.disk.getItem(visits))).get('product')).toBe(140)
+    await first.page.locator('[data-recent-key="session:image"]').click()
+    await first.page.evaluate(() => {
+      const at = Date.now() + 10
+      localStorage.setItem('sherlock.sidebar.activity.v2', JSON.stringify({ product: at }))
+      document.dispatchEvent(new Event('sherlock-sidebar-recency'))
+    })
+    await first.context.close()
+
+    const second = await start(5726)
+    await second.rows.first().waitFor()
+    expect(await second.page.evaluate(() => localStorage.length)).toBe(0)
+    expect(await second.rows.evaluateAll(rows => rows.slice(0, 3).map(row => row.dataset.recentKey)))
+      .toEqual(['session:product', 'session:image', 'session:review'])
+    await second.toggle.click()
+    expect(second.disk.getItem(modeKey)).toBe('directory')
+    await second.context.close()
+
+    const third = await start(3914)
+    await third.toggle.waitFor()
+    expect(await third.toggle.getAttribute('aria-pressed')).toBe('false')
+    // An older renderer may submit a delayed write for one session only.
+    expect(third.disk.setItem(visits, JSON.stringify([['review', 100], ['elsewhere', 80]]))).toBe(true)
+    expect(third.disk.setItem(visits, '[["invalid","now"]]')).toBe(false)
+    expect(third.disk.setItem(modeKey, 'other')).toBe(false)
+    const restored = new Map(JSON.parse(new ResearchCanvasStorage(directory).getItem(visits)))
+    expect(restored.get('review')).toBe(150)
+    expect(restored.get('image')).toBeGreaterThan(150)
+    expect(restored.get('elsewhere')).toBe(80)
+  } finally {
+    for (const context of contexts) await context.close()
+    await rm(directory, { recursive: true, force: true })
+  }
 }, 15000)
