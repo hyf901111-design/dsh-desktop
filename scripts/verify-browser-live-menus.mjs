@@ -555,7 +555,15 @@ async function nativeFixture(config){
     await mouse(button);await shown('Home switcher')
     assert.ok(menu.popup&&!menu.popup.isFocusable())
     assert.equal(wireState.material,'menu')
-    assert.deepEqual(await menuDOM("(()=>{const style=getComputedStyle(document.querySelector('nav'));return [style.borderRadius,style.backgroundColor]})()"),['12px','rgba(0, 0, 0, 0.82)'])
+    const navPaint="(()=>{const nav=document.querySelector('nav'),style=getComputedStyle(nav);return [style.borderRadius,style.backgroundColor,style.color]})()"
+    const shellPaint=()=>ui(navPaint.replace("document.querySelector('nav')","document.querySelector('#ework-sidebar-session-switcher nav')"))
+    const lightPaint=await shellPaint()
+    assert.deepEqual(await menuDOM(navPaint),lightPaint)
+    assert.equal(lightPaint[0],'12px')
+    await ui("document.body.setAttribute('data-ds-dark-theme','')")
+    const darkPaint=await shellPaint()
+    assert.notEqual(darkPaint[1],lightPaint[1]);assert.notEqual(darkPaint[2],lightPaint[2])
+    await until(async()=>JSON.stringify(await menuDOM(navPaint))===JSON.stringify(darkPaint),'open native switcher adopts dark theme')
     await pause(420);assert.ok(await activeMenu(),'resting over Home keeps the panel open')
     // Crossing to the child makes Chromium report a leave in the shell.
     pointer=await center(panel)

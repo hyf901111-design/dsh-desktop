@@ -17,7 +17,7 @@ beforeAll(async () => {
   sidebarSource = (await readFile('node_modules/@deepseek-ai/dsh-client-ui-sidebar/lib/client.js', 'utf8'))
     .replace('exports.apply = apply;', 'exports.Root = SidebarRoot; exports.zh = zh; exports.apply = apply;')
   layoutSource = await readFile('node_modules/@deepseek-ai/dsh-client-ui-layout/lib/client.js', 'utf8')
-  style = (await Promise.all(['figma-panels.css', 'figma-b-icons.css', 'navigation-shortcuts.css']
+  style = (await Promise.all(['figma-final-shell.css', 'figma-panels.css', 'figma-b-icons.css', 'navigation-shortcuts.css']
     .map(file => readFile('src/preload/' + file, 'utf8')))).join('\n')
   const bundle = await build({
     stdin: { resolveDir: process.cwd(), contents: `
@@ -175,8 +175,9 @@ it('softens fine background detail while transmitting a muted background color t
   const { page, home, panel } = await fixture()
   try {
     await page.locator('[data-pane="conversation"]').evaluate((pane: HTMLElement) => {
+      document.body.setAttribute('data-ds-dark-theme','')
       pane.style.position = 'relative'
-      pane.style.background = 'linear-gradient(90deg,rgb(32,78,130) 154px,rgb(228,180,42) 154px)'
+      pane.style.setProperty('background', 'linear-gradient(90deg,rgb(32,78,130) 154px,rgb(228,180,42) 154px)', 'important')
       const grid = document.createElement('div')
       grid.id = 'switcher-texture'
       grid.style.cssText = 'position:absolute;inset:50% 0 0;background:repeating-conic-gradient(black 0 25%,white 0 50%) 0/8px 8px'
@@ -189,13 +190,16 @@ it('softens fine background detail while transmitting a muted background color t
     const picture = PNG.sync.read(await page.screenshot({ clip: bounds, scale: 'css' }))
     const red = (x: number, y: number) => picture.data[(y * picture.width + x) * 4]!
     const transmitted = red(256, 110) - red(52, 110)
-    expect(transmitted).toBeGreaterThan(30)
-    expect(transmitted).toBeLessThan(42)
-    expect(red(52, 110)).toBeLessThan(10)
+    expect(transmitted).toBeGreaterThan(13)
+    expect(transmitted).toBeLessThan(22)
+    expect(red(52, 110)).toBeGreaterThan(13)
+    expect(red(52, 110)).toBeLessThan(25)
     const fine = Array.from({ length: 20 }, (_, x) => red(80 + x, 320))
     expect(Math.max(...fine) - Math.min(...fine)).toBeLessThan(3)
     await page.locator('[data-pane="conversation"]').evaluate((pane: HTMLElement) => {
-      pane.style.cssText += ';background:white;border-radius:0'
+      pane.style.setProperty('background','white','important')
+      pane.style.borderRadius = '0'
+      pane.closest<HTMLElement>('[data-dsh-frame]')!.style.setProperty('background','white','important')
       pane.querySelector('#switcher-texture')!.remove()
     })
     const corners = PNG.sync.read(await page.screenshot({ clip: bounds, scale: 'css' }))
@@ -269,7 +273,24 @@ it('keeps the empty panel usable in English and dark appearance', async () => {
     })
     const empty = page.getByRole('navigation', { name: 'Switch conversation' })
     await empty.getByText('No conversations yet').waitFor()
-    expect(await empty.evaluate((el: HTMLElement) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0.82)')
+    for (const dark of [true, false, true]) {
+      const colors = await empty.evaluate((el: HTMLElement, dark: boolean) => {
+        document.body.toggleAttribute('data-ds-dark-theme', dark)
+        const nav = getComputedStyle(el), frame = getComputedStyle(document.querySelector('[data-dsh-frame]')!)
+        const canvas = document.createElement('canvas').getContext('2d')!
+        const pixel = (color: string) => {
+          canvas.clearRect(0, 0, 1, 1)
+          canvas.fillStyle = color
+          canvas.fillRect(0, 0, 1, 1)
+          return Array.from(canvas.getImageData(0, 0, 1, 1).data)
+        }
+        return { rail: pixel(frame.backgroundColor), panel: pixel(nav.backgroundColor), text: pixel(nav.color) }
+      }, dark)
+      expect(colors.panel[3]).toBeCloseTo(232, 0)
+      expect(colors.panel[0] - colors.rail[0]).toBeGreaterThanOrEqual(5)
+      expect(colors.panel[0] - colors.rail[0]).toBeLessThanOrEqual(9)
+      expect(dark ? colors.text[0] - colors.panel[0] : colors.panel[0] - colors.text[0]).toBeGreaterThan(160)
+    }
     await home.focus(); await page.keyboard.press('ArrowDown')
     expect(await empty.evaluate((el: HTMLElement) => el === document.activeElement)).toBe(true)
     await page.keyboard.press('Escape')

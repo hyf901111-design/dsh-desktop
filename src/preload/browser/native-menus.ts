@@ -157,13 +157,16 @@ export class NativeBrowserMenuProjection{
    // A native sibling cannot blur the live webpage underneath. Paint the
    // entire composer flyout, including its search field and scrollport.
    if(root.matches(composerMenuSelector))copy.style.backgroundColor=dark?'#262626':'#f6f6f6'
-   if(switcher&&!material){const nav=copy.querySelector('nav');if(nav)nav.style.backgroundColor='#000'}
+   if(switcher&&!material){
+    const nav=copy.querySelector('nav'),source=root.querySelector('nav')
+    if(nav&&source)nav.style.backgroundColor='rgb(from '+win.getComputedStyle(source).backgroundColor+' r g b / 1)'
+   }
    return copy.outerHTML
   })
   const listCss=sharedStyles?[...sharedStyles].map(([rule,key])=>'[data-native-row-style='+key+']{'+rule+'}').join('\n'):''
   const backdropCss=table?'.odyssey-table-dialog::backdrop{background:'+win.getComputedStyle(table,'::backdrop').backgroundColor+'}':''
   const notificationCss=roots.some(root=>root.matches(notificationCenterSelector))?notificationCenterStyles:''
-  const pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=listCss+'\n'+backdropCss+'\n'+notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
+  const pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=listCss+'\n'+backdropCss+'\n'+notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(switcher?win.getComputedStyle(roots[0]!).getPropertyValue('--switcher-highlight'):'')||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
   const state={id:this.id,revision:this.revision,owner:browser.dataset.sessionId||'',tabId:browser.dataset.tabId,url:browser.dataset.url,bounds:table?{x:0,y:0,width:win.innerWidth,height:win.innerHeight}:{x:left,y:top,width:right-left,height:bottom-top},html:copies.join(''),css,focusId:passive?undefined:this.focusId||undefined,selection:this.selection,passive,material,hoverCard,switcherAnchor:anchor?{x:anchor.x-left,y:anchor.y-top,width:anchor.width,height:anchor.height}:undefined,focusOwner:(switcher&&!material)||hoverCard||roots.some(root=>root.classList.contains('eb-suggestions')),reducedMotion:win.matchMedia('(prefers-reduced-motion: reduce)').matches}
   for(const {element} of this.roots){
    if(element.dataset.browserProjected!=='true')element.dataset.browserProjected='true'
