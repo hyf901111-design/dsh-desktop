@@ -330,6 +330,112 @@
         ],
         "recordedAt": "2026-11-23T22:09:17.199Z"
       }
+    },
+    {
+      "handoff": {
+        "schemaVersion": 1,
+        "featureName": "消息中心外部点击关闭与图像原比例文案",
+        "branch": "codex/feat/notification-ratio-20261124",
+        "baseCommit": "3449a79e3410e31df11492f859855b75d670c626",
+        "tipCommit": "59c05631008667a1938488e66951ff6e2c91c736",
+        "commits": [
+          {
+            "commit": "9323dd89cd8517803d8107c7f2a8382f220560b3",
+            "parents": [
+              "3449a79e3410e31df11492f859855b75d670c626"
+            ],
+            "subject": "修复：点击演示编辑器及其他菜单外区域时关闭消息中心"
+          },
+          {
+            "commit": "59c05631008667a1938488e66951ff6e2c91c736",
+            "parents": [
+              "9323dd89cd8517803d8107c7f2a8382f220560b3"
+            ],
+            "subject": "调整：图像画布比例选项显示为原比例"
+          }
+        ],
+        "files": [
+          {
+            "status": "M",
+            "path": "src/preload/image-factory/view.tsx"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/notification-center.css"
+          },
+          {
+            "status": "M",
+            "path": "src/preload/research-board-notifications-ui.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/image-factory-layer-gesture.test.ts"
+          },
+          {
+            "status": "M",
+            "path": "test/pending-conversation-rendered.test.js"
+          },
+          {
+            "status": "M",
+            "path": "test/research-board-notifications-center.test.ts"
+          }
+        ],
+        "checks": [
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "桌面端类型检查",
+            "verifiedCommit": "59c05631008667a1938488e66951ff6e2c91c736",
+            "completedAt": "2026-11-23T22:48:46.582988+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/research-board-notifications-center.test.ts",
+              "test/image-factory-layer-gesture.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "消息中心和图像画布交互",
+            "verifiedCommit": "59c05631008667a1938488e66951ff6e2c91c736",
+            "completedAt": "2026-11-23T22:48:41.351835+00:00",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "--maxWorkers=1",
+              "test/pending-conversation-rendered.test.js",
+              "-t",
+              "restores a custom canvas ratio"
+            ],
+            "outcome": "passed",
+            "summary": "Chromium 实测恢复原始画布宽高",
+            "verifiedCommit": "59c05631008667a1938488e66951ff6e2c91c736",
+            "completedAt": "2026-11-23T22:48:48.341037+00:00",
+            "timeoutMs": 180000
+          }
+        ],
+        "uiVerification": {
+          "outcome": "passed",
+          "summary": "Chromium 实测跨域演示框架、阻止冒泡的外部控件、菜单内筛选和铃铛开关。通过图像菜单验证 16:9 切回 257×389。"
+        },
+        "acceptanceCriteria": [
+          "点击嵌入的编辑器或普通界面可关闭消息中心，菜单内筛选正常",
+          "图像菜单显示原比例并恢复源图尺寸"
+        ],
+        "risks": [],
+        "generatedAt": "2026-11-23T22:48:48.372003+00:00"
+      }
     }
   ],
   "integrationChecks": [
@@ -389,6 +495,37 @@
         "fresh desktop window|opens Home directly|opens a new .+ session without reusing the previous app session"
       ],
       "timeoutMs": 300000
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/research-board-notifications-center.test.ts",
+        "test/image-factory-layer-gesture.test.ts"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "test/pending-conversation-rendered.test.js",
+        "-t",
+        "restores a custom canvas ratio"
+      ],
+      "timeoutMs": 180000
     }
   ],
   "mainSynchronizations": []
