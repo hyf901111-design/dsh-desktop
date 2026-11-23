@@ -9,6 +9,7 @@ import {
   rmSync
 } from 'node:fs'
 import { join } from 'node:path'
+import { isFreshDesktopProfile } from './launch-root'
 import {
   ResearchBoardsError,
   type Favorite,
@@ -54,6 +55,7 @@ export type AccountStore = {
   >
 }
 export type BoardsStoreState = {
+  pendingStarterBoard?: string
   version: 1
   favorites: Favorite[]
   accounts: Record<string, AccountStore>
@@ -119,6 +121,14 @@ export class ResearchBoardsStore {
       }
     }
   }
+  static prepareFreshInstallation(userData: string) {
+    if (!isFreshDesktopProfile(userData)) return
+    const store = new ResearchBoardsStore(userData)
+    // A migrated or partially restored board store already belongs to its user.
+    if (existsSync(store.file)) return
+    store.transaction(state => { state.pendingStarterBoard = 'session-' + randomUUID() })
+  }
+  get pendingStarterBoard() { return this.state.pendingStarterBoard }
   snapshot() {
     return clone(this.state)
   }
@@ -181,6 +191,7 @@ export class ResearchBoardsStore {
     }
     this.transaction((s) => {
       s.favorites.push(value)
+      if (s.pendingStarterBoard === identity.sessionId) delete s.pendingStarterBoard
     })
     return clone(value)
   }

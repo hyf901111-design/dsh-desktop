@@ -1,4 +1,5 @@
 import { validFeedbackImages } from '../../packages/dsh-research-collaboration/feedback-images.js'
+import { starterWatchlistDocument, starterWatchlistTitle } from '../../packages/dsh-research-task-runtime/watchlist-board.js'
 import { withSharedCanvasCompatibilityLayout } from '../shared/shared-board-layout'
 import { cleanActivity } from 'dsh-research-collaboration/activity'
 import { componentVersion, validateComponentMessage } from 'dsh-research-collaboration/component-state'
@@ -449,6 +450,8 @@ export class ResearchBoardsService {
   private notificationsDispose?: () => void
   private accountDispose: () => void
   private generationAbort = new AbortController()
+  private starterFlight?: Promise<void>
+  private starterRetry?: ReturnType<typeof setTimeout>
   private stopped = false
   private eventSeq = 0
   private flushing?: Promise<void>
@@ -730,6 +733,37 @@ export class ResearchBoardsService {
       notifications: copy(a?.notifications ?? emptyNotifications()),
       recoveries: summaries(a?.recoveries ?? [])
     }
+  }
+  installStarterBoard(basePath: string): Promise<void> {
+    if (this.starterFlight) return this.starterFlight
+    const sessionId = this.store.pendingStarterBoard
+    if (this.stopped || !sessionId) return Promise.resolve()
+    clearTimeout(this.starterRetry)
+    this.starterFlight = (async () => {
+      const { storage, hooks } = this.options
+      const document = starterWatchlistDocument(sessionId)
+      for (const [key, value] of [
+        ['ework.research.grid.v1:' + sessionId, document.grid],
+        ['sherlock.research.canvas.artifacts.v1:' + sessionId, document.artifacts]
+      ] as const) {
+        // A retry only fills missing keys. Even an empty saved canvas is an edit.
+        if (storage.getItem(key) === null && !storage.setItem(key, JSON.stringify(value)))
+          throw new ResearchBoardsError('STORAGE_UNAVAILABLE')
+      }
+      if (!hooks?.directory) throw new ResearchBoardsError('CAPTURE_UNAVAILABLE')
+      const identity = await hooks.directory({ mode: 'starter', sessionId, basePath, title: starterWatchlistTitle }, this.generationAbort.signal)
+      if (this.stopped || this.store.pendingStarterBoard !== sessionId) return
+      if (identity.sessionId !== sessionId) throw new ResearchBoardsError('BINDING_CONFLICT')
+      this.store.addFavorite(identity, true, true)
+      this.emitState()
+    })().catch(error => {
+      if (!this.stopped) {
+        console.warn('[research-boards] starter board initialization will retry', error)
+        this.starterRetry = setTimeout(() => void this.installStarterBoard(basePath), 15000)
+        this.starterRetry.unref?.()
+      }
+    }).finally(() => { this.starterFlight = undefined })
+    return this.starterFlight
   }
   async start() {
     if (this.options.account.authenticated) await this.refresh()
@@ -3151,6 +3185,7 @@ export class ResearchBoardsService {
     return saved
   }
   stop() {
+    clearTimeout(this.starterRetry)
     for (const timer of this.progressTimers.values()) clearTimeout(timer)
     this.progressTimers.clear()
     if (this.stopped) return

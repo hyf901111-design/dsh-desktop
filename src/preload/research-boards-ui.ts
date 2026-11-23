@@ -1274,7 +1274,8 @@ export function createResearchBoardsPage(deps: PageDependencies) {
 
   function waitForBoardSession(id: string) {
     const list = deps.sessions.list.getSnapshot()
-    if (list.phase === 'pending' && !list.byId[id]) {
+    // A native starter session can reach the personal list just before its host event.
+    if (!list.byId[id] && (list.phase === 'pending' || state.favorites.some(f => f.dedicated && f.sessionId === id))) {
       return deps.sessions.refresh().then(() => {
         const refreshed = deps.sessions.list.getSnapshot()
         if (refreshed.phase === 'pending' && !refreshed.byId[id]) throw Error('会话列表加载失败，请重试。')

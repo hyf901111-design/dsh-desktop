@@ -1,5 +1,8 @@
+import { homeGuideNativeBoardSymbols as boardSymbolsDefinition, homeGuideNativeBoardWidgetSeed as boardWidgetSeedDefinition } from '../../packages/dsh-research-task-runtime/watchlist-board.js'
 import {NativeHomeNotesGuidePortal as NotesGuidePortalDefinition,revealHomeNotesGuideSummary as NotesGuideSummaryDefinition} from './home-guide-notes-native.mjs'
 import {HOME_BOARD_SMART_PATH as boardSmartPathDefinition, HOME_BOARD_SMART_PROMPT as boardSmartPromptDefinition} from '../../packages/dsh-research-task-runtime/home-board-smart-contract.js'
+const homeGuideNativeBoardSymbols = boardSymbolsDefinition
+export const homeGuideNativeBoardWidgetSeed = boardWidgetSeedDefinition
 const homeGuideNativeSmartPath = boardSmartPathDefinition
 const homeGuideNativeSmartPrompt = boardSmartPromptDefinition
 // Keep serialized references local when the test loader rewrites ESM imports.
@@ -17,26 +20,6 @@ const CANVAS = '/* odyssey:home-guide-shared-workspace-canvas:v1 */'
 const RENDER_OWNER = '/* odyssey:home-guide-render-owner:v1 */\n                "data-home-guide-view-session": sessionId, "data-home-guide-board-only": boardOnly || void 0,'
 const COMPLETE_DRAFT = '/* odyssey:home-guide-complete-draft:v1 */\nuseHomeGuideNativeCompleteDraft(rootRef,sessionId,workspace,canvasToolRef,selectCanvasTool);'
 const SELECT_TOOL = '\n      const selectCanvasTool=tool=>{canvasToolRef.current=tool;setCanvasTool(tool);};'
-
-function homeGuideNativeBoardSymbols() {
-  return [
-    { market: 'US', code: 'AAPL', name: '苹果' },
-    { market: 'SH', code: '600900', name: '长江电力' },
-    { market: 'SH', code: '601138', name: '工业富联' },
-    { market: 'SZ', code: '000858', name: '五粮液' },
-    { market: 'SZ', code: '000425', name: '徐工机械' }
-  ]
-}
-
-export function homeGuideNativeBoardWidgetSeed(spec, symbols) {
-  if (spec.widget === 'quote') return { ...spec, dataSource: 'default' }
-  if (spec.widget === 'watchlist') return { ...spec, symbols: symbols.slice(0, 3), selectedSymbol: 'US:AAPL', refreshEnabled: true }
-  if (spec.widget === 'indices') {
-    const benchmarks = [['^GSPC','标普500'],['^IXIC','纳斯达克综合指数'],['^NDX','纳斯达克100'],['^RUT','罗素2000']]
-    return { ...spec, symbols: [...spec.symbols, ...benchmarks.map(([code,name]) => ({ market: 'INDEX', code, name }))] }
-  }
-  return null
-}
 
 // Keep the existing bridge, provenance and errors; no tutorial market values.
 function homeGuideNativeSampleProvider() {

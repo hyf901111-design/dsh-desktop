@@ -403,6 +403,11 @@ function configureAppIdentity(): () => void {
       }
     }
     try {
+      ResearchBoardsStore.prepareFreshInstallation(identity.userData)
+    } catch (error) {
+      console.warn('[research-boards] unable to register starter board', error)
+    }
+    try {
       initializeFirstLaunchAppearance(identity.userData)
     } catch (error) {
       console.warn('[desktop] failed to initialize first-launch appearance', error)
@@ -1934,6 +1939,7 @@ async function bootstrap(): Promise<void> {
     onChanged: (snapshot) => {
       if (snapshot.phase === 'starting') integrationService?.rotateIdentity()
       if (snapshot.phase === 'ready' && snapshot.url) {
+        void researchBoardsService?.installStarterBoard(launchDirectory)
         void openHarness(snapshot.url).catch(showUnexpectedError)
         void recoverKnowledgeCopies(snapshot.url)
         queueKnowledgeHistory()
