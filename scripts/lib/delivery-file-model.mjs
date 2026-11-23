@@ -330,7 +330,7 @@ export function presentationDelivery(message,toolName,turn) {
     if(!path||!path.toLowerCase().endsWith('.'+file.format)||paths.includes(path))return
     paths.push(path);formats.add(file.format)
   }
-  return{turnId:value.turnId,paths}
+  return{turnId:value.turnId,paths,...(value.complete===true && {complete:true})}
 }
 
 /** Code Mode settlements are host events, not text printed by run_code. */

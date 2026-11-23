@@ -209,12 +209,17 @@ it('durably collects verified native and Code Mode presentation publications wit
  const paths=(state,status='closed',seq=10)=>selector({cwd:'/work',seq,text:'文件可在卡片中打开；质量仍待原生复核。',turn:{status,data:new Map([['deliverables',definition.buildLocationData({state},'turn').value]])}})
  expect(paths(native(initial()))).toEqual(['/work/final.pptx','/work/final.pdf'])
  expect(paths(native(initial()),'open')).toBeNull();expect(paths(native(initial()),'closed',1)).toBeNull()
+ const terminal=native(initial(),'presentation_files',{...packet,complete:true})
+ expect(paths(terminal,'closed',1)).toEqual(['/work/final.pptx','/work/final.pdf'])
+ expect(paths(terminal,'open',1)).toBeNull()
  expect(paths(native(initial(),'bash'))).toBeNull();expect(paths(native(initial(),'presentation_files',{...packet,turnId:'2'}))).toBeNull()
  const event={type:'tool/code-dispatch',seq:2,data:{name:'presentation_files',rootCallId:'root',parentCallId:'root',subCallId:'publish',isError:false,content:[{type:'text',text:JSON.stringify(packet)}]}}
  expect(definition.match(event)).toEqual({id:'1',role:'update'})
  const coded=(state,event2=event)=>definition.update({state},{event:event2})
  const state=call(initial(),'run_code','root')
  expect(paths(coded(state))).toEqual(['/work/final.pptx','/work/final.pdf'])
+ const terminalEvent={...event,data:{...event.data,content:[{type:'text',text:JSON.stringify({...packet,complete:true})}]}}
+ expect(paths(coded(state,terminalEvent),'closed',1)).toEqual(['/work/final.pptx','/work/final.pdf'])
  expect(paths(coded(initial()))).toBeNull();expect(paths(coded(call(initial(),'bash','root')))).toBeNull()
  expect(paths(coded(state,{...event,data:{...event.data,isError:true}}))).toBeNull()
 })
