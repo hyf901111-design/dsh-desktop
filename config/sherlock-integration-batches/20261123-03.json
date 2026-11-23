@@ -9,24 +9,31 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "为已有演示文稿提供轻量改版和原生复核",
+        "featureName": "办公演示按内容结构排版与交付收束",
         "branch": "codex/feat/ppt-layout-edit-20261123",
-        "baseCommit": "3449a79e3410e31df11492f859855b75d670c626",
-        "tipCommit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
+        "baseCommit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
+        "tipCommit": "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb",
         "commits": [
           {
-            "commit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
+            "commit": "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb",
             "parents": [
-              "3449a79e3410e31df11492f859855b75d670c626"
+              "55225e7bc06783da21231674ff2c1ba5d210ab0d"
             ],
-            "subject": "优化客户端已有 PPT 改版流程，复用原生对象排版与逐页复核"
+            "subject": "按内容关系生成和重排办公演示，并在文件核验交付后结束任务"
           }
         ],
         "files": [
           {
-            "status": "C097",
-            "path": "skills/efund-ppt-maker/AUTHORING.md",
-            "previousPath": "skills/efund-ppt-maker/SKILL.md"
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/index.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-integration-runtime/skill-priority.js"
+          },
+          {
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/presentation-files.js"
           },
           {
             "status": "M",
@@ -38,30 +45,83 @@
           },
           {
             "status": "A",
-            "path": "skills/efund-ppt-maker/references/layout-edit.md"
+            "path": "skills/efund-ppt-maker/references/meeting-content.md"
           },
           {
-            "status": "A",
+            "status": "M",
             "path": "skills/efund-ppt-maker/scripts/layout_edit.py"
           },
           {
             "status": "A",
-            "path": "skills/efund-ppt-maker/scripts/review_layout.applescript"
+            "path": "skills/efund-ppt-maker/scripts/meeting_attachments.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/meeting_deck.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/meeting_layout.py"
+          },
+          {
+            "status": "A",
+            "path": "skills/efund-ppt-maker/scripts/review_meeting.py"
           },
           {
             "status": "M",
             "path": "test/bundled-ppt-skill.test.ts"
           },
           {
+            "status": "M",
+            "path": "test/integration-bundled-skill.test.js"
+          },
+          {
             "status": "A",
-            "path": "test/efund_layout_edit_test.py"
+            "path": "test/meeting_deck_test.py"
           },
           {
             "status": "M",
-            "path": "test/integration-bundled-skill.test.js"
+            "path": "test/presentation-files.test.js"
           }
         ],
         "checks": [
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "test/meeting_deck_test.py"
+            ],
+            "outcome": "passed",
+            "summary": "新建、重排、原生对象与防覆盖",
+            "verifiedCommit": "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb",
+            "completedAt": "2026-11-23T16:06:38.248+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "python3",
+              "-B",
+              "test/efund_layout_edit_test.py"
+            ],
+            "outcome": "passed",
+            "summary": "原始文稿按页和对象保真",
+            "verifiedCommit": "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb",
+            "completedAt": "2026-11-23T16:06:38.248+00:00",
+            "timeoutMs": 120000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/presentation-files.test.js"
+            ],
+            "outcome": "passed",
+            "summary": "交付成功终止及失败恢复",
+            "verifiedCommit": "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb",
+            "completedAt": "2026-11-23T16:06:38.248+00:00",
+            "timeoutMs": 120000
+          },
           {
             "argv": [
               "node",
@@ -73,71 +133,25 @@
               "discoverable through|actual shipped PPT"
             ],
             "outcome": "passed",
-            "summary": "技能详情与运行时发现",
-            "verifiedCommit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
-            "completedAt": "2026-11-23T14:57:05.744+00:00",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "python3",
-              "-B",
-              "test/efund_layout_edit_test.py"
-            ],
-            "outcome": "passed",
-            "summary": "任务 Python 验证逻辑页序、合并表格、链接、输入版本和原子交付",
-            "verifiedCommit": "55225e7bc06783da21231674ff2c1ba5d210ab0d",
-            "completedAt": "2026-11-23T14:57:05.744+00:00",
+            "summary": "技能发现与实际资源",
+            "verifiedCommit": "355bf5bde3972c912b17e32ebfdb468fb1ffd4eb",
+            "completedAt": "2026-11-23T16:06:38.248+00:00",
             "timeoutMs": 120000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "原材料在随包 Python 中按计划重排；macOS PowerPoint 实际访问 1–8 页并导出可读 PDF。v3 仅改指定表格且两份原生附件不变。"
+          "summary": "PowerPoint 渲染真实八页原稿及五页新建示例，确认编号、主结论、指标强调、时间线与两份附件标题；待集成后复测完整客户端。"
         },
         "acceptanceCriteria": [
-          "技能区分已有稿排版与完整新建流程，普通改版不要求重选目录",
-          "原生可编辑对象和附件保留，PowerPoint 可逐页访问"
+          "已有演示实际按内容重排",
+          "新建办公报告生成可编辑品牌页",
+          "真实文件验收成功后停止"
         ],
         "risks": [
-          "仍需完整模型会话评估端到端耗时；PowerPoint 自动化取决于本机权限"
+          "特殊素材型和动画页需个别设计；模型会话质量需现场复核。"
         ],
-        "generatedAt": "2026-11-23T14:57:26.410+00:00"
-      },
-      "merged": {
-        "mergeCommit": "57000c686d8d146c028e223ec413172088e8c4be",
-        "verificationCommit": "57000c686d8d146c028e223ec413172088e8c4be",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/bundled-ppt-skill.test.ts",
-              "test/integration-bundled-skill.test.js",
-              "-t",
-              "discoverable through|actual shipped PPT"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/bundled-ppt-skill.test.ts test/integration-bundled-skill.test.js -t discoverable through|actual shipped PPT",
-            "verifiedCommit": "57000c686d8d146c028e223ec413172088e8c4be",
-            "completedAt": "2026-11-23T14:58:12.953Z",
-            "timeoutMs": 120000
-          },
-          {
-            "argv": [
-              "python3",
-              "-B",
-              "test/efund_layout_edit_test.py"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：python3 -B test/efund_layout_edit_test.py",
-            "verifiedCommit": "57000c686d8d146c028e223ec413172088e8c4be",
-            "completedAt": "2026-11-23T14:58:12.953Z",
-            "timeoutMs": 120000
-          }
-        ],
-        "recordedAt": "2026-11-23T14:58:12.953Z"
+        "generatedAt": "2026-11-23T16:06:38.248+00:00"
       }
     }
   ],
