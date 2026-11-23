@@ -1,3 +1,6 @@
+import * as groupedQuantity from './workbench-grouped-quantity.js'
+const {groupedScopeRestored} = groupedQuantity
+
 // These checks also run on previously saved canvases. Use only the current
 // panel's contract and delivered records, never a board title or source quote.
 export function workbenchDeliveryIntent(request = '') {
@@ -41,8 +44,13 @@ export function workbenchReadingScopeCount(artifact, entity) {
 export function workbenchReadingScopeRestored(artifact, receipt) {
   return receipt?.recoveryMode === 'incomplete-scope' && Array.isArray(receipt.unmetRequirements) &&
     receipt.unmetRequirements.length > 0 && receipt.unmetRequirements.every(reason => {
+      if (typeof reason !== 'string') return false
       const scope = /^交付范围无法核验：需要 (\d+)(?:个|项)([^。]+)。请使用已取得的完整记录呈现。$/u.exec(reason)
-      return scope && workbenchReadingScopeCount(artifact, scope[2]) >= Number(scope[1])
+      if (scope) return workbenchReadingScopeCount(artifact, scope[2]) >= Number(scope[1])
+      const counted = /^交付范围未满足：需要 (\d+)([项个条家只])([^。，]+)，目前仅有 \d+ 项。$/u.exec(reason)
+      if (!counted) return false
+      const request = receipt.hostContext?.sourceRequirement ?? receipt.containerPrompt ?? receipt.prompt
+      return groupedScopeRestored(artifact, workbenchDeliveryIntent(request), {expected:Number(counted[1]),unit:counted[2],entity:counted[3]})
     })
 }
 

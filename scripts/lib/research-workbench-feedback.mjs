@@ -1,4 +1,5 @@
 import * as panelDelivery from '../../packages/dsh-research-task-runtime/workbench-panel-delivery.js'
+import * as groupedQuantity from '../../packages/dsh-research-task-runtime/workbench-grouped-quantity.js'
 const {workbenchDeliveryIntent, workbenchChartTextFallback, workbenchNamedTargets, workbenchNamedTableCoverage, workbenchReadingScopeCount, workbenchReadingScopeRestored} = panelDelivery
 
 // The canvas already owns the accepted generation state for every card,
@@ -233,15 +234,15 @@ function ResearchWorkbenchProgress({sessionId,plans,footer=false}) {
  ]})
 }
 
-export function researchWorkbenchRecoveryDefinitions(){return [workbenchDeliveryIntent,workbenchChartTextFallback,workbenchNamedTargets,workbenchNamedTableCoverage,workbenchReadingScopeCount,workbenchReadingScopeRestored,researchWorkbenchRecoveryMode].map(fn=>fn.toString()).join('\n')}
+export function researchWorkbenchRecoveryDefinitions(){return [groupedQuantity.chartQuantityIssue,groupedQuantity.groupedCountValue,groupedQuantity.groupedQuantityData,groupedQuantity.workbenchGroupedQuantityIssue,groupedQuantity.groupedScopeRestored,workbenchDeliveryIntent,workbenchChartTextFallback,workbenchNamedTargets,workbenchNamedTableCoverage,workbenchReadingScopeCount,workbenchReadingScopeRestored,researchWorkbenchRecoveryMode].map(fn=>fn.toString()).join('\n')}
 export function researchWorkbenchFeedbackDefinitions(){return researchWorkbenchRecoveryDefinitions()+'\n'+[isPartialWorkbenchNode,publishResearchWorkbenchProgress,publishInactiveResearchWorkbenchProgress,observeResearchWorkbenchProgress,workbenchProgressState,researchWorkbenchReceiptPlans,researchWorkbenchReceiptAnchors,requestResearchWorkbenchRetry,installResearchWorkbenchRetry,ResearchWorkbenchProgress].map(fn=>fn.toString()).join('\n')}
 export function patchResearchWorkbenchFeedback(source) {
- const marker='/* ework:workbench-feedback:v16 */',ending='/* ework:workbench-feedback:end */'
+ const marker='/* ework:workbench-feedback:v17 */',ending='/* ework:workbench-feedback:end */'
  source=source.replace('\nconst workbenchMeta=planningResponseMetadata(activityNodes);','')
  if(source.includes(marker))return source
  const exact=(before,after)=>{if(source.split(before).length!==2)throw Error('Workbench feedback anchor missing or ambiguous: '+before.slice(0,80));source=source.replace(before,after)}
  const helpers=marker+'\n'+researchWorkbenchFeedbackDefinitions()+'\n'+ending+'\n'
- const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[0-5]|[1-9]) \*\//)
+ const previous=source.search(/\/\* ework:workbench-feedback:v(?:1[0-6]|[1-9]) \*\//)
  if(previous>=0){
   // Several later patches append their own helpers before ExecutionStatusGroup.
   // Replace this patch's functions only; never consume those adjacent owners.

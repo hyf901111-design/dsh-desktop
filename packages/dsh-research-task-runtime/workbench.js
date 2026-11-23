@@ -18,6 +18,8 @@ import {delimitedTableIntegrityIssue,resolveDelimitedDatasetReferences} from './
 import {acceptArtifactOutput} from './artifact-output.js';
 import {COMPONENT_CONTENT_GUIDANCE} from './component-content.js';
 import {workbenchSourceText} from './workbench-prototype-evidence.js';
+import {groupedScopeRestored} from './workbench-grouped-quantity.js';
+import {workbenchReadingScopeRestored} from './workbench-panel-delivery.js';
 import {resolveWorkbenchPrototypeTables} from './workbench-prototype-tables.js';
 import {completeWordOrganizationPanels,completeWordReadingPanel,resolveWordDocumentGrids} from './workbench-word-grid.js';
 import {matchesDatasetViewScope} from './dataset-view-runtime.js';
@@ -183,6 +185,25 @@ export async function registerWorkbench(ctx, runtime, { filePath, isTrustedReque
     catch (e) {
         if (e.code !== 'ENOENT')
             throw e;
+    }
+    for (const plan of plans) {
+        if (!Array.isArray(plan?.scopeDeficits) || !Array.isArray(plan.input?.panels) || !Array.isArray(plan.panels)) continue;
+        plan.scopeDeficits = plan.scopeDeficits.filter(issue => {
+            if (issue?.reason !== 'missing-records' || typeof issue.panel !== 'string') return true;
+            const panels = plan.panels.filter(panel => panel?.title === issue.panel);
+            if (panels.length !== 1) return true;
+            const [panel] = panels;
+            if (!panel.prepared || panel.error || !panel.artifact || !plan.input.panels.some(original =>
+                original?.title === panel.title && original.prompt === panel.prompt) ||
+                !groupedScopeRestored(panel.artifact, panel.prompt, issue)) return true;
+            if (workbenchReadingScopeRestored(panel.artifact, panel)) {
+                delete panel.deliveryStatus;
+                delete panel.recoveryMode;
+                delete panel.unmetRequirements;
+            }
+            return false;
+        });
+        if (!plan.scopeDeficits.length) delete plan.scopeDeficits;
     }
     for (const p of plans)
         if (!p.ready) {
