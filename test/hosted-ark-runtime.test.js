@@ -94,6 +94,10 @@ test('the real model adapter only registers entitled chat models and uses its ca
       res.writeHead(429,{'content-type':'application/json'}).end(JSON.stringify({error:{code:'AI_QUOTA_FIVE_HOUR',message:'本 5 小时可用额度不足'}}))
       return
     }
+    if (requests.at(-1).data.messages[0].content === 'already-admitted') {
+      res.writeHead(409,{'content-type':'application/json'}).end(JSON.stringify({error:{code:'HOSTED_AI_DUPLICATE',message:'请求已受理，请勿重复提交。'}}))
+      return
+    }
     res.writeHead(200,{'content-type':'text/event-stream'})
     const frame=(choices,usage)=>({id:'test',created:1,model:model.id,object:'chat.completion.chunk',choices,...usage?{usage}:{}})
     if (requests.at(-1).data.messages[0].content === 'partial-tool') {
@@ -150,6 +154,9 @@ test('the real model adapter only registers entitled chat models and uses its ca
     expect(await run([{role:'user',content:[{type:'text',text:'partial-tool'}]}])).toMatchObject({
       type:'finish',reason:{kind:'error',failure:{code:'TRANSPORT'}}
     })
+    expect(await run([{role:'user',content:[{type:'text',text:'already-admitted'}]}])).toMatchObject({
+      type:'finish',reason:{kind:'error',failure:{code:'HOSTED_AI_DUPLICATE'}}
+    })
     const oldGenerate=service.image.capture()
     const lastCatalog=catalog
     catalogStatus=502
@@ -174,8 +181,8 @@ test('the real model adapter only registers entitled chat models and uses its ca
     expect(service.image.available()).toBe(false)
     expect(service.image.unavailable()).toBe(false)
     await expect(oldGenerate({},{signal:new AbortController().signal,maxBytes:100})).rejects.toThrow('账号已切换')
-    expect(requests).toHaveLength(4)
-    expect(new Set(requests.map(request=>request.requestId)).size).toBe(4)
+    expect(requests).toHaveLength(5)
+    expect(new Set(requests.map(request=>request.requestId)).size).toBe(5)
   }finally{service.dispose();server.closeAllConnections();await new Promise(resolve=>server.close(resolve))}
 })
 
