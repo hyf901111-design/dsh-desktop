@@ -9,114 +9,74 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "完整表格与原生网页层级、反馈图片、会话浮层及跨应用知识库拖放",
+        "featureName": "窗口拖动异常、模型中断恢复及主页会话浮层",
         "branch": "codex/feat/workspace-improvements-20261123",
-        "baseCommit": "8d0e989969318bb14079f64d8c364f0dda43acfd",
-        "tipCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
+        "baseCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
+        "tipCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
         "commits": [
           {
-            "commit": "c3ac02aded8260137b117fabcdf59e4c311d86c9",
+            "commit": "be4a924678733ed7201bd6655aa59850ee03a5eb",
             "parents": [
-              "8d0e989969318bb14079f64d8c364f0dda43acfd"
+              "f52283b9dea36d6ceaf2ff8e11f49141f362db57"
             ],
-            "subject": "优化主页会话浮层：贴顶显示黑色模糊背景并隐藏滚动条"
+            "subject": "修复 macOS 窗口跨屏幕原点拖动时的坐标转换异常"
           },
           {
-            "commit": "0fa5473bd938b89db42579adb91272a9f29a809d",
+            "commit": "cff152c92993aacaa5238817ccd82190a02dfefa",
             "parents": [
-              "c3ac02aded8260137b117fabcdf59e4c311d86c9"
+              "be4a924678733ed7201bd6655aa59850ee03a5eb"
             ],
-            "subject": "精简笔记空格输入框并保留提示词配图"
+            "subject": "让主页会话浮层贴合侧栏与主内容上沿"
           },
           {
-            "commit": "85116fe0f39dfd116ac1d4fe93b1b385f4cd97dc",
+            "commit": "474cd54d8818238357dfa947dbb045e4826cb06c",
             "parents": [
-              "0fa5473bd938b89db42579adb91272a9f29a809d"
+              "cff152c92993aacaa5238817ccd82190a02dfefa"
             ],
-            "subject": "修复消息中心操作重叠，支持通过问题反馈收发图片"
+            "subject": "固定会话浮层测试的窗口尺寸元组类型"
           },
           {
-            "commit": "6d2a6ea9aa0dff26a81e718294a158733f8aa81f",
+            "commit": "f3422f291c2a61bb733aa7ac22a702c7a4d391f3",
             "parents": [
-              "85116fe0f39dfd116ac1d4fe93b1b385f4cd97dc"
+              "474cd54d8818238357dfa947dbb045e4826cb06c"
             ],
-            "subject": "修复动态网页更新打断浏览器对话提交"
+            "subject": "在托管模型接收首包前按原请求标识恢复临时断线"
           },
           {
-            "commit": "bbcc1b8ff9e6251f7087bc36ca2472af1ba2c139",
+            "commit": "d049d6fd3f4081007e7e27f4fa2312e6fd936d24",
             "parents": [
-              "6d2a6ea9aa0dff26a81e718294a158733f8aa81f"
+              "f3422f291c2a61bb733aa7ac22a702c7a4d391f3"
             ],
-            "subject": "支持从右侧知识库拖入 Excel 和 CSV 并切回最近工作簿"
+            "subject": "保留重试后的最终失败原因并支持在原会话继续任务"
           },
           {
-            "commit": "f5da6a543d1ea41a2d08eb9c5a8b4749835ce221",
+            "commit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
             "parents": [
-              "bbcc1b8ff9e6251f7087bc36ca2472af1ba2c139"
+              "d049d6fd3f4081007e7e27f4fa2312e6fd936d24"
             ],
-            "subject": "支持从右侧知识库拖入文件到笔记段落"
-          },
-          {
-            "commit": "4d0855db4f45d72f03c12f491356ff188aa7f6ce",
-            "parents": [
-              "f5da6a543d1ea41a2d08eb9c5a8b4749835ce221"
-            ],
-            "subject": "统一知识库文件拖动标识与来源校验"
-          },
-          {
-            "commit": "62ba6db4e34ce86cea65676f8a5df7e25cae3f82",
-            "parents": [
-              "4d0855db4f45d72f03c12f491356ff188aa7f6ce"
-            ],
-            "subject": "修复右侧完整表格打开和关闭时原生网页的显示层级"
-          },
-          {
-            "commit": "5da5769ad36a750f0f433efc3383f09dbc3e0544",
-            "parents": [
-              "62ba6db4e34ce86cea65676f8a5df7e25cae3f82"
-            ],
-            "subject": "支持将知识库原文件拖入研究看板画布"
-          },
-          {
-            "commit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "parents": [
-              "5da5769ad36a750f0f433efc3383f09dbc3e0544"
-            ],
-            "subject": "支持从知识库将文件拖入当前应用并按用途打开或引用"
+            "subject": "保留模型已确认完成的输出并在尾帧断线后继续工具步骤"
           }
         ],
         "files": [
           {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/feedback-images.d.ts"
-          },
-          {
-            "status": "A",
-            "path": "packages/dsh-research-collaboration/feedback-images.js"
+            "status": "M",
+            "path": "packages/dsh-research-task-runtime/hosted-ai.js"
           },
           {
             "status": "M",
-            "path": "scripts/lib/knowledge-shared-research.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/start-native-acceptance-services.mjs"
-          },
-          {
-            "status": "M",
-            "path": "scripts/verify-browser-page-agent-native.mjs"
+            "path": "scripts/lib/conversation-failure-copy.mjs"
           },
           {
             "status": "A",
-            "path": "services/accounts/migrations/0007_feedback_images.sql"
+            "path": "scripts/lib/hosted-chat-stream-tail.mjs"
           },
           {
             "status": "M",
-            "path": "services/collaboration/http.js"
+            "path": "scripts/lib/profile-runtime-patches.mjs"
           },
           {
             "status": "M",
-            "path": "services/collaboration/repository.js"
+            "path": "scripts/patch-web-frontend-loading.mjs"
           },
           {
             "status": "M",
@@ -124,71 +84,11 @@
           },
           {
             "status": "M",
-            "path": "src/main/browser/page-agent.ts"
+            "path": "src/main/window-resize.ts"
           },
           {
             "status": "M",
-            "path": "src/main/collaboration-client.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/index.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/files.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/notes/service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/presentation/import-file.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/research-boards-service.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/spreadsheet/ipc.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/main/state/research-knowledge-files.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/main/state/research-owned-files.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/native-menus.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/overlay-preflight.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/browser/view.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/index.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/knowledge/app-drop.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/panel.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/knowledge/panel.tsx"
+            "path": "src/preload/figma-reading.css"
           },
           {
             "status": "M",
@@ -196,119 +96,31 @@
           },
           {
             "status": "M",
-            "path": "src/preload/notes/drag-and-drop.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/editor.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/inline-ai-composer.tsx"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notes/style.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/notification-center.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/presentation/knowledge-drop.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/problem-feedback-images.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-dialogs.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-board-notifications-ui.ts"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/research-file-path.ts"
-          },
-          {
-            "status": "A",
-            "path": "src/preload/research-knowledge-drop.ts"
-          },
-          {
-            "status": "M",
             "path": "src/preload/sidebar-session-switcher.ts"
           },
           {
-            "status": "A",
-            "path": "src/preload/spreadsheet/knowledge-drop.ts"
+            "status": "M",
+            "path": "test/account-service.test.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/ui-copy.ts"
+            "path": "test/home-workbench-progress.test.js"
           },
           {
             "status": "M",
-            "path": "src/preload/spreadsheet/view.css"
-          },
-          {
-            "status": "M",
-            "path": "src/preload/spreadsheet/view.ts"
+            "path": "test/hosted-ark-runtime.test.js"
           },
           {
             "status": "A",
-            "path": "src/shared/knowledge-drag.ts"
+            "path": "test/hosted-chat-stream-tail.test.js"
           },
           {
             "status": "M",
-            "path": "test/browser-app-rendered.test.js"
+            "path": "test/hosted-quota-notice.test.js"
           },
           {
             "status": "M",
-            "path": "test/browser-page-agent.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/knowledge-app-drop-browser.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/note-files.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-inline-ai-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/notes-slash-insert.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/problem-feedback-worker.test.js"
-          },
-          {
-            "status": "M",
-            "path": "test/research-board-notifications-center.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/research-boards-service.test.ts"
-          },
-          {
-            "status": "A",
-            "path": "test/research-knowledge-drop-browser.test.js"
-          },
-          {
-            "status": "A",
-            "path": "test/research-knowledge-files.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-account-rail-browser.test.js"
+            "path": "test/profile-runtime-patches.test.js"
           },
           {
             "status": "M",
@@ -316,7 +128,7 @@
           },
           {
             "status": "A",
-            "path": "test/spreadsheet-knowledge-drop-browser.test.js"
+            "path": "test/window-move-ipc.test.ts"
           }
         ],
         "checks": [
@@ -328,8 +140,8 @@
             ],
             "outcome": "passed",
             "summary": "桌面端类型检查",
-            "verifiedCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "completedAt": "2026-11-23T07:54:25.086490+00:00",
+            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
+            "completedAt": "2026-11-23T08:29:19.658435+00:00",
             "timeoutMs": 300000
           },
           {
@@ -339,20 +151,14 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/knowledge-app-drop-browser.test.js",
-              "test/presentation-knowledge-drop-browser.test.js",
-              "test/spreadsheet-knowledge-drop-browser.test.js",
-              "test/spreadsheet-files.test.ts",
-              "test/spreadsheet-store.test.ts",
-              "test/research-knowledge-drop-browser.test.js",
-              "test/research-knowledge-files.test.ts",
-              "test/research-owned-files.test.ts",
-              "test/research-board-assets.test.ts"
+              "test/window-move-ipc.test.ts",
+              "test/window-resize.test.ts",
+              "test/panel-toggle-drag-region.test.js"
             ],
             "outcome": "passed",
-            "summary": "知识库原生鼠标拖入表格和演示、编辑中保留原件、画布卡片和原始文件授权",
-            "verifiedCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "completedAt": "2026-11-23T07:54:30.874631+00:00",
+            "summary": "窗口跨过坐标原点的 Electron IPC 与拖动生命周期",
+            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
+            "completedAt": "2026-11-23T08:29:08.803595+00:00",
             "timeoutMs": 300000
           },
           {
@@ -362,14 +168,12 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/note-files.test.ts",
-              "test/notes-inline-files.test.tsx",
-              "test/notes-native-drop.test.js"
+              "test/sidebar-session-switcher-browser.test.ts"
             ],
             "outcome": "passed",
-            "summary": "笔记附件保存和文件投放",
-            "verifiedCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "completedAt": "2026-11-23T07:54:34.958669+00:00",
+            "summary": "浮层与折叠侧栏及圆角内容区的实际几何位置、悬停连续性和键盘交互",
+            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
+            "completedAt": "2026-11-23T08:29:13.984673+00:00",
             "timeoutMs": 300000
           },
           {
@@ -379,15 +183,15 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/notes-slash-insert.test.js",
-              "test/notes-inline-ai-browser.test.ts",
-              "-t",
-              "knowledge panel row|opens file picker|image.*after reopening|Space-prompt image"
+              "test/account-service.test.ts",
+              "test/hosted-ark-runtime.test.js",
+              "test/hosted-chat-stream-tail.test.js",
+              "test/profile-runtime-patches.test.js"
             ],
             "outcome": "passed",
-            "summary": "笔记段落落点、移除按钮、空格和右侧对话生成配图",
-            "verifiedCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "completedAt": "2026-11-23T07:54:39.202845+00:00",
+            "summary": "模型连接恢复、取消、限额与重复受理保护",
+            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
+            "completedAt": "2026-11-23T08:29:18.319576+00:00",
             "timeoutMs": 300000
           },
           {
@@ -397,222 +201,30 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/sidebar-session-switcher-browser.test.ts",
-              "test/sidebar-account-rail-browser.test.js",
-              "test/problem-feedback-worker.test.js",
-              "test/research-board-notifications-center.test.ts",
-              "test/collaboration-client.test.ts"
+              "test/hosted-quota-notice.test.js",
+              "test/home-workbench-progress.test.js",
+              "test/task-continuation-browser.test.js"
             ],
             "outcome": "passed",
-            "summary": "黑色贴顶会话面板、反馈图像选择和粘贴、通知收取和授权",
-            "verifiedCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "completedAt": "2026-11-23T07:54:45.690275+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "--testTimeout=30000",
-              "test/browser-app-rendered.test.js",
-              "-t",
-              "pre-mounted full table|keeps conversation image previews|keeps feedback file selection"
-            ],
-            "outcome": "passed",
-            "summary": "预挂载完整表格避让原生网页，滚动和关闭恢复、图片弹层和反馈",
-            "verifiedCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "completedAt": "2026-11-23T07:54:41.151683+00:00",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "--maxWorkers=1",
-              "--testTimeout=30000",
-              "test/browser-page-agent.test.ts",
-              "test/browser-page-reader.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "动态页面观察与操作保护",
-            "verifiedCommit": "f52283b9dea36d6ceaf2ff8e11f49141f362db57",
-            "completedAt": "2026-11-23T07:54:43.058395+00:00",
+            "summary": "失败原因、重试后历史投影、继续任务按钮与原会话草稿保护",
+            "verifiedCommit": "9a3362c9126deb2f906a4d793d7a42682832fa6e",
+            "completedAt": "2026-11-23T08:29:22.860374+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
           "outcome": "passed",
-          "summary": "真实 Electron 打开、滚动和关闭完整表格后恢复同一网页。Chromium 真实鼠标拖入笔记、表格和演示，另已验证看板文件卡、反馈图片和主页浮层。"
+          "summary": "Chromium 以实际主框架与侧栏核验无缝浮层，Electron 本地窗口跨过零坐标，验证终止事件、续办交互与同会话输入保护。"
         },
         "acceptanceCriteria": [
-          "网页不遮住完整表格，关闭后保留网页位置",
-          "知识库文件投放到对应应用，原件和编辑内容保留",
-          "笔记提示词配图、贴顶黑色模糊快捷面板及带图反馈可用",
-          "动态网页可以继续发送浏览器对话"
+          "拖动窗口跨过坐标原点不再弹主进程错误",
+          "短暂接入故障有限重连，中断后可查看原因并主动继续",
+          "面板紧贴侧栏并与内容区上沿对齐且无描边"
         ],
         "risks": [
-          "反馈图片服务及数据库迁移已在隔离环境验证。公网部署另行安排。"
+          "真实模型服务持续不可用时，任务仍会中断。"
         ],
-        "generatedAt": "2026-11-23T07:54:45.732603+00:00"
-      },
-      "merged": {
-        "mergeCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-        "verificationCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/problem-feedback-worker.test.js",
-              "test/research-board-notifications-center.test.ts",
-              "test/collaboration-client.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/home-operations-navigation.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/sidebar-session-switcher-browser.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/problem-feedback-worker.test.js test/research-board-notifications-center.test.ts test/collaboration-client.test.ts test/home-operations-actions.test.ts test/home-operations-navigation.test.ts test/image-factory-canvases.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvas-workspace.test.ts test/sidebar-session-switcher-browser.test.ts",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-service.test.ts",
-              "test/notes-inline-ai-browser.test.ts",
-              "-t",
-              "sidebar image prompt|image questions|image.*after reopening|Space-prompt image"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/notes-service.test.ts test/notes-inline-ai-browser.test.ts -t sidebar image prompt|image questions|image.*after reopening|Space-prompt image",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pending-conversation-rendered.test.js",
-              "-t",
-              "acknowledges Enter immediately|shows image chat admission"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/pending-conversation-rendered.test.js -t acknowledges Enter immediately|shows image chat admission",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens a new .+ session without reusing the previous app session"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sidebar-new-session-actions.test.ts -t opens a new .+ session without reusing the previous app session",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-output-limit.test.js",
-              "test/workbench-resume-request.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/workbench-mixed-document-adapter.test.js",
-              "test/workbench-execution-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-output-limit.test.js test/workbench-resume-request.test.js test/conversation-components-policy.test.js test/workbench-mixed-document-adapter.test.js test/workbench-execution-policy.test.js",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-prototype-evidence.test.js",
-              "-t",
-              "workbench document follow-ups"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-prototype-evidence.test.js -t workbench document follow-ups",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-delivery-scope.test.js",
-              "test/workbench-grouped-quantity.test.js",
-              "test/workbench-explicit-scope.test.js",
-              "test/research-generation-watch.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/generation-progress-persistence.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-delivery-scope.test.js test/workbench-grouped-quantity.test.js test/workbench-explicit-scope.test.js test/research-generation-watch.test.js test/research-planning-feedback.test.js test/research-workbench-feedback.test.js test/workbench-feedback-upgrade-preservation.test.js test/generation-progress-persistence.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-scrollbar-theme-browser.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-scrollbar-theme-browser.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "f1c1031ac68c9ac67406b90d16b72c9e4027a40c",
-            "completedAt": "2026-11-23T07:55:04.548Z",
-            "timeoutMs": 240000
-          }
-        ],
-        "recordedAt": "2026-11-23T07:55:04.548Z"
+        "generatedAt": "2026-11-23T08:29:22.903584+00:00"
       }
     },
     {
