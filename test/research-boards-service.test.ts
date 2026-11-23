@@ -250,6 +250,8 @@ it('rejects original binding, viewer sync writes, arbitrary IPC and stale frame 
   t.store.addFavorite({ sessionId: 'original', title: 'Original' })
   t.setRole('viewer')
   const view = await ready(t)
+  expect(t.service.fileImportScope('original')).toBeNull()
+  expect(() => t.service.fileImportScope('shared-session')).toThrow()
   expect(
     t.service.writeCanvasStorage(
       'sherlock.research.canvas.artifacts.v1:shared-session',

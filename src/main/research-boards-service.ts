@@ -3081,6 +3081,13 @@ export class ResearchBoardsService {
     if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
     return projectDocument(this.requireBoard(binding.boardId).doc)
   }
+  fileImportScope(sessionId: string): string | null {
+    if (!this.isSharedSession(sessionId)) return null
+    const binding = this.getBinding(sessionId)
+    if (!binding) throw new ResearchBoardsError('ACCESS_DENIED')
+    const board = this.requireBoard(binding.boardId, sessionId, true)
+    return JSON.stringify([binding.accountId, binding.boardId, board.snapshot.board.sharingEpoch])
+  }
   authorizeCanvasUse(sessionId: string, write: boolean): void {
     if (!this.isSharedSession(sessionId)) return
     const binding = this.getBinding(sessionId)
