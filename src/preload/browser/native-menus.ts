@@ -82,8 +82,10 @@ export class NativeBrowserMenuProjection{
   if(!center||element===root){
    const style=this.document.defaultView!.getComputedStyle(element)
    this.scrollbar(element,id,style)
-   const properties=styleProperties.map(name=>name+':'+style.getPropertyValue(name))
-   const css=properties.join(';')+';animation:none;transition:none;caret-color:currentColor;pointer-events:auto'
+   const ring=root.matches(switcherSelector)&&element.matches('.ework-switcher-activity .dsh-state-ring')
+   const properties=styleProperties.map(name=>name+':'+(ring&&name==='transform'?'none':style.getPropertyValue(name)))
+   const motion=ring?'':';animation:none'
+   const css=properties.join(';')+motion+';transition:none;caret-color:currentColor;pointer-events:auto'
    if(sharedStyles&&element!==root){
     // Long tables and workspace lists repeat the same computed row styles.
     const rule=css+';border-collapse:'+style.borderCollapse+';border-spacing:'+style.borderSpacing
@@ -163,7 +165,8 @@ export class NativeBrowserMenuProjection{
    }
    return copy.outerHTML
   })
-  const listCss=sharedStyles?[...sharedStyles].map(([rule,key])=>'[data-native-row-style='+key+']{'+rule+'}').join('\n'):''
+  const ringCss=switcher?roots[0]!.querySelector('.ework-switcher-activity style.dshStateRingMotion')?.textContent||'':''
+  const listCss=(sharedStyles?[...sharedStyles].map(([rule,key])=>'[data-native-row-style='+key+']{'+rule+'}').join('\n'):'')+'\n'+ringCss
   const backdropCss=table?'.odyssey-table-dialog::backdrop{background:'+win.getComputedStyle(table,'::backdrop').backgroundColor+'}':''
   const notificationCss=roots.some(root=>root.matches(notificationCenterSelector))?notificationCenterStyles:''
   const pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=listCss+'\n'+backdropCss+'\n'+notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(switcher?win.getComputedStyle(roots[0]!).getPropertyValue('--switcher-highlight'):'')||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()

@@ -345,6 +345,12 @@ body[data-ds-dark-theme] #ework-sidebar-session-switcher {
 #ework-sidebar-session-switcher h3 button[aria-expanded=false]::before {
   mask-image: url('/odyssey-b-folder-closed-18.svg');
 }
+#ework-sidebar-session-switcher h3 button[data-board-group]::before {
+  mask-image: url('/odyssey-board-folder-open-18.svg');
+}
+#ework-sidebar-session-switcher h3 button[data-board-group][aria-expanded=false]::before {
+  mask-image: url('/odyssey-board-folder-closed-18.svg');
+}
 #ework-sidebar-session-switcher h3 button::after {
   content: '';
   flex: none;
@@ -357,6 +363,7 @@ body[data-ds-dark-theme] #ework-sidebar-session-switcher {
 #ework-sidebar-session-switcher h3 button[aria-expanded=false]::after { transform: rotate(-90deg) }
 #ework-sidebar-session-switcher section + section { margin-top: 8px }
 #ework-sidebar-session-switcher button {
+  position: relative;
   display: block;
   box-sizing: border-box;
   width: 100%;
@@ -373,6 +380,17 @@ body[data-ds-dark-theme] #ework-sidebar-session-switcher {
   white-space: nowrap;
   cursor: pointer;
 }
+#ework-sidebar-session-switcher .ework-switcher-activity {
+  position: absolute;
+  inset-inline-start: 10px;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+#ework-sidebar-session-switcher .ework-switcher-activity svg { display: block }
 #ework-sidebar-session-switcher button:is(:hover,:focus-visible,[aria-current=true]) {
   background: var(--switcher-highlight);
 }
