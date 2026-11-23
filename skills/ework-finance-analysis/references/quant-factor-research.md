@@ -61,7 +61,7 @@
 | `factor_multi.py` | 多因子选股引擎（IC/IR 计算 + 分层回测 + 因子等权 / IC 加权 / 正交化组合） | 202 |
 | `factor_fundamental.py` | 基本面因子筛选（PE / PB / ROE / 增长率多维度打分） | 127 |
 
-**Setup**：`pip install pandas numpy requests`（无特殊依赖）。
+macOS 客户端已提供 pandas、NumPy 和 requests，可直接运行脚本。
 
 **调用示例**：
 ```python

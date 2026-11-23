@@ -263,6 +263,9 @@
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
       "hardenedRuntime": true,
+      "signIgnore": [
+        "/Contents/Resources/task-python/lib/python3[.]12/site-packages/(?:pytz|tzdata)/zoneinfo/(?:[A-Za-z0-9_+-]+/)*[A-Za-z0-9_+-]+$"
+      ],
       "gatekeeperAssess": false,
       "target": [
         "dmg",

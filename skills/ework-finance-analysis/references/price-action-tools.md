@@ -95,14 +95,11 @@
 | `elliott_wave.py` | 5 浪推动 + 3 浪修正 + 三铁律 + 斐波那契关系校验 | 458 | — |
 | `basic_indicators.py` | EMA + ADX + 布林带 + RSI + OBV + 量比 三维投票 | 302 | — |
 | `ichimoku.py` | Tenkan / Kijun / 云图 / 迟行线（需 78 根 K 线热身） | 195 | — |
-| `harmonic_patterns.py` | 4 种斐波那契谐波（Gartley / Bat / Butterfly / Crab）+ PRZ 识别 | 510 | `pip install pyharmonics` |
-| `chan_theory.py` | 缠论分型→笔→中枢自动检测，123 类买卖点 | 225 | `pip install czsc` |
-| `smart_money.py` | ICT/SMC：BOS / ChoCH / FVG / Order Block | 190 | `pip install smartmoneyconcepts` |
+| `harmonic_patterns.py` | 4 种斐波那契谐波（Gartley / Bat / Butterfly / Crab）+ PRZ 识别 | 510 | pyharmonics（可选，内置谐波检测器也可运行） |
+| `chan_theory.py` | 缠论分型→笔→中枢自动检测，123 类买卖点 | 225 | czsc |
+| `smart_money.py` | ICT/SMC：BOS / ChoCH / FVG / Order Block | 190 | smartmoneyconcepts |
 
-**Setup**（基础环境，所有 script 都需要）：
-```bash
-pip install pandas numpy requests
-```
+macOS 客户端已提供 pandas、NumPy 和 requests，可直接执行基础分析脚本。
 
 **特殊依赖处理（chan_theory / smart_money / harmonic_patterns）**：
 
@@ -114,11 +111,17 @@ pip install pandas numpy requests
 
 2. **真需要时先检测、缺失再装，并在对话中一句话告知**：
    ```bash
-   # 先检测，已装就跳过 install，省时间
-   python3 -c "import czsc" 2>/dev/null && echo "OK: czsc 已装" || {
-     echo "正在安装 czsc 库以提供缠论分析（约 30 秒）..."
-     pip install czsc 2>&1 | tail -5
-   }
+   # 在当前任务的可写工作区执行。使用同一解释器安装依赖和运行脚本。
+   if python3 -c "import czsc" 2>/dev/null; then
+     task_python=python3
+   else
+     task_python="$PWD/.ework-finance-venv/bin/python"
+     if [ ! -x "$task_python" ]; then
+       python3 -m venv --system-site-packages "$PWD/.ework-finance-venv" || exit 1
+     fi
+     "$task_python" -c "import czsc" 2>/dev/null || "$task_python" -m pip install czsc || exit 1
+   fi
+   "$task_python" -c "import czsc"
    ```
    **不要问用户"要不要装"**——用户已经表达需求了。**也不要每次都 install**——已装就直接进入下一步用 import 调用。
 
@@ -126,7 +129,7 @@ pip install pandas numpy requests
    - 装失败（沙箱限制 / 网络问题 / 编译失败）→ 一句话告知"专门库装不上，用通用 K 线形态识别替代"，然后用 `candlestick_patterns.py` + `basic_indicators.py` 给出**结构性判断**（虽然不如专门库精确）
    - **绝不要让用户在没分析的情况下面对一个 ModuleNotFoundError**
 
-4. **同会话内装一次即可**，后续直接 import 不再重复装。
+4. **同会话内装一次即可**，如果已创建虚拟环境，此后在同一工作区用 `.ework-finance-venv/bin/python` 运行需要该库的脚本。
 
 **输入约定**：DataFrame 列名 `open / high / low / close / volume`，按时间升序。
 

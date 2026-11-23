@@ -88,17 +88,17 @@
 
 | 文件 | 用途 | 额外依赖 |
 |---|---|---|
-| `scripts/ib/validate_dcf.py` | DCF Excel 模型自动校验（公式错误 / WACC 合理性 / 永续增长率边界 / terminal value 占比 / 敏感性分析完整性） | `pip install openpyxl` |
+| `scripts/ib/validate_dcf.py` | DCF Excel 模型自动校验（公式错误 / WACC 合理性 / 永续增长率边界 / terminal value 占比 / 敏感性分析完整性） | openpyxl（macOS 客户端内置） |
 | `scripts/ib/extract_ib_numbers.py` | 投行材料数字提取与一致性校验（财务亮点 / 估值倍数 / 协同效应 / 时间线，自动检测前后矛盾） | — |
 
 ```bash
-# 校验 DCF 模型（先 pip install openpyxl）
+# 校验 DCF 模型（使用内置 openpyxl）
 python3 scripts/ib/validate_dcf.py <path/to/model.xlsx>
 
 # 检查投行材料数字一致性（纯文本/Markdown 输入，无需额外依赖）
 python3 scripts/ib/extract_ib_numbers.py <path/to/material.txt>
 ```
 
-**Setup**：`pip install openpyxl`（仅 validate_dcf 需要；extract_ib_numbers 是纯标准库实现）。
+**Setup**：openpyxl（macOS 客户端内置）（仅 validate_dcf 需要；extract_ib_numbers 是纯标准库实现）。
 
 DCF / LBO 建模产出后**用上面工具自动审一遍**，避免手工漏检。

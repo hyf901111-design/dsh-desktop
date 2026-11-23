@@ -39,3 +39,16 @@ it('keeps executables, native modules, frameworks and other resource paths in si
  expect(config.mac.notarize).toBe(true)
  expect(config.mac.strictVerify).not.toBe(false)
 })
+
+it('seals Python timezone databases as resources and signs Python executables and libraries', () => {
+ const root = app + 'Resources/task-python/'
+ const packages = root + 'lib/python3.12/site-packages/'
+ for (const name of ['pytz', 'tzdata']) {
+  expect(ignored(packages + name + '/zoneinfo/Europe/London')).toBe(true)
+  expect(ignored(packages + name + '/zoneinfo/Etc/GMT+5')).toBe(true)
+  expect(ignored(packages + name + '/zoneinfo/module.so')).toBe(false)
+ }
+ for (const file of ['bin/python3.12', 'lib/libpython3.12.dylib', 'lib/python3.12/site-packages/lxml/etree.so']) {
+  expect(ignored(root + file)).toBe(false)
+ }
+})
