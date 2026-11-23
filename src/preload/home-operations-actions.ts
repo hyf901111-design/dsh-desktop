@@ -33,7 +33,7 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
     signal.addEventListener('abort', abort, { once: true })
     operation.then(value => { signal.removeEventListener('abort', abort); if (signal.aborted) reject(cancelled()); else resolve(value) }, error => { signal.removeEventListener('abort', abort); reject(error) })
   })
-  const navigate = (action: 'research' | 'notes' | 'composer', signal: AbortSignal) => new Promise<{ sessionId: string; draftRev?: number }>((resolve, reject) => {
+  const navigate = (action: 'research' | 'notes' | 'composer', signal: AbortSignal, presentationId?: string) => new Promise<{ sessionId: string; draftRev?: number }>((resolve, reject) => {
     check(signal)
     const requestId = win.crypto.randomUUID()
     const cleanup = () => { navigationRequests.delete(signal); win.removeEventListener(REPLY, reply); signal.removeEventListener('abort', abort); win.clearTimeout(timer) }
@@ -50,7 +50,7 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
     signal.addEventListener('abort', abort, { once: true })
     win.addEventListener(REPLY, reply)
     navigationRequests.set(signal, requestId)
-    win.dispatchEvent(new win.CustomEvent(REQUEST, { detail: { requestId, action } }))
+    win.dispatchEvent(new win.CustomEvent(REQUEST, { detail: { requestId, action, ...(presentationId ? { presentationId } : {}) } }))
   })
   const contextChanged = (event: Event) => {
     const ownedRequestId = (event as CustomEvent).detail?.ownedRequestId
@@ -62,7 +62,7 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
     }
   }
   win.addEventListener(CONTEXT_CHANGED, contextChanged)
-  const run = async (card: HomeOperationCard, context: HomeOperationActionContext): Promise<void> => {
+  const run = async (card: HomeOperationCard, context: HomeOperationActionContext, presentationId?: string): Promise<void> => {
     if (disposed || context.signal.aborted) throw cancelled()
     const controller = new win.AbortController()
     const abort = () => controller.abort()
@@ -76,7 +76,7 @@ export function createHomeOperationsActions(document: Document, bridge: Pick<Int
       if (card !== 'ppt' && card !== 'report') throw Error('卡片操作无效，请重试。')
       await awaitActive(context.revealComposer(), signal)
       check(signal)
-      const { sessionId, draftRev } = await navigate('composer', signal)
+      const { sessionId, draftRev } = await navigate('composer', signal, presentationId)
       check(signal)
       const result = await awaitActive(bridge.request({ type: 'snapshot' }), signal)
       check(signal)

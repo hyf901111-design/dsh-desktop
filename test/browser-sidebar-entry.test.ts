@@ -107,7 +107,7 @@ it('closes More as soon as the spreadsheet demo clicks New Spreadsheet',async()=
  let release!:()=>void
  const held=new Promise<void>(resolve=>{release=resolve})
  const spreadsheet=createSidebarNewNoteAction(document,()=>held,'spreadsheet')
- actions.newSpreadsheet.mockImplementation(spreadsheet.create)
+ actions.newSpreadsheet.mockImplementation(async () => { await spreadsheet.create() })
  const controller=new AbortController()
  let pending:Promise<unknown>|undefined
  try{

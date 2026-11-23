@@ -455,6 +455,8 @@ function initializeUi(): void {
     await notes.flushCurrent()
     const id=document.body.dataset.eworkSpreadsheetSession
     if(id)await spreadsheetView?.flush(id)
+    const presentationId = document.body.dataset.eworkPresentationSession
+    if (presentationId) await presentationView?.flush(presentationId)
   }
   const sidebarNewNote=createSidebarNewNoteAction(document,flushBeforeCreate)
   const sidebarNewSpreadsheet=createSidebarNewNoteAction(document,flushBeforeCreate,'spreadsheet')
@@ -463,8 +465,6 @@ function initializeUi(): void {
   mountAccountUi(document, async (action, input) => {
     if (['login', 'register', 'logout', 'password'].includes(action)) {
       await flushBeforeCreate()
-      const id = document.body.dataset.eworkPresentationSession
-      if (id) await presentationView?.flush(id)
     }
     return ipcRenderer.invoke('account:invoke', action, input)
   }, boards, {explore:process.platform==='darwin'})
@@ -499,14 +499,24 @@ function initializeUi(): void {
     },
     mountWorkbench: mountHomeWorkbenchGuide,
     mountSpreadsheet: async (doc, _host, options) => mountCashFlowGuide(doc, options, spreadsheetView!) })
-  const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, { themeController: getHomeThemeController(document)!, onBeforeOpen:()=>{void homeGuides.reset(false)}, onToggleAppearance: () => toggleHomeAppearance(document), onAction: homeActions.run, onExample:(kind, context)=>playHomeGuideFromExplore(homeGuides,kind,context) }) : () => {}
-  integrationView.mount()
   const openSidebarDocument = async (app: 'note' | 'spreadsheet' | 'presentation', signal?: AbortSignal) => {
     const previousSurface = workspaceSurfaceHost.current()?.surface
-    await (app === 'note' ? sidebarNewNote : app === 'spreadsheet' ? sidebarNewSpreadsheet : sidebarNewPresentation).create(signal)
+    const id = await (app === 'note' ? sidebarNewNote : app === 'spreadsheet' ? sidebarNewSpreadsheet : sidebarNewPresentation).create(signal)
     if (previousSurface && workspaceSurfaceHost.current()?.surface === previousSurface &&
         !(app === 'note' && previousSurface === 'notes')) workspaceSurfaceHost.close(previousSurface)
+    return id
   }
+  const disposeHomeOperations = process.platform === 'darwin' ? mountExploreMenu(document, {
+    themeController: getHomeThemeController(document)!,
+    onBeforeOpen: () => { void homeGuides.reset(false) },
+    onToggleAppearance: () => toggleHomeAppearance(document),
+    onAction: async (card, context) => {
+      const presentationId = card === 'ppt' ? await openSidebarDocument('presentation', context.signal) : undefined
+      await homeActions.run(card, context, presentationId)
+    },
+    onExample: (kind, context) => playHomeGuideFromExplore(homeGuides, kind, context)
+  }) : () => {}
+  integrationView.mount()
   let navigationShortcuts: ReturnType<typeof mountNavigationShortcuts> | undefined
   const scheduledView = new ScheduledTaskView(document, {
     list: () => ipcRenderer.invoke('scheduled-tasks:request', 'list'),
