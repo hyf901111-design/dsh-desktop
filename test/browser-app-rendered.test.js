@@ -295,6 +295,45 @@ it('keeps feedback file selection and pasted screenshots in the main renderer',a
  } finally { await page.close() }
 })
 
+it('keeps a pre-mounted full table above the native webpage until the dialog closes', async () => {
+ const {page} = await fixture()
+ try {
+  await page.evaluate(() => {
+   const panel = document.createElement('aside')
+   panel.style.cssText = 'position:fixed;right:0;bottom:0'
+   panel.innerHTML = '<button>打开完整表格 ↗</button><dialog class="odyssey-table-dialog" aria-label="完整表格"><button>关闭</button><div tabindex="0" style="width:360px;height:180px;overflow:auto"><table></table></div></dialog>'
+   const dialog = panel.querySelector('dialog'), table = dialog.querySelector('table')
+   for (let row=0; row<30; row++) {
+    const cell = table.insertRow().insertCell()
+    cell.textContent = '岗位 ' + row
+    cell.style.cssText = 'min-width:700px;height:30px'
+   }
+   panel.firstElementChild.onclick = () => dialog.showModal()
+   dialog.firstElementChild.onclick = () => dialog.close()
+   document.body.append(panel)
+  })
+  await liveWebsite(page)
+  const opener = page.getByRole('button', {name:'打开完整表格 ↗'})
+  const dialog = page.getByRole('dialog', {name:'完整表格'})
+  const lastLayout = () => page.evaluate(() => window.browserCalls.filter(([name]) => name === 'layout').at(-1)[1])
+  const tab = await page.locator('.eb-root').getAttribute('data-tab-id')
+  for (const close of ['按钮', 'Escape']) {
+   await opener.click()
+   await expect.poll(async () => (await lastLayout()).visible).toBe(false)
+   expect(await dialog.getAttribute('data-browser-projected')).toBeNull()
+   const port = dialog.locator('[tabindex]')
+   await port.hover()
+   await page.mouse.wheel(200, 180)
+   await expect.poll(() => port.evaluate(el => el.scrollLeft > 0 && el.scrollTop > 0)).toBe(true)
+   if (close === 'Escape') await page.keyboard.press('Escape')
+   else await dialog.getByRole('button', {name:'关闭'}).click()
+   await expect.poll(async () => (await lastLayout()).visible).toBe(true)
+   expect(await page.locator('.eb-root').getAttribute('data-tab-id')).toBe(tab)
+   expect(await opener.evaluate(el => document.activeElement === el)).toBe(true)
+  }
+ } finally { await page.close() }
+})
+
 it('keeps conversation image previews in the attachment renderer and restores the same native webpage on close',async()=>{
  const {page,errors}=await fixture()
  try{
