@@ -9,63 +9,66 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "macOS 客户端随包提供跨设备任务依赖",
+        "featureName": "验证随包 Python 签名和专用依赖的工作区安装说明",
         "branch": "codex/feat/workspace-improvements-20261123",
-        "baseCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
-        "tipCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
+        "baseCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
+        "tipCommit": "edf040735df8226fd1620f083b2cfb60948b05fd",
         "commits": [
           {
-            "commit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
+            "commit": "a329ca0cf38a8b141e41c266c854f3fe3961a3f2",
             "parents": [
-              "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb"
+              "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85"
             ],
-            "subject": "为 macOS 客户端内置任务解释器和办公依赖并验证干净安装环境"
+            "subject": "让金融技能直接使用内置依赖并在工作区安装可选分析包"
+          },
+          {
+            "commit": "edf040735df8226fd1620f083b2cfb60948b05fd",
+            "parents": [
+              "a329ca0cf38a8b141e41c266c854f3fe3961a3f2"
+            ],
+            "subject": "将 Python 时区数据库纳入应用资源封印并保留原生库签名"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "build/harness-node-entry.mjs"
-          },
-          {
-            "status": "A",
-            "path": "build/task-runtime/darwin-arm64.json"
-          },
-          {
-            "status": "A",
-            "path": "build/task-runtime/darwin-x64.json"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/bundled-task-python.mjs"
-          },
-          {
-            "status": "A",
-            "path": "scripts/lib/verify-bundled-task-tools.mjs"
+            "path": "package.json"
           },
           {
             "status": "M",
-            "path": "scripts/restore-packaged-runtime-patches.mjs"
+            "path": "skills/ework-finance-analysis/SKILL.md"
           },
           {
             "status": "M",
-            "path": "scripts/verify-packaged-macos.mjs"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/bundled-task-tools/office.py"
-          },
-          {
-            "status": "A",
-            "path": "test/fixtures/bundled-task-tools/task.mjs"
+            "path": "skills/ework-finance-analysis/references/breakout-patterns.md"
           },
           {
             "status": "M",
-            "path": "test/macos-package-runtime.test.ts"
+            "path": "skills/ework-finance-analysis/references/ib-models.md"
           },
           {
             "status": "M",
-            "path": "test/packaged-runtime-patches.test.js"
+            "path": "skills/ework-finance-analysis/references/price-action-tools.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-finance-analysis/references/quant-factor-research.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-finance-analysis/references/systematic-strategies.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-finance-analysis/references/valuation-pricing.md"
+          },
+          {
+            "status": "M",
+            "path": "skills/ework-finance-analysis/scripts/run_signal.py"
+          },
+          {
+            "status": "M",
+            "path": "test/macos-pdf-resource-signing.test.ts"
           }
         ],
         "checks": [
@@ -77,8 +80,8 @@
             ],
             "outcome": "passed",
             "summary": "桌面端类型检查",
-            "verifiedCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
-            "completedAt": "2026-11-23T10:06:21.682732+00:00",
+            "verifiedCommit": "edf040735df8226fd1620f083b2cfb60948b05fd",
+            "completedAt": "2026-11-23T10:18:28.947294+00:00",
             "timeoutMs": 300000
           },
           {
@@ -94,8 +97,8 @@
             ],
             "outcome": "passed",
             "summary": "内置任务工具路径、进程生命周期与打包钩子",
-            "verifiedCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
-            "completedAt": "2026-11-23T10:06:15.468676+00:00",
+            "verifiedCommit": "edf040735df8226fd1620f083b2cfb60948b05fd",
+            "completedAt": "2026-11-23T10:18:22.680606+00:00",
             "timeoutMs": 300000
           },
           {
@@ -105,12 +108,13 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/macos-package-runtime.test.ts"
+              "test/macos-package-runtime.test.ts",
+              "test/macos-pdf-resource-signing.test.ts"
             ],
             "outcome": "passed",
             "summary": "模拟全新用户运行任务进程，读回 Word、Excel、PowerPoint 并检查包内依赖",
-            "verifiedCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
-            "completedAt": "2026-11-23T10:06:29.963103+00:00",
+            "verifiedCommit": "edf040735df8226fd1620f083b2cfb60948b05fd",
+            "completedAt": "2026-11-23T10:18:39.430705+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -125,163 +129,7 @@
         "risks": [
           "Intel 运行时在 Apple 芯片通过 Rosetta 验证，未在独立 Intel 设备上测试。"
         ],
-        "generatedAt": "2026-11-23T10:06:30.003321+00:00"
-      },
-      "merged": {
-        "mergeCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-        "verificationCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/problem-feedback-worker.test.js",
-              "test/research-board-notifications-center.test.ts",
-              "test/collaboration-client.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/home-operations-navigation.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/sidebar-session-switcher-browser.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/problem-feedback-worker.test.js test/research-board-notifications-center.test.ts test/collaboration-client.test.ts test/home-operations-actions.test.ts test/home-operations-navigation.test.ts test/image-factory-canvases.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvas-workspace.test.ts test/sidebar-session-switcher-browser.test.ts",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-service.test.ts",
-              "test/notes-inline-ai-browser.test.ts",
-              "-t",
-              "sidebar image prompt|image questions|image.*after reopening|Space-prompt image"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/notes-service.test.ts test/notes-inline-ai-browser.test.ts -t sidebar image prompt|image questions|image.*after reopening|Space-prompt image",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pending-conversation-rendered.test.js",
-              "-t",
-              "acknowledges Enter immediately|shows image chat admission"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/pending-conversation-rendered.test.js -t acknowledges Enter immediately|shows image chat admission",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens a new .+ session without reusing the previous app session"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sidebar-new-session-actions.test.ts -t opens a new .+ session without reusing the previous app session",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-output-limit.test.js",
-              "test/workbench-resume-request.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/workbench-mixed-document-adapter.test.js",
-              "test/workbench-execution-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-output-limit.test.js test/workbench-resume-request.test.js test/conversation-components-policy.test.js test/workbench-mixed-document-adapter.test.js test/workbench-execution-policy.test.js",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-prototype-evidence.test.js",
-              "-t",
-              "workbench document follow-ups"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-prototype-evidence.test.js -t workbench document follow-ups",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-delivery-scope.test.js",
-              "test/workbench-grouped-quantity.test.js",
-              "test/workbench-explicit-scope.test.js",
-              "test/research-generation-watch.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/generation-progress-persistence.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-delivery-scope.test.js test/workbench-grouped-quantity.test.js test/workbench-explicit-scope.test.js test/research-generation-watch.test.js test/research-planning-feedback.test.js test/research-workbench-feedback.test.js test/workbench-feedback-upgrade-preservation.test.js test/generation-progress-persistence.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-scrollbar-theme-browser.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-scrollbar-theme-browser.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "5016312d64e3d9e7b53a22b106802541fa6b5753",
-            "completedAt": "2026-11-23T10:06:35.598Z",
-            "timeoutMs": 240000
-          }
-        ],
-        "recordedAt": "2026-11-23T10:06:35.598Z"
+        "generatedAt": "2026-11-23T10:18:39.471203+00:00"
       }
     },
     {
