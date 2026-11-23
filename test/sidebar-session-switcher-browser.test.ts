@@ -96,9 +96,10 @@ it('switches in live board and workspace groups while the native sidebar stays f
     expect(list.x).toBe(pane.x)
     expect(await panel.evaluate((el: HTMLElement) => ({
       border: getComputedStyle(el).borderWidth,
+      radius: getComputedStyle(el).borderRadius,
       scrollbar: getComputedStyle(el).scrollbarWidth,
       blur: getComputedStyle(el).backdropFilter
-    }))).toEqual({ border: '0px', scrollbar: 'none', blur: 'blur(32px)' })
+    }))).toEqual({ border: '0px', radius: '12px', scrollbar: 'none', blur: 'blur(32px)' })
     const homeRight = box.x + box.width, crossingY = box.y + box.height / 2
     expect(homeRight).toBeLessThan(list.x)
     await page.mouse.move(homeRight + 1, crossingY, { steps: 8 })
@@ -177,6 +178,7 @@ it('softens fine background detail while transmitting a muted background color t
       pane.style.position = 'relative'
       pane.style.background = 'linear-gradient(90deg,rgb(32,78,130) 154px,rgb(228,180,42) 154px)'
       const grid = document.createElement('div')
+      grid.id = 'switcher-texture'
       grid.style.cssText = 'position:absolute;inset:50% 0 0;background:repeating-conic-gradient(black 0 25%,white 0 50%) 0/8px 8px'
       pane.append(grid)
       ;(window as any).fixture.clear()
@@ -188,9 +190,22 @@ it('softens fine background detail while transmitting a muted background color t
     const red = (x: number, y: number) => picture.data[(y * picture.width + x) * 4]!
     const transmitted = red(256, 110) - red(52, 110)
     expect(transmitted).toBeGreaterThan(30)
-    expect(transmitted).toBeLessThan(65)
+    expect(transmitted).toBeLessThan(42)
+    expect(red(52, 110)).toBeLessThan(10)
     const fine = Array.from({ length: 20 }, (_, x) => red(80 + x, 320))
     expect(Math.max(...fine) - Math.min(...fine)).toBeLessThan(3)
+    await page.locator('[data-pane="conversation"]').evaluate((pane: HTMLElement) => {
+      pane.style.cssText += ';background:white;border-radius:0'
+      pane.querySelector('#switcher-texture')!.remove()
+    })
+    const corners = PNG.sync.read(await page.screenshot({ clip: bounds, scale: 'css' }))
+    for (const x of [1, bounds.width - 2]) {
+      for (const y of [1, bounds.height - 2]) {
+        expect(corners.data[(y * corners.width + x) * 4]).toBeGreaterThan(180)
+        const insetX = x === 1 ? x + 14 : x - 14
+        expect(corners.data[(y * corners.width + insetX) * 4]).toBeLessThan(70)
+      }
+    }
     expect(await panel.evaluate((el: HTMLElement) => getComputedStyle(el.parentElement!, '::backdrop').backgroundColor)).toBe('rgba(0, 0, 0, 0)')
   } finally { await page.close() }
 })
@@ -254,7 +269,7 @@ it('keeps the empty panel usable in English and dark appearance', async () => {
     })
     const empty = page.getByRole('navigation', { name: 'Switch conversation' })
     await empty.getByText('No conversations yet').waitFor()
-    expect(await empty.evaluate((el: HTMLElement) => getComputedStyle(el).backgroundColor)).toBe('rgba(41, 42, 44, 0.72)')
+    expect(await empty.evaluate((el: HTMLElement) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0.82)')
     await home.focus(); await page.keyboard.press('ArrowDown')
     expect(await empty.evaluate((el: HTMLElement) => el === document.activeElement)).toBe(true)
     await page.keyboard.press('Escape')

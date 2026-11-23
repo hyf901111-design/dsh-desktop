@@ -171,7 +171,14 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
   if(!current())return false
   const wc=contents(surface)!,bounds={x:Math.round(input.bounds.x),y:Math.round(input.bounds.y),width:Math.max(1,Math.round(input.bounds.width)),height:Math.max(1,Math.round(input.bounds.height))}
   wc.setZoomFactor(input.zoom)
-  if(surface.popup){const origin=owner!.getContentBounds();surface.popup.setBounds({...bounds,x:origin.x+bounds.x,y:origin.y+bounds.y});surface.popup.setIgnoreMouseEvents(surface===passive);if(surface!==material)surface.popup.showInactive()}
+  if(surface.popup){
+   const origin=owner!.getContentBounds()
+   surface.popup.setBounds({...bounds,x:origin.x+bounds.x,y:origin.y+bounds.y})
+   // Match the four CSS corners of the Home panel at the native window's DIP scale.
+   if(surface===material)surface.popup.contentView.setBorderRadius(input.switcherAnchor?Math.round(12*input.zoom):0)
+   surface.popup.setIgnoreMouseEvents(surface===passive)
+   if(surface!==material)surface.popup.showInactive()
+  }
   else{surface.view!.setBounds(bounds);owner!.contentView.addChildView(surface.view!);surface.view!.setVisible(true)}
   wc.setBackgroundThrottling(false);shown=true;surface.clearPromise=undefined;surface.hasContent=true
   return new Promise<boolean>(resolve=>{pending={request:ticket,resolve,timer:setTimeout(()=>{if(pending?.request===ticket)hide()},5000)};try{wc.send(stateChannel,{...snapshot,_request:ticket})}catch{hide()}})

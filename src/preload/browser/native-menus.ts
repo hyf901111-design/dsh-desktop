@@ -157,7 +157,7 @@ export class NativeBrowserMenuProjection{
    // A native sibling cannot blur the live webpage underneath. Paint the
    // entire composer flyout, including its search field and scrollport.
    if(root.matches(composerMenuSelector))copy.style.backgroundColor=dark?'#262626':'#f6f6f6'
-   if(switcher&&!material){const nav=copy.querySelector('nav');if(nav)nav.style.backgroundColor='#303134'}
+   if(switcher&&!material){const nav=copy.querySelector('nav');if(nav)nav.style.backgroundColor='#000'}
    return copy.outerHTML
   })
   const listCss=sharedStyles?[...sharedStyles].map(([rule,key])=>'[data-native-row-style='+key+']{'+rule+'}').join('\n'):''
