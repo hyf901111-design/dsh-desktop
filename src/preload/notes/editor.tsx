@@ -28,7 +28,7 @@ import {useNoteComponentSize,NoteComponentResizeHandles} from './component-size'
 import {useNoteComponentInteraction} from './component-interaction'
 import {createNativeNoteOperations,nativeBlankTableIntent,selectedNativeNoteBlocks,type NativeNotePreviewPlan} from './native-operations'
 import { NativeSlashMenu } from './native-slash-menu'
-import { noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
+import { noteImageBlocks, noteFileCandidates, NOTE_FILE_DRAG_TYPE, type NoteFileNode } from '../../shared/note-files'
 import { recordSidebarSessionUse } from '../../../scripts/lib/sidebar-session-recency.mjs'
 import {useNoteDragAndDrop} from './drag-and-drop'
 import {useNoteReplyInsertion} from './reply-insertion'
@@ -753,7 +753,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           inlineCompletion={partial,summary,kind:result.capabilityReceipts?.some(receipt=>receipt.capability==='notes.blocks.apply')?'native-operations':result.kind,error:state?.failed.length?state.error:!changes&&!external?result.capabilitySummary||'尚未生成可插入内容，原需求已保留，可重试。':undefined}
           publishTask(requestId,'replied',{result})
         }else{
-          const blocks=result.kind==='component'?[{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}]:editor.tryParseMarkdownToBlocks(result.markdown)
+          const blocks=result.kind==='image'?noteImageBlocks(result.files):result.kind==='component'?[{type:'research',props:{payload:JSON.stringify({...result.node,id:'note-component-'+requestId})}}]:editor.tryParseMarkdownToBlocks(result.markdown)
           const textFallback=result.kind==='text'&&'textFallback'in result&&result.textFallback===true
           let before:{blockId:string;identity:string}|undefined
           if(result.kind==='text'&&result.inlineOrder){
@@ -795,7 +795,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           // A safely resolved prose-only fallback follows normal review. Keep
           // failed receipts in the result/history; unresolved or mixed work stays partial.
           const fallbackError=failure&&(state?.failed.length||completed)?(proposal?.error||(state?.failed.length?state.error:failure.message?.slice(0,1000))||t('组件未生成，已保留文字结果')):undefined
-          publishTask(requestId,'ready',{result});inlineCompletion={partial:false,summary:textFallback?'已生成文字'+(failure||state?.failed.length?'，'+(completed?'部分组件':'组件')+'未生成':'')+(state?.failed.length?'；原组件内容已保留':''):'',kind:textFallback?'text-fallback':result.kind,error:fallbackError};changed()
+          publishTask(requestId,'ready',{result});inlineCompletion={partial:false,summary:result.kind==='image'?'已插入图片':textFallback?'已生成文字'+(failure||state?.failed.length?'，'+(completed?'部分组件':'组件')+'未生成':'')+(state?.failed.length?'；原组件内容已保留':''):'',kind:textFallback?'text-fallback':result.kind,error:fallbackError};changed()
         }
       }else if(draftBlockId&&result.kind==='conversation'){
         const previous=JSON.parse(editor.getBlock(pending).props.payload);editor.updateBlock(pending,{props:{payload:JSON.stringify({...previous,generationStatus:'draft',generationDetail:result.markdown})}});publishTask(requestId,'replied',{result})
@@ -862,7 +862,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       if(value.resultKind==='native-operations')await props.bridge.request('conversation-state',{sessionId:props.sessionId,requestId:value.id,phase:undo?'discarded':'accepted'})
       if(reviewedProposal.current===value.id){if(inlineDraftRef.current?.review?.id===value.id)inlinePrompt.current=undo?value.prompt:'';reviewedProposal.current=undefined}
       setInlineDraft(draft=>draft?.review?.id===value.id?undefined:draft)
-      if(value.resultKind==='text'||value.resultKind==='text-fallback'||value.resultKind==='component'||value.resultKind==='native-operations')publishTask(value.id,undo?'discarded':'accepted',{},value.resultKind!=='native-operations')
+      if(value.resultKind==='image'||value.resultKind==='text'||value.resultKind==='text-fallback'||value.resultKind==='component'||value.resultKind==='native-operations')publishTask(value.id,undo?'discarded':'accepted',{},value.resultKind!=='native-operations')
     }catch(error){if(!proposals.list().some(item=>item.id===value.id))proposals.restore(restore);proposals.setError(value.id,(error as Error).message);changed();setInlineDraft(draft=>draft?.review?.id===value.id?{...draft,error:(error as Error).message}:draft)}finally{settlingProposal.current='';setInlineDraft(draft=>draft?.review?{...draft,review:{...draft.review,busy:proposals.list().find(item=>item.id===draft.review!.id)?.state==='running',canUndo:editor.isEditable&&proposals.canUndo(draft.review.id)}}:draft)}
    }
    const result=run();settlementTask.current=result;return result
@@ -897,7 +897,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
       }catch(error){setError((error as Error).message);return}
     }
     editor.focus()
-    const blocks = preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
+    const blocks = preview.result.kind==='image'?noteImageBlocks(preview.result.files):preview.result.kind === 'component' ? [{ type: 'research', props: { payload: JSON.stringify(preview.result.node) } }] : editor.tryParseMarkdownToBlocks(preview.result.markdown)
     const range=editor.getExtension(NoteAiSelection)?.currentRange()
     if(replace&&range&&!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,range)){setError(t("请只选择正文文字进行改写。"));return}
     if(preview.result.kind==='component'&&preview.result.targetBlockId){const block=editor.getBlock(preview.result.targetBlockId);if(!block||block.type!=='research'){setError(t('组件已变化，请重新生成。'));return}const original=JSON.parse(block.props.payload);editor.updateBlock(block.id,{props:{payload:JSON.stringify({...original,...preview.result.node,id:original.id,noteSize:original.noteSize})}})}
@@ -975,20 +975,27 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
     finally{exportPending.current=false;if(!disposed.current)setExporting(false)}
   }
   const ctx = useMemo(() => ({ bridge: props.bridge, sessionId: props.sessionId, dark: props.dark, navigate: props.navigate, editor,persistComponentActions:()=>persistConfirmed(),commitHtmlInteraction:htmlInteractions.commit,importing:importing.current,isGeneratingComponent:(id:string)=>inlineComponents.isGenerating(id)||generatingBlock.current===id&&!!currentGeneration(),generateComponent:inlineComponents.start,stopGeneration:(id:string)=>{const local=inlineComponents.stop(id);if(local.ok)return local;if(generatingBlock.current!==id)return {ok:false};commands.current.stop();return {ok:true}} }), [props.bridge, props.sessionId, props.dark, props.navigate, editor,writing,inlineComponents.version])
+  const pickNoteMedia=async(kind:string,anchor?:NoteInsertionAnchor)=>{
+    if(!editor.isEditable||!editorActive()||request.current)return
+    try{
+      const reference=anchor?noteInlineAnchorBlock(editor,anchor,client.current):editor.getTextCursorPosition().block
+      const result=await props.bridge.request('file-pick',{sessionId:props.sessionId,kind,locale:document.documentElement.dataset.odysseyLocale})
+      if(disposed.current||!editorActive()||!editor.isEditable||request.current||!result.files?.length)return
+      const current=anchor?noteInlineAnchorBlock(editor,anchor,client.current):editor.getBlock(reference.id)
+      if(!current)return
+      if(anchor)setInlineDraft(undefined)
+      await importFiles(result.files,current,current.type==='paragraph'&&!noteText(current.content).trim()?'before':'after','inline')
+      if(!disposed.current&&editorActive())editor.focus()
+    }catch(e){if(!disposed.current)setError((e as Error).message)}
+  }
   const slashItems = useMemo(()=>async (query:string)=>{
     const order=['paragraph','heading','heading_2','heading_3','heading_4','numbered_list','bullet_list','check_list','code_block','quote','divider','toggle_list']
-    const pick=async(kind:string)=>{
-      const reference=editor.getTextCursorPosition().block
-      try{const result=await props.bridge.request('file-pick',{sessionId:props.sessionId,kind,locale:document.documentElement.dataset.odysseyLocale});if(disposed.current||!editor.isEditable||!editor.getBlock(reference.id)||!result.files?.length)return
-        const current=editor.getBlock(reference.id);await importFiles(result.files,current,current.type==='paragraph'&&!noteText(current.content).trim()?'before':'after','inline');editor.focus()
-      }catch(e){if(!disposed.current)setError((e as Error).message)}
-    }
     const draft=(kind:'smart'|'link')=>{if(!editor.isEditable)return;const reference=editor.getTextCursorPosition().block
       const node={id:'note-component-'+crypto.randomUUID(),kind:'generated-container',title:kind==='smart'?t("智能组件"):t("添加链接"),noteDraft:kind,containerPrompt:'',generationStatus:'draft'}
       const created=editor.insertBlocks([{type:'research',props:{payload:JSON.stringify(node)}}],reference,reference.type==='paragraph'&&!noteText(reference.content).trim()?'before':'after');requestAnimationFrame(()=>{const input=scroll.current?.querySelector<HTMLTextAreaElement>('[data-id="'+CSS.escape(created[0].id)+'"] textarea');input?.closest('.en-research')?.scrollIntoView({block:'nearest'});input?.focus({preventScroll:true})})
     }
     const creation=[{key:'smart_component',iconKey:'sparkles',title:t("智能组件"),group:t("插入"),aliases:['智能','生成','组件','smart','ai'],onItemClick:()=>draft('smart')},{key:'link_component',iconKey:'link',title:t("链接"),group:t("插入"),aliases:['链接','网页','link','url'],onItemClick:()=>draft('link')}]
-    const defaults=getDefaultReactSlashMenuItems(editor).filter((item:any)=>item.key!=='emoji').map((item:any)=>item.key==='table'?{...item,onItemClick:()=>withNativeTableSizing(editor,item.onItemClick)}:['image','video','audio','file'].includes(item.key)?{...item,onItemClick:()=>pick(item.key)}:item).sort((a:any,b:any)=>(order.indexOf(a.key)<0?100:order.indexOf(a.key))-(order.indexOf(b.key)<0?100:order.indexOf(b.key)))
+    const defaults=getDefaultReactSlashMenuItems(editor).filter((item:any)=>item.key!=='emoji').map((item:any)=>item.key==='table'?{...item,onItemClick:()=>withNativeTableSizing(editor,item.onItemClick)}:['image','video','audio','file'].includes(item.key)?{...item,onItemClick:()=>pickNoteMedia(item.key)}:item).sort((a:any,b:any)=>(order.indexOf(a.key)<0?100:order.indexOf(a.key))-(order.indexOf(b.key)<0?100:order.indexOf(b.key)))
     const library:any={key:'library',title:t("组件库"),group:t("插入"),aliases:['组件','研究','library'],onItemClick:()=>{}}
     // Load on each opening/query so research-side renames and additions stay current.
     try{
@@ -1090,7 +1097,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
   const suggestion=<>{importingDocument?<div className="en-ai-loading" role="status"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("正在导入文档…")}</span></div>:null}{exporting?<div className="en-ai-loading" role="status" aria-live="polite"><span className="en-ai-spinner" aria-hidden="true"/><span>{t("准备组件快照与导出文件…")}</span></div>:null}{writing&&documentWriting&&!inlineDraft?<div data-note-preview-request-id={request.current} data-note-preview-state="generating"><NoteAiProcessing stop={stop}/></div>:null}{error ? <div className="en-error" role="alert"><span>{t(error)}</span>{status === '保存冲突' ? <button onClick={async () => { try { await props.bridge.draft({ sessionId: props.sessionId, clientId: client.current, revision: revision.current, content: snapshot() }); props.onReload() } catch (e) { setError((e as Error).message) } }}>{t("重新读取并对比")}</button> : null}<button onClick={() => setError('')} aria-label={t("关闭提示")}>×</button></div> : null}
       {preview ? <div data-note-preview-request-id={preview.requestId} data-note-preview-state="ready"><SuggestionPanel header={<><strong>{preview.result.kind === 'component' ? t("创建的研究组件") : t("内容预览")}</strong><button aria-label={t("放弃建议")} onClick={discardPreview}>×</button></>} footer={<>{preview.selectedText && preview.result.kind === 'text' && editor.getExtension(NoteAiSelection)?.currentRange() && noteRangeHasOnlyText(editor._tiptapEditor.state.doc,editor.getExtension(NoteAiSelection).currentRange()) ? <button onClick={() => apply(true)}>{t("替换所选")}</button> : null}<button data-note-preview-apply={preview.requestId} onClick={() => apply(false)}>{t(composerPreview.current?.requestId===preview.requestId||preview.result.kind==='component'&&preview.result.targetBlockId?"应用修改":"添加至正文")}</button><button onClick={regenerate}>{t("重新撰写")}</button><button onClick={discardPreview}>{t("放弃")}</button></>}>
         {preview.result.capabilitySummary||preview.result.capabilityReceipts?.length?<div className="en-capability-receipts" role="status">{preview.result.capabilityReceipts?.length?capabilityReceiptText(preview.result.capabilityReceipts,document.documentElement.dataset.odysseyLocale):preview.result.capabilitySummary}</div>:null}
-        {preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
+        {preview.result.kind==='image'?preview.result.files.map(file=><InlineNoteFileBlock key={file.id} block={{id:file.id,props:{}}} node={file} context={{bridge:props.bridge,sessionId:props.sessionId}}/>):preview.result.kind === 'text' ? <MarkdownPreview markdown={preview.result.markdown} dark={props.dark} /> : <ResearchBlock block={{ id: 'preview', props: { payload: JSON.stringify(preview.result.node) } }} />}
         {composerPreview.current?.requestId===preview.requestId?[...(composerPreview.current.updates??[]).map(node=>({node})),...composerPreview.current.components].map((result,index)=><ResearchBlock key={index} block={{id:'preview-'+index,props:{payload:JSON.stringify(result.node)}}}/>):null}
       </SuggestionPanel></div> : null}</>
   return <Context.Provider value={ctx}><div className="en-body" data-note-source-session={props.sessionId} data-note-source-revision={revision.current}
@@ -1114,7 +1121,7 @@ function NotesEditor(props: Props & { initial: NoteLoad['saved']; recovery?: Not
           {!viewPreview?<><FormattingToolbarController formattingToolbar={() => <NoteFormattingToolbar><BlockTypeSelect items={[{ name: t("正文"), type: 'paragraph', icon: () => <NoteMenuIcon kind="paragraph"/> }, ...[1, 2, 3, 4].map(level => ({ name: t("标题 ") + level, type: 'heading', props: { level }, icon: () => <span>H{level}</span> }))]} /><TextAlignButton textAlignment="left" /><NoteListButtons/><BasicTextStyleButton basicTextStyle="bold" /><BasicTextStyleButton basicTextStyle="italic" /><BasicTextStyleButton basicTextStyle="underline" /><BasicTextStyleButton basicTextStyle="strike" /><CreateLinkButton /><BasicTextStyleButton basicTextStyle="code" /><ColorStyleButton /><AddCommentButton /><AiRewriteButton onRewrite={() => { const range=editor._tiptapEditor.state.selection;const captured={text:editor.getSelectedText(),from:range.from,to:range.to,cursor:editor.getTextCursorPosition().block.id,fingerprint:JSON.stringify(editor.document)};if(!captured.text||!noteRangeHasOnlyText(editor._tiptapEditor.state.doc,captured))return;pinnedSelection.current=captured;setPreview(undefined);setError('');paintSelection(captured);setNativeDraft(t("改写选中文字，保留原意并让表达更清晰。"), true) }}/></NoteFormattingToolbar>} />
           <SideMenuController sideMenu={BlockMenu} floatingUIOptions={{useFloatingOptions:{middleware:[{name:'ework-first-line',fn:({elements,rects,y}:any)=>{const reference=(elements.reference.contextElement||elements.reference) as HTMLElement,inline=reference.querySelector<HTMLElement>('.bn-inline-content'),content=inline||reference.querySelector<HTMLElement>('.bn-block-content')||reference;const base=reference.getBoundingClientRect(),component=reference.querySelector<HTMLElement>('.en-research,.en-note-file');if(component)return{y:y+component.getBoundingClientRect().top-base.top};const box=content.getBoundingClientRect(),line=parseFloat(getComputedStyle(content).lineHeight)||28;return{y:y+box.top-base.top+line/2-rects.floating.height/2}}}]}}} /></>:null}
         </BlockNoteView>
-        {!viewPreview&&inlineDraft?<NoteInlineAiComposer draft={inlineDraft} editor={editor} scroll={scroll} running={writing&&!!inlineRequest.current} disabled={!!request.current&&!inlineRequest.current||externalBusy||!editor.isEditable||!!props.recovery} onChange={prompt=>{inlinePrompt.current=prompt;setInlineDraft(value=>value?{...value,prompt,error:undefined,reply:undefined}:value)}} onSubmit={submitInlineAi} onConfirm={()=>settleInlineProposal(false)} onUndo={()=>settleInlineProposal(true)} onCancel={cancelInlineAi} onDismiss={dismissInlineAi} onStop={stopInlineAi}/>:null}
+        {!viewPreview&&inlineDraft?<NoteInlineAiComposer draft={inlineDraft} editor={editor} scroll={scroll} running={writing&&!!inlineRequest.current} disabled={!!request.current&&!inlineRequest.current||externalBusy||!editor.isEditable||!!props.recovery} onChange={prompt=>{inlinePrompt.current=prompt;setInlineDraft(value=>value?{...value,prompt,error:undefined,reply:undefined}:value)}} onPickImage={()=>void pickNoteMedia('image',inlineDraft.anchor)} onSubmit={submitInlineAi} onConfirm={()=>settleInlineProposal(false)} onUndo={()=>settleInlineProposal(true)} onCancel={cancelInlineAi} onDismiss={dismissInlineAi} onStop={stopInlineAi}/>:null}
       </div>
     </div>
     {!viewPreview?<><NoteReplacementPopover controller={challenge.replacementReviews} scroll={scroll}/>

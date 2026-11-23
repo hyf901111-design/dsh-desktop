@@ -4,6 +4,9 @@ export type NoteMediaKind = 'image'|'audio'|'video'
 /** Runtime-only lease: URLs and release IDs must never be saved in a note node. */
 export type NoteMediaLease = {url:string;releaseId:string;expiresAt:number;kind:NoteMediaKind;contentType:string;name:string}
 export type NoteFileNode = {id:string;name:string;displayName?:string;path?:string;source:'computer';authorizationId?:string;contentType?:string;mediaKind?:NoteMediaKind;noteDisplay?:'inline';previewSessionId?:string;previewEligible?:false;height?:number;noteSize?:{width?:number;height?:number};importStatus?:'importing'|'failed';error?:string}
+export function noteImageBlocks(files:NoteFileNode[]){
+  return files.map(file=>({id:file.id,type:'attachment' as const,props:{payload:JSON.stringify({...file,noteDisplay:'inline'})}}))
+}
 export function noteFileCandidates(transfer:Pick<DataTransfer,'files'|'getData'>,sessionId:string,pathForFile:(file:File)=>string) {
   const raw=transfer.getData(NOTE_FILE_DRAG_TYPE)
   if(raw){

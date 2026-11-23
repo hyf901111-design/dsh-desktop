@@ -281,6 +281,22 @@ export function installNotesService(options: {
               ;(_event.sender as {send(channel:string,value:unknown):void}).send('notes:progress',{sessionId:session,requestId:input.requestId,owner,capabilityProgress})
             }
           },generate:generateResult})
+          if(result.kind==='image'){
+            const files=options.files
+            const writable=()=>current()&&!!clientContext?.editable&&options.canWrite?.(session)!==false&&documentAdapter.identity(session)===clientContext.documentId
+            if(!files||!writable()||!Array.isArray(result.images)||!result.images.length||result.images.length>64)throw Error('笔记图片请求已过期。')
+            const nodes=[]
+            try{
+              for(const image of result.images){
+                if(!writable()||typeof image?.attachmentId!=='string'||!image.attachmentId||image.attachmentId.length>256)throw Error('笔记图片请求已过期。')
+                const stored=await rpc('session.attachment',{sessionId:session,attachmentId:image.attachmentId})
+                if(stored?.attachment?.attachmentId!==image.attachmentId)throw Error('笔记图片不属于当前会话。')
+                nodes.push(await files.admitImage(owner,session,stored,writable))
+              }
+              result={kind:'image',files:nodes,images:result.images}
+              capabilityResults.set(cacheKey,{fingerprint,result})
+            }catch(error){for(const node of nodes)files.revoke(owner,session,node.id);throw error}
+          }
           const retainResult=async()=>{
             if(receipts.length){
               capabilityResults.set(cacheKey,{fingerprint,result})

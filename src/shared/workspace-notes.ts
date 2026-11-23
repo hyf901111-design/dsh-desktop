@@ -1,3 +1,4 @@
+import type {NoteFileNode} from './note-files'
 import type {CapabilityReceipt} from '../../packages/dsh-research-task-runtime/client-capabilities.js'
 export type NoteContent = { title: string; blocks: any[]; yjs: string }
 export type SavedNote = NoteContent & { revision: number; updatedAt: number }
@@ -43,7 +44,7 @@ export function canApplySuggestion(captured: { documentId: string; fingerprint: 
 }
 type NoteCapabilityResult = {capabilitySummary?:string;capabilityReceipts?:CapabilityReceipt[]}
 export type NoteInlineOrder='before-components'|'after-components'
-export type NoteDocumentResult = ({ kind: 'text'; markdown: string;inlineOrder?:NoteInlineOrder;textFallback?:true } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & NoteCapabilityResult
+export type NoteDocumentResult = ({kind:'image';files:NoteFileNode[]} | { kind: 'text'; markdown: string;inlineOrder?:NoteInlineOrder;textFallback?:true } | { kind: 'component'; node: Record<string, any>;targetBlockId?:string;sourceResult?:{status:'verified';refreshStatus:'unbound';recipe:any;sourceNames?:string[]} }) & NoteCapabilityResult
 export type NoteAiResult = NoteDocumentResult | ({ kind: 'conversation'; markdown: string;requiresReply?:boolean;notice?:'read-only-incomplete' } & NoteCapabilityResult)
 export type NoteInsertionAnchor = {documentId:string;blockId:string;position:Record<string,any>}
 
