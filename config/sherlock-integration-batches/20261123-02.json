@@ -353,6 +353,93 @@
           "在线生图取决于套餐或配置的图片服务。"
         ],
         "generatedAt": "2026-11-23T06:12:20.943920+00:00"
+      },
+      "merged": {
+        "mergeCommit": "7588a36bdb2b14c78fcccbe74951dba48c9bd2b6",
+        "verificationCommit": "7588a36bdb2b14c78fcccbe74951dba48c9bd2b6",
+        "checks": [
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/problem-feedback-worker.test.js",
+              "test/research-board-notifications-center.test.ts",
+              "test/collaboration-client.test.ts",
+              "test/home-operations-actions.test.ts",
+              "test/home-operations-navigation.test.ts",
+              "test/image-factory-canvases.test.ts",
+              "test/image-factory-native.test.js",
+              "test/image-factory-layer-gesture.test.ts",
+              "test/image-factory-canvas-workspace.test.ts",
+              "test/sidebar-session-switcher-browser.test.ts"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/problem-feedback-worker.test.js test/research-board-notifications-center.test.ts test/collaboration-client.test.ts test/home-operations-actions.test.ts test/home-operations-navigation.test.ts test/image-factory-canvases.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvas-workspace.test.ts test/sidebar-session-switcher-browser.test.ts",
+            "verifiedCommit": "7588a36bdb2b14c78fcccbe74951dba48c9bd2b6",
+            "completedAt": "2026-11-23T06:13:28.666Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/notes-service.test.ts",
+              "test/notes-inline-ai-browser.test.ts",
+              "-t",
+              "sidebar image prompt|image questions|image.*after reopening|Space-prompt image"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/notes-service.test.ts test/notes-inline-ai-browser.test.ts -t sidebar image prompt|image questions|image.*after reopening|Space-prompt image",
+            "verifiedCommit": "7588a36bdb2b14c78fcccbe74951dba48c9bd2b6",
+            "completedAt": "2026-11-23T06:13:28.666Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/pending-conversation-rendered.test.js",
+              "-t",
+              "acknowledges Enter immediately|shows image chat admission"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/pending-conversation-rendered.test.js -t acknowledges Enter immediately|shows image chat admission",
+            "verifiedCommit": "7588a36bdb2b14c78fcccbe74951dba48c9bd2b6",
+            "completedAt": "2026-11-23T06:13:28.666Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "node",
+              "node_modules/vitest/vitest.mjs",
+              "run",
+              "test/sidebar-new-session-actions.test.ts",
+              "-t",
+              "opens a new .+ session without reusing the previous app session"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sidebar-new-session-actions.test.ts -t opens a new .+ session without reusing the previous app session",
+            "verifiedCommit": "7588a36bdb2b14c78fcccbe74951dba48c9bd2b6",
+            "completedAt": "2026-11-23T06:13:28.666Z",
+            "timeoutMs": 180000
+          },
+          {
+            "argv": [
+              "npm",
+              "run",
+              "typecheck"
+            ],
+            "outcome": "passed",
+            "summary": "已在暂存合并树执行：npm run typecheck",
+            "verifiedCommit": "7588a36bdb2b14c78fcccbe74951dba48c9bd2b6",
+            "completedAt": "2026-11-23T06:13:28.666Z",
+            "timeoutMs": 180000
+          }
+        ],
+        "recordedAt": "2026-11-23T06:13:28.666Z"
       }
     }
   ],
