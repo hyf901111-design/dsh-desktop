@@ -120,3 +120,8 @@ body[data-ds-dark-theme] .knowledge-panel-menu { background: #292929; }
 .knowledge-preview-content table { border-collapse:collapse; }
 .knowledge-preview-content :is(td,th) { border:1px solid #8885; padding:3px 6px; }
 .knowledge-preview-feedback { color:var(--dsw-alias-label-secondary,#858585); font-size:12px; }
+
+.knowledge-app-drop { position: fixed; z-index: 2690; box-sizing: border-box; display: grid; place-items: center; border-radius: 12px; }
+.knowledge-app-drop span { pointer-events: none; opacity: 0; padding: 8px 14px; border-radius: 8px; color: white; background: rgb(25 25 28 / 88%); }
+.knowledge-app-drop[data-over] { background: rgb(80 140 220 / 9%); outline: 2px dashed var(--dsw-alias-label-accent, #6999da); outline-offset: -4px; }
+.knowledge-app-drop[data-over] span { opacity: 1; }

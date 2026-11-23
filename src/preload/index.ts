@@ -1,3 +1,4 @@
+import { mountKnowledgeAppDrop } from './knowledge/app-drop'
 import { showOfficeAccessNotice } from './office-access-notice'
 import { mountSharedKnowledgeSessions } from './knowledge/shared-session'
 import { mountKnowledgePanels } from './knowledge/panel'
@@ -105,7 +106,7 @@ const DEVELOPER_MODE_STYLE_ID = 'sherlock-developer-mode-style'
 const DEVELOPER_MODE_NOTICE_ID = 'sherlock-developer-mode-notice'
 const locale = navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en'
 
-let openFileInEditor = async (_source: FileEditorSource, _mode: FileEditorMode): Promise<void> => {
+let openFileInEditor = async (_source: FileEditorSource, _mode: FileEditorMode, _current?: () => boolean): Promise<void> => {
   throw Error('文件导入入口尚未就绪。')
 }
 let openKnowledgeImageCanvas = async (_kind: 'source' | 'copy', _id: string): Promise<void> => {
@@ -296,19 +297,22 @@ function initializeUi(): void {
   sidebarUpdateControl.mount()
   const workspaceSurfaceHost = new WorkspaceSurfaceHost(document)
   mountResearchBoardNotifications(document, boards, () => workspaceSurfaceHost.revealConversation())
-  openFileInEditor = async (source, mode) => {
+  openFileInEditor = async (source, mode, current = () => true) => {
     try {
       const locale = document.documentElement.dataset.odysseyLocale
       let result = await ipcRenderer.invoke('knowledge:request', 'open-file-in-editor', { ...source, mode, locale }) as {
         session?: { id: string; mode: FileEditorMode }; token?: string; bytes?: Uint8Array; name?: string; note?: { format: 'markdown' | 'text'; text: string }
       }
+      if (!current()) return
       if (result.token && result.bytes && result.name) {
         const deck = await parsePresentationFile(document, result.bytes, result.name)
+        if (!current()) return
         result = await ipcRenderer.invoke('knowledge:request', 'finish-presentation-file-import', { token: result.token, deck })
       } else if (result.token && result.note) {
         const blocks = noteBlocksFromFile(result.note)
         result = await ipcRenderer.invoke('knowledge:request', 'finish-note-file-import', { token: result.token, blocks })
       }
+      if (!current()) return
       const session = result.session
       if (!session) throw Error('文件导入失败。')
       if (!await openKnowledgeSession(document, session.id, session.mode, 'imported')) {
@@ -327,11 +331,11 @@ function initializeUi(): void {
     (id, updatedAt, fromSession) => ipcRenderer.invoke('knowledge:request', 'copy-shared-session', { id, updatedAt, fromSession }))
   window.addEventListener('unload', disposeSharedKnowledgeSessions, { once: true })
   const openImageFactorySource = (id: string) => imageFactory.openSessionCanvas(id, () => openKnowledgeSession(document, id, 'chat'))
-  const openImageFactoryCopy = async (id: string) => {
+  const openImageFactoryCopy = async (id: string, current = () => true) => {
     const origin = workspaceSurfaceHost.current()
     try {
       const copy = await ipcRenderer.invoke('knowledge:request', 'copy-image-factory-file', { id }) as { id: string }
-      if (workspaceSurfaceHost.current() !== origin) return
+      if (workspaceSurfaceHost.current() !== origin || !current()) return
       await imageFactory.openSessionCanvas(copy.id, () => openKnowledgeSession(document, copy.id, 'chat', 'imported'))
     } catch (error) { throw Error(knowledgeRequestError(error)) }
   }
@@ -384,6 +388,10 @@ function initializeUi(): void {
     }
   })
   window.addEventListener('unload', disposeKnowledge, { once: true })
+  const disposeKnowledgeDrop = mountKnowledgeAppDrop(document, {
+    openPresentation: (id, sessionId, current) => openFileInEditor({ id, sessionId }, 'presentation', current),
+    openImage: openImageFactoryCopy
+  })
   const disposeKnowledgePanels = mountKnowledgePanels(document, {
     memory: knowledgeMemory,
     revealConversation: () => workspaceSurfaceHost.revealConversation(),
@@ -400,6 +408,7 @@ function initializeUi(): void {
   ipcRenderer.on('knowledge:changed', knowledgeChanged)
   ipcRenderer.on('knowledge:account-changed', knowledgeAccountChanged)
   window.addEventListener('unload', () => {
+    disposeKnowledgeDrop()
     disposeKnowledgePanels()
     ipcRenderer.removeListener('knowledge:changed', knowledgeChanged)
     ipcRenderer.removeListener('knowledge:account-changed', knowledgeAccountChanged)

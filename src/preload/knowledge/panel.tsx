@@ -1,3 +1,4 @@
+import { KNOWLEDGE_FILE_DRAG_TYPE } from '../../shared/knowledge-drag'
 import { sharedKnowledgeSessionFile, knowledgeSessionLabels as sharedModeLabels } from '../../shared/knowledge-sessions'
 import { openKnowledgeSession, openSharedKnowledgeSession } from './session-directory'
 import { listKnowledgeRows, usePublishedKnowledgeSessions } from './published-sessions'
@@ -252,6 +253,11 @@ function FilePicker({ document, bridge, referenceFile }: Omit<PanelProps, 'id'>)
   const [state, setState] = useState({ ready: false, error: '' })
   const [referenceError, setReferenceError] = useState('')
   const location = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const error = (event: Event) => { if (location.current?.contains(event.target as Node)) setReferenceError((event as CustomEvent<string>).detail) }
+    document.addEventListener('sherlock:knowledge-drop-error', error)
+    return () => document.removeEventListener('sherlock:knowledge-drop-error', error)
+  }, [document])
   const directoryTrigger = useRef<HTMLButtonElement>(null)
   const filterTrigger = useRef<HTMLButtonElement>(null)
   const reloadReceived = useRef<() => void>(() => {})
@@ -447,7 +453,7 @@ function FilePicker({ document, bridge, referenceFile }: Omit<PanelProps, 'id'>)
           draggable={!session && !published} onDragStart={event => {
             if (session || published) return
             event.dataTransfer.effectAllowed = 'copy'
-            event.dataTransfer.setData('application/x-ework-knowledge-file', JSON.stringify({ id: row.id, label: row.name }))
+            event.dataTransfer.setData(KNOWLEDGE_FILE_DRAG_TYPE, JSON.stringify({ id: row.id, label: row.name }))
           }}>
           <KnowledgeItemIcon format={published?.mode ?? (session ? session.mode : knowledgeFormat(row.name))} tile />
           <button type="button" className="knowledge-panel-name" onClick={() => {
