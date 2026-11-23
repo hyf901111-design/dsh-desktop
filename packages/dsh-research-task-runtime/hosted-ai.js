@@ -54,6 +54,9 @@ export function isInterruptedModelStream(message) {
 class HostedPiAiAdapter extends PiAiAdapter {
   async *stream(options) {
     for await (const event of super.stream(options)) {
+      // Pi initializes usage to zero before any usage frame arrives. A missing
+      // accounting tail leaves token counts unknown; the gateway owns settlement.
+      if (event.type === 'usage' && Object.values(event.usage).every(count => count === 0)) continue
       if (event.type !== 'finish' || event.reason.kind !== 'error') {
         yield event
         continue
