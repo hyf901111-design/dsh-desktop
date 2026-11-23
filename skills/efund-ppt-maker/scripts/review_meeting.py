@@ -17,11 +17,16 @@ def review(source):
         sys.platform == "darwin"
         and Path("/Applications/Microsoft PowerPoint.app").exists()
     ):
+        # PowerPoint can reuse a stale open presentation after its path was rewritten.
+        # Give every review a unique file name, even when the caller reuses a candidate.
+        snapshot = out / (out.name + source.suffix)
+        shutil.copyfile(source, snapshot)
         result = subprocess.run(
             [
                 "osascript",
                 str(Path(__file__).with_name("review_layout.applescript")),
-                str(source.resolve()),
+                str(snapshot.resolve()),
+                "--close-snapshot",
             ],
             capture_output=True,
             text=True,

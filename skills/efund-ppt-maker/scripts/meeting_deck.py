@@ -207,7 +207,7 @@ def reflow(page, archive, extra):
                     ):
                         c.text = label
                 widths = (
-                    [108, 215, 85, 476]
+                    [108, 244, 85, 447]
                     if impact
                     else relative_widths([c.width for c in table.columns], 884)
                 )
@@ -225,17 +225,27 @@ def reflow(page, archive, extra):
                     )
                     for r in table.rows
                 ]
-                computed.append((f, widths, hs, header))
-            all_h = [v for _, _, hs, _ in computed for v in hs]
+                computed.append((f, widths, hs, header, impact))
+            all_h = [v for _, _, hs, _, _ in computed for v in hs]
             heights = iter(
                 distribute(all_h, page.height - 61 - 171 - 3 * (len(matrix) - 1))
             )
             for i, f in enumerate(strips):
                 page.table(f, 38 + 448 * i, 104, [100, 336], [60], header=False)
             y = 171
-            for f, widths, hs, header in computed:
+            for f, widths, hs, header, impact in computed:
                 row_h = [next(heights) for _ in hs]
+                # A status color is data in an impact matrix. Preserve the original
+                # text paint (including theme transforms) while restyling the grid.
+                colors = []
+                if impact:
+                    for row in list(f.table.rows)[int(header):]:
+                        for paint in row.cells[2]._tc.xpath(".//a:rPr/a:solidFill"):
+                            colors.append((paint.getparent(), deepcopy(paint)))
                 page.table(f, 38, y, widths, row_h, header=header)
+                for props, paint in colors:
+                    current = props.xpath("./a:solidFill")[0]
+                    props.replace(current, paint)
                 y += sum(row_h) + 3
             return "comparison"
         if len(tables) == len(words) == 2:
