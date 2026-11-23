@@ -12,7 +12,7 @@
         "featureName": "主页悬浮面板深浅主题与误发工具协议恢复",
         "branch": "codex/feat/workspace-improvements-20261123",
         "baseCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
-        "tipCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
+        "tipCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
         "commits": [
           {
             "commit": "8977d7ec958bbeed3c828ff1eaaf72136edb1a66",
@@ -27,6 +27,13 @@
               "8977d7ec958bbeed3c828ff1eaaf72136edb1a66"
             ],
             "subject": "拦截正文中误发的工具协议并在原任务内恢复结构化调用"
+          },
+          {
+            "commit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
+            "parents": [
+              "1292227f71df960cd42199ce633aff5b3a71eb2d"
+            ],
+            "subject": "保留工作台输出上限处理与工具协议恢复的兼容性"
           }
         ],
         "files": [
@@ -68,8 +75,8 @@
             ],
             "outcome": "passed",
             "summary": "桌面端类型检查",
-            "verifiedCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
-            "completedAt": "2026-11-23T09:41:28.181979+00:00",
+            "verifiedCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
+            "completedAt": "2026-11-23T09:43:34.717523+00:00",
             "timeoutMs": 300000
           },
           {
@@ -84,8 +91,8 @@
             ],
             "outcome": "passed",
             "summary": "主页与浏览器悬浮栏主题切换、圆角、模糊与可读性",
-            "verifiedCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
-            "completedAt": "2026-11-23T09:41:21.789383+00:00",
+            "verifiedCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
+            "completedAt": "2026-11-23T09:43:30.074836+00:00",
             "timeoutMs": 300000
           },
           {
@@ -100,8 +107,8 @@
             ],
             "outcome": "passed",
             "summary": "真实 SDK 工具循环回放改稿，验证结构化调用、重试上限及正文不泄漏协议",
-            "verifiedCommit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
-            "completedAt": "2026-11-23T09:41:25.020296+00:00",
+            "verifiedCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
+            "completedAt": "2026-11-23T09:43:33.341650+00:00",
             "timeoutMs": 300000
           }
         ],
@@ -116,7 +123,7 @@
         "risks": [
           "工具异常在本地以受控模型流回放。"
         ],
-        "generatedAt": "2026-11-23T09:41:28.225156+00:00"
+        "generatedAt": "2026-11-23T09:43:34.762255+00:00"
       }
     },
     {
