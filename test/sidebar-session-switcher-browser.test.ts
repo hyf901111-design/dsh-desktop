@@ -129,7 +129,8 @@ it('follows the rounded workspace while the panel is open across window sizes an
     await home.focus()
     await page.keyboard.press('ArrowDown')
     const pane = page.locator('[data-dsh-frame] > [data-pane="conversation"]')
-    for (const [width, height] of [[1440, 900], [780, 480], [360, 400]]) {
+    const viewports = [[1440, 900], [780, 480], [360, 400]] as const
+    for (const [width, height] of viewports) {
       await page.setViewportSize({ width, height })
       const bounds = await pane.boundingBox(), list = await panel.boundingBox()
       expect([list.x, list.y, list.width, list.y + list.height]).toEqual([
