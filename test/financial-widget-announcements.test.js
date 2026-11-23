@@ -81,6 +81,8 @@ it('手动选择公司解除公告自身联动，空来源清除旧公告而不�
  await vi.waitFor(()=>expect(f.document.querySelector('.ew-financial-suggestions [role=option]')).not.toBeNull())
  await f.event('click',f.document.querySelector('.ew-financial-suggestions [role=option]'))
  expect(f.spec(f.announcement.id)).toMatchObject({symbols:[first]});expect(f.spec(f.announcement.id).linkedSourceId).toBeUndefined()
+ expect(f.spec(f.announcement.id).selectedSymbol).toBeUndefined()
+ expect(f.bridge.request.mock.calls.find(([q])=>q.action==='search')[0]).not.toHaveProperty('includeCrypto')
  await f.drag(f.port(f.watch.id,'output'),f.port(f.announcement.id,'input'))
  await f.event('keydown',f.host.querySelector('[data-stock-code="600519"]'),{key:'Delete'})
  await f.event('keydown',f.host.querySelector('[data-stock-code="000858"]'),{key:'Delete'})
