@@ -9,61 +9,63 @@
     {
       "handoff": {
         "schemaVersion": 1,
-        "featureName": "主页悬浮面板深浅主题与误发工具协议恢复",
+        "featureName": "macOS 客户端随包提供跨设备任务依赖",
         "branch": "codex/feat/workspace-improvements-20261123",
-        "baseCommit": "710f1bff4400332a47aa7751b817b6afccd90924",
-        "tipCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
+        "baseCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
+        "tipCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
         "commits": [
           {
-            "commit": "8977d7ec958bbeed3c828ff1eaaf72136edb1a66",
+            "commit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
             "parents": [
-              "710f1bff4400332a47aa7751b817b6afccd90924"
+              "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb"
             ],
-            "subject": "让主页悬浮栏随左侧栏切换深浅磨砂配色"
-          },
-          {
-            "commit": "1292227f71df960cd42199ce633aff5b3a71eb2d",
-            "parents": [
-              "8977d7ec958bbeed3c828ff1eaaf72136edb1a66"
-            ],
-            "subject": "拦截正文中误发的工具协议并在原任务内恢复结构化调用"
-          },
-          {
-            "commit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
-            "parents": [
-              "1292227f71df960cd42199ce633aff5b3a71eb2d"
-            ],
-            "subject": "保留工作台输出上限处理与工具协议恢复的兼容性"
+            "subject": "为 macOS 客户端内置任务解释器和办公依赖并验证干净安装环境"
           }
         ],
         "files": [
           {
             "status": "M",
-            "path": "scripts/lib/first-response-effort.mjs"
+            "path": "build/harness-node-entry.mjs"
+          },
+          {
+            "status": "A",
+            "path": "build/task-runtime/darwin-arm64.json"
+          },
+          {
+            "status": "A",
+            "path": "build/task-runtime/darwin-x64.json"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/bundled-task-python.mjs"
+          },
+          {
+            "status": "A",
+            "path": "scripts/lib/verify-bundled-task-tools.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/lib/task-opening-stream.mjs"
+            "path": "scripts/restore-packaged-runtime-patches.mjs"
           },
           {
             "status": "M",
-            "path": "scripts/verify-browser-live-menus.mjs"
+            "path": "scripts/verify-packaged-macos.mjs"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/bundled-task-tools/office.py"
+          },
+          {
+            "status": "A",
+            "path": "test/fixtures/bundled-task-tools/task.mjs"
           },
           {
             "status": "M",
-            "path": "src/preload/browser/native-menus.ts"
+            "path": "test/macos-package-runtime.test.ts"
           },
           {
             "status": "M",
-            "path": "src/preload/navigation-shortcuts.css"
-          },
-          {
-            "status": "M",
-            "path": "test/sidebar-session-switcher-browser.test.ts"
-          },
-          {
-            "status": "M",
-            "path": "test/task-opening-sdk-recovery.test.js"
+            "path": "test/packaged-runtime-patches.test.js"
           }
         ],
         "checks": [
@@ -75,8 +77,8 @@
             ],
             "outcome": "passed",
             "summary": "桌面端类型检查",
-            "verifiedCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
-            "completedAt": "2026-11-23T09:43:34.717523+00:00",
+            "verifiedCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
+            "completedAt": "2026-11-23T10:06:21.682732+00:00",
             "timeoutMs": 300000
           },
           {
@@ -86,13 +88,14 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/sidebar-session-switcher-browser.test.ts",
-              "test/browser-menu-overlay-focus.test.ts"
+              "test/harness-bundled-package-resolution.test.ts",
+              "test/harness-parent-lifetime.test.ts",
+              "test/packaged-runtime-patches.test.js"
             ],
             "outcome": "passed",
-            "summary": "主页与浏览器悬浮栏主题切换、圆角、模糊与可读性",
-            "verifiedCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
-            "completedAt": "2026-11-23T09:43:30.074836+00:00",
+            "summary": "内置任务工具路径、进程生命周期与打包钩子",
+            "verifiedCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
+            "completedAt": "2026-11-23T10:06:15.468676+00:00",
             "timeoutMs": 300000
           },
           {
@@ -102,184 +105,27 @@
               "run",
               "--maxWorkers=1",
               "--testTimeout=30000",
-              "test/task-opening-sdk-recovery.test.js",
-              "test/conversation-first-response-effort.test.js"
+              "test/macos-package-runtime.test.ts"
             ],
             "outcome": "passed",
-            "summary": "真实 SDK 工具循环回放改稿，验证结构化调用、重试上限及正文不泄漏协议",
-            "verifiedCommit": "2a192dc131ac1d1f0a69b4266a208a3cdeac22cb",
-            "completedAt": "2026-11-23T09:43:33.341650+00:00",
+            "summary": "模拟全新用户运行任务进程，读回 Word、Excel、PowerPoint 并检查包内依赖",
+            "verifiedCommit": "105e54a4fe7f8a90d4e3aeb3c6e1a334a4ab1e85",
+            "completedAt": "2026-11-23T10:06:29.963103+00:00",
             "timeoutMs": 300000
           }
         ],
         "uiVerification": {
-          "outcome": "passed",
-          "summary": "真实 macOS 原生窗口与 Chromium 验证浅色、深色切换，窗口保持模糊，四角已裁剪。"
+          "outcome": "not-applicable",
+          "summary": "变更位于任务进程及打包流程，使用真实任务执行器在空用户目录验证。"
         },
         "acceptanceCriteria": [
-          "浅色模式显示浅底深字，深色模式颜色贴近左侧栏",
-          "普通改稿回合隔离文本形式的工具调用并自动恢复执行"
+          "系统 PATH 下可使用包内 Node、Python 和文件搜索",
+          "无须安装开发工具即可生成并读回办公文件"
         ],
         "risks": [
-          "工具异常在本地以受控模型流回放。"
+          "Intel 运行时在 Apple 芯片通过 Rosetta 验证，未在独立 Intel 设备上测试。"
         ],
-        "generatedAt": "2026-11-23T09:43:34.762255+00:00"
-      },
-      "merged": {
-        "mergeCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-        "verificationCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-        "checks": [
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/problem-feedback-worker.test.js",
-              "test/research-board-notifications-center.test.ts",
-              "test/collaboration-client.test.ts",
-              "test/home-operations-actions.test.ts",
-              "test/home-operations-navigation.test.ts",
-              "test/image-factory-canvases.test.ts",
-              "test/image-factory-native.test.js",
-              "test/image-factory-layer-gesture.test.ts",
-              "test/image-factory-canvas-workspace.test.ts",
-              "test/sidebar-session-switcher-browser.test.ts"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/problem-feedback-worker.test.js test/research-board-notifications-center.test.ts test/collaboration-client.test.ts test/home-operations-actions.test.ts test/home-operations-navigation.test.ts test/image-factory-canvases.test.ts test/image-factory-native.test.js test/image-factory-layer-gesture.test.ts test/image-factory-canvas-workspace.test.ts test/sidebar-session-switcher-browser.test.ts",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/notes-service.test.ts",
-              "test/notes-inline-ai-browser.test.ts",
-              "-t",
-              "sidebar image prompt|image questions|image.*after reopening|Space-prompt image"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/notes-service.test.ts test/notes-inline-ai-browser.test.ts -t sidebar image prompt|image questions|image.*after reopening|Space-prompt image",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/pending-conversation-rendered.test.js",
-              "-t",
-              "acknowledges Enter immediately|shows image chat admission"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/pending-conversation-rendered.test.js -t acknowledges Enter immediately|shows image chat admission",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/sidebar-new-session-actions.test.ts",
-              "-t",
-              "opens a new .+ session without reusing the previous app session"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/sidebar-new-session-actions.test.ts -t opens a new .+ session without reusing the previous app session",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "npm",
-              "run",
-              "typecheck"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：npm run typecheck",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 180000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-output-limit.test.js",
-              "test/workbench-resume-request.test.js",
-              "test/conversation-components-policy.test.js",
-              "test/workbench-mixed-document-adapter.test.js",
-              "test/workbench-execution-policy.test.js"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-output-limit.test.js test/workbench-resume-request.test.js test/conversation-components-policy.test.js test/workbench-mixed-document-adapter.test.js test/workbench-execution-policy.test.js",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-prototype-evidence.test.js",
-              "-t",
-              "workbench document follow-ups"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-prototype-evidence.test.js -t workbench document follow-ups",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/component-delivery-scope.test.js",
-              "test/workbench-grouped-quantity.test.js",
-              "test/workbench-explicit-scope.test.js",
-              "test/research-generation-watch.test.js",
-              "test/research-planning-feedback.test.js",
-              "test/research-workbench-feedback.test.js",
-              "test/workbench-feedback-upgrade-preservation.test.js",
-              "test/generation-progress-persistence.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/component-delivery-scope.test.js test/workbench-grouped-quantity.test.js test/workbench-explicit-scope.test.js test/research-generation-watch.test.js test/research-planning-feedback.test.js test/research-workbench-feedback.test.js test/workbench-feedback-upgrade-preservation.test.js test/generation-progress-persistence.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 300000
-          },
-          {
-            "argv": [
-              "node",
-              "node_modules/vitest/vitest.mjs",
-              "run",
-              "test/workbench-scrollbar-theme-browser.test.js",
-              "--testTimeout=30000",
-              "--maxWorkers=1"
-            ],
-            "outcome": "passed",
-            "summary": "已在暂存合并树执行：node node_modules/vitest/vitest.mjs run test/workbench-scrollbar-theme-browser.test.js --testTimeout=30000 --maxWorkers=1",
-            "verifiedCommit": "dbd97bdc4729a34bcf272ca5f9ba248c62dd2613",
-            "completedAt": "2026-11-23T09:44:38.657Z",
-            "timeoutMs": 240000
-          }
-        ],
-        "recordedAt": "2026-11-23T09:44:38.657Z"
+        "generatedAt": "2026-11-23T10:06:30.003321+00:00"
       }
     },
     {
