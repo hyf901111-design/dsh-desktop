@@ -60,6 +60,25 @@ function rendererFixture(){
    await Promise.resolve()
    host.querySelector('button').click()
   }
+  function mountHomeSwitcher(){
+   const style=document.createElement('style')
+   style.textContent=switcherStyles
+   document.head.append(style)
+   document.body.dataset.dshFrame=''
+   document.querySelector('.pI_x6G_centerCol').dataset.pane='conversation'
+   const sidebar=document.querySelector('[data-dsh-sidebar-root]')
+   sidebar.dataset.dshSidebarWide='false'
+   const home=document.createElement('button')
+   home.dataset.sidebarHome=''
+   home.textContent='主页'
+   home.style.cssText='position:fixed;left:12px;top:140px;width:36px;height:36px'
+   sidebar.append(home)
+   mountSidebarSessionSwitcher(sidebar,{
+    results:()=>[{area:'workspaces',key:'row',title:'浏览器会话',sessionId:'synthetic'}],
+    workspaces:()=>[{workspaceId:'first',title:'工作区',path:'/fixture',sessionIds:['synthetic']}],
+    current:()=>null,subscribe:()=>()=>{},open:async()=>{document.body.dataset.openedSwitcherRow='true'},showError:error=>{throw error}
+   })
+  }
   let copiedPath=''
   function mountWorkspaceHoverCard(){
    const anchor=document.createElement('div')
@@ -82,7 +101,7 @@ function rendererFixture(){
   contextBridge.exposeInMainWorld('qa',{
    open:()=>view.open('live-menu-synthetic-session'),close:()=>view.close(),
    click,global:()=>global.click(),dismiss:()=>{scheduled.closeMenu();view.dismiss()},
-   openNotificationCenter,mountWorkspaceHoverCard,copiedWorkspacePath:()=>copiedPath,
+   openNotificationCenter,mountHomeSwitcher,mountWorkspaceHoverCard,copiedWorkspacePath:()=>copiedPath,
    tooltip:bounds=>{document.querySelector('#live-menu-tooltip')?.remove();const tip=document.createElement('div');tip.id='live-menu-tooltip';tip.role='tooltip';tip.textContent='实时网页上的提示';tip.style.cssText='position:fixed;z-index:10000;padding:12px;background:#292929;color:white;border-radius:8px;left:'+bounds.x+'px;top:'+bounds.y+'px';document.body.append(tip)},removeTooltip:()=>document.querySelector('#live-menu-tooltip')?.remove(),
    diagnostics:()=>({rootHidden:view.root.hidden,panel:view.panel,presented:view.panelPresented,documentFocused:document.hasFocus(),activeField:document.activeElement?.getAttribute('data-field'),states,sourceMenus:[...document.querySelectorAll('.eb-popover,.st-menu')].map(el=>({role:el.getAttribute('role'),hidden:el.getAttribute('aria-hidden'),inert:el.inert,visibility:getComputedStyle(el).visibility})),viewport:document.querySelector('[data-browser-viewport]')?.getBoundingClientRect().toJSON(),globalAction,calls,actions,images:document.querySelectorAll('.eb-page-image').length}),
    dispose:()=>{projection.dispose();view.dispose();host.dispose()},
@@ -112,7 +131,7 @@ async function nativeFixture(config){
  const live=()=>page.executeJavaScript('({...window.live,cursor:document.querySelector("video").currentTime})')
  const advancing=async()=>{const before=await live();await until(async()=>{const after=await live();return after.timer>before.timer+2&&after.raf>before.raf+2&&after.video>before.video+1},'timer, animation and video continue under native menu');const after=await live();return{before,after}}
  const ax=async wc=>{if(!wc.debugger.isAttached())wc.debugger.attach('1.3');return(await wc.debugger.sendCommand('Accessibility.getFullAXTree')).nodes}
- const check=async(name,run)=>{if(config.tableOnly&&!name.startsWith('full table'))return;if(config.notificationsOnly&&!/notification center/.test(name)||config.workspaceTabsOnly&&!/expanded browser tabs survive/.test(name)||config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
+ const check=async(name,run)=>{if(config.tableOnly&&!name.startsWith('full table'))return;if(config.homeSwitcherOnly&&!/Home switcher/.test(name)||config.notificationsOnly&&!/notification center/.test(name)||config.workspaceTabsOnly&&!/expanded browser tabs survive/.test(name)||config.downloadsOnly&&!/recent downloads projects/.test(name)||config.hoverOnly&&!/workspace hover card|passive tooltip/.test(name)||config.focusOnly&&!/stale source address/.test(name)||config.scrollbarOnly&&!/long More/.test(name)||config.supplementOnly&&!/address suggestions|local font/.test(name)||config.initialPass&&/delayed replacement|temporary data|zoom|retired menu|closing the workspace|passive tooltip|transparent shadow/.test(name))return;phase=name;const at=performance.now(),detail=await run();checks.push({name,passed:true,ms:performance.now()-at,...(detail?{detail}:{})})}
  const dismiss=async()=>{await ui('qa.dismiss()');await until(()=>!locateMenu(),'native menu dismissed')}
  const diagnostics=async()=>({phase,error:null,window:win&&!win.isDestroyed()?{visible:win.isVisible(),focused:win.isFocused(),focusedWindow:BrowserWindow.getFocusedWindow()?.id,focusedContents:webContents.getFocusedWebContents()?.id,bounds:win.getContentBounds(),zoom:win.webContents.getZoomFactor()}:undefined,views:win&&!win.isDestroyed()?win.contentView.children.filter(view=>view.webContents&&!view.webContents.isDestroyed()).map(view=>({title:view.webContents.getTitle(),url:view.webContents.getURL().slice(0,160),visible:view.getVisible(),bounds:view.getBounds(),zoom:view.webContents.getZoomFactor()})):[],renderer:await Promise.race([ui('qa.diagnostics()'),pause(500).then(()=>({timeout:true}))]).catch(error=>({error:String(error)})),checks,timings,captureCalls,fontRequests,consoleEvents,trace})
  try{
@@ -502,6 +521,60 @@ async function nativeFixture(config){
    return {bounds,completed:true}
   })
 
+  if(config.homeSwitcherOnly)await check('Home switcher keeps its native glass, hover and workspace actions over a live page',async()=>{
+   if(process.platform!=='darwin')return
+   await ui('qa.mountHomeSwitcher()')
+   const home='[data-sidebar-home]',panel='#ework-sidebar-session-switcher'
+   const center=selector=>ui(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`)
+   const button=await center(home),originalPointer=screen.getCursorScreenPoint
+   let pointer=button
+   screen.getCursorScreenPoint=()=>{const origin=win.getContentBounds(),zoom=win.webContents.getZoomFactor();return{x:origin.x+pointer.x*zoom,y:origin.y+pointer.y*zoom}}
+   const mouse=async point=>{
+    pointer=point
+    win.webContents.sendInputEvent({type:'mouseMove',x:Math.round(point.x),y:Math.round(point.y)})
+   }
+   try{
+    await page.executeJavaScript("const pattern=document.createElement('div');pattern.id='test-pattern';pattern.style.cssText='position:fixed;inset:0;z-index:99999;pointer-events:none;background:repeating-linear-gradient(90deg,black 0px 6px,white 6px 12px)';document.body.append(pattern)")
+    const origin=win.getContentBounds(),z=win.webContents.getZoomFactor()
+    const pixelStrip=async name=>{
+     const path=join(config.evidence,name+'.png')
+     // Only sample the texture of this generated local page.
+     const box=[origin.x+150*z,origin.y+350*z,72*z,4*z].map(Math.round).join(',')
+     require('node:child_process').execFileSync('/usr/sbin/screencapture',['-x','-R',box,path])
+     const image=require('electron').nativeImage.createFromPath(path),pixels=image.toBitmap()
+     const red=[];for(let i=2;i<pixels.length;i+=4)red.push(pixels[i])
+     return Math.max(...red)-Math.min(...red)
+    }
+    await pause(150)
+    const clear=await pixelStrip('switcher-page')
+    assert.ok(clear>100,'visible fine stripes before opening: '+clear)
+    await mouse(button);await shown('Home switcher')
+    assert.ok(menu.popup&&!menu.popup.isFocusable())
+    assert.equal(wireState.material,'menu')
+    await pause(420);assert.ok(await activeMenu(),'resting over Home keeps the panel open')
+    // Crossing to the child makes Chromium report a leave in the shell.
+    pointer=await center(panel)
+    await ui("document.querySelector('[data-sidebar-home]').dispatchEvent(new PointerEvent('pointerleave'))")
+    await pause(420)
+    assert.ok(await activeMenu(),'crossing to the native window keeps the panel open')
+    const blurred=await pixelStrip('switcher-glass')
+    assert.ok(blurred<clear*.22,'native glass blurs detail: '+JSON.stringify({clear,blurred}))
+    const group='h3 button',row='button[data-key=row]'
+    await clickNative(group)
+    await until(()=>menuDOM("document.querySelector('h3 button')?.getAttribute('aria-expanded')==='false'"),'workspace collapses')
+    await clickNative(group)
+    await until(()=>menuDOM("!!document.querySelector('button[data-key=row]')"),'workspace expands')
+    pointer={x:600,y:340}
+    await until(()=>!locateMenu(),'moving outside returns the webpage')
+    assert.equal(pageView.getVisible(),true)
+    await mouse({x:5,y:65});await pause(80);await mouse(button);await shown('reopened Home switcher')
+    await clickNative(row)
+    await until(()=>ui("document.body.dataset.openedSwitcherRow==='true'"),'selecting a session')
+    await until(()=>!locateMenu(),'row selection closes the panel')
+    return {clear,blurred,pageRemainedLive:true,material:'menu'}
+   }finally{screen.getCursorScreenPoint=originalPointer;await page.executeJavaScript("document.querySelector('#test-pattern')?.remove()")}
+  })
+
   await check('expanded browser tabs survive the native draggable title and collapse outside the bar',async()=>{
    const toggle='.eb-workspace-toggle',label='.eb-app-label'
    const originalPointer=screen.getCursorScreenPoint
@@ -537,8 +610,8 @@ async function nativeFixture(config){
  }catch(error){const failure=await diagnostics();failure.error=String(error?.stack||error);await writeFile(join(config.evidence,'failure.json'),JSON.stringify(failure,null,2));console.error(JSON.stringify(failure,null,2));api?.dispose();server?.close();win?.destroy();app.exit(1)}
 }
 
-await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {createRoot} from 'react-dom/client';import {jsx} from 'react/jsx-runtime';import {HoverCard} from '@deepseek-ai/dsh-client-ui-primitives';import {BrowserAppView} from './src/preload/browser/view';import {mountResearchBoardNotifications} from './src/preload/research-board-notifications-ui';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],loader:{'.css':'empty'},logLevel:'silent'})
-const config={tableOnly:process.env.BROWSER_LIVE_MENU_TABLE_ONLY==='1',notificationsOnly:process.env.BROWSER_LIVE_MENU_NOTIFICATIONS_ONLY==='1',workspaceTabsOnly:process.env.BROWSER_LIVE_MENU_WORKSPACE_TABS_ONLY==='1',downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
+await build({stdin:{resolveDir:root,contents:`import {contextBridge,ipcRenderer} from 'electron';import {mountSidebarSessionSwitcher} from './src/preload/sidebar-session-switcher';import switcherStyles from './src/preload/navigation-shortcuts.css?inline';import {createRoot} from 'react-dom/client';import {jsx} from 'react/jsx-runtime';import {HoverCard} from '@deepseek-ai/dsh-client-ui-primitives';import {BrowserAppView} from './src/preload/browser/view';import {mountResearchBoardNotifications} from './src/preload/research-board-notifications-ui';import {NativeBrowserMenuProjection} from './src/preload/browser/native-menus';import {WorkspaceSurfaceHost} from './src/preload/workspace-surface-host';import {ScheduledTaskView} from './src/preload/scheduled/view';import {scheduledStyles} from './src/preload/scheduled/style';(${rendererFixture.toString()})();`},bundle:true,platform:'node',format:'cjs',outfile:preload,external:['electron'],plugins:[inline],loader:{'.css':'empty'},logLevel:'silent'})
+const config={tableOnly:process.env.BROWSER_LIVE_MENU_TABLE_ONLY==='1',homeSwitcherOnly:process.env.BROWSER_LIVE_MENU_HOME_SWITCHER_ONLY==='1',notificationsOnly:process.env.BROWSER_LIVE_MENU_NOTIFICATIONS_ONLY==='1',workspaceTabsOnly:process.env.BROWSER_LIVE_MENU_WORKSPACE_TABS_ONLY==='1',downloadsOnly:process.env.BROWSER_LIVE_MENU_DOWNLOADS_ONLY==='1',hoverOnly:process.env.BROWSER_LIVE_MENU_HOVER_ONLY==='1',profile:join(scratch,'profile'),state:join(scratch,'state'),materials:join(scratch,'materials'),evidence,preload,menuPreload:join(root,'src/preload/browser/menu-preload.cjs'),fontPath:join(root,'build/fonts/NotoSansSC.woff2'),initialPass:process.env.BROWSER_LIVE_MENU_INITIAL_PASS==='1',supplementOnly:process.env.BROWSER_LIVE_MENU_SUPPLEMENT_ONLY==='1',scrollbarOnly:process.env.BROWSER_LIVE_MENU_SCROLLBAR_ONLY==='1',focusOnly:process.env.BROWSER_LIVE_MENU_FOCUS_ONLY==='1'}
 await build({stdin:{resolveDir:root,contents:`import {registerBrowserApp} from './src/main/browser/service';const {join}=require('node:path');(${nativeFixture.toString()})(${JSON.stringify(config)});`},bundle:true,platform:'node',format:'cjs',outfile:entry,external:['electron'],logLevel:'silent'})
 const code=await new Promise((done,reject)=>{
  const child=spawn(require('electron'),[entry],{env:{...process.env,ELECTRON_RUN_AS_NODE:''},stdio:'inherit'}),timer=setTimeout(()=>child.kill('SIGTERM'),60000)

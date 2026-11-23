@@ -1,8 +1,8 @@
 import {ipcMain,BrowserWindow,WebContentsView,screen,type Rectangle} from 'electron'
 import {randomUUID} from 'node:crypto'
 
-export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;hoverCard?:boolean;focusOwner?:boolean;material?:'menu'}
-export type BrowserMenuOverlayAction={id:string;revision:number;kind:'click'|'input'|'change'|'key'|'scroll'|'dismiss'|'pointer';controlId?:string;value?:string;checked?:boolean;key?:string;metaKey?:boolean;ctrlKey?:boolean;shiftKey?:boolean;altKey?:boolean;over?:boolean;scrollTop?:number;scrollLeft?:number;selectionStart?:number;selectionEnd?:number;through?:{x:number;y:number;button?:'left'|'middle'|'right'}}
+export type BrowserMenuOverlayState={id:string;revision:number;html:string;css?:string;bounds:Rectangle;zoom:number;focusId?:string;selection?:{start:number;end:number;direction?:string};reducedMotion?:boolean;passive?:boolean;hoverCard?:boolean;focusOwner?:boolean;switcherAnchor?:Rectangle;material?:'menu'}
+export type BrowserMenuOverlayAction={id:string;revision:number;kind:'click'|'input'|'change'|'key'|'scroll'|'dismiss'|'pointer'|'switcher-hover';controlId?:string;value?:string;checked?:boolean;key?:string;metaKey?:boolean;ctrlKey?:boolean;shiftKey?:boolean;altKey?:boolean;over?:boolean;scrollTop?:number;scrollLeft?:number;selectionStart?:number;selectionEnd?:number;through?:{x:number;y:number;button?:'left'|'middle'|'right'}}
 export type BrowserMenuKeyInput={type:string;key:string;meta?:boolean;control?:boolean;shift?:boolean;alt?:boolean;isComposing?:boolean}
 const actionChannel='browser-app:menu-action',stateChannel='browser-app:menu-state',clearChannel='browser-app:menu-clear'
 const kinds=new Set(['click','input','change','key','scroll','dismiss','pointer'])
@@ -12,6 +12,8 @@ const documentHtml='<!doctype html><meta charset="utf-8"><meta http-equiv="Conte
 function validateState(state:BrowserMenuOverlayState){
  if(!state||typeof state.id!=='string'||!state.id||state.id.length>256||!Number.isSafeInteger(state.revision)||state.revision<0||typeof state.html!=='string'||!state.html||Buffer.byteLength(state.html,'utf8')>4000000||state.css!==undefined&&(typeof state.css!=='string'||Buffer.byteLength(state.css,'utf8')>1000000)||['passive','hoverCard','focusOwner','reducedMotion'].some(key=>(state as any)[key]!==undefined&&typeof (state as any)[key]!=='boolean'))throw Error('原生菜单内容无效或过大。')
  if(state.material!==undefined&&(state.material!=='menu'||state.passive))throw Error('原生菜单材质无效。')
+ const anchor=state.switcherAnchor
+ if(anchor&&(!['x','y','width','height'].every(key=>Number.isFinite(anchor[key as keyof Rectangle])&&Math.abs(anchor[key as keyof Rectangle])<=30000)||anchor.width<=0||anchor.height<=0))throw Error('主页按钮位置无效。')
  const r=state.bounds
  if(!r||!(['x','y','width','height'] as const).every(key=>Number.isFinite(r[key])&&Math.abs(r[key])<=30000)||r.width<=0||r.height<=0||!Number.isFinite(state.zoom)||state.zoom<.1||state.zoom>5)throw Error('原生菜单位置或缩放无效。')
  if(state.focusId!==undefined&&(typeof state.focusId!=='string'||state.focusId.length>256)||state.selection&&(!Number.isSafeInteger(state.selection.start)||!Number.isSafeInteger(state.selection.end)||state.selection.start<0||state.selection.end<state.selection.start||state.selection.end>1000000||state.selection.direction!==undefined&&!['forward','backward','none'].includes(state.selection.direction)))throw Error('原生菜单焦点无效。')
@@ -23,14 +25,33 @@ export function createBrowserMenuOverlay(preload:string,getWindow:()=>BrowserWin
  const interactive:Surface={ready:false,hasContent:false,clearToken:0},passive:Surface={ready:false,hasContent:false,clearToken:0},material:Surface={ready:false,hasContent:false,clearToken:0},surfaces=[interactive,passive,material]
  let owner:BrowserWindow|undefined,state:BrowserMenuOverlayState|undefined,shown=false,disposed=false,request=0
  let pointerTimer:ReturnType<typeof setInterval>|undefined,pointerSignature=''
+ let switcherBoundary:{id:string;inside:boolean}|undefined
  const stopPointer=()=>{clearInterval(pointerTimer);pointerTimer=undefined;pointerSignature=''}
  const samplePointer=()=>{
-  if(!shown||!state||active()!==material||!material.popup?.isVisible())return
-  const bounds=material.popup.getContentBounds(),point=screen.getCursorScreenPoint(),inside=point.x>=bounds.x&&point.y>=bounds.y&&point.x<bounds.x+bounds.width&&point.y<bounds.y+bounds.height,z=state.zoom||1,x=inside?(point.x-bounds.x)/z:-1,y=inside?(point.y-bounds.y)/z:-1,signature=JSON.stringify([state.id,state.revision,request,x,y])
+  if(!shown||!state||!owner||owner.isDestroyed())return
+  const surface=active(),popup=surface.popup
+  if(!popup?.isVisible()&&!state.switcherAnchor)return
+  const parent=owner.getContentBounds(),bounds=popup?.getContentBounds()??{...state.bounds,x:parent.x+state.bounds.x,y:parent.y+state.bounds.y}
+  const point=screen.getCursorScreenPoint(),z=state.zoom,x=(point.x-bounds.x)/z,y=(point.y-bounds.y)/z
+  const inside=x>=0&&y>=0&&x<bounds.width/z&&y<bounds.height/z
+  // The shell and the native glass window have separate pointer event streams.
+  // Test the button, the crossing strip and the panel as one hover region.
+  const anchor=state.switcherAnchor
+  if(anchor){
+   const overAnchor=x>=anchor.x&&x<anchor.x+anchor.width&&y>=anchor.y&&y<anchor.y+anchor.height
+   const overBridge=x>=anchor.x+anchor.width&&x<0&&y>=0&&y<bounds.height/z
+   const over=inside||overAnchor||overBridge
+   if(switcherBoundary?.id!==state.id||switcherBoundary.inside!==over){
+    switcherBoundary={id:state.id,inside:over}
+    onAction({id:state.id,revision:state.revision,kind:'switcher-hover',over})
+   }
+  }
+  if(surface!==material)return
+  const hitX=inside?x:-1,hitY=inside?y:-1,signature=JSON.stringify([state.id,state.revision,request,hitX,hitY])
   if(signature===pointerSignature)return;pointerSignature=signature
-  contents(material)?.send('browser-app:menu-pointer',{id:state.id,revision:state.revision,_request:request,x,y})
+  contents(material)?.send('browser-app:menu-pointer',{id:state.id,revision:state.revision,_request:request,x:hitX,y:hitY})
  }
- const startPointer=()=>{stopPointer();if(active()!==material)return;samplePointer();pointerTimer=setInterval(samplePointer,32);pointerTimer.unref?.()}
+ const startPointer=()=>{stopPointer();if(active()!==material&&!state?.switcherAnchor)return;samplePointer();pointerTimer=setInterval(samplePointer,32);pointerTimer.unref?.()}
  let pending:{request:number;resolve:(value:boolean)=>void;timer:ReturnType<typeof setTimeout>}|undefined
  const contents=(surface:Surface)=>surface.view?.webContents??surface.popup?.webContents
  const active=()=>state?.passive?passive:state?.material==='menu'?material:interactive

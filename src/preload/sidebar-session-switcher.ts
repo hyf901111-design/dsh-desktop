@@ -131,13 +131,23 @@ export function mountSidebarSessionSwitcher(sidebar: HTMLElement, source: Switch
     if (focus) (list.querySelector<HTMLElement>('[aria-current]') ??
       list.querySelector<HTMLElement>('[data-current-group]') ?? controls()[0] ?? list).focus()
   }
-  function leave(event: PointerEvent) {
-    if (inside(event.relatedTarget)) return
+  function scheduleClose() {
+    win.clearTimeout(closeTimer)
     win.clearTimeout(openTimer)
     closeTimer = win.setTimeout(() => {
       if (!panel.contains(doc.activeElement) || !doc.activeElement?.matches(':focus-visible')) close()
     }, 160)
   }
+  function leave(event: PointerEvent) {
+    if (inside(event.relatedTarget) || panel.dataset.browserProjected) return
+    scheduleClose()
+  }
+  // The native browser reports whether the physical pointer is over either
+  // window. A renderer pointerleave alone also fires on entry into its popup.
+  panel.addEventListener('sherlock:switcher-hover', event => {
+    if ((event as CustomEvent<boolean>).detail) cancelTimers()
+    else scheduleClose()
+  })
   function enter(event: PointerEvent) {
     if (event.pointerType === 'touch' || event.buttons) return
     cancelTimers()

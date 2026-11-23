@@ -5,6 +5,7 @@ type MenuBridge={request(method:string,input?:Record<string,unknown>):Promise<an
 type Projected={element:HTMLElement;aria:string|null;inert:boolean}
 const hoverCardSelector='[data-odyssey-hover-card]'
 const notificationCenterSelector='.srb-notifications'
+const switcherSelector='#ework-sidebar-session-switcher'
 const composerMenuSelector='._3e4SsG_menu,.mufS8W_card,[data-ework-expanded-command],[data-ework-command-surface]'
 const selector='[data-browser-panel],.eb-suggestions,.eb-find,.st-menu,[popover]:popover-open,[role=menu],[role=listbox],[role=dialog],[role=alertdialog],[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert],.odyssey-subagent-composer-popover,'+hoverCardSelector+','+notificationCenterSelector+','+composerMenuSelector+','+fullTableDialogSelector
 const passiveSurface=(element:HTMLElement)=>element.matches('[role=tooltip],.eb-toast,.srb-notification,[role=status],[role=alert]')&&!element.querySelector('button,input,select,textarea,a,[tabindex]')
@@ -69,11 +70,11 @@ export class NativeBrowserMenuProjection{
    this.scrollStyles.push(`[data-native-control="${id}"]${pseudo}{${['width','height','display','background-color','border-radius'].map(name=>name+':'+paint.getPropertyValue(name)).join(';')}}`)
   }
  }
- private clone(element:Element,root:Element,tableStyles?:Map<string,string>):Element|null{
+ private clone(element:Element,root:Element,sharedStyles?:Map<string,string>):Element|null{
   if(['SCRIPT','STYLE','LINK','IFRAME','OBJECT','EMBED'].includes(element.tagName))return null
   const copy=element.cloneNode(false) as HTMLElement,id=this.controlId(element,root)
   for(const attribute of [...copy.attributes])if(/^on/i.test(attribute.name)||['inert','autofocus','popover','data-browser-projected'].includes(attribute.name))copy.removeAttribute(attribute.name)
-  copy.setAttribute('data-native-control',id);if(element.matches(tableStyles?'button,a,input,textarea,select,label':actionable))copy.setAttribute('data-native-clickable','')
+  copy.setAttribute('data-native-control',id);if(element.matches(sharedStyles?'button,a,input,textarea,select,label':actionable))copy.setAttribute('data-native-clickable','')
   if(copy.hasAttribute('href'))copy.setAttribute('href','#')
   if(element instanceof this.document.defaultView!.HTMLImageElement)copy.setAttribute('src',element.currentSrc||element.src)
   const center=root.matches(notificationCenterSelector)
@@ -83,19 +84,29 @@ export class NativeBrowserMenuProjection{
    this.scrollbar(element,id,style)
    const properties=styleProperties.map(name=>name+':'+style.getPropertyValue(name))
    const css=properties.join(';')+';animation:none;transition:none;caret-color:currentColor;pointer-events:auto'
-   if(tableStyles&&element!==root){
-    // A full table repeats cell styles. Send each distinct rule only once.
+   if(sharedStyles&&element!==root){
+    // Long tables and workspace lists repeat the same computed row styles.
     const rule=css+';border-collapse:'+style.borderCollapse+';border-spacing:'+style.borderSpacing
-    let key=tableStyles.get(rule)
-    if(!key){key='t'+tableStyles.size;tableStyles.set(rule,key)}
-    copy.removeAttribute('style');copy.dataset.nativeTableStyle=key
+    let key=sharedStyles.get(rule)
+    if(!key){key='t'+sharedStyles.size;sharedStyles.set(rule,key)}
+    copy.removeAttribute('style');copy.dataset.nativeRowStyle=key
    }else copy.setAttribute('style',css)
    if(center)copy.dataset.notificationTheme=style.getPropertyValue('--center-theme').trim()
   }
   if(element===root){copy.setAttribute('data-native-menu-root','');copy.removeAttribute('aria-hidden');copy.style.visibility='visible';copy.style.opacity='1';copy.style.pointerEvents='auto';copy.style.position='absolute';copy.style.margin='0';copy.style.transform='none';copy.style.translate='none';copy.style.maxHeight='none';copy.style.maxWidth='none'}
   if(element instanceof this.document.defaultView!.HTMLInputElement){copy.setAttribute('value',element.value);if(element.checked)copy.setAttribute('checked','');else copy.removeAttribute('checked')}
   if(element instanceof this.document.defaultView!.HTMLTextAreaElement)copy.textContent=element.value
-  else for(const child of element.childNodes){if(child.nodeType===3)copy.append(child.cloneNode());else if(child.nodeType===1){const cloned=this.clone(child as Element,root,tableStyles);if(cloned)copy.append(cloned)}}
+  else for(const child of element.childNodes){if(child.nodeType===3)copy.append(child.cloneNode());else if(child.nodeType===1){const cloned=this.clone(child as Element,root,sharedStyles);if(cloned)copy.append(cloned)}}
+  if(root.matches(switcherSelector)&&element.matches('h3 > button')){
+   // Cloning a DOM node omits its CSS folder and disclosure icons.
+   for(const pseudo of ['::before','::after']){
+    const style=this.document.defaultView!.getComputedStyle(element,pseudo)
+    const icon=this.document.createElement('span')
+    icon.setAttribute('aria-hidden','true')
+    icon.style.cssText=styleProperties.map(name=>name+':'+style.getPropertyValue(name)).join(';')
+    if(pseudo==='::before')copy.prepend(icon);else copy.append(icon)
+   }
+  }
   if(element instanceof this.document.defaultView!.HTMLSelectElement)for(const option of copy.querySelectorAll('option'))option.toggleAttribute('selected',option.value===element.value)
   copy.dataset.nativeScrollTop=String(element.scrollTop);copy.dataset.nativeScrollLeft=String(element.scrollLeft)
   if(element===this.document.activeElement){this.focusId=id;this.readSelection(element)}
@@ -125,34 +136,40 @@ export class NativeBrowserMenuProjection{
   // Keep them in a mouse-transparent window so the gap between surfaces stays clickable.
   const table=this.document.querySelector<HTMLDialogElement>(fullTableDialogSelector)
   if(table&&this.noticesOnly){this.reset();return}
-  const roots=table?[table]:this.noticesOnly ? outer.filter(passiveSurface).filter(intersectsPage) : menus.some(intersectsPage) ? menus : hoverCards
+  const homeMenu=menus.find(root=>root.matches(switcherSelector)&&intersectsPage(root))
+  const roots=table?[table]:this.noticesOnly ? outer.filter(passiveSurface).filter(intersectsPage) : homeMenu?[homeMenu]:menus.some(intersectsPage) ? menus : hoverCards
   if(!table&&!roots.some(intersectsPage)){this.reset();return}
   const hoverCard=!table&&!this.noticesOnly&&hoverCards.length>0&&!menus.some(intersectsPage)
+  const switcher=roots.length===1&&roots[0]!.matches(switcherSelector)
+  const anchor=switcher?this.document.querySelector('[data-dsh-sidebar-wide=false] [data-sidebar-home]')?.getBoundingClientRect():undefined
   const passive=roots.every(passiveSurface)
   const group=roots.map(element=>element.closest('.eb-root')?'browser:'+(element.getAttribute('data-browser-panel')||element.className):this.documentRootId(element)).join(',')
   if(group!==this.group){this.reset();this.group=group;this.id=crypto.randomUUID();this.revision++;this.ids.clear()}
   for(const previous of this.roots)if(!roots.includes(previous.element))this.restore(previous)
   const previous=new Map(this.roots.map(root=>[root.element,root]));this.roots=roots.map(element=>previous.get(element)||{element,aria:element.getAttribute('aria-hidden'),inert:element.inert})
-  this.controls.clear();this.scrollStyles=[];const boxes=roots.map(root=>root.getBoundingClientRect()),extent=candidates.filter(element=>roots.some(root=>root.contains(element))).map(element=>element.getBoundingClientRect()),win=this.document.defaultView!,material=!passive&&roots.every(root=>root.matches('.st-menu,.rScV5Q_contextMenu[data-browser-page-context-menu]'))&&/Mac/.test(win.navigator.platform)?'menu':undefined,inset=material?0:20,left=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.left))-(hoverCard?8:inset))),top=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.top))-inset)),right=Math.min(win.innerWidth,Math.ceil(Math.max(...extent.map(r=>r.right))+inset)),bottom=Math.min(win.innerHeight,Math.ceil(Math.max(...extent.map(r=>r.bottom))+inset))
+  this.controls.clear();this.scrollStyles=[];const boxes=roots.map(root=>root.getBoundingClientRect()),extent=candidates.filter(element=>roots.some(root=>root.contains(element))).map(element=>element.getBoundingClientRect()),win=this.document.defaultView!,material=!passive&&roots.every(root=>root.matches('.st-menu,.rScV5Q_contextMenu[data-browser-page-context-menu],'+switcherSelector))&&/Mac/.test(win.navigator.platform)?'menu':undefined,inset=material||switcher?0:20,left=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.left))-(hoverCard?8:inset))),top=Math.max(0,Math.floor(Math.min(...extent.map(r=>r.top))-inset)),right=Math.min(win.innerWidth,Math.ceil(Math.max(...extent.map(r=>r.right))+inset)),bottom=Math.min(win.innerHeight,Math.ceil(Math.max(...extent.map(r=>r.bottom))+inset))
   const dark=browser.dataset.dark==='true'
-  const tableStyles=table?new Map<string,string>():undefined
+  const sharedStyles=table||switcher?new Map<string,string>():undefined
   const copies=roots.map((root,index)=>{
-   const copy=this.clone(root,root,tableStyles) as HTMLElement
+   const copy=this.clone(root,root,sharedStyles) as HTMLElement
    const bounds=boxes[index]!
    Object.assign(copy.style,{left:bounds.left-(table?0:left)+'px',top:bounds.top-(table?0:top)+'px',width:bounds.width+'px',height:bounds.height+'px'})
    // A native sibling cannot blur the live webpage underneath. Paint the
    // entire composer flyout, including its search field and scrollport.
    if(root.matches(composerMenuSelector))copy.style.backgroundColor=dark?'#262626':'#f6f6f6'
+   if(switcher&&!material){const nav=copy.querySelector('nav');if(nav)nav.style.backgroundColor='#303134'}
    return copy.outerHTML
   })
-  const tableCss=table&&tableStyles
-   ? [...tableStyles].map(([rule,key])=>'[data-native-table-style='+key+']{'+rule+'}').join('\n')+'\n.odyssey-table-dialog::backdrop{background:'+win.getComputedStyle(table,'::backdrop').backgroundColor+'}'
-   : ''
+  const listCss=sharedStyles?[...sharedStyles].map(([rule,key])=>'[data-native-row-style='+key+']{'+rule+'}').join('\n'):''
+  const backdropCss=table?'.odyssey-table-dialog::backdrop{background:'+win.getComputedStyle(table,'::backdrop').backgroundColor+'}':''
   const notificationCss=roots.some(root=>root.matches(notificationCenterSelector))?notificationCenterStyles:''
-  const pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=tableCss+'\n'+notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
-  const state={id:this.id,revision:this.revision,owner:browser.dataset.sessionId||'',tabId:browser.dataset.tabId,url:browser.dataset.url,bounds:table?{x:0,y:0,width:win.innerWidth,height:win.innerHeight}:{x:left,y:top,width:right-left,height:bottom-top},html:copies.join(''),css,focusId:passive?undefined:this.focusId||undefined,selection:this.selection,passive,material,hoverCard,focusOwner:hoverCard||roots.some(root=>root.classList.contains('eb-suggestions')),reducedMotion:win.matchMedia('(prefers-reduced-motion: reduce)').matches}
+  const pageContext=roots.find(root=>root.matches('[data-browser-page-context-menu]')),row=pageContext?win.getComputedStyle(pageContext).getPropertyValue('--odyssey-menu-row').trim():'',css=listCss+'\n'+backdropCss+'\n'+notificationCss+'\n'+this.scrollStyles.join('\n')+`\nhtml,body{margin:0;background:transparent;color-scheme:${dark?'dark':'light'}}*{box-sizing:border-box}body{--native-menu-hover:${row||(dark?'rgba(255,255,255,.08)':'rgba(0,0,0,.05)')}}[data-native-clickable]:not(.srb-notifications *):not(:disabled):hover{background-color:var(--native-menu-hover)!important}`+'\n'+this.fontCss()
+  const state={id:this.id,revision:this.revision,owner:browser.dataset.sessionId||'',tabId:browser.dataset.tabId,url:browser.dataset.url,bounds:table?{x:0,y:0,width:win.innerWidth,height:win.innerHeight}:{x:left,y:top,width:right-left,height:bottom-top},html:copies.join(''),css,focusId:passive?undefined:this.focusId||undefined,selection:this.selection,passive,material,hoverCard,switcherAnchor:anchor?{x:anchor.x-left,y:anchor.y-top,width:anchor.width,height:anchor.height}:undefined,focusOwner:(switcher&&!material)||hoverCard||roots.some(root=>root.classList.contains('eb-suggestions')),reducedMotion:win.matchMedia('(prefers-reduced-motion: reduce)').matches}
   for(const {element} of this.roots){
    if(element.dataset.browserProjected!=='true')element.dataset.browserProjected='true'
+   // Keep the source disclosure and keyboard focus alive across native mouse transitions.
+   this.resize?.observe(element)
+   if(switcher)continue
    if(!element.inert)element.inert=true
    if(element.getAttribute('aria-hidden')!=='true')element.setAttribute('aria-hidden','true')
    this.resize?.observe(element)
@@ -171,6 +188,11 @@ export class NativeBrowserMenuProjection{
   if(this.disposed||value?.id!==this.id||value.revision!==this.revision)return
   const browser=this.document.querySelector<HTMLElement>('.eb-root:not([hidden])[data-native-page=true]');if(!browser||JSON.stringify([browser.dataset.tabId,browser.dataset.url,browser.dataset.sessionId])!==this.context){this.reset();return}
   if(value.kind==='dismiss'){this.dismiss();return}
+  if(value.kind==='switcher-hover'){
+   const root=this.roots.find(root=>root.element.matches(switcherSelector))
+   if(root)root.element.dispatchEvent(new this.document.defaultView!.CustomEvent('sherlock:switcher-hover',{detail:value.over}))
+   return
+  }
   const element=this.controls.get(value.controlId);if(!element?.isConnected||!this.roots.some(root=>root.element.contains(element))||element.matches(':disabled,[aria-disabled=true]'))return
   const win=this.document.defaultView!,roots=this.roots.map(root=>root.element);for(const root of roots)root.inert=false
   try{
@@ -193,7 +215,7 @@ export class NativeBrowserMenuProjection{
     }
     const active=this.document.activeElement;if(active&&roots.some(root=>root.contains(active))){const entry=[...this.controls].find(([,el])=>el===active);if(entry)this.focusId=entry[0];this.readSelection(active)}
    }
-  }finally{for(const root of roots)if(root.isConnected)root.inert=true;this.schedule()}
+  }finally{for(const root of roots)if(root.isConnected&&!root.matches(switcherSelector))root.inert=true;this.schedule()}
  }
  pagePointerDown(tabId:string){
   const browser=this.document.querySelector<HTMLElement>('.eb-root:not([hidden])[data-native-page=true]')
