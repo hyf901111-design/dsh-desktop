@@ -30,7 +30,7 @@ function textStream(deltas) {
 const callStream=()=>[{type:'block-start',index:0,blockType:'tool-call'},{type:'block-end',index:0,block:tool},{type:'finish',reason:{kind:'tool-calls'}}]
 const cleanup=[]
 afterEach(async()=>{for(const dispose of cleanup.splice(0).reverse())await dispose()})
-async function fullTurn(prompt,produce) {
+async function fullTurn(prompt,produce, toolName = 'inspect_workbook') {
  const folder=await mkdtemp(join(tmpdir(),'sherlock-opening-sdk-'))
  cleanup.push(()=>rm(folder,{force:true,recursive:true}))
  await symlink(join(process.cwd(),'node_modules'),join(folder,'node_modules'),'dir')
@@ -46,9 +46,9 @@ async function fullTurn(prompt,produce) {
  new ToolRuntime(ctx);new AgentLoop(ctx,{agents:[],maxParallelToolCalls:1})
  cleanup.push(()=>ctx.fiber.dispose())
  ctx.on('agent/error',({error})=>errors.push(error.message))
- ctx.tools.register(defineTool({name:'inspect_workbook',description:'读取工作表',parameters:{},
+ ctx.tools.register(defineTool({name:toolName,description:'读取工作表',parameters:{},
   output:{schema:{type:'string'},render:(_args,data)=>[{type:'text',text:data}]},
-  execute:async()=>{actions.push('inspect_workbook');return '工作表包含真实观测日。'}}))
+  execute:async()=>{actions.push(toolName);return '工作表包含真实观测日。'}}))
  registerFirstResponseEffort(ctx);registerModelTaskReplies(ctx)
  class Adapter extends LlmAdapter {
   async resolveModel(provider,id){return {provider,id,name:id,defaultMaxTokens:1000}}
@@ -77,6 +77,38 @@ it('passes a normal user-requested protocol example unchanged in one ordinary re
  const example='字面示例\n'+sample.deltas.join('').split('\n\n')[1]
  const {events,requests,errors}=await fullTurn('请解释这段工具协议的格式，用示例回答。',()=>textStream([example]))
  expect(requests).toHaveLength(1);expect(errors).toEqual([]);expect(endOf(events).kind).toBe('completed');expect(publicChunks(events)).toBe(example)
+})
+const editRequest = '请把稿件改得更通顺，去掉难懂的句子。'
+const editIntro = '我先通读全文，再用平实的说法改写。'
+const filePath = '/example/案例稿件.md'
+const readCall = {type:'tool-call',id:'read-1',name:'read',arguments:JSON.stringify({file_path:filePath})}
+const readStream = () => callStream().map(chunk => chunk.block ? {...chunk,block:readCall} : chunk)
+const leak = '<｜｜DSML｜｜ calls><｜｜DSML｜｜ invoke name="read"><｜｜DSML｜｜ parameter name="file_path" string="true">'+filePath+'</｜｜DSML｜｜ parameter></｜｜DSML｜｜ invoke></｜｜DSML｜｜ calls>'
+it.each([leak, leak.replaceAll('｜｜','| |')])('recovers a serialized read in an ordinary editing turn using only a native tool receipt', async wire => {
+ const {events,requests,actions,errors}=await fullTurn(editRequest,n=>[
+  textStream([...editIntro+'\n\n'+wire]),readStream(),textStream([closing])
+ ][n-1],'read')
+ expect(errors).toEqual([]); expect(endOf(events).kind).toBe('completed')
+ expect(actions).toEqual(['read']); expect(requests).toHaveLength(3)
+ expect(requests[1].tools.map(t=>t.name)).toContain('read')
+ expect(requests[1].system).toContain('structured tool calls')
+ expect(requests[1].messages.at(-1).role).toBe('user')
+ expect(requests[2].messages.some(m=>m.source?.callId==='read-1')).toBe(true)
+ expect(publicChunks(events)).toBe(editIntro+'\n\n'+closing)
+ expect(JSON.stringify(events.filter(e=>e.type.startsWith('assistant/')))).not.toContain('DSML')
+})
+it('limits recovery when the model keeps printing a call and never executes its text arguments',async()=>{
+ const {events,requests,actions}=await fullTurn(editRequest,()=>textStream([leak]),'read')
+ expect(requests).toHaveLength(2); expect(actions).toEqual([])
+ expect(endOf(events).kind).toBe('error'); expect(publicChunks(events)).toBe('')
+})
+it('uses an existing structured call only once when the same stream also contains a textual envelope',async()=>{
+ const {requests,actions,events}=await fullTurn(editRequest,n=>n===1?[
+  ...textStream([editIntro+'\n'+leak]).slice(0,-1),
+  ...readStream().map(e=>e.index===0?{...e,index:1}:e)
+ ]:textStream([closing]),'read')
+ expect(requests).toHaveLength(2); expect(actions).toEqual(['read'])
+ expect(publicChunks(events)).toBe(editIntro+'\n'+closing)
 })
 it('continues after an opening stream error and keeps the actual execution error on the correct step',async()=>{
  const {events,requests,errors}=await fullTurn(sample.request,n=>{if(n===1)throw Error('opening transport error');return [{type:'finish',reason:{kind:'error',failure:{code:'UPSTREAM',message:'execution transport error'}}}]})
